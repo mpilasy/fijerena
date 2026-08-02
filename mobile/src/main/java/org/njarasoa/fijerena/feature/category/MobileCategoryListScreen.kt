@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.feature.category
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -7,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -194,7 +197,12 @@ fun MobileCategoryListScreen(
     var dockTarget by remember { mutableStateOf<MediaItem?>(null) }
     var fullScreen by remember { mutableStateOf(false) }
     var hasSeededDock by remember { mutableStateOf(false) }
-    val isWideLayout = LocalConfiguration.current.screenWidthDp >= 600
+    // Orientation-driven, not a width threshold — a screenWidthDp cutoff happens to catch most
+    // phones once rotated (landscape width is usually well over 600dp) but doesn't express intent
+    // and misbehaves on small phones/foldables. LocalConfiguration is read live, so this flips as
+    // the device rotates.
+    val isLandscape =
+        LocalConfiguration.current.let { it.screenWidthDp > it.screenHeightDp }
 
     // One-time "long-press to favorite" hint — favoriting has no other visible affordance here.
     // Shown once ever (marked seen as soon as it's shown), auto-dismisses after a few seconds.
@@ -286,6 +294,9 @@ fun MobileCategoryListScreen(
         }
     val dockLoaderState = dockLoader?.state?.collectAsStateWithLifecycle()?.value
     val dockSuccess = dockLoaderState as? StreamLoaderViewModel.StreamState.Success
+    // Mirrors TV's previewPlaybackState (LiveTvSplitLayout.kt) — used by the landscape split to
+    // show a loading spinner over the video box while a channel is still resolving/buffering.
+    val dockPlaybackState = dockPlayback?.playbackState?.collectAsStateWithLifecycle()?.value
 
     if (target != null && dockLoader != null) {
         LaunchedEffect(target.id) {
@@ -362,6 +373,22 @@ fun MobileCategoryListScreen(
         }
     }
 
+    // Rotation follows the phone's physical orientation automatically only while the preview is
+    // docked — the rest of the app is portrait-locked (AndroidManifest.xml). Placed before the
+    // fullScreen early-return below so it stays mounted across promote/demote, not just while the
+    // small dock is on screen. SENSOR (not USER) so it rotates on physical movement even if the
+    // OS auto-rotate toggle is off — same reasoning as the full-screen player's
+    // SENSOR_LANDSCAPE override in MobilePlayerScreen.kt, just not landscape-only here since the
+    // dock has a real portrait layout too.
+    if (isLiveTv && target != null) {
+        val activity = context as? Activity
+        DisposableEffect(activity) {
+            val original = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
+            onDispose { activity?.requestedOrientation = original }
+        }
+    }
+
     if (target != null && dockPlayback != null && dockLoader != null && fullScreen) {
         // Refresh the history list on demote (fullScreen leaving composition) so it reflects
         // what was just watched — promoting/demoting never leaves this screen, so nothing else
@@ -388,41 +415,46 @@ fun MobileCategoryListScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text(contentType.replace("_", " ")) },
-                navigationIcon = {
-                    CinemaIconButton(onClick = onBack,
-                        icon = {
-                            Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
-                        }
-                    )
-                },
-                actions = {
-                    // EPG button - show for Live TV when native EPG or XMLTV file is available
-                    if (contentType == ContentType.LIVE_TV) {
-                        val state = uiState
-                        if (state is CategoryViewModel.UiState.Success) {
-                            val selectedCatId = state.selectedCategoryId
-                            val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
-                            val hasEpgData =
-                                supportsNativeEpg ||
-                                    epgIndexState is EpgIndexState.Indexed
-                            if (selectedCatId != null && selectedCatName != null && hasEpgData) {
-                                CinemaIconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) },
-                                    icon = {
-                                        Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide), tint = CinemaTextPrimary)
-                                    }
-                                )
+            // Hidden in the landscape split — the title/EPG/search row eats vertical space the
+            // video pane needs, and none of its actions (EPG, search, category nav) apply while
+            // docked anyway (category chips are hidden here too, see below).
+            if (!(isLiveTv && target != null && isLandscape)) {
+                TopAppBar(
+                    title = { Text(contentType.replace("_", " ")) },
+                    navigationIcon = {
+                        CinemaIconButton(onClick = onBack,
+                            icon = {
+                                Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
+                            }
+                        )
+                    },
+                    actions = {
+                        // EPG button - show for Live TV when native EPG or XMLTV file is available
+                        if (contentType == ContentType.LIVE_TV) {
+                            val state = uiState
+                            if (state is CategoryViewModel.UiState.Success) {
+                                val selectedCatId = state.selectedCategoryId
+                                val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
+                                val hasEpgData =
+                                    supportsNativeEpg ||
+                                        epgIndexState is EpgIndexState.Indexed
+                                if (selectedCatId != null && selectedCatName != null && hasEpgData) {
+                                    CinemaIconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) },
+                                        icon = {
+                                            Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide), tint = CinemaTextPrimary)
+                                        }
+                                    )
+                                }
                             }
                         }
-                    }
-                    CinemaIconButton(onClick = onSearchClick,
-                        icon = {
-                            Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
-                        }
-                    )
-                },
-            )
+                        CinemaIconButton(onClick = onSearchClick,
+                            icon = {
+                                Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
+                            }
+                        )
+                    },
+                )
+            }
         },
     ) { paddingValues ->
         Box(
@@ -571,9 +603,10 @@ fun MobileCategoryListScreen(
                             }
                         }
 
-                        if (isLiveTv && target != null && isWideLayout) {
-                            // Landscape/tablet split — mirrors tv/.../LiveTvSplitLayout.kt's
-                            // side-by-side layout: video+EPG pane left, channel list right.
+                        if (isLiveTv && target != null && isLandscape) {
+                            // Landscape split — mirrors tv/.../LiveTvSplitLayout.kt's side-by-side
+                            // layout as closely as possible: video+EPG pane left (0.66), channel
+                            // list right (0.34).
                             Row(
                                 modifier = Modifier.fillMaxSize(),
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -581,28 +614,60 @@ fun MobileCategoryListScreen(
                                 Column(
                                     modifier =
                                         Modifier
-                                            .weight(0.5f)
+                                            .weight(0.66f)
                                             .fillMaxHeight()
                                             .padding(horizontal = CinemaSpacing.md),
                                 ) {
-                                    // Fixed height rather than Modifier.aspectRatio(16f / 9f): the
-                                    // latter mis-positions its content in this specific spot (a
-                                    // Row placed after other siblings in the parent Column, each
-                                    // weighted+fillMaxHeight child measured with a reduced-but-
-                                    // bounded height constraint) — reproduced with a bare colored
-                                    // Box, confirmed it's not related to EmbeddedPlayerSurface.
-                                    // TV's LiveTvSplitLayout doesn't hit this because its Row has
-                                    // no preceding siblings to reduce the incoming constraint.
-                                    Box(
+                                    // True 16:9 without Modifier.aspectRatio(16f / 9f): the latter
+                                    // mis-positions its content in this specific spot (a Row placed
+                                    // after other siblings in the parent Column, each weighted+
+                                    // fillMaxHeight child measured with a reduced-but-bounded height
+                                    // constraint) — reproduced with a bare colored Box, confirmed
+                                    // it's not related to EmbeddedPlayerSurface. TV's
+                                    // LiveTvSplitLayout doesn't hit this because its Row has no
+                                    // preceding siblings to reduce the incoming constraint.
+                                    // BoxWithConstraints sidesteps it: it reads the actual measured
+                                    // width and derives a plain .height() from it, the same
+                                    // primitive the old fixed-120dp workaround used, just computed
+                                    // instead of hardcoded — coerced against maxHeight too, so it
+                                    // never overflows the column on unusually short screens.
+                                    BoxWithConstraints(
                                         modifier =
                                             Modifier
                                                 .fillMaxWidth()
-                                                .height(120.dp)
                                                 .clip(RoundedCornerShape(CinemaCornerRadius.medium))
                                                 .background(CinemaSurface)
                                                 .clickable(onClick = { fullScreen = true }),
                                     ) {
-                                        videoSurface()
+                                        val videoHeight = (maxWidth * 9f / 16f).coerceAtMost(maxHeight)
+                                        Box(modifier = Modifier.fillMaxWidth().height(videoHeight)) {
+                                            videoSurface()
+
+                                            // The preview surface has no controls/error UI of its
+                                            // own, so a stalled or watchdog-killed stream would
+                                            // otherwise look identical to a live frozen frame —
+                                            // mirrors TV's LiveTvSplitLayout.
+                                            if (dockPlaybackState !is PlaybackState.Playing) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.align(Alignment.Center),
+                                                    color = CinemaAccent,
+                                                )
+                                            }
+
+                                            IconButton(
+                                                onClick = {
+                                                    dockPlayback?.stop()
+                                                    dockTarget = null
+                                                },
+                                                modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xs),
+                                            ) {
+                                                Icon(
+                                                    CinemaIcons.Close,
+                                                    contentDescription = "Close",
+                                                    tint = Color.White,
+                                                )
+                                            }
+                                        }
                                     }
                                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                                     // Marks this as the docked preview, distinct from the bare
@@ -651,7 +716,7 @@ fun MobileCategoryListScreen(
                                         )
                                     }
                                 }
-                                Column(modifier = Modifier.weight(0.5f).fillMaxHeight()) {
+                                Column(modifier = Modifier.weight(0.34f).fillMaxHeight()) {
                                     streamsList()
                                 }
                             }
