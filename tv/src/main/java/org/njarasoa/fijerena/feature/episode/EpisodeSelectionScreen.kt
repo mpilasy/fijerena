@@ -272,10 +272,14 @@ private fun EpisodeListContent(
         }
     }
 
-    // Use API seasons if available, otherwise derive from episode map keys
+    // Use API seasons if available, otherwise derive from episode map keys.
+    // Skip seasons with no actual episodes (e.g. an empty "Season 0" specials entry).
     val sortedSeasons =
         remember(seriesDetail) {
-            val apiSeasons = seriesDetail.seasons.sortedBy { it.seasonNumber }
+            val apiSeasons =
+                seriesDetail.seasons
+                    .filter { season -> seriesDetail.episodes[season.seasonNumber.toString()]?.isNotEmpty() == true }
+                    .sortedBy { it.seasonNumber }
             if (apiSeasons.isNotEmpty()) {
                 apiSeasons
             } else {
