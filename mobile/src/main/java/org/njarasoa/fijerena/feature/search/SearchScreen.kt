@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -76,14 +77,14 @@ fun MobileSearchScreen(
     val appSettings = remember { AppSettings(context.applicationContext) }
 
     // Favorite long-press state
-    var favoriteMenuTarget by remember { mutableStateOf<MobileSearchFavoriteTarget?>(null) }
+    var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
 
     favoriteMenuTarget?.let { target ->
         MobileSearchFavoriteDialog(
             target = target,
             onConfirm = {
                 when (target) {
-                    is MobileSearchFavoriteTarget.Category -> {
+                    is FavoriteMenuTarget.Category -> {
                         viewModel.toggleFavoriteCategory(
                             target.categoryId,
                             target.categoryName,
@@ -91,7 +92,7 @@ fun MobileSearchScreen(
                             target.isFavorite,
                         )
                     }
-                    is MobileSearchFavoriteTarget.Stream -> {
+                    is FavoriteMenuTarget.Stream -> {
                         viewModel.toggleFavorite(
                             target.itemId,
                             target.itemName,
@@ -250,7 +251,7 @@ fun MobileSearchScreen(
                             },
                             onResultLongPress = { result ->
                                 favoriteMenuTarget =
-                                    MobileSearchFavoriteTarget.Stream(
+                                    FavoriteMenuTarget.Stream(
                                         itemId = result.itemId,
                                         itemName = result.streamName,
                                         categoryId = result.categoryId,
@@ -263,7 +264,7 @@ fun MobileSearchScreen(
                             },
                             onCategoryLongPress = { catResult ->
                                 favoriteMenuTarget =
-                                    MobileSearchFavoriteTarget.Category(
+                                    FavoriteMenuTarget.Category(
                                         categoryId = catResult.categoryId,
                                         categoryName = catResult.categoryName,
                                         contentType = catResult.contentType,
@@ -748,33 +749,16 @@ private fun SearchResultCard(
     }
 }
 
-private sealed class MobileSearchFavoriteTarget {
-    data class Category(
-        val categoryId: String,
-        val categoryName: String,
-        val contentType: String,
-        val isFavorite: Boolean,
-    ) : MobileSearchFavoriteTarget()
-
-    data class Stream(
-        val itemId: String,
-        val itemName: String,
-        val categoryId: String,
-        val contentType: String,
-        val isFavorite: Boolean,
-    ) : MobileSearchFavoriteTarget()
-}
-
 @Composable
 private fun MobileSearchFavoriteDialog(
-    target: MobileSearchFavoriteTarget,
+    target: FavoriteMenuTarget,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val (itemName, isFavorite) =
         when (target) {
-            is MobileSearchFavoriteTarget.Category -> target.categoryName to target.isFavorite
-            is MobileSearchFavoriteTarget.Stream -> target.itemName to target.isFavorite
+            is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
+            is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
         }
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 

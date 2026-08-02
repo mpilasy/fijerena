@@ -72,6 +72,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -129,14 +130,14 @@ fun SearchScreen(
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
     // Favorite long-press state
-    var favoriteMenuTarget by remember { mutableStateOf<SearchFavoriteTarget?>(null) }
+    var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
 
     favoriteMenuTarget?.let { target ->
         SearchFavoriteDialog(
             target = target,
             onConfirm = {
                 when (target) {
-                    is SearchFavoriteTarget.Category -> {
+                    is FavoriteMenuTarget.Category -> {
                         viewModel.toggleFavoriteCategory(
                             target.categoryId,
                             target.categoryName,
@@ -144,7 +145,7 @@ fun SearchScreen(
                             target.isFavorite,
                         )
                     }
-                    is SearchFavoriteTarget.Stream -> {
+                    is FavoriteMenuTarget.Stream -> {
                         viewModel.toggleFavorite(
                             target.itemId,
                             target.itemName,
@@ -213,7 +214,7 @@ fun SearchScreen(
                             },
                             onResultLongPress = { result ->
                                 favoriteMenuTarget =
-                                    SearchFavoriteTarget.Stream(
+                                    FavoriteMenuTarget.Stream(
                                         itemId = result.itemId,
                                         itemName = result.streamName,
                                         categoryId = result.categoryId,
@@ -226,7 +227,7 @@ fun SearchScreen(
                             },
                             onCategoryLongPress = { catResult ->
                                 favoriteMenuTarget =
-                                    SearchFavoriteTarget.Category(
+                                    FavoriteMenuTarget.Category(
                                         categoryId = catResult.categoryId,
                                         categoryName = catResult.categoryName,
                                         contentType = catResult.contentType,
@@ -942,33 +943,16 @@ private fun SearchResultItem(
     }
 }
 
-private sealed class SearchFavoriteTarget {
-    data class Category(
-        val categoryId: String,
-        val categoryName: String,
-        val contentType: String,
-        val isFavorite: Boolean,
-    ) : SearchFavoriteTarget()
-
-    data class Stream(
-        val itemId: String,
-        val itemName: String,
-        val categoryId: String,
-        val contentType: String,
-        val isFavorite: Boolean,
-    ) : SearchFavoriteTarget()
-}
-
 @Composable
 private fun SearchFavoriteDialog(
-    target: SearchFavoriteTarget,
+    target: FavoriteMenuTarget,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val (itemName, isFavorite) =
         when (target) {
-            is SearchFavoriteTarget.Category -> target.categoryName to target.isFavorite
-            is SearchFavoriteTarget.Stream -> target.itemName to target.isFavorite
+            is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
+            is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
         }
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 
