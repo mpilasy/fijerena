@@ -92,6 +92,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -157,7 +158,7 @@ fun MobileCategoryListScreen(
     }
 
     // Long-press favorite menu state
-    var favoriteMenuTarget by remember { mutableStateOf<MobileFavoriteMenuTarget?>(null) }
+    var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
 
     // Show the context menu dialog when a target is set
     favoriteMenuTarget?.let { target ->
@@ -165,14 +166,14 @@ fun MobileCategoryListScreen(
             target = target,
             onConfirm = {
                 when (target) {
-                    is MobileFavoriteMenuTarget.Category -> {
+                    is FavoriteMenuTarget.Category -> {
                         viewModel.toggleFavoriteCategory(
                             target.categoryId,
                             target.categoryName,
                             target.contentType,
                         )
                     }
-                    is MobileFavoriteMenuTarget.Stream -> {
+                    is FavoriteMenuTarget.Stream -> {
                         viewModel.toggleFavoriteStream(
                             target.itemId,
                             target.itemName,
@@ -516,7 +517,7 @@ fun MobileCategoryListScreen(
                                 },
                                 onCategoryLongPress = { category ->
                                     favoriteMenuTarget =
-                                        MobileFavoriteMenuTarget.Category(
+                                        FavoriteMenuTarget.Category(
                                             categoryId = category.id,
                                             categoryName = category.name,
                                             contentType = contentType,
@@ -582,7 +583,7 @@ fun MobileCategoryListScreen(
                                         val realCategoryId = item.providerData["categoryId"]
                                         if (item.providerData["isCategoryRef"] == "true" && realCategoryId != null) {
                                             favoriteMenuTarget =
-                                                MobileFavoriteMenuTarget.Category(
+                                                FavoriteMenuTarget.Category(
                                                     categoryId = realCategoryId,
                                                     categoryName = item.name,
                                                     contentType = contentType,
@@ -590,7 +591,7 @@ fun MobileCategoryListScreen(
                                                 )
                                         } else {
                                             favoriteMenuTarget =
-                                                MobileFavoriteMenuTarget.Stream(
+                                                FavoriteMenuTarget.Stream(
                                                     itemId = item.id,
                                                     itemName = item.name,
                                                     categoryId = item.categoryId,
@@ -1097,38 +1098,18 @@ private fun StreamsList(
 }
 
 /**
- * Data class representing a pending favorite action from a long-press on mobile.
- */
-private sealed class MobileFavoriteMenuTarget {
-    data class Category(
-        val categoryId: String,
-        val categoryName: String,
-        val contentType: String,
-        val isFavorite: Boolean,
-    ) : MobileFavoriteMenuTarget()
-
-    data class Stream(
-        val itemId: String,
-        val itemName: String,
-        val categoryId: String,
-        val contentType: String,
-        val isFavorite: Boolean,
-    ) : MobileFavoriteMenuTarget()
-}
-
-/**
  * Themed context menu dialog for favoriting categories/streams on mobile.
  */
 @Composable
 private fun MobileFavoriteContextMenuDialog(
-    target: MobileFavoriteMenuTarget,
+    target: FavoriteMenuTarget,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val (itemName, isFavorite) =
         when (target) {
-            is MobileFavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
-            is MobileFavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
+            is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
+            is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
         }
 
     val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)

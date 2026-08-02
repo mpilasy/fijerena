@@ -5,31 +5,12 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-
-/**
- * Data class representing a pending favorite action from a long-press.
- */
-internal sealed class FavoriteMenuTarget {
-    data class Category(
-        val categoryId: String,
-        val categoryName: String,
-        val contentType: String,
-        val isFavorite: Boolean,
-    ) : FavoriteMenuTarget()
-
-    data class Stream(
-        val itemId: String,
-        val itemName: String,
-        val categoryId: String,
-        val contentType: String,
-        val isFavorite: Boolean,
-    ) : FavoriteMenuTarget()
-}
 
 /**
  * Themed context menu dialog for favoriting categories/shows.
