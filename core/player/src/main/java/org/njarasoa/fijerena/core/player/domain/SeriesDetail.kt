@@ -25,3 +25,28 @@ data class EpisodeItem(
     val metadata: MediaMetadata = MediaMetadata(),
     val thumbnailUrl: String? = null,
 )
+
+/**
+ * Seasons to display, sorted and with empty ones (e.g. a "Season 0" specials
+ * entry with no actual episodes) dropped. Falls back to deriving seasons from
+ * the episode map's keys when the API didn't provide a season list.
+ */
+fun SeriesDetail.sortedSeasons(seasonName: (Int) -> String): List<SeasonInfo> {
+    val apiSeasons =
+        seasons
+            .filter { season -> episodes[season.seasonNumber.toString()]?.isNotEmpty() == true }
+            .sortedBy { it.seasonNumber }
+    if (apiSeasons.isNotEmpty()) return apiSeasons
+
+    return episodes.entries
+        .filter { (_, eps) -> eps.isNotEmpty() }
+        .mapNotNull { (key, eps) -> key.toIntOrNull()?.let { it to eps.size } }
+        .sortedBy { (num, _) -> num }
+        .map { (num, count) ->
+            SeasonInfo(
+                seasonNumber = num,
+                name = seasonName(num),
+                episodeCount = count,
+            )
+        }
+}
