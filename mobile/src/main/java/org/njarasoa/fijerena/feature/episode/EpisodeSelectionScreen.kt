@@ -33,7 +33,15 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.defaultExpandedSeason
+import org.njarasoa.fijerena.core.player.domain.episodeScrollIndex
+import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
+import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
+import org.njarasoa.fijerena.core.player.domain.seasonNumberContaining
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
+import org.njarasoa.fijerena.core.player.model.computeEndsAt
+import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -187,7 +195,8 @@ fun MobileEpisodeSelectionScreen(
                     val detail = seriesDetail!!
                     val flatEpisodes =
                         remember(detail) {
-                            flattenEpisodes(detail)
+                            val sorted = detail.sortedSeasons { num -> context.getString(R.string.series_season_name_format, num) }
+                            detail.flattenedEpisodes(sorted)
                         }
                     val currentIdx =
                         remember(flatEpisodes, selectedEpisode!!.id) {
@@ -260,23 +269,12 @@ private fun EpisodeListContent(
     // detail panel lands on that season expanded, everything else collapsed.
     val resumeSeasonNumber =
         remember(seriesDetail, initialEpisodeId) {
-            initialEpisodeId?.let { epId ->
-                seriesDetail.episodes.entries
-                    .firstOrNull { (_, eps) -> eps.any { it.id == epId } }
-                    ?.key
-                    ?.toIntOrNull()
-            }
+            initialEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
         }
 
     // Accordion: only one season expanded at a time (first season by default)
     var expandedSeasons by remember(seriesDetail) {
-        mutableStateOf(
-            when {
-                resumeSeasonNumber != null -> setOf(resumeSeasonNumber)
-                hasMultipleSeasons && sortedSeasons.isNotEmpty() -> setOf(sortedSeasons.first().seasonNumber)
-                else -> emptySet()
-            },
-        )
+        mutableStateOf(defaultExpandedSeason(resumeSeasonNumber, sortedSeasons))
     }
     // Set by the manual season-header toggle below, so the auto-expand effect doesn't
     // clobber a choice the user already made while the playback-position lookups were in flight.
@@ -290,20 +288,16 @@ private fun EpisodeListContent(
     // means visible without the user having to scroll to find it.
     LaunchedEffect(resumeSeasonNumber, expandedSeasons) {
         val targetId = initialEpisodeId ?: return@LaunchedEffect
-        var index = 0
-        for (season in sortedSeasons) {
-            val seasonKey = season.seasonNumber.toString()
-            val seasonEpisodes = sortedEpisodesBySeason[seasonKey] ?: emptyList()
-            val isExpanded = !hasMultipleSeasons || season.seasonNumber in expandedSeasons
-            if (hasMultipleSeasons) index++ // season header row
-            if (isExpanded) {
-                val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
-                if (episodeIndex >= 0) {
-                    listState.animateScrollToItem(index + episodeIndex)
-                    return@LaunchedEffect
-                }
-                index += seasonEpisodes.size
-            }
+        val index =
+            episodeScrollIndex(
+                sortedSeasons = sortedSeasons,
+                episodesBySeason = sortedEpisodesBySeason,
+                hasMultipleSeasons = hasMultipleSeasons,
+                targetEpisodeId = targetId,
+                isExpanded = { it in expandedSeasons },
+            )
+        if (index != null) {
+            listState.animateScrollToItem(index)
         }
     }
 
@@ -321,18 +315,14 @@ private fun EpisodeListContent(
 
         val allWatched = mediaRepository.getPlaybackPositionsSuspend(allEpisodeIds, ContentType.TV_SHOWS)
 
-        for (season in sortedSeasons) {
-            val seasonKey = season.seasonNumber.toString()
-            val episodes = sortedEpisodesBySeason[seasonKey] ?: continue
-            for (episode in episodes) {
-                val watched = allWatched[episode.id]
-                if (watched == null || !watched.isCompleted) {
-                    if (!hasManuallyToggledSeasons) {
-                        expandedSeasons = setOf(season.seasonNumber)
-                    }
-                    return@LaunchedEffect
-                }
-            }
+        val unwatchedSeason =
+            firstSeasonWithUnwatchedEpisode(
+                sortedSeasons = sortedSeasons,
+                episodesBySeason = sortedEpisodesBySeason,
+                isCompleted = { allWatched[it]?.isCompleted == true },
+            )
+        if (unwatchedSeason != null && !hasManuallyToggledSeasons) {
+            expandedSeasons = setOf(unwatchedSeason)
         }
     }
 
@@ -574,7 +564,7 @@ private fun EpisodeDetailContent(
         // Play / Resume buttons + Favorite
         val hasResume = resumePositionMs > 0L
         if (hasResume) {
-            val resumeTimeText = formatMillis(resumePositionMs)
+            val resumeTimeText = formatTime(resumePositionMs)
             CinemaButton(
                 onClick = {
                     onPlay(episode.id, episode.title, extension, false)
@@ -830,80 +820,3 @@ private fun ErrorScreen(
 
 private const val EPISODE_SWIPE_THRESHOLD_PX = 80f
 
-private fun flattenEpisodes(detail: SeriesDetail): List<DomainEpisodeItem> {
-    val seasonNumbers =
-        if (detail.seasons.isNotEmpty()) {
-            detail.seasons.map { it.seasonNumber }.sorted()
-        } else {
-            detail.episodes.keys.mapNotNull { it.toIntOrNull() }.sorted()
-        }
-
-    // ⚡ Bolt: Use pre-sized ArrayList to avoid intermediate allocations from flatMap
-    val totalSize = detail.episodes.values.sumOf { it.size }
-    val result = ArrayList<DomainEpisodeItem>(totalSize)
-    for (num in seasonNumbers) {
-        val eps = detail.episodes[num.toString()]
-        if (eps != null) {
-            result.addAll(eps.sortedBy { it.episodeNumber })
-        }
-    }
-    return result
-}
-
-private fun parseDurationToSeconds(duration: String): Long? {
-    duration.toLongOrNull()?.let { return it }
-    val parts = duration.split(":")
-    return when (parts.size) {
-        3 -> {
-            val h = parts[0].toLongOrNull() ?: return null
-            val m = parts[1].toLongOrNull() ?: return null
-            val s = parts[2].toLongOrNull() ?: return null
-            h * 3600 + m * 60 + s
-        }
-        2 -> {
-            val m = parts[0].toLongOrNull() ?: return null
-            val s = parts[1].toLongOrNull() ?: return null
-            m * 60 + s
-        }
-        else -> null
-    }
-}
-
-private fun computeEndsAt(
-    context: android.content.Context,
-    duration: String?,
-    resumePositionMs: Long,
-): String? {
-    if (duration == null) return null
-    val totalSeconds = parseDurationToSeconds(duration) ?: return null
-    if (totalSeconds <= 0) return null
-    val totalMs = totalSeconds * 1000
-    val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
-    val calendar = java.util.Calendar.getInstance()
-    calendar.add(java.util.Calendar.MILLISECOND, remainingMs.toInt())
-    return org.njarasoa.fijerena.core.player.model.TimeFormat
-        .formatClockTime(context, calendar.time)
-}
-
-private fun formatMillis(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format("%d:%02d", minutes, seconds)
-    }
-}
-
-private fun formatDuration(duration: String): String {
-    val seconds = parseDurationToSeconds(duration) ?: return duration
-    val hours = seconds / 3600
-    val minutes = (seconds % 3600) / 60
-    return when {
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes}m"
-        else -> "${seconds}s"
-    }
-}

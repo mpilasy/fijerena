@@ -639,3 +639,24 @@ class EpgBrowserViewModel(
             }
     }
 }
+
+/** "N programs (M airings) — 1.2s [source]" summary line for the results header. */
+fun EpgBrowserViewModel.UiState.Results.statsLine(): String {
+    val timeStr = "%.1f".format(searchTimeMs / 1000.0)
+    val truncatedSuffix = if (truncated) " (truncated)" else ""
+    val sourceSuffix =
+        when {
+            !searchedFromIndex -> " [XML scan]"
+            else ->
+                when (searchPath) {
+                    EpgSearchPath.FTS_PHRASE -> " [FTS phrase]"
+                    EpgSearchPath.FTS_AND -> " [FTS AND]"
+                    EpgSearchPath.NONE -> " [indexed]"
+                }
+        }
+    return "$totalPrograms programs ($totalAirings airings) — ${timeStr}s$truncatedSuffix$sourceSuffix"
+}
+
+/** Empty-state message when there are no (matched) results for the query. */
+fun EpgBrowserViewModel.UiState.Results.noResultsMessage(matchedOnly: Boolean): String =
+    if (matchedOnly) "No matched results for '$query'" else "No results found for '$query'"

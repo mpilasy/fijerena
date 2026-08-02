@@ -53,6 +53,11 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.player.model.channelLabel
+import org.njarasoa.fijerena.core.player.model.computeEndsAt
+import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.formatTime
+import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -382,7 +387,7 @@ private fun MovieDetailsContent(
                         }
                         movieDetail.metadata.duration?.let { duration ->
                             Text(
-                                text = formatDuration(duration, context),
+                                text = formatDuration(duration),
                                 style = scaledStyles.titleMedium,
                                 color = CinemaTextSecondary,
                             )
@@ -421,7 +426,7 @@ private fun MovieDetailsContent(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (hasResume) {
-                            val resumeTimeText = formatMillis(resumePositionMs)
+                            val resumeTimeText = formatTime(resumePositionMs)
                             CinemaPrimaryButton(
                                 onClick = {
                                     onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
@@ -524,7 +529,18 @@ private fun MovieDetailsContent(
                                             val parts = mutableListOf<String>()
                                             audio.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
                                             audio.codecName?.let { codec -> parts.add(codec.uppercase()) }
-                                            audio.channels?.let { ch -> parts.add(channelLabel(ch, context)) }
+                                            audio.channels?.let { ch ->
+                                                parts.add(
+                                                    channelLabel(
+                                                        ch,
+                                                        mono = context.getString(R.string.audio_channel_mono),
+                                                        stereo = context.getString(R.string.audio_channel_stereo),
+                                                        surround51 = context.getString(R.string.audio_channel_5_1),
+                                                        surround71 = context.getString(R.string.audio_channel_7_1),
+                                                        custom = { context.getString(R.string.audio_channel_custom, it) },
+                                                    ),
+                                                )
+                                            }
                                             if (audio.isDefault) parts.add(stringResource(R.string.tech_default_label))
                                             parts.joinToString(" · ")
                                         }
@@ -668,106 +684,4 @@ private fun TechInfoRow(
     }
 }
 
-/**
- * Returns a human-readable channel layout label (e.g., "5.1", "7.1", "Stereo")
- */
-private fun channelLabel(channels: Int, context: android.content.Context): String =
-    when (channels) {
-        1 -> context.getString(R.string.audio_channel_mono)
-        2 -> context.getString(R.string.audio_channel_stereo)
-        6 -> context.getString(R.string.audio_channel_5_1)
-        8 -> context.getString(R.string.audio_channel_7_1)
-        else -> context.getString(R.string.audio_channel_custom, channels)
-    }
-
-/**
- * Returns a human-readable resolution label (e.g., "4K", "1080p", "720p")
- */
-private fun resolutionLabel(
-    width: Int,
-    height: Int,
-): String =
-    when {
-        width >= 3840 || height >= 2160 -> "4K"
-        width >= 2560 || height >= 1440 -> "1440p"
-        width >= 1920 || height >= 1080 -> "1080p"
-        width >= 1280 || height >= 720 -> "720p"
-        width >= 854 || height >= 480 -> "480p"
-        else -> "${height}p"
-    }
-
-/**
- * Parses a duration string that can be either raw seconds ("7200") or h:mm:ss / m:ss format ("1:23:45").
- * Returns total seconds, or null if unparseable.
- */
-private fun parseDurationToSeconds(duration: String): Long? {
-    // Try raw seconds first
-    duration.toLongOrNull()?.let { return it }
-    // Try h:mm:ss or m:ss format
-    val parts = duration.split(":")
-    return when (parts.size) {
-        3 -> {
-            val h = parts[0].toLongOrNull() ?: return null
-            val m = parts[1].toLongOrNull() ?: return null
-            val s = parts[2].toLongOrNull() ?: return null
-            h * 3600 + m * 60 + s
-        }
-        2 -> {
-            val m = parts[0].toLongOrNull() ?: return null
-            val s = parts[1].toLongOrNull() ?: return null
-            m * 60 + s
-        }
-        else -> null
-    }
-}
-
-/**
- * Computes "Ends at" time based on duration and optional resume position.
- * Returns formatted time string like "10:30 PM" or null if duration unavailable.
- */
-private fun computeEndsAt(
-    context: android.content.Context,
-    duration: String?,
-    resumePositionMs: Long,
-): String? {
-    if (duration == null) return null
-    val totalSeconds = parseDurationToSeconds(duration) ?: return null
-    if (totalSeconds <= 0) return null
-    val totalMs = totalSeconds * 1000
-    val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
-    val calendar = java.util.Calendar.getInstance()
-    calendar.add(java.util.Calendar.MILLISECOND, remainingMs.toInt())
-    return org.njarasoa.fijerena.core.player.model.TimeFormat
-        .formatClockTime(context, calendar.time)
-}
-
-/**
- * Formats milliseconds to "1:23:45" or "23:45" style.
- */
-private fun formatMillis(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format("%d:%02d", minutes, seconds)
-    }
-}
-
-/**
- * Formats duration string to human-readable "2h 0m" form.
- * Accepts raw seconds ("7200") or h:mm:ss / m:ss format ("1:23:45").
- */
-private fun formatDuration(duration: String, context: android.content.Context): String {
-    val seconds = parseDurationToSeconds(duration) ?: return duration
-    val hours = seconds / 3600
-    val minutes = (seconds % 3600) / 60
-    return when {
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes}m"
-        else -> "${seconds}s"
-    }
-}
 

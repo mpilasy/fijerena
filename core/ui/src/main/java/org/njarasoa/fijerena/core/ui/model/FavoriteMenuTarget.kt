@@ -1,5 +1,8 @@
 package org.njarasoa.fijerena.core.ui.model
 
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
+
 /**
  * A pending favorite-toggle action from a long-press/context menu on a category or stream.
  */
@@ -18,4 +21,52 @@ sealed class FavoriteMenuTarget {
         val contentType: String,
         val isFavorite: Boolean,
     ) : FavoriteMenuTarget()
+}
+
+/** Display name and current favorite state, for building a confirm/toggle dialog. */
+fun FavoriteMenuTarget.nameAndFavoriteState(): Pair<String, Boolean> =
+    when (this) {
+        is FavoriteMenuTarget.Category -> categoryName to isFavorite
+        is FavoriteMenuTarget.Stream -> itemName to isFavorite
+    }
+
+fun MediaItem.toFavoriteMenuTarget(
+    contentType: String,
+    favoriteIds: ImmutableStringSet,
+): FavoriteMenuTarget.Stream =
+    FavoriteMenuTarget.Stream(
+        itemId = id,
+        itemName = name,
+        categoryId = categoryId,
+        contentType = contentType,
+        isFavorite = favoriteIds.contains(id),
+    )
+
+/**
+ * Builds a [FavoriteMenuTarget] from a long-pressed [item]: a category reference
+ * (e.g. from "Favorite Categories"/"Recent Categories") toggles the category's
+ * favorite state, anything else toggles the stream's.
+ */
+fun MediaItem.toFavoriteMenuTarget(
+    contentType: String,
+    isFavorite: (itemId: String) -> Boolean,
+    isFavoriteCategory: (categoryId: String) -> Boolean,
+): FavoriteMenuTarget {
+    val realCategoryId = providerData["categoryId"]
+    return if (providerData["isCategoryRef"] == "true" && realCategoryId != null) {
+        FavoriteMenuTarget.Category(
+            categoryId = realCategoryId,
+            categoryName = name,
+            contentType = contentType,
+            isFavorite = isFavoriteCategory(realCategoryId),
+        )
+    } else {
+        FavoriteMenuTarget.Stream(
+            itemId = id,
+            itemName = name,
+            categoryId = categoryId,
+            contentType = contentType,
+            isFavorite = isFavorite(id),
+        )
+    }
 }

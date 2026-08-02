@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
@@ -51,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.model.toFavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -433,13 +435,7 @@ internal fun LiveTvSplitLayout(
                         color = CinemaTextPrimary,
                         maxLines = 2,
                     )
-                    val nowSec = System.currentTimeMillis() / 1000L
-                    val fraction =
-                        if (nowProg.duration > 0L) {
-                            ((nowSec - nowProg.startTime).toFloat() / nowProg.duration.toFloat()).coerceIn(0f, 1f)
-                        } else {
-                            0f
-                        }
+                    val fraction = nowProg.elapsedFraction()
                     LinearProgressIndicator(
                         progress = { fraction },
                         modifier = Modifier.fillMaxWidth(),
@@ -538,15 +534,6 @@ private fun neighborChannel(streams: ImmutableMediaList?, currentId: String, dir
     val nextIndex = (currentIndex + direction).mod(list.size)
     return list[nextIndex]
 }
-
-private fun MediaItem.toFavoriteMenuTarget(contentType: String, favoriteIds: ImmutableStringSet) =
-    FavoriteMenuTarget.Stream(
-        itemId = id,
-        itemName = name,
-        categoryId = categoryId,
-        contentType = contentType,
-        isFavorite = favoriteIds.contains(id),
-    )
 
 /** The channel list pane, shared between the "no preview yet" and "split" render paths. */
 @Composable

@@ -6,6 +6,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -23,11 +24,7 @@ internal fun FavoriteContextMenuDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val (itemName, isFavorite) =
-        when (target) {
-            is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
-            is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
-        }
+    val (itemName, isFavorite) = target.nameAndFavoriteState()
 
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 

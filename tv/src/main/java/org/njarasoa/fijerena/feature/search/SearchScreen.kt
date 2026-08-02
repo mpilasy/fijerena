@@ -69,10 +69,14 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
+import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
+import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -93,7 +97,6 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.ui.components.TvSearchTextField
-import java.util.Locale
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
@@ -522,12 +525,7 @@ private fun SearchResultsList(
     }
 
     fun toggleGroup(contentType: String) {
-        expandedGroups =
-            if (expandedGroups.contains(contentType)) {
-                expandedGroups - contentType
-            } else {
-                expandedGroups + contentType
-            }
+        expandedGroups = expandedGroups.toggled(contentType)
     }
 
     if (isSearching && categoryResults.isEmpty() && results.isEmpty()) {
@@ -609,13 +607,7 @@ private fun SearchResultsList(
             // Pre-compute grouped results outside TvLazyColumn to avoid O(N×types) per recomposition
             val groupedByType =
                 remember(categoryResults, results) {
-                    val catsByType = categoryResults.groupBy { it.contentType }
-                    val streamsByType = results.groupBy { it.contentType }
-                    val allTypes = (catsByType.keys + streamsByType.keys).distinct()
-                    val sortedTypes = listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (allTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
-                    sortedTypes.map { type ->
-                        Triple(type, catsByType[type].orEmpty(), streamsByType[type].orEmpty())
-                    }
+                    buildGroupedSearchResults(categoryResults, results)
                 }
 
             TvLazyColumn(
@@ -630,7 +622,7 @@ private fun SearchResultsList(
                             val isExpanded = expandedGroups.contains(type)
                             item(key = "header_$type", contentType = "header") {
                                 CollapsibleHeader(
-                                    title = getContentTypeLabel(type),
+                                    title = type.asContentTypeLabel(),
                                     isExpanded = isExpanded,
                                     onToggle = { toggleGroup(type) },
                                 )
@@ -778,14 +770,6 @@ private fun CollapsibleHeader(
         }
     }
 }
-
-private fun getContentTypeLabel(contentType: String): String =
-    when (contentType) {
-        "LIVE_TV" -> "Live TV"
-        "MOVIES" -> "Movies"
-        "TV_SHOWS" -> "TV Shows"
-        else -> contentType.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-    }
 
 @Composable
 private fun CategoryResultItem(
@@ -949,11 +933,7 @@ private fun SearchFavoriteDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val (itemName, isFavorite) =
-        when (target) {
-            is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
-            is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
-        }
+    val (itemName, isFavorite) = target.nameAndFavoriteState()
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 
     CinemaAlertDialog(

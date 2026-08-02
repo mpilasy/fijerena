@@ -28,6 +28,15 @@ class CategoryViewModel(
         const val FAVORITE_CATEGORIES_ID = "favorite_categories"
         const val LAST_WATCHED_CATEGORY_ID = "last_watched"
         const val RECENTLY_VIEWED_CATEGORIES_ID = "recently_viewed_categories"
+
+        val VIRTUAL_CATEGORY_IDS =
+            setOf(
+                FAVORITES_CATEGORY_ID,
+                FAVORITE_CATEGORIES_ID,
+                LAST_WATCHED_CATEGORY_ID,
+                CONTINUE_WATCHING_CATEGORY_ID,
+                RECENTLY_VIEWED_CATEGORIES_ID,
+            )
     }
 
     sealed class UiState {
@@ -591,3 +600,7 @@ class CategoryViewModel(
         return repository.getWatchHistoryForContentTypeSuspend(contentType)
     }
 }
+
+/** Splits into (virtual, regular) categories — single pass instead of two filters. */
+fun List<MediaCategory>.partitionVirtual(): Pair<List<MediaCategory>, List<MediaCategory>> =
+    partition { it.id in CategoryViewModel.VIRTUAL_CATEGORY_IDS }

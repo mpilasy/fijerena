@@ -21,6 +21,14 @@ data class EpgProgram(
     val duration: Long get() = endTime - startTime
 }
 
+/** Fraction of this program elapsed at [nowEpochSec], clamped to [0, 1]. */
+fun EpgProgram.elapsedFraction(nowEpochSec: Long = System.currentTimeMillis() / 1000L): Float =
+    if (duration > 0L) {
+        ((nowEpochSec - startTime).toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+
 @Serializable
 data class EpgResponse(
     @SerialName("epg_listings") val listings: List<EpgProgram> = emptyList(),

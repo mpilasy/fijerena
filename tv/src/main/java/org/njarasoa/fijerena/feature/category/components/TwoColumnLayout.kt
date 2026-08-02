@@ -32,6 +32,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.model.toFavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -272,27 +273,12 @@ internal fun TwoColumnLayout(
                     }
                 },
                 onStreamLongPress = { item ->
-                    // Category reference items (from "Favorite Categories" / "Recent Categories")
-                    // should toggle the category favorite, not create a stream favorite
-                    val realCategoryId = item.providerData["categoryId"]
-                    if (item.providerData["isCategoryRef"] == "true" && realCategoryId != null) {
-                        favoriteMenuTarget =
-                            FavoriteMenuTarget.Category(
-                                categoryId = realCategoryId,
-                                categoryName = item.name,
-                                contentType = contentType,
-                                isFavorite = categoryViewModel.isFavoriteCategory(realCategoryId, contentType),
-                            )
-                    } else {
-                        favoriteMenuTarget =
-                            FavoriteMenuTarget.Stream(
-                                itemId = item.id,
-                                itemName = item.name,
-                                categoryId = item.categoryId,
-                                contentType = contentType,
-                                isFavorite = categoryViewModel.isFavorite(item.id, contentType),
-                            )
-                    }
+                    favoriteMenuTarget =
+                        item.toFavoriteMenuTarget(
+                            contentType = contentType,
+                            isFavorite = { categoryViewModel.isFavorite(it, contentType) },
+                            isFavoriteCategory = { categoryViewModel.isFavoriteCategory(it, contentType) },
+                        )
                 },
                 onRefreshStreams = onRefreshStreams,
                 modifier =
