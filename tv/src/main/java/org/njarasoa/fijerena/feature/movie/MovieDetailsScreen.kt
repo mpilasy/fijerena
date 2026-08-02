@@ -121,7 +121,9 @@ fun MovieDetailsScreen(
         if (entity != null) {
             val password = providerRepo.getPassword(entity.id) ?: ""
             val provider = MediaProviderFactory.create(entity, appContext, password)
-            provider.connect()
+            if (!provider.isConnected()) {
+                provider.connect()
+            }
             repo.setProvider(provider)
         }
         mediaRepository = repo
