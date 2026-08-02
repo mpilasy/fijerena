@@ -73,7 +73,11 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
-import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
+import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
+import org.njarasoa.fijerena.core.network.xmltv.formatAiringTime
+import org.njarasoa.fijerena.core.network.xmltv.formatCount
+import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
+import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
@@ -91,6 +95,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
+import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -682,42 +688,13 @@ private fun ResultsContent(
     // Filter date groups when hiding unmatched channels
     val displayDateGroups =
         remember(results.dateGroups, matchedOnly) {
-            if (matchedOnly) {
-                results.dateGroups.mapNotNull { group ->
-                    val filteredPrograms =
-                        group.programs.mapNotNull { program ->
-                            val matchedAirings = program.airings.filter { it.matchedStream != null }
-                            if (matchedAirings.isEmpty()) {
-                                null
-                            } else {
-                                program.copy(airings = matchedAirings)
-                            }
-                        }
-                    if (filteredPrograms.isEmpty()) {
-                        null
-                    } else {
-                        group.copy(programs = filteredPrograms)
-                    }
-                }
-            } else {
-                results.dateGroups
-            }
+            if (matchedOnly) filterMatchedOnly(results.dateGroups) else results.dateGroups
         }
 
     Column {
         // Stats row
-        val timeStr = "%.1f".format(results.searchTimeMs / 1000.0)
-        val truncatedSuffix = if (results.truncated) " (truncated)" else ""
-        val sourceSuffix = when {
-            !results.searchedFromIndex -> " [XML scan]"
-            else -> when (results.searchPath) {
-                EpgSearchPath.FTS_PHRASE -> " [FTS phrase]"
-                EpgSearchPath.FTS_AND -> " [FTS AND]"
-                EpgSearchPath.NONE -> " [indexed]"
-            }
-        }
         Text(
-            text = "${results.totalPrograms} programs (${results.totalAirings} airings) — ${timeStr}s$truncatedSuffix$sourceSuffix",
+            text = results.statsLine(),
             style =
                 MaterialTheme.typography.titleMedium.copy(
                     fontSize =
@@ -734,12 +711,7 @@ private fun ResultsContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text =
-                        if (matchedOnly) {
-                            "No matched results for '${results.query}'"
-                        } else {
-                            "No results found for '${results.query}'"
-                        },
+                    text = results.noResultsMessage(matchedOnly),
                     style =
                         MaterialTheme.typography.bodyLarge.copy(
                             fontSize =
@@ -1090,50 +1062,3 @@ private fun AiringRow(
     }
 }
 
-private fun formatAiringTime(
-    context: android.content.Context,
-    startEpoch: Long,
-    endEpoch: Long,
-): String {
-    val startText =
-        org.njarasoa.fijerena.core.player.model.TimeFormat
-            .formatTime(context, startEpoch)
-    val endText =
-        org.njarasoa.fijerena.core.player.model.TimeFormat
-            .formatTime(context, endEpoch)
-    return "$startText – $endText"
-}
-
-private fun formatFileSize(bytes: Long): String =
-    when {
-        bytes >= 1_073_741_824L -> "%.1f GB".format(bytes / 1_073_741_824.0)
-        bytes >= 1_048_576L -> "%.1f MB".format(bytes / 1_048_576.0)
-        bytes >= 1024L -> "%.1f KB".format(bytes / 1024.0)
-        else -> "$bytes B"
-    }
-
-private fun formatCount(count: Int): String =
-    when {
-        count >= 1_000_000 -> "%.1fM".format(count / 1_000_000.0)
-        count >= 1_000 -> "%.1fK".format(count / 1_000.0)
-        else -> count.toString()
-    }
-
-private fun freshnessLabel(
-    oldestIngestedAtMs: Long?,
-    nowEpoch: Long,
-    staleSourceCount: Int,
-): String {
-    if (oldestIngestedAtMs == null) return "No EPG sources"
-    if (oldestIngestedAtMs == 0L) return "Never refreshed"
-    val ageSec = nowEpoch - oldestIngestedAtMs / 1000L
-    val ageLabel =
-        when {
-            ageSec < 60 -> "just now"
-            ageSec < 3600 -> "${ageSec / 60}m ago"
-            ageSec < 86_400 -> "${ageSec / 3600}h ago"
-            else -> "${ageSec / 86_400}d ago"
-        }
-    val suffix = if (staleSourceCount > 0) " • $staleSourceCount stale" else ""
-    return "Updated $ageLabel$suffix"
-}

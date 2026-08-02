@@ -50,3 +50,79 @@ fun SeriesDetail.sortedSeasons(seasonName: (Int) -> String): List<SeasonInfo> {
             )
         }
 }
+
+/** All episodes across [sortedSeasons], each season's episodes sorted by episode number. */
+fun SeriesDetail.flattenedEpisodes(sortedSeasons: List<SeasonInfo>): List<EpisodeItem> {
+    val result = ArrayList<EpisodeItem>(episodes.values.sumOf { it.size })
+    for (season in sortedSeasons) {
+        episodes[season.seasonNumber.toString()]?.sortedBy { it.episodeNumber }?.let { result.addAll(it) }
+    }
+    return result
+}
+
+/** The season number containing [episodeId], or null if not found. */
+fun SeriesDetail.seasonNumberContaining(episodeId: String): Int? =
+    episodes.entries
+        .firstOrNull { (_, eps) -> eps.any { it.id == episodeId } }
+        ?.key
+        ?.toIntOrNull()
+
+/**
+ * Which season should be expanded by default in an accordion-style season list:
+ * the resume season if known, else the first season when there's more than one,
+ * else none.
+ */
+fun defaultExpandedSeason(
+    resumeSeasonNumber: Int?,
+    sortedSeasons: List<SeasonInfo>,
+): Set<Int> =
+    when {
+        resumeSeasonNumber != null -> setOf(resumeSeasonNumber)
+        sortedSeasons.size > 1 -> setOf(sortedSeasons.first().seasonNumber)
+        else -> emptySet()
+    }
+
+/**
+ * First season (in [sortedSeasons] order) containing an episode for which
+ * [isCompleted] returns false — used to auto-expand the season with the next
+ * unwatched/in-progress episode.
+ */
+fun firstSeasonWithUnwatchedEpisode(
+    sortedSeasons: List<SeasonInfo>,
+    episodesBySeason: Map<String, List<EpisodeItem>>,
+    isCompleted: (episodeId: String) -> Boolean,
+): Int? {
+    for (season in sortedSeasons) {
+        val episodes = episodesBySeason[season.seasonNumber.toString()] ?: continue
+        for (episode in episodes) {
+            if (!isCompleted(episode.id)) return season.seasonNumber
+        }
+    }
+    return null
+}
+
+/**
+ * Flat-list index of [targetEpisodeId] within an accordion season list (header
+ * rows counted when [hasMultipleSeasons]), or null if it isn't in an expanded
+ * season.
+ */
+fun episodeScrollIndex(
+    sortedSeasons: List<SeasonInfo>,
+    episodesBySeason: Map<String, List<EpisodeItem>>,
+    hasMultipleSeasons: Boolean,
+    targetEpisodeId: String,
+    isExpanded: (seasonNumber: Int) -> Boolean,
+): Int? {
+    var index = 0
+    for (season in sortedSeasons) {
+        val seasonEpisodes = episodesBySeason[season.seasonNumber.toString()] ?: emptyList()
+        val expanded = !hasMultipleSeasons || isExpanded(season.seasonNumber)
+        if (hasMultipleSeasons) index++
+        if (expanded) {
+            val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetEpisodeId }
+            if (episodeIndex >= 0) return index + episodeIndex
+            index += seasonEpisodes.size
+        }
+    }
+    return null
+}

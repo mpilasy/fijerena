@@ -58,6 +58,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -67,16 +68,6 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
-
-// Extracted as a top-level constant to avoid allocating a new Set on every recomposition
-private val VIRTUAL_CATEGORY_IDS =
-    setOf(
-        CategoryViewModel.FAVORITES_CATEGORY_ID,
-        CategoryViewModel.FAVORITE_CATEGORIES_ID,
-        CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
-        CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
-        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID,
-    )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -92,10 +83,9 @@ internal fun CategoryList(
     onCategoryLongPress: (MediaCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Single-pass partition instead of two separate filter() calls
     val (virtualCategories, regularCategories) =
         remember(categories) {
-            categories.partition { it.id in VIRTUAL_CATEGORY_IDS }
+            categories.partitionVirtual()
         }
 
     val listState = rememberTvLazyListState()
@@ -104,7 +94,7 @@ internal fun CategoryList(
     // Auto-scroll and focus on selected category
     LaunchedEffect(regularCategories, selectedCategoryId) {
         if (selectedCategoryId != null) {
-            if (selectedCategoryId in VIRTUAL_CATEGORY_IDS) {
+            if (selectedCategoryId in CategoryViewModel.VIRTUAL_CATEGORY_IDS) {
                 // Focus virtual category in sidebar
                 try {
                     focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus()

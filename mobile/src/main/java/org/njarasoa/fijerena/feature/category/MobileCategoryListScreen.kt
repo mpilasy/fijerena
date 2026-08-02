@@ -79,6 +79,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
@@ -93,6 +94,8 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
+import org.njarasoa.fijerena.core.ui.model.toFavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -102,6 +105,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
@@ -578,27 +582,12 @@ fun MobileCategoryListScreen(
                                         }
                                     },
                                     onItemLongPress = { item ->
-                                        // Category reference items (from "Favorite Categories" / "Recent Categories")
-                                        // should toggle the category favorite, not create a stream favorite
-                                        val realCategoryId = item.providerData["categoryId"]
-                                        if (item.providerData["isCategoryRef"] == "true" && realCategoryId != null) {
-                                            favoriteMenuTarget =
-                                                FavoriteMenuTarget.Category(
-                                                    categoryId = realCategoryId,
-                                                    categoryName = item.name,
-                                                    contentType = contentType,
-                                                    isFavorite = viewModel.isFavoriteCategory(realCategoryId, contentType),
-                                                )
-                                        } else {
-                                            favoriteMenuTarget =
-                                                FavoriteMenuTarget.Stream(
-                                                    itemId = item.id,
-                                                    itemName = item.name,
-                                                    categoryId = item.categoryId,
-                                                    contentType = contentType,
-                                                    isFavorite = viewModel.isFavorite(item.id, contentType),
-                                                )
-                                        }
+                                        favoriteMenuTarget =
+                                            item.toFavoriteMenuTarget(
+                                                contentType = contentType,
+                                                isFavorite = { viewModel.isFavorite(it, contentType) },
+                                                isFavoriteCategory = { viewModel.isFavoriteCategory(it, contentType) },
+                                            )
                                     },
                                 )
                             }
@@ -693,13 +682,7 @@ fun MobileCategoryListScreen(
                                             color = CinemaTextPrimary,
                                             maxLines = 2,
                                         )
-                                        val nowSec = System.currentTimeMillis() / 1000L
-                                        val fraction =
-                                            if (nowProg.duration > 0L) {
-                                                ((nowSec - nowProg.startTime).toFloat() / nowProg.duration.toFloat()).coerceIn(0f, 1f)
-                                            } else {
-                                                0f
-                                            }
+                                        val fraction = nowProg.elapsedFraction()
                                         LinearProgressIndicator(
                                             progress = { fraction },
                                             modifier = Modifier.fillMaxWidth(),
@@ -862,16 +845,6 @@ private fun FavoriteHintBanner(modifier: Modifier = Modifier) {
     }
 }
 
-// Extracted as a top-level constant to avoid allocating a new Set on every recomposition
-private val VIRTUAL_CATEGORY_IDS =
-    setOf(
-        CategoryViewModel.FAVORITES_CATEGORY_ID,
-        CategoryViewModel.FAVORITE_CATEGORIES_ID,
-        CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
-        CategoryViewModel.CONTINUE_WATCHING_CATEGORY_ID,
-        CategoryViewModel.RECENTLY_VIEWED_CATEGORIES_ID,
-    )
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CategoryChipRow(
@@ -882,10 +855,9 @@ private fun CategoryChipRow(
     onCategorySelected: (String) -> Unit,
     onCategoryLongPress: (org.njarasoa.fijerena.core.player.domain.MediaCategory) -> Unit = {},
 ) {
-    // Single-pass partition instead of two separate filter() calls
     val (virtualCategories, regularCategories) =
         remember(categories) {
-            categories.partition { it.id in VIRTUAL_CATEGORY_IDS }
+            categories.partitionVirtual()
         }
 
     val listState = rememberLazyListState()
@@ -900,7 +872,7 @@ private fun CategoryChipRow(
     val enteredCategoryIds = remember { mutableSetOf<String>() }
 
     LaunchedEffect(selectedCategoryId) {
-        if (selectedCategoryId != null && selectedCategoryId !in VIRTUAL_CATEGORY_IDS) {
+        if (selectedCategoryId != null && selectedCategoryId !in CategoryViewModel.VIRTUAL_CATEGORY_IDS) {
             val index = regularCategories.indexOfFirst { it.id == selectedCategoryId }
             if (index >= 0) {
                 listState.animateScrollToItem(index)
@@ -1106,11 +1078,7 @@ private fun MobileFavoriteContextMenuDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val (itemName, isFavorite) =
-        when (target) {
-            is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
-            is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
-        }
+    val (itemName, isFavorite) = target.nameAndFavoriteState()
 
     val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
 

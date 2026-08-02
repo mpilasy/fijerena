@@ -51,8 +51,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
-import org.njarasoa.fijerena.ui.player.utils.formatBitrate
-import org.njarasoa.fijerena.ui.player.utils.formatTime
+import org.njarasoa.fijerena.core.player.model.formatBitrate
+import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable

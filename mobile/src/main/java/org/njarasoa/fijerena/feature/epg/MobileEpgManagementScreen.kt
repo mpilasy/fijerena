@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.network.EPG_REFRESH_INTERVAL_OPTIONS
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -69,16 +70,7 @@ fun MobileEpgManagementScreen(onBack: () -> Unit) {
     var showClearConfirm by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showIntervalPicker by remember { mutableStateOf(false) }
-    val intervalOptions = remember {
-        listOf(
-            -1 to "Never",
-            4 to "4 hours",
-            8 to "8 hours",
-            12 to "12 hours",
-            24 to "24 hours",
-            48 to "48 hours"
-        )
-    }
+    val intervalOptions = EPG_REFRESH_INTERVAL_OPTIONS
     var deleteSelectedIds by remember { mutableStateOf<Set<Long>?>(null) }
 
     Scaffold(

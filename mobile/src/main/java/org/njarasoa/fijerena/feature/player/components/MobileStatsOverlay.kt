@@ -39,8 +39,8 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.feature.player.utils.formatBitrate
-import org.njarasoa.fijerena.feature.player.utils.formatTime
+import org.njarasoa.fijerena.core.player.model.formatBitrate
+import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess

@@ -31,12 +31,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
+import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
+import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -51,7 +55,6 @@ import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
-import java.util.Locale
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -338,12 +341,7 @@ private fun SearchResults(
     var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
 
     fun toggleGroup(contentType: String) {
-        expandedGroups =
-            if (expandedGroups.contains(contentType)) {
-                expandedGroups - contentType
-            } else {
-                expandedGroups + contentType
-            }
+        expandedGroups = expandedGroups.toggled(contentType)
     }
 
     val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
@@ -382,13 +380,7 @@ private fun SearchResults(
         // Pre-compute grouped results outside LazyColumn to avoid O(N×types) filter per recomposition
         val groupedByType =
             remember(categoryResults, results) {
-                val catsByType = categoryResults.groupBy { it.contentType }
-                val streamsByType = results.groupBy { it.contentType }
-                val allTypes = (catsByType.keys + streamsByType.keys).distinct()
-                val sortedTypes = listOf("LIVE_TV", "MOVIES", "TV_SHOWS") + (allTypes - setOf("LIVE_TV", "MOVIES", "TV_SHOWS"))
-                sortedTypes.map { type ->
-                    Triple(type, catsByType[type].orEmpty(), streamsByType[type].orEmpty())
-                }
+                buildGroupedSearchResults(categoryResults, results)
             }
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -461,7 +453,7 @@ private fun SearchResults(
                         val isExpanded = expandedGroups.contains(type)
                         item(key = "header_$type", contentType = "header") {
                             MobileCollapsibleHeader(
-                                title = getContentTypeLabel(type),
+                                title = type.asContentTypeLabel(),
                                 isExpanded = isExpanded,
                                 onToggle = { toggleGroup(type) },
                             )
@@ -640,14 +632,6 @@ private fun MobileCollapsibleHeader(
     }
 }
 
-private fun getContentTypeLabel(contentType: String): String =
-    when (contentType) {
-        "LIVE_TV" -> "Live TV"
-        "MOVIES" -> "Movies"
-        "TV_SHOWS" -> "TV Shows"
-        else -> contentType.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-    }
-
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun CategoryResultCard(
@@ -755,11 +739,7 @@ private fun MobileSearchFavoriteDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val (itemName, isFavorite) =
-        when (target) {
-            is FavoriteMenuTarget.Category -> target.categoryName to target.isFavorite
-            is FavoriteMenuTarget.Stream -> target.itemName to target.isFavorite
-        }
+    val (itemName, isFavorite) = target.nameAndFavoriteState()
     val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
 
     CinemaAlertDialog(

@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 class SearchViewModel(
@@ -434,3 +435,22 @@ class SearchViewModel(
         }
     }
 }
+
+/**
+ * Groups search results by content type, with Live TV/Movies/TV Shows sorted first
+ * (in that order) and any other types appended after.
+ */
+fun buildGroupedSearchResults(
+    categoryResults: List<SearchViewModel.CategorySearchResult>,
+    results: List<SearchViewModel.SearchResult>,
+): List<Triple<String, List<SearchViewModel.CategorySearchResult>, List<SearchViewModel.SearchResult>>> {
+    val catsByType = categoryResults.groupBy { it.contentType }
+    val streamsByType = results.groupBy { it.contentType }
+    val allTypes = (catsByType.keys + streamsByType.keys).distinct()
+    val priorityTypes = listOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS)
+    val sortedTypes = priorityTypes + (allTypes - priorityTypes.toSet())
+    return sortedTypes.map { type -> Triple(type, catsByType[type].orEmpty(), streamsByType[type].orEmpty()) }
+}
+
+/** Adds [item] if absent, removes it if present. */
+fun Set<String>.toggled(item: String): Set<String> = if (contains(item)) this - item else this + item

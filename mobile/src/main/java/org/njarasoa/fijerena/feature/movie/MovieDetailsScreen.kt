@@ -22,6 +22,11 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.player.model.channelLabel
+import org.njarasoa.fijerena.core.player.model.computeEndsAt
+import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.formatTime
+import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -285,7 +290,7 @@ private fun MovieDetailsContent(
         // Play / Resume buttons
         val hasResume = resumePositionMs > 0L
         if (hasResume) {
-            val resumeTimeText = formatMillis(resumePositionMs)
+            val resumeTimeText = formatTime(resumePositionMs)
             CinemaButton(
                 onClick = {
                     onPlayMovie(movieId, movieDetail.name, extension, false)
@@ -499,82 +504,3 @@ private fun MobileTechInfoRow(
     }
 }
 
-private fun channelLabel(channels: Int): String =
-    when (channels) {
-        1 -> "Mono"
-        2 -> "Stereo"
-        6 -> "5.1"
-        8 -> "7.1"
-        else -> "${channels}ch"
-    }
-
-private fun resolutionLabel(
-    width: Int,
-    height: Int,
-): String =
-    when {
-        width >= 3840 || height >= 2160 -> "4K"
-        width >= 2560 || height >= 1440 -> "1440p"
-        width >= 1920 || height >= 1080 -> "1080p"
-        width >= 1280 || height >= 720 -> "720p"
-        width >= 854 || height >= 480 -> "480p"
-        else -> "${height}p"
-    }
-
-private fun parseDurationToSeconds(duration: String): Long? {
-    duration.toLongOrNull()?.let { return it }
-    val parts = duration.split(":")
-    return when (parts.size) {
-        3 -> {
-            val h = parts[0].toLongOrNull() ?: return null
-            val m = parts[1].toLongOrNull() ?: return null
-            val s = parts[2].toLongOrNull() ?: return null
-            h * 3600 + m * 60 + s
-        }
-        2 -> {
-            val m = parts[0].toLongOrNull() ?: return null
-            val s = parts[1].toLongOrNull() ?: return null
-            m * 60 + s
-        }
-        else -> null
-    }
-}
-
-private fun computeEndsAt(
-    context: android.content.Context,
-    duration: String?,
-    resumePositionMs: Long,
-): String? {
-    if (duration == null) return null
-    val totalSeconds = parseDurationToSeconds(duration) ?: return null
-    if (totalSeconds <= 0) return null
-    val totalMs = totalSeconds * 1000
-    val remainingMs = if (resumePositionMs > 0) (totalMs - resumePositionMs).coerceAtLeast(0) else totalMs
-    val calendar = java.util.Calendar.getInstance()
-    calendar.add(java.util.Calendar.MILLISECOND, remainingMs.toInt())
-    return org.njarasoa.fijerena.core.player.model.TimeFormat
-        .formatClockTime(context, calendar.time)
-}
-
-private fun formatMillis(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format("%d:%02d", minutes, seconds)
-    }
-}
-
-private fun formatDuration(duration: String): String {
-    val seconds = parseDurationToSeconds(duration) ?: return duration
-    val hours = seconds / 3600
-    val minutes = (seconds % 3600) / 60
-    return when {
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes}m"
-        else -> "${seconds}s"
-    }
-}
