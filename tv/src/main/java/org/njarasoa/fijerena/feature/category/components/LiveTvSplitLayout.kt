@@ -458,8 +458,20 @@ internal fun LiveTvSplitLayout(
                 }
             }
 
+            // A freshly-picked channel (search/browse) hasn't necessarily hit watch history yet
+            // (loadStreamLight never writes it, and even loadStream's write is delayed) — without
+            // this, target could be entirely absent from the list below, leaving no row to OK-press
+            // for promote. Prepend it so it's always reachable, matching the comment above.
+            val displayedLastWatched =
+                remember(lastWatchedStreams, target.id) {
+                    if (lastWatchedStreams.any { it.id == target.id }) {
+                        lastWatchedStreams
+                    } else {
+                        listOf(target) + lastWatchedStreams
+                    }
+                }
             LiveTvChannelList(
-                streams = ImmutableMediaList(lastWatchedStreams),
+                streams = ImmutableMediaList(displayedLastWatched),
                 streamsLoading = lastWatchedStreamsLoading,
                 // Hardcoded, not the real browsed/searched/EPG'd-into selection — the panel's
                 // list and title always reflect history here, regardless of entry path (see
