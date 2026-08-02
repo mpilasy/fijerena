@@ -74,6 +74,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.sortedSeasons
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -272,29 +273,9 @@ private fun EpisodeListContent(
         }
     }
 
-    // Use API seasons if available, otherwise derive from episode map keys.
-    // Skip seasons with no actual episodes (e.g. an empty "Season 0" specials entry).
     val sortedSeasons =
         remember(seriesDetail) {
-            val apiSeasons =
-                seriesDetail.seasons
-                    .filter { season -> seriesDetail.episodes[season.seasonNumber.toString()]?.isNotEmpty() == true }
-                    .sortedBy { it.seasonNumber }
-            if (apiSeasons.isNotEmpty()) {
-                apiSeasons
-            } else {
-                seriesDetail.episodes.keys
-                    .mapNotNull { key -> key.toIntOrNull() }
-                    .sorted()
-                    .map { num ->
-                        SeasonInfo(
-                            seasonNumber = num,
-                            name = context.getString(R.string.series_season_name_format, num),
-                            episodeCount =
-                                seriesDetail.episodes[num.toString()]?.size ?: 0,
-                        )
-                    }
-            }
+            seriesDetail.sortedSeasons { num -> context.getString(R.string.series_season_name_format, num) }
         }
 
     // Pre-sort episodes per season — avoid re-sorting inside LazyColumn on every recomposition
