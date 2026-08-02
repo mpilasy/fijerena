@@ -1,10 +1,10 @@
 # Audit: duplicate logic in mobile/tv worth sharing
 
 ## Status (2026-08-02)
-Tier 1 items A–E implemented and committed, except two small D items
-(`epgDevStats` suffix, `parseEpgRefreshHour`) and two small E items (`epgDbStats`
-derivation, `isBusy` derivation, `isOnAir`/`isSoon`/tap-action) — left as follow-up,
-low value relative to effort. Tier 2 untouched. See git log for the commits.
+Tier 1 done and committed (`03db5e31`), except four small leftovers noted inline
+below (marked TODO) — left as follow-up, low value relative to effort. Tier 2
+untouched, still backlog. Verified via clean compile of every touched module
+plus a live smoke test on both emulators (TV + mobile launch, no crashes).
 
 ## Context
 Following the `sortedSeasons()` and `FavoriteMenuTarget` extractions, user asked for a
@@ -35,58 +35,52 @@ already-diverged copies) and one stray file, for the user's awareness, not auto-
 
 ---
 
-## Tier 1 — pure-function extractions (do now)
+## Tier 1 — pure-function extractions (DONE, commit `03db5e31`)
 
-### A. Time/duration formatting → `core/player`
-Collapse two near-identical `PlayerUtils.kt` files
-(`mobile/.../feature/player/utils/PlayerUtils.kt`,
-`tv/.../ui/player/utils/PlayerUtils.kt`) plus 4 copies of the same helpers in
-`MovieDetailsScreen.kt`/`EpisodeSelectionScreen.kt` (mobile + tv) into one
-`core/player/model/TimeFormat.kt` (already exists, extend it):
-`formatTime`/`formatMillis` (same function, two names), `formatEpochTime`,
-`formatBitrate`, `parseDurationToSeconds`, `computeEndsAt`, `formatDuration`,
-`channelLabel`, `resolutionLabel`. Delete both `PlayerUtils.kt` files once callers
-point at core.
+### A. Time/duration formatting → `core/player` — DONE
+Collapsed two near-identical `PlayerUtils.kt` files plus 4 copies of the same
+helpers in `MovieDetailsScreen.kt`/`EpisodeSelectionScreen.kt` (mobile + tv) into
+`core/player/model/PlaybackFormat.kt` (new file, sits next to `TimeFormat.kt`):
+`formatTime`, `formatEpochTime`, `formatBitrate`, `parseDurationToSeconds`,
+`computeEndsAt`, `formatDuration`, `channelLabel`, `resolutionLabel`. Both
+`PlayerUtils.kt` files deleted.
 
-### B. `SeriesDetail`/episode-list state → `core/player/domain/SeriesDetail.kt`
-Same file as `sortedSeasons()`. Extract from `EpisodeSelectionScreen.kt` (mobile + tv):
-- `seasonNumberContaining(episodeId): Int?` (currently inline `resumeSeasonNumber` calc)
-- `defaultExpandedSeason(resumeSeason, sortedSeasons): Set<Int>`
-- `flattenedEpisodes(sortedSeasons): List<EpisodeItem>` (mobile has this as
-  `flattenEpisodes()`; tv inlines the same algorithm — unify)
-- pure part of "first season with unwatched episode" — takes a
-  `Map<String, WatchProgress>` the caller already fetched; the suspend fetch itself
-  stays in each screen's `LaunchedEffect`
-- episode-scroll-index computation (walk seasons/episodes to find target offset)
+### B. `SeriesDetail`/episode-list state → `core/player/domain/SeriesDetail.kt` — DONE
+Added `seasonNumberContaining`, `defaultExpandedSeason`, `flattenedEpisodes`,
+`firstSeasonWithUnwatchedEpisode`, `episodeScrollIndex`, all wired into both
+`EpisodeSelectionScreen.kt` files. Fixed a latent inconsistency along the way: TV's
+unwatched-season loop was re-sorting episodes inline instead of reusing the
+pre-sorted map mobile already used — both now call the same function over the
+same pre-sorted data.
 
-### C. Search/category pure derivations
-- `ContentType` display label (`getContentTypeLabel`, 2 copies) →
-  `core/player/domain/ContentType.kt` as `.displayLabel()`
-- Grouped-by-type builder (`groupedByType`, 2 copies) → `core/ui` near `SearchViewModel`
-- `Set<String>.toggled(key)` helper (`toggleGroup`, 2 copies) → small core/ui util
-- `VIRTUAL_CATEGORY_IDS` partition (2 copies) → core/ui near `CategoryViewModel`
-- `FavoriteMenuTarget` → (name, isFavorite) mapping (4 copies) and
-  `MediaItem.toFavoriteMenuTarget()` (tv already has this named; mobile inlines it
-  twice) → both into `core/ui/model/FavoriteMenuTarget.kt` (the file created in the
-  last pass)
+### C. Search/category pure derivations — DONE
+- `ContentType.asContentTypeLabel()` in `core/player/domain/ContentType.kt`
+- `buildGroupedSearchResults`, `Set<String>.toggled()` in
+  `core/ui/viewmodels/SearchViewModel.kt`
+- `CategoryViewModel.VIRTUAL_CATEGORY_IDS` + `List<MediaCategory>.partitionVirtual()`
+  in `core/ui/viewmodels/CategoryViewModel.kt`
+- `FavoriteMenuTarget.nameAndFavoriteState()` and two `MediaItem.toFavoriteMenuTarget()`
+  overloads (plain favorite-list check, and the category-ref-aware long-press variant
+  that also unified mobile's category-list long-press with TV's `TwoColumnLayout`) in
+  `core/ui/model/FavoriteMenuTarget.kt`
 
-### D. EPG pure derivations
-- `EpgProgram.elapsedFraction(nowEpochSec)` (2 copies) →
-  `core/player/model/EpgModels.kt`
-- `epgDevStats`/dev-stats-suffix (2 copies), `intervalOptions` constant (2 copies),
-  `parseEpgRefreshHour` (2 copies) → `core/network` near the EPG settings model or
-  `core/ui`
+### D. EPG pure derivations — MOSTLY DONE
+- DONE: `EpgProgram.elapsedFraction()` in `core/player/model/EpgModels.kt`;
+  `EPG_REFRESH_INTERVAL_OPTIONS` constant in `core/network/AppSettings.kt`
+- TODO (left as follow-up): `epgDevStats`/dev-stats-suffix (2 copies),
+  `parseEpgRefreshHour` (2 copies) — low value, skipped this pass
 
-### E. EPG browser pure derivations → `core/network` near `EpgBrowserAiring`/`EpgBrowserProgram`
-This pair had the cleanest, largest duplication: `filterMatchedOnly` (23 lines),
-`formatAiringTime`, `formatFileSize`, `formatCount`, `freshnessLabel`,
-stats-row text builder, no-results message text, `epgDbStats` derivation,
-`isBusy` (isRefreshing) derivation, `isOnAir`/`isSoon`/`isMatched` + tap-action
-decision (`AiringStatus`/`AiringTapAction`) — all pure functions of
-`EpgBrowserAiring`/`EpgFileManager.MultiSourceState`, all verbatim-identical between
-`MobileEpgBrowserScreen.kt` and `TvEpgBrowserScreen.kt`.
+### E. EPG browser pure derivations → `core/network/xmltv/EpgBrowserModels.kt` — MOSTLY DONE
+DONE: `filterMatchedOnly`, `formatAiringTime`, `formatFileSize`, `formatCount`,
+`freshnessLabel` (in `EpgBrowserModels.kt`), plus `EpgBrowserViewModel.UiState.Results
+.statsLine()`/`.noResultsMessage()` (in `core/ui/viewmodels/EpgBrowserViewModel.kt`
+— these needed the `Results` state class so landed there instead of
+`EpgBrowserModels.kt`).
+TODO (left as follow-up): `epgDbStats` derivation, `isBusy` (isRefreshing)
+derivation, `isOnAir`/`isSoon`/`isMatched` + tap-action decision — lower value,
+skipped this pass.
 
-**Verification for Tier 1:** `./gradlew :core:player:compileDebugKotlin :core:network:compileDebugKotlin :core:ui:compileDebugKotlin :mobile:compileDebugKotlin :tv:compileDebugKotlin`, then launch both emulators and smoke-check search, category list, EPG guide/browser, episode list, movie details (same manual pass done for the season fix).
+**Verification:** `./gradlew :core:player:compileDebugKotlin :core:network:compileDebugKotlin :core:ui:compileDebugKotlin :mobile:compileDebugKotlin :tv:compileDebugKotlin` — clean. Installed both debug APKs on `emulator-5554` (TV) and `emulator-5556` (mobile), launched, no crashes in logcat.
 
 ---
 

@@ -26,4 +26,4 @@ Prefer real hardware for validation:
 
 ## Performance Optimization Batch — Complete
 
-All 14 P0/P1/P2 items from the original batch (EpgIndexer allocations, GlassPanel/ClockDisplay/ContentTypeSelectionScreen hoisting, collectAsStateWithLifecycle migration, SettingsExportManager/UiScaleSettingsCard cleanup, audio processing) landed — see git history for details. The follow-on player-overlay allocation pass is tracked separately in [docs/player-overlay-performance-plan.md](docs/player-overlay-performance-plan.md) (also complete).
+All 14 P0/P1/P2 items from the original batch (EpgIndexer allocations, GlassPanel/ClockDisplay/ContentTypeSelectionScreen hoisting, collectAsStateWithLifecycle migration, SettingsExportManager/UiScaleSettingsCard cleanup, audio processing) landed — see git history for details. The follow-on player-overlay allocation pass (tracked separately) is also complete — see git history for that plan's contents.
