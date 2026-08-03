@@ -22,20 +22,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -110,14 +107,7 @@ fun MobileEpgTimeline(
             selectedDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
         }
 
-    // Shared "now" timestamp, refreshed every 60s to avoid per-chip System.currentTimeMillis() calls
-    var nowEpochSeconds by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(60_000L)
-            nowEpochSeconds = System.currentTimeMillis() / 1000
-        }
-    }
+    val nowEpochSeconds = rememberNowEpochSeconds()
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
