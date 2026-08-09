@@ -32,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,13 +50,13 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -103,14 +102,7 @@ fun EpgGridLayout(
     val scale = LocalUiScale.current
     var isSearchActive by remember { mutableStateOf(false) }
 
-    // Shared "now" timestamp refreshed every 60s — avoids per-cell System.currentTimeMillis() calls
-    var nowEpochSeconds by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(60_000)
-            nowEpochSeconds = System.currentTimeMillis() / 1000
-        }
-    }
+    val nowEpochSeconds = rememberNowEpochSeconds()
 
     Column(
         modifier =

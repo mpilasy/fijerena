@@ -60,7 +60,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
@@ -73,6 +72,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -124,14 +124,7 @@ fun MobileEpgBrowserScreen(
 
     var matchedOnly by remember { mutableStateOf(true) }
 
-    // Shared time tick drives "On Air" + freshness label recomputes
-    var nowEpoch by remember { mutableStateOf(System.currentTimeMillis() / 1000L) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(60_000L)
-            nowEpoch = System.currentTimeMillis() / 1000L
-        }
-    }
+    val nowEpoch = rememberNowEpochSeconds()
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(Unit) {
