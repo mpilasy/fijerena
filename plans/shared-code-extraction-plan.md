@@ -100,10 +100,9 @@ skipped this pass.
    identical in `MobilePlayerScreen.kt` and `tv/.../PlayerEffects.kt`. Needs a small
    state-machine class (e.g. `ExhaustionToastDebouncer`) so the algorithm can be
    pulled out from under the `LaunchedEffect`.
-3. **Shared "now" ticker composable.** The same 60-second `LaunchedEffect` +
-   `mutableLongStateOf` ticker is copy-pasted **4 times** (EPG guide ×2, EPG browser
-   ×2). Recommend a `@Composable fun rememberNowEpochSeconds(): Long` hook in
-   `core/ui`.
+3. **Shared "now" ticker composable — DONE** (`6cca4e7a`, #201). Added
+   `rememberNowEpochSeconds()` in `core/ui/components/TimeTicker.kt`; all 4 copies
+   (EPG guide ×2, EPG browser ×2) now call it.
 4. **Favorite-hint show/dismiss effect**, duplicated in
    `MobileCategoryListScreen.kt`/`TvCategoryGridScreen.kt` — same shape, recommend
    `@Composable fun rememberFavoriteHintVisible(context): Boolean` in `core/ui`.
