@@ -308,12 +308,34 @@ class JellyfinMediaProvider(
             val token = api.getAccessToken()
             val headers = if (token != null) mapOf("X-Emby-Token" to token) else emptyMap()
 
-            val playbackInfoDeferred = async { api.getPlaybackInfo(streamItemId, userId) }
-            val itemDeferred = async { api.getItemById(streamItemId) }
+            // Fetched as a unit so a 401 on either call triggers a single reconnect+retry of
+            // both, instead of each call independently reconnecting (which would race).
+            val fetched =
+                withAutoReconnect {
+                    coroutineScope {
+                        val playbackInfoDeferred = async { api.getPlaybackInfo(streamItemId, userId) }
+                        val itemDeferred = async { api.getItemById(streamItemId) }
+                        val playbackInfoResult = playbackInfoDeferred.await()
+                        val itemResult = itemDeferred.await()
+                        val unauthorized =
+                            listOf(playbackInfoResult, itemResult).firstNotNullOfOrNull { result ->
+                                (result.exceptionOrNull() as? ClientRequestException)
+                                    ?.takeIf { it.response.status == HttpStatusCode.Unauthorized }
+                            }
+                        if (unauthorized != null) {
+                            Result.failure(unauthorized)
+                        } else {
+                            Result.success(playbackInfoResult to itemResult)
+                        }
+                    }
+                }
+            if (fetched.isFailure) {
+                return@coroutineScope Result.failure(fetched.exceptionOrNull() ?: Exception("Authentication failed"))
+            }
 
             // Ask Jellyfin whether to direct-play or transcode based on our DeviceProfile
-            val playbackInfo = playbackInfoDeferred.await()
-            val item = itemDeferred.await().getOrNull()
+            val (playbackInfo, itemResult) = fetched.getOrThrow()
+            val item = itemResult.getOrNull()
             val itemTitle = item?.name ?: ""
 
             if (playbackInfo.isSuccess) {

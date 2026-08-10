@@ -39,7 +39,7 @@ tier. Each entry below also has a **Complexity** rating; at a glance:
 | 12 | [FIXED] Xtream sync mass-deletes local library on empty/partial server response | Easy–Moderate |
 | 13 | [FIXED] Player getInstance()/awaitInstance() race beyond playStream() | Easy |
 | 14 | [FIXED] AppContainer caches stale MediaRepository after credential edit | Moderate |
-| 15 | JellyfinMediaProvider.resolvePlayableStream() has no auto-reconnect-on-401 | Easy–Moderate |
+| 15 | [FIXED] JellyfinMediaProvider.resolvePlayableStream() has no auto-reconnect-on-401 | Easy–Moderate |
 | 16 | [FIXED] Saved audio/subtitle track index uses wrong indexing scheme on restore | Moderate |
 | 17 | [SKIPPED — deprioritized] Favorites/favorite-categories silently evict oldest entry at cap | Easy–Moderate |
 | 18 | [FIXED] Episode season auto-expand clobbers manual accordion toggle | Easy |
@@ -56,7 +56,10 @@ neither needs re-investigating cold later).
 #12, #13, #14, #16, #18, #19, #20, #21 fixed (2026-06-22) — see their entries
 below for the resolution notes. #17 was deprioritized, not invalidated —
 unlike #4/#7, the bug itself is still confirmed real. #15 from the same
-sweep remains open.
+sweep fixed 2026-08-09 — see its entry below.
+
+**All items from this plan are now resolved, skipped-with-reason, or
+deliberately deprioritized. Nothing open remains.**
 
 ## High impact
 
@@ -179,7 +182,7 @@ Two compounding issues in the same gesture handler:
 **Complexity:** Involved — the most architecturally heavy fix in this list. `EpgManagementViewModel`'s `_dbGeneration` counter is scoped to that ViewModel; fixing this properly means either promoting an invalidation signal up into `EpgIndexDatabase` itself so any consumer can react, or duplicating the generation-counter pattern locally. Also needs verifying that hot-swapping the inner `Flow<PagingData<...>>` inside `_pagedNowPlaying`/`_pagedSearchResults` is actually picked up by whatever composable collects it (`collectAsLazyPagingItems()`) — not yet verified.
 **Skipped:** confirmed the "Involved" framing was overstated — `EpgIndexer.state` is already a process-wide signal `EpgBrowserViewModel` already subscribes to forever (`indexer.state.collect{}` in `initPagedNowPlaying()`), and `clearAll()` already publishes `EpgIndexState.NotIndexed` into it after destroying the DB. The actual gap is just that the existing collector's `if (state is Indexed)` ignores every other state — a same-file, few-line fix, not a new generation-counter/broadcast mechanism. However, the documented trigger ("open EPG browser, then clear data while it's still active") isn't reachable in single-window use: EPG Browser and EPG Management are pushed from two different parent hubs with no `saveState`, so leaving EPG Browser always pops it — destroying the ViewModel and its collector — before Clear All Data can run, on both mobile and TV. It IS reachable on mobile via Android split-screen (two instances of the app open at once, sharing the same process-wide `EpgIndexer`/`EpgIndexDatabase` singletons) — confirmed `mobile/AndroidManifest.xml` doesn't set `resizeableActivity="false"`, so multi-window isn't blocked — but that's a deliberate two-window action, not ordinary usage, and TV has no split-screen at all. Decided the narrow, mobile-only, split-screen-only trigger doesn't justify the change right now; `_pagedSearchResults` would also need separate handling since it has no reactive mechanism at all today.
 
-### 15. JellyfinMediaProvider.resolvePlayableStream() has no auto-reconnect-on-401, unlike every other Jellyfin call
+### 15. [FIXED] JellyfinMediaProvider.resolvePlayableStream() has no auto-reconnect-on-401, unlike every other Jellyfin call
 **File:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinMediaProvider.kt` (`resolvePlayableStream()` lines 286-345+, `withAutoReconnect()` lines 510-524, `ensureConnected()` lines 505-508)
 
 Every other Jellyfin method (`getCategories`, `getItems`, `getMovieDetail`, `search`, etc. — confirmed at lines 84, 111, 131, 175, 185, 281, 458) wraps its API call in `withAutoReconnect { }`, which detects a 401 (`ClientRequestException` with `HttpStatusCode.Unauthorized`), clears the session, re-authenticates, and retries once. `resolvePlayableStream()` — the function that actually starts playback — instead calls `ensureConnected()` (line 293), which only checks the *local* `isConnected()` flag and short-circuits to `true` if a session token is merely present, without validating it against the server. The actual API calls (`api.getPlaybackInfo()`, `api.getItemById()`, lines 300-301) are made directly via `async { }`, completely bypassing `withAutoReconnect`.
@@ -187,6 +190,7 @@ Every other Jellyfin method (`getCategories`, `getItems`, `getMovieDetail`, `sea
 **Impact:** playback fails with a confusing, generic error while every other part of the app continues to "work" — the inconsistency makes this hard to diagnose from a bug report.
 **Fix:** route `resolvePlayableStream()`'s `getPlaybackInfo()`/`getItemById()` calls through `withAutoReconnect { }` like every other method, instead of the local-only `ensureConnected()` check.
 **Complexity:** Easy–Moderate — mechanical to apply the existing wrapper, but the two calls are currently fired in parallel via `async { }` inside a `coroutineScope { }`, so the wrapper needs to wrap that parallel-fetch block as a unit rather than each call individually.
+**Resolved:** wrapped the parallel `getPlaybackInfo()`/`getItemById()` fetch in a single `withAutoReconnect { }` call — both `await()`s happen inside the wrapped block, and the block returns `Result.failure` only if either call's exception is a 401, so a shared reconnect+retry covers both instead of racing two independent reconnects. Non-401 failures still flow through unchanged to the existing fallback logic below (legacy static direct-play path).
 
 ### 16. [FIXED] Saved audio/subtitle track index is restored using the wrong indexing scheme
 **File:** `core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt` (`selectAudioTrack(groupIndex, trackIndex)` lines 612-641, `selectSubtitleTrack(groupIndex, trackIndex)` lines 643-672, `selectAudioTrack(consolidatedIndex)` lines 564-570, `selectSubtitleTrack(consolidatedIndex)` lines 600-610, `getAudioTracks()` lines 534-562), `tv/.../player/TvPlayerScreen.kt:190-196`, `mobile/.../player/MobilePlayerScreen.kt:302-308`
