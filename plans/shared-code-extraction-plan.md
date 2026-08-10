@@ -3,8 +3,9 @@
 ## Status (2026-08-09)
 Tier 1 done and committed (`03db5e31`), except four small leftovers noted inline
 below (marked TODO) — left as follow-up, low value relative to effort.
-Tier 2: items 2, 3, 4 done. Items 1 and 5 remain — both need a small behavior
-decision (not just a mechanical move) before landing, see their notes below.
+Tier 2: items 1-4 done. Only item 5 (provider connect/re-auth helper) remains —
+touches session/connection code across many screens, deserves its own careful
+pass, see its note below.
 
 ## Context
 Following the `sortedSeasons()` and `FavoriteMenuTarget` extractions, user asked for a
@@ -86,16 +87,16 @@ skipped this pass.
 
 ## Tier 2 — backlog (needs a design call, not done in this pass)
 
-1. **Player "finalize session" helper.** TV already extracted player logic into
-   `PlayerEffects.kt`/`PlayerScreenState.kt`/`PlayerKeyHandler.kt`; mobile didn't get
-   the same treatment. `finalizeSession()` (position/duration extraction + audio/sub
-   track index lookup + `stopPlayback()` call) exists once in mobile
-   (`MobilePlayerScreen.kt:685-705`) but is hand-copied **3 times** in
-   `TvPlayerScreen.kt` — and TV's 3 copies aren't even consistent with each other
-   (the `onDispose` copy skips the audio/sub index lookup). Recommend: one shared
-   `finalizeSession(playbackState, streamingService, loaderViewModel)` in
-   `core/ui/viewmodels`, called identically from both platforms and all 3 TV call
-   sites — fixes a latent inconsistency, not just duplication.
+1. **Player "finalize session" helper — DONE** (2026-08-09). Added
+   `finalizeSession(playbackState, loaderViewModel)` in
+   `core/ui/viewmodels/StreamLoaderViewModel.kt`; all 4 mobile call sites and all 3
+   TV call sites now call it. Confirmed before merging: TV's `onDispose` copy was
+   the only one skipping the audio/sub-track-index save, and its extra
+   `!isLive`/`dur > 0` guards were redundant — `StreamLoaderViewModel.stopPlayback()`
+   already self-gates on `contentType != LIVE_TV` and on `duration > 0` internally.
+   So unifying is a real fix (audio/sub track pick is now saved on back-gesture
+   exit too), not just code movement, with no behavior change on the other 6 call
+   sites.
 2. **Exhaustion-toast debounce — DONE** (2026-08-09). Added `ExhaustionToastDebouncer`
    (pure state machine) + `watchExhaustionToasts()` (the polling loop) in
    `core/player/service/ExhaustionToastWatcher.kt`; both `MobilePlayerScreen.kt` and

@@ -49,6 +49,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
 import org.njarasoa.fijerena.feature.player.components.AudioTrackSelectorDialog
 import org.njarasoa.fijerena.feature.player.components.ChannelToast
 import org.njarasoa.fijerena.feature.player.components.ErrorOverlay
@@ -664,24 +665,3 @@ fun MobilePlayerContent(
     }
 }
 
-private fun finalizeSession(
-    playbackState: PlaybackState,
-    loaderViewModel: StreamLoaderViewModel
-) {
-    val pos =
-        when (playbackState) {
-            is PlaybackState.Playing -> playbackState.position
-            is PlaybackState.Paused -> playbackState.position
-            else -> 0L
-        }
-    val dur =
-        when (playbackState) {
-            is PlaybackState.Playing -> playbackState.duration
-            is PlaybackState.Paused -> playbackState.duration
-            else -> 0L
-        }
-    val service = StreamingPlaybackService.getInstance()
-    val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
-    val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
-    loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
-}
