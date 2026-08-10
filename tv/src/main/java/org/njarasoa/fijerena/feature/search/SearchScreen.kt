@@ -259,7 +259,7 @@ private fun HeaderRow(contentType: String) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = contentType.replace("_", " "),
+                text = if (contentType == "ALL") "All Content" else contentType.asContentTypeLabel(),
                 style = MaterialTheme.typography.titleMedium,
                 color = CinemaAccent,
             )
@@ -546,7 +546,12 @@ private fun SearchResultsList(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "No results found for '$query'. Try different keywords.",
+                text =
+                    if (queryContentType == "ALL") {
+                        "No results found for '$query'. Try different keywords."
+                    } else {
+                        "No results found in ${queryContentType.asContentTypeLabel()} for '$query'. Try different keywords."
+                    },
                 style = MaterialTheme.typography.bodyLarge,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )

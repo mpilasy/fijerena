@@ -121,7 +121,11 @@ fun MobileSearchScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Search") },
+                title = {
+                    Text(
+                        if (contentType == "ALL") "Search All Content" else "Search " + contentType.asContentTypeLabel(),
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, "Back")
@@ -371,7 +375,12 @@ private fun SearchResults(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "No results found for '$query'\nTry different keywords",
+                text =
+                    if (queryContentType == "ALL") {
+                        "No results found for '$query'\nTry different keywords"
+                    } else {
+                        "No results found in ${queryContentType.asContentTypeLabel()} for '$query'\nTry different keywords"
+                    },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
             )
