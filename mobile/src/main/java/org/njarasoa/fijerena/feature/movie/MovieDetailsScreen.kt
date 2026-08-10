@@ -17,10 +17,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.player.domain.ContentType
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.model.channelLabel
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
@@ -34,6 +32,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -51,64 +51,15 @@ fun MobileMovieDetailsScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    var mediaRepository by remember { mutableStateOf<MediaRepository?>(null) }
-
-    var movieDetail by remember { mutableStateOf<MovieDetail?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var resumePositionMs by remember { mutableStateOf(0L) }
-    var resumeDurationMs by remember { mutableStateOf(0L) }
-
-    // Favorite state
-    var isFavorite by remember { mutableStateOf(false) }
-
-    // Initialize repository and load movie info asynchronously
-    LaunchedEffect(movieId) {
-        isLoading = true
-        error = null
-
-        val appContext = context.applicationContext
-        val providerRepo = ProviderRepository(appContext)
-        val entity = providerRepo.getActiveProvider()
-        val repo =
-            if (entity != null) {
-                val resolvedRepo = MediaRepository(appContext, entity.id)
-                val password = providerRepo.getPassword(entity.id) ?: ""
-                val provider = MediaProviderFactory.create(entity, appContext, password)
-                if (!provider.isConnected()) {
-                    provider.connect()
-                }
-                resolvedRepo.setProvider(provider)
-                resolvedRepo
-            } else {
-                MediaRepository(appContext, 0L)
-            }
-        mediaRepository = repo
-
-        isFavorite = repo.isFavorite(movieId, ContentType.MOVIES)
-
-        val result = repo.getMovieDetail(movieId)
-        result.fold(
-            onSuccess = { detail ->
-                movieDetail = detail
-                isLoading = false
-            },
-            onFailure = { e ->
-                error = e.message ?: context.getString(R.string.movie_error_loading)
-                isLoading = false
-            },
+    val viewModel: MovieDetailsViewModel =
+        viewModel(
+            factory =
+                remember(movieId, categoryId) {
+                    MovieDetailsViewModelFactory(context.applicationContext, movieId, categoryId)
+                },
         )
-
-        // Load resume position
-        val watched = repo.getPlaybackPositionSuspend(movieId, ContentType.MOVIES)
-        if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
-            val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
-            if (progress in 2.0..95.0) {
-                resumePositionMs = watched.playbackPosition
-                resumeDurationMs = watched.duration
-            }
-        }
-    }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
     Scaffold(
         topBar = {
@@ -122,16 +73,7 @@ fun MobileMovieDetailsScreen(
                     )
                 },
                 actions = {
-                    CinemaIconButton(onClick = {
-                        mediaRepository?.let { repo ->
-                            if (isFavorite) {
-                                repo.removeFavorite(movieId, ContentType.MOVIES)
-                            } else {
-                                repo.addFavorite(movieId, movieName, categoryId, ContentType.MOVIES)
-                            }
-                            isFavorite = !isFavorite
-                        }
-                    },
+                    CinemaIconButton(onClick = { viewModel.toggleFavorite(movieName) },
                         icon = {
                             Icon(
                                 imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
@@ -150,23 +92,23 @@ fun MobileMovieDetailsScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
         ) {
-            when {
-                isLoading -> {
+            when (val state = uiState) {
+                is MovieDetailsViewModel.UiState.Loading -> {
                     LoadingScreen()
                 }
-                error != null -> {
+                is MovieDetailsViewModel.UiState.Error -> {
                     ErrorScreen(
-                        message = error ?: stringResource(R.string.common_error),
+                        message = state.message,
                         onBack = onBack,
                     )
                 }
-                movieDetail != null -> {
+                is MovieDetailsViewModel.UiState.Success -> {
                     MovieDetailsContent(
-                        movieDetail = movieDetail!!,
+                        movieDetail = state.movieDetail,
                         movieId = movieId,
                         movieName = movieName,
-                        resumePositionMs = resumePositionMs,
-                        resumeDurationMs = resumeDurationMs,
+                        resumePositionMs = state.resumePositionMs,
+                        resumeDurationMs = state.resumeDurationMs,
                         onPlayMovie = onPlayMovie,
                     )
                 }

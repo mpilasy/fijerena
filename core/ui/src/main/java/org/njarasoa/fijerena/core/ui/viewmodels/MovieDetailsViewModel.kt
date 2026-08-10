@@ -77,11 +77,13 @@ class MovieDetailsViewModel(
                             )
                     },
                     onFailure = { e ->
-                        _uiState.value = UiState.Error(e.message ?: "Failed to load movie info")
+                        _uiState.value =
+                            UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.movie_error_loading))
                     },
                 )
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Initialization error")
+                _uiState.value =
+                    UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.movie_error_loading))
             }
         }
     }

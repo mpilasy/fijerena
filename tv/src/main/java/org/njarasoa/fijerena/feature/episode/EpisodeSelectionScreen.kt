@@ -61,6 +61,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -68,9 +70,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
@@ -95,6 +95,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -106,8 +108,6 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
@@ -132,90 +132,38 @@ fun EpisodeSelectionScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
-    var mediaRepository by remember { mutableStateOf<MediaRepository?>(null) }
-
-    var seriesDetail by remember { mutableStateOf<SeriesDetail?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var refreshTrigger by remember { mutableStateOf(0) }
-    var isFavorite by remember { mutableStateOf(false) }
-
-    fun refresh() {
-        refreshTrigger++
-    }
-
-    // Load series info on launch
-    LaunchedEffect(seriesId, refreshTrigger) {
-        isLoading = true
-        error = null
-
-        // Initialize repository asynchronously (avoids runBlocking on main thread)
-        val repo =
-            withContext(kotlinx.coroutines.Dispatchers.IO) {
-                mediaRepository ?: run {
-                    val appContext = context.applicationContext
-                    val providerRepo = ProviderRepository(appContext)
-                    val entity = providerRepo.getActiveProvider()
-                    val r = MediaRepository(appContext, entity?.id ?: 0L)
-                    if (entity != null) {
-                        val password = providerRepo.getPassword(entity.id) ?: ""
-                        val provider = MediaProviderFactory.create(entity, appContext, password)
-                        if (!provider.isConnected()) {
-                            provider.connect()
-                        }
-                        r.setProvider(provider)
-                    }
-                    mediaRepository = r
-                    isFavorite = r.isFavorite(seriesId, ContentType.TV_SHOWS)
-                    r
-                }
-            }
-
-        val result = repo.getSeriesDetail(seriesId)
-        val defaultError = context.getString(R.string.series_error_load_failed)
-        result.fold(
-            onSuccess = { detail ->
-                seriesDetail = detail
-                isLoading = false
-            },
-            onFailure = { e ->
-                error = e.message ?: defaultError
-                isLoading = false
-            },
+    val viewModel: SeriesDetailsViewModel =
+        viewModel(
+            factory =
+                remember(seriesId, categoryId) {
+                    SeriesDetailsViewModelFactory(context.applicationContext, seriesId, categoryId)
+                },
         )
-    }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
-        when {
-            isLoading -> {
+        when (val state = uiState) {
+            is SeriesDetailsViewModel.UiState.Loading -> {
                 LoadingScreen()
             }
-            error != null -> {
+            is SeriesDetailsViewModel.UiState.Error -> {
                 ErrorScreen(
-                    message = error ?: stringResource(R.string.common_error),
+                    message = state.message,
                     onBack = onBack,
                 )
             }
-            seriesDetail != null -> {
+            is SeriesDetailsViewModel.UiState.Success -> {
                 EpisodeListContent(
-                    seriesDetail = seriesDetail!!,
+                    seriesDetail = state.seriesDetail,
                     seriesName = seriesName,
                     categoryId = categoryId,
-                    mediaRepository = mediaRepository!!,
+                    mediaRepository = viewModel.mediaRepository!!,
                     initialEpisodeId = initialEpisodeId,
-                    isFavorite = isFavorite,
-                    onToggleFavorite = {
-                        val repo = mediaRepository ?: return@EpisodeListContent
-                        if (isFavorite) {
-                            repo.removeFavorite(seriesId, ContentType.TV_SHOWS)
-                        } else {
-                            repo.addFavorite(seriesId, seriesName, categoryId, ContentType.TV_SHOWS)
-                        }
-                        isFavorite = !isFavorite
-                    },
+                    isFavorite = state.isFavorite,
+                    onToggleFavorite = { viewModel.toggleFavorite(seriesName) },
                     onEpisodeSelected = onEpisodeSelected,
-                    onRefresh = { refresh() },
+                    onRefresh = { viewModel.loadSeriesInfo() },
                     onBack = onBack,
                 )
             }

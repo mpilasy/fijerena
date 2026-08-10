@@ -27,9 +27,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
@@ -39,6 +39,8 @@ import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
 import org.njarasoa.fijerena.core.player.domain.seasonNumberContaining
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
+import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.player.model.formatTime
@@ -69,66 +71,32 @@ fun MobileEpisodeSelectionScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    var mediaRepository by remember { mutableStateOf<MediaRepository?>(null) }
+    val viewModel: SeriesDetailsViewModel =
+        viewModel(
+            factory =
+                remember(seriesId, categoryId) {
+                    SeriesDetailsViewModelFactory(context.applicationContext, seriesId, categoryId)
+                },
+        )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isFavorite = (uiState as? SeriesDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
-    var seriesDetail by remember { mutableStateOf<SeriesDetail?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var isRefreshing by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var refreshTrigger by remember { mutableStateOf(0) }
+    // Retained across a background refresh so the list stays visible with just a pull-spinner
+    // (PullToRefreshBox below) instead of flashing to a full-screen loading state.
+    var lastSuccess by remember { mutableStateOf<SeriesDetailsViewModel.UiState.Success?>(null) }
+    if (uiState is SeriesDetailsViewModel.UiState.Success) {
+        lastSuccess = uiState as SeriesDetailsViewModel.UiState.Success
+    }
+    val displaySeriesDetail = lastSuccess?.seriesDetail
+    val isRefreshing = uiState is SeriesDetailsViewModel.UiState.Loading && lastSuccess != null
+
     // Selected episode for detail panel — only set by an explicit tap (including on the
     // Continue Watching resume episode below); arriving here never auto-opens it.
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
-    var isFavorite by remember { mutableStateOf(false) }
 
     // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {
         selectedEpisode = null
-    }
-
-    // Load series info on launch or refresh
-    LaunchedEffect(seriesId, refreshTrigger) {
-        if (!isRefreshing) isLoading = true
-        error = null
-
-        // Initialize repository asynchronously (avoids runBlocking on main thread)
-        val repo =
-            mediaRepository ?: run {
-                val appContext = context.applicationContext
-                val providerRepo = ProviderRepository(appContext)
-                val entity = providerRepo.getActiveProvider()
-                val r =
-                    if (entity != null) {
-                        val resolvedRepo = MediaRepository(appContext, entity.id)
-                        val password = providerRepo.getPassword(entity.id) ?: ""
-                        val provider = MediaProviderFactory.create(entity, appContext, password)
-                        if (!provider.isConnected()) {
-                            provider.connect()
-                        }
-                        resolvedRepo.setProvider(provider)
-                        resolvedRepo
-                    } else {
-                        MediaRepository(appContext, 0L)
-                    }
-                mediaRepository = r
-                isFavorite = r.isFavorite(seriesId, ContentType.TV_SHOWS)
-                r
-            }
-
-        val result = repo.getSeriesDetail(seriesId)
-        val defaultError = context.getString(R.string.series_error_load_failed)
-        result.fold(
-            onSuccess = { detail ->
-                seriesDetail = detail
-                isLoading = false
-                isRefreshing = false
-            },
-            onFailure = { e ->
-                error = e.message ?: defaultError
-                isLoading = false
-                isRefreshing = false
-            },
-        )
     }
 
     Scaffold(
@@ -149,16 +117,7 @@ fun MobileEpisodeSelectionScreen(
                     )
                 },
                 actions = {
-                    CinemaIconButton(onClick = {
-                        mediaRepository?.let { repo ->
-                            if (isFavorite) {
-                                repo.removeFavorite(seriesId, ContentType.TV_SHOWS)
-                            } else {
-                                repo.addFavorite(seriesId, seriesName, categoryId, ContentType.TV_SHOWS)
-                            }
-                            isFavorite = !isFavorite
-                        }
-                    },
+                    CinemaIconButton(onClick = { viewModel.toggleFavorite(seriesName) },
                         icon = {
                             Icon(
                                 imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
@@ -179,20 +138,21 @@ fun MobileEpisodeSelectionScreen(
         ) {
             AmbientBackdrop(
                 modifier = Modifier.fillMaxSize(),
-                imageUrl = selectedEpisode?.thumbnailUrl ?: seriesDetail?.coverUrl,
+                imageUrl = selectedEpisode?.thumbnailUrl ?: displaySeriesDetail?.coverUrl,
             )
+            val errorState = uiState as? SeriesDetailsViewModel.UiState.Error
             when {
-                isLoading -> {
+                displaySeriesDetail == null && errorState == null -> {
                     LoadingScreen()
                 }
-                error != null -> {
+                errorState != null -> {
                     ErrorScreen(
-                        message = error ?: stringResource(R.string.common_error),
+                        message = errorState.message,
                         onBack = onBack,
                     )
                 }
-                seriesDetail != null && selectedEpisode != null -> {
-                    val detail = seriesDetail!!
+                displaySeriesDetail != null && selectedEpisode != null -> {
+                    val detail = displaySeriesDetail
                     val flatEpisodes =
                         remember(detail) {
                             val sorted = detail.sortedSeasons { num -> context.getString(R.string.series_season_name_format, num) }
@@ -208,7 +168,7 @@ fun MobileEpisodeSelectionScreen(
                         episode = selectedEpisode!!,
                         seriesDetail = detail,
                         categoryId = categoryId,
-                        mediaRepository = mediaRepository!!,
+                        mediaRepository = viewModel.mediaRepository!!,
                         previousEpisode = previousEpisode,
                         nextEpisode = nextEpisode,
                         onNavigate = { next -> selectedEpisode = next },
@@ -217,18 +177,15 @@ fun MobileEpisodeSelectionScreen(
                         },
                     )
                 }
-                seriesDetail != null -> {
+                displaySeriesDetail != null -> {
                     PullToRefreshBox(
                         isRefreshing = isRefreshing,
-                        onRefresh = {
-                            isRefreshing = true
-                            refreshTrigger++
-                        },
+                        onRefresh = { viewModel.loadSeriesInfo() },
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         EpisodeListContent(
-                            seriesDetail = seriesDetail!!,
-                            mediaRepository = mediaRepository!!,
+                            seriesDetail = displaySeriesDetail,
+                            mediaRepository = viewModel.mediaRepository!!,
                             initialEpisodeId = initialEpisodeId,
                             onEpisodeSelected = { episode ->
                                 selectedEpisode = episode

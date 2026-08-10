@@ -3,9 +3,7 @@
 ## Status (2026-08-09)
 Tier 1 done and committed (`03db5e31`), except four small leftovers noted inline
 below (marked TODO) — left as follow-up, low value relative to effort.
-Tier 2: items 1-4 done. Only item 5 (provider connect/re-auth helper) remains —
-touches session/connection code across many screens, deserves its own careful
-pass, see its note below.
+Tier 2: all 5 items done. Plan complete.
 
 ## Context
 Following the `sortedSeasons()` and `FavoriteMenuTarget` extractions, user asked for a
@@ -110,13 +108,28 @@ skipped this pass.
    `core/ui/components/TimeTicker.kt`; both `MobileCategoryListScreen.kt` and
    `TvCategoryGridScreen.kt` now call it instead of duplicating the
    `AppSettings.hasSeenFavoriteHint` read/write + 4s auto-dismiss.
-5. **Provider connect/re-auth helper.** The exact guard fixed twice in commit
-   `da6a6e82` (`if (!provider.isConnected()) provider.connect()`) is duplicated across
-   4 screens (mobile+tv × movie+episode) plus a similar pattern in both nav hosts and
-   `AppContainer.kt`. This is the highest long-term-value item — any future
-   auth/connect fix will otherwise need to be repeated N times again — but touches
-   session/connection code, so it deserves its own careful pass rather than folding
-   into a mechanical-extraction commit.
+5. **Provider connect/re-auth helper — DONE** (2026-08-09), bigger fix than
+   originally scoped. Turned out the shared helper this item wanted already
+   existed: `AppContainer.getMediaRepository()` (mutex-guarded, cached per
+   provider ID, already does the `!isConnected() → connect()` guard, plus a
+   try/catch the 4 screens' hand-rolled version lacked). `SearchViewModel`/
+   `CategoryViewModel`/`EpgViewModel` already called it; the 4 movie/episode
+   screens didn't — they hand-rolled a worse copy (no mutex, no cache, rebuilt
+   `MediaProviderFactory` + repo from scratch on every navigation into the
+   screen). Bigger find: `MovieDetailsViewModel`/`SeriesDetailsViewModel`
+   (`core/ui/viewmodels/`) already existed, already called
+   `AppContainer.getMediaRepository()` correctly, and matched each screen's
+   hand-rolled state shape almost field-for-field (movie/series detail, resume
+   position with the same 2–95% window calc, favorite, loading, error) — but
+   were completely unused, zero references anywhere in `mobile/`/`tv/`. Wired
+   them into all 4 screens (mobile+tv × movie+episode) instead of just
+   swapping the connect guard, since it cost barely more and fixed the actual
+   root cause rather than one symptom of it. Also fixed the two ViewModels'
+   error messages, which were hardcoded English instead of using the same
+   localized string resources (`R.string.movie_error_loading`/
+   `series_error_load_failed`) the screens used before — the app ships French
+   and Malagasy translations, so this would've been a silent regression for
+   non-English users.
 
 ## Also found, not part of this plan (flagging only)
 - **Real bug/divergence:** `SettingsUtils.kt` (same path, both modules) defines
