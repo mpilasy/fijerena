@@ -17,6 +17,8 @@ import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 
 class StreamLoaderViewModel(
     private val context: Context,
@@ -495,6 +497,34 @@ class StreamLoaderViewModel(
             repo.flushWatchHistory()
         }
     }
+}
+
+/**
+ * Saves the final playback position/duration and selected audio/subtitle track
+ * for the current session, so it's called identically whenever a player screen
+ * leaves a stream (back, switching to a new stream, or the composable leaving
+ * composition) rather than each call site re-deriving it slightly differently.
+ */
+fun finalizeSession(
+    playbackState: PlaybackState,
+    loaderViewModel: StreamLoaderViewModel,
+) {
+    val pos =
+        when (playbackState) {
+            is PlaybackState.Playing -> playbackState.position
+            is PlaybackState.Paused -> playbackState.position
+            else -> 0L
+        }
+    val dur =
+        when (playbackState) {
+            is PlaybackState.Playing -> playbackState.duration
+            is PlaybackState.Paused -> playbackState.duration
+            else -> 0L
+        }
+    val service = StreamingPlaybackService.getInstance()
+    val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+    val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+    loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
 }
 
 class StreamLoaderViewModelFactory(
