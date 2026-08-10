@@ -44,14 +44,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.model.channelLabel
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
@@ -68,6 +66,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -100,86 +100,38 @@ fun MovieDetailsScreen(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
-    var mediaRepository by remember { mutableStateOf<MediaRepository?>(null) }
-
-    var movieDetail by remember { mutableStateOf<MovieDetail?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var refreshTrigger by remember { mutableStateOf(0) }
-    var resumePositionMs by remember { mutableStateOf(0L) }
-    var resumeDurationMs by remember { mutableStateOf(0L) }
-
-    fun refresh() {
-        refreshTrigger++
-    }
-
-    // Load movie info on launch
-    LaunchedEffect(movieId, refreshTrigger) {
-        isLoading = true
-        error = null
-
-        // Initialize repository asynchronously (avoids runBlocking on main thread)
-        val appContext = context.applicationContext
-        val providerRepo = ProviderRepository(appContext)
-        val entity = providerRepo.getActiveProvider()
-        val repo = MediaRepository(appContext, entity?.id ?: 0L)
-        if (entity != null) {
-            val password = providerRepo.getPassword(entity.id) ?: ""
-            val provider = MediaProviderFactory.create(entity, appContext, password)
-            if (!provider.isConnected()) {
-                provider.connect()
-            }
-            repo.setProvider(provider)
-        }
-        mediaRepository = repo
-
-        val result = repo.getMovieDetail(movieId)
-        val defaultError = context.getString(R.string.movie_error_loading)
-        result.fold(
-            onSuccess = { detail ->
-                movieDetail = detail
-                isLoading = false
-            },
-            onFailure = { e ->
-                error = e.message ?: defaultError
-                isLoading = false
-            },
+    val viewModel: MovieDetailsViewModel =
+        viewModel(
+            factory =
+                remember(movieId, categoryId) {
+                    MovieDetailsViewModelFactory(context.applicationContext, movieId, categoryId)
+                },
         )
-
-        // Load resume position
-        val watched = repo.getPlaybackPositionSuspend(movieId, ContentType.MOVIES)
-        if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
-            val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
-            if (progress in 2.0..95.0) {
-                resumePositionMs = watched.playbackPosition
-                resumeDurationMs = watched.duration
-            }
-        }
-    }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
-        when {
-            isLoading -> {
+        when (val state = uiState) {
+            is MovieDetailsViewModel.UiState.Loading -> {
                 LoadingScreen()
             }
-            error != null -> {
+            is MovieDetailsViewModel.UiState.Error -> {
                 ErrorScreen(
-                    message = error ?: "Unknown error",
+                    message = state.message,
                     onBack = onBack,
                 )
             }
-            movieDetail != null -> {
+            is MovieDetailsViewModel.UiState.Success -> {
                 MovieDetailsContent(
-                    movieDetail = movieDetail!!,
+                    movieDetail = state.movieDetail,
                     movieId = movieId,
                     movieName = movieName,
-                    categoryId = categoryId,
-                    mediaRepository = mediaRepository!!,
-                    resumePositionMs = resumePositionMs,
-                    resumeDurationMs = resumeDurationMs,
+                    isFavorite = state.isFavorite,
+                    resumePositionMs = state.resumePositionMs,
+                    resumeDurationMs = state.resumeDurationMs,
                     onPlayMovie = onPlayMovie,
-                    onRefresh = { refresh() },
+                    onToggleFavorite = { viewModel.toggleFavorite(state.movieDetail.name.ifEmpty { movieName }) },
+                    onRefresh = { viewModel.loadMovieInfo() },
                     onBack = onBack,
                 )
             }
@@ -192,11 +144,11 @@ private fun MovieDetailsContent(
     movieDetail: MovieDetail,
     movieId: String,
     movieName: String,
-    categoryId: String,
-    mediaRepository: MediaRepository,
+    isFavorite: Boolean,
     resumePositionMs: Long,
     resumeDurationMs: Long,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onToggleFavorite: () -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -217,9 +169,6 @@ private fun MovieDetailsContent(
                 val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
             }
         }
-
-    // Favorite state
-    var isFavorite by remember { mutableStateOf(mediaRepository.isFavorite(movieId, ContentType.MOVIES)) }
 
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
@@ -286,14 +235,7 @@ private fun MovieDetailsContent(
                     )
                     // Favorite button
                     CinemaIconButton(
-                        onClick = {
-                            if (isFavorite) {
-                                mediaRepository.removeFavorite(movieId, ContentType.MOVIES)
-                            } else {
-                                mediaRepository.addFavorite(movieId, movieDetail.name.ifEmpty { movieName }, categoryId, ContentType.MOVIES)
-                            }
-                            isFavorite = !isFavorite
-                        },
+                        onClick = onToggleFavorite,
                         icon = {
                             Icon(
                                 imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,

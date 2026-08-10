@@ -17,9 +17,12 @@ class SeriesDetailsViewModel(
     private val seriesId: String,
     private val categoryId: String,
 ) : ViewModel() {
-    private var repository: org.njarasoa.fijerena.core.network.MediaRepository? = null
+    private var repository: MediaRepository? = null
 
-    private suspend fun ensureRepo(): org.njarasoa.fijerena.core.network.MediaRepository {
+    /** The repository used to load this series, once loaded — needed by episode-list children. */
+    val mediaRepository: MediaRepository? get() = repository
+
+    private suspend fun ensureRepo(): MediaRepository {
         if (repository == null) {
             val container =
                 org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -45,8 +48,6 @@ class SeriesDetailsViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private var mediaRepository: MediaRepository? = null
-
     init {
         loadSeriesInfo()
     }
@@ -56,7 +57,6 @@ class SeriesDetailsViewModel(
             _uiState.value = UiState.Loading
             try {
                 val repo = ensureRepo()
-                mediaRepository = repo
 
                 val result = repo.getSeriesDetail(seriesId)
                 result.fold(
@@ -69,11 +69,13 @@ class SeriesDetailsViewModel(
                             )
                     },
                     onFailure = { e ->
-                        _uiState.value = UiState.Error(e.message ?: "Failed to load series info")
+                        _uiState.value =
+                            UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.series_error_load_failed))
                     },
                 )
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Initialization error")
+                _uiState.value =
+                    UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.series_error_load_failed))
             }
         }
     }
