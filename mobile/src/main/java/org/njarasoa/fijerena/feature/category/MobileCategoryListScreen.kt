@@ -85,6 +85,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.rememberFavoriteHintVisible
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -210,20 +211,9 @@ fun MobileCategoryListScreen(
         LocalConfiguration.current.let { it.screenWidthDp > it.screenHeightDp }
 
     // One-time "long-press to favorite" hint — favoriting has no other visible affordance here.
-    // Shown once ever (marked seen as soon as it's shown), auto-dismisses after a few seconds.
     // Safe to render unconditionally below: the full-screen player path returns early above
     // (line ~365), so this composition is only ever reached while browsing/docked.
-    val hintContext = LocalContext.current
-    var showFavoriteHint by remember {
-        mutableStateOf(!org.njarasoa.fijerena.core.network.AppSettings(hintContext.applicationContext).hasSeenFavoriteHint)
-    }
-    LaunchedEffect(showFavoriteHint) {
-        if (showFavoriteHint) {
-            org.njarasoa.fijerena.core.network.AppSettings(hintContext.applicationContext).hasSeenFavoriteHint = true
-            delay(4000)
-            showFavoriteHint = false
-        }
-    }
+    val showFavoriteHint = rememberFavoriteHintVisible()
 
     BackHandler(enabled = isLiveTv && fullScreen) { fullScreen = false }
     // Dock auto-seeds on entry (below), so without this, Back from a docked preview would skip
