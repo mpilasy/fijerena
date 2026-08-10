@@ -10,7 +10,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -26,9 +28,9 @@ fun ThemeSettingsCard(
     onThemeChanged: (String) -> Unit,
     onUiStyleChanged: (String) -> Unit,
 ) {
-    SettingsSection(title = "Theme") {
+    SettingsSection(title = stringResource(R.string.settings_theme_section_title)) {
         Text(
-            text = "Select a color theme for the app",
+            text = stringResource(R.string.settings_theme_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )
@@ -66,7 +68,7 @@ fun ThemeSettingsCard(
 
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Select a look and feel",
+            text = stringResource(R.string.settings_ui_style_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )

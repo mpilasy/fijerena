@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -45,6 +46,7 @@ import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
@@ -185,13 +187,15 @@ fun MobileContentTypeSelectionScreen(
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
+            val appName = stringResource(R.string.login_app_name)
             val displayName =
                 buildString {
-                    append(providerName.ifEmpty { "fijerena" })
+                    append(providerName.ifEmpty { appName })
                     if (appSettings.isDevMode && providerType.isNotEmpty()) {
                         append(" ($providerType)")
                     }
                 }
+            val switchProviderDescription = stringResource(R.string.content_switch_provider_description_format, displayName)
             TopAppBar(
                 title = {
                     // Only render as a dropdown when there's actually something to switch to —
@@ -204,7 +208,7 @@ fun MobileContentTypeSelectionScreen(
                                 Modifier
                                     .clickable(role = Role.DropdownList) { showProviderPicker = true }
                                     .semantics {
-                                        contentDescription = "Switch Provider, current provider: $displayName"
+                                        contentDescription = switchProviderDescription
                                     }.padding(end = CinemaSpacing.xs, top = CinemaSpacing.xs, bottom = CinemaSpacing.xs),
                         ) {
                             Text(
@@ -228,18 +232,18 @@ fun MobileContentTypeSelectionScreen(
                     if (hasEpgData) {
                         CinemaIconButton(onClick = onEpgBrowser,
                             icon = {
-                                Icon(CinemaIcons.MenuBook, "EPG Browser", tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.MenuBook, stringResource(R.string.epg_browser_title), tint = CinemaTextPrimary)
                             }
                         )
                     }
                     CinemaIconButton(onClick = onSearch,
                         icon = {
-                            Icon(CinemaIcons.Search, "Search", tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
                         }
                     )
                     CinemaIconButton(onClick = onSettings,
                         icon = {
-                            Icon(CinemaIcons.Settings, "Settings", tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.Settings, stringResource(R.string.settings_title), tint = CinemaTextPrimary)
                         }
                     )
                 },
@@ -257,7 +261,7 @@ fun MobileContentTypeSelectionScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Select Content Type",
+                text = stringResource(R.string.content_select_type_title),
                 style = MaterialTheme.typography.headlineMedium,
                 modifier =
                     Modifier
@@ -269,8 +273,8 @@ fun MobileContentTypeSelectionScreen(
             var cardIndex = 1
             if (ContentType.LIVE_TV in supportedContentTypes) {
                 GradientContentCard(
-                    title = "Live TV",
-                    description = "Watch live television channels",
+                    title = stringResource(R.string.provider_live_tv_label),
+                    description = stringResource(R.string.content_type_live_tv_description),
                     icon = CinemaIcons.LiveTv,
                     categoryCounts = liveTvCounts,
                     showTotal = isDevMode,
@@ -283,8 +287,8 @@ fun MobileContentTypeSelectionScreen(
 
             if (ContentType.MOVIES in supportedContentTypes) {
                 GradientContentCard(
-                    title = "Movies",
-                    description = "Browse on-demand movies",
+                    title = stringResource(R.string.provider_movies_label),
+                    description = stringResource(R.string.content_type_movies_description),
                     icon = CinemaIcons.Movie,
                     categoryCounts = moviesCounts,
                     showTotal = isDevMode,
@@ -296,8 +300,8 @@ fun MobileContentTypeSelectionScreen(
 
             if (ContentType.TV_SHOWS in supportedContentTypes) {
                 GradientContentCard(
-                    title = "TV Shows",
-                    description = "Watch series and episodes",
+                    title = stringResource(R.string.provider_tv_shows_label),
+                    description = stringResource(R.string.content_type_tv_shows_description),
                     icon = CinemaIcons.Tv,
                     categoryCounts = tvShowsCounts,
                     showTotal = isDevMode,
@@ -314,7 +318,7 @@ fun MobileContentTypeSelectionScreen(
     if (showProviderPicker && allProviders.size > 1) {
         CinemaAlertDialog(
             onDismissRequest = { showProviderPicker = false },
-            title = { Text("Switch Provider") },
+            title = { Text(stringResource(R.string.content_switch_provider_title)) },
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -365,7 +369,7 @@ fun MobileContentTypeSelectionScreen(
                                 )
                                 if (isActive) {
                                     Text(
-                                        text = "Active",
+                                        text = stringResource(R.string.provider_active_label),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                     )
@@ -377,7 +381,7 @@ fun MobileContentTypeSelectionScreen(
             },
             confirmButton = {
                 CinemaDialogTextButton(onClick = { showProviderPicker = false }) {
-                    Text("Close")
+                    Text(stringResource(R.string.common_close))
                 }
             },
         )

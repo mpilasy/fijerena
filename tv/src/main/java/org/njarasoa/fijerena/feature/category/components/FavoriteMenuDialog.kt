@@ -1,9 +1,11 @@
 package org.njarasoa.fijerena.feature.category.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
@@ -26,7 +28,7 @@ internal fun FavoriteContextMenuDialog(
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()
 
-    val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+    val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
@@ -51,7 +53,7 @@ internal fun FavoriteContextMenuDialog(
         dismissButton = {
             CinemaSecondaryButton(
                 onClick = onDismiss,
-                text = "Cancel",
+                text = stringResource(R.string.common_cancel),
             )
         },
         containerColor = CinemaSurface,

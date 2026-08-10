@@ -16,9 +16,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.player.domain.ProviderType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -50,13 +52,13 @@ fun ColumnScope.DataManagementSection(
         GlassPanel(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(CinemaSpacing.md)) {
                 Text(
-                    text = "Data Management",
+                    text = stringResource(R.string.provider_data_management_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                 Text(
-                    text = "Manage local database and cached data",
+                    text = stringResource(R.string.provider_data_management_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
@@ -70,7 +72,7 @@ fun ColumnScope.DataManagementSection(
                             enabled = !isBusy,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(if (syncState is SyncState.Syncing) "Syncing..." else "Sync Data Now")
+                            Text(if (syncState is SyncState.Syncing) stringResource(R.string.provider_syncing) else stringResource(R.string.provider_sync_now_button))
                         }
 
                         // Last Sync Stats
@@ -79,7 +81,7 @@ fun ColumnScope.DataManagementSection(
                             val time = NumberUtils.formatTimestamp(LocalContext.current, currentProvider?.lastSyncedAtMs ?: 0L)
                             val duration = NumberUtils.formatDuration(currentProvider?.lastSyncDurationMs ?: 0L)
                             Text(
-                                text = "Last Sync: Finished at $time • Took $duration",
+                                text = stringResource(R.string.provider_last_sync_status, time, duration),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                             )
@@ -97,7 +99,7 @@ fun ColumnScope.DataManagementSection(
                         }
                         if (syncState is SyncState.Success) {
                             Text(
-                                text = "Sync completed successfully",
+                                text = stringResource(R.string.provider_sync_success),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -113,13 +115,13 @@ fun ColumnScope.DataManagementSection(
                     ) {
                         Column {
                             Text(
-                                text = "Total Database Items",
+                                text = stringResource(R.string.provider_total_db_items_label),
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             val totalItems =
                                 stats.liveTv.itemsCount + stats.movies.itemsCount + stats.tvShows.itemsCount
                             Text(
-                                text = "${NumberUtils.formatCount(totalItems)} Items",
+                                text = stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(totalItems)),
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -128,7 +130,7 @@ fun ColumnScope.DataManagementSection(
                             onClick = { onShowClearCacheDialogChange(true) },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                         ) {
-                            Text("Clear All")
+                            Text(stringResource(R.string.provider_clear_all_button))
                         }
                     }
 
@@ -145,9 +147,9 @@ fun ColumnScope.DataManagementSection(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "Live TV", style = MaterialTheme.typography.titleSmall)
+                            Text(text = stringResource(R.string.provider_live_tv_label), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                text = "${NumberUtils.formatCount(stats.liveTv.categoryCount)} Categories · ${NumberUtils.formatCount(stats.liveTv.itemsCount)} Channels",
+                                text = stringResource(R.string.provider_live_tv_stats, NumberUtils.formatCount(stats.liveTv.categoryCount), NumberUtils.formatCount(stats.liveTv.itemsCount)),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -155,7 +157,7 @@ fun ColumnScope.DataManagementSection(
                         CinemaOutlinedButton(
                             onClick = { onShowClearLiveTvCacheDialogChange(true) },
                             enabled = stats.liveTv.itemsCount > 0,
-                        ) { Text("Clear") }
+                        ) { Text(stringResource(R.string.provider_clear_button)) }
                     }
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
@@ -167,9 +169,9 @@ fun ColumnScope.DataManagementSection(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "Movies", style = MaterialTheme.typography.titleSmall)
+                            Text(text = stringResource(R.string.provider_movies_label), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                text = "${NumberUtils.formatCount(stats.movies.categoryCount)} Categories · ${NumberUtils.formatCount(stats.movies.itemsCount)} Movies",
+                                text = stringResource(R.string.provider_movies_stats, NumberUtils.formatCount(stats.movies.categoryCount), NumberUtils.formatCount(stats.movies.itemsCount)),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -177,7 +179,7 @@ fun ColumnScope.DataManagementSection(
                         CinemaOutlinedButton(
                             onClick = { onShowClearMoviesCacheDialogChange(true) },
                             enabled = stats.movies.itemsCount > 0,
-                        ) { Text("Clear") }
+                        ) { Text(stringResource(R.string.provider_clear_button)) }
                     }
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
@@ -189,9 +191,9 @@ fun ColumnScope.DataManagementSection(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "TV Shows", style = MaterialTheme.typography.titleSmall)
+                            Text(text = stringResource(R.string.provider_tv_shows_label), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                text = "${NumberUtils.formatCount(stats.tvShows.categoryCount)} Cat. · ${NumberUtils.formatCount(stats.tvShows.itemsCount)} Series · ${NumberUtils.formatCount(stats.tvShows.episodesCount)} Ep.",
+                                text = stringResource(R.string.provider_tv_shows_stats, NumberUtils.formatCount(stats.tvShows.categoryCount), NumberUtils.formatCount(stats.tvShows.itemsCount), NumberUtils.formatCount(stats.tvShows.episodesCount)),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -199,7 +201,7 @@ fun ColumnScope.DataManagementSection(
                         CinemaOutlinedButton(
                             onClick = { onShowClearTvShowsCacheDialogChange(true) },
                             enabled = stats.tvShows.itemsCount > 0,
-                        ) { Text("Clear") }
+                        ) { Text(stringResource(R.string.provider_clear_button)) }
                     }
                 }
             } // Column

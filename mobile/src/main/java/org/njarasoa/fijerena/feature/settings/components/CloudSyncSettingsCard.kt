@@ -12,10 +12,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -31,9 +33,9 @@ fun CloudSyncSettingsCard(
     coroutineScope: CoroutineScope,
     signInLauncher: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) {
-    SettingsSection(title = "Cloud Sync") {
+    SettingsSection(title = stringResource(R.string.settings_cloud_sync_section_title)) {
         Text(
-            text = "Sync provider settings across devices using your Google account",
+            text = stringResource(R.string.settings_cloud_sync_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )
@@ -46,13 +48,17 @@ fun CloudSyncSettingsCard(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(modifier = Modifier.height(4.dp))
+            val syncingText = stringResource(R.string.provider_syncing)
+            val syncedText = stringResource(R.string.sync_status_synced)
+            val errorFormat = stringResource(R.string.epg_database_error)
+            val readyText = stringResource(R.string.sync_status_ready)
             val statusText =
                 when (syncStatus) {
-                    is DriveSettingsSyncManager.SyncStatus.Syncing -> "Syncing..."
-                    is DriveSettingsSyncManager.SyncStatus.Synced -> "Synced"
+                    is DriveSettingsSyncManager.SyncStatus.Syncing -> syncingText
+                    is DriveSettingsSyncManager.SyncStatus.Synced -> syncedText
                     is DriveSettingsSyncManager.SyncStatus.Error ->
-                        "Error: ${(syncStatus as DriveSettingsSyncManager.SyncStatus.Error).message}"
-                    else -> "Ready"
+                        String.format(errorFormat, (syncStatus as DriveSettingsSyncManager.SyncStatus.Error).message)
+                    else -> readyText
                 }
             Text(
                 text = statusText,
@@ -73,13 +79,13 @@ fun CloudSyncSettingsCard(
                     onClick = { coroutineScope.launch { syncManager.syncNow() } },
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Sync Now")
+                    Text(stringResource(R.string.settings_cloud_sync_now_button))
                 }
                 CinemaOutlinedButton(
                     onClick = { coroutineScope.launch { syncManager.signOut() } },
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Sign Out")
+                    Text(stringResource(R.string.common_sign_out))
                 }
             }
         } else {
@@ -91,7 +97,7 @@ fun CloudSyncSettingsCard(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Sign in with Google")
+                Text(stringResource(R.string.settings_sign_in_google_button))
             }
             if (signInError != null) {
                 Spacer(modifier = Modifier.height(4.dp))

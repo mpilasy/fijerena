@@ -9,7 +9,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -19,7 +21,7 @@ fun ProviderSettingsCard(
     uiState: SettingsUiState,
     onManageProviders: () -> Unit
 ) {
-    SettingsSection(title = "Provider") {
+    SettingsSection(title = stringResource(R.string.settings_provider_section_title)) {
         Text(
             text = uiState.providerName,
             style = MaterialTheme.typography.bodyLarge,
@@ -37,7 +39,7 @@ fun ProviderSettingsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    "Expires",
+                    stringResource(R.string.settings_provider_expires_label),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
@@ -53,7 +55,7 @@ fun ProviderSettingsCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        "Max connections",
+                        stringResource(R.string.settings_provider_max_connections_label),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
@@ -61,7 +63,7 @@ fun ProviderSettingsCard(
                 }
             }
             if (uiState.subscriptionIsTrial) {
-                Text("Trial account", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+                Text(stringResource(R.string.settings_provider_trial_account_label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -69,7 +71,7 @@ fun ProviderSettingsCard(
             onClick = onManageProviders,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Manage Providers")
+            Text(stringResource(R.string.settings_provider_manage_button))
         }
     }
 }

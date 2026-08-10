@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
@@ -42,6 +43,7 @@ import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.MatchType
 import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.provider.withAddedRules
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -63,7 +65,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 fun ConfirmActionDialog(
     title: String,
     text: String,
-    confirmText: String = "Clear",
+    confirmText: String = stringResource(R.string.provider_clear_button),
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     isDanger: Boolean = true,
@@ -90,7 +92,7 @@ fun ConfirmActionDialog(
                         containerColor = CinemaSurfaceVariant,
                         contentColor = CinemaTextPrimary,
                     ),
-            ) { Text("Cancel") }
+            ) { Text(stringResource(R.string.common_cancel)) }
         },
         containerColor = CinemaSurface,
     )
@@ -122,12 +124,13 @@ fun CategoryFilterDialog(
     var pendingAddMatchType by remember { mutableStateOf(MatchType.STARTS_WITH) }
     var selectedScripts by remember { mutableStateOf(currentFilters.allowedScripts) }
 
+    @Composable
     fun matchTypeLabel(type: MatchType): String =
         when (type) {
-            MatchType.STARTS_WITH -> "Starts"
-            MatchType.ENDS_WITH -> "Ends"
-            MatchType.CONTAINS -> "Contains"
-            MatchType.EXACT -> "Exact"
+            MatchType.STARTS_WITH -> stringResource(R.string.provider_filter_match_starts)
+            MatchType.ENDS_WITH -> stringResource(R.string.provider_filter_match_ends)
+            MatchType.CONTAINS -> stringResource(R.string.provider_filter_match_contains)
+            MatchType.EXACT -> stringResource(R.string.provider_filter_match_exact)
         }
 
     @Composable
@@ -158,13 +161,13 @@ fun CategoryFilterDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.fillMaxWidth(0.85f).fillMaxHeight(0.85f),
         properties = DialogProperties(usePlatformDefaultWidth = false),
-        title = { Text("Category Filters", color = CinemaTextPrimary) },
+        title = { Text(stringResource(R.string.provider_category_filters_title), color = CinemaTextPrimary) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
             ) {
-                Text("Filter Mode:", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
+                Text(stringResource(R.string.provider_filter_mode_label), style = scaledStyles.titleSmall, color = CinemaTextPrimary)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                     verticalAlignment = Alignment.CenterVertically,
@@ -175,33 +178,33 @@ fun CategoryFilterDialog(
                             androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = if (filterMode == FilterMode.EXCLUDE) CinemaAccent else CinemaSurfaceVariant,
                             ),
-                    ) { Text("Exclude") }
+                    ) { Text(stringResource(R.string.provider_filter_exclude)) }
                     CinemaButton(
                         onClick = { filterMode = FilterMode.INCLUDE },
                         colors =
                             androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = if (filterMode == FilterMode.INCLUDE) CinemaAccent else CinemaSurfaceVariant,
                             ),
-                    ) { Text("Include") }
+                    ) { Text(stringResource(R.string.provider_filter_include_short)) }
                 }
                 Text(
                     if (filterMode == FilterMode.EXCLUDE) {
-                        "Hide categories matching these rules"
+                        stringResource(R.string.provider_filter_hide_matching_desc)
                     } else {
-                        "Show only categories matching these rules"
+                        stringResource(R.string.provider_filter_show_matching_desc)
                     },
                     style = scaledStyles.bodySmall,
                     color = CinemaTextSecondary,
                 )
                 if (filterMode == FilterMode.INCLUDE && rules.isEmpty()) {
                     Text(
-                        "No rules configured — Include mode will hide every category",
+                        stringResource(R.string.provider_filter_include_empty_warning),
                         style = scaledStyles.bodySmall,
                         color = CinemaError,
                     )
                 }
 
-                Text("Rules:", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
+                Text(stringResource(R.string.provider_filter_rules_label), style = scaledStyles.titleSmall, color = CinemaTextPrimary)
                 rules.forEachIndexed { index, rule ->
                     if (editingIndex == index) {
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
@@ -235,11 +238,11 @@ fun CategoryFilterDialog(
                                         editingIndex = null
                                     },
                                     colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaAccent),
-                                ) { Text("Save") }
+                                ) { Text(stringResource(R.string.provider_save_button)) }
                                 CinemaButton(
                                     onClick = { editingIndex = null },
                                     colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
-                                ) { Text("Cancel") }
+                                ) { Text(stringResource(R.string.common_cancel)) }
                             }
                         }
                     } else {
@@ -268,25 +271,25 @@ fun CategoryFilterDialog(
                                     editingValue = rule.value
                                     editingMatchType = rule.matchType
                                 },
-                                icon = { Icon(CinemaIcons.Edit, contentDescription = "Edit rule") },
+                                icon = { Icon(CinemaIcons.Edit, contentDescription = stringResource(R.string.provider_filter_edit_rule)) },
                                 size = 36.dp,
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             CinemaDangerIconButton(
                                 onClick = { rules = rules.toMutableList().also { it.removeAt(index) } },
-                                icon = { Icon(CinemaIcons.Delete, contentDescription = "Delete rule") },
+                                icon = { Icon(CinemaIcons.Delete, contentDescription = stringResource(R.string.provider_filter_delete_rule)) },
                                 size = 36.dp,
                             )
                         }
                     }
                 }
 
-                Text("Add rules (comma-separated):", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
+                Text(stringResource(R.string.provider_filter_add_rules_section_label), style = scaledStyles.titleSmall, color = CinemaTextPrimary)
                 OutlinedTextField(
                     value = addRulesText,
                     onValueChange = { addRulesText = it },
-                    label = { Text("Add rules (comma-separated)") },
-                    placeholder = { Text("e.g., XXX, Adult, 18+") },
+                    label = { Text(stringResource(R.string.provider_filter_add_rules_label)) },
+                    placeholder = { Text(stringResource(R.string.provider_filter_rules_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
                     maxLines = 3,
@@ -313,11 +316,11 @@ fun CategoryFilterDialog(
                     },
                     enabled = addRulesText.isNotBlank(),
                     colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
-                ) { Text("Add") }
+                ) { Text(stringResource(R.string.common_add)) }
 
                 pendingAddValues?.let { values ->
                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                        Text("Choose match type:", style = scaledStyles.bodyMedium, color = CinemaTextPrimary)
+                        Text(stringResource(R.string.provider_filter_choose_match_type_prompt), style = scaledStyles.bodyMedium, color = CinemaTextPrimary)
                         MatchTypeChipRow(selected = pendingAddMatchType, onSelect = { pendingAddMatchType = it })
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                             CinemaButton(
@@ -327,18 +330,18 @@ fun CategoryFilterDialog(
                                     pendingAddValues = null
                                 },
                                 colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaAccent),
-                            ) { Text("OK") }
+                            ) { Text(stringResource(R.string.common_ok)) }
                             CinemaButton(
                                 onClick = { pendingAddValues = null },
                                 colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
-                            ) { Text("Cancel") }
+                            ) { Text(stringResource(R.string.common_cancel)) }
                         }
                     }
                 }
 
-                Text("Language Script Filter:", style = scaledStyles.titleSmall, color = CinemaTextPrimary)
+                Text(stringResource(R.string.provider_filter_script_title), style = scaledStyles.titleSmall, color = CinemaTextPrimary)
                 Text(
-                    "Show only categories in selected scripts (none = show all)",
+                    stringResource(R.string.provider_filter_script_desc),
                     style = scaledStyles.bodySmall,
                     color = CinemaTextSecondary,
                 )
@@ -379,7 +382,7 @@ fun CategoryFilterDialog(
                         containerColor = CinemaAccent,
                         contentColor = CinemaTextPrimary,
                     ),
-            ) { Text("Save") }
+            ) { Text(stringResource(R.string.provider_save_button)) }
         },
         dismissButton = {
             CinemaDialogActionButton(
@@ -389,7 +392,7 @@ fun CategoryFilterDialog(
                         containerColor = CinemaSurfaceVariant,
                         contentColor = CinemaTextPrimary,
                     ),
-            ) { Text("Cancel") }
+            ) { Text(stringResource(R.string.common_cancel)) }
         },
         containerColor = CinemaSurface,
     )
@@ -407,6 +410,11 @@ fun QuickConnectDialog(
     var qcSecret by remember { mutableStateOf("") }
     var qcError by remember { mutableStateOf<String?>(null) }
 
+    val initFailedText = stringResource(R.string.provider_qc_init_failed)
+    val pollFailedFormat = stringResource(R.string.provider_qc_poll_failed)
+    val authFailedFormat = stringResource(R.string.provider_qc_auth_failed)
+    val timeoutText = stringResource(R.string.provider_qc_timeout)
+
     LaunchedEffect(Unit) {
         qcCode = ""
         qcSecret = ""
@@ -419,7 +427,7 @@ fun QuickConnectDialog(
         val api = JellyfinApiService(url.trimEnd('/'), deviceId)
         val initResult = api.initiateQuickConnect()
         if (initResult.isFailure) {
-            qcError = initResult.exceptionOrNull()?.message ?: "Failed to start Quick Connect"
+            qcError = initResult.exceptionOrNull()?.message ?: initFailedText
             return@LaunchedEffect
         }
         val init = initResult.getOrThrow()
@@ -430,13 +438,13 @@ fun QuickConnectDialog(
             delay(3_000)
             val poll = api.pollQuickConnect(qcSecret)
             if (poll.isFailure) {
-                qcError = "Polling failed: ${poll.exceptionOrNull()?.message}"
+                qcError = String.format(pollFailedFormat, poll.exceptionOrNull()?.message)
                 return@LaunchedEffect
             }
             if (poll.getOrThrow().authenticated) {
                 val authResult = api.authenticateWithQuickConnect(qcSecret)
                 if (authResult.isFailure) {
-                    qcError = "Authentication failed: ${authResult.exceptionOrNull()?.message}"
+                    qcError = String.format(authFailedFormat, authResult.exceptionOrNull()?.message)
                     return@LaunchedEffect
                 }
                 val auth = authResult.getOrThrow()
@@ -444,12 +452,12 @@ fun QuickConnectDialog(
                 return@LaunchedEffect
             }
         }
-        qcError = "Timed out waiting for approval. Please try again."
+        qcError = timeoutText
     }
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Quick Connect", color = CinemaTextPrimary) },
+        title = { Text(stringResource(R.string.provider_quick_connect_title), color = CinemaTextPrimary) },
         text = {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -467,14 +475,14 @@ fun QuickConnectDialog(
                         CircularProgressIndicator(color = CinemaAccent)
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         Text(
-                            text = "Connecting to server...",
+                            text = stringResource(R.string.provider_connecting_server),
                             color = CinemaTextSecondary,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                     else -> {
                         Text(
-                            text = "Enter this code in Jellyfin:",
+                            text = stringResource(R.string.provider_qc_enter_code),
                             color = CinemaTextSecondary,
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -491,7 +499,7 @@ fun QuickConnectDialog(
                         )
                         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                         Text(
-                            text = "Open Jellyfin → Dashboard → Quick Connect, then enter the code above.",
+                            text = stringResource(R.string.provider_qc_instructions),
                             color = CinemaTextSecondary,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -499,7 +507,7 @@ fun QuickConnectDialog(
                         CircularProgressIndicator(color = CinemaAccent)
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                         Text(
-                            text = "Waiting for approval...",
+                            text = stringResource(R.string.provider_qc_waiting),
                             color = CinemaTextSecondary,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -516,7 +524,7 @@ fun QuickConnectDialog(
                         containerColor = CinemaSurfaceVariant,
                         contentColor = CinemaTextPrimary,
                     ),
-            ) { Text("Cancel") }
+            ) { Text(stringResource(R.string.common_cancel)) }
         },
         containerColor = CinemaSurface,
     )

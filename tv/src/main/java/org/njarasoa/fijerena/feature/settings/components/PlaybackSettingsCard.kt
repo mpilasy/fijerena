@@ -10,8 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -27,7 +29,7 @@ fun PlaybackSettingsCard(
 ) {
     Column {
         Text(
-            text = "Playback",
+            text = stringResource(R.string.settings_playback_section_title),
             style =
                 MaterialTheme.typography.titleMedium.copy(
                     fontSize =
@@ -38,7 +40,7 @@ fun PlaybackSettingsCard(
         )
         Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
         Text(
-            text = "How long to watch a channel before it's added to Last Watched",
+            text = stringResource(R.string.settings_playback_watch_delay_desc),
             style =
                 MaterialTheme.typography.bodySmall.copy(
                     fontSize =

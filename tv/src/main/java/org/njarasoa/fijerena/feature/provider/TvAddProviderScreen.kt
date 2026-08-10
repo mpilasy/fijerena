@@ -487,13 +487,13 @@ fun TvAddProviderScreen(
                                                     ),
                                             )
                                         },
-                                        text = "Save Anyway",
+                                        text = stringResource(R.string.provider_save_anyway),
                                     )
                                 },
                                 dismissButton = {
                                     CinemaSecondaryButton(
                                         onClick = { viewModel.resetSaveState() },
-                                        text = "Go Back",
+                                        text = stringResource(R.string.provider_go_back),
                                     )
                                 },
                                 containerColor = CinemaSurface,

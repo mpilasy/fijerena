@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelStoreOwner
@@ -44,6 +45,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.service.watchExhaustionToasts
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -585,7 +587,7 @@ fun MobilePlayerContent(
                 exit = slideOutHorizontally { -it },
             ) {
                 MobileChannelListSheet(
-                    title = "Category Channels",
+                    title = stringResource(R.string.player_category_channels),
                     streams = remember(state.categoryStreams) { ImmutableMediaList(state.categoryStreams) },
                     panelAlignment = Alignment.CenterStart,
                     currentStreamId = state.streamId,
@@ -607,7 +609,7 @@ fun MobilePlayerContent(
                 exit = slideOutHorizontally { it },
             ) {
                 MobileChannelListSheet(
-                    title = "Last Watched",
+                    title = stringResource(R.string.player_last_watched),
                     streams =
                         remember(state.lastWatchedStreams, state.streamId) {
                             ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId })

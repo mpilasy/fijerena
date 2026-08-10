@@ -219,6 +219,7 @@
     <string name="provider_clear_button">Effacer</string>
     <string name="provider_clear_favorites_title">Effacer tous les favoris ?</string>
     <string name="provider_clear_favorites_message">Ceci supprimera tous les favoris de tous les types de contenu. Cette action est irréversible.</string>
+    <string name="provider_clear_progress_label">Effacer la progression de lecture</string>
     <string name="provider_clear_progress_title">Effacer la progression ?</string>
     <string name="provider_clear_progress_message">Ceci supprimera toutes les positions de lecture enregistrées. La lecture reprendra au début.</string>
     <string name="provider_category_filters_title">Filtres de catégories</string>
@@ -466,4 +467,234 @@
     <!-- Audio format -->
     <string name="player_audio_format_hint">%1$dch • %2$dkHz</string>
     <string name="player_nav_hint">D-pad pour naviguer • OK pour séléctionner • RETOUR pour annuler</string>
+
+    <!-- Edit Provider URL -->
+    <string name="edit_provider_title">Modifier l\'URL du fournisseur</string>
+    <string name="edit_provider_subtitle">Changer l\'URL du fournisseur</string>
+    <string name="edit_provider_credentials_preserved_hint">Vos identifiants seront conservés</string>
+    <string name="edit_provider_url_label">URL du fournisseur</string>
+    <string name="edit_provider_url_empty_error">L\'URL ne peut pas être vide</string>
+    <string name="edit_provider_update_success">URL du fournisseur mise à jour avec succès</string>
+    <string name="edit_provider_update_failed">Échec de la mise à jour de l\'URL du fournisseur</string>
+
+    <!-- Player Controls extras -->
+    <string name="player_rewind_1min_description">Retour rapide 1 min</string>
+    <string name="player_fast_forward_5min_description">Avance rapide 5 min</string>
+    <string name="player_rewind_label">-1m</string>
+    <string name="player_forward_label">+5m</string>
+    <string name="player_play">Lecture</string>
+    <string name="player_quality_dimensions_format">%1$dx%2$d - %3$d fps</string>
+
+    <!-- Stats Labels extras -->
+    <string name="player_stats_resolution">Résolution</string>
+    <string name="player_stats_frame_rate">Fréquence d\'images</string>
+    <string name="player_stats_sample_rate">Fréquence d\'échantillonnage</string>
+    <string name="player_stats_channels">Canaux</string>
+    <string name="player_stats_position">Position</string>
+    <string name="player_stats_duration">Durée</string>
+    <string name="player_stats_drop_rate_per_sec">Taux de perte/s</string>
+    <string name="player_stats_stream_health">Santé du flux</string>
+
+    <!-- Settings: Provider Card -->
+    <string name="settings_provider_section_title">Fournisseur</string>
+    <string name="settings_provider_expires_label">Expire le</string>
+    <string name="settings_provider_max_connections_label">Connexions max.</string>
+    <string name="settings_provider_trial_account_label">Compte d\'essai</string>
+    <string name="settings_provider_manage_button">Gérer les fournisseurs</string>
+
+    <!-- EPG Management extras -->
+    <string name="epg_automation_disabled">Désactivé</string>
+    <string name="epg_delete_sources_count_btn">Supprimer %1$d source(s)</string>
+    <string name="epg_source_phase_format">%1$s…</string>
+    <string name="epg_source_progress_percent">%1$d%%</string>
+    <string name="epg_delete_source_title">Supprimer la source ?</string>
+    <string name="epg_database_ready">Prêt (%1$s programmes)</string>
+    <string name="epg_database_optimizing">Optimisation de l\'index de recherche…</string>
+    <string name="epg_database_error_prefixed">Erreur de base de données : %1$s</string>
+    <string name="epg_current_status_error">Erreur de statut actuel : %1$s</string>
+
+    <!-- EPG Browser -->
+    <string name="epg_browser_title">Navigateur EPG</string>
+    <string name="epg_browser_title_with_provider">Navigateur EPG — %1$s</string>
+    <string name="epg_browser_refresh_stale_description">Actualiser les sources EPG obsolètes</string>
+    <string name="epg_browser_mode_programme">Prog.</string>
+    <string name="epg_browser_mode_channel">Chaîne</string>
+    <string name="epg_browser_matched_label">Correspondants</string>
+    <string name="epg_browser_search_titles_placeholder">Rechercher des titres…</string>
+    <string name="epg_browser_search_channels_placeholder">Rechercher des chaînes…</string>
+    <string name="epg_indexing_progress_count">%1$d %% (%2$s)</string>
+    <string name="epg_browser_finalizing_format">finalisation… (%1$s)</string>
+    <string name="epg_browser_indexing_label">Indexation…</string>
+    <string name="epg_browser_optimizing_label">Optimisation…</string>
+    <string name="epg_browser_hint_search_titles">Rechercher des titres de programmes</string>
+    <string name="epg_browser_hint_search_channels">Rechercher par nom de chaîne</string>
+    <string name="epg_browser_no_file_message">Aucun fichier EPG disponible.\nConfigurez une URL EPG dans les paramètres.</string>
+    <string name="epg_browser_watch_confirm_title">Regarder maintenant ?</string>
+    <string name="epg_browser_watch_confirm_message">Cette émission passe à %1$s.\nRegarder %2$s maintenant ?</string>
+    <string name="epg_browser_watch_now_btn">Regarder maintenant</string>
+    <string name="epg_browser_watch_description">Regarder</string>
+    <string name="epg_browser_show_less">Afficher moins</string>
+    <string name="epg_browser_show_more">Afficher plus</string>
+    <string name="epg_browser_show_more_count">%1$d diffusions de plus</string>
+    <string name="epg_browser_on_air_badge">À L\'ANTENNE</string>
+    <string name="epg_browser_soon_badge">BIENTÔT</string>
+    <string name="epg_browser_recent_searches">Recherches récentes</string>
+    <string name="epg_browser_clear_all_description">Tout effacer</string>
+    <string name="epg_browser_remove_description">Supprimer</string>
+
+    <!-- EPG Settings Card -->
+    <string name="settings_epg_section_title">Données EPG</string>
+    <string name="epg_summary_channels_programmes">%1$s chaînes, %2$s programmes</string>
+    <string name="epg_summary_indexing">Indexation : %1$d %%</string>
+    <string name="epg_summary_not_indexed">%1$d source(s) configurée(s), pas encore indexée(s)</string>
+    <string name="epg_summary_no_sources">Aucune source configurée</string>
+    <string name="epg_data_manage_button">Gérer les données EPG</string>
+
+    <!-- Player Stats extras -->
+    <string name="player_stats_na">N/A</string>
+    <string name="player_stream_type_live">Direct</string>
+    <string name="player_stream_type_vod">VOD</string>
+    <string name="player_stats_health_healthy">SAIN</string>
+    <string name="player_stats_health_degraded_format">DÉGRADÉ (Tentative %1$d)</string>
+    <string name="player_stats_health_unstable_format">INSTABLE (Points : %1$d)</string>
+
+    <!-- Mobile Settings Cards -->
+    <string name="settings_cellular_buffer_title">Paramètres de mémoire tampon cellulaire</string>
+    <string name="common_warning">Avertissement</string>
+    <string name="settings_cellular_buffer_advanced_label">Paramètres avancés</string>
+    <string name="settings_cellular_buffer_warning_desc">La modification des multiplicateurs de mémoire tampon affecte la qualité de lecture cellulaire. Les changements prennent effet à la prochaine lecture.</string>
+    <string name="settings_cellular_live_buffer_title">Mémoire tampon TV en direct</string>
+    <string name="settings_cellular_live_buffer_desc">Ajuster la taille de la mémoire tampon pour les flux TV en direct cellulaires</string>
+    <string name="settings_cellular_multiplier_format">Multiplicateur : %1$.1fx</string>
+    <string name="settings_cellular_vod_buffer_title">Mémoire tampon VOD</string>
+    <string name="settings_cellular_vod_buffer_desc">Ajuster la taille de la mémoire tampon pour les flux VOD cellulaires</string>
+    <string name="settings_apply_changes">Appliquer les modifications</string>
+    <string name="settings_reset_to_defaults">Réinitialiser par défaut</string>
+    <string name="settings_buffer_preview_title">Aperçu de la mémoire tampon</string>
+    <string name="common_min">Min</string>
+    <string name="common_max">Max</string>
+    <string name="common_seconds_decimal_format">%1$.1fs</string>
+    <string name="settings_about_section_title">À propos</string>
+    <string name="settings_about_app_version">Fijerena v1.0.0</string>
+    <string name="settings_about_tagline">Lecteur multimédia natif premium pour Android</string>
+    <string name="settings_cloud_sync_section_title">Synchronisation cloud</string>
+    <string name="settings_cloud_sync_desc">Synchroniser les paramètres du fournisseur entre appareils avec votre compte Google</string>
+    <string name="sync_status_synced">Synchronisé</string>
+    <string name="sync_status_ready">Prêt</string>
+    <string name="settings_cloud_sync_now_button">Synchroniser maintenant</string>
+    <string name="common_sign_out">Se déconnecter</string>
+    <string name="settings_sign_in_google_button">Se connecter avec Google</string>
+    <string name="settings_developer_mode_title">Mode développeur</string>
+    <string name="settings_developer_mode_desc">Activer les statistiques techniques et les fonctionnalités de débogage</string>
+    <string name="settings_configure_cellular_buffers_button">Configurer les mémoires tampons cellulaires</string>
+    <string name="settings_export_import_section_title">Exporter / Importer</string>
+    <string name="settings_export_import_desc">Exporter tous les paramètres vers un fichier ou importer depuis un autre appareil</string>
+    <string name="common_export">Exporter</string>
+    <string name="common_import">Importer</string>
+    <string name="settings_quick_import_not_found">Fichier de paramètres introuvable dans Téléchargements ou le dossier de l\'application</string>
+    <string name="settings_quick_import_button">Importation rapide depuis Téléchargements</string>
+    <string name="settings_import_select_title">Sélectionner quoi importer</string>
+    <string name="settings_import_general_label">Paramètres généraux</string>
+    <string name="settings_import_providers_count_format">Fournisseurs (%1$d)</string>
+    <string name="settings_import_epg_sources_count_format">Sources EPG (%1$d)</string>
+    <string name="settings_import_favorites_label">Favoris</string>
+    <string name="settings_import_provider_conflict_title">Conflit de fournisseur</string>
+    <string name="settings_import_conflict_message">Le(s) fournisseur(s) suivant(s) existe(nt) déjà :\n\n%1$s\n\nQue souhaitez-vous faire ?</string>
+    <string name="common_overwrite">Écraser</string>
+    <string name="common_duplicate">Dupliquer</string>
+    <string name="settings_import_skip_duplicates_button">Ignorer les doublons</string>
+    <string name="settings_playback_section_title">Lecture</string>
+    <string name="settings_playback_watch_delay_desc">Durée de visionnage d\'une chaîne avant son ajout à Derniers regardés</string>
+    <string name="settings_watch_delay_label">Délai de visionnage (secondes)</string>
+    <string name="settings_watch_delay_range_format">%1$d–%2$d secondes</string>
+    <string name="settings_theme_section_title">Thème</string>
+    <string name="settings_theme_desc">Choisir un thème de couleur pour l\'application</string>
+    <string name="settings_ui_style_desc">Choisir une apparence</string>
+
+    <!-- Content Type Selection -->
+    <string name="content_select_type_title">Sélectionner le type de contenu</string>
+    <string name="content_switch_provider_title">Changer de fournisseur</string>
+    <string name="content_switch_provider_description_format">Changer de fournisseur, fournisseur actuel : %1$s</string>
+    <string name="content_type_live_tv_description">Regarder des chaînes de télévision en direct</string>
+    <string name="content_type_movies_description">Parcourir les films à la demande</string>
+    <string name="content_type_tv_shows_description">Regarder des séries et des épisodes</string>
+
+    <!-- Category -->
+    <string name="category_live_preview_badge">APERÇU EN DIRECT</string>
+
+    <!-- Search -->
+    <string name="search_streams_placeholder">Rechercher des flux…</string>
+    <string name="search_categories_streams_hint">Rechercher des catégories et des flux dans toutes les catégories</string>
+    <string name="search_tab_categories">Catégories</string>
+    <string name="search_tab_streams">Flux</string>
+    <string name="category_up_next_format">À suivre : %1$s</string>
+
+    <!-- Provider Category Filters (TV short labels) -->
+    <string name="provider_filter_include_short">Inclure</string>
+    <string name="provider_filter_hide_matching_desc">Masquer les catégories correspondant à ces règles</string>
+    <string name="provider_filter_show_matching_desc">Afficher uniquement les catégories correspondant à ces règles</string>
+    <string name="provider_filter_rules_label">Règles :</string>
+    <string name="provider_filter_add_rules_section_label">Ajouter des règles (séparées par des virgules) :</string>
+    <string name="provider_filter_rules_placeholder">p. ex. XXX, Adult, 18+</string>
+    <string name="provider_filter_choose_match_type_prompt">Choisir le type de correspondance :</string>
+
+    <!-- Edit Provider URL (TV) -->
+    <string name="edit_provider_current_url_format">URL actuelle : %1$s</string>
+    <string name="edit_provider_url_placeholder">Saisir la nouvelle URL du fournisseur</string>
+    <string name="edit_provider_save_reauth_button">Enregistrer et se reconnecter</string>
+
+    <!-- EPG Management (TV) -->
+    <string name="epg_source_selected_description">Sélectionné</string>
+    <string name="epg_source_not_selected_description">Non sélectionné</string>
+    <string name="epg_delete_source_message_tv">Cela supprimera \"%1$s\" et toutes ses données indexées.</string>
+    <string name="epg_increase_description_format">Augmenter %1$s</string>
+    <string name="epg_decrease_description_format">Diminuer %1$s</string>
+
+    <!-- EPG Browser (TV) -->
+    <string name="epg_browser_provider_suffix_format"> — %1$s</string>
+    <string name="epg_browser_dev_stats_counts_format">%1$s prog., %2$s chaînes</string>
+    <string name="epg_browser_dev_stats_format">EPG : %1$s</string>
+    <string name="epg_browser_search_mode_programme">Programme</string>
+    <string name="epg_browser_search_mode_channel">Qu\'est-ce qui passe</string>
+    <string name="epg_browser_matched_only_label">Correspondances uniquement</string>
+    <string name="epg_browser_enter_programme_placeholder">Saisir le titre du programme…</string>
+    <string name="epg_browser_enter_channel_placeholder">Saisir le nom de la chaîne…</string>
+    <string name="epg_browser_indexing_progress_programmes_format">%1$d%% (%2$s programmes)</string>
+    <string name="epg_browser_finalizing_programmes_format">finalisation… (%1$s programmes)</string>
+    <string name="epg_browser_building_index_label">Construction de l\'index de recherche…</string>
+    <string name="epg_browser_optimizing_index_label">Optimisation de l\'index de recherche…</string>
+    <string name="epg_browser_hint_search_titles_local">Rechercher les titres de programmes dans vos données EPG locales</string>
+    <string name="epg_browser_hint_search_channels_6h">Rechercher par nom de chaîne pour voir ce qui passe dans les 6 prochaines heures</string>
+
+    <!-- TV Player -->
+    <string name="player_back_to_categories">Retour aux catégories</string>
+    <string name="stats_overlay_move_hint">Utiliser le pavé directionnel pour déplacer</string>
+
+    <!-- TV Settings: About Card -->
+    <string name="settings_about_version_format">Fijerena v%1$s</string>
+    <string name="settings_about_build_format">Build : %1$s</string>
+    <string name="settings_about_built_format">Compilé le : %1$s</string>
+
+    <!-- TV Settings: Export/Import Card -->
+    <string name="settings_export_button">Exporter les paramètres</string>
+    <string name="settings_import_button">Importer les paramètres</string>
+    <string name="settings_import_conflict_intro">Le(s) fournisseur(s) suivant(s) existe(nt) déjà :</string>
+    <string name="settings_import_choose_action">Que souhaitez-vous faire ?</string>
+
+    <!-- TV Settings: Theme Card -->
+    <string name="settings_ui_style_section_title">Apparence</string>
+    <string name="settings_ui_style_desc_tv">Choisissez une apparence inspirée d\'une plateforme</string>
+
+    <!-- TV Category/Search misc -->
+    <string name="category_refresh_description">Actualiser les catégories</string>
+    <string name="category_refresh_streams_description">Actualiser les flux</string>
+    <string name="category_favorite_hint_tv">Maintenez OK sur une chaîne ou une catégorie pour l\'ajouter aux favoris</string>
+    <string name="content_search_all_description">Tout rechercher</string>
+    <string name="content_type_live_tv_subtitle_short">Regarder des chaînes en direct</string>
+    <string name="common_edit_field_description_format">Modifier %1$s</string>
+    <string name="common_loading">Chargement…</string>
+    <string name="search_stream_name_placeholder">Entrez le nom du flux…</string>
+    <string name="search_result_category_format">Catégorie : %1$s</string>
+    <string name="content_type_movies_subtitle_short">Parcourir à la demande</string>
+    <string name="content_type_tv_shows_subtitle_short">Séries et épisodes</string>
 </resources>

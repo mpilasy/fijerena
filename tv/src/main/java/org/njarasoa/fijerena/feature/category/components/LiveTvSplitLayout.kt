@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -45,6 +46,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
@@ -416,7 +418,7 @@ internal fun LiveTvSplitLayout(
                 // (video disappears, this label goes with it) reads as a real state change
                 // instead of "Back did nothing". See docs/UX_FLOW_AUDIT.md, "Live TV back-stopover".
                 Text(
-                    text = "LIVE PREVIEW",
+                    text = stringResource(R.string.category_live_preview_badge),
                     style = MaterialTheme.typography.labelSmall,
                     color = CinemaAccent,
                 )
@@ -430,7 +432,7 @@ internal fun LiveTvSplitLayout(
                 val nowProg = success?.currentEpgProgram
                 if (nowProg != null) {
                     Text(
-                        text = "Now: ${nowProg.title}",
+                        text = stringResource(R.string.epg_now_prefix, nowProg.title),
                         style = MaterialTheme.typography.titleMedium,
                         color = CinemaTextPrimary,
                         maxLines = 2,
@@ -447,7 +449,7 @@ internal fun LiveTvSplitLayout(
                 val nextProg = success?.nextEpgProgram
                 if (nextProg != null) {
                     Text(
-                        text = "Up next: ${nextProg.title}",
+                        text = stringResource(R.string.category_up_next_format, nextProg.title),
                         style = MaterialTheme.typography.bodyMedium,
                         color = CinemaTextSecondary,
                         maxLines = 1,

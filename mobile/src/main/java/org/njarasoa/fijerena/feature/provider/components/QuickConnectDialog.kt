@@ -12,8 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
@@ -49,7 +51,7 @@ fun QuickConnectDialog(
             val api = JellyfinApiService(url.trimEnd('/'), deviceId)
             val initResult = api.initiateQuickConnect()
             if (initResult.isFailure) {
-                onQcErrorChange(initResult.exceptionOrNull()?.message ?: "Failed to start Quick Connect")
+                onQcErrorChange(initResult.exceptionOrNull()?.message ?: context.getString(R.string.provider_qc_init_failed))
                 return@LaunchedEffect
             }
             val init = initResult.getOrThrow()
@@ -60,13 +62,13 @@ fun QuickConnectDialog(
                 delay(3_000)
                 val poll = api.pollQuickConnect(init.secret)
                 if (poll.isFailure) {
-                    onQcErrorChange("Polling failed: ${poll.exceptionOrNull()?.message}")
+                    onQcErrorChange(context.getString(R.string.provider_qc_poll_failed, poll.exceptionOrNull()?.message))
                     return@LaunchedEffect
                 }
                 if (poll.getOrThrow().authenticated) {
                     val authResult = api.authenticateWithQuickConnect(init.secret)
                     if (authResult.isFailure) {
-                        onQcErrorChange("Authentication failed: ${authResult.exceptionOrNull()?.message}")
+                        onQcErrorChange(context.getString(R.string.provider_qc_auth_failed, authResult.exceptionOrNull()?.message))
                         return@LaunchedEffect
                     }
                     val auth = authResult.getOrThrow()
@@ -82,12 +84,12 @@ fun QuickConnectDialog(
                     return@LaunchedEffect
                 }
             }
-            onQcErrorChange("Timed out waiting for approval. Please try again.")
+            onQcErrorChange(context.getString(R.string.provider_qc_timeout))
         }
 
         CinemaAlertDialog(
             onDismissRequest = { onShowQuickConnectDialogChange(false) },
-            title = { Text("Quick Connect") },
+            title = { Text(stringResource(R.string.provider_quick_connect_title)) },
             text = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -105,13 +107,13 @@ fun QuickConnectDialog(
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                             Text(
-                                text = "Connecting to server...",
+                                text = stringResource(R.string.provider_connecting_server),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
                         else -> {
                             Text(
-                                text = "Enter this code in Jellyfin:",
+                                text = stringResource(R.string.provider_qc_enter_code),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
@@ -122,7 +124,7 @@ fun QuickConnectDialog(
                             )
                             Spacer(modifier = Modifier.height(CinemaSpacing.md))
                             Text(
-                                text = "Open Jellyfin → Dashboard → Quick Connect, then enter the code above.",
+                                text = stringResource(R.string.provider_qc_instructions),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -130,7 +132,7 @@ fun QuickConnectDialog(
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                             Text(
-                                text = "Waiting for approval...",
+                                text = stringResource(R.string.provider_qc_waiting),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -141,7 +143,7 @@ fun QuickConnectDialog(
             confirmButton = {},
             dismissButton = {
                 CinemaOutlinedButton(onClick = { onShowQuickConnectDialogChange(false) }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             },
         )

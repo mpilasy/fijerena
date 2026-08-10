@@ -51,6 +51,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -70,6 +71,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -254,7 +256,7 @@ private fun HeaderRow(contentType: String) {
     ) {
         Column {
             Text(
-                text = "Search",
+                text = stringResource(R.string.common_search),
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -302,7 +304,7 @@ private fun ErrorView(message: String) {
             modifier = Modifier.padding(Spacing.xl),
         ) {
             Text(
-                text = "Error",
+                text = stringResource(R.string.common_error),
                 style = MaterialTheme.typography.displayMedium,
                 color = CinemaError,
             )
@@ -356,7 +358,7 @@ private fun SearchContent(
                 localQuery = ""
                 onClearSearch()
             },
-            placeholder = "Enter stream name...",
+            placeholder = stringResource(R.string.search_stream_name_placeholder),
             focusRequester = searchFocusRequester,
             showClearButton = localQuery.isNotEmpty() || results.isNotEmpty() || categoryResults.isNotEmpty(),
         )
@@ -384,7 +386,7 @@ private fun SearchContent(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Search categories and streams across all categories",
+                        text = stringResource(R.string.search_categories_streams_hint),
                         style = MaterialTheme.typography.bodyLarge,
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                     )
@@ -427,7 +429,7 @@ private fun SearchHistorySection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Recent Searches",
+                text = stringResource(R.string.epg_browser_recent_searches),
                 style = MaterialTheme.typography.titleMedium,
                 color = CinemaTextSecondary,
             )
@@ -436,7 +438,7 @@ private fun SearchHistorySection(
                 icon = {
                     Icon(
                         imageVector = CinemaIcons.Delete,
-                        contentDescription = "Clear all",
+                        contentDescription = stringResource(R.string.epg_browser_clear_all_description),
                         modifier = Modifier.size(TvDimensions.iconSmall),
                         tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
                     )
@@ -670,7 +672,7 @@ private fun SearchResultsList(
                     if (categoryResults.isNotEmpty()) {
                         item(key = "category_header", contentType = "header") {
                             Text(
-                                text = "Categories",
+                                text = stringResource(R.string.search_tab_categories),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = CinemaAccent,
                                 modifier =
@@ -697,7 +699,7 @@ private fun SearchResultsList(
                     if (results.isNotEmpty()) {
                         item(key = "stream_header", contentType = "header") {
                             Text(
-                                text = "Streams",
+                                text = stringResource(R.string.search_tab_streams),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = CinemaAccent,
                                 modifier =
@@ -923,7 +925,7 @@ private fun SearchResultItem(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "Category: ${result.categoryName}",
+                    text = stringResource(R.string.search_result_category_format, result.categoryName),
                     style = MaterialTheme.typography.bodyMedium,
                     color = CinemaTextSecondary,
                 )
@@ -964,7 +966,7 @@ private fun SearchFavoriteDialog(
         dismissButton = {
             CinemaSecondaryButton(
                 onClick = onDismiss,
-                text = "Cancel",
+                text = stringResource(R.string.common_cancel),
             )
         },
         containerColor = CinemaSurface,

@@ -52,6 +52,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -108,6 +109,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.R
 
 @Composable
 fun TvEpgBrowserScreen(
@@ -131,7 +133,7 @@ fun TvEpgBrowserScreen(
     val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
     val epgDbStats =
         when (val idx = indexState) {
-            is EpgIndexState.Indexed -> "${formatCount(idx.programmeCount)} progs, ${formatCount(idx.channelCount)} channels"
+            is EpgIndexState.Indexed -> stringResource(R.string.epg_browser_dev_stats_counts_format, formatCount(idx.programmeCount), formatCount(idx.channelCount))
             else -> null
         }
     val isRefreshing =
@@ -163,7 +165,7 @@ fun TvEpgBrowserScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "EPG Browser",
+                        text = stringResource(R.string.epg_browser_title),
                         style =
                             MaterialTheme.typography.displaySmall.copy(
                                 fontSize =
@@ -172,9 +174,10 @@ fun TvEpgBrowserScreen(
                             ),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
-                    if (activeProviderName != null) {
+                    val providerName = activeProviderName
+                    if (providerName != null) {
                         Text(
-                            text = " — $activeProviderName",
+                            text = stringResource(R.string.epg_browser_provider_suffix_format, providerName),
                             style =
                                 MaterialTheme.typography.titleLarge.copy(
                                     fontSize =
@@ -223,7 +226,7 @@ fun TvEpgBrowserScreen(
                                 } else {
                                     Icon(
                                         imageVector = CinemaIcons.Refresh,
-                                        contentDescription = "Refresh stale EPG sources",
+                                        contentDescription = stringResource(R.string.epg_browser_refresh_stale_description),
                                         tint = if (staleSourceCount > 0) CinemaWarning else CinemaTextPrimary,
                                         modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
                                     )
@@ -242,7 +245,7 @@ fun TvEpgBrowserScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "No EPG file available. Configure an EPG URL in Settings.",
+                                text = stringResource(R.string.epg_browser_no_file_message),
                                 style =
                                     MaterialTheme.typography.bodyLarge.copy(
                                         fontSize =
@@ -358,8 +361,8 @@ private fun EpgBrowserContent(
                             Text(
                                 text =
                                     when (mode) {
-                                        EpgBrowserViewModel.SearchMode.PROGRAMME -> "Programme"
-                                        EpgBrowserViewModel.SearchMode.CHANNEL -> "What's on"
+                                        EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_search_mode_programme)
+                                        EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_search_mode_channel)
                                     },
                                 style =
                                     MaterialTheme.typography.labelLarge.copy(
@@ -388,7 +391,7 @@ private fun EpgBrowserContent(
                                 ),
                         )
                         Text(
-                            text = "Matched only",
+                            text = stringResource(R.string.epg_browser_matched_only_label),
                             style =
                                 MaterialTheme.typography.labelLarge.copy(
                                     fontSize =
@@ -411,8 +414,8 @@ private fun EpgBrowserContent(
                         onClearSearch()
                     },
                     placeholder = when (searchMode) {
-                        EpgBrowserViewModel.SearchMode.PROGRAMME -> "Enter programme title..."
-                        EpgBrowserViewModel.SearchMode.CHANNEL -> "Enter channel name..."
+                        EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_enter_programme_placeholder)
+                        EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_enter_channel_placeholder)
                     },
                     focusRequester = searchFocusRequester,
                     showClearButton = localQuery.isNotEmpty() || hasResults,
@@ -431,7 +434,7 @@ private fun EpgBrowserContent(
         // Dev mode: show EPG DB stats
         if (isDevMode && epgDbStats != null) {
             Text(
-                text = "EPG: $epgDbStats",
+                text = stringResource(R.string.epg_browser_dev_stats_format, epgDbStats),
                 style =
                     MaterialTheme.typography.labelSmall.copy(
                         fontSize =
@@ -448,9 +451,9 @@ private fun EpgBrowserContent(
         if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
             val idx = currentIndexState
             val progressText = if (idx is EpgIndexState.Indexing) {
-                "${idx.progressPercent}% (${formatCount(idx.programmesIndexed)} programmes)"
+                stringResource(R.string.epg_browser_indexing_progress_programmes_format, idx.progressPercent, formatCount(idx.programmesIndexed))
             } else {
-                "finalizing... (${formatCount((idx as EpgIndexState.Optimizing).programmeCount)} programmes)"
+                stringResource(R.string.epg_browser_finalizing_programmes_format, formatCount((idx as EpgIndexState.Optimizing).programmeCount))
             }
             val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f
 
@@ -460,7 +463,7 @@ private fun EpgBrowserContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = if (idx is EpgIndexState.Indexing) "Building search index..." else "Optimizing search index...",
+                        text = if (idx is EpgIndexState.Indexing) stringResource(R.string.epg_browser_building_index_label) else stringResource(R.string.epg_browser_optimizing_index_label),
                         style =
                             MaterialTheme.typography.labelMedium.copy(
                                 fontSize =
@@ -519,8 +522,8 @@ private fun EpgBrowserContent(
                     ) {
                         val hintText =
                             when (searchMode) {
-                                EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles in your local EPG data"
-                                EpgBrowserViewModel.SearchMode.CHANNEL -> "Search by channel name to see what's on in the next 6 hours"
+                                EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_hint_search_titles_local)
+                                EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_hint_search_channels_6h)
                             }
                         Text(
                             text = hintText,
@@ -583,7 +586,7 @@ private fun EpgSearchHistorySection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Recent Searches",
+                text = stringResource(R.string.epg_browser_recent_searches),
                 style =
                     MaterialTheme.typography.titleMedium.copy(
                         fontSize =
@@ -597,7 +600,7 @@ private fun EpgSearchHistorySection(
                 icon = {
                     Icon(
                         imageVector = CinemaIcons.Delete,
-                        contentDescription = "Clear all",
+                        contentDescription = stringResource(R.string.epg_browser_clear_all_description),
                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                         tint = CinemaTextPrimary
                     )
@@ -911,14 +914,14 @@ private fun ProgramCard(
                 val airingContext = LocalContext.current
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
-                    title = { Text("Watch now?", color = CinemaTextPrimary) },
+                    title = { Text(stringResource(R.string.epg_browser_watch_confirm_title), color = CinemaTextPrimary) },
                     text = {
                         Text(
-                            "This show airs at ${formatAiringTime(
-                                airingContext,
-                                pending.startEpoch,
-                                pending.endEpoch,
-                            )}.\nWatch ${pending.channelName} now?",
+                            stringResource(
+                                R.string.epg_browser_watch_confirm_message,
+                                formatAiringTime(airingContext, pending.startEpoch, pending.endEpoch),
+                                pending.channelName,
+                            ),
                             color = CinemaTextSecondary
                         )
                     },
@@ -926,10 +929,10 @@ private fun ProgramCard(
                         CinemaButton(onClick = {
                             pendingConfirmAiring = null
                             onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
-                        }) { Text("Watch now") }
+                        }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
                     },
                     dismissButton = {
-                        CinemaButton(onClick = { pendingConfirmAiring = null }) { Text("Cancel") }
+                        CinemaButton(onClick = { pendingConfirmAiring = null }) { Text(stringResource(R.string.common_cancel)) }
                     },
                     containerColor = CinemaSurface,
                 )
@@ -965,7 +968,7 @@ private fun AiringRow(
             if (isMatched) {
                 Icon(
                     imageVector = CinemaIcons.PlayArrow,
-                    contentDescription = "Watch",
+                    contentDescription = stringResource(R.string.epg_browser_watch_description),
                     modifier = Modifier.size(Spacing.lg.scaled(scale)),
                     tint = if (isOnAir) CinemaSuccess else CinemaAccentLight,
                 )
@@ -1000,7 +1003,7 @@ private fun AiringRow(
             }
             if (isOnAir || isSoon) {
                 val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
-                val badgeLabel = if (isOnAir) "ON AIR" else "SOON"
+                val badgeLabel = if (isOnAir) stringResource(R.string.epg_browser_on_air_badge) else stringResource(R.string.epg_browser_soon_badge)
                 Text(
                     text = badgeLabel,
                     style =

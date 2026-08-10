@@ -25,8 +25,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
@@ -138,7 +140,7 @@ fun TvSearchTextField(
                 icon = {
                     Icon(
                         imageVector = CinemaIcons.Close,
-                        contentDescription = "Clear",
+                        contentDescription = stringResource(R.string.provider_clear_button),
                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                         tint = CinemaTextPrimary
                     )
@@ -168,7 +170,7 @@ fun TvSearchTextField(
             icon = {
                 Icon(
                     imageVector = CinemaIcons.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.common_search),
                     modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
                     tint = CinemaTextPrimary
                 )

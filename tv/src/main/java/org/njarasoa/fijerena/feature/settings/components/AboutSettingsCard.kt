@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -22,7 +24,7 @@ fun AboutSettingsCard(scale: Float) {
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
-                text = "About",
+                text = stringResource(R.string.settings_about_section_title),
                 style =
                     MaterialTheme.typography.titleMedium.copy(
                         fontSize =
@@ -33,7 +35,7 @@ fun AboutSettingsCard(scale: Float) {
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Text(
-                text = "Fijerena v${org.njarasoa.fijerena.BuildConfig.VERSION_NAME}",
+                text = stringResource(R.string.settings_about_version_format, org.njarasoa.fijerena.BuildConfig.VERSION_NAME),
                 style =
                     MaterialTheme.typography.bodyMedium.copy(
                         fontSize =
@@ -44,7 +46,7 @@ fun AboutSettingsCard(scale: Float) {
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
-                text = "Build: ${org.njarasoa.fijerena.BuildConfig.GIT_HASH}",
+                text = stringResource(R.string.settings_about_build_format, org.njarasoa.fijerena.BuildConfig.GIT_HASH),
                 style =
                     MaterialTheme.typography.bodySmall.copy(
                         fontSize =
@@ -55,7 +57,7 @@ fun AboutSettingsCard(scale: Float) {
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
-                text = "Built: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME}",
+                text = stringResource(R.string.settings_about_built_format, org.njarasoa.fijerena.BuildConfig.BUILD_TIME),
                 style =
                     MaterialTheme.typography.bodySmall.copy(
                         fontSize =

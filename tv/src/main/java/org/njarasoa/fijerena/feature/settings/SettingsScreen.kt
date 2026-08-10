@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -78,7 +80,9 @@ fun SettingsScreen(
     LaunchedEffect(pendingExportUri) {
         val uri = pendingExportUri ?: return@LaunchedEffect
         val success = exportManager.exportToUri(uri)
-        viewModel.setExportImportMessage(if (success) "Settings exported successfully" else "Export failed")
+        viewModel.setExportImportMessage(
+            if (success) context.getString(R.string.settings_export_success) else context.getString(R.string.settings_export_failed),
+        )
         pendingExportUri = null
     }
 
@@ -92,7 +96,7 @@ fun SettingsScreen(
                 pendingImportOptions = SettingsExportManager.ImportOptions()
                 showImportOptionsDialog = true
             }.onFailure { e ->
-                viewModel.setExportImportMessage("Import failed: ${e.message}")
+                viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message))
             }
         pendingImportUri = null
     }
@@ -107,7 +111,7 @@ fun SettingsScreen(
                 pendingImportOptions = SettingsExportManager.ImportOptions()
                 showImportOptionsDialog = true
             }.onFailure { e ->
-                viewModel.setExportImportMessage("Import failed: ${e.message}")
+                viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message))
             }
         pendingImportPath = null
     }
@@ -127,7 +131,7 @@ fun SettingsScreen(
             coroutineScope.launch {
                 val success = syncManager.handleSignInResult(result.data)
                 if (!success) {
-                    signInError = "Sign-in failed. Check Google Play Services."
+                    signInError = context.getString(R.string.settings_google_signin_failed)
                 } else {
                     signInError = null
                 }
@@ -176,7 +180,7 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Settings",
+                    text = stringResource(R.string.settings_title),
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -303,7 +307,7 @@ fun SettingsScreen(
                             if (path != null) {
                                 pendingImportPath = path
                             } else {
-                                viewModel.setExportImportMessage("Settings file not found in Downloads or app folder")
+                                viewModel.setExportImportMessage(context.getString(R.string.settings_quick_import_not_found))
                             }
                         },
                         exportImportMessage = uiState.exportImportMessage,

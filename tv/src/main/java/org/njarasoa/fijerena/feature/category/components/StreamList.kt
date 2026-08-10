@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
@@ -43,6 +44,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -161,7 +163,7 @@ internal fun StreamList(
                         icon = {
                             Icon(
                                 imageVector = CinemaIcons.Refresh,
-                                contentDescription = "Refresh streams",
+                                contentDescription = stringResource(R.string.category_refresh_streams_description),
                                 tint = CinemaTextPrimary,
                                 modifier =
                                     Modifier
@@ -392,7 +394,7 @@ private fun StreamItem(
                     // "What's On Now" for Live TV
                     nowPlayingProgram?.let { program ->
                         Text(
-                            text = "Now: ${program.title}",
+                            text = stringResource(R.string.epg_now_prefix, program.title),
                             style = scaledStyles.bodySmall,
                             color = CinemaOrangeLight,
                             maxLines = 1,

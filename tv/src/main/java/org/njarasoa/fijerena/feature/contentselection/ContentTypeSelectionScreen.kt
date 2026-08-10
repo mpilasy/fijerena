@@ -52,6 +52,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -73,6 +74,7 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -246,7 +248,7 @@ fun ContentTypeSelectionScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "fijerena",
+                        text = stringResource(R.string.login_app_name),
                         style =
                             MaterialTheme.typography.displayMedium.copy(
                                 fontSize =
@@ -268,6 +270,8 @@ fun ContentTypeSelectionScreen(
                                 } else {
                                     providerName
                                 }
+                            val switchProviderDescription =
+                                stringResource(R.string.content_switch_provider_description_format, displayName)
                             var providerPillFocused by remember { mutableStateOf(false) }
                             val pillScale by animateFloatAsState(
                                 targetValue = if (providerPillFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
@@ -285,7 +289,7 @@ fun ContentTypeSelectionScreen(
                                         ).onFocusChanged { providerPillFocused = it.isFocused }
                                         .clickable(role = Role.DropdownList) { showProviderPicker = true }
                                         .semantics {
-                                            contentDescription = "Switch Provider, current provider: $displayName"
+                                            contentDescription = switchProviderDescription
                                         },
                             ) {
                                 Row(
@@ -316,7 +320,7 @@ fun ContentTypeSelectionScreen(
                                 icon = {
                                     Icon(
                                         imageVector = CinemaIcons.MenuBook,
-                                        contentDescription = "EPG Browser",
+                                        contentDescription = stringResource(R.string.epg_browser_title),
                                         tint = CinemaTextPrimary,
                                     )
                                 },
@@ -327,7 +331,7 @@ fun ContentTypeSelectionScreen(
                             icon = {
                                 Icon(
                                     imageVector = CinemaIcons.Search,
-                                    contentDescription = "Search All",
+                                    contentDescription = stringResource(R.string.content_search_all_description),
                                     tint = CinemaTextPrimary,
                                 )
                             },
@@ -337,7 +341,7 @@ fun ContentTypeSelectionScreen(
                             icon = {
                                 Icon(
                                     imageVector = CinemaIcons.Settings,
-                                    contentDescription = "Settings",
+                                    contentDescription = stringResource(R.string.settings_title),
                                     tint = CinemaTextPrimary,
                                 )
                             },
@@ -360,8 +364,8 @@ fun ContentTypeSelectionScreen(
                         var cardIndex = 1
                         if (ContentType.LIVE_TV in supportedContentTypes) {
                             ContentTypeHeroCard(
-                                title = "Live TV",
-                                subtitle = "Watch live channels",
+                                title = stringResource(R.string.provider_live_tv_label),
+                                subtitle = stringResource(R.string.content_type_live_tv_subtitle_short),
                                 icon = CinemaIcons.LiveTv,
                                 categoryCounts = liveTvCounts,
                                 showTotal = isDevMode,
@@ -374,8 +378,8 @@ fun ContentTypeSelectionScreen(
 
                         if (ContentType.MOVIES in supportedContentTypes) {
                             ContentTypeHeroCard(
-                                title = "Movies",
-                                subtitle = "Browse on-demand",
+                                title = stringResource(R.string.provider_movies_label),
+                                subtitle = stringResource(R.string.content_type_movies_subtitle_short),
                                 icon = CinemaIcons.Movie,
                                 categoryCounts = moviesCounts,
                                 showTotal = isDevMode,
@@ -387,8 +391,8 @@ fun ContentTypeSelectionScreen(
 
                         if (ContentType.TV_SHOWS in supportedContentTypes) {
                             ContentTypeHeroCard(
-                                title = "TV Shows",
-                                subtitle = "Series & episodes",
+                                title = stringResource(R.string.provider_tv_shows_label),
+                                subtitle = stringResource(R.string.content_type_tv_shows_subtitle_short),
                                 icon = CinemaIcons.Tv,
                                 categoryCounts = tvShowsCounts,
                                 showTotal = isDevMode,
@@ -409,7 +413,7 @@ fun ContentTypeSelectionScreen(
                     containerColor = CinemaSurface,
                     titleContentColor = CinemaTextPrimary,
                     textContentColor = CinemaTextSecondary,
-                    title = { androidx.compose.material3.Text("Switch Provider") },
+                    title = { androidx.compose.material3.Text(stringResource(R.string.content_switch_provider_title)) },
                     text = {
                         Column(
                             modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -460,7 +464,7 @@ fun ContentTypeSelectionScreen(
                                         )
                                         if (isActive) {
                                             androidx.compose.material3.Text(
-                                                text = "Active",
+                                                text = stringResource(R.string.provider_active_label),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = CinemaAccent,
                                             )
@@ -472,7 +476,7 @@ fun ContentTypeSelectionScreen(
                     },
                     confirmButton = {
                         CinemaDialogTextButton(onClick = { showProviderPicker = false }) {
-                            androidx.compose.material3.Text("Close", color = CinemaAccent)
+                            androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaAccent)
                         }
                     },
                 )

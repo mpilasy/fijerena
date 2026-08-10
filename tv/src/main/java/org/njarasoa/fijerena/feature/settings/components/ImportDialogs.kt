@@ -31,6 +31,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -39,6 +40,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.SettingsExportManager
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
@@ -100,7 +102,7 @@ fun ImportOptionsDialog(
                     modifier = Modifier.padding(Spacing.xxl),
                 ) {
                     Text(
-                        text = "Select What to Import",
+                        text = stringResource(R.string.settings_import_select_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = CinemaAccent,
                     )
@@ -116,7 +118,7 @@ fun ImportOptionsDialog(
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         OptionRow(
-                            label = "General Settings",
+                            label = stringResource(R.string.settings_import_general_label),
                             checked = optGlobal,
                             onToggle = { optGlobal = !optGlobal },
                             modifier = Modifier.focusRequester(firstOptionFocusRequester),
@@ -124,21 +126,21 @@ fun ImportOptionsDialog(
 
                         if (parsed.hasProviders) {
                             OptionRow(
-                                label = "Providers (${parsed.settings.providers.size})",
+                                label = stringResource(R.string.settings_import_providers_count_format, parsed.settings.providers.size),
                                 checked = optProviders,
                                 onToggle = { optProviders = !optProviders },
                             )
                         }
                         if (parsed.hasEpgSources) {
                             OptionRow(
-                                label = "EPG Sources (${parsed.settings.epgSources.size})",
+                                label = stringResource(R.string.settings_import_epg_sources_count_format, parsed.settings.epgSources.size),
                                 checked = optEpg,
                                 onToggle = { optEpg = !optEpg },
                             )
                         }
                         if (parsed.hasFavorites) {
                             OptionRow(
-                                label = "Favorites",
+                                label = stringResource(R.string.settings_import_favorites_label),
                                 checked = optFavorites,
                                 onToggle = { optFavorites = !optFavorites },
                             )
@@ -162,12 +164,12 @@ fun ImportOptionsDialog(
                                     ),
                                 )
                             },
-                            text = "Import",
+                            text = stringResource(R.string.common_import),
                             modifier = Modifier.weight(1f),
                         )
                         CinemaSecondaryButton(
                             onClick = onCancel,
-                            text = "Cancel",
+                            text = stringResource(R.string.common_cancel),
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -279,7 +281,7 @@ fun ConflictResolutionDialog(
                             .focusProperties { exit = { FocusRequester.Cancel } },
                 ) {
                     Text(
-                        text = "Provider Conflict",
+                        text = stringResource(R.string.settings_import_provider_conflict_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = CinemaAccent,
                     )
@@ -287,7 +289,7 @@ fun ConflictResolutionDialog(
                     Spacer(modifier = Modifier.height(Spacing.sm))
 
                     Text(
-                        text = "The following provider(s) already exist:",
+                        text = stringResource(R.string.settings_import_conflict_intro),
                         style = MaterialTheme.typography.bodyMedium,
                         color = CinemaTextPrimary,
                     )
@@ -314,7 +316,7 @@ fun ConflictResolutionDialog(
                     Spacer(modifier = Modifier.height(Spacing.md))
 
                     Text(
-                        text = "What would you like to do?",
+                        text = stringResource(R.string.settings_import_choose_action),
                         style = MaterialTheme.typography.bodyMedium,
                         color = CinemaTextPrimary,
                     )
@@ -329,7 +331,7 @@ fun ConflictResolutionDialog(
                             onClick = {
                                 onResolve(SettingsExportManager.ConflictResolution.OVERWRITE)
                             },
-                            text = "Overwrite",
+                            text = stringResource(R.string.common_overwrite),
                             modifier =
                                 Modifier
                                     .weight(1f)
@@ -339,7 +341,7 @@ fun ConflictResolutionDialog(
                             onClick = {
                                 onResolve(SettingsExportManager.ConflictResolution.DUPLICATE)
                             },
-                            text = "Duplicate",
+                            text = stringResource(R.string.common_duplicate),
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -354,12 +356,12 @@ fun ConflictResolutionDialog(
                             onClick = {
                                 onResolve(SettingsExportManager.ConflictResolution.SKIP)
                             },
-                            text = "Skip Duplicates",
+                            text = stringResource(R.string.settings_import_skip_duplicates_button),
                             modifier = Modifier.weight(1f),
                         )
                         CinemaSecondaryButton(
                             onClick = onCancel,
-                            text = "Cancel",
+                            text = stringResource(R.string.common_cancel),
                             modifier = Modifier.weight(1f),
                         )
                     }

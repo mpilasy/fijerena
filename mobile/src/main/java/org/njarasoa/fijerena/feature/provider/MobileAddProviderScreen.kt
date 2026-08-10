@@ -920,10 +920,10 @@ fun MobileAddProviderScreen(
                                 }
                                 showCategoryFilterDialog = false
                             },
-                        ) { Text("Save") }
+                        ) { Text(stringResource(R.string.provider_save_button)) }
                     },
                     dismissButton = {
-                        CinemaOutlinedButton(onClick = { showCategoryFilterDialog = false }) { Text("Cancel") }
+                        CinemaOutlinedButton(onClick = { showCategoryFilterDialog = false }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }

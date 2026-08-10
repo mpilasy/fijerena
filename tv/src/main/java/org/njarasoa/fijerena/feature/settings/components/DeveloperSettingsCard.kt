@@ -13,8 +13,10 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -44,13 +46,13 @@ fun DeveloperSettingsCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Developer Mode",
+                    text = stringResource(R.string.settings_developer_mode_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
                 Text(
-                    text = "Enable stats for nerds and debug features",
+                    text = stringResource(R.string.settings_developer_mode_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )

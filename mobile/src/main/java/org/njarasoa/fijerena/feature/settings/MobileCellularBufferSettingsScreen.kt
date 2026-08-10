@@ -12,9 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -46,10 +48,10 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cellular Buffer Settings") },
+                title = { Text(stringResource(R.string.settings_cellular_buffer_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, "Back")
+                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
                     }
                 },
             )
@@ -76,19 +78,19 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                     ) {
                         Icon(
                             imageVector = CinemaIcons.Info,
-                            contentDescription = "Warning",
+                            contentDescription = stringResource(R.string.common_warning),
                             tint = CinemaWarning,
                             modifier = Modifier.size(20.dp),
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Advanced Settings",
+                                text = stringResource(R.string.settings_cellular_buffer_advanced_label),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = CinemaWarning,
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Adjusting buffer multipliers affects cellular playback quality. Changes take effect on next playback.",
+                                text = stringResource(R.string.settings_cellular_buffer_warning_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                             )
@@ -98,9 +100,9 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
             }
 
             // Live TV Section
-            LocalSettingsSection(title = "Live TV Buffer") {
+            LocalSettingsSection(title = stringResource(R.string.settings_cellular_live_buffer_title)) {
                 Text(
-                    text = "Adjust buffer size for cellular Live TV streams",
+                    text = stringResource(R.string.settings_cellular_live_buffer_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
@@ -121,7 +123,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Multiplier: %.1fx".format(liveMultiplier),
+                            text = stringResource(R.string.settings_cellular_multiplier_format, liveMultiplier),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -139,9 +141,9 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
             }
 
             // VOD Section
-            LocalSettingsSection(title = "VOD Buffer") {
+            LocalSettingsSection(title = stringResource(R.string.settings_cellular_vod_buffer_title)) {
                 Text(
-                    text = "Adjust buffer size for cellular VOD streams",
+                    text = stringResource(R.string.settings_cellular_vod_buffer_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
@@ -162,7 +164,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Multiplier: %.1fx".format(vodMultiplier),
+                            text = stringResource(R.string.settings_cellular_multiplier_format, vodMultiplier),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -193,7 +195,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     enabled = hasChanges,
                 ) {
-                    Text("Apply Changes")
+                    Text(stringResource(R.string.settings_apply_changes))
                 }
 
                 CinemaOutlinedButton(
@@ -204,7 +206,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Reset to Defaults")
+                    Text(stringResource(R.string.settings_reset_to_defaults))
                 }
             }
 
@@ -235,7 +237,7 @@ private fun CellularBufferPreview(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = "Buffer Preview",
+                text = stringResource(R.string.settings_buffer_preview_title),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
             )
@@ -245,23 +247,23 @@ private fun CellularBufferPreview(
             ) {
                 Column {
                     Text(
-                        text = "Min",
+                        text = stringResource(R.string.common_min),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                     )
                     Text(
-                        text = "%.1fs".format(minBufferSeconds),
+                        text = stringResource(R.string.common_seconds_decimal_format, minBufferSeconds),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 Column {
                     Text(
-                        text = "Max",
+                        text = stringResource(R.string.common_max),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                     )
                     Text(
-                        text = "%.1fs".format(maxBufferSeconds),
+                        text = stringResource(R.string.common_seconds_decimal_format, maxBufferSeconds),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

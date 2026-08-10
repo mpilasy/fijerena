@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -23,6 +24,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -261,7 +263,7 @@ private fun FavoriteHintBanner(modifier: Modifier = Modifier) {
     val scale = LocalUiScale.current
     org.njarasoa.fijerena.core.ui.components.GlassPanel(modifier = modifier) {
         androidx.tv.material3.Text(
-            text = "Hold OK on a channel or category to add it to Favorites",
+            text = stringResource(R.string.category_favorite_hint_tv),
             style = androidx.tv.material3.MaterialTheme.typography.bodyMedium,
             color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
             modifier =

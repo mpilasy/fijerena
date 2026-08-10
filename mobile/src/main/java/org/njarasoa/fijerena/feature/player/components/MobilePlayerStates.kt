@@ -16,8 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.player.model.PlaybackState
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -55,7 +57,7 @@ fun ErrorScreen(
             modifier = Modifier.padding(32.dp),
         ) {
             Text(
-                text = "Playback Error",
+                text = stringResource(R.string.player_error),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -66,10 +68,10 @@ fun ErrorScreen(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 CinemaButton(onClick = onRetry) {
-                    Text("Retry")
+                    Text(stringResource(R.string.player_retry))
                 }
                 CinemaButton(onClick = onBack) {
-                    Text("Back")
+                    Text(stringResource(R.string.player_back))
                 }
             }
         }
@@ -92,7 +94,7 @@ fun ErrorOverlay(
             modifier = Modifier.padding(24.dp),
         ) {
             Text(
-                text = "Playback Error",
+                text = stringResource(R.string.player_error),
                 style = MaterialTheme.typography.headlineSmall,
                 color = CinemaError,
             )
@@ -105,10 +107,10 @@ fun ErrorOverlay(
             Spacer(modifier = Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 CinemaButton(onClick = onRetry) {
-                    Text("Retry")
+                    Text(stringResource(R.string.player_retry))
                 }
                 CinemaButton(onClick = onBack) {
-                    Text("Back")
+                    Text(stringResource(R.string.player_back))
                 }
             }
         }

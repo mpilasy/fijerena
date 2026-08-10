@@ -13,11 +13,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -36,7 +38,7 @@ fun EpgSettingsCard(
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
-                text = "EPG Data",
+                text = stringResource(R.string.settings_epg_section_title),
                 style =
                     MaterialTheme.typography.titleMedium.copy(
                         fontSize =
@@ -55,20 +57,22 @@ fun EpgSettingsCard(
             }
             val summaryText =
                 when (val idx = indexState) {
-                    is EpgIndexState.Indexed -> "${formatProgrammeCount(
-                        idx.channelCount,
-                    )} channels, ${formatProgrammeCount(idx.programmeCount)} programmes"
-                    is EpgIndexState.Indexing -> "Indexing: ${idx.progressPercent}%"
-                    is EpgIndexState.Optimizing -> "Optimizing search index..."
+                    is EpgIndexState.Indexed -> stringResource(
+                        R.string.epg_summary_channels_programmes,
+                        formatProgrammeCount(idx.channelCount),
+                        formatProgrammeCount(idx.programmeCount),
+                    )
+                    is EpgIndexState.Indexing -> stringResource(R.string.epg_summary_indexing, idx.progressPercent)
+                    is EpgIndexState.Optimizing -> stringResource(R.string.epg_browser_optimizing_index_label)
                     is EpgIndexState.NotIndexed ->
                         if (sourceCount >
                             0
                         ) {
-                            "$sourceCount source(s) configured, not yet indexed"
+                            stringResource(R.string.epg_summary_not_indexed, sourceCount)
                         } else {
-                            "No sources configured"
+                            stringResource(R.string.epg_summary_no_sources)
                         }
-                    is EpgIndexState.Failed -> "Error: ${idx.reason}"
+                    is EpgIndexState.Failed -> stringResource(R.string.epg_database_error, idx.reason)
                 }
             Text(
                 text = summaryText,
@@ -83,7 +87,7 @@ fun EpgSettingsCard(
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onManageEpg,
-                text = "Manage EPG Data",
+                text = stringResource(R.string.epg_data_manage_button),
             )
         }
     }

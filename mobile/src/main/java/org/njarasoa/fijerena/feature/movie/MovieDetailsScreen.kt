@@ -389,7 +389,7 @@ private fun LoadingScreen() {
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             CircularProgressIndicator()
-            Text("Loading movie details...")
+            Text(stringResource(R.string.movie_loading_details))
         }
     }
 }
@@ -409,7 +409,7 @@ private fun ErrorScreen(
             modifier = Modifier.padding(CinemaSpacing.xl),
         ) {
             Text(
-                text = "Error Loading Movie",
+                text = stringResource(R.string.movie_error_loading),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -418,7 +418,7 @@ private fun ErrorScreen(
                 style = MaterialTheme.typography.bodyLarge,
             )
             CinemaButton(onClick = onBack) {
-                Text("Back")
+                Text(stringResource(R.string.common_back))
             }
         }
     }
