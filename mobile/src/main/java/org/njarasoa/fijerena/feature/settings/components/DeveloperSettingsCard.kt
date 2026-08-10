@@ -13,7 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
@@ -26,7 +28,7 @@ fun DeveloperSettingsCard(
     viewModel: SettingsViewModel,
     onCellularBuffers: () -> Unit
 ) {
-    SettingsSection(title = "Developer Mode") {
+    SettingsSection(title = stringResource(R.string.settings_developer_mode_title)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -34,7 +36,7 @@ fun DeveloperSettingsCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Enable stats for nerds and debug features",
+                    text = stringResource(R.string.settings_developer_mode_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                 )
@@ -54,7 +56,7 @@ fun DeveloperSettingsCard(
                 onClick = onCellularBuffers,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Configure Cellular Buffers")
+                Text(stringResource(R.string.settings_configure_cellular_buffers_button))
             }
         }
     }

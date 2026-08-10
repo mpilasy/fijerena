@@ -18,8 +18,10 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.ProviderType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -38,7 +40,7 @@ fun ProviderTypeDropdown(
             value = selectedType.displayName,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Provider Type") },
+            label = { Text(stringResource(R.string.provider_type_label)) },
             trailingIcon = {
                 Text(
                     text = if (typeDropdownExpanded) "▲" else "▼",

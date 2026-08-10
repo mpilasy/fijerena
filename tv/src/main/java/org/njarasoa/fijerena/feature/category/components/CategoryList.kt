@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
@@ -44,6 +45,7 @@ import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
@@ -167,7 +169,7 @@ internal fun CategoryList(
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
         ) {
             Text(
-                text = "Categories",
+                text = stringResource(R.string.search_tab_categories),
                 style = scaledTitleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -178,7 +180,7 @@ internal fun CategoryList(
                 icon = {
                     Icon(
                         imageVector = CinemaIcons.Refresh,
-                        contentDescription = "Refresh categories",
+                        contentDescription = stringResource(R.string.category_refresh_description),
                         tint = CinemaTextPrimary,
                         modifier =
                             Modifier

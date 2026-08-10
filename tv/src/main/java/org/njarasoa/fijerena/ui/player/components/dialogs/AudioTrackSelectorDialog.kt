@@ -213,14 +213,14 @@ fun AudioTrackSelectorDialog(
                                     )
                                     if (track.isSelected) {
                                         Text(
-                                            text = "Active",
+                                            text = stringResource(R.string.player_active),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary,
                                         )
                                     }
                                 }
                                 Text(
-                                    text = "${track.channelCount}ch • ${track.sampleRate / 1000}kHz",
+                                    text = stringResource(R.string.player_audio_format_hint, track.channelCount, track.sampleRate / 1000),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = CinemaTextTertiary,
                                 )
@@ -238,13 +238,13 @@ fun AudioTrackSelectorDialog(
                                 .align(CenterHorizontally)
                                 .width(TvDimensions.selectionListWidth),
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.common_cancel))
                     }
                 }
 
                 // Hint text
                 Text(
-                    text = "Use D-pad to navigate • OK to select • BACK to cancel",
+                    text = stringResource(R.string.player_nav_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = CinemaTextDisabled,
                     textAlign = TextAlign.Center,

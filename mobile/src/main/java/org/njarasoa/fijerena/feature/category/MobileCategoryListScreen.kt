@@ -643,7 +643,7 @@ fun MobileCategoryListScreen(
                                             ) {
                                                 Icon(
                                                     CinemaIcons.Close,
-                                                    contentDescription = "Close",
+                                                    contentDescription = stringResource(R.string.common_close),
                                                     tint = Color.White,
                                                 )
                                             }
@@ -654,7 +654,7 @@ fun MobileCategoryListScreen(
                                     // list underneath — see docs/UX_FLOW_AUDIT.md, "Live TV
                                     // back-stopover".
                                     Text(
-                                        text = "LIVE PREVIEW",
+                                        text = stringResource(R.string.category_live_preview_badge),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = CinemaAccent,
                                     )
@@ -667,7 +667,7 @@ fun MobileCategoryListScreen(
                                     val nowProg = dockSuccess?.currentEpgProgram
                                     if (nowProg != null) {
                                         Text(
-                                            text = "Now: ${nowProg.title}",
+                                            text = stringResource(R.string.epg_now_prefix, nowProg.title),
                                             style = MaterialTheme.typography.titleMedium,
                                             color = CinemaTextPrimary,
                                             maxLines = 2,
@@ -683,7 +683,7 @@ fun MobileCategoryListScreen(
                                     val nextProg = dockSuccess?.nextEpgProgram
                                     if (nextProg != null) {
                                         Text(
-                                            text = "Up next: ${nextProg.title}",
+                                            text = stringResource(R.string.category_up_next_format, nextProg.title),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = CinemaTextSecondary,
                                             maxLines = 1,
@@ -725,7 +725,7 @@ fun MobileCategoryListScreen(
                                         ) {
                                             Icon(
                                                 CinemaIcons.Close,
-                                                contentDescription = "Close",
+                                                contentDescription = stringResource(R.string.common_close),
                                                 tint = Color.White,
                                             )
                                         }
@@ -746,7 +746,7 @@ fun MobileCategoryListScreen(
                                             // bare list underneath — see docs/UX_FLOW_AUDIT.md,
                                             // "Live TV back-stopover".
                                             Text(
-                                                text = "LIVE PREVIEW",
+                                                text = stringResource(R.string.category_live_preview_badge),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = Color.White.copy(alpha = 0.75f),
                                             )
@@ -759,7 +759,7 @@ fun MobileCategoryListScreen(
                                             val nowProg = dockSuccess?.currentEpgProgram
                                             if (nowProg != null) {
                                                 Text(
-                                                    text = "Now: ${nowProg.title}",
+                                                    text = stringResource(R.string.epg_now_prefix, nowProg.title),
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     color = Color.White.copy(alpha = 0.85f),
                                                     maxLines = 1,

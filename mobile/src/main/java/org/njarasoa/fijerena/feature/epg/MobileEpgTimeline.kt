@@ -26,12 +26,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -64,7 +66,7 @@ private fun fillGapsWithPlaceholders(
             result.add(
                 EpgProgram(
                     id = "${NO_PROGRAM_ID_PREFIX}${channelId}_$cursor",
-                    title = "No program found",
+                    title = "", // unused: GapChip renders its own localized label via isGapEntry()
                     start = cursor.toString(),
                     end = progStart.toString(),
                 ),
@@ -78,7 +80,7 @@ private fun fillGapsWithPlaceholders(
         result.add(
             EpgProgram(
                 id = "${NO_PROGRAM_ID_PREFIX}${channelId}_$cursor",
-                title = "No program found",
+                title = "", // unused: GapChip renders its own localized label via isGapEntry()
                 start = cursor.toString(),
                 end = dayEnd.toString(),
             ),
@@ -292,7 +294,7 @@ private fun GapChip(
             )
             Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
             Text(
-                text = "No program found",
+                text = stringResource(R.string.epg_no_program_found),
                 style = MaterialTheme.typography.bodySmall,
                 fontStyle = FontStyle.Italic,
                 color = textColor.copy(alpha = CinemaAlpha.textMedium),

@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.CoroutineScope
@@ -27,6 +28,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.player.domain.ProviderType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -78,7 +80,7 @@ fun ColumnScope.ProviderSettingsSection(
         GlassPanel(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(CinemaSpacing.md)) {
                 Text(
-                    text = "Provider Settings",
+                    text = stringResource(R.string.provider_settings_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -92,11 +94,11 @@ fun ColumnScope.ProviderSettingsSection(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Auto-Resume",
+                            text = stringResource(R.string.provider_auto_resume_label),
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Text(
-                            text = "Resume VOD content from where you left off",
+                            text = stringResource(R.string.provider_auto_resume_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                         )
@@ -119,9 +121,9 @@ fun ColumnScope.ProviderSettingsSection(
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
                 // Watch History Size
-                Text(text = "Last Watched Queue Size", style = MaterialTheme.typography.titleSmall)
+                Text(text = stringResource(R.string.provider_watch_history_size_label), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    text = "Items to keep in Last Watched category (1-100)",
+                    text = stringResource(R.string.provider_watch_history_size_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
@@ -137,13 +139,13 @@ fun ColumnScope.ProviderSettingsSection(
                         CinemaOutlinedButton(onClick = {
                             onIsEditingQueueSizeChange(true)
                             onNewWatchHistorySizeChange(watchHistorySize)
-                        }) { Text("Edit") }
+                        }) { Text(stringResource(R.string.provider_edit_button)) }
                     }
                 } else {
                     OutlinedTextField(
                         value = newWatchHistorySize,
                         onValueChange = { if (it.isEmpty() || it.toIntOrNull() != null) onNewWatchHistorySizeChange(it) },
-                        label = { Text("Queue Size") },
+                        label = { Text(stringResource(R.string.provider_queue_size_label)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -156,7 +158,7 @@ fun ColumnScope.ProviderSettingsSection(
                         CinemaOutlinedButton(onClick = {
                             onIsEditingQueueSizeChange(false)
                             onNewWatchHistorySizeChange("")
-                        }) { Text("Cancel") }
+                        }) { Text(stringResource(R.string.common_cancel)) }
                         CinemaButton(
                             onClick = {
                                 val size = newWatchHistorySize.toIntOrNull()
@@ -173,16 +175,16 @@ fun ColumnScope.ProviderSettingsSection(
                                 }
                             },
                             enabled = newWatchHistorySize.toIntOrNull()?.let { it in 1..100 } == true,
-                        ) { Text("Save") }
+                        ) { Text(stringResource(R.string.provider_save_button)) }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
                 // Favorites Max Size
-                Text(text = "Favorites Max Size", style = MaterialTheme.typography.titleSmall)
+                Text(text = stringResource(R.string.provider_favorites_max_size_label), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    text = "Maximum number of favorites to store (10-500)",
+                    text = stringResource(R.string.provider_favorites_max_size_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
@@ -198,13 +200,13 @@ fun ColumnScope.ProviderSettingsSection(
                         CinemaOutlinedButton(onClick = {
                             onIsEditingFavoritesSizeChange(true)
                             onNewFavoritesMaxSizeChange(favoritesMaxSize)
-                        }) { Text("Edit") }
+                        }) { Text(stringResource(R.string.provider_edit_button)) }
                     }
                 } else {
                     OutlinedTextField(
                         value = newFavoritesMaxSize,
                         onValueChange = { if (it.isEmpty() || it.toIntOrNull() != null) onNewFavoritesMaxSizeChange(it) },
-                        label = { Text("Max Size") },
+                        label = { Text(stringResource(R.string.provider_max_size_label)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -217,7 +219,7 @@ fun ColumnScope.ProviderSettingsSection(
                         CinemaOutlinedButton(onClick = {
                             onIsEditingFavoritesSizeChange(false)
                             onNewFavoritesMaxSizeChange("")
-                        }) { Text("Cancel") }
+                        }) { Text(stringResource(R.string.common_cancel)) }
                         CinemaButton(
                             onClick = {
                                 val size = newFavoritesMaxSize.toIntOrNull()
@@ -234,16 +236,16 @@ fun ColumnScope.ProviderSettingsSection(
                                 }
                             },
                             enabled = newFavoritesMaxSize.toIntOrNull()?.let { it in 10..500 } == true,
-                        ) { Text("Save") }
+                        ) { Text(stringResource(R.string.provider_save_button)) }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
                 // Clear Favorites
-                Text(text = "Clear All Favorites", style = MaterialTheme.typography.titleSmall)
+                Text(text = stringResource(R.string.provider_clear_favorites_button), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    text = "Remove all favorited streams from all content types",
+                    text = stringResource(R.string.provider_clear_favorites_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
@@ -252,14 +254,14 @@ fun ColumnScope.ProviderSettingsSection(
                     onClick = { onShowClearFavoritesDialogChange(true) },
                     colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Clear All Favorites") }
+                ) { Text(stringResource(R.string.provider_clear_favorites_button)) }
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
                 // Clear Progress
-                Text(text = "Clear Playback Progress", style = MaterialTheme.typography.titleSmall)
+                Text(text = stringResource(R.string.provider_clear_progress_label), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    text = "Remove all saved positions (Continue Watching will be empty)",
+                    text = stringResource(R.string.provider_clear_progress_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
@@ -268,16 +270,16 @@ fun ColumnScope.ProviderSettingsSection(
                     onClick = { onShowClearProgressDialogChange(true) },
                     colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Clear All Progress") }
+                ) { Text(stringResource(R.string.provider_clear_progress_button)) }
 
                 // Xtream-only settings
                 if (selectedType == ProviderType.XTREAM) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
                     // Stream Output Format
-                    Text(text = "Stream Output Format", style = MaterialTheme.typography.titleSmall)
+                    Text(text = stringResource(R.string.provider_stream_format_label), style = MaterialTheme.typography.titleSmall)
                     Text(
-                        text = "Format used for live stream URLs (m3u8 = HLS, ts = MPEG-TS)",
+                        text = stringResource(R.string.provider_stream_format_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
@@ -305,9 +307,9 @@ fun ColumnScope.ProviderSettingsSection(
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
                     // Playlist Type
-                    Text(text = "Playlist Type", style = MaterialTheme.typography.titleSmall)
+                    Text(text = stringResource(R.string.provider_playlist_type_label), style = MaterialTheme.typography.titleSmall)
                     Text(
-                        text = "Playlist format (m3u_plus = extended with EPG, simple = basic)",
+                        text = stringResource(R.string.provider_playlist_type_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
@@ -337,9 +339,9 @@ fun ColumnScope.ProviderSettingsSection(
                 if (selectedType == ProviderType.XTREAM) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-                    Text(text = "Category Filters", style = MaterialTheme.typography.titleSmall)
+                    Text(text = stringResource(R.string.provider_category_filters_title), style = MaterialTheme.typography.titleSmall)
                     Text(
-                        text = "Hide categories by prefix (e.g., 'Adult', 'XXX')",
+                        text = stringResource(R.string.provider_category_filters_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
@@ -350,16 +352,16 @@ fun ColumnScope.ProviderSettingsSection(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "Mode: ${categoryFilters.mode.name}", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = stringResource(R.string.provider_filter_mode_value, categoryFilters.mode.name), style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 text =
                                     if (categoryFilters.rules.isEmpty()) {
-                                        "No filters configured"
+                                        stringResource(R.string.provider_no_filters)
                                     } else {
                                         val preview = categoryFilters.rules.take(CATEGORY_FILTER_PREVIEW_COUNT).joinToString(", ") { it.value }
                                         val remaining = categoryFilters.rules.size - CATEGORY_FILTER_PREVIEW_COUNT
                                         val suffix = if (remaining > 0) ", +$remaining more" else ""
-                                        "${categoryFilters.rules.size} prefix(es): $preview$suffix"
+                                        stringResource(R.string.provider_prefixes_value, categoryFilters.rules.size, "$preview$suffix")
                                     },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
@@ -367,21 +369,24 @@ fun ColumnScope.ProviderSettingsSection(
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                text = "Scripts: ${if (categoryFilters.allowedScripts.isEmpty()) {
-                                    "All"
-                                } else {
-                                    categoryFilters.allowedScripts
-                                        .joinToString(
-                                            ", ",
-                                        ) { it.displayName }
-                                }}",
+                                text = stringResource(
+                                    R.string.provider_scripts_value,
+                                    if (categoryFilters.allowedScripts.isEmpty()) {
+                                        stringResource(R.string.common_all)
+                                    } else {
+                                        categoryFilters.allowedScripts
+                                            .joinToString(
+                                                ", ",
+                                            ) { it.displayName }
+                                    },
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        CinemaOutlinedButton(onClick = { onShowCategoryFilterDialogChange(true) }) { Text("Edit") }
+                        CinemaOutlinedButton(onClick = { onShowCategoryFilterDialogChange(true) }) { Text(stringResource(R.string.provider_edit_button)) }
                     }
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
@@ -393,9 +398,9 @@ fun ColumnScope.ProviderSettingsSection(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "Enable Caching", style = MaterialTheme.typography.titleSmall)
+                            Text(text = stringResource(R.string.provider_enable_caching_label), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                text = "Enable caching for faster loading",
+                                text = stringResource(R.string.provider_enable_caching_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                             )

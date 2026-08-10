@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -42,7 +44,7 @@ fun ProviderSettingsCard(
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
-                text = "Provider",
+                text = stringResource(R.string.settings_provider_section_title),
                 style =
                     MaterialTheme.typography.titleMedium.copy(
                         fontSize =
@@ -79,7 +81,7 @@ fun ProviderSettingsCard(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("Expires", style = bodySmallStyle, color = CinemaTextSecondary)
+                            Text(stringResource(R.string.settings_provider_expires_label), style = bodySmallStyle, color = CinemaTextSecondary)
                             Text(
                                 text = subscriptionExpiry,
                                 style = bodySmallStyle,
@@ -91,18 +93,18 @@ fun ProviderSettingsCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Text("Max connections", style = bodySmallStyle, color = CinemaTextSecondary)
+                                Text(stringResource(R.string.settings_provider_max_connections_label), style = bodySmallStyle, color = CinemaTextSecondary)
                                 Text(subscriptionMaxCons, style = bodySmallStyle)
                             }
                         }
                         if (subscriptionIsTrial) {
-                            Text("Trial account", style = bodySmallStyle, color = CinemaAccent)
+                            Text(stringResource(R.string.settings_provider_trial_account_label), style = bodySmallStyle, color = CinemaAccent)
                         }
                     }
                 }
                 CinemaSecondaryButton(
                     onClick = onManageProviders,
-                    text = "Manage Providers",
+                    text = stringResource(R.string.settings_provider_manage_button),
                 )
             }
         }

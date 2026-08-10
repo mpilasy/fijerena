@@ -13,9 +13,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
@@ -25,12 +27,12 @@ fun PlaybackSettingsCard(
     uiState: SettingsUiState,
     viewModel: SettingsViewModel
 ) {
-    SettingsSection(title = "Playback") {
+    SettingsSection(title = stringResource(R.string.settings_playback_section_title)) {
         var watchDelayText by remember(uiState.watchDelaySeconds) {
             mutableStateOf(uiState.watchDelaySeconds.toString())
         }
         Text(
-            text = "How long to watch a channel before it's added to Last Watched",
+            text = stringResource(R.string.settings_playback_watch_delay_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )
@@ -43,12 +45,18 @@ fun PlaybackSettingsCard(
                     viewModel.updateWatchDelay(seconds)
                 }
             },
-            label = { Text("Watch delay (seconds)") },
+            label = { Text(stringResource(R.string.settings_watch_delay_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             supportingText = {
-                Text("${AppSettings.MIN_WATCH_DELAY_SECONDS}–${AppSettings.MAX_WATCH_DELAY_SECONDS} seconds")
+                Text(
+                    stringResource(
+                        R.string.settings_watch_delay_range_format,
+                        AppSettings.MIN_WATCH_DELAY_SECONDS,
+                        AppSettings.MAX_WATCH_DELAY_SECONDS,
+                    ),
+                )
             },
         )
     }

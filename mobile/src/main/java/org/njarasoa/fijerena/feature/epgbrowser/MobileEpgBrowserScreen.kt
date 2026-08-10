@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -88,6 +89,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,11 +143,12 @@ fun MobileEpgBrowserScreen(
             TopAppBar(
                 title = {
                     Column {
+                        val providerName = activeProviderName
                         Text(
-                            if (activeProviderName != null) {
-                                "EPG Browser — $activeProviderName"
+                            if (providerName != null) {
+                                stringResource(R.string.epg_browser_title_with_provider, providerName)
                             } else {
-                                "EPG Browser"
+                                stringResource(R.string.epg_browser_title)
                             },
                             style = MaterialTheme.typography.titleMedium,
                         )
@@ -189,7 +192,7 @@ fun MobileEpgBrowserScreen(
                         } else {
                             Icon(
                                 imageVector = CinemaIcons.Refresh,
-                                contentDescription = "Refresh stale EPG sources",
+                                contentDescription = stringResource(R.string.epg_browser_refresh_stale_description),
                                 tint =
                                     if (staleSourceCount > 0) {
                                         CinemaWarning
@@ -237,8 +240,8 @@ fun MobileEpgBrowserScreen(
                             Text(
                                 text =
                                     when (mode) {
-                                        EpgBrowserViewModel.SearchMode.PROGRAMME -> "Prog."
-                                        EpgBrowserViewModel.SearchMode.CHANNEL -> "Chan."
+                                        EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_mode_programme)
+                                        EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_mode_channel)
                                     },
                                 style = MaterialTheme.typography.labelMedium,
                             )
@@ -257,7 +260,7 @@ fun MobileEpgBrowserScreen(
                         modifier = Modifier.size(32.dp),
                     )
                     Text(
-                        text = "Matched",
+                        text = stringResource(R.string.epg_browser_matched_label),
                         style = MaterialTheme.typography.labelMedium,
                     )
                 }
@@ -266,8 +269,8 @@ fun MobileEpgBrowserScreen(
             // Search bar
             val placeholderText =
                 when (searchMode) {
-                    EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search titles..."
-                    EpgBrowserViewModel.SearchMode.CHANNEL -> "Search channels..."
+                    EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_search_titles_placeholder)
+                    EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_search_channels_placeholder)
                 }
             OutlinedTextField(
                 value = searchQuery,
@@ -293,7 +296,7 @@ fun MobileEpgBrowserScreen(
                         }) {
                             Icon(
                                 imageVector = CinemaIcons.Close,
-                                contentDescription = "Clear",
+                                contentDescription = stringResource(R.string.provider_clear_button),
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -318,9 +321,9 @@ fun MobileEpgBrowserScreen(
             if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
                 val idx = currentIndexState
                 val progressText = if (idx is EpgIndexState.Indexing) {
-                    "${idx.progressPercent}% (${formatCount(idx.programmesIndexed)})"
+                    stringResource(R.string.epg_indexing_progress_count, idx.progressPercent, formatCount(idx.programmesIndexed))
                 } else {
-                    "finalizing... (${formatCount((idx as EpgIndexState.Optimizing).programmeCount)})"
+                    stringResource(R.string.epg_browser_finalizing_format, formatCount((idx as EpgIndexState.Optimizing).programmeCount))
                 }
                 val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f
 
@@ -336,7 +339,7 @@ fun MobileEpgBrowserScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = if (idx is EpgIndexState.Indexing) "Indexing..." else "Optimizing...",
+                            text = if (idx is EpgIndexState.Indexing) stringResource(R.string.epg_browser_indexing_label) else stringResource(R.string.epg_browser_optimizing_label),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -382,8 +385,8 @@ fun MobileEpgBrowserScreen(
                         ) {
                             val hintText =
                                 when (searchMode) {
-                                    EpgBrowserViewModel.SearchMode.PROGRAMME -> "Search programme titles"
-                                    EpgBrowserViewModel.SearchMode.CHANNEL -> "Search by channel name"
+                                    EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_hint_search_titles)
+                                    EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_hint_search_channels)
                                 }
                             Text(
                                 text = hintText,
@@ -399,7 +402,7 @@ fun MobileEpgBrowserScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No EPG file available.\nConfigure an EPG URL in Settings.",
+                            text = stringResource(R.string.epg_browser_no_file_message),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -609,24 +612,24 @@ private fun MobileProgramCard(
                 val airingContext = LocalContext.current
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
-                    title = { Text("Watch now?") },
+                    title = { Text(stringResource(R.string.epg_browser_watch_confirm_title)) },
                     text = {
                         Text(
-                            "This show airs at ${formatAiringTime(
-                                airingContext,
-                                pending.startEpoch,
-                                pending.endEpoch,
-                            )}.\nWatch ${pending.channelName} now?",
+                            stringResource(
+                                R.string.epg_browser_watch_confirm_message,
+                                formatAiringTime(airingContext, pending.startEpoch, pending.endEpoch),
+                                pending.channelName,
+                            ),
                         )
                     },
                     confirmButton = {
                         CinemaDialogTextButton(onClick = {
                             pendingConfirmAiring = null
                             onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
-                        }) { Text("Watch now") }
+                        }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
                     },
                     dismissButton = {
-                        CinemaDialogTextButton(onClick = { pendingConfirmAiring = null }) { Text("Cancel") }
+                        CinemaDialogTextButton(onClick = { pendingConfirmAiring = null }) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -644,12 +647,12 @@ private fun MobileProgramCard(
                 ) {
                     Icon(
                         imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
-                        contentDescription = if (expanded) "Show less" else "Show more",
+                        contentDescription = if (expanded) stringResource(R.string.epg_browser_show_less) else stringResource(R.string.epg_browser_show_more),
                         modifier = Modifier.size(CinemaSpacing.lg),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        text = if (expanded) "Show less" else "${program.airings.size - 3} more airings",
+                        text = if (expanded) stringResource(R.string.epg_browser_show_less) else stringResource(R.string.epg_browser_show_more_count, program.airings.size - 3),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -700,7 +703,7 @@ private fun MobileAiringRow(
         if (isMatched) {
             Icon(
                 imageVector = CinemaIcons.PlayArrow,
-                contentDescription = "Watch",
+                contentDescription = stringResource(R.string.epg_browser_watch_description),
                 modifier = Modifier.size(CinemaSpacing.lg),
                 tint = if (isOnAir) CinemaSuccess else MaterialTheme.colorScheme.primary,
             )
@@ -715,7 +718,7 @@ private fun MobileAiringRow(
         )
         if (isOnAir || isSoon) {
             val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
-            val badgeLabel = if (isOnAir) "ON AIR" else "SOON"
+            val badgeLabel = if (isOnAir) stringResource(R.string.epg_browser_on_air_badge) else stringResource(R.string.epg_browser_soon_badge)
             Text(
                 text = badgeLabel,
                 style = MaterialTheme.typography.labelSmall,
@@ -759,14 +762,14 @@ private fun MobileEpgSearchHistorySection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Recent Searches",
+                text = stringResource(R.string.epg_browser_recent_searches),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
             )
             IconButton(onClick = onClearAll) {
                 Icon(
                     imageVector = CinemaIcons.Delete,
-                    contentDescription = "Clear all",
+                    contentDescription = stringResource(R.string.epg_browser_clear_all_description),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     modifier = Modifier.size(20.dp),
                 )
@@ -796,7 +799,7 @@ private fun MobileEpgSearchHistorySection(
                         ) {
                             Icon(
                                 imageVector = CinemaIcons.Close,
-                                contentDescription = "Remove",
+                                contentDescription = stringResource(R.string.epg_browser_remove_description),
                                 modifier = Modifier.size(AssistChipDefaults.IconSize),
                             )
                         }

@@ -16,7 +16,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.SettingsExportManager
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
@@ -37,33 +39,39 @@ fun ImportOptionsDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select What to Import") },
+        title = { Text(stringResource(R.string.settings_import_select_title)) },
         text = {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = optGlobal, onCheckedChange = { optGlobal = it })
                     Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                    Text("General Settings", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.settings_import_general_label), style = MaterialTheme.typography.bodyMedium)
                 }
                 if (parsed.hasProviders) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = optProviders, onCheckedChange = { optProviders = it })
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        Text("Providers (${parsed.settings.providers.size})", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            stringResource(R.string.settings_import_providers_count_format, parsed.settings.providers.size),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                     }
                 }
                 if (parsed.hasEpgSources) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = optEpg, onCheckedChange = { optEpg = it })
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        Text("EPG Sources (${parsed.settings.epgSources.size})", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            stringResource(R.string.settings_import_epg_sources_count_format, parsed.settings.epgSources.size),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                     }
                 }
                 if (parsed.hasFavorites) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = optFavorites, onCheckedChange = { optFavorites = it })
                         Spacer(modifier = Modifier.width(CinemaSpacing.xs))
-                        Text("Favorites", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.settings_import_favorites_label), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -78,10 +86,10 @@ fun ImportOptionsDialog(
                         importFavorites = optFavorites,
                     )
                 onConfirm(options)
-            }) { Text("Import") }
+            }) { Text(stringResource(R.string.common_import)) }
         },
         dismissButton = {
-            CinemaOutlinedButton(onClick = onDismiss) { Text("Cancel") }
+            CinemaOutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }
@@ -96,12 +104,13 @@ fun ImportConflictDialog(
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Provider Conflict") },
+        title = { Text(stringResource(R.string.settings_import_provider_conflict_title)) },
         text = {
             Text(
-                "The following provider(s) already exist:\n\n" +
-                    conflicts.joinToString("\n") { "• $it" } +
-                    "\n\nWhat would you like to do?",
+                stringResource(
+                    R.string.settings_import_conflict_message,
+                    conflicts.joinToString("\n") { "• $it" },
+                ),
             )
         },
         confirmButton = {
@@ -116,20 +125,20 @@ fun ImportConflictDialog(
                     CinemaDialogActionButton(
                         onClick = onOverwrite,
                         modifier = Modifier.weight(1f),
-                    ) { Text("Overwrite", maxLines = 1) }
+                    ) { Text(stringResource(R.string.common_overwrite), maxLines = 1) }
                     CinemaDialogActionButton(
                         onClick = onDuplicate,
                         modifier = Modifier.weight(1f),
-                    ) { Text("Duplicate", maxLines = 1) }
+                    ) { Text(stringResource(R.string.common_duplicate), maxLines = 1) }
                 }
                 CinemaDialogActionButton(
                     onClick = onSkip,
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Skip Duplicates") }
+                ) { Text(stringResource(R.string.settings_import_skip_duplicates_button)) }
             }
         },
         dismissButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text("Cancel") }
+            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

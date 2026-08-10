@@ -30,11 +30,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -61,10 +63,10 @@ fun MobileEditProviderScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Provider URL") },
+                title = { Text(stringResource(R.string.edit_provider_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, "Back")
+                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
                     }
                 },
             )
@@ -80,12 +82,12 @@ fun MobileEditProviderScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Change Provider URL",
+                text = stringResource(R.string.edit_provider_subtitle),
                 style = MaterialTheme.typography.headlineMedium,
             )
 
             Text(
-                text = "Your credentials will be preserved",
+                text = stringResource(R.string.edit_provider_credentials_preserved_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
             )
@@ -95,8 +97,8 @@ fun MobileEditProviderScreen(
             OutlinedTextField(
                 value = providerUrl,
                 onValueChange = { providerUrl = it },
-                label = { Text("Provider URL") },
-                placeholder = { Text("http://example.com:8080") },
+                label = { Text(stringResource(R.string.edit_provider_url_label)) },
+                placeholder = { Text(stringResource(R.string.login_server_url_placeholder)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 colors =
@@ -135,13 +137,16 @@ fun MobileEditProviderScreen(
                     onClick = onBack,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
 
+                val urlEmptyError = stringResource(R.string.edit_provider_url_empty_error)
+                val updateSuccessMessage = stringResource(R.string.edit_provider_update_success)
+                val updateFailedMessage = stringResource(R.string.edit_provider_update_failed)
                 CinemaButton(
                     onClick = {
                         if (providerUrl.isBlank()) {
-                            message = "URL cannot be empty"
+                            message = urlEmptyError
                             return@CinemaButton
                         }
 
@@ -152,12 +157,12 @@ fun MobileEditProviderScreen(
                             when (val result = repository.updateProviderUrl(providerUrl.trim())) {
                                 is Result.Success -> {
                                     isLoading = false
-                                    message = "Provider URL updated successfully"
+                                    message = updateSuccessMessage
                                     onSaved()
                                 }
                                 is Result.Error -> {
                                     isLoading = false
-                                    message = result.message ?: "Failed to update provider URL"
+                                    message = result.message ?: updateFailedMessage
                                 }
                             }
                         }
@@ -168,7 +173,7 @@ fun MobileEditProviderScreen(
                     if (isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(MobileDimensions.iconDefault))
                     } else {
-                        Text("Save")
+                        Text(stringResource(R.string.provider_save_button))
                     }
                 }
             }

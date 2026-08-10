@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -31,7 +33,7 @@ fun ExportImportSettingsCard(
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
-                text = "Export / Import",
+                text = stringResource(R.string.settings_export_import_section_title),
                 style =
                     MaterialTheme.typography.titleMedium.copy(
                         fontSize =
@@ -42,7 +44,7 @@ fun ExportImportSettingsCard(
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
-                text = "Export all settings to a file or import from another device",
+                text = stringResource(R.string.settings_export_import_desc),
                 style =
                     MaterialTheme.typography.bodySmall.copy(
                         fontSize =
@@ -58,19 +60,19 @@ fun ExportImportSettingsCard(
             ) {
                 CinemaPrimaryButton(
                     onClick = onExport,
-                    text = "Export Settings",
+                    text = stringResource(R.string.settings_export_button),
                     modifier = Modifier.weight(1f),
                 )
                 CinemaSecondaryButton(
                     onClick = onImport,
-                    text = "Import Settings",
+                    text = stringResource(R.string.settings_import_button),
                     modifier = Modifier.weight(1f),
                 )
             }
             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onQuickImport,
-                text = "Quick Import from Downloads",
+                text = stringResource(R.string.settings_quick_import_button),
                 modifier = Modifier.fillMaxWidth(),
             )
             if (exportImportMessage != null) {

@@ -219,6 +219,7 @@
     <string name="provider_clear_button">Clear</string>
     <string name="provider_clear_favorites_title">Clear All Favorites?</string>
     <string name="provider_clear_favorites_message">This will remove all favorited streams from all content types (Live TV, Movies, TV Shows). This action cannot be undone.</string>
+    <string name="provider_clear_progress_label">Clear Playback Progress</string>
     <string name="provider_clear_progress_title">Clear All Playback Progress?</string>
     <string name="provider_clear_progress_message">This will remove all saved playback positions. You will start from the beginning when playing any VOD content.</string>
     <string name="provider_category_filters_title">Category Filters</string>
@@ -466,4 +467,232 @@
     <!-- Audio format -->
     <string name="player_audio_format_hint">%1$dch • %2$dkHz</string>
     <string name="player_nav_hint">Use D-pad to navigate • OK to select • BACK to cancel</string>
+
+    <!-- Edit Provider URL -->
+    <string name="edit_provider_title">Edit Provider URL</string>
+    <string name="edit_provider_subtitle">Change Provider URL</string>
+    <string name="edit_provider_credentials_preserved_hint">Your credentials will be preserved</string>
+    <string name="edit_provider_url_label">Provider URL</string>
+    <string name="edit_provider_url_empty_error">URL cannot be empty</string>
+    <string name="edit_provider_update_success">Provider URL updated successfully</string>
+    <string name="edit_provider_update_failed">Failed to update provider URL</string>
+
+    <!-- Settings: Provider Card -->
+    <string name="settings_provider_section_title">Provider</string>
+    <string name="settings_provider_expires_label">Expires</string>
+    <string name="settings_provider_max_connections_label">Max connections</string>
+    <string name="settings_provider_trial_account_label">Trial account</string>
+    <string name="settings_provider_manage_button">Manage Providers</string>
+
+    <!-- EPG Management extras -->
+    <string name="epg_automation_disabled">Disabled</string>
+    <string name="epg_delete_sources_count_btn">Delete %1$d Source(s)</string>
+    <string name="epg_source_phase_format">%1$s…</string>
+    <string name="epg_source_progress_percent">%1$d%%</string>
+    <string name="epg_delete_source_title">Delete Source?</string>
+    <string name="epg_database_ready">Ready (%1$s programmes)</string>
+    <string name="epg_database_optimizing">Optimizing search index…</string>
+    <string name="epg_database_error_prefixed">Database Error: %1$s</string>
+    <string name="epg_current_status_error">Current Status Error: %1$s</string>
+
+    <!-- EPG Browser -->
+    <string name="epg_browser_title">EPG Browser</string>
+    <string name="epg_browser_title_with_provider">EPG Browser — %1$s</string>
+    <string name="epg_browser_refresh_stale_description">Refresh stale EPG sources</string>
+    <string name="epg_browser_mode_programme">Prog.</string>
+    <string name="epg_browser_mode_channel">Chan.</string>
+    <string name="epg_browser_matched_label">Matched</string>
+    <string name="epg_browser_search_titles_placeholder">Search titles…</string>
+    <string name="epg_browser_search_channels_placeholder">Search channels…</string>
+    <string name="epg_indexing_progress_count">%1$d%% (%2$s)</string>
+    <string name="epg_browser_finalizing_format">finalizing… (%1$s)</string>
+    <string name="epg_browser_indexing_label">Indexing…</string>
+    <string name="epg_browser_optimizing_label">Optimizing…</string>
+    <string name="epg_browser_hint_search_titles">Search programme titles</string>
+    <string name="epg_browser_hint_search_channels">Search by channel name</string>
+    <string name="epg_browser_no_file_message">No EPG file available.\nConfigure an EPG URL in Settings.</string>
+    <string name="epg_browser_watch_confirm_title">Watch now?</string>
+    <string name="epg_browser_watch_confirm_message">This show airs at %1$s.\nWatch %2$s now?</string>
+    <string name="epg_browser_watch_now_btn">Watch now</string>
+    <string name="epg_browser_watch_description">Watch</string>
+    <string name="epg_browser_show_less">Show less</string>
+    <string name="epg_browser_show_more">Show more</string>
+    <string name="epg_browser_show_more_count">%1$d more airings</string>
+    <string name="epg_browser_on_air_badge">ON AIR</string>
+    <string name="epg_browser_soon_badge">SOON</string>
+    <string name="epg_browser_recent_searches">Recent Searches</string>
+    <string name="epg_browser_clear_all_description">Clear all</string>
+    <string name="epg_browser_remove_description">Remove</string>
+
+    <!-- EPG Settings Card -->
+    <string name="settings_epg_section_title">EPG Data</string>
+    <string name="epg_summary_channels_programmes">%1$s channels, %2$s programmes</string>
+    <string name="epg_summary_indexing">Indexing: %1$d%%</string>
+    <string name="epg_summary_not_indexed">%1$d source(s) configured, not yet indexed</string>
+    <string name="epg_summary_no_sources">No sources configured</string>
+    <string name="epg_data_manage_button">Manage EPG Data</string>
+
+    <!-- Player Controls extras -->
+    <string name="player_rewind_1min_description">Rewind 1min</string>
+    <string name="player_fast_forward_5min_description">Fast Forward 5min</string>
+    <string name="player_rewind_label">-1m</string>
+    <string name="player_forward_label">+5m</string>
+    <string name="player_play">Play</string>
+    <string name="player_quality_dimensions_format">%1$dx%2$d - %3$d fps</string>
+
+    <!-- Stats Labels extras -->
+    <string name="player_stats_resolution">Resolution</string>
+    <string name="player_stats_frame_rate">Frame Rate</string>
+    <string name="player_stats_sample_rate">Sample Rate</string>
+    <string name="player_stats_channels">Channels</string>
+    <string name="player_stats_position">Position</string>
+    <string name="player_stats_duration">Duration</string>
+    <string name="player_stats_drop_rate_per_sec">Drop Rate/sec</string>
+    <string name="player_stats_stream_health">Stream Health</string>
+    <string name="player_stats_na">N/A</string>
+    <string name="player_stream_type_live">Live</string>
+    <string name="player_stream_type_vod">VOD</string>
+    <string name="player_stats_health_healthy">HEALTHY</string>
+    <string name="player_stats_health_degraded_format">DEGRADED (Attempt %1$d)</string>
+    <string name="player_stats_health_unstable_format">UNSTABLE (Points: %1$d)</string>
+
+    <!-- Mobile Settings Cards -->
+    <string name="settings_cellular_buffer_title">Cellular Buffer Settings</string>
+    <string name="common_warning">Warning</string>
+    <string name="settings_cellular_buffer_advanced_label">Advanced Settings</string>
+    <string name="settings_cellular_buffer_warning_desc">Adjusting buffer multipliers affects cellular playback quality. Changes take effect on next playback.</string>
+    <string name="settings_cellular_live_buffer_title">Live TV Buffer</string>
+    <string name="settings_cellular_live_buffer_desc">Adjust buffer size for cellular Live TV streams</string>
+    <string name="settings_cellular_multiplier_format">Multiplier: %1$.1fx</string>
+    <string name="settings_cellular_vod_buffer_title">VOD Buffer</string>
+    <string name="settings_cellular_vod_buffer_desc">Adjust buffer size for cellular VOD streams</string>
+    <string name="settings_apply_changes">Apply Changes</string>
+    <string name="settings_reset_to_defaults">Reset to Defaults</string>
+    <string name="settings_buffer_preview_title">Buffer Preview</string>
+    <string name="common_min">Min</string>
+    <string name="common_max">Max</string>
+    <string name="common_seconds_decimal_format">%1$.1fs</string>
+    <string name="settings_about_section_title">About</string>
+    <string name="settings_about_app_version">Fijerena v1.0.0</string>
+    <string name="settings_about_tagline">Premium native media player for Android</string>
+    <string name="settings_cloud_sync_section_title">Cloud Sync</string>
+    <string name="settings_cloud_sync_desc">Sync provider settings across devices using your Google account</string>
+    <string name="sync_status_synced">Synced</string>
+    <string name="sync_status_ready">Ready</string>
+    <string name="settings_cloud_sync_now_button">Sync Now</string>
+    <string name="common_sign_out">Sign Out</string>
+    <string name="settings_sign_in_google_button">Sign in with Google</string>
+    <string name="settings_developer_mode_title">Developer Mode</string>
+    <string name="settings_developer_mode_desc">Enable stats for nerds and debug features</string>
+    <string name="settings_configure_cellular_buffers_button">Configure Cellular Buffers</string>
+    <string name="settings_export_import_section_title">Export / Import</string>
+    <string name="settings_export_import_desc">Export all settings to a file or import from another device</string>
+    <string name="common_export">Export</string>
+    <string name="common_import">Import</string>
+    <string name="settings_quick_import_not_found">Settings file not found in Downloads or app folder</string>
+    <string name="settings_quick_import_button">Quick Import from Downloads</string>
+    <string name="settings_import_select_title">Select What to Import</string>
+    <string name="settings_import_general_label">General Settings</string>
+    <string name="settings_import_providers_count_format">Providers (%1$d)</string>
+    <string name="settings_import_epg_sources_count_format">EPG Sources (%1$d)</string>
+    <string name="settings_import_favorites_label">Favorites</string>
+    <string name="settings_import_provider_conflict_title">Provider Conflict</string>
+    <string name="settings_import_conflict_message">The following provider(s) already exist:\n\n%1$s\n\nWhat would you like to do?</string>
+    <string name="common_overwrite">Overwrite</string>
+    <string name="common_duplicate">Duplicate</string>
+    <string name="settings_import_skip_duplicates_button">Skip Duplicates</string>
+    <string name="settings_playback_section_title">Playback</string>
+    <string name="settings_playback_watch_delay_desc">How long to watch a channel before it\'s added to Last Watched</string>
+    <string name="settings_watch_delay_label">Watch delay (seconds)</string>
+    <string name="settings_watch_delay_range_format">%1$d–%2$d seconds</string>
+    <string name="settings_theme_section_title">Theme</string>
+    <string name="settings_theme_desc">Select a color theme for the app</string>
+    <string name="settings_ui_style_desc">Select a look and feel</string>
+
+    <!-- Content Type Selection -->
+    <string name="content_select_type_title">Select Content Type</string>
+    <string name="content_switch_provider_title">Switch Provider</string>
+    <string name="content_switch_provider_description_format">Switch Provider, current provider: %1$s</string>
+    <string name="content_type_live_tv_description">Watch live television channels</string>
+    <string name="content_type_movies_description">Browse on-demand movies</string>
+    <string name="content_type_tv_shows_description">Watch series and episodes</string>
+
+    <!-- Category -->
+    <string name="category_live_preview_badge">LIVE PREVIEW</string>
+
+    <!-- Search -->
+    <string name="search_streams_placeholder">Search streams…</string>
+    <string name="search_categories_streams_hint">Search categories and streams across all categories</string>
+    <string name="search_tab_categories">Categories</string>
+    <string name="search_tab_streams">Streams</string>
+    <string name="category_up_next_format">Up next: %1$s</string>
+
+    <!-- Provider Category Filters (TV short labels) -->
+    <string name="provider_filter_include_short">Include</string>
+    <string name="provider_filter_hide_matching_desc">Hide categories matching these rules</string>
+    <string name="provider_filter_show_matching_desc">Show only categories matching these rules</string>
+    <string name="provider_filter_rules_label">Rules:</string>
+    <string name="provider_filter_add_rules_section_label">Add rules (comma-separated):</string>
+    <string name="provider_filter_rules_placeholder">e.g., XXX, Adult, 18+</string>
+    <string name="provider_filter_choose_match_type_prompt">Choose match type:</string>
+
+    <!-- Edit Provider URL (TV) -->
+    <string name="edit_provider_current_url_format">Current URL: %1$s</string>
+    <string name="edit_provider_url_placeholder">Enter new provider URL</string>
+    <string name="edit_provider_save_reauth_button">Save &amp; Re-authenticate</string>
+
+    <!-- EPG Management (TV) -->
+    <string name="epg_source_selected_description">Selected</string>
+    <string name="epg_source_not_selected_description">Not selected</string>
+    <string name="epg_delete_source_message_tv">This will remove \"%1$s\" and all its indexed data.</string>
+    <string name="epg_increase_description_format">Increase %1$s</string>
+    <string name="epg_decrease_description_format">Decrease %1$s</string>
+
+    <!-- EPG Browser (TV) -->
+    <string name="epg_browser_provider_suffix_format"> — %1$s</string>
+    <string name="epg_browser_dev_stats_counts_format">%1$s progs, %2$s channels</string>
+    <string name="epg_browser_dev_stats_format">EPG: %1$s</string>
+    <string name="epg_browser_search_mode_programme">Programme</string>
+    <string name="epg_browser_search_mode_channel">What\'s on</string>
+    <string name="epg_browser_matched_only_label">Matched only</string>
+    <string name="epg_browser_enter_programme_placeholder">Enter programme title…</string>
+    <string name="epg_browser_enter_channel_placeholder">Enter channel name…</string>
+    <string name="epg_browser_indexing_progress_programmes_format">%1$d%% (%2$s programmes)</string>
+    <string name="epg_browser_finalizing_programmes_format">finalizing… (%1$s programmes)</string>
+    <string name="epg_browser_building_index_label">Building search index…</string>
+    <string name="epg_browser_optimizing_index_label">Optimizing search index…</string>
+    <string name="epg_browser_hint_search_titles_local">Search programme titles in your local EPG data</string>
+    <string name="epg_browser_hint_search_channels_6h">Search by channel name to see what\'s on in the next 6 hours</string>
+
+    <!-- TV Player -->
+    <string name="player_back_to_categories">Back to Categories</string>
+    <string name="stats_overlay_move_hint">Use D-pad to move</string>
+
+    <!-- TV Settings: About Card -->
+    <string name="settings_about_version_format">Fijerena v%1$s</string>
+    <string name="settings_about_build_format">Build: %1$s</string>
+    <string name="settings_about_built_format">Built: %1$s</string>
+
+    <!-- TV Settings: Export/Import Card -->
+    <string name="settings_export_button">Export Settings</string>
+    <string name="settings_import_button">Import Settings</string>
+    <string name="settings_import_conflict_intro">The following provider(s) already exist:</string>
+    <string name="settings_import_choose_action">What would you like to do?</string>
+
+    <!-- TV Settings: Theme Card -->
+    <string name="settings_ui_style_section_title">Look and Feel</string>
+    <string name="settings_ui_style_desc_tv">Select a platform-inspired look and feel</string>
+
+    <!-- TV Category/Search misc -->
+    <string name="category_refresh_description">Refresh categories</string>
+    <string name="category_refresh_streams_description">Refresh streams</string>
+    <string name="category_favorite_hint_tv">Hold OK on a channel or category to add it to Favorites</string>
+    <string name="content_search_all_description">Search All</string>
+    <string name="content_type_live_tv_subtitle_short">Watch live channels</string>
+    <string name="common_edit_field_description_format">Edit %1$s</string>
+    <string name="common_loading">Loading…</string>
+    <string name="search_stream_name_placeholder">Enter stream name…</string>
+    <string name="search_result_category_format">Category: %1$s</string>
+    <string name="content_type_movies_subtitle_short">Browse on-demand</string>
+    <string name="content_type_tv_shows_subtitle_short">Series &amp; episodes</string>
 </resources>

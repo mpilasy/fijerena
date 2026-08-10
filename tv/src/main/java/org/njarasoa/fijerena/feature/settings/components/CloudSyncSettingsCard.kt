@@ -13,9 +13,11 @@ import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -42,7 +44,7 @@ fun CloudSyncSettingsCard(
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
-                text = "Cloud Sync",
+                text = stringResource(R.string.settings_cloud_sync_section_title),
                 style =
                     MaterialTheme.typography.titleMedium.copy(
                         fontSize =
@@ -53,7 +55,7 @@ fun CloudSyncSettingsCard(
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
-                text = "Sync provider settings across devices using your Google account",
+                text = stringResource(R.string.settings_cloud_sync_desc),
                 style =
                     MaterialTheme.typography.bodySmall.copy(
                         fontSize =
@@ -83,11 +85,11 @@ fun CloudSyncSettingsCard(
                         )
                         val statusText =
                             when (syncStatus) {
-                                is DriveSettingsSyncManager.SyncStatus.Syncing -> "Syncing..."
-                                is DriveSettingsSyncManager.SyncStatus.Synced -> "Synced"
+                                is DriveSettingsSyncManager.SyncStatus.Syncing -> stringResource(R.string.provider_syncing)
+                                is DriveSettingsSyncManager.SyncStatus.Synced -> stringResource(R.string.sync_status_synced)
                                 is DriveSettingsSyncManager.SyncStatus.Error ->
-                                    "Error: ${syncStatus.message}"
-                                else -> "Ready"
+                                    stringResource(R.string.epg_database_error, syncStatus.message)
+                                else -> stringResource(R.string.sync_status_ready)
                             }
                         Text(
                             text = statusText,
@@ -108,12 +110,12 @@ fun CloudSyncSettingsCard(
                     Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                     CinemaIconButton(
                         onClick = onSyncNow,
-                        icon = { Icon(CinemaIcons.Sync, contentDescription = "Sync Now") },
+                        icon = { Icon(CinemaIcons.Sync, contentDescription = stringResource(R.string.settings_cloud_sync_now_button)) },
                     )
                     Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                     CinemaDangerButton(
                         onClick = onSignOut,
-                        text = "Sign Out",
+                        text = stringResource(R.string.common_sign_out),
                     )
                 }
             } else {
@@ -122,7 +124,7 @@ fun CloudSyncSettingsCard(
                     onClick = {
                         onSignIn()
                     },
-                    text = "Sign in with Google",
+                    text = stringResource(R.string.settings_sign_in_google_button),
                 )
                 if (signInError != null) {
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))

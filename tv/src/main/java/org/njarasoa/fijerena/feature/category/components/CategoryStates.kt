@@ -10,8 +10,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -34,7 +36,7 @@ internal fun LoadingScreen() {
                 color = CinemaAccent,
             )
             Text(
-                text = "Loading...",
+                text = stringResource(R.string.common_loading),
                 style = MaterialTheme.typography.titleLarge,
                 color = CinemaTextSecondary,
             )
@@ -57,7 +59,7 @@ internal fun ErrorScreen(
             modifier = Modifier.padding(Spacing.xl),
         ) {
             Text(
-                text = "Error",
+                text = stringResource(R.string.common_error),
                 style = MaterialTheme.typography.displayMedium,
                 color = CinemaError,
             )
@@ -70,7 +72,7 @@ internal fun ErrorScreen(
 
             CinemaPrimaryButton(
                 onClick = onRetry,
-                text = "Retry",
+                text = stringResource(R.string.common_retry),
             )
         }
     }

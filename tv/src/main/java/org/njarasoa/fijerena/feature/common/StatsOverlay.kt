@@ -31,11 +31,13 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -159,7 +161,7 @@ fun StatsOverlay(
                     verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                 ) {
                     Text(
-                        text = "Stats for Nerds",
+                        text = stringResource(R.string.player_stats_title),
                         style = MaterialTheme.typography.titleSmall,
                         color = CinemaAccent,
                     )
@@ -185,7 +187,7 @@ fun StatsOverlay(
                     if (isFocused) {
                         Spacer(modifier = Modifier.height(Spacing.xxs))
                         Text(
-                            text = "Use D-pad to move",
+                            text = stringResource(R.string.stats_overlay_move_hint),
                             style = MaterialTheme.typography.labelSmall,
                             color = CinemaAccent.copy(alpha = CinemaAlpha.textHigh),
                         )
@@ -214,7 +216,7 @@ fun StatsOverlay(
                     verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                 ) {
                     Text(
-                        text = "Stats for Nerds",
+                        text = stringResource(R.string.player_stats_title),
                         style = MaterialTheme.typography.titleSmall,
                         color = CinemaAccent,
                     )

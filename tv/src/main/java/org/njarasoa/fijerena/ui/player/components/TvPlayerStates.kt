@@ -121,7 +121,7 @@ fun ErrorContent(
         ) {
             // Error icon/title
             Text(
-                text = "⚠️ Playback Error",
+                text = stringResource(R.string.player_playback_error_prefix),
                 color = CinemaError,
                 style = MaterialTheme.typography.headlineMedium,
             )
@@ -150,18 +150,24 @@ fun ErrorContent(
                         modifier = Modifier.padding(Spacing.md),
                     ) {
                         Text(
-                            text = "Technical Details (Dev Mode):",
+                            text = stringResource(R.string.player_technical_details),
                             color = CinemaAccent,
                             style = MaterialTheme.typography.labelLarge,
                         )
                         Spacer(modifier = Modifier.height(Spacing.xs))
 
+                        val typeLabel = stringResource(R.string.player_error_type_label)
+                        val messageLabel = stringResource(R.string.player_error_message_label)
+                        val unknownText = stringResource(R.string.player_error_unknown)
+                        val stackTraceLabel = stringResource(R.string.player_error_stack_trace_label)
+                        val noStackTraceText = stringResource(R.string.player_no_stack_trace)
+
                         val exception = error.exception
                         val errorDetails =
                             buildString {
-                                append("Type: ${exception?.javaClass?.simpleName ?: "Unknown"}\n")
+                                append("$typeLabel${exception?.javaClass?.simpleName ?: unknownText}\n")
                                 exception?.message?.let { msg ->
-                                    append("Message: $msg\n")
+                                    append("$messageLabel$msg\n")
                                 }
                                 // Get stack trace preview (first 5 lines)
                                 val stackTrace =
@@ -169,8 +175,8 @@ fun ErrorContent(
                                         ?.stackTraceToString()
                                         ?.lines()
                                         ?.take(5)
-                                        ?.joinToString("\n") ?: "No stack trace available"
-                                append("\nStack Trace:\n$stackTrace")
+                                        ?.joinToString("\n") ?: noStackTraceText
+                                append("\n$stackTraceLabel\n$stackTrace")
                             }
 
                         Text(
@@ -197,12 +203,12 @@ fun ErrorContent(
             ) {
                 CinemaPrimaryButton(
                     onClick = onRetry,
-                    text = "Retry",
+                    text = stringResource(R.string.player_retry),
                     modifier = Modifier.width(120.dp).height(TvDimensions.trackItemHeight),
                 )
                 CinemaSecondaryButton(
                     onClick = onBack,
-                    text = "Back",
+                    text = stringResource(R.string.player_back),
                     modifier = Modifier.width(120.dp).height(TvDimensions.trackItemHeight),
                 )
             }

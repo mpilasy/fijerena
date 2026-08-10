@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -246,11 +248,11 @@ fun MobileControlsOverlay(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = CinemaIcons.FastRewind,
-                            contentDescription = "Rewind 1min",
+                            contentDescription = stringResource(R.string.player_rewind_1min_description),
                             tint = CinemaTextPrimary,
                             modifier = Modifier.size(MobileDimensions.iconLarge),
                         )
-                        Text("-1m", style = typography.labelSmall, color = CinemaTextPrimary)
+                        Text(stringResource(R.string.player_rewind_label), style = typography.labelSmall, color = CinemaTextPrimary)
                     }
                 }
             }
@@ -265,7 +267,7 @@ fun MobileControlsOverlay(
                         } else {
                             CinemaIcons.Pause
                         },
-                    contentDescription = if (playbackState is PlaybackState.Paused) "Play" else "Pause",
+                    contentDescription = stringResource(if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause),
                     tint = CinemaTextPrimary,
                     modifier = Modifier.size(MobileDimensions.iconPlayIcon),
                 )
@@ -278,11 +280,11 @@ fun MobileControlsOverlay(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = CinemaIcons.FastForward,
-                            contentDescription = "Fast Forward 5min",
+                            contentDescription = stringResource(R.string.player_fast_forward_5min_description),
                             tint = CinemaTextPrimary,
                             modifier = Modifier.size(MobileDimensions.iconLarge),
                         )
-                        Text("+5m", style = typography.labelSmall, color = CinemaTextPrimary)
+                        Text(stringResource(R.string.player_forward_label), style = typography.labelSmall, color = CinemaTextPrimary)
                     }
                 }
             }
@@ -362,11 +364,13 @@ fun MobileControlsOverlay(
                             horizontalArrangement = Arrangement.End,
                         ) {
                             Text(
-                                text = "Remaining: ${formatTime(remainingTime)}  •  Ends at ${
+                                text = stringResource(
+                                    R.string.player_remaining_ends_at_format,
+                                    formatTime(remainingTime),
                                     org.njarasoa.fijerena.core.ui.theme.TimeFormat.formatClockTime(
                                         Date(estimatedEndTimeMillis),
-                                    )
-                                }",
+                                    ),
+                                ),
                                 style = labelStyle,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -388,7 +392,7 @@ fun MobileControlsOverlay(
                                         .background(CinemaLive, shape = MaterialTheme.shapes.small),
                             )
                             Text(
-                                text = "LIVE",
+                                text = stringResource(R.string.player_live),
                                 style = typography.labelLarge,
                                 color = CinemaTextPrimary,
                             )
@@ -398,7 +402,7 @@ fun MobileControlsOverlay(
                             val nowStart = formatEpochTime(epgContext, currentEpgProgram.startTime)
                             val nowEnd = formatEpochTime(epgContext, currentEpgProgram.endTime)
                             Text(
-                                text = "Now: ${currentEpgProgram.title}  ($nowStart – $nowEnd)",
+                                text = stringResource(R.string.player_now_playing_format, currentEpgProgram.title, nowStart, nowEnd),
                                 style = typography.bodySmall,
                                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                 modifier = Modifier.padding(top = 4.dp),
@@ -426,7 +430,11 @@ fun MobileControlsOverlay(
                             )
                             if (nextEpgProgram != null) {
                                 Text(
-                                    text = "Up Next: ${nextEpgProgram.title}  (${formatEpochTime(epgContext, nextEpgProgram.startTime)})",
+                                    text = stringResource(
+                                        R.string.player_up_next_format,
+                                        nextEpgProgram.title,
+                                        formatEpochTime(epgContext, nextEpgProgram.startTime),
+                                    ),
                                     style = labelStyle,
                                     color = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                                     modifier = Modifier.padding(top = 2.dp),
@@ -449,7 +457,7 @@ fun MobileControlsOverlay(
                     if (audioTrackCount > 1) {
                         CinemaIconButton(onClick = onAudioTrack,
                             icon = {
-                                Icon(CinemaIcons.VolumeUp, "Audio", tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.VolumeUp, stringResource(R.string.player_audio), tint = CinemaTextPrimary)
                             }
                         )
                     }
@@ -458,7 +466,7 @@ fun MobileControlsOverlay(
                     if (subtitleTrackCount > 0) {
                         CinemaIconButton(onClick = onSubtitle,
                             icon = {
-                                Icon(CinemaIcons.Subtitles, "Subtitles", tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.Subtitles, stringResource(R.string.player_subtitles), tint = CinemaTextPrimary)
                             }
                         )
                     }
@@ -467,7 +475,7 @@ fun MobileControlsOverlay(
                     if (qualityCount > 1) {
                         CinemaIconButton(onClick = onQuality,
                             icon = {
-                                Icon(CinemaIcons.Tune, "Quality", tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.Tune, stringResource(R.string.player_quality), tint = CinemaTextPrimary)
                             }
                         )
                     }
@@ -477,7 +485,7 @@ fun MobileControlsOverlay(
                         icon = {
                             Icon(
                                 imageVector = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
-                                contentDescription = if (isFavorite) "Remove Favorite" else "Add Favorite",
+                                contentDescription = stringResource(if (isFavorite) R.string.player_remove_favorite else R.string.player_add_favorite),
                                 tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                             )
                         }
@@ -486,7 +494,7 @@ fun MobileControlsOverlay(
                     // Stats for nerds (always visible)
                     CinemaIconButton(onClick = onStats,
                         icon = {
-                            Icon(CinemaIcons.BarChart, "Stats", tint = CinemaTextPrimary)
+                            Icon(CinemaIcons.BarChart, stringResource(R.string.player_stats), tint = CinemaTextPrimary)
                         }
                     )
                 }

@@ -14,10 +14,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -54,15 +56,15 @@ fun MobileProviderSelectionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Providers") },
+                title = { Text(stringResource(R.string.provider_selection_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, "Back")
+                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = onAddProvider) {
-                        Icon(CinemaIcons.Add, contentDescription = "Add Provider")
+                        Icon(CinemaIcons.Add, contentDescription = stringResource(R.string.provider_add_title))
                     }
                 },
             )
@@ -90,7 +92,7 @@ fun MobileProviderSelectionScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No providers configured",
+                            text = stringResource(R.string.provider_no_providers),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                         )
@@ -127,9 +129,9 @@ fun MobileProviderSelectionScreen(
     deleteConfirmProvider?.let { provider ->
         CinemaAlertDialog(
             onDismissRequest = { deleteConfirmProvider = null },
-            title = { Text("Delete Provider?") },
+            title = { Text(stringResource(R.string.provider_delete_confirm_title)) },
             text = {
-                Text("Delete \"${provider.name}\"? All cached data for this provider will be removed.")
+                Text(stringResource(R.string.provider_delete_confirm_message, provider.name))
             },
             confirmButton = {
                 CinemaDialogActionButton(
@@ -139,12 +141,12 @@ fun MobileProviderSelectionScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.provider_delete_button))
                 }
             },
             dismissButton = {
                 CinemaOutlinedButton(onClick = { deleteConfirmProvider = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             },
         )
@@ -175,7 +177,7 @@ private fun MobileProviderList(
                         )
                         if (provider.isActive) {
                             Text(
-                                text = "Active",
+                                text = stringResource(R.string.provider_active_label),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -204,7 +206,7 @@ private fun MobileProviderList(
                             IconButton(onClick = { onSelect(provider) }) {
                                 Icon(
                                     CinemaIcons.CheckCircle,
-                                    contentDescription = "Select",
+                                    contentDescription = stringResource(R.string.common_select),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
@@ -212,14 +214,14 @@ private fun MobileProviderList(
                         IconButton(onClick = { onEdit(provider.id) }) {
                             Icon(
                                 CinemaIcons.Edit,
-                                contentDescription = "Edit",
+                                contentDescription = stringResource(R.string.provider_edit_button),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         IconButton(onClick = { onDelete(provider) }) {
                             Icon(
                                 CinemaIcons.Delete,
-                                contentDescription = "Delete",
+                                contentDescription = stringResource(R.string.provider_delete_button),
                                 tint = CinemaError,
                             )
                         }

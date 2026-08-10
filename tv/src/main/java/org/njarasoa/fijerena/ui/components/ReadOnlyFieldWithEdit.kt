@@ -28,12 +28,14 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
@@ -164,7 +166,7 @@ fun ReadOnlyFieldWithEdit(
                     editValue = value
                     isEditing = true
                 },
-                icon = { Icon(CinemaIcons.Edit, contentDescription = "Edit $label") },
+                icon = { Icon(CinemaIcons.Edit, contentDescription = stringResource(R.string.common_edit_field_description_format, label)) },
             )
         }
     }

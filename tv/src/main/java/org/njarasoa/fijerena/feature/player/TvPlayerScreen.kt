@@ -21,6 +21,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModelStoreOwner
@@ -38,6 +39,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
@@ -266,7 +268,7 @@ private fun ErrorScreen(
             modifier = Modifier.padding(Spacing.xl),
         ) {
             Text(
-                text = "Playback Error",
+                text = stringResource(R.string.player_error),
                 style = MaterialTheme.typography.displayMedium,
                 color = CinemaError,
             )
@@ -279,12 +281,12 @@ private fun ErrorScreen(
             Spacer(modifier = Modifier.padding(Spacing.lg))
             CinemaSecondaryButton(
                 onClick = onRetry,
-                text = "Retry",
+                text = stringResource(R.string.player_retry),
             )
             Spacer(modifier = Modifier.padding(Spacing.sm))
             CinemaSecondaryButton(
                 onClick = onBack,
-                text = "Back to Categories",
+                text = stringResource(R.string.player_back_to_categories),
             )
         }
     }

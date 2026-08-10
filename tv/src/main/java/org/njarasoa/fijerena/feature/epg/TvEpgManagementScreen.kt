@@ -168,7 +168,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(stringResource(R.string.epg_maintenance_title), style = MaterialTheme.typography.titleMedium)
                                     Text(
-                                        "Clean up temporary files and old programmes.",
+                                        stringResource(R.string.epg_maintenance_desc_tv),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                     )
@@ -205,11 +205,11 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                     Column {
                                         Text(stringResource(R.string.epg_auto_refresh_title), style = MaterialTheme.typography.titleMedium)
                                         val intervalText = when (val interval = epgSettings.epgRefreshInterval) {
-                                            -1 -> "Disabled"
+                                            -1 -> stringResource(R.string.epg_automation_disabled)
                                             else -> {
-                                                val freq = if (interval == 24) "Daily" else "Every $interval hours"
+                                                val freq = if (interval == 24) stringResource(R.string.epg_automation_freq_daily) else stringResource(R.string.epg_automation_freq_hours, interval)
                                                 val timeStr = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(nextRefreshAtMs))
-                                                "$freq. Next at $timeStr"
+                                                freq + stringResource(R.string.epg_automation_next_at, timeStr)
                                             }
                                         }
                                         Text(
@@ -255,15 +255,15 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                     CinemaSecondaryButton(
                                         onClick = { showIntervalPicker = true },
                                         text = when (val interval = epgSettings.epgRefreshInterval) {
-                                            -1 -> "Frequency: Never"
-                                            24 -> "Frequency: Daily"
-                                            else -> "Frequency: Every $interval hours"
+                                            -1 -> stringResource(R.string.epg_automation_frequency, stringResource(R.string.epg_automation_freq_never))
+                                            24 -> stringResource(R.string.epg_automation_frequency, stringResource(R.string.epg_automation_freq_daily))
+                                            else -> stringResource(R.string.epg_automation_frequency, stringResource(R.string.epg_automation_freq_hours, interval))
                                         },
                                     )
                                     if (epgSettings.epgRefreshInterval != -1) {
                                         CinemaSecondaryButton(
                                             onClick = { showTimePicker = true },
-                                            text = "Start: ${epgSettings.epgRefreshTime}",
+                                            text = stringResource(R.string.epg_automation_start_label, epgSettings.epgRefreshTime),
                                         )
                                     }
                                 }
@@ -318,7 +318,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                     ) {
                                         Icon(
                                             imageVector = if (isSelected) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                                            contentDescription = if (isSelected) "Selected" else "Not selected",
+                                            contentDescription = if (isSelected) stringResource(R.string.epg_source_selected_description) else stringResource(R.string.epg_source_not_selected_description),
                                             modifier = Modifier.size(24.dp.scaled(scale)),
                                         )
                                     }
@@ -328,7 +328,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = source.label.ifBlank { "Unnamed Source" },
+                                        text = source.label.ifBlank { stringResource(R.string.epg_unnamed_source) },
                                         style = MaterialTheme.typography.titleMedium,
                                     )
                                     Text(
@@ -346,15 +346,15 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                                 CinemaSecondaryButton(
                                     onClick = { viewModel.refreshSource(source.id) },
-                                    text = "Refresh",
+                                    text = stringResource(R.string.common_refresh),
                                 )
                                 CinemaSecondaryButton(
                                     onClick = { editingSource = source },
-                                    text = "Edit",
+                                    text = stringResource(R.string.provider_edit_button),
                                 )
                                 CinemaDangerButton(
                                     onClick = { deletingSource = source },
-                                    text = "Delete",
+                                    text = stringResource(R.string.provider_delete_button),
                                 )
                             }
 
@@ -366,12 +366,12 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                     ) {
                                         Text(
-                                            text = "${activeProgress.phase}...",
+                                            text = stringResource(R.string.epg_source_phase_format, activeProgress.phase),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.primary,
                                         )
                                         Text(
-                                            text = "${activeProgress.progressPercent}%",
+                                            text = stringResource(R.string.epg_source_progress_percent, activeProgress.progressPercent),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.primary,
                                         )
@@ -397,7 +397,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                                 .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
                                                 .format(java.util.Date(source.lastIngestedAtMs))
                                         } else {
-                                            "Never"
+                                            stringResource(R.string.epg_source_never)
                                         }
 
                                     val latestProgStr =
@@ -406,19 +406,20 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                                 .SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
                                                 .format(java.util.Date(latestTime * 1000L))
                                         } else {
-                                            "None"
+                                            stringResource(R.string.epg_source_none)
                                         }
 
-                                    SourceStat("Last Sync", lastIngested, scale)
-                                    SourceStat("Download", NumberUtils.formatDuration(source.lastDownloadDurationMs), scale)
-                                    SourceStat("Ingest", NumberUtils.formatDuration(source.lastIngestionDurationMs), scale)
-                                    SourceStat("Latest Prog", latestProgStr, scale)
-                                    SourceStat("Channels", NumberUtils.formatCount(source.lastChannels), scale)
-                                    SourceStat("Programmes", NumberUtils.formatCount(source.lastProgrammes), scale)
+                                    SourceStat(stringResource(R.string.epg_source_stat_label), lastIngested, scale)
+                                    SourceStat(stringResource(R.string.epg_source_stat_download), NumberUtils.formatDuration(source.lastDownloadDurationMs), scale)
+                                    SourceStat(stringResource(R.string.epg_source_stat_ingest), NumberUtils.formatDuration(source.lastIngestionDurationMs), scale)
+                                    SourceStat(stringResource(R.string.epg_source_stat_latest), latestProgStr, scale)
+                                    SourceStat(stringResource(R.string.epg_source_stat_channels), NumberUtils.formatCount(source.lastChannels), scale)
+                                    SourceStat(stringResource(R.string.epg_source_stat_programmes), NumberUtils.formatCount(source.lastProgrammes), scale)
 
-                                    if (source.lastError != null) {
+                                    val lastError = source.lastError
+                                    if (lastError != null) {
                                         Text(
-                                            text = "Error: ${source.lastError}",
+                                            text = stringResource(R.string.epg_database_error, lastError),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.error,
                                         )
@@ -466,17 +467,17 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                         viewModel.clearDatabase()
                         showClearConfirm = false
                     },
-                    text = "Clear Everything",
+                    text = stringResource(R.string.epg_clear_everything_btn),
                 )
             },
             dismissButton = {
                 CinemaSecondaryButton(
                     onClick = { showClearConfirm = false },
-                    text = "Cancel",
+                    text = stringResource(R.string.common_cancel),
                 )
             },
-            title = { Text("Clear EPG Data?", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
-            text = { Text("This will delete all indexed programmes and channels. Your source URLs will be preserved.", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
+            title = { Text(stringResource(R.string.epg_clear_db_confirm_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+            text = { Text(stringResource(R.string.epg_clear_db_confirm_message), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
             containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
@@ -490,17 +491,17 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                         viewModel.deleteSource(source.id)
                         deletingSource = null
                     },
-                    text = "Delete",
+                    text = stringResource(R.string.provider_delete_button),
                 )
             },
             dismissButton = {
                 CinemaSecondaryButton(
                     onClick = { deletingSource = null },
-                    text = "Cancel",
+                    text = stringResource(R.string.common_cancel),
                 )
             },
-            title = { Text("Delete EPG Source?", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
-            text = { Text("This will remove \"${source.label.ifBlank { source.url }}\" and all its indexed data.", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
+            title = { Text(stringResource(R.string.epg_delete_source_confirm_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+            text = { Text(stringResource(R.string.epg_delete_source_message_tv, source.label.ifBlank { source.url }), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
             containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
@@ -514,17 +515,17 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                         viewModel.deleteSelected(idsToDelete)
                         deleteSelectedIds = null
                     },
-                    text = "Delete ${idsToDelete.size} Source(s)",
+                    text = stringResource(R.string.epg_delete_sources_count_btn, idsToDelete.size),
                 )
             },
             dismissButton = {
                 CinemaSecondaryButton(
                     onClick = { deleteSelectedIds = null },
-                    text = "Cancel",
+                    text = stringResource(R.string.common_cancel),
                 )
             },
-            title = { Text("Delete Selected Sources?", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
-            text = { Text("This will permanently remove ${idsToDelete.size} source(s) and all their indexed data.", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
+            title = { Text(stringResource(R.string.epg_delete_selected_confirm_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+            text = { Text(stringResource(R.string.epg_delete_selected_confirm_message, idsToDelete.size), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
             containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
@@ -544,7 +545,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
     if (showIntervalPicker) {
         CinemaAlertDialog(
             onDismissRequest = { showIntervalPicker = false },
-            title = { Text("EPG Refresh Interval", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+            title = { Text(stringResource(R.string.epg_refresh_interval_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
                     intervalOptions.forEach { (interval, label) ->
@@ -644,17 +645,17 @@ private fun EpgStatusCard(
 ) {
     GlassPanel {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
-            Text("System Status", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.epg_system_status), style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
             // Indexer State
             val indexText =
                 when (indexState) {
-                    is EpgIndexState.Indexed -> "Database: Ready (${NumberUtils.formatCount(indexState.programmeCount)} programmes)"
-                    is EpgIndexState.Indexing -> "Database: Indexing in progress..."
-                    is EpgIndexState.Optimizing -> "Database: Optimizing search index..."
-                    is EpgIndexState.NotIndexed -> "Database: Empty"
-                    is EpgIndexState.Failed -> "Database Error: ${indexState.reason}"
+                    is EpgIndexState.Indexed -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_ready, NumberUtils.formatCount(indexState.programmeCount)))
+                    is EpgIndexState.Indexing -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_indexing))
+                    is EpgIndexState.Optimizing -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_optimizing))
+                    is EpgIndexState.NotIndexed -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_empty))
+                    is EpgIndexState.Failed -> stringResource(R.string.epg_database_error_prefixed, indexState.reason)
                 }
             Text(indexText, style = MaterialTheme.typography.bodySmall)
 
@@ -663,18 +664,22 @@ private fun EpgStatusCard(
                 when (multiState) {
                     is MultiSourceState.Idle -> {
                         val queued = queuedTaskIds.count { it.startsWith("epg_refresh_") }
-                        if (queued > 0) "Current Status: $queued refresh tasks queued" else "Current Status: Idle"
+                        if (queued > 0) {
+                            stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_tasks_queued, queued))
+                        } else {
+                            stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
+                        }
                     }
-                    is MultiSourceState.Processing -> "Current Status: Processing ${multiState.completedCount}/${multiState.totalSources} sources"
+                    is MultiSourceState.Processing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_processing, multiState.completedCount, multiState.totalSources))
                     is MultiSourceState.Retrying -> {
                         val nextRetry = NumberUtils.formatTimestamp(LocalContext.current, multiState.nextRetryAtMs)
-                        "Current Status: Error. Retrying (Attempt ${multiState.attempt}/${multiState.maxAttempts}) at $nextRetry"
+                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_retrying, multiState.attempt, multiState.maxAttempts, nextRetry))
                     }
-                    is MultiSourceState.Completed -> "Current Status: Finished run"
-                    is MultiSourceState.Finalizing -> "Current Status: Finalizing (${multiState.phase})..."
-                    is MultiSourceState.Clearing -> "Current Status: Clearing data..."
-                    is MultiSourceState.Error -> "Current Status Error: ${multiState.reason}"
-                    else -> "Current Status: Idle"
+                    is MultiSourceState.Completed -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finished))
+                    is MultiSourceState.Finalizing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finalizing, multiState.phase))
+                    is MultiSourceState.Clearing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_clearing))
+                    is MultiSourceState.Error -> stringResource(R.string.epg_current_status_error, multiState.reason)
+                    else -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
                 }
             Text(currentStatusText, style = MaterialTheme.typography.bodySmall)
 
@@ -683,9 +688,9 @@ private fun EpgStatusCard(
                 val context = LocalContext.current
                 val time = NumberUtils.formatTimestamp(context, stats.updatedAtMs)
                 val duration = NumberUtils.formatDuration(stats.durationMs)
-                val errorText = if (stats.errors > 0) " (${stats.errors} errors)" else ""
+                val errorText = if (stats.errors > 0) stringResource(R.string.epg_last_run_errors, stats.errors) else ""
                 Text(
-                    text = "Last Run: Finished at $time • ${stats.sourcesProcessed} sources in $duration$errorText",
+                    text = stringResource(R.string.epg_last_run_stats, time, stats.sourcesProcessed, duration, errorText),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                 )
@@ -708,7 +713,7 @@ private fun EpgSourceEditDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialSource == null) "Add EPG Source" else "Edit EPG Source", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+        title = { Text(if (initialSource == null) stringResource(R.string.epg_add_source_title) else stringResource(R.string.epg_edit_source_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
         confirmButton = {
             CinemaPrimaryButton(
                 onClick = {
@@ -720,12 +725,12 @@ private fun EpgSourceEditDialog(
                         initialSource?.enabled ?: true,
                     )
                 },
-                text = "Save",
+                text = stringResource(R.string.provider_save_button),
                 enabled = url.isNotBlank(),
             )
         },
         dismissButton = {
-            CinemaSecondaryButton(onClick = onDismiss, text = "Cancel")
+            CinemaSecondaryButton(onClick = onDismiss, text = stringResource(R.string.common_cancel))
         },
         containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         text = {
@@ -733,7 +738,7 @@ private fun EpgSourceEditDialog(
                 androidx.compose.material3.OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("XMLTV URL") },
+                    label = { Text(stringResource(R.string.epg_xmltv_url_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -749,7 +754,7 @@ private fun EpgSourceEditDialog(
                 androidx.compose.material3.OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Label (Optional)") },
+                    label = { Text(stringResource(R.string.epg_label_optional)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -765,7 +770,7 @@ private fun EpgSourceEditDialog(
                 androidx.compose.material3.OutlinedTextField(
                     value = tzOffset,
                     onValueChange = { tzOffset = it },
-                    label = { Text("Timezone Offset (Hours)") },
+                    label = { Text(stringResource(R.string.epg_timezone_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -797,7 +802,7 @@ private fun TvTimePickerDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set Refresh Time", color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+        title = { Text(stringResource(R.string.epg_set_refresh_time_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
         text = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -806,7 +811,7 @@ private fun TvTimePickerDialog(
             ) {
                 TimeSpinnerColumn(
                     value = hour,
-                    label = "Hour",
+                    label = stringResource(R.string.epg_hour_label),
                     displayText = "%02d".format(hour),
                     onIncrement = { hour = (hour + 1) % 24 },
                     onDecrement = { hour = (hour + 23) % 24 },
@@ -822,7 +827,7 @@ private fun TvTimePickerDialog(
 
                 TimeSpinnerColumn(
                     value = minute,
-                    label = "Minute",
+                    label = stringResource(R.string.epg_minute_label),
                     displayText = "%02d".format(minute),
                     onIncrement = { minute = (minute + 5) % 60 },
                     onDecrement = { minute = (minute + 55) % 60 },
@@ -833,11 +838,11 @@ private fun TvTimePickerDialog(
         confirmButton = {
             CinemaPrimaryButton(
                 onClick = { onConfirm("%02d:%02d".format(hour, minute)) },
-                text = "Save",
+                text = stringResource(R.string.provider_save_button),
             )
         },
         dismissButton = {
-            CinemaSecondaryButton(onClick = onDismiss, text = "Cancel")
+            CinemaSecondaryButton(onClick = onDismiss, text = stringResource(R.string.common_cancel))
         },
         containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
     )
@@ -874,7 +879,7 @@ private fun TimeSpinnerColumn(
         ) {
             Icon(
                 imageVector = CinemaIcons.KeyboardArrowUp,
-                contentDescription = "Increase $label",
+                contentDescription = stringResource(R.string.epg_increase_description_format, label),
                 modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(28.dp.scaled(scale)),
             )
         }
@@ -896,7 +901,7 @@ private fun TimeSpinnerColumn(
         ) {
             Icon(
                 imageVector = CinemaIcons.KeyboardArrowDown,
-                contentDescription = "Decrease $label",
+                contentDescription = stringResource(R.string.epg_decrease_description_format, label),
                 modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(28.dp.scaled(scale)),
             )
         }

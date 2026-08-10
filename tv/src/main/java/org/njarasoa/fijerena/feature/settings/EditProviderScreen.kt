@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
@@ -31,6 +32,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -59,6 +61,8 @@ fun EditProviderScreen(
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val urlEmptyErrorText = stringResource(R.string.edit_provider_url_empty_error)
+    val updateFailedText = stringResource(R.string.edit_provider_update_failed)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -78,7 +82,7 @@ fun EditProviderScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "Edit Provider URL",
+                    text = stringResource(R.string.edit_provider_title),
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -86,7 +90,7 @@ fun EditProviderScreen(
                 Spacer(modifier = Modifier.height(Spacing.xl))
 
                 Text(
-                    text = "Current URL: $currentUrl",
+                    text = stringResource(R.string.edit_provider_current_url_format, currentUrl),
                     style = MaterialTheme.typography.bodyMedium,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
@@ -100,8 +104,8 @@ fun EditProviderScreen(
                         urlInput = it
                         error = null
                     },
-                    label = { Text("Provider URL") },
-                    placeholder = { Text("Enter new provider URL") },
+                    label = { Text(stringResource(R.string.edit_provider_url_label)) },
+                    placeholder = { Text(stringResource(R.string.edit_provider_url_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors =
@@ -140,13 +144,13 @@ fun EditProviderScreen(
                     CinemaSecondaryButton(
                         onClick = onBack,
                         enabled = !isLoading,
-                        text = "Cancel",
+                        text = stringResource(R.string.common_cancel),
                     )
 
                     CinemaPrimaryButton(
                         onClick = {
                             if (urlInput.isBlank()) {
-                                error = "URL cannot be empty"
+                                error = urlEmptyErrorText
                                 return@CinemaPrimaryButton
                             }
 
@@ -161,13 +165,13 @@ fun EditProviderScreen(
                                     }
                                     is Result.Error -> {
                                         isLoading = false
-                                        error = result.message ?: "Failed to update provider URL"
+                                        error = result.message ?: updateFailedText
                                     }
                                 }
                             }
                         },
                         enabled = !isLoading && urlInput.trim() != currentUrl,
-                        text = if (isLoading) "Saving..." else "Save & Re-authenticate",
+                        text = if (isLoading) stringResource(R.string.provider_saving) else stringResource(R.string.edit_provider_save_reauth_button),
                     )
                 }
             }

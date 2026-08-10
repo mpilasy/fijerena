@@ -15,9 +15,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -31,10 +33,10 @@ fun AudioTrackSelectorDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Audio Track") },
+        title = { Text(stringResource(R.string.player_select_audio)) },
         text = {
             if (audioTracks.isEmpty()) {
-                Text("No audio tracks available")
+                Text(stringResource(R.string.player_no_audio))
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -68,14 +70,14 @@ fun AudioTrackSelectorDialog(
                                     )
                                     if (track.isSelected) {
                                         Text(
-                                            text = "Active",
+                                            text = stringResource(R.string.player_active),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary,
                                         )
                                     }
                                 }
                                 Text(
-                                    text = "${track.channelCount}ch - ${track.sampleRate / 1000}kHz",
+                                    text = stringResource(R.string.player_audio_format_hint, track.channelCount, track.sampleRate / 1000),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -86,7 +88,7 @@ fun AudioTrackSelectorDialog(
             }
         },
         confirmButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text("Close") }
+            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
         },
     )
 }
@@ -101,7 +103,7 @@ fun SubtitleSelectorDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Subtitles") },
+        title = { Text(stringResource(R.string.player_select_subtitles)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -131,13 +133,13 @@ fun SubtitleSelectorDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Off",
+                            text = stringResource(R.string.common_off),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = if (!hasActiveSubtitle) FontWeight.Bold else FontWeight.Normal,
                         )
                         if (!hasActiveSubtitle) {
                             Text(
-                                text = "Active",
+                                text = stringResource(R.string.player_active),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -173,7 +175,7 @@ fun SubtitleSelectorDialog(
                                 )
                                 if (track.isSelected) {
                                     Text(
-                                        text = "Active",
+                                        text = stringResource(R.string.player_active),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                     )
@@ -190,7 +192,7 @@ fun SubtitleSelectorDialog(
             }
         },
         confirmButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text("Close") }
+            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
         },
     )
 }
@@ -205,7 +207,7 @@ fun QualitySelectorDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Quality") },
+        title = { Text(stringResource(R.string.player_select_quality)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -233,20 +235,20 @@ fun QualitySelectorDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "Auto (Adaptive)",
+                                text = stringResource(R.string.player_quality_auto),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = if (!hasManualSelection) FontWeight.Bold else FontWeight.Normal,
                             )
                             if (!hasManualSelection) {
                                 Text(
-                                    text = "Active",
+                                    text = stringResource(R.string.player_active),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                         }
                         Text(
-                            text = "Adjust quality based on network",
+                            text = stringResource(R.string.player_quality_auto_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -281,14 +283,19 @@ fun QualitySelectorDialog(
                                 )
                                 if (quality.isSelected) {
                                     Text(
-                                        text = "Active",
+                                        text = stringResource(R.string.player_active),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }
                             Text(
-                                text = "${quality.width}x${quality.height} - ${quality.frameRate.toInt()}fps",
+                                text = stringResource(
+                                    R.string.player_quality_dimensions_format,
+                                    quality.width,
+                                    quality.height,
+                                    quality.frameRate.toInt(),
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -298,7 +305,7 @@ fun QualitySelectorDialog(
             }
         },
         confirmButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text("Close") }
+            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
         },
     )
 }

@@ -28,7 +28,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -93,13 +95,13 @@ fun MobileChannelListSheet(
                         color = CinemaTextPrimary,
                     )
                     IconButton(onClick = onDismiss) {
-                        Icon(CinemaIcons.Close, contentDescription = "Close", tint = CinemaTextPrimary)
+                        Icon(CinemaIcons.Close, contentDescription = stringResource(R.string.common_close), tint = CinemaTextPrimary)
                     }
                 }
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 if (streams.isEmpty()) {
                     Text(
-                        text = "No channels available",
+                        text = stringResource(R.string.player_no_channels),
                         style = MaterialTheme.typography.bodyMedium,
                         color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                     )

@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
@@ -33,7 +35,7 @@ fun ThemeSettingsCard(
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
-                text = "Theme",
+                text = stringResource(R.string.settings_theme_section_title),
                 style =
                     MaterialTheme.typography.titleMedium.copy(
                         fontSize =
@@ -44,7 +46,7 @@ fun ThemeSettingsCard(
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
-                text = "Select a color theme for the app",
+                text = stringResource(R.string.settings_theme_desc),
                 style =
                     MaterialTheme.typography.bodySmall.copy(
                         fontSize =
@@ -88,7 +90,7 @@ fun ThemeSettingsCard(
 
             Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
             Text(
-                text = "Look and Feel",
+                text = stringResource(R.string.settings_ui_style_section_title),
                 style =
                     MaterialTheme.typography.titleMedium.copy(
                         fontSize =
@@ -99,7 +101,7 @@ fun ThemeSettingsCard(
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
             Text(
-                text = "Select a platform-inspired look and feel",
+                text = stringResource(R.string.settings_ui_style_desc_tv),
                 style =
                     MaterialTheme.typography.bodySmall.copy(
                         fontSize =

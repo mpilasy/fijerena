@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
@@ -26,6 +27,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -152,7 +154,7 @@ internal fun TwoColumnLayout(
                     icon = {
                         Icon(
                             imageVector = CinemaIcons.Search,
-                            contentDescription = "Search",
+                            contentDescription = stringResource(R.string.common_search),
                             tint = CinemaTextPrimary
                         )
                     },
@@ -166,7 +168,7 @@ internal fun TwoColumnLayout(
                     if (selectedCategoryName != null) {
                         CinemaSecondaryButton(
                             onClick = { onEpgClick(selectedCategoryId, selectedCategoryName) },
-                            text = "TV Guide",
+                            text = stringResource(R.string.common_tv_guide),
                         )
                     }
                 }

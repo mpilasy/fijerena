@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -149,7 +151,7 @@ fun MobileSearchScreen(
                     Modifier
                         .fillMaxWidth()
                         .padding(Spacing.md),
-                placeholder = { Text("Search streams...", color = CinemaTextPrimary.copy(alpha = 0.6f)) },
+                placeholder = { Text(stringResource(R.string.search_streams_placeholder), color = CinemaTextPrimary.copy(alpha = 0.6f)) },
                 shape = androidx.compose.foundation.shape.CircleShape,
                 leadingIcon = {
                     CinemaIconButton(
@@ -162,7 +164,7 @@ fun MobileSearchScreen(
                         icon = {
                             Icon(
                                 imageVector = CinemaIcons.Search,
-                                contentDescription = "Search",
+                                contentDescription = stringResource(R.string.common_search),
                                 tint = CinemaTextPrimary
                             )
                         }
@@ -178,7 +180,7 @@ fun MobileSearchScreen(
                             icon = {
                                 Icon(
                                     imageVector = CinemaIcons.Close,
-                                    contentDescription = "Clear",
+                                    contentDescription = stringResource(R.string.provider_clear_button),
                                     tint = CinemaTextPrimary
                                 )
                             }
@@ -312,7 +314,7 @@ private fun ErrorView(message: String) {
             modifier = Modifier.padding(Spacing.xl),
         ) {
             Text(
-                text = "Error",
+                text = stringResource(R.string.common_error),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -363,7 +365,7 @@ private fun SearchResults(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "Search categories and streams across all categories",
+                    text = stringResource(R.string.search_categories_streams_hint),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
@@ -494,7 +496,7 @@ private fun SearchResults(
                 if (categoryResults.isNotEmpty()) {
                     item(key = "category_header", contentType = "header") {
                         Text(
-                            text = "Categories",
+                            text = stringResource(R.string.search_tab_categories),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(vertical = Spacing.xxs),
@@ -511,7 +513,7 @@ private fun SearchResults(
                 if (results.isNotEmpty()) {
                     item(key = "stream_header", contentType = "header") {
                         Text(
-                            text = "Streams",
+                            text = stringResource(R.string.search_tab_streams),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(vertical = Spacing.xxs),
@@ -552,14 +554,14 @@ private fun MobileSearchHistorySection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Recent Searches",
+                text = stringResource(R.string.epg_browser_recent_searches),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
             )
             IconButton(onClick = onClearAll) {
                 Icon(
                     imageVector = CinemaIcons.Delete,
-                    contentDescription = "Clear all",
+                    contentDescription = stringResource(R.string.epg_browser_clear_all_description),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     modifier = Modifier.size(MobileDimensions.iconSmall),
                 )
@@ -591,7 +593,7 @@ private fun MobileSearchHistorySection(
                         ) {
                             Icon(
                                 imageVector = CinemaIcons.Close,
-                                contentDescription = "Remove",
+                                contentDescription = stringResource(R.string.epg_browser_remove_description),
                                 modifier = Modifier.size(AssistChipDefaults.IconSize),
                             )
                         }
@@ -772,7 +774,7 @@ private fun MobileSearchFavoriteDialog(
         },
         dismissButton = {
             CinemaDialogTextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         },
     )
