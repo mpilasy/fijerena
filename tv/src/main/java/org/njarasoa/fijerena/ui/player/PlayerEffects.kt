@@ -6,6 +6,7 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.player.service.watchExhaustionToasts
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import java.util.Calendar
@@ -25,34 +26,12 @@ fun PlayerEffects(
 
     // Auto-show toast on repeated buffer exhaustion
     LaunchedEffect(isDeveloperMode, currentMetadata.streamUrl) {
-        val exhaustionTimestamps = mutableListOf<Long>()
-        var lastSeenCount = 0
-        while (true) {
-            val currentCount = StreamingPlaybackService.getInstance()?.exhaustionRebufferCount?.value ?: 0
-            if (currentCount < lastSeenCount) {
-                // Count was reset (likely channel switch)
-                lastSeenCount = currentCount
-                exhaustionTimestamps.clear()
-            } else if (currentCount > lastSeenCount) {
-                val now = System.currentTimeMillis()
-                repeat(currentCount - lastSeenCount) {
-                    exhaustionTimestamps.add(now)
-                }
-                lastSeenCount = currentCount
-                // Remove timestamps older than 30 seconds
-                exhaustionTimestamps.removeAll { now - it > 30_000L }
-                // Show toast if 3+ buffer exhaustions in 30s window
-                if (exhaustionTimestamps.size >= 3) {
-                    android.widget.Toast.makeText(
-                        context,
-                        context.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
-                    // Clear timestamps to prevent repeated toasts for the same event window
-                    exhaustionTimestamps.clear()
-                }
-            }
-            delay(1000L)
+        watchExhaustionToasts {
+            android.widget.Toast.makeText(
+                context,
+                context.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
+                android.widget.Toast.LENGTH_LONG
+            ).show()
         }
     }
 

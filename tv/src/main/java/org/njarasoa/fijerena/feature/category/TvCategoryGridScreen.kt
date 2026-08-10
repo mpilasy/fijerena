@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.rememberFavoriteHintVisible
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.ErrorScreen
@@ -145,18 +146,7 @@ private fun CategoryGridContent(
             )
 
     // One-time "hold to favorite" hint — favoriting has no other visible affordance on TV.
-    // Shown once ever (marked seen as soon as it's shown), auto-dismisses after a few seconds.
-    val hintContext = LocalContext.current
-    var showFavoriteHint by remember {
-        mutableStateOf(!org.njarasoa.fijerena.core.network.AppSettings(hintContext.applicationContext).hasSeenFavoriteHint)
-    }
-    LaunchedEffect(showFavoriteHint) {
-        if (showFavoriteHint) {
-            org.njarasoa.fijerena.core.network.AppSettings(hintContext.applicationContext).hasSeenFavoriteHint = true
-            delay(4000)
-            showFavoriteHint = false
-        }
-    }
+    val showFavoriteHint = rememberFavoriteHintVisible()
 
     // 5% padding for TV overscan safety — applied per-branch rather than around the whole
     // `when`, since LiveTvSplitLayout's promoted full-screen player must NOT inherit it (it

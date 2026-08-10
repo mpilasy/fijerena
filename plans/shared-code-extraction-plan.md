@@ -1,10 +1,10 @@
 # Audit: duplicate logic in mobile/tv worth sharing
 
-## Status (2026-08-02)
+## Status (2026-08-09)
 Tier 1 done and committed (`03db5e31`), except four small leftovers noted inline
-below (marked TODO) — left as follow-up, low value relative to effort. Tier 2
-untouched, still backlog. Verified via clean compile of every touched module
-plus a live smoke test on both emulators (TV + mobile launch, no crashes).
+below (marked TODO) — left as follow-up, low value relative to effort.
+Tier 2: items 2, 3, 4 done. Items 1 and 5 remain — both need a small behavior
+decision (not just a mechanical move) before landing, see their notes below.
 
 ## Context
 Following the `sortedSeasons()` and `FavoriteMenuTarget` extractions, user asked for a
@@ -96,16 +96,19 @@ skipped this pass.
    `finalizeSession(playbackState, streamingService, loaderViewModel)` in
    `core/ui/viewmodels`, called identically from both platforms and all 3 TV call
    sites — fixes a latent inconsistency, not just duplication.
-2. **Exhaustion-toast debounce.** ~28 lines of sliding-window rebuffer-count logic,
-   identical in `MobilePlayerScreen.kt` and `tv/.../PlayerEffects.kt`. Needs a small
-   state-machine class (e.g. `ExhaustionToastDebouncer`) so the algorithm can be
-   pulled out from under the `LaunchedEffect`.
+2. **Exhaustion-toast debounce — DONE** (2026-08-09). Added `ExhaustionToastDebouncer`
+   (pure state machine) + `watchExhaustionToasts()` (the polling loop) in
+   `core/player/service/ExhaustionToastWatcher.kt`; both `MobilePlayerScreen.kt` and
+   `tv/.../PlayerEffects.kt` now call `watchExhaustionToasts { }` with just the
+   platform's `Toast.makeText(...)` call as the callback.
 3. **Shared "now" ticker composable — DONE** (`6cca4e7a`, #201). Added
    `rememberNowEpochSeconds()` in `core/ui/components/TimeTicker.kt`; all 4 copies
    (EPG guide ×2, EPG browser ×2) now call it.
-4. **Favorite-hint show/dismiss effect**, duplicated in
-   `MobileCategoryListScreen.kt`/`TvCategoryGridScreen.kt` — same shape, recommend
-   `@Composable fun rememberFavoriteHintVisible(context): Boolean` in `core/ui`.
+4. **Favorite-hint show/dismiss effect — DONE** (2026-08-09). Added
+   `rememberFavoriteHintVisible()` next to `rememberNowEpochSeconds()` in
+   `core/ui/components/TimeTicker.kt`; both `MobileCategoryListScreen.kt` and
+   `TvCategoryGridScreen.kt` now call it instead of duplicating the
+   `AppSettings.hasSeenFavoriteHint` read/write + 4s auto-dismiss.
 5. **Provider connect/re-auth helper.** The exact guard fixed twice in commit
    `da6a6e82` (`if (!provider.isConnected()) provider.connect()`) is duplicated across
    4 screens (mobile+tv × movie+episode) plus a similar pattern in both nav hosts and
