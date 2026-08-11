@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- EPG sync foreground-service notifications -->
+    <string name="epg_sync_notification_channel">Synchronisation du guide EPG</string>
+    <string name="epg_sync_notification_title">Actualisation du guide TV</string>
+    <string name="epg_fts_rebuild_notification_title">Reconstruction de l\'index du guide TV</string>
+
+    <!-- Friendly error messages -->
+    <string name="error_no_internet">Impossible de joindre le serveur. Vérifiez votre connexion internet.</string>
+    <string name="error_timeout">Le serveur a mis trop de temps à répondre. Veuillez réessayer.</string>
+    <string name="error_ssl">Échec de la connexion sécurisée. Vérifiez l\'adresse du serveur.</string>
+    <string name="error_network">Erreur réseau. Vérifiez votre connexion et réessayez.</string>
+    <string name="error_unauthorized">Échec de la connexion. Vérifiez votre nom d\'utilisateur et votre mot de passe.</string>
+    <string name="error_generic">Une erreur s\'est produite. Veuillez réessayer.</string>
+    <string name="sync_error_download_failed">Échec du téléchargement</string>
+    <string name="sync_error_upload_failed">Échec de l\'envoi</string>
+
+    <!-- Settings export/import -->
+    <string name="settings_export_error_read_file">Impossible de lire le fichier</string>
+    <string name="settings_export_error_import_failed">Échec de l\'importation</string>
+    <string name="settings_export_error_invalid_format">Format de fichier de paramètres invalide</string>
+    <string name="settings_export_summary_import_failed_format">Échec de l\'importation : %1$s</string>
+    <string name="settings_export_summary_providers_format">Fournisseurs : %1$s</string>
+    <string name="settings_export_item_added_format">%1$d ajouté(s)</string>
+    <string name="settings_export_item_overwritten_format">%1$d écrasé(s)</string>
+    <string name="settings_export_item_skipped_format">%1$d ignoré(s)</string>
+    <string name="settings_export_summary_epg_sources_format">Sources EPG : %1$s</string>
+    <string name="settings_export_summary_favorites_format">%1$d favori(s) restauré(s)</string>
+    <string name="settings_export_summary_updated">Paramètres mis à jour</string>
+    <string name="settings_export_summary_passwords_reentry_format">%1$s (les mots de passe doivent être ressaisis)</string>
+
+    <!-- EPG freshness label -->
+    <string name="epg_freshness_no_sources">Aucune source EPG</string>
+    <string name="epg_freshness_never_refreshed">Jamais actualisé</string>
+    <string name="epg_freshness_just_now">à l\'instant</string>
+    <string name="epg_freshness_minutes_ago_format">il y a %1$dm</string>
+    <string name="epg_freshness_hours_ago_format">il y a %1$dh</string>
+    <string name="epg_freshness_days_ago_format">il y a %1$dj</string>
+    <string name="epg_freshness_stale_suffix_format"> • %1$d périmée(s)</string>
+    <string name="epg_freshness_updated_format">Actualisé %1$s</string>
+
+    <!-- EpgFileManager error fallbacks -->
+    <string name="epg_error_unknown">Erreur inconnue</string>
+    <string name="epg_error_task_failed_retries_format">Échec après %1$d tentatives</string>
+    <string name="epg_error_no_sources">Aucune source à traiter</string>
+    <string name="epg_error_processing_failed">Échec du traitement</string>
+    <string name="epg_error_source_not_found">Source introuvable</string>
+</resources>

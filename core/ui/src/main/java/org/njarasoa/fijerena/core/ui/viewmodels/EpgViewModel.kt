@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
@@ -93,7 +94,7 @@ class EpgViewModel(
         val capabilities = repository.getCapabilities()
         val hasExternalEpg = repository.hasIndexedEpgData()
         if (capabilities != null && !capabilities.supportsEpg && !hasExternalEpg) {
-            _uiState.value = UiState.Error("EPG is not supported by this provider")
+            _uiState.value = UiState.Error(context.getString(R.string.epg_error_not_supported))
             return
         }
 
@@ -102,12 +103,12 @@ class EpgViewModel(
         val items =
             itemsResult
                 .getOrElse {
-                    _uiState.value = UiState.Error("Failed to load channels: ${it.message}")
+                    _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_channels_format, it.message))
                     return
                 }.take(50)
 
         if (items.isEmpty()) {
-            _uiState.value = UiState.Error("No channels found in this category")
+            _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_channels_in_category))
             return
         }
 
@@ -115,12 +116,12 @@ class EpgViewModel(
         val epgResult = repository.getEpgBulkForItems(items)
         val epgData =
             epgResult.getOrElse {
-                _uiState.value = UiState.Error("Failed to load EPG data: ${it.message}")
+                _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_data_format, it.message))
                 return
             }
 
         if (epgData.isEmpty()) {
-            _uiState.value = UiState.Error("No EPG data available for these channels")
+            _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_data_for_channels))
             return
         }
 

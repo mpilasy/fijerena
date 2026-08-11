@@ -11,9 +11,10 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.ui.R
 
 data class SettingsUiState(
-    val providerName: String = "No provider",
+    val providerName: String = "",
     val currentUrl: String = "",
     val currentUsername: String = "",
     val activeProviderId: Long? = null,
@@ -68,7 +69,7 @@ class SettingsViewModel(
             // Base provider info
             var newState =
                 _uiState.value.copy(
-                    providerName = activeProvider?.name ?: "No provider",
+                    providerName = activeProvider?.name ?: "",
                     currentUrl = activeProvider?.url ?: "",
                     currentUsername = activeProvider?.username ?: "",
                     activeProviderId = activeProvider?.id,
@@ -141,7 +142,7 @@ class SettingsViewModel(
         viewModelScope.launch {
             val result = exportManager.importFromParsed(parsed, resolution, options)
 
-            val message = result.toSummary()
+            val message = result.toSummary(context)
 
             if (result.isSuccess) {
                 // Refresh global settings from AppSettings (they were updated inside exportManager.importFromJson)
@@ -177,7 +178,7 @@ class SettingsViewModel(
     private fun formatExpiryDate(expDate: String?): String? =
         when {
             expDate.isNullOrEmpty() -> null
-            expDate.equals("Unlimited", ignoreCase = true) -> "Unlimited"
+            expDate.equals("Unlimited", ignoreCase = true) -> context.getString(R.string.subscription_unlimited)
             else -> {
                 val epoch = expDate.toLongOrNull()
                 if (epoch != null) {

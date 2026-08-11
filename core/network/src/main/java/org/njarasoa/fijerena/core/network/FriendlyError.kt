@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 
+import android.content.Context
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -13,20 +14,23 @@ import javax.net.ssl.SSLException
  *
  * Developer Mode callers append the raw text via the [includeRaw] overload.
  */
-fun friendlyErrorMessage(e: Throwable): String =
+fun friendlyErrorMessage(
+    e: Throwable,
+    context: Context,
+): String =
     when (e) {
-        is UnknownHostException -> "Can't reach the server. Check your internet connection."
-        is SocketTimeoutException -> "The server took too long to respond. Please try again."
-        is SSLException -> "Secure connection failed. Check the server address."
-        is IOException -> "Network error. Check your connection and try again."
+        is UnknownHostException -> context.getString(R.string.error_no_internet)
+        is SocketTimeoutException -> context.getString(R.string.error_timeout)
+        is SSLException -> context.getString(R.string.error_ssl)
+        is IOException -> context.getString(R.string.error_network)
         else -> {
             val msg = e.message.orEmpty()
             when {
                 msg.contains("401") ||
                     msg.contains("403") ||
                     msg.contains("Unauthorized", ignoreCase = true) ->
-                    "Login failed. Check your username and password."
-                else -> "Something went wrong. Please try again."
+                    context.getString(R.string.error_unauthorized)
+                else -> context.getString(R.string.error_generic)
             }
         }
     }
@@ -38,9 +42,10 @@ fun friendlyErrorMessage(e: Throwable): String =
  */
 fun friendlyErrorMessage(
     e: Throwable,
+    context: Context,
     includeRaw: Boolean,
 ): String {
-    val friendly = friendlyErrorMessage(e)
+    val friendly = friendlyErrorMessage(e, context)
     val raw = e.message
     return if (includeRaw && !raw.isNullOrBlank()) "$friendly\n\n[dev] $raw" else friendly
 }

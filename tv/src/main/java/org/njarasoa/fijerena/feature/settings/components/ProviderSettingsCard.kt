@@ -60,7 +60,7 @@ fun ProviderSettingsCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = providerName,
+                        text = providerName.ifEmpty { stringResource(R.string.provider_none_label) },
                         style =
                             MaterialTheme.typography.bodyLarge.copy(
                                 fontSize =

@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,6 +10,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
+import org.njarasoa.fijerena.core.ui.R
 
 /**
  * LoginViewModel manages authentication state for Xtream IPTV login.
@@ -22,6 +24,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
  */
 class LoginViewModel(
     private val repository: XtreamRepository,
+    private val context: Context,
 ) : ViewModel() {
     /**
      * UI state sealed class representing all possible login states.
@@ -87,17 +90,17 @@ class LoginViewModel(
                     val errorMessage =
                         when {
                             result.message?.contains("timeout", ignoreCase = true) == true ->
-                                "Connection timeout. Check your network or server URL."
+                                context.getString(R.string.login_error_timeout)
                             result.message?.contains("401") == true || result.message?.contains("Unauthorized") == true ->
-                                "Invalid username or password."
+                                context.getString(R.string.login_error_invalid_credentials)
                             result.message?.contains("404") == true || result.message?.contains("Not Found") == true ->
-                                "Server not found. Check your URL."
+                                context.getString(R.string.login_error_server_not_found)
                             result.message?.contains("Invalid credentials") == true ->
-                                "Invalid username or password."
+                                context.getString(R.string.login_error_invalid_credentials)
                             result.message?.contains("not active", ignoreCase = true) == true ->
-                                result.message ?: "Account is not active"
+                                result.message ?: context.getString(R.string.login_error_account_inactive)
                             else ->
-                                "Login failed: ${result.message ?: "Unknown error"}"
+                                context.getString(R.string.login_error_generic_format, result.message ?: context.getString(R.string.error_generic_unknown))
                         }
                     _uiState.value = UiState.Error(errorMessage)
                 }

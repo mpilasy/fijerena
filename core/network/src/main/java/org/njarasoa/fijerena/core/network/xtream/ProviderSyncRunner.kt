@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
+import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
@@ -62,7 +63,7 @@ object ProviderSyncRunner {
                     // No exception thrown — connect() simply refused. Almost always credentials.
                     val devSuffix =
                         if (AppSettings(context).isDevMode) "\n\n[dev] connect() returned not-connected" else ""
-                    return Outcome.Permanent("Login failed. Check your username and password.$devSuffix")
+                    return Outcome.Permanent(context.getString(R.string.error_unauthorized) + devSuffix)
                 }
 
                 mediaProvider.syncAll()
@@ -88,7 +89,7 @@ object ProviderSyncRunner {
                     continue
                 }
                 Log.e(TAG, "Sync failed for ${provider.name} (attempt $attempt, transient=$transient)", e)
-                val message = friendlyErrorMessage(e, AppSettings(context).isDevMode)
+                val message = friendlyErrorMessage(e, context, AppSettings(context).isDevMode)
                 return if (transient) Outcome.Transient(message) else Outcome.Permanent(message)
             }
         }

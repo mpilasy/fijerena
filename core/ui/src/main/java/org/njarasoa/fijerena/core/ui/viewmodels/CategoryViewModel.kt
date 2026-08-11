@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 class CategoryViewModel(
@@ -162,8 +163,8 @@ class CategoryViewModel(
         if (!repository.isConnected()) {
             val connectResult = repository.connect()
             if (connectResult.isFailure) {
-                val reason = connectResult.exceptionOrNull()?.message ?: "Unknown error"
-                _uiState.value = UiState.Error("Connection failed: $reason")
+                val reason = connectResult.exceptionOrNull()?.message ?: context.getString(R.string.error_generic_unknown)
+                _uiState.value = UiState.Error(context.getString(R.string.category_error_connection_failed_format, reason))
                 return
             }
         }
@@ -188,7 +189,7 @@ class CategoryViewModel(
                 buildAndShowCategories(fetchedCategories)
             },
             onFailure = { error ->
-                _uiState.value = UiState.Error(error.message ?: "Failed to load categories")
+                _uiState.value = UiState.Error(error.message ?: context.getString(R.string.category_error_load_failed))
             },
         )
     }
@@ -499,7 +500,7 @@ class CategoryViewModel(
             virtualCats.add(
                 MediaCategory(
                     id = CONTINUE_WATCHING_CATEGORY_ID,
-                    name = "Continue Watching",
+                    name = context.getString(R.string.series_continue_watching_badge),
                     isVirtual = true,
                 ),
             )
@@ -507,7 +508,7 @@ class CategoryViewModel(
         virtualCats.add(
             MediaCategory(
                 id = FAVORITES_CATEGORY_ID,
-                name = "Favorites",
+                name = context.getString(R.string.settings_import_favorites_label),
                 isVirtual = true,
             ),
         )
@@ -516,7 +517,7 @@ class CategoryViewModel(
             virtualCats.add(
                 MediaCategory(
                     id = FAVORITE_CATEGORIES_ID,
-                    name = "Favorite Categories",
+                    name = context.getString(R.string.category_favorite_categories_label),
                     isVirtual = true,
                 ),
             )
@@ -524,7 +525,7 @@ class CategoryViewModel(
         virtualCats.add(
             MediaCategory(
                 id = LAST_WATCHED_CATEGORY_ID,
-                name = "Last Watched",
+                name = context.getString(R.string.player_last_watched),
                 isVirtual = true,
             ),
         )
@@ -533,7 +534,7 @@ class CategoryViewModel(
             virtualCats.add(
                 MediaCategory(
                     id = RECENTLY_VIEWED_CATEGORIES_ID,
-                    name = "Recent Categories",
+                    name = context.getString(R.string.category_recent_categories_label),
                     isVirtual = true,
                 ),
             )

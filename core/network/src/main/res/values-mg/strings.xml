@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- EPG sync foreground-service notifications -->
+    <string name="epg_sync_notification_channel">Fanavaozana ny EPG</string>
+    <string name="epg_sync_notification_title">Manavao ny fandaharana</string>
+    <string name="epg_fts_rebuild_notification_title">Manangana indray ny fikarohan\'ny fandaharana</string>
+
+    <!-- Friendly error messages -->
+    <string name="error_no_internet">Tsy tratra ny mpizara. Jereo ny fifandraisanao amin\'ny internet.</string>
+    <string name="error_timeout">Ela loatra ny valin\'ny mpizara. Andramo indray.</string>
+    <string name="error_ssl">Tsy nahomby ny fifandraisana voaaro. Jereo ny adiresin\'ny mpizara.</string>
+    <string name="error_network">Nisy olana tamin\'ny tambajotra. Jereo ny fifandraisanao ary andramo indray.</string>
+    <string name="error_unauthorized">Tsy nahomby ny fidirana. Jereo ny anaranao sy ny tenimiafinao.</string>
+    <string name="error_generic">Nisy olana. Andramo indray.</string>
+    <string name="sync_error_download_failed">Tsy nahomby ny fakana</string>
+    <string name="sync_error_upload_failed">Tsy nahomby ny fandefasana</string>
+
+    <!-- Settings export/import -->
+    <string name="settings_export_error_read_file">Tsy afaka namaky ny rakitra</string>
+    <string name="settings_export_error_import_failed">Tsy nahomby ny fampidirana</string>
+    <string name="settings_export_error_invalid_format">Diso ny endriky ny rakitra</string>
+    <string name="settings_export_summary_import_failed_format">Tsy nahomby ny fampidirana: %1$s</string>
+    <string name="settings_export_summary_providers_format">Mpanome: %1$s</string>
+    <string name="settings_export_item_added_format">%1$d nampidirina</string>
+    <string name="settings_export_item_overwritten_format">%1$d nosoloana</string>
+    <string name="settings_export_item_skipped_format">%1$d nihoarana</string>
+    <string name="settings_export_summary_epg_sources_format">Fantsakana EPG: %1$s</string>
+    <string name="settings_export_summary_favorites_format">%1$d tiana indrindra naverina</string>
+    <string name="settings_export_summary_updated">Voavaozina ny fandrindrana</string>
+    <string name="settings_export_summary_passwords_reentry_format">%1$s (tsy maintsy asiana indray ny tenimiafina)</string>
+
+    <!-- EPG freshness label -->
+    <string name="epg_freshness_no_sources">Tsy misy fantsakana EPG</string>
+    <string name="epg_freshness_never_refreshed">Mbola tsy navaozina</string>
+    <string name="epg_freshness_just_now">vao haingana</string>
+    <string name="epg_freshness_minutes_ago_format">%1$dm lasa</string>
+    <string name="epg_freshness_hours_ago_format">%1$do lasa</string>
+    <string name="epg_freshness_days_ago_format">%1$dandro lasa</string>
+    <string name="epg_freshness_stale_suffix_format"> • %1$d lany andro</string>
+    <string name="epg_freshness_updated_format">Navaozina %1$s</string>
+
+    <!-- EpgFileManager error fallbacks -->
+    <string name="epg_error_unknown">Fahadisoana tsy fantatra</string>
+    <string name="epg_error_task_failed_retries_format">Tsy nahomby aorian\'ny fanandramana %1$d</string>
+    <string name="epg_error_no_sources">Tsy misy fantsakana hodinihina</string>
+    <string name="epg_error_processing_failed">Tsy nahomby ny fanodinana</string>
+    <string name="epg_error_source_not_found">Tsy hita ny fantsakana</string>
+</resources>

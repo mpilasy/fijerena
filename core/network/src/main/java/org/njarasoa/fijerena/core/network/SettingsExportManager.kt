@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 import android.content.Context
+import org.njarasoa.fijerena.core.network.R
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.edit
@@ -374,12 +375,12 @@ class SettingsExportManager(
                 val jsonString =
                     context.contentResolver.openInputStream(uri)?.use { input ->
                         input.bufferedReader().readText()
-                    } ?: return@withContext ImportResult(error = "Could not read file")
+                    } ?: return@withContext ImportResult(error = context.getString(R.string.settings_export_error_read_file))
 
                 importFromJson(jsonString, conflictResolution, options)
             } catch (e: Exception) {
                 Log.e(TAG, "Import failed", e)
-                ImportResult(error = e.message ?: "Import failed")
+                ImportResult(error = e.message ?: context.getString(R.string.settings_export_error_import_failed))
             }
         }
 
@@ -631,10 +632,10 @@ class SettingsExportManager(
                 )
             } catch (e: kotlinx.serialization.SerializationException) {
                 Log.e(TAG, "Invalid settings file format", e)
-                ImportResult(error = "Invalid settings file format")
+                ImportResult(error = context.getString(R.string.settings_export_error_invalid_format))
             } catch (e: Exception) {
                 Log.e(TAG, "Import failed", e)
-                ImportResult(error = e.message ?: "Import failed")
+                ImportResult(error = e.message ?: context.getString(R.string.settings_export_error_import_failed))
             }
         }
 
@@ -673,36 +674,36 @@ class SettingsExportManager(
     ) {
         val isSuccess: Boolean get() = error == null
 
-        fun toSummary(): String {
-            if (error != null) return "Import failed: $error"
+        fun toSummary(context: Context): String {
+            if (error != null) return context.getString(R.string.settings_export_summary_import_failed_format, error)
             val parts = mutableListOf<String>()
 
             // Providers
             if (providersAdded > 0 || providersUpdated > 0 || providersSkipped > 0) {
                 val p = mutableListOf<String>()
-                if (providersAdded > 0) p.add("$providersAdded added")
-                if (providersUpdated > 0) p.add("$providersUpdated overwritten")
-                if (providersSkipped > 0) p.add("$providersSkipped skipped")
-                parts.add("Providers: ${p.joinToString(", ")}")
+                if (providersAdded > 0) p.add(context.getString(R.string.settings_export_item_added_format, providersAdded))
+                if (providersUpdated > 0) p.add(context.getString(R.string.settings_export_item_overwritten_format, providersUpdated))
+                if (providersSkipped > 0) p.add(context.getString(R.string.settings_export_item_skipped_format, providersSkipped))
+                parts.add(context.getString(R.string.settings_export_summary_providers_format, p.joinToString(", ")))
             }
 
             // EPG Sources
             if (epgSourcesAdded > 0 || epgSourcesSkipped > 0) {
                 val e = mutableListOf<String>()
-                if (epgSourcesAdded > 0) e.add("$epgSourcesAdded added")
-                if (epgSourcesSkipped > 0) e.add("$epgSourcesSkipped skipped")
-                parts.add("EPG Sources: ${e.joinToString(", ")}")
+                if (epgSourcesAdded > 0) e.add(context.getString(R.string.settings_export_item_added_format, epgSourcesAdded))
+                if (epgSourcesSkipped > 0) e.add(context.getString(R.string.settings_export_item_skipped_format, epgSourcesSkipped))
+                parts.add(context.getString(R.string.settings_export_summary_epg_sources_format, e.joinToString(", ")))
             }
 
             // Favorites
             val favTotal = favoritesRestored + favoriteCategoriesRestored
             if (favTotal > 0) {
-                parts.add("$favTotal favorite(s) restored")
+                parts.add(context.getString(R.string.settings_export_summary_favorites_format, favTotal))
             }
 
-            if (parts.isEmpty()) parts.add("Settings updated")
+            if (parts.isEmpty()) parts.add(context.getString(R.string.settings_export_summary_updated))
             val summary = parts.joinToString(". ") + "."
-            return if (providersAdded > 0) "$summary (Passwords must be re-entered)" else summary
+            return if (providersAdded > 0) context.getString(R.string.settings_export_summary_passwords_reentry_format, summary) else summary
         }
     }
 }

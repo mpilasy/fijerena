@@ -613,9 +613,9 @@ private fun ContentTypeHeroCard(
                     val (filtered, total) = categoryCounts
                     val countText =
                         if (showTotal && filtered < total) {
-                            "$filtered of $total categories"
+                            stringResource(R.string.category_filtered_of_total_format, filtered, total)
                         } else {
-                            "$filtered categories"
+                            stringResource(R.string.category_count_format, filtered)
                         }
                     Text(
                         text = countText,

@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -33,7 +35,7 @@ fun UiScaleSettingsCard(
 ) {
     Column {
         Text(
-            text = "Category/Grid UI Scale",
+            text = stringResource(R.string.settings_ui_scale_section_title),
             style =
                 MaterialTheme.typography.titleMedium.copy(
                     fontSize =
@@ -44,7 +46,7 @@ fun UiScaleSettingsCard(
         )
         Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
         Text(
-            text = "Adjust font, spacing, and element sizes for category/grid views",
+            text = stringResource(R.string.settings_ui_scale_desc),
             style =
                 MaterialTheme.typography.bodySmall.copy(
                     fontSize =

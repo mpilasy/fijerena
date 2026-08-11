@@ -366,7 +366,7 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.epg_source_phase_format, activeProgress.phase),
+                                            text = stringResource(R.string.epg_source_phase_format, localizedEpgPhase(activeProgress.phase)),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.primary,
                                         )
@@ -548,7 +548,8 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
             title = { Text(stringResource(R.string.epg_refresh_interval_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    intervalOptions.forEach { (interval, label) ->
+                    intervalOptions.forEach { interval ->
+                        val label = if (interval == -1) stringResource(R.string.epg_automation_freq_never) else stringResource(R.string.epg_refresh_interval_hours_format, interval)
                         val isSelected = epgSettings.epgRefreshInterval == interval
                         androidx.tv.material3.Surface(
                             checked = isSelected,
@@ -592,6 +593,17 @@ fun TvEpgManagementScreen(onBack: () -> Unit) {
         )
     }
 }
+
+@Composable
+private fun localizedEpgPhase(phase: String): String =
+    when (phase) {
+        "Downloading" -> stringResource(R.string.epg_phase_downloading)
+        "Ingesting" -> stringResource(R.string.epg_phase_ingesting)
+        "Awaiting Ingestion" -> stringResource(R.string.epg_phase_awaiting_ingestion)
+        "Rebuilding indexes…" -> stringResource(R.string.epg_phase_rebuilding_indexes)
+        "Swapping to primary guide…" -> stringResource(R.string.epg_phase_swapping_primary_guide)
+        else -> phase
+    }
 
 @Composable
 private fun StatusIndicator(
@@ -676,7 +688,7 @@ private fun EpgStatusCard(
                         stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_retrying, multiState.attempt, multiState.maxAttempts, nextRetry))
                     }
                     is MultiSourceState.Completed -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finished))
-                    is MultiSourceState.Finalizing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finalizing, multiState.phase))
+                    is MultiSourceState.Finalizing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finalizing, localizedEpgPhase(multiState.phase)))
                     is MultiSourceState.Clearing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_clearing))
                     is MultiSourceState.Error -> stringResource(R.string.epg_current_status_error, multiState.reason)
                     else -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))

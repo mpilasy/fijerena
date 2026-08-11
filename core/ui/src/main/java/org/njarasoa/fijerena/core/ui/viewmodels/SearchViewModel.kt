@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 class SearchViewModel(
@@ -214,7 +215,7 @@ class SearchViewModel(
             if (!repo.isConnected()) {
                 val connectResult = repo.connect()
                 if (connectResult.isFailure) {
-                    _uiState.value = UiState.Error("Session expired. Please login again.")
+                    _uiState.value = UiState.Error(context.getString(R.string.search_error_session_expired))
                     return
                 }
             }
@@ -347,7 +348,7 @@ class SearchViewModel(
                 )
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            _uiState.value = UiState.Error(e.message ?: "Failed to search")
+            _uiState.value = UiState.Error(e.message ?: context.getString(R.string.search_error_failed))
         }
     }
 

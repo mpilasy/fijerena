@@ -22,7 +22,7 @@ class LoginViewModelFactory(
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
             val accountManager = AccountManager(context.applicationContext)
             val repository = XtreamRepository(accountManager, context.applicationContext, providerId)
-            return LoginViewModel(repository) as T
+            return LoginViewModel(repository, context.applicationContext) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

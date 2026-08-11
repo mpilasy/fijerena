@@ -70,6 +70,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
@@ -110,6 +111,16 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
  * - D-pad navigation between search field and results
  * - TV-optimized with 5% overscan padding
  */
+@Composable
+private fun localizedContentTypeLabel(contentType: String): String =
+    when (contentType) {
+        "ALL" -> stringResource(R.string.content_type_all_label)
+        ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
+        ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
+        ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+        else -> contentType.asContentTypeLabel()
+    }
+
 @Composable
 fun SearchScreen(
     contentType: String,
@@ -261,7 +272,7 @@ private fun HeaderRow(contentType: String) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = if (contentType == "ALL") "All Content" else contentType.asContentTypeLabel(),
+                text = localizedContentTypeLabel(contentType),
                 style = MaterialTheme.typography.titleMedium,
                 color = CinemaAccent,
             )
@@ -550,9 +561,9 @@ private fun SearchResultsList(
             Text(
                 text =
                     if (queryContentType == "ALL") {
-                        "No results found for '$query'. Try different keywords."
+                        stringResource(R.string.search_no_results_query_format_tv, query)
                     } else {
-                        "No results found in ${queryContentType.asContentTypeLabel()} for '$query'. Try different keywords."
+                        stringResource(R.string.search_no_results_type_format_tv, localizedContentTypeLabel(queryContentType), query)
                     },
                 style = MaterialTheme.typography.bodyLarge,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
@@ -570,7 +581,7 @@ private fun SearchResultsList(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "$totalResults results",
+                    text = stringResource(R.string.search_results_count_format, totalResults),
                     style = MaterialTheme.typography.titleMedium,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
@@ -629,7 +640,7 @@ private fun SearchResultsList(
                             val isExpanded = expandedGroups.contains(type)
                             item(key = "header_$type", contentType = "header") {
                                 CollapsibleHeader(
-                                    title = type.asContentTypeLabel(),
+                                    title = localizedContentTypeLabel(type),
                                     isExpanded = isExpanded,
                                     onToggle = { toggleGroup(type) },
                                 )
@@ -770,7 +781,7 @@ private fun CollapsibleHeader(
             )
             Icon(
                 imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
-                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
                 tint = CinemaAccent,
                 modifier = Modifier.size(TvDimensions.iconSmall),
             )
@@ -941,7 +952,7 @@ private fun SearchFavoriteDialog(
     onDismiss: () -> Unit,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()
-    val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+    val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,

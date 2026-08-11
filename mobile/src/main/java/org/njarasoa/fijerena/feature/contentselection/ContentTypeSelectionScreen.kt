@@ -493,7 +493,7 @@ private fun GradientContentCard(
                         )
                         if (showTotal && filtered < total) {
                             Text(
-                                text = "of $total",
+                                text = stringResource(R.string.category_of_total_format, total),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
                             )

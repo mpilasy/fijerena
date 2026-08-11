@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- EPG sync foreground-service notifications -->
+    <string name="epg_sync_notification_channel">EPG Guide Sync</string>
+    <string name="epg_sync_notification_title">Refreshing TV guide</string>
+    <string name="epg_fts_rebuild_notification_title">Rebuilding TV guide index</string>
+
+    <!-- Friendly error messages (FriendlyError.kt) -->
+    <string name="error_no_internet">Can\'t reach the server. Check your internet connection.</string>
+    <string name="error_timeout">The server took too long to respond. Please try again.</string>
+    <string name="error_ssl">Secure connection failed. Check the server address.</string>
+    <string name="error_network">Network error. Check your connection and try again.</string>
+    <string name="error_unauthorized">Login failed. Check your username and password.</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="sync_error_download_failed">Download failed</string>
+    <string name="sync_error_upload_failed">Upload failed</string>
+
+    <!-- Settings export/import (SettingsExportManager) -->
+    <string name="settings_export_error_read_file">Could not read file</string>
+    <string name="settings_export_error_import_failed">Import failed</string>
+    <string name="settings_export_error_invalid_format">Invalid settings file format</string>
+    <string name="settings_export_summary_import_failed_format">Import failed: %1$s</string>
+    <string name="settings_export_summary_providers_format">Providers: %1$s</string>
+    <string name="settings_export_item_added_format">%1$d added</string>
+    <string name="settings_export_item_overwritten_format">%1$d overwritten</string>
+    <string name="settings_export_item_skipped_format">%1$d skipped</string>
+    <string name="settings_export_summary_epg_sources_format">EPG Sources: %1$s</string>
+    <string name="settings_export_summary_favorites_format">%1$d favorite(s) restored</string>
+    <string name="settings_export_summary_updated">Settings updated</string>
+    <string name="settings_export_summary_passwords_reentry_format">%1$s (Passwords must be re-entered)</string>
+
+    <!-- EPG freshness label (EpgBrowserModels) -->
+    <string name="epg_freshness_no_sources">No EPG sources</string>
+    <string name="epg_freshness_never_refreshed">Never refreshed</string>
+    <string name="epg_freshness_just_now">just now</string>
+    <string name="epg_freshness_minutes_ago_format">%1$dm ago</string>
+    <string name="epg_freshness_hours_ago_format">%1$dh ago</string>
+    <string name="epg_freshness_days_ago_format">%1$dd ago</string>
+    <string name="epg_freshness_stale_suffix_format"> • %1$d stale</string>
+    <string name="epg_freshness_updated_format">Updated %1$s</string>
+
+    <!-- EpgFileManager error fallbacks -->
+    <string name="epg_error_unknown">Unknown error</string>
+    <string name="epg_error_task_failed_retries_format">Task failed after %1$d retries</string>
+    <string name="epg_error_no_sources">No sources to process</string>
+    <string name="epg_error_processing_failed">Processing failed</string>
+    <string name="epg_error_source_not_found">Source not found</string>
+</resources>

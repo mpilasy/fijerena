@@ -8,6 +8,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import org.njarasoa.fijerena.core.network.R
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
@@ -384,7 +385,7 @@ class EpgFileManager private constructor(
                                             attempt = currentAttempt,
                                             maxAttempts = maxAttempts,
                                             nextRetryAtMs = nextRetryAt,
-                                            reason = e.message ?: "Unknown error"
+                                            reason = e.message ?: context.getString(R.string.epg_error_unknown)
                                         )
                                         Log.w(TAG, "Task $taskId failed (attempt $currentAttempt/$maxAttempts). Retrying in ${delayMs/60000} min. Error: ${e.message}")
                                         delay(delayMs)
@@ -394,7 +395,7 @@ class EpgFileManager private constructor(
 
                             // All attempts failed
                             Log.e(TAG, "Task $taskId failed after $maxAttempts retries: ${lastException?.message}", lastException)
-                            _state.value = MultiSourceState.Error(lastException?.message ?: "Task failed after $maxAttempts retries")
+                            _state.value = MultiSourceState.Error(lastException?.message ?: context.getString(R.string.epg_error_task_failed_retries_format, maxAttempts))
                             onComplete?.invoke()
                         }
                     }
@@ -490,7 +491,7 @@ class EpgFileManager private constructor(
 
     private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) {
         if (sources.isEmpty()) {
-            _state.value = MultiSourceState.Error("No sources to process")
+            _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_no_sources))
             return
         }
 
@@ -607,7 +608,7 @@ class EpgFileManager private constructor(
                                         activeLabels.remove(label)
                                         activeProgress.remove(source.id)
                                         completedStats.add(
-                                            SourceStats(source.id, label, durationMs = sourceDuration, error = "Download failed"),
+                                            SourceStats(source.id, label, durationMs = sourceDuration, error = context.getString(R.string.sync_error_download_failed)),
                                         )
                                         updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                                     }
@@ -687,7 +688,7 @@ class EpgFileManager private constructor(
         } catch (e: Exception) {
             Log.e(TAG, "processAllSources failed: ${e.message}", e)
             EpgIndexer.getInstance(context).endBulkIngestion()
-            _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
+            _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
         }
     }
 
@@ -742,7 +743,7 @@ class EpgFileManager private constructor(
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val source =
                 sourceDao.getSourceById(sourceId) ?: run {
-                    _state.value = MultiSourceState.Error("Source not found")
+                    _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_source_not_found))
                     return
                 }
             val indexer = EpgIndexer.getInstance(context)
@@ -820,7 +821,7 @@ class EpgFileManager private constructor(
                     ) { updateSingleProgress() }
                 } else {
                     // Download failed — error already logged
-                    SourceStats(source.id, label, error = "Download failed")
+                    SourceStats(source.id, label, error = context.getString(R.string.sync_error_download_failed))
                 }
 
             // Finalizing: rebuild B-tree query indexes.
@@ -878,7 +879,7 @@ class EpgFileManager private constructor(
         } catch (e: Exception) {
             Log.e(TAG, "processSingleSource failed: ${e.message}", e)
             EpgIndexer.getInstance(context).endBulkIngestion()
-            _state.value = MultiSourceState.Error(e.message ?: "Processing failed")
+            _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
         }
     }
 
@@ -1012,7 +1013,7 @@ class EpgFileManager private constructor(
             }
 
             if (lastError != null) {
-                val display = lastException?.let { friendlyErrorMessage(it, appSettings.isDevMode) } ?: lastError
+                val display = lastException?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) } ?: lastError
                 sourceDao.markError(source.id, display)
                 tmpFile.delete()
                 return null
@@ -1021,7 +1022,7 @@ class EpgFileManager private constructor(
             return DownloadedSource(source, label, tmpFile, downloadedBytes, System.currentTimeMillis() - downloadStartMs)
         } catch (e: Exception) {
             Log.e(TAG, "Error downloading source: $label", e)
-            sourceDao.markError(source.id, friendlyErrorMessage(e, appSettings.isDevMode))
+            sourceDao.markError(source.id, friendlyErrorMessage(e, context, appSettings.isDevMode))
             tmpFile.delete()
             return null
         }
@@ -1098,7 +1099,7 @@ class EpgFileManager private constructor(
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error ingesting source: $label", e)
-            val display = friendlyErrorMessage(e, appSettings.isDevMode)
+            val display = friendlyErrorMessage(e, context, appSettings.isDevMode)
             sourceDao.markError(source.id, display)
             return SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = display)
         } finally {

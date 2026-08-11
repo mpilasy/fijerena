@@ -436,9 +436,9 @@ fun TvAddProviderScreen(
                                 enabled = !isBusy,
                                 text =
                                     when (saveState) {
-                                        is SaveState.Validating -> "Connecting..."
-                                        is SaveState.Saving -> "Saving..."
-                                        else -> if (isEditMode) "Update" else "Add"
+                                        is SaveState.Validating -> stringResource(R.string.provider_connecting)
+                                        is SaveState.Saving -> stringResource(R.string.provider_saving)
+                                        else -> if (isEditMode) stringResource(R.string.common_update) else stringResource(R.string.common_add)
                                     },
                             )
                         }
@@ -503,9 +503,9 @@ fun TvAddProviderScreen(
                         // Cache confirmation dialogs
                         if (showClearCacheDialog) {
                             ConfirmActionDialog(
-                                title = "Clear All Cache?",
-                                text = "This will remove all cached data (Live TV, Movies, TV Shows, EPG). The app will need to re-download data from the server.",
-                                confirmText = "Clear All",
+                                title = stringResource(R.string.provider_clear_cache_all_title),
+                                text = stringResource(R.string.provider_clear_cache_all_message),
+                                confirmText = stringResource(R.string.provider_clear_all_button),
                                 onConfirm = {
                                     coroutineScope.launch {
                                         providerRepo.clearAllCacheForProvider(editId)
@@ -519,9 +519,9 @@ fun TvAddProviderScreen(
 
                         if (showClearLiveTvCacheDialog) {
                             ConfirmActionDialog(
-                                title = "Clear Live TV Cache?",
-                                text = "This will remove all cached Live TV data (categories and streams).",
-                                confirmText = "Clear",
+                                title = stringResource(R.string.provider_clear_cache_live_title),
+                                text = stringResource(R.string.provider_clear_cache_live_message),
+                                confirmText = stringResource(R.string.provider_clear_button),
                                 onConfirm = {
                                     coroutineScope.launch {
                                         providerRepo.clearCacheForProviderContentType(editId, ContentType.LIVE_TV)
@@ -535,9 +535,9 @@ fun TvAddProviderScreen(
 
                         if (showClearMoviesCacheDialog) {
                             ConfirmActionDialog(
-                                title = "Clear Movies Cache?",
-                                text = "This will remove all cached Movies data (categories and streams).",
-                                confirmText = "Clear",
+                                title = stringResource(R.string.provider_clear_cache_movies_title),
+                                text = stringResource(R.string.provider_clear_cache_movies_message),
+                                confirmText = stringResource(R.string.provider_clear_button),
                                 onConfirm = {
                                     coroutineScope.launch {
                                         providerRepo.clearCacheForProviderContentType(editId, ContentType.MOVIES)
@@ -551,9 +551,9 @@ fun TvAddProviderScreen(
 
                         if (showClearTvShowsCacheDialog) {
                             ConfirmActionDialog(
-                                title = "Clear TV Shows Cache?",
-                                text = "This will remove all cached TV Shows data (categories and streams).",
-                                confirmText = "Clear",
+                                title = stringResource(R.string.provider_clear_cache_tvshows_title),
+                                text = stringResource(R.string.provider_clear_cache_tvshows_message),
+                                confirmText = stringResource(R.string.provider_clear_button),
                                 onConfirm = {
                                     coroutineScope.launch {
                                         providerRepo.clearCacheForProviderContentType(editId, ContentType.TV_SHOWS)
@@ -568,9 +568,9 @@ fun TvAddProviderScreen(
                         // Clear Favorites Confirmation Dialog
                         if (showClearFavoritesDialog) {
                             ConfirmActionDialog(
-                                title = "Clear All Favorites?",
-                                text = "This will remove all favorited streams from all content types (Live TV, Movies, TV Shows). This action cannot be undone.",
-                                confirmText = "Clear All",
+                                title = stringResource(R.string.provider_clear_favorites_title),
+                                text = stringResource(R.string.provider_clear_favorites_message),
+                                confirmText = stringResource(R.string.provider_clear_all_button),
                                 onConfirm = {
                                     repository.clearFavorites()
                                     showClearFavoritesDialog = false
@@ -582,9 +582,9 @@ fun TvAddProviderScreen(
                         // Clear Progress Confirmation Dialog
                         if (showClearProgressDialog) {
                             ConfirmActionDialog(
-                                title = "Clear All Playback Progress?",
-                                text = "This will remove all saved playback positions. You will start from the beginning when playing any VOD content.",
-                                confirmText = "Clear All",
+                                title = stringResource(R.string.provider_clear_progress_title),
+                                text = stringResource(R.string.provider_clear_progress_message),
+                                confirmText = stringResource(R.string.provider_clear_all_button),
                                 onConfirm = {
                                     repository.clearWatchHistory()
                                     showClearProgressDialog = false
