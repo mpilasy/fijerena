@@ -631,4 +631,77 @@
     <string name="search_result_category_format">Sokajy: %1$s</string>
     <string name="content_type_movies_subtitle_short">Jereo ny tolotra</string>
     <string name="content_type_tv_shows_subtitle_short">Andiany sy fizarany</string>
+
+    <!-- EPG phase labels -->
+    <string name="epg_phase_downloading">Alaina</string>
+    <string name="epg_phase_ingesting">Ampidirina</string>
+    <string name="epg_phase_awaiting_ingestion">Miandry ny fampidirana</string>
+    <string name="epg_phase_rebuilding_indexes">Manangana ny fikarohana…</string>
+    <string name="epg_phase_swapping_primary_guide">Mifindra amin\'ny fandaharana lehibe…</string>
+    <string name="category_count_format">Sokajy %1$d</string>
+
+    <!-- Search content-type audit fixes -->
+    <string name="content_type_all_label">Ny rehetra</string>
+    <string name="search_title_format">Tadiavo %1$s</string>
+    <string name="search_no_results_query_format">Tsy nahita valiny ho an\'ny \'%1$s\'\nAndramo teny hafa</string>
+    <string name="search_no_results_type_format">Tsy nahita valiny ao amin\'ny %1$s ho an\'ny \'%2$s\'\nAndramo teny hafa</string>
+    <string name="search_no_results_query_format_tv">Tsy nahita valiny ho an\'ny \'%1$s\'. Andramo teny hafa.</string>
+    <string name="search_no_results_type_format_tv">Tsy nahita valiny ao amin\'ny %1$s ho an\'ny \'%2$s\'. Andramo teny hafa.</string>
+    <string name="search_results_count_format">Valiny %1$d</string>
+    <string name="provider_none_label">Tsy misy mpanome</string>
+
+    <!-- Punctuation-adjacent literal audit fixes -->
+    <string name="player_stats_build_format">Build: %1$s (%2$s)</string>
+    <string name="player_stats_device_type_format">Fitaovana: %1$s | Karazany: %2$s</string>
+    <string name="epg_browser_index_stats_format">EPG Index: %1$s</string>
+    <string name="category_favorite_hint_mobile">Tsindrio ela ny fantsakana na sokajy iray hanampiana azy amin\'ny tiana indrindra</string>
+    <string name="category_now_playing_badge">▶ Mandeha</string>
+    <string name="category_of_total_format">amin\'ny %1$d</string>
+    <string name="settings_ui_scale_section_title">Refin\'ny sokajy/tabilao</string>
+    <string name="settings_ui_scale_desc">Ovay ny endri-tsoratra, ny elanelana, ary ny haben\'ny singa ho an\'ny sokajy/tabilao</string>
+
+    <!-- Connection test error messages -->
+    <string name="provider_error_invalid_credentials">Diso ny fangatahana fidirana</string>
+    <string name="provider_error_account_inactive_format">Tsy mavitrika ny kaonty: %1$s</string>
+    <string name="provider_error_http_status_format">Namaly HTTP %1$d ny mpizara</string>
+    <string name="provider_error_invalid_m3u">Tsy rakitra M3U marina: tsy misy loha #EXTM3U</string>
+    <string name="provider_error_connection_failed">Tsy nahomby ny fifandraisana</string>
+    <string name="epg_refresh_interval_hours_format">Adiny %1$d</string>
+    <string name="stream_count_format">Fantsakana %1$d</string>
+    <string name="category_select_to_view_channels">Misafidiana sokajy hijerena ny fandaharana</string>
+    <string name="category_no_channels">Tsy misy fandaharana amin\'ity sokajy ity</string>
+    <string name="category_filtered_of_total_format">%1$d amin\'ny %2$d sokajy</string>
+
+    <!-- EpgViewModel / StreamLoaderViewModel error states -->
+    <string name="epg_error_not_supported">Tsy raisin\'ity mpanome ity ny EPG</string>
+    <string name="epg_error_load_channels_format">Tsy nahomby ny fakana ny fandaharana: %1$s</string>
+    <string name="epg_error_no_channels_in_category">Tsy nisy fandaharana hita amin\'ity sokajy ity</string>
+    <string name="epg_error_load_data_format">Tsy nahomby ny fakana angona EPG: %1$s</string>
+    <string name="epg_error_no_data_for_channels">Tsy misy angona EPG ho an\'ireto fandaharana ireto</string>
+    <string name="stream_error_initialization_failed">Tsy nahomby ny fanombohana</string>
+    <string name="stream_error_resolve_failed">Tsy nahomby ny fikarohana ny fantsakana</string>
+    <string name="stream_error_unknown">Nisy fahadisoana tsy fantatra teo am-pakana ny fantsakana</string>
+    <string name="subscription_unlimited">Tsy voafetra</string>
+
+    <!-- ViewModel error-fallback audit fixes -->
+    <string name="login_error_timeout">Ela loatra ny fifandraisana. Jereo ny tambajotra na ny adiresin\'ny mpizara.</string>
+    <string name="login_error_invalid_credentials">Diso ny anarana na ny tenimiafina.</string>
+    <string name="login_error_server_not_found">Tsy hita ny mpizara. Jereo ny adiresinao.</string>
+    <string name="login_error_account_inactive">Tsy mavitrika ny kaonty</string>
+    <string name="login_error_generic_format">Tsy nahomby ny fidirana: %1$s</string>
+    <string name="error_generic_unknown">Fahadisoana tsy fantatra</string>
+    <string name="category_error_connection_failed_format">Tsy nahomby ny fifandraisana: %1$s</string>
+    <string name="category_error_load_failed">Tsy nahomby ny fakana ny sokajy</string>
+    <string name="category_favorite_categories_label">Sokajy tiana indrindra</string>
+    <string name="category_recent_categories_label">Sokajy vao haingana</string>
+    <string name="search_error_session_expired">Tapitra ny fotoana. Midira indray azafady.</string>
+    <string name="search_error_failed">Tsy nahomby ny fikarohana</string>
+    <string name="epg_error_file_too_large">Lehibe loatra ny rakitra EPG. Andramo fangatahana mazava kokoa.</string>
+    <string name="epg_browser_no_matched_results_format">Tsy nahita valiny mifanandrify amin\'ny \'%1$s\'</string>
+    <string name="epg_browser_no_results_format">Tsy nahita valiny ho an\'ny \'%1$s\'</string>
+    <string name="provider_error_add_failed">Tsy nahomby ny fampidirana ny mpanome</string>
+    <string name="provider_error_select_failed">Tsy nahomby ny fisafidianana ny mpanome</string>
+    <string name="provider_error_delete_failed">Tsy nahomby ny famafana ny mpanome</string>
+    <string name="provider_error_update_failed">Tsy nahomby ny fanavaozana ny mpanome</string>
+    <string name="provider_error_save_failed">Tsy nahomby ny fitehirizana ny mpanome</string>
 </resources>

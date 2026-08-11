@@ -697,4 +697,77 @@
     <string name="search_result_category_format">Catégorie : %1$s</string>
     <string name="content_type_movies_subtitle_short">Parcourir à la demande</string>
     <string name="content_type_tv_shows_subtitle_short">Séries et épisodes</string>
+
+    <!-- EPG phase labels -->
+    <string name="epg_phase_downloading">Téléchargement</string>
+    <string name="epg_phase_ingesting">Ingestion</string>
+    <string name="epg_phase_awaiting_ingestion">En attente d\'ingestion</string>
+    <string name="epg_phase_rebuilding_indexes">Reconstruction des index…</string>
+    <string name="epg_phase_swapping_primary_guide">Basculement vers le guide principal…</string>
+    <string name="category_count_format">%1$d catégories</string>
+
+    <!-- Search content-type audit fixes -->
+    <string name="content_type_all_label">Tout le contenu</string>
+    <string name="search_title_format">Rechercher %1$s</string>
+    <string name="search_no_results_query_format">Aucun résultat pour \'%1$s\'\nEssayez d\'autres mots-clés</string>
+    <string name="search_no_results_type_format">Aucun résultat dans %1$s pour \'%2$s\'\nEssayez d\'autres mots-clés</string>
+    <string name="search_no_results_query_format_tv">Aucun résultat pour \'%1$s\'. Essayez d\'autres mots-clés.</string>
+    <string name="search_no_results_type_format_tv">Aucun résultat dans %1$s pour \'%2$s\'. Essayez d\'autres mots-clés.</string>
+    <string name="search_results_count_format">%1$d résultats</string>
+    <string name="provider_none_label">Aucun fournisseur</string>
+
+    <!-- Punctuation-adjacent literal audit fixes -->
+    <string name="player_stats_build_format">Build : %1$s (%2$s)</string>
+    <string name="player_stats_device_type_format">Appareil : %1$s | Type : %2$s</string>
+    <string name="epg_browser_index_stats_format">Index EPG : %1$s</string>
+    <string name="category_favorite_hint_mobile">Appui long sur une chaîne ou catégorie pour l\'ajouter aux favoris</string>
+    <string name="category_now_playing_badge">▶ Lecture en cours</string>
+    <string name="category_of_total_format">sur %1$d</string>
+    <string name="settings_ui_scale_section_title">Échelle Catégorie/Grille</string>
+    <string name="settings_ui_scale_desc">Ajuster la police, l\'espacement et la taille des éléments pour les vues catégorie/grille</string>
+
+    <!-- Connection test error messages -->
+    <string name="provider_error_invalid_credentials">Identifiants invalides</string>
+    <string name="provider_error_account_inactive_format">Le compte n\'est pas actif : %1$s</string>
+    <string name="provider_error_http_status_format">Le serveur a retourné HTTP %1$d</string>
+    <string name="provider_error_invalid_m3u">Fichier M3U invalide : en-tête #EXTM3U manquant</string>
+    <string name="provider_error_connection_failed">Échec de la connexion</string>
+    <string name="epg_refresh_interval_hours_format">%1$d heures</string>
+    <string name="stream_count_format">%1$d flux</string>
+    <string name="category_select_to_view_channels">Sélectionnez une catégorie pour voir les chaînes</string>
+    <string name="category_no_channels">Aucune chaîne dans cette catégorie</string>
+    <string name="category_filtered_of_total_format">%1$d sur %2$d catégories</string>
+
+    <!-- EpgViewModel / StreamLoaderViewModel error states -->
+    <string name="epg_error_not_supported">L\'EPG n\'est pas pris en charge par ce fournisseur</string>
+    <string name="epg_error_load_channels_format">Échec du chargement des chaînes : %1$s</string>
+    <string name="epg_error_no_channels_in_category">Aucune chaîne trouvée dans cette catégorie</string>
+    <string name="epg_error_load_data_format">Échec du chargement des données EPG : %1$s</string>
+    <string name="epg_error_no_data_for_channels">Aucune donnée EPG disponible pour ces chaînes</string>
+    <string name="stream_error_initialization_failed">Échec de l\'initialisation</string>
+    <string name="stream_error_resolve_failed">Échec de la résolution du flux</string>
+    <string name="stream_error_unknown">Erreur inconnue lors du chargement du flux</string>
+    <string name="subscription_unlimited">Illimité</string>
+
+    <!-- ViewModel error-fallback audit fixes -->
+    <string name="login_error_timeout">Délai de connexion dépassé. Vérifiez votre réseau ou l\'URL du serveur.</string>
+    <string name="login_error_invalid_credentials">Nom d\'utilisateur ou mot de passe invalide.</string>
+    <string name="login_error_server_not_found">Serveur introuvable. Vérifiez votre URL.</string>
+    <string name="login_error_account_inactive">Le compte n\'est pas actif</string>
+    <string name="login_error_generic_format">Échec de la connexion : %1$s</string>
+    <string name="error_generic_unknown">Erreur inconnue</string>
+    <string name="category_error_connection_failed_format">Échec de la connexion : %1$s</string>
+    <string name="category_error_load_failed">Échec du chargement des catégories</string>
+    <string name="category_favorite_categories_label">Catégories favorites</string>
+    <string name="category_recent_categories_label">Catégories récentes</string>
+    <string name="search_error_session_expired">Session expirée. Veuillez vous reconnecter.</string>
+    <string name="search_error_failed">Échec de la recherche</string>
+    <string name="epg_error_file_too_large">Fichier EPG trop volumineux pour la recherche. Essayez une requête plus précise.</string>
+    <string name="epg_browser_no_matched_results_format">Aucun résultat correspondant pour \'%1$s\'</string>
+    <string name="epg_browser_no_results_format">Aucun résultat trouvé pour \'%1$s\'</string>
+    <string name="provider_error_add_failed">Échec de l\'ajout du fournisseur</string>
+    <string name="provider_error_select_failed">Échec de la sélection du fournisseur</string>
+    <string name="provider_error_delete_failed">Échec de la suppression du fournisseur</string>
+    <string name="provider_error_update_failed">Échec de la mise à jour du fournisseur</string>
+    <string name="provider_error_save_failed">Échec de l\'enregistrement du fournisseur</string>
 </resources>

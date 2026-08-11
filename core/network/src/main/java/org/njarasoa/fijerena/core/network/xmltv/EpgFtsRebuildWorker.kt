@@ -10,6 +10,7 @@ import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 
 /**
@@ -27,13 +28,13 @@ class EpgFtsRebuildWorker(
         val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "EPG Guide Sync", NotificationManager.IMPORTANCE_LOW).apply {
+                NotificationChannel(CHANNEL_ID, applicationContext.getString(R.string.epg_sync_notification_channel), NotificationManager.IMPORTANCE_LOW).apply {
                     setShowBadge(false)
                 },
             )
         }
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setContentTitle("Rebuilding TV guide index")
+            .setContentTitle(applicationContext.getString(R.string.epg_fts_rebuild_notification_title))
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setOngoing(true)
             .setSilent(true)

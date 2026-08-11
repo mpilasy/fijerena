@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Playback error messages -->
+    <string name="player_error_stream_type_live">Le direct</string>
+    <string name="player_error_stream_type_video">La vidéo</string>
+    <string name="player_error_recovery_exhausted_format">%1$s indisponible après plusieurs tentatives de récupération. Vérifiez votre connexion et réessayez.</string>
+    <string name="player_error_retry_exhausted_format">%1$s indisponible après %2$d tentatives. %3$s</string>
+    <string name="player_error_channel_offline">La chaîne est peut-être hors ligne.</string>
+    <string name="player_error_check_connection">Vérifiez votre connexion et réessayez.</string>
+    <string name="player_error_codec_unsupported_format">Codec vidéo non pris en charge sur cet appareil : %1$s</string>
+    <string name="player_error_format_unsupported">Format vidéo non pris en charge sur cet appareil</string>
+    <string name="player_error_network_failed">Échec de la connexion réseau. Vérifiez votre connexion internet.</string>
+    <string name="player_error_http_401">HTTP 401 — Échec de l\'authentification. Vérifiez vos identifiants.</string>
+    <string name="player_error_http_403">HTTP 403 — Accès refusé. Votre abonnement a peut-être expiré.</string>
+    <string name="player_error_http_404">HTTP 404 — Flux introuvable. La chaîne est peut-être hors ligne.</string>
+    <string name="player_error_http_connection_limit_format">HTTP %1$d — Limite de connexions atteinte. Fermez les autres flux actifs sur ce compte.</string>
+    <string name="player_error_http_server_unavailable_format">HTTP %1$d — Serveur indisponible. Réessayez sous peu.</string>
+    <string name="player_error_http_server_error_format">HTTP %1$d — Erreur serveur. Réessayez plus tard.</string>
+    <string name="player_error_http_access_denied_format">HTTP %1$d — Accès au flux refusé.</string>
+    <string name="player_error_http_unavailable_format">HTTP %1$d — Flux indisponible.</string>
+    <string name="player_error_stream_unavailable">Flux indisponible.</string>
+    <string name="player_error_playback_timeout">Délai de lecture dépassé. Le flux est peut-être trop lent ou indisponible.</string>
+    <string name="player_error_stream_not_found">Flux introuvable ou accès refusé.</string>
+    <string name="player_error_invalid_stream_format">Format de flux invalide. Le flux est peut-être corrompu.</string>
+    <string name="player_error_generic_format">Erreur de lecture : %1$s</string>
+
+    <!-- Track selection labels -->
+    <string name="player_track_language_unknown">Inconnu</string>
+    <string name="player_track_audio_fallback_label_format">%1$s - %2$dch</string>
+    <string name="player_track_generic_label">Piste</string>
+    <string name="player_track_subtitle_fallback_label_format">Sous-titre %1$d</string>
+    <string name="player_error_occurred">Une erreur de lecture s\'est produite</string>
+    <string name="player_chapter_fallback_format">Chapitre %1$d</string>
+</resources>

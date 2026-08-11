@@ -197,7 +197,7 @@ fun TvEpgBrowserScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                         modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale)),
                     ) {
-                        val freshnessText = freshnessLabel(oldestIngestedAtMs, nowEpoch, staleSourceCount)
+                        val freshnessText = freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount)
                         val freshnessColor =
                             if (staleSourceCount > 0 || oldestIngestedAtMs == 0L) {
                                 CinemaWarning

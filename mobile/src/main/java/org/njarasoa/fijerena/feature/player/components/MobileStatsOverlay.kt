@@ -411,14 +411,14 @@ fun MobileStatsOverlay(
                             .detect()
                     }
                 Text(
-                    text = "Build: ${org.njarasoa.fijerena.BuildConfig.BUILD_TIME} (${org.njarasoa.fijerena.BuildConfig.GIT_HASH})",
+                    text = stringResource(R.string.player_stats_build_format, org.njarasoa.fijerena.BuildConfig.BUILD_TIME, org.njarasoa.fijerena.BuildConfig.GIT_HASH),
                     style = typography.labelSmall,
                     color = CinemaTextPrimary.copy(alpha = 0.3f),
                     modifier = Modifier.padding(top = 12.dp),
                 )
 
                 Text(
-                    text = "Type: ${caps.deviceType}",
+                    text = stringResource(R.string.player_error_type_label) + caps.deviceType,
                     style = typography.labelSmall,
                     color = CinemaTextPrimary.copy(alpha = 0.3f),
                 )

@@ -153,7 +153,7 @@ fun MobileEpgBrowserScreen(
                             style = MaterialTheme.typography.titleMedium,
                         )
                         val freshnessText =
-                            freshnessLabel(oldestIngestedAtMs, nowEpoch, staleSourceCount)
+                            freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount)
                         val freshnessColor =
                             if (staleSourceCount > 0 || oldestIngestedAtMs == 0L) {
                                 CinemaWarning
@@ -167,7 +167,7 @@ fun MobileEpgBrowserScreen(
                         )
                         if (isDevMode && epgDbStats != null) {
                             Text(
-                                text = "EPG Index: $epgDbStats",
+                                text = stringResource(R.string.epg_browser_index_stats_format, epgDbStats),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -176,7 +176,7 @@ fun MobileEpgBrowserScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, "Back")
+                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
                     }
                 },
                 actions = {

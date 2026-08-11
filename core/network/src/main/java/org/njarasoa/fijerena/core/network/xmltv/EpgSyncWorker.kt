@@ -12,6 +12,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.R
 
 /**
  * WorkManager worker for background EPG sync (all device types).
@@ -31,13 +32,13 @@ class EpgSyncWorker(
         val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "EPG Guide Sync", NotificationManager.IMPORTANCE_LOW).apply {
+                NotificationChannel(CHANNEL_ID, applicationContext.getString(R.string.epg_sync_notification_channel), NotificationManager.IMPORTANCE_LOW).apply {
                     setShowBadge(false)
                 },
             )
         }
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setContentTitle("Refreshing TV guide")
+            .setContentTitle(applicationContext.getString(R.string.epg_sync_notification_title))
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setOngoing(true)
             .setSilent(true)

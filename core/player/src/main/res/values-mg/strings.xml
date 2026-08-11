@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Playback error messages -->
+    <string name="player_error_stream_type_live">Ny fandaharana mivantana</string>
+    <string name="player_error_stream_type_video">Ny sarimihetsika</string>
+    <string name="player_error_recovery_exhausted_format">Tsy azo jerena ny %1$s aorian\'ny fanandramana maro. Jereo ny fifandraisanao ary andramo indray.</string>
+    <string name="player_error_retry_exhausted_format">Tsy azo jerena ny %1$s aorian\'ny fanandramana %2$d. %3$s</string>
+    <string name="player_error_channel_offline">Angamba tsy mandeha ny fandaharana.</string>
+    <string name="player_error_check_connection">Jereo ny fifandraisanao ary andramo indray.</string>
+    <string name="player_error_codec_unsupported_format">Tsy raisin\'ity fitaovana ity ny codec: %1$s</string>
+    <string name="player_error_format_unsupported">Tsy raisin\'ity fitaovana ity ny endriky ny sarimihetsika</string>
+    <string name="player_error_network_failed">Tsy nahomby ny tambajotra. Jereo ny fifandraisanao amin\'ny internet.</string>
+    <string name="player_error_http_401">HTTP 401 — Tsy nahomby ny fidirana. Jereo ny fangatahanao.</string>
+    <string name="player_error_http_403">HTTP 403 — Voarara ny fidirana. Angamba tapitra ny fandraisanao anjara.</string>
+    <string name="player_error_http_404">HTTP 404 — Tsy hita ny fantsakana. Angamba tsy mandeha ny fandaharana.</string>
+    <string name="player_error_http_connection_limit_format">HTTP %1$d — Tratra ny fetran\'ny fifandraisana. Akatony ny fantsakana hafa mandeha amin\'ity kaonty ity.</string>
+    <string name="player_error_http_server_unavailable_format">HTTP %1$d — Tsy azo idirana ny mpizara. Andramo aorian\'izay fotsiny.</string>
+    <string name="player_error_http_server_error_format">HTTP %1$d — Nisy olana tamin\'ny mpizara. Andramo indray aoriana.</string>
+    <string name="player_error_http_access_denied_format">HTTP %1$d — Voarara ny fidirana amin\'ny fantsakana.</string>
+    <string name="player_error_http_unavailable_format">HTTP %1$d — Tsy azo jerena ny fantsakana.</string>
+    <string name="player_error_stream_unavailable">Tsy azo jerena ny fantsakana.</string>
+    <string name="player_error_playback_timeout">Ela loatra ny famakiana. Angamba miadana be na tsy mandeha ny fantsakana.</string>
+    <string name="player_error_stream_not_found">Tsy hita na voarara ny fidirana amin\'ny fantsakana.</string>
+    <string name="player_error_invalid_stream_format">Diso ny endriky ny fantsakana. Angamba simba izy io.</string>
+    <string name="player_error_generic_format">Nisy fahadisoana ny famakiana: %1$s</string>
+
+    <!-- Track selection labels -->
+    <string name="player_track_language_unknown">Tsy fantatra</string>
+    <string name="player_track_audio_fallback_label_format">%1$s - %2$dch</string>
+    <string name="player_track_generic_label">Làlana</string>
+    <string name="player_track_subtitle_fallback_label_format">Dikan-teny %1$d</string>
+    <string name="player_error_occurred">Nisy fahadisoana ny famakiana</string>
+    <string name="player_chapter_fallback_format">Toko %1$d</string>
+</resources>

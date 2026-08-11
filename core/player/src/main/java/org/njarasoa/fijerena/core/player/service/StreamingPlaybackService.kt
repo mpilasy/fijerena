@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.player.service
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
@@ -18,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.njarasoa.fijerena.core.player.R
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.delay
@@ -198,11 +200,10 @@ class StreamingPlaybackService : MediaSessionService() {
                     val isLive = _currentMetadata.value.isLive
                     Log.w(TAG, "Recovery exhausted: giving up after repeated recycle attempts (isLive=$isLive).")
                     stop()
-                    val label = if (isLive) "Live stream" else "Video"
+                    val label = if (isLive) getString(R.string.player_error_stream_type_live) else getString(R.string.player_error_stream_type_video)
                     _playbackState.value =
                         PlaybackState.Error(
-                            "$label unavailable after repeated recovery attempts. " +
-                                "Check your connection and try again.",
+                            getString(R.string.player_error_recovery_exhausted_format, label),
                         )
                 }
             },
@@ -350,6 +351,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
         playerListener =
             PlayerListener(
+                context = this,
                 onStateChanged = { newState ->
                     val isRecycling = isRecycling()
                     Log.d(TAG, "onStateChanged: newState=$newState, isRecycling=$isRecycling")
@@ -494,11 +496,11 @@ class StreamingPlaybackService : MediaSessionService() {
     private fun attemptStreamRetry(metadata: PlayerMetadata) {
         val maxRetries = if (metadata.isLive) MAX_LIVE_RETRIES else MAX_VOD_RETRIES
         if (retryCount >= maxRetries) {
-            val detail = lastErrorMessage ?: if (metadata.isLive) "The channel may be offline." else "Check your connection and try again."
-            val label = if (metadata.isLive) "Live stream" else "Video"
+            val detail = lastErrorMessage ?: if (metadata.isLive) getString(R.string.player_error_channel_offline) else getString(R.string.player_error_check_connection)
+            val label = if (metadata.isLive) getString(R.string.player_error_stream_type_live) else getString(R.string.player_error_stream_type_video)
             _playbackState.value =
                 PlaybackState.Error(
-                    "$label unavailable after $maxRetries retries. $detail",
+                    getString(R.string.player_error_retry_exhausted_format, label, maxRetries, detail),
                 )
             return
         }
@@ -619,8 +621,8 @@ class StreamingPlaybackService : MediaSessionService() {
                         org.njarasoa.fijerena.core.player.model.AudioTrackInfo(
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
-                            language = format.language ?: "Unknown",
-                            label = format.label ?: "${format.language ?: "Track"} - ${format.channelCount}ch",
+                            language = format.language ?: getString(R.string.player_track_language_unknown),
+                            label = format.label ?: getString(R.string.player_track_audio_fallback_label_format, format.language ?: getString(R.string.player_track_generic_label), format.channelCount),
                             channelCount = format.channelCount,
                             sampleRate = format.sampleRate,
                             bitrate = format.bitrate,
@@ -657,8 +659,8 @@ class StreamingPlaybackService : MediaSessionService() {
                         org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo(
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
-                            language = format.language ?: "Unknown",
-                            label = format.label ?: format.language ?: "Subtitle ${trackIndex + 1}",
+                            language = format.language ?: getString(R.string.player_track_language_unknown),
+                            label = format.label ?: format.language ?: getString(R.string.player_track_subtitle_fallback_label_format, trackIndex + 1),
                             mimeType = format.sampleMimeType ?: "unknown",
                             isSelected = isSelected,
                         ),
@@ -883,6 +885,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     private class PlayerListener(
+        private val context: Context,
         private val onStateChanged: (PlaybackState) -> Unit,
         private val onWakeLockRequired: () -> Unit,
         private val player: Player,
@@ -954,44 +957,44 @@ class StreamingPlaybackService : MediaSessionService() {
                 -> {
                     val codecInfo = extractCodecInfo(error.message ?: "")
                     if (codecInfo.isNotEmpty()) {
-                        "Video codec not supported on this device: $codecInfo"
+                        context.getString(R.string.player_error_codec_unsupported_format, codecInfo)
                     } else {
-                        "Video format not supported on this device"
+                        context.getString(R.string.player_error_format_unsupported)
                     }
                 }
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
                 -> {
-                    "Network connection failed. Check your internet connection."
+                    context.getString(R.string.player_error_network_failed)
                 }
                 PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
                     val code = extractHttpStatusCode(error)
                     when (code) {
-                        401 -> "HTTP 401 — Authentication failed. Check your credentials."
-                        403 -> "HTTP 403 — Access denied. Your subscription may have expired."
-                        404 -> "HTTP 404 — Stream not found. The channel may be offline."
-                        456, 458 -> "HTTP $code — Connection limit reached. Close other active streams on this account."
-                        502, 503, 504 -> "HTTP $code — Server unavailable. Try again shortly."
-                        in 500..599 -> "HTTP $code — Server error. Try again later."
-                        in 400..499 -> "HTTP $code — Stream access denied."
-                        else -> if (code != null) "HTTP $code — Stream unavailable." else "Stream unavailable."
+                        401 -> context.getString(R.string.player_error_http_401)
+                        403 -> context.getString(R.string.player_error_http_403)
+                        404 -> context.getString(R.string.player_error_http_404)
+                        456, 458 -> context.getString(R.string.player_error_http_connection_limit_format, code)
+                        502, 503, 504 -> context.getString(R.string.player_error_http_server_unavailable_format, code)
+                        in 500..599 -> context.getString(R.string.player_error_http_server_error_format, code)
+                        in 400..499 -> context.getString(R.string.player_error_http_access_denied_format, code)
+                        else -> if (code != null) context.getString(R.string.player_error_http_unavailable_format, code) else context.getString(R.string.player_error_stream_unavailable)
                     }
                 }
                 PlaybackException.ERROR_CODE_TIMEOUT -> {
-                    "Playback timeout. The stream may be too slow or unavailable."
+                    context.getString(R.string.player_error_playback_timeout)
                 }
                 PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
                 PlaybackException.ERROR_CODE_IO_NO_PERMISSION,
                 -> {
-                    "Stream not found or access denied."
+                    context.getString(R.string.player_error_stream_not_found)
                 }
                 PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
                 PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
                 -> {
-                    "Invalid stream format. The stream may be corrupted."
+                    context.getString(R.string.player_error_invalid_stream_format)
                 }
                 else -> {
-                    "Playback error: ${error.errorCodeName}"
+                    context.getString(R.string.player_error_generic_format, error.errorCodeName)
                 }
             }
 

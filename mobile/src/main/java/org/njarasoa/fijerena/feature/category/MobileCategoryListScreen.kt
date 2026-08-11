@@ -415,7 +415,16 @@ fun MobileCategoryListScreen(
             // docked anyway (category chips are hidden here too, see below).
             if (!(isLiveTv && target != null && isLandscape)) {
                 TopAppBar(
-                    title = { Text(contentType.replace("_", " ")) },
+                    title = {
+                        Text(
+                            when (contentType) {
+                                ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
+                                ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
+                                ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+                                else -> contentType.replace("_", " ")
+                            },
+                        )
+                    },
                     navigationIcon = {
                         CinemaIconButton(onClick = onBack,
                             icon = {
@@ -827,7 +836,7 @@ private fun FavoriteHintBanner(modifier: Modifier = Modifier) {
         shape = RoundedCornerShape(CinemaCornerRadius.large),
     ) {
         Text(
-            text = "Long-press a channel or category to add it to Favorites",
+            text = stringResource(R.string.category_favorite_hint_mobile),
             style = MaterialTheme.typography.bodyMedium,
             color = CinemaTextPrimary,
             modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.sm),
@@ -1158,7 +1167,7 @@ private fun StreamCard(
                 )
                 if (isCurrentlyPlaying) {
                     Text(
-                        text = "▶ Playing",
+                        text = stringResource(R.string.category_now_playing_badge),
                         style = MaterialTheme.typography.bodySmall,
                         color = CinemaAccent,
                         maxLines = 1,

@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.player.viewmodel
 import android.app.Application
 import android.content.Intent
+import org.njarasoa.fijerena.core.player.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
@@ -68,7 +69,7 @@ class PlaybackViewModel(
                 // (observeServiceState collects service.playbackState).
                 // Only set a fallback here if the service isn't reachable.
                 if (StreamingPlaybackService.getInstance() == null) {
-                    _playbackState.value = PlaybackState.Error("Playback error occurred", error)
+                    _playbackState.value = PlaybackState.Error(context.getString(R.string.player_error_occurred), error)
                 }
             }
         }
@@ -248,8 +249,8 @@ class PlaybackViewModel(
                         AudioTrackInfo(
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
-                            language = format.language ?: "Unknown",
-                            label = format.label ?: "${format.language ?: "Track"} - ${format.channelCount}ch",
+                            language = format.language ?: context.getString(R.string.player_track_language_unknown),
+                            label = format.label ?: context.getString(R.string.player_track_audio_fallback_label_format, format.language ?: context.getString(R.string.player_track_generic_label), format.channelCount),
                             channelCount = format.channelCount,
                             sampleRate = format.sampleRate,
                             bitrate = format.bitrate,
@@ -296,8 +297,8 @@ class PlaybackViewModel(
                         SubtitleTrackInfo(
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
-                            language = format.language ?: "Unknown",
-                            label = format.label ?: format.language ?: "Subtitle ${trackIndex + 1}",
+                            language = format.language ?: context.getString(R.string.player_track_language_unknown),
+                            label = format.label ?: format.language ?: context.getString(R.string.player_track_subtitle_fallback_label_format, trackIndex + 1),
                             mimeType = format.sampleMimeType ?: "unknown",
                             isSelected = isSelected,
                         ),
@@ -403,7 +404,7 @@ class PlaybackViewModel(
             val startMs = startTimesMs[index]
             val endMs = if (index + 1 < startTimesMs.size) startTimesMs[index + 1] else duration
             ChapterInfo(
-                title = title.ifEmpty { "Chapter ${index + 1}" },
+                title = title.ifEmpty { context.getString(R.string.player_chapter_fallback_format, index + 1) },
                 startTimeMs = startMs,
                 endTimeMs = endMs,
             )

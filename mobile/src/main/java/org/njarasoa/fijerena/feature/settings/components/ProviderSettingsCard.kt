@@ -23,7 +23,7 @@ fun ProviderSettingsCard(
 ) {
     SettingsSection(title = stringResource(R.string.settings_provider_section_title)) {
         Text(
-            text = uiState.providerName,
+            text = uiState.providerName.ifEmpty { stringResource(R.string.provider_none_label) },
             style = MaterialTheme.typography.bodyLarge,
         )
         Text(

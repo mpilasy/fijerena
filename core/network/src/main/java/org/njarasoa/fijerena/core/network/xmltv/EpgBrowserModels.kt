@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.xmltv
 
 import android.content.Context
+import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.player.model.TimeFormat
 
 data class EpgBrowserProgram(
@@ -71,20 +72,21 @@ fun formatCount(count: Int): String =
     }
 
 fun freshnessLabel(
+    context: Context,
     oldestIngestedAtMs: Long?,
     nowEpoch: Long,
     staleSourceCount: Int,
 ): String {
-    if (oldestIngestedAtMs == null) return "No EPG sources"
-    if (oldestIngestedAtMs == 0L) return "Never refreshed"
+    if (oldestIngestedAtMs == null) return context.getString(R.string.epg_freshness_no_sources)
+    if (oldestIngestedAtMs == 0L) return context.getString(R.string.epg_freshness_never_refreshed)
     val ageSec = nowEpoch - oldestIngestedAtMs / 1000L
     val ageLabel =
         when {
-            ageSec < 60 -> "just now"
-            ageSec < 3600 -> "${ageSec / 60}m ago"
-            ageSec < 86_400 -> "${ageSec / 3600}h ago"
-            else -> "${ageSec / 86_400}d ago"
+            ageSec < 60 -> context.getString(R.string.epg_freshness_just_now)
+            ageSec < 3600 -> context.getString(R.string.epg_freshness_minutes_ago_format, ageSec / 60)
+            ageSec < 86_400 -> context.getString(R.string.epg_freshness_hours_ago_format, ageSec / 3600)
+            else -> context.getString(R.string.epg_freshness_days_ago_format, ageSec / 86_400)
         }
-    val suffix = if (staleSourceCount > 0) " • $staleSourceCount stale" else ""
-    return "Updated $ageLabel$suffix"
+    val suffix = if (staleSourceCount > 0) context.getString(R.string.epg_freshness_stale_suffix_format, staleSourceCount) else ""
+    return context.getString(R.string.epg_freshness_updated_format, ageLabel) + suffix
 }

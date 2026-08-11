@@ -336,13 +336,5 @@ class AppSettings(
     }
 }
 
-/** (interval hours, label) choices for the EPG auto-refresh setting; -1 means "Never". */
-val EPG_REFRESH_INTERVAL_OPTIONS =
-    listOf(
-        -1 to "Never",
-        4 to "4 hours",
-        8 to "8 hours",
-        12 to "12 hours",
-        24 to "24 hours",
-        48 to "48 hours",
-    )
+/** Interval-hour choices for the EPG auto-refresh setting; -1 means "Never". Labels are localized at the UI layer. */
+val EPG_REFRESH_INTERVAL_OPTIONS = listOf(-1, 4, 8, 12, 24, 48)

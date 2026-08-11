@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
@@ -58,6 +59,16 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+
+@Composable
+private fun localizedContentTypeLabel(contentType: String): String =
+    when (contentType) {
+        "ALL" -> stringResource(R.string.content_type_all_label)
+        ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
+        ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
+        ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+        else -> contentType.asContentTypeLabel()
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,12 +136,12 @@ fun MobileSearchScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (contentType == "ALL") "Search All Content" else "Search " + contentType.asContentTypeLabel(),
+                        stringResource(R.string.search_title_format, localizedContentTypeLabel(contentType)),
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(CinemaIcons.ArrowBack, "Back")
+                        Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back))
                     }
                 },
             )
@@ -379,9 +390,9 @@ private fun SearchResults(
             Text(
                 text =
                     if (queryContentType == "ALL") {
-                        "No results found for '$query'\nTry different keywords"
+                        stringResource(R.string.search_no_results_query_format, query)
                     } else {
-                        "No results found in ${queryContentType.asContentTypeLabel()} for '$query'\nTry different keywords"
+                        stringResource(R.string.search_no_results_type_format, localizedContentTypeLabel(queryContentType), query)
                     },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
@@ -450,7 +461,7 @@ private fun SearchResults(
             if (categoryResults.isNotEmpty() || results.isNotEmpty()) {
                 item(key = "result_count", contentType = "status") {
                     Text(
-                        text = "${categoryResults.size + results.size} results",
+                        text = stringResource(R.string.search_results_count_format, categoryResults.size + results.size),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
@@ -464,7 +475,7 @@ private fun SearchResults(
                         val isExpanded = expandedGroups.contains(type)
                         item(key = "header_$type", contentType = "header") {
                             MobileCollapsibleHeader(
-                                title = type.asContentTypeLabel(),
+                                title = localizedContentTypeLabel(type),
                                 isExpanded = isExpanded,
                                 onToggle = { toggleGroup(type) },
                             )
@@ -635,7 +646,7 @@ private fun MobileCollapsibleHeader(
             )
             Icon(
                 imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
-                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(MobileDimensions.iconSmall),
             )
@@ -735,7 +746,7 @@ private fun SearchResultCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "Category: ${result.categoryName}",
+                    text = stringResource(R.string.search_result_category_format, result.categoryName),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                 )
@@ -751,7 +762,7 @@ private fun MobileSearchFavoriteDialog(
     onDismiss: () -> Unit,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()
-    val actionText = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+    val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,

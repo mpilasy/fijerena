@@ -695,4 +695,77 @@
     <string name="search_result_category_format">Category: %1$s</string>
     <string name="content_type_movies_subtitle_short">Browse on-demand</string>
     <string name="content_type_tv_shows_subtitle_short">Series &amp; episodes</string>
+
+    <!-- EPG phase labels (dynamic phase words from EpgFileManager) -->
+    <string name="epg_phase_downloading">Downloading</string>
+    <string name="epg_phase_ingesting">Ingesting</string>
+    <string name="epg_phase_awaiting_ingestion">Awaiting Ingestion</string>
+    <string name="epg_phase_rebuilding_indexes">Rebuilding indexes…</string>
+    <string name="epg_phase_swapping_primary_guide">Swapping to primary guide…</string>
+    <string name="category_count_format">%1$d categories</string>
+
+    <!-- Search content-type audit fixes -->
+    <string name="content_type_all_label">All Content</string>
+    <string name="search_title_format">Search %1$s</string>
+    <string name="search_no_results_query_format">No results found for \'%1$s\'\nTry different keywords</string>
+    <string name="search_no_results_type_format">No results found in %1$s for \'%2$s\'\nTry different keywords</string>
+    <string name="search_no_results_query_format_tv">No results found for \'%1$s\'. Try different keywords.</string>
+    <string name="search_no_results_type_format_tv">No results found in %1$s for \'%2$s\'. Try different keywords.</string>
+    <string name="search_results_count_format">%1$d results</string>
+    <string name="provider_none_label">No provider</string>
+
+    <!-- Punctuation-adjacent literal audit fixes -->
+    <string name="player_stats_build_format">Build: %1$s (%2$s)</string>
+    <string name="player_stats_device_type_format">Device: %1$s | Type: %2$s</string>
+    <string name="epg_browser_index_stats_format">EPG Index: %1$s</string>
+    <string name="category_favorite_hint_mobile">Long-press a channel or category to add it to Favorites</string>
+    <string name="category_now_playing_badge">▶ Playing</string>
+    <string name="category_of_total_format">of %1$d</string>
+    <string name="settings_ui_scale_section_title">Category/Grid UI Scale</string>
+    <string name="settings_ui_scale_desc">Adjust font, spacing, and element sizes for category/grid views</string>
+
+    <!-- Connection test error messages (ProviderViewModel) -->
+    <string name="provider_error_invalid_credentials">Invalid credentials</string>
+    <string name="provider_error_account_inactive_format">Account is not active: %1$s</string>
+    <string name="provider_error_http_status_format">Server returned HTTP %1$d</string>
+    <string name="provider_error_invalid_m3u">Not a valid M3U file: missing #EXTM3U header</string>
+    <string name="provider_error_connection_failed">Connection failed</string>
+    <string name="epg_refresh_interval_hours_format">%1$d hours</string>
+    <string name="stream_count_format">%1$d streams</string>
+    <string name="category_select_to_view_channels">Select a category to view channels</string>
+    <string name="category_no_channels">No channels in this category</string>
+    <string name="category_filtered_of_total_format">%1$d of %2$d categories</string>
+
+    <!-- EpgViewModel / StreamLoaderViewModel error states -->
+    <string name="epg_error_not_supported">EPG is not supported by this provider</string>
+    <string name="epg_error_load_channels_format">Failed to load channels: %1$s</string>
+    <string name="epg_error_no_channels_in_category">No channels found in this category</string>
+    <string name="epg_error_load_data_format">Failed to load EPG data: %1$s</string>
+    <string name="epg_error_no_data_for_channels">No EPG data available for these channels</string>
+    <string name="stream_error_initialization_failed">Initialization failed</string>
+    <string name="stream_error_resolve_failed">Failed to resolve stream</string>
+    <string name="stream_error_unknown">Unknown error loading stream</string>
+    <string name="subscription_unlimited">Unlimited</string>
+
+    <!-- ViewModel error-fallback audit fixes -->
+    <string name="login_error_timeout">Connection timeout. Check your network or server URL.</string>
+    <string name="login_error_invalid_credentials">Invalid username or password.</string>
+    <string name="login_error_server_not_found">Server not found. Check your URL.</string>
+    <string name="login_error_account_inactive">Account is not active</string>
+    <string name="login_error_generic_format">Login failed: %1$s</string>
+    <string name="error_generic_unknown">Unknown error</string>
+    <string name="category_error_connection_failed_format">Connection failed: %1$s</string>
+    <string name="category_error_load_failed">Failed to load categories</string>
+    <string name="category_favorite_categories_label">Favorite Categories</string>
+    <string name="category_recent_categories_label">Recent Categories</string>
+    <string name="search_error_session_expired">Session expired. Please login again.</string>
+    <string name="search_error_failed">Failed to search</string>
+    <string name="epg_error_file_too_large">EPG file too large for search. Try a more specific query.</string>
+    <string name="epg_browser_no_matched_results_format">No matched results for \'%1$s\'</string>
+    <string name="epg_browser_no_results_format">No results found for \'%1$s\'</string>
+    <string name="provider_error_add_failed">Failed to add provider</string>
+    <string name="provider_error_select_failed">Failed to select provider</string>
+    <string name="provider_error_delete_failed">Failed to delete provider</string>
+    <string name="provider_error_update_failed">Failed to update provider</string>
+    <string name="provider_error_save_failed">Failed to save provider</string>
 </resources>

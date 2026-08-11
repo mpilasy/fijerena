@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Playback error messages (StreamingPlaybackService) -->
+    <string name="player_error_stream_type_live">Live stream</string>
+    <string name="player_error_stream_type_video">Video</string>
+    <string name="player_error_recovery_exhausted_format">%1$s unavailable after repeated recovery attempts. Check your connection and try again.</string>
+    <string name="player_error_retry_exhausted_format">%1$s unavailable after %2$d retries. %3$s</string>
+    <string name="player_error_channel_offline">The channel may be offline.</string>
+    <string name="player_error_check_connection">Check your connection and try again.</string>
+    <string name="player_error_codec_unsupported_format">Video codec not supported on this device: %1$s</string>
+    <string name="player_error_format_unsupported">Video format not supported on this device</string>
+    <string name="player_error_network_failed">Network connection failed. Check your internet connection.</string>
+    <string name="player_error_http_401">HTTP 401 — Authentication failed. Check your credentials.</string>
+    <string name="player_error_http_403">HTTP 403 — Access denied. Your subscription may have expired.</string>
+    <string name="player_error_http_404">HTTP 404 — Stream not found. The channel may be offline.</string>
+    <string name="player_error_http_connection_limit_format">HTTP %1$d — Connection limit reached. Close other active streams on this account.</string>
+    <string name="player_error_http_server_unavailable_format">HTTP %1$d — Server unavailable. Try again shortly.</string>
+    <string name="player_error_http_server_error_format">HTTP %1$d — Server error. Try again later.</string>
+    <string name="player_error_http_access_denied_format">HTTP %1$d — Stream access denied.</string>
+    <string name="player_error_http_unavailable_format">HTTP %1$d — Stream unavailable.</string>
+    <string name="player_error_stream_unavailable">Stream unavailable.</string>
+    <string name="player_error_playback_timeout">Playback timeout. The stream may be too slow or unavailable.</string>
+    <string name="player_error_stream_not_found">Stream not found or access denied.</string>
+    <string name="player_error_invalid_stream_format">Invalid stream format. The stream may be corrupted.</string>
+    <string name="player_error_generic_format">Playback error: %1$s</string>
+
+    <!-- Track selection labels -->
+    <string name="player_track_language_unknown">Unknown</string>
+    <string name="player_track_audio_fallback_label_format">%1$s - %2$dch</string>
+    <string name="player_track_generic_label">Track</string>
+    <string name="player_track_subtitle_fallback_label_format">Subtitle %1$d</string>
+    <string name="player_error_occurred">Playback error occurred</string>
+    <string name="player_chapter_fallback_format">Chapter %1$d</string>
+</resources>

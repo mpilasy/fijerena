@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -120,7 +121,7 @@ class StreamLoaderViewModel(
                 )
             } catch (e: Exception) {
                 Log.e("StreamLoader", "Initialization error", e)
-                _state.value = StreamState.Error(e.message ?: "Initialization failed")
+                _state.value = StreamState.Error(e.message ?: context.getString(R.string.stream_error_initialization_failed))
             }
         }
     }
@@ -291,11 +292,11 @@ class StreamLoaderViewModel(
                     }
                 },
                 onFailure = { e ->
-                    _state.value = StreamState.Error(e.message ?: "Failed to resolve stream")
+                    _state.value = StreamState.Error(e.message ?: context.getString(R.string.stream_error_resolve_failed))
                 },
             )
         } catch (e: Exception) {
-            _state.value = StreamState.Error(e.message ?: "Unknown error loading stream")
+            _state.value = StreamState.Error(e.message ?: context.getString(R.string.stream_error_unknown))
         }
     }
 

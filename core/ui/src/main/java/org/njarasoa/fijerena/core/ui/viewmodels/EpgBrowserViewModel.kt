@@ -413,10 +413,10 @@ class EpgBrowserViewModel(
                     initPagedSearch(query)
                 } catch (e: OutOfMemoryError) {
                     System.gc()
-                    _uiState.value = UiState.Error("EPG file too large for search. Try a more specific query.")
+                    _uiState.value = UiState.Error(context.getString(R.string.epg_error_file_too_large))
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
-                    _uiState.value = UiState.Error(e.message ?: "Search failed")
+                    _uiState.value = UiState.Error(e.message ?: context.getString(R.string.search_error_failed))
                 }
             }
     }
@@ -658,5 +658,10 @@ fun EpgBrowserViewModel.UiState.Results.statsLine(): String {
 }
 
 /** Empty-state message when there are no (matched) results for the query. */
+@androidx.compose.runtime.Composable
 fun EpgBrowserViewModel.UiState.Results.noResultsMessage(matchedOnly: Boolean): String =
-    if (matchedOnly) "No matched results for '$query'" else "No results found for '$query'"
+    if (matchedOnly) {
+        androidx.compose.ui.res.stringResource(R.string.epg_browser_no_matched_results_format, query)
+    } else {
+        androidx.compose.ui.res.stringResource(R.string.epg_browser_no_results_format, query)
+    }

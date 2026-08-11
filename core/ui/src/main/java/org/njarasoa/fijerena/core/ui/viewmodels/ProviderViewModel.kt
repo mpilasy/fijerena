@@ -14,6 +14,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
@@ -218,7 +219,7 @@ class ProviderViewModel(
                 loadProviders()
                 onComplete()
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: "Failed to add provider")
+                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_add_failed))
             }
         }
     }
@@ -230,7 +231,7 @@ class ProviderViewModel(
                 _activeProvider.value = providerRepository.getProviderById(id)
                 loadProviders()
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: "Failed to select provider")
+                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_select_failed))
             }
         }
     }
@@ -246,7 +247,7 @@ class ProviderViewModel(
                 }
                 loadProviders()
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: "Failed to delete provider")
+                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_delete_failed))
             }
         }
     }
@@ -267,7 +268,7 @@ class ProviderViewModel(
                 loadProviders()
                 onComplete()
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: "Failed to update provider")
+                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_update_failed))
             }
         }
     }
@@ -297,7 +298,7 @@ class ProviderViewModel(
             } else {
                 _saveState.value =
                     SaveState.ValidationFailed(
-                        result.exceptionOrNull()?.message ?: "Connection failed",
+                        result.exceptionOrNull()?.message ?: context.getString(R.string.provider_error_connection_failed),
                     )
             }
         }
@@ -341,7 +342,7 @@ class ProviderViewModel(
                 onComplete()
             } catch (e: Exception) {
                 _saveState.value = SaveState.Idle
-                _uiState.value = ProviderUiState.Error(e.message ?: "Failed to save provider")
+                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_save_failed))
             }
         }
     }
@@ -383,7 +384,7 @@ class ProviderViewModel(
             onComplete()
         } catch (e: Exception) {
             _saveState.value = SaveState.Idle
-            _uiState.value = ProviderUiState.Error(e.message ?: "Failed to save provider")
+            _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_save_failed))
         }
     }
 
@@ -401,14 +402,14 @@ class ProviderViewModel(
                         val service = XtreamApiService(url, username, password)
                         val response = service.authenticate()
                         if (response.userInfo.auth != 1) {
-                            Result.failure(Exception("Invalid credentials"))
+                            Result.failure(Exception(context.getString(R.string.provider_error_invalid_credentials)))
                         } else if (response.userInfo.status != "Active") {
-                            Result.failure(Exception("Account is not active: ${response.userInfo.status}"))
+                            Result.failure(Exception(context.getString(R.string.provider_error_account_inactive_format, response.userInfo.status)))
                         } else {
                             Result.success(Unit)
                         }
                     } catch (e: Exception) {
-                        Result.failure(Exception(friendlyErrorMessage(e, appSettings.isDevMode), e))
+                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
                     }
                 }
                 "REMOTE_M3U" -> {
@@ -421,7 +422,7 @@ class ProviderViewModel(
                         try {
                             val statusCode = connection.responseCode
                             if (statusCode !in 200..299) {
-                                Result.failure(Exception("Server returned HTTP $statusCode"))
+                                Result.failure(Exception(context.getString(R.string.provider_error_http_status_format, statusCode)))
                             } else {
                                 val header =
                                     connection.inputStream.bufferedReader().use { reader ->
@@ -432,14 +433,14 @@ class ProviderViewModel(
                                 if (header.trimStart().startsWith("#EXTM3U")) {
                                     Result.success(Unit)
                                 } else {
-                                    Result.failure(Exception("Not a valid M3U file: missing #EXTM3U header"))
+                                    Result.failure(Exception(context.getString(R.string.provider_error_invalid_m3u)))
                                 }
                             }
                         } finally {
                             connection.disconnect()
                         }
                     } catch (e: Exception) {
-                        Result.failure(Exception(friendlyErrorMessage(e, appSettings.isDevMode), e))
+                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
                     }
                 }
                 "JELLYFIN", "SMB" -> {
@@ -462,7 +463,7 @@ class ProviderViewModel(
                         }
                         result
                     } catch (e: Exception) {
-                        Result.failure(Exception(friendlyErrorMessage(e, appSettings.isDevMode), e))
+                        Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
                     }
                 }
                 else -> Result.success(Unit)

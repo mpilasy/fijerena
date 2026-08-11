@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.sync
 import android.content.Context
+import org.njarasoa.fijerena.core.network.R
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.edit
@@ -161,7 +162,7 @@ class DriveSettingsSyncManager(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to download settings", e)
-            _syncStatus.value = SyncStatus.Error(e.message ?: "Download failed")
+            _syncStatus.value = SyncStatus.Error(e.message ?: context.getString(R.string.sync_error_download_failed))
             return false
         }
     }
@@ -201,12 +202,12 @@ class DriveSettingsSyncManager(
                 prefs.edit { putLong(KEY_LAST_SYNC, System.currentTimeMillis()) }
                 _syncStatus.value = SyncStatus.Synced
             } else {
-                _syncStatus.value = SyncStatus.Error("Upload failed")
+                _syncStatus.value = SyncStatus.Error(context.getString(R.string.sync_error_upload_failed))
             }
             return success
         } catch (e: Exception) {
             Log.e(TAG, "Failed to upload settings", e)
-            _syncStatus.value = SyncStatus.Error(e.message ?: "Upload failed")
+            _syncStatus.value = SyncStatus.Error(e.message ?: context.getString(R.string.sync_error_upload_failed))
             return false
         }
     }

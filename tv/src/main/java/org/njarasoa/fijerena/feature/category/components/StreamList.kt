@@ -145,7 +145,7 @@ internal fun StreamList(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
             ) {
                 Text(
-                    text = selectedCategoryName ?: "Select a category",
+                    text = selectedCategoryName ?: stringResource(R.string.category_select_category),
                     style =
                         MaterialTheme.typography.titleLarge.copy(
                             fontSize =
@@ -176,9 +176,10 @@ internal fun StreamList(
             }
             // Show stream count
             if (streams != null) {
+                val streamsLabel = stringResource(R.string.stream_count_format, streams.size)
                 val streamCountText =
                     buildString {
-                        append("${streams.size} streams")
+                        append(streamsLabel)
                         if (isDevMode && selectedCategoryId != null) {
                             categoryViewModel.getPayloadSize(selectedCategoryId)?.let {
                                 append(" | $it")
@@ -230,9 +231,9 @@ internal fun StreamList(
                         Text(
                             text =
                                 if (streams == null) {
-                                    "Select a category to view channels"
+                                    stringResource(R.string.category_select_to_view_channels)
                                 } else {
-                                    "No channels in this category"
+                                    stringResource(R.string.category_no_channels)
                                 },
                             style = MaterialTheme.typography.bodyLarge,
                             color = CinemaTextSecondary,

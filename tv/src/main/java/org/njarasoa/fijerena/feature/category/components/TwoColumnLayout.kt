@@ -179,12 +179,18 @@ internal fun TwoColumnLayout(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = contentType.replace("_", " "),
+                        text =
+                            when (contentType) {
+                                ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
+                                ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
+                                ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+                                else -> contentType.replace("_", " ")
+                            },
                         style = scaledStyles.titleMedium,
                         color = CinemaAccent,
                     )
                     Text(
-                        text = "${categories.size} categories",
+                        text = stringResource(R.string.category_count_format, categories.size),
                         style = scaledStyles.labelSmall,
                         color = CinemaTextSecondary,
                     )
@@ -201,8 +207,8 @@ internal fun TwoColumnLayout(
         if (contentType == ContentType.LIVE_TV) {
             val epgErrorMessage =
                 when (epgIndexState) {
-                    is EpgIndexState.Failed -> "EPG indexing failed"
-                    is EpgIndexState.Indexing -> "EPG indexing ${epgIndexState.progressPercent}%..."
+                    is EpgIndexState.Failed -> stringResource(R.string.epg_indexing_failed)
+                    is EpgIndexState.Indexing -> stringResource(R.string.epg_indexing_progress, epgIndexState.progressPercent)
                     else -> null
                 }
             if (epgErrorMessage != null) {
