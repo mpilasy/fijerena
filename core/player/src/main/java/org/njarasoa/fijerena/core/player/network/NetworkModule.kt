@@ -97,23 +97,11 @@ object NetworkModule {
                 try { return listOf(InetAddress.getByName(hostname)) } catch (_: Exception) { }
             }
 
-            // Retry DNS resolution up to 3 times with increasing delays before propagating
-            // failure. Handles brief DNS server unavailability that would otherwise cause all
-            // download retries to exhaust within seconds of each other.
-            var lastException: Exception? = null
-            for (attempt in 1..3) {
-                if (attempt > 1) {
-                    Thread.sleep(2000L * (attempt - 1)) // 2s before attempt 2, 4s before attempt 3
-                }
-                try {
-                    val addresses = resolveOnce(hostname)
-                    if (addresses.isNotEmpty()) return addresses
-                } catch (e: Exception) {
-                    lastException = e
-                    android.util.Log.w(TAG, "DNS attempt $attempt/3 failed for $hostname: ${e.message}")
-                }
-            }
-            throw lastException ?: java.net.UnknownHostException("Could not resolve $hostname")
+            // Single attempt only — this runs synchronously on whatever thread triggers the
+            // OkHttpClient's first use (can be the main thread), so blocking here with retry
+            // sleeps risks an ANR. Transient DNS failure is already handled by the outer
+            // AdaptiveLoadErrorPolicy, which retries the whole request with backoff.
+            return resolveOnce(hostname)
         }
 
         private fun resolveOnce(hostname: String): List<InetAddress> {

@@ -868,7 +868,9 @@ private fun CategoryChipRow(
 
     // Entrance animation plays once per item: LazyRow recycles item composition off the ends
     // of the scroll buffer, so without this guard the fade/slide replays on every scroll.
-    val enteredCategoryIds = remember { mutableSetOf<String>() }
+    // Keyed to categories so it resets (bounded) on category-list change instead of growing
+    // unbounded for the composable's whole lifetime.
+    val enteredCategoryIds = remember(categories) { mutableSetOf<String>() }
 
     LaunchedEffect(selectedCategoryId) {
         if (selectedCategoryId != null && selectedCategoryId !in CategoryViewModel.VIRTUAL_CATEGORY_IDS) {
@@ -979,7 +981,9 @@ private fun StreamsList(
 
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
     // of the scroll buffer, so without this guard the fade/slide replays on every scroll.
-    val enteredStreamIds = remember { mutableSetOf<String>() }
+    // Keyed to items so it resets (bounded) on category switch instead of growing unbounded
+    // across every stream id seen this session.
+    val enteredStreamIds = remember(items) { mutableSetOf<String>() }
 
     LaunchedEffect(items, lastPlayedItemId) {
         if (!items.isNullOrEmpty() && lastPlayedItemId != null) {

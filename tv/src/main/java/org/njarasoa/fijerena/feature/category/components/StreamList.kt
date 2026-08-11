@@ -122,7 +122,9 @@ internal fun StreamList(
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
     // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
     // guard the fade/slide replays on every focus move instead of just on first appearance.
-    val enteredStreamIds = remember { mutableSetOf<String>() }
+    // Keyed to streams so it resets (bounded) on category switch instead of growing unbounded
+    // across every stream id seen this session.
+    val enteredStreamIds = remember(streams) { mutableSetOf<String>() }
 
     LaunchedEffect(streams, lastPlayedItemId) {
         if (!streams.isNullOrEmpty() && lastPlayedItemId != null && lastPlayedItemId != lastFocusedItemId) {
