@@ -522,8 +522,11 @@ private fun SearchResultsList(
     onCategoryClick: (CategorySearchResult) -> Unit,
     onCategoryLongPress: (CategorySearchResult) -> Unit,
 ) {
-    // Stable map — only add missing keys, never discard existing FocusRequesters
-    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    // Stable within a query's results — only add missing keys, never discard existing
+    // FocusRequesters, so focus targeting survives recomposition mid-query. Keyed to
+    // categoryResults/results so a new query drops the old query's requesters instead of
+    // accumulating one per result id ever seen this session.
+    val focusRequesters = remember(categoryResults, results) { mutableMapOf<String, FocusRequester>() }
     val firstItemFocusRequester = remember { FocusRequester() }
 
     var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }

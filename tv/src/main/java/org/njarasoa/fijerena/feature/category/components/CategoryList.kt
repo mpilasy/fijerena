@@ -91,7 +91,9 @@ internal fun CategoryList(
         }
 
     val listState = rememberTvLazyListState()
-    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    // Keyed to categories so switching category lists (refresh, content-type switch) drops
+    // stale FocusRequesters instead of accumulating one per category id ever seen this session.
+    val focusRequesters = remember(categories) { mutableMapOf<String, FocusRequester>() }
 
     // Auto-scroll and focus on selected category
     LaunchedEffect(regularCategories, selectedCategoryId) {
@@ -147,7 +149,9 @@ internal fun CategoryList(
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
     // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
     // guard the fade/slide replays on every focus move instead of just on first appearance.
-    val enteredCategoryIds = remember { mutableSetOf<String>() }
+    // Keyed to categories so it resets (bounded) on category-list change instead of growing
+    // unbounded for the composable's whole lifetime.
+    val enteredCategoryIds = remember(categories) { mutableSetOf<String>() }
 
     val palette = LocalCinemaTheme.current
     val borderBrush =
