@@ -27,6 +27,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -217,18 +222,26 @@ internal fun LiveTvSplitLayout(
     val playback: PlaybackViewModel = viewModel()
     val previewPlaybackState by playback.playbackState.collectAsStateWithLifecycle()
 
-    // The preview pane's channel list is always watch history — regardless of which category
+    // The preview pane's channel list defaults to watch history — regardless of which category
     // (if any) was actually browsed/searched/EPG'd into to get here — with the currently
     // previewed channel included and highlighted (see lastPlayedItemId = target.id below), not
     // filtered out like the full-screen Last Watched flyout does. Independent of
     // categoryViewModel's own selectedCategoryId/streams so browsing a real category still works
     // normally everywhere else (the full-screen Category flyout, EPG/search entry, etc.).
+    // D-pad Left/Right (see the onPreviewKeyEvent below) toggles it over to Favorites instead.
+    var listSource by remember { mutableStateOf(PreviewListSource.LAST_WATCHED) }
     var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var lastWatchedStreamsLoading by remember { mutableStateOf(true) }
+    var favoriteStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var favoriteStreamsLoading by remember { mutableStateOf(true) }
     val composableScope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         lastWatchedStreams = categoryViewModel.getLastWatchedSnapshot()
         lastWatchedStreamsLoading = false
+    }
+    LaunchedEffect(Unit) {
+        favoriteStreams = categoryViewModel.getFavoritesSnapshot()
+        favoriteStreamsLoading = false
     }
 
     // One video surface, relocated (not recreated) between the small preview box and the
@@ -336,13 +349,15 @@ internal fun LiveTvSplitLayout(
     }
 
     if (fullScreen) {
-        // Refresh the preview's history list on demote (fullScreen leaving composition) so it
-        // reflects what was just watched — promoting/demoting never leaves this screen (no nav
-        // pop, no fresh CategoryViewModel), so nothing else would ever re-fetch it.
+        // Refresh both the preview's history and favorites lists on demote (fullScreen leaving
+        // composition) so they reflect what was just watched/(un)favorited — promoting/demoting
+        // never leaves this screen (no nav pop, no fresh CategoryViewModel), so nothing else
+        // would ever re-fetch them.
         DisposableEffect(Unit) {
             onDispose {
                 composableScope.launch {
                     lastWatchedStreams = categoryViewModel.getLastWatchedSnapshot()
+                    favoriteStreams = categoryViewModel.getFavoritesSnapshot()
                 }
             }
         }
@@ -459,28 +474,38 @@ internal fun LiveTvSplitLayout(
 
             // A freshly-picked channel (search/browse) hasn't necessarily hit watch history yet
             // (loadStreamLight never writes it, and even loadStream's write is delayed) — without
-            // this, target could be entirely absent from the list below, leaving no row to OK-press
-            // for promote. Prepend it so it's always reachable, matching the comment above.
-            val displayedLastWatched =
-                remember(lastWatchedStreams, target.id) {
-                    if (lastWatchedStreams.any { it.id == target.id }) {
-                        lastWatchedStreams
-                    } else {
-                        listOf(target) + lastWatchedStreams
+            // this, target could be entirely absent from the Last Watched list, leaving no row to
+            // OK-press for promote. Prepend it so it's always reachable. Not done for Favorites —
+            // there it's expected the current channel may simply not be one, same as any other
+            // list the user browses to.
+            val displayedStreams =
+                remember(listSource, lastWatchedStreams, favoriteStreams, target.id) {
+                    when (listSource) {
+                        PreviewListSource.LAST_WATCHED ->
+                            if (lastWatchedStreams.any { it.id == target.id }) {
+                                lastWatchedStreams
+                            } else {
+                                listOf(target) + lastWatchedStreams
+                            }
+                        PreviewListSource.FAVORITES -> favoriteStreams
                     }
                 }
             LiveTvChannelList(
-                streams = ImmutableMediaList(displayedLastWatched),
-                streamsLoading = lastWatchedStreamsLoading,
+                streams = ImmutableMediaList(displayedStreams),
+                streamsLoading = if (listSource == PreviewListSource.FAVORITES) favoriteStreamsLoading else lastWatchedStreamsLoading,
                 // Hardcoded, not the real browsed/searched/EPG'd-into selection — the panel's
-                // list and title always reflect history here, regardless of entry path (see
-                // lastWatchedStreams above). categoryMap always has this id (a virtual category
+                // list and title always reflect history/favorites here, regardless of entry path
+                // (see listSource above). categoryMap always has both ids (virtual categories
                 // added by rebuildVirtualCategories), so the title still resolves to "Last
-                // Watched" correctly.
-                selectedCategoryId = CategoryViewModel.LAST_WATCHED_CATEGORY_ID,
+                // Watched"/"Favorites" correctly.
+                selectedCategoryId =
+                    if (listSource == PreviewListSource.FAVORITES) {
+                        CategoryViewModel.FAVORITES_CATEGORY_ID
+                    } else {
+                        CategoryViewModel.LAST_WATCHED_CATEGORY_ID
+                    },
                 categoryMap = categoryMap,
-                // Highlight whatever's actually previewing, which on this always-history list is
-                // also just... its entry in the history, if present.
+                // Highlight whatever's actually previewing, if present in the current list.
                 lastPlayedItemId = target.id,
                 nowPlaying = nowPlaying,
                 contentType = contentType,
@@ -492,9 +517,18 @@ internal fun LiveTvSplitLayout(
                 onStreamSelected = onStreamSelected,
                 onRefreshStreams = {
                     composableScope.launch {
-                        lastWatchedStreamsLoading = true
-                        lastWatchedStreams = categoryViewModel.getLastWatchedSnapshot()
-                        lastWatchedStreamsLoading = false
+                        when (listSource) {
+                            PreviewListSource.LAST_WATCHED -> {
+                                lastWatchedStreamsLoading = true
+                                lastWatchedStreams = categoryViewModel.getLastWatchedSnapshot()
+                                lastWatchedStreamsLoading = false
+                            }
+                            PreviewListSource.FAVORITES -> {
+                                favoriteStreamsLoading = true
+                                favoriteStreams = categoryViewModel.getFavoritesSnapshot()
+                                favoriteStreamsLoading = false
+                            }
+                        }
                     }
                 },
                 onStreamPromote = { item ->
@@ -517,11 +551,38 @@ internal fun LiveTvSplitLayout(
                 },
                 onStreamLongPress = { item -> favoriteMenuTarget = item.toFavoriteMenuTarget(contentType, favoriteIds) },
                 onStreamFocused = { item -> focusedItem = item },
-                modifier = Modifier.weight(0.34f).fillMaxHeight(),
+                modifier =
+                    Modifier
+                        .weight(0.34f)
+                        .fillMaxHeight()
+                        // Left/Right toggles Last Watched <-> Favorites regardless of which row
+                        // in the list is focused — onPreviewKeyEvent intercepts ahead of the
+                        // focused Card, which only handles OK/center, so nothing needs to consume
+                        // this deeper in the tree.
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) {
+                                false
+                            } else {
+                                when (event.key) {
+                                    Key.DirectionLeft -> {
+                                        listSource = PreviewListSource.LAST_WATCHED
+                                        true
+                                    }
+                                    Key.DirectionRight -> {
+                                        listSource = PreviewListSource.FAVORITES
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            }
+                        },
             )
         }
     }
 }
+
+/** Which list the Live TV preview pane's channel panel is showing, toggled via D-pad Left/Right. */
+private enum class PreviewListSource { LAST_WATCHED, FAVORITES }
 
 /**
  * Computes the channel next to [currentId] in [streams], wrapping around. Used for full-screen

@@ -600,6 +600,15 @@ class CategoryViewModel(
         if (!::repository.isInitialized) return emptyList()
         return repository.getWatchHistoryForContentTypeSuspend(contentType)
     }
+
+    /**
+     * Favorites fetch, same shape as [getLastWatchedSnapshot] — for the same Live TV preview
+     * pane callers, toggling between the two without disturbing the selected/browsed category.
+     */
+    suspend fun getFavoritesSnapshot(): List<MediaItem> {
+        if (!::repository.isInitialized) return emptyList()
+        return repository.getFavoritesForContentTypeSuspend(contentType)
+    }
 }
 
 /** Splits into (virtual, regular) categories — single pass instead of two filters. */
