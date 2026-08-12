@@ -116,8 +116,13 @@ internal fun StreamList(
 
     val scale = LocalUiScale.current
 
-    // Auto-scroll and focus on last played item (on initial load and when returning from player)
-    var lastFocusedItemId by remember { mutableStateOf<String?>(null) }
+    // Auto-scroll and focus on last played item (on initial load and when returning from player).
+    // Keyed to selectedCategoryId so switching list context (e.g. the Live TV preview panel's
+    // Last Watched <-> Favorites toggle) resets it — otherwise, since lastPlayedItemId (the
+    // current channel) stays the same across that toggle, the guard below would treat a
+    // *second* visit to an already-visited list as already handled and skip re-focusing, leaving
+    // focus wherever it landed after the previously-focused Card was disposed by the switch away.
+    var lastFocusedItemId by remember(selectedCategoryId) { mutableStateOf<String?>(null) }
 
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
     // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
@@ -126,16 +131,29 @@ internal fun StreamList(
     // across every stream id seen this session.
     val enteredStreamIds = remember(streams) { mutableSetOf<String>() }
 
-    LaunchedEffect(streams, lastPlayedItemId) {
-        if (!streams.isNullOrEmpty() && lastPlayedItemId != null && lastPlayedItemId != lastFocusedItemId) {
+    LaunchedEffect(streams, streamsLoading, lastPlayedItemId) {
+        // Skip entirely while streamsLoading: that branch renders a spinner, not the list, so no
+        // Card exists yet for the FocusRequester to attach to. Previously this ran anyway, always
+        // failed, and — critically — still marked lastFocusedItemId as handled, so once the list
+        // actually finished loading a moment later the guard below was already tripped and this
+        // never got a second chance. Focus was left stuck on the header's refresh button (the
+        // first focusable in the composed tree) for good.
+        if (!streamsLoading && !streams.isNullOrEmpty() && lastPlayedItemId != null && lastPlayedItemId != lastFocusedItemId) {
             val lastPlayedIndex = streams.indexOfFirst { it.id == lastPlayedItemId }
             if (lastPlayedIndex != -1) {
                 listState.animateScrollToItem(lastPlayedIndex)
+                // Small delay so the target item is actually composed and its FocusRequester
+                // attached before requesting focus — mirrors TvChannelListOverlay.kt's identical
+                // race.
+                kotlinx.coroutines.delay(100)
                 try {
                     lastPlayedFocusRequester.requestFocus()
+                    // Only mark handled on success, so a failed attempt (e.g. still racing
+                    // composition) gets retried on the next recomposition instead of being
+                    // silently given up on forever.
+                    lastFocusedItemId = lastPlayedItemId
                 } catch (_: IllegalStateException) {
                 }
-                lastFocusedItemId = lastPlayedItemId
             }
         }
     }
