@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -60,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -241,19 +243,27 @@ fun MobileCategoryListScreen(
     val target = dockTarget
     val dockPlayback: PlaybackViewModel? = if (isLiveTv && target != null) viewModel() else null
 
-    // While a preview is docked, the list below is always watch history — regardless of which
+    // While a preview is docked, the list below defaults to watch history — regardless of which
     // category/tab (if any) was actually browsed to get here — with the currently previewed
     // channel included and highlighted. Independent of the CategoryViewModel's own
     // selectedCategoryId/streams so normal category/tab browsing is untouched when nothing's
     // docked, and mirrors TV's LiveTvSplitLayout for the same reason. Not used for Movies/TV
-    // Shows (target is always null there).
+    // Shows (target is always null there). Swipe left/right on the list (see
+    // listSourceSwipeModifier below) toggles it over to Favorites instead.
+    var listSource by remember { mutableStateOf(PreviewListSource.LAST_WATCHED) }
     var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var lastWatchedStreamsLoading by remember { mutableStateOf(true) }
+    var favoriteStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+    var favoriteStreamsLoading by remember { mutableStateOf(true) }
     val composableScope = rememberCoroutineScope()
     if (target != null) {
         LaunchedEffect(Unit) {
             lastWatchedStreams = viewModel.getLastWatchedSnapshot()
             lastWatchedStreamsLoading = false
+        }
+        LaunchedEffect(Unit) {
+            favoriteStreams = viewModel.getFavoritesSnapshot()
+            favoriteStreamsLoading = false
         }
     }
 
@@ -385,13 +395,15 @@ fun MobileCategoryListScreen(
     }
 
     if (target != null && dockPlayback != null && dockLoader != null && fullScreen) {
-        // Refresh the history list on demote (fullScreen leaving composition) so it reflects
-        // what was just watched — promoting/demoting never leaves this screen, so nothing else
-        // would ever re-fetch it. Mirrors TV's LiveTvSplitLayout for the same reason.
+        // Refresh both the history and favorites lists on demote (fullScreen leaving
+        // composition) so they reflect what was just watched/(un)favorited — promoting/demoting
+        // never leaves this screen, so nothing else would ever re-fetch them. Mirrors TV's
+        // LiveTvSplitLayout for the same reason.
         DisposableEffect(Unit) {
             onDispose {
                 composableScope.launch {
                     lastWatchedStreams = viewModel.getLastWatchedSnapshot()
+                    favoriteStreams = viewModel.getFavoritesSnapshot()
                 }
             }
         }
@@ -536,30 +548,91 @@ fun MobileCategoryListScreen(
                         }
 
                         // Streams list with pull-to-refresh — while a preview is docked, always
-                        // history (see lastWatchedStreams above), regardless of the real
+                        // history or favorites (see listSource above), regardless of the real
                         // selected category/tab.
-                        val displayedStreams = if (target != null) lastWatchedStreams else state.streams
-                        val displayedStreamsLoading = if (target != null) lastWatchedStreamsLoading else state.streamsLoading
+                        val displayedStreams =
+                            if (target == null) {
+                                state.streams
+                            } else if (listSource == PreviewListSource.FAVORITES) {
+                                favoriteStreams
+                            } else {
+                                lastWatchedStreams
+                            }
+                        val displayedStreamsLoading =
+                            if (target == null) {
+                                state.streamsLoading
+                            } else if (listSource == PreviewListSource.FAVORITES) {
+                                favoriteStreamsLoading
+                            } else {
+                                lastWatchedStreamsLoading
+                            }
+                        // Swipe left/right toggles the docked panel between Last Watched and
+                        // Favorites — mirrors TV's D-pad Left/Right on the same panel
+                        // (LiveTvSplitLayout.kt). Only active while docked; normal category/tab
+                        // browsing has no swipe. Threshold/accumulator pattern matches the
+                        // full-screen player's own horizontal swipe handling
+                        // (MobilePlayerScreen.kt) for consistency.
+                        val listSourceSwipeModifier =
+                            if (target == null) {
+                                Modifier
+                            } else {
+                                Modifier.pointerInput(Unit) {
+                                    var accumulator = 0f
+                                    var fired = false
+                                    detectHorizontalDragGestures(
+                                        onDragStart = { accumulator = 0f; fired = false },
+                                        onDragEnd = { accumulator = 0f; fired = false },
+                                        onDragCancel = { accumulator = 0f; fired = false },
+                                    ) { change, dragAmount ->
+                                        change.consume()
+                                        accumulator += dragAmount
+                                        if (!fired && kotlin.math.abs(accumulator) > 80f) {
+                                            fired = true
+                                            listSource =
+                                                if (accumulator < 0) PreviewListSource.FAVORITES else PreviewListSource.LAST_WATCHED
+                                        }
+                                    }
+                                }
+                            }
                         val streamsList: @Composable () -> Unit = {
                             PullToRefreshBox(
                                 isRefreshing = displayedStreamsLoading,
                                 onRefresh = {
-                                    if (target != null) {
+                                    if (target == null) {
+                                        state.selectedCategoryId?.let { viewModel.refreshStreams(it) }
+                                    } else if (listSource == PreviewListSource.FAVORITES) {
+                                        composableScope.launch {
+                                            favoriteStreamsLoading = true
+                                            favoriteStreams = viewModel.getFavoritesSnapshot()
+                                            favoriteStreamsLoading = false
+                                        }
+                                    } else {
                                         composableScope.launch {
                                             lastWatchedStreamsLoading = true
                                             lastWatchedStreams = viewModel.getLastWatchedSnapshot()
                                             lastWatchedStreamsLoading = false
                                         }
-                                    } else {
-                                        state.selectedCategoryId?.let { viewModel.refreshStreams(it) }
                                     }
                                 },
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillMaxSize().then(listSourceSwipeModifier),
                             ) {
                                 StreamsList(
                                     items = displayedStreams,
                                     streamsLoading = displayedStreamsLoading,
-                                    selectedCategoryId = if (target != null) CategoryViewModel.LAST_WATCHED_CATEGORY_ID else state.selectedCategoryId,
+                                    selectedCategoryId =
+                                        when {
+                                            target == null -> state.selectedCategoryId
+                                            listSource == PreviewListSource.FAVORITES -> CategoryViewModel.FAVORITES_CATEGORY_ID
+                                            else -> CategoryViewModel.LAST_WATCHED_CATEGORY_ID
+                                        },
+                                    panelTitle =
+                                        if (target == null) {
+                                            null
+                                        } else if (listSource == PreviewListSource.FAVORITES) {
+                                            stringResource(R.string.settings_import_favorites_label)
+                                        } else {
+                                            stringResource(R.string.player_last_watched)
+                                        },
                                     lastPlayedItemId = state.lastPlayedItemId,
                                     nowPlaying = nowPlaying,
                                     currentlyPlayingId = target?.id,
@@ -824,6 +897,9 @@ fun MobileCategoryListScreen(
     }
 }
 
+/** Which list the docked Live TV preview's channel panel is showing, toggled via swipe left/right. */
+private enum class PreviewListSource { LAST_WATCHED, FAVORITES }
+
 /**
  * One-time hint pointing at the long-press-to-favorite gesture, which otherwise has zero
  * on-screen affordance. See [MobileCategoryListScreen] and `AppSettings.hasSeenFavoriteHint`.
@@ -974,6 +1050,11 @@ private fun StreamsList(
     lastPlayedItemId: String? = null,
     nowPlaying: ImmutableNowPlaying = ImmutableNowPlaying(),
     currentlyPlayingId: String? = null,
+    // Only set while docked (see MobileCategoryListScreen) — the category chip row above is
+    // hidden there, so without this there's no way to tell Last Watched and Favorites apart
+    // after a swipe. Left null everywhere else: normal browsing already shows the selected
+    // chip.
+    panelTitle: String? = null,
     onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
     onItemLongPress: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
 ) {
@@ -1043,12 +1124,20 @@ private fun StreamsList(
                 verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
             ) {
                 item(contentType = "header") {
-                    Text(
-                        text = stringResource(R.string.category_streams_count, items.size),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 4.dp, start = 4.dp),
-                    )
+                    Column(modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)) {
+                        if (panelTitle != null) {
+                            Text(
+                                text = panelTitle,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        Text(
+                            text = stringResource(R.string.category_streams_count, items.size),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 itemsIndexed(items, key = { _, item -> item.id }, contentType = { _, _ -> "stream" }) { index, item ->
                     StreamCard(
