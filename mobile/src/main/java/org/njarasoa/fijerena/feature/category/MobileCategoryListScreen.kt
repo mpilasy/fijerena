@@ -1070,8 +1070,7 @@ private fun StreamsList(
         if (!items.isNullOrEmpty() && lastPlayedItemId != null) {
             val index = items.indexOfFirst { it.id == lastPlayedItemId }
             if (index > 0) {
-                // +1 to account for the header item
-                listState.animateScrollToItem(index + 1)
+                listState.animateScrollToItem(index)
             }
         }
     }
@@ -1117,44 +1116,47 @@ private fun StreamsList(
             }
         }
         else -> {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
-            ) {
-                item(contentType = "header") {
-                    Column(modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)) {
-                        if (panelTitle != null) {
-                            Text(
-                                text = panelTitle,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Pinned, not a LazyColumn item — otherwise it scrolls away with the list, and on
+                // the docked preview panel that's the only thing telling Last Watched and
+                // Favorites apart (see panelTitle above).
+                Column(modifier = Modifier.padding(horizontal = 12.dp).padding(top = 8.dp, bottom = 4.dp)) {
+                    if (panelTitle != null) {
                         Text(
-                            text = stringResource(R.string.category_streams_count, items.size),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = panelTitle,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
-                }
-                itemsIndexed(items, key = { _, item -> item.id }, contentType = { _, _ -> "stream" }) { index, item ->
-                    StreamCard(
-                        item = item,
-                        nowPlayingProgram = nowPlaying[item.id],
-                        isCurrentlyPlaying = item.id == currentlyPlayingId,
-                        onClick = {
-                            onItemSelected(item.id, item.name, item.categoryId)
-                        },
-                        onLongClick = { onItemLongPress(item) },
-                        modifier =
-                            if (enteredStreamIds.add(item.id)) {
-                                Modifier.staggeredEntrance(index)
-                            } else {
-                                Modifier
-                            },
+                    Text(
+                        text = stringResource(R.string.category_streams_count, items.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
+                ) {
+                    itemsIndexed(items, key = { _, item -> item.id }, contentType = { _, _ -> "stream" }) { index, item ->
+                        StreamCard(
+                            item = item,
+                            nowPlayingProgram = nowPlaying[item.id],
+                            isCurrentlyPlaying = item.id == currentlyPlayingId,
+                            onClick = {
+                                onItemSelected(item.id, item.name, item.categoryId)
+                            },
+                            onLongClick = { onItemLongPress(item) },
+                            modifier =
+                                if (enteredStreamIds.add(item.id)) {
+                                    Modifier.staggeredEntrance(index)
+                                } else {
+                                    Modifier
+                                },
+                        )
+                    }
                 }
             }
         }
