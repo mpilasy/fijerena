@@ -86,12 +86,8 @@ interface XtreamStreamDao {
 
     @Query("""
         SELECT s.* FROM xtream_streams s
-        LEFT JOIN xtream_categories c ON s.categoryId = c.categoryId AND s.providerId = c.providerId AND c.type = :type
-        WHERE (
-            s.rowid IN (
-                SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
-            )
-            OR (c.categoryName LIKE :categoryQuery)
+        WHERE s.rowid IN (
+            SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
         )
         AND s.providerId = :providerId AND s.type = :type
         AND (s.excluded = 0 OR :includeExcluded = 1)
@@ -101,7 +97,6 @@ interface XtreamStreamDao {
         providerId: Long,
         type: String,
         query: String,
-        categoryQuery: String,
         includeExcluded: Boolean,
     ): List<XtreamStreamEntity>
 
