@@ -127,6 +127,7 @@ fun EpisodeSelectionScreen(
     categoryId: String,
     initialEpisodeId: String? = null,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -161,8 +162,10 @@ fun EpisodeSelectionScreen(
                     mediaRepository = viewModel.mediaRepository!!,
                     initialEpisodeId = initialEpisodeId,
                     isFavorite = state.isFavorite,
+                    categoryName = state.categoryName,
                     onToggleFavorite = { viewModel.toggleFavorite(seriesName) },
                     onEpisodeSelected = onEpisodeSelected,
+                    onCategorySelected = { onCategorySelected(categoryId) },
                     onRefresh = { viewModel.loadSeriesInfo() },
                     onBack = onBack,
                 )
@@ -179,8 +182,10 @@ private fun EpisodeListContent(
     mediaRepository: MediaRepository,
     initialEpisodeId: String? = null,
     isFavorite: Boolean,
+    categoryName: String?,
     onToggleFavorite: () -> Unit,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onCategorySelected: () -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -448,6 +453,15 @@ private fun EpisodeListContent(
                         text = providerName,
                         style = scaledStyles.titleSmall,
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
+                }
+
+                // Category this series belongs to — OK opens its series list
+                if (categoryName != null) {
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                    CinemaSecondaryButton(
+                        onClick = onCategorySelected,
+                        text = stringResource(R.string.details_category_format, categoryName),
                     )
                 }
 

@@ -491,6 +491,14 @@ fun MobileNavHost(
                             ),
                         )
                     },
+                    onCategorySelected = { categoryId ->
+                        navController.navigate(
+                            Screen.CategoryList(
+                                contentType = ContentType.MOVIES,
+                                initialCategoryId = categoryId,
+                            ),
+                        )
+                    },
                     onBack = {
                         navController.navigateUp()
                     },
@@ -520,15 +528,25 @@ fun MobileNavHost(
                             ),
                         )
                     },
+                    onCategorySelected = { categoryId ->
+                        navController.navigate(
+                            Screen.CategoryList(
+                                contentType = ContentType.TV_SHOWS,
+                                initialCategoryId = categoryId,
+                            ),
+                        )
+                    },
                     onBack = {
                         navController.navigateUp()
                     },
                 )
             }
 
-            // EPG Management Screen
-            composable<Screen.EpgManagement> {
+            // EPG Management Screen (scoped to one provider)
+            composable<Screen.EpgManagement> { backStackEntry ->
+                val epgScreen = backStackEntry.toRoute<Screen.EpgManagement>()
                 MobileEpgManagementScreen(
+                    providerId = epgScreen.providerId,
                     onBack = { navController.navigateUp() },
                 )
             }

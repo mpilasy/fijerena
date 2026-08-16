@@ -68,6 +68,7 @@ fun MobileEpisodeSelectionScreen(
     categoryId: String,
     initialEpisodeId: String? = null,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -187,9 +188,11 @@ fun MobileEpisodeSelectionScreen(
                             seriesDetail = displaySeriesDetail,
                             mediaRepository = viewModel.mediaRepository!!,
                             initialEpisodeId = initialEpisodeId,
+                            categoryName = lastSuccess?.categoryName,
                             onEpisodeSelected = { episode ->
                                 selectedEpisode = episode
                             },
+                            onCategorySelected = { onCategorySelected(categoryId) },
                         )
                     }
                 }
@@ -203,7 +206,9 @@ private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     mediaRepository: MediaRepository,
     initialEpisodeId: String? = null,
+    categoryName: String?,
     onEpisodeSelected: (DomainEpisodeItem) -> Unit,
+    onCategorySelected: () -> Unit,
 ) {
     val context = LocalContext.current
     val sortedSeasons =
@@ -323,6 +328,19 @@ private fun EpisodeListContent(
                         )
                     }
                 }
+            }
+        }
+
+        // Category this series belongs to — tap to browse it
+        if (categoryName != null) {
+            CinemaOutlinedButton(
+                onClick = onCategorySelected,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = CinemaSpacing.md),
+            ) {
+                Text(stringResource(R.string.details_category_format, categoryName))
             }
         }
 

@@ -48,6 +48,7 @@ fun MobileMovieDetailsScreen(
     movieName: String,
     categoryId: String,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -109,7 +110,9 @@ fun MobileMovieDetailsScreen(
                         movieName = movieName,
                         resumePositionMs = state.resumePositionMs,
                         resumeDurationMs = state.resumeDurationMs,
+                        categoryName = state.categoryName,
                         onPlayMovie = onPlayMovie,
+                        onCategorySelected = { onCategorySelected(categoryId) },
                     )
                 }
             }
@@ -124,7 +127,9 @@ private fun MovieDetailsContent(
     movieName: String,
     resumePositionMs: Long,
     resumeDurationMs: Long,
+    categoryName: String?,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onCategorySelected: () -> Unit,
 ) {
     val extension = movieDetail.extension ?: "mp4"
     val scrollState = rememberScrollState()
@@ -372,6 +377,17 @@ private fun MovieDetailsContent(
             }
             movieDetail.extension?.let { ext ->
                 MobileTechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
+            }
+        }
+
+        // Category this movie belongs to — tap to browse it
+        if (categoryName != null) {
+            Spacer(modifier = Modifier.height(CinemaSpacing.lg))
+            CinemaOutlinedButton(
+                onClick = onCategorySelected,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.details_category_format, categoryName))
             }
         }
     }

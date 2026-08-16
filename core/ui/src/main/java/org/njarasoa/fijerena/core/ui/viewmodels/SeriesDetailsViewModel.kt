@@ -38,6 +38,8 @@ class SeriesDetailsViewModel(
         data class Success(
             val seriesDetail: SeriesDetail,
             val isFavorite: Boolean,
+            /** Null when the category can't be resolved (unknown id, or hidden by category filters). */
+            val categoryName: String? = null,
         ) : UiState()
 
         data class Error(
@@ -62,10 +64,17 @@ class SeriesDetailsViewModel(
                 result.fold(
                     onSuccess = { detail ->
                         val isFav = repo.isFavorite(seriesId, "TV_SHOWS")
+                        val categoryName =
+                            repo
+                                .getFilteredCategories("TV_SHOWS")
+                                .getOrNull()
+                                ?.firstOrNull { it.id == categoryId }
+                                ?.name
                         _uiState.value =
                             UiState.Success(
                                 seriesDetail = detail,
                                 isFavorite = isFav,
+                                categoryName = categoryName,
                             )
                     },
                     onFailure = { e ->

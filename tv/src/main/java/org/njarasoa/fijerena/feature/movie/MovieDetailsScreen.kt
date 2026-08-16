@@ -95,6 +95,7 @@ fun MovieDetailsScreen(
     movieName: String,
     categoryId: String,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -129,7 +130,9 @@ fun MovieDetailsScreen(
                     isFavorite = state.isFavorite,
                     resumePositionMs = state.resumePositionMs,
                     resumeDurationMs = state.resumeDurationMs,
+                    categoryName = state.categoryName,
                     onPlayMovie = onPlayMovie,
+                    onCategorySelected = { onCategorySelected(categoryId) },
                     onToggleFavorite = { viewModel.toggleFavorite(state.movieDetail.name.ifEmpty { movieName }) },
                     onRefresh = { viewModel.loadMovieInfo() },
                     onBack = onBack,
@@ -147,7 +150,9 @@ private fun MovieDetailsContent(
     isFavorite: Boolean,
     resumePositionMs: Long,
     resumeDurationMs: Long,
+    categoryName: String?,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
+    onCategorySelected: () -> Unit,
     onToggleFavorite: () -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
@@ -512,6 +517,15 @@ private fun MovieDetailsContent(
                         movieDetail.extension?.let { ext ->
                             TechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
                         }
+                    }
+
+                    // Category this movie belongs to — OK opens its stream list
+                    if (categoryName != null) {
+                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+                        CinemaSecondaryButton(
+                            onClick = onCategorySelected,
+                            text = stringResource(R.string.details_category_format, categoryName),
+                        )
                     }
                 } // GlassPanel Column
             } // GlassPanel

@@ -408,6 +408,14 @@ fun TvNavHost(
                                 ),
                             )
                         },
+                        onCategorySelected = { categoryId ->
+                            navController.navigate(
+                                Screen.CategoryList(
+                                    contentType = ContentType.MOVIES,
+                                    initialCategoryId = categoryId,
+                                ),
+                            )
+                        },
                         onBack = {
                             navController.navigateUp()
                         },
@@ -434,6 +442,14 @@ fun TvNavHost(
                                     seriesId = episodeSelectionScreen.seriesId,
                                     seriesName = episodeSelectionScreen.seriesName,
                                     startFromBeginning = startFromBeginning,
+                                ),
+                            )
+                        },
+                        onCategorySelected = { categoryId ->
+                            navController.navigate(
+                                Screen.CategoryList(
+                                    contentType = ContentType.TV_SHOWS,
+                                    initialCategoryId = categoryId,
                                 ),
                             )
                         },

@@ -208,7 +208,7 @@
     <string name="provider_save_anyway">Enregistrer quand même</string>
     <string name="provider_go_back">Retour</string>
     <string name="provider_clear_cache_all_title">Vider tout le cache ?</string>
-    <string name="provider_clear_cache_all_message">Ceci supprimera toutes les données en cache (Direct, Films, Séries, EPG). L\'application devra les télécharger à nouveau.</string>
+    <string name="provider_clear_cache_all_message">Ceci supprimera les données en cache de ce fournisseur (Direct, Films, Séries : catégories et flux). L\'application les téléchargera à nouveau.</string>
     <string name="provider_clear_all_button">Tout effacer</string>
     <string name="provider_clear_cache_live_title">Vider le cache TV en direct ?</string>
     <string name="provider_clear_cache_live_message">Ceci supprimera toutes les catégories et chaînes en direct du cache.</string>
@@ -695,6 +695,8 @@
     <string name="common_loading">Chargement…</string>
     <string name="search_stream_name_placeholder">Entrez le nom du flux…</string>
     <string name="search_result_category_format">Catégorie : %1$s</string>
+    <string name="details_category_format">Catégorie : %1$s</string>
+    <string name="details_browse_category">Parcourir cette catégorie</string>
     <string name="content_type_movies_subtitle_short">Parcourir à la demande</string>
     <string name="content_type_tv_shows_subtitle_short">Séries et épisodes</string>
 
