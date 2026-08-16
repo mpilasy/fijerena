@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ProviderEntity::class, EpgSourceEntity::class, EpgPipelineStatsEntity::class],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class SettingsDatabase : RoomDatabase() {
@@ -101,6 +101,62 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        val MIGRATION_7_8 =
+            object : Migration(7, 8) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    // EPG is a provider-level concern: every source must have an owning provider.
+                    // Backfill existing global (NULL) sources to the currently active provider,
+                    // falling back to the first known provider if none is active.
+                    db.execSQL(
+                        """
+                        UPDATE epg_source SET provider_id = (SELECT id FROM providers WHERE isActive = 1 LIMIT 1)
+                        WHERE provider_id IS NULL
+                        """.trimIndent(),
+                    )
+                    db.execSQL(
+                        """
+                        UPDATE epg_source SET provider_id = (SELECT id FROM providers ORDER BY id LIMIT 1)
+                        WHERE provider_id IS NULL
+                        """.trimIndent(),
+                    )
+
+                    // SQLite can't add a NOT NULL constraint to an existing column - recreate the table.
+                    db.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS `epg_source_new` (
+                            `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            `url` TEXT NOT NULL,
+                            `label` TEXT NOT NULL,
+                            `timezone_offset_hours` INTEGER NOT NULL,
+                            `added_at_ms` INTEGER NOT NULL,
+                            `last_ingested_at_ms` INTEGER NOT NULL,
+                            `last_error` TEXT,
+                            `enabled` INTEGER NOT NULL DEFAULT 1,
+                            `last_channels` INTEGER NOT NULL DEFAULT 0,
+                            `last_programmes` INTEGER NOT NULL DEFAULT 0,
+                            `last_download_bytes` INTEGER NOT NULL DEFAULT 0,
+                            `ingest_method` TEXT NOT NULL DEFAULT 'DOWNLOADED',
+                            `last_ingestion_duration_ms` INTEGER NOT NULL DEFAULT 0,
+                            `last_download_duration_ms` INTEGER NOT NULL DEFAULT 0,
+                            `provider_id` INTEGER NOT NULL
+                        )
+                        """.trimIndent(),
+                    )
+                    db.execSQL(
+                        """
+                        INSERT INTO epg_source_new
+                        SELECT id, url, label, timezone_offset_hours, added_at_ms, last_ingested_at_ms, last_error,
+                               enabled, last_channels, last_programmes, last_download_bytes, ingest_method,
+                               last_ingestion_duration_ms, last_download_duration_ms, provider_id
+                        FROM epg_source WHERE provider_id IS NOT NULL
+                        """.trimIndent(),
+                    )
+                    db.execSQL("DROP TABLE epg_source")
+                    db.execSQL("ALTER TABLE epg_source_new RENAME TO epg_source")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_epg_source_provider_id` ON `epg_source` (`provider_id`)")
+                }
+            }
+
         fun getInstance(context: Context): SettingsDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -115,6 +171,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_4_5,
                         MIGRATION_5_6,
                         MIGRATION_6_7,
+                        MIGRATION_7_8,
                     ).build()
                     .also { INSTANCE = it }
             }

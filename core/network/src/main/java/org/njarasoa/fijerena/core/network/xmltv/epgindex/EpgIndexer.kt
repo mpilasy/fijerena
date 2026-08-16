@@ -381,7 +381,7 @@ class EpgIndexer private constructor(
             val sourceUrl = "xtream://$providerId"
             val (sourceId, existingSource) =
                 writeMutex.withLock {
-                    val existing = sourceDao.getSourceByUrl(sourceUrl)
+                    val existing = sourceDao.getSourceByUrl(sourceUrl, providerId)
                     if (existing != null) {
                         existing.id to existing
                     } else {

@@ -287,13 +287,16 @@ class EpgFileManager private constructor(
 
             if (oldUrl.isNotBlank()) {
                 val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-                if (sourceDao.getSourceCount() == 0) {
+                // EPG belongs to a provider - the legacy global URL migrates onto the active one.
+                val activeProviderId = ProviderRepository(context).getActiveProvider()?.id
+                if (sourceDao.getSourceCount() == 0 && activeProviderId != null) {
                     val label = extractLabel(oldUrl)
                     sourceDao.insertSource(
                         EpgSourceEntity(
                             url = oldUrl,
                             label = label,
                             timezoneOffsetHours = oldTz,
+                            providerId = activeProviderId,
                         ),
                     )
                 }
@@ -695,26 +698,21 @@ class EpgFileManager private constructor(
     /**
      * Clear the per-provider XMLTV cache (SharedPreferences-backed, 12h TTL) for every
      * provider affected by a just-completed sync, so the player doesn't keep showing a
-     * pre-sync EPG snapshot until that TTL expires. A source with `providerId == null`
-     * applies to every provider, so it invalidates all of them.
+     * pre-sync EPG snapshot until that TTL expires. Each source belongs to exactly one
+     * provider, so only that provider's cache needs clearing.
      */
-    private suspend fun invalidateXmltvCache(
+    private fun invalidateXmltvCache(
         sources: List<EpgSourceEntity>,
         stats: List<SourceStats>,
     ) {
         val ingestedSourceIds = stats.filter { it.error == null }.map { it.sourceId }.toSet()
-        val ingestedSources = sources.filter { it.id in ingestedSourceIds }
-        if (ingestedSources.isEmpty()) return
-
-        val providerIds = mutableSetOf<Long>()
-        providerIds += ingestedSources.mapNotNull { it.providerId }
-        if (ingestedSources.any { it.providerId == null }) {
-            providerIds += ProviderRepository(context).getAllProvidersList().map { it.id }
-        }
-
-        providerIds.forEach { providerId ->
-            XmltvEpgService(context, providerId).clearCache()
-        }
+        sources
+            .filter { it.id in ingestedSourceIds }
+            .map { it.providerId }
+            .distinct()
+            .forEach { providerId ->
+                XmltvEpgService(context, providerId).clearCache()
+            }
     }
 
     private fun updateAggregateProgress(

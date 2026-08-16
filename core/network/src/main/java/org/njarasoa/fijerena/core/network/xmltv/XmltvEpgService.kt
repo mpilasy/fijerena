@@ -61,9 +61,12 @@ class XmltvEpgService(
         // Return cached maps if available — avoids full DB scan on every call
         cachedChannelMaps?.let { return it }
 
+        // EPG is provider-scoped: without a real provider there is nothing to match against.
+        if (providerId <= 0L) return null
+
         val settingsDb = SettingsDatabase.getInstance(context)
         val sourceDao = settingsDb.epgSourceDao()
-        val validSources = sourceDao.getEnabledSourcesForSearch(if (providerId != -1L) providerId else null)
+        val validSources = sourceDao.getEnabledSourcesForSearch(providerId)
         val sourceIds = validSources.map { it.id }.toSet()
         if (sourceIds.isEmpty()) return null
 

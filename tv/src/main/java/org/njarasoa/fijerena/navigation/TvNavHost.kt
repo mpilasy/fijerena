@@ -546,15 +546,20 @@ fun TvNavHost(
                         onEditProvider = { id ->
                             navController.navigate(Screen.AddProvider(editId = id))
                         },
+                        onManageEpg = { id ->
+                            navController.navigate(Screen.EpgManagement(providerId = id))
+                        },
                         onBack = {
                             navController.navigateUp()
                         },
                     )
                 }
 
-                // EPG Management Screen
-                composable<Screen.EpgManagement> {
+                // EPG Management Screen (scoped to one provider)
+                composable<Screen.EpgManagement> { backStackEntry ->
+                    val epgScreen = backStackEntry.toRoute<Screen.EpgManagement>()
                     TvEpgManagementScreen(
+                        providerId = epgScreen.providerId,
                         onBack = { navController.navigateUp() },
                     )
                 }
@@ -572,9 +577,6 @@ fun TvNavHost(
                         onUiScaleChanged = onUiScaleChanged,
                         onManageProviders = {
                             navController.navigate(Screen.ProviderSelection)
-                        },
-                        onManageEpg = {
-                            navController.navigate(Screen.EpgManagement)
                         },
                         onProviderChanged = {
                             coroutineScope.launch {

@@ -153,10 +153,13 @@ sealed interface Screen {
 
     /**
      * EPG Management screen destination.
-     * Manage multiple XMLTV EPG sources (add, edit, delete, refresh).
+     * Manage a single provider's XMLTV EPG sources (add, edit, delete, refresh).
+     * EPG sources belong to one provider and are never shared between providers.
      */
     @Serializable
-    data object EpgManagement : Screen
+    data class EpgManagement(
+        val providerId: Long,
+    ) : Screen
 
     /**
      * Cellular Buffer Settings screen destination (developer mode only).

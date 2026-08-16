@@ -36,6 +36,8 @@ import org.njarasoa.fijerena.core.ui.R
 @OptIn(ExperimentalCoroutinesApi::class)
 class EpgManagementViewModel(
     private val context: Context,
+    // EPG is a provider-level concern: this screen manages one provider's sources only.
+    private val providerId: Long,
 ) : ViewModel() {
     private val epgFileManager = EpgFileManager.getInstance(context)
     private val indexer = EpgIndexer.getInstance(context)
@@ -49,8 +51,9 @@ class EpgManagementViewModel(
     // Generation counter for index DB — sources Flow now persistent
     private val _dbGeneration = MutableStateFlow(0)
 
-    // Sources are now in the persistent SettingsDatabase
-    val sources: Flow<List<EpgSourceEntity>> = settingsDb().epgSourceDao().getAllSources().distinctUntilChanged()
+    // Sources are now in the persistent SettingsDatabase, scoped to this provider
+    val sources: Flow<List<EpgSourceEntity>> =
+        settingsDb().epgSourceDao().getSourcesForProvider(providerId).distinctUntilChanged()
 
     val staleSourceCount: StateFlow<Int> =
         sources
@@ -275,6 +278,7 @@ class EpgManagementViewModel(
                             timezoneOffsetHours = timezoneOffsetHours,
                             ingestMethod = ingestMethod,
                             enabled = enabled,
+                            providerId = providerId,
                         ),
                     )
                 }

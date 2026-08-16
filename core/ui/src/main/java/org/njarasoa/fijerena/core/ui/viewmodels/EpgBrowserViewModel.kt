@@ -317,10 +317,12 @@ class EpgBrowserViewModel(
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
 
-            val activeProviderId = providerRepository.getActiveProvider()?.id ?: -1L
+            // EPG is provider-scoped: with no active provider there are no sources to show.
+            val activeProviderId = providerRepository.getActiveProvider()?.id
             val settingsDb = SettingsDatabase.getInstance(context)
             val sourceDao = settingsDb.epgSourceDao()
-            val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
+            val validSources =
+                activeProviderId?.let { sourceDao.getEnabledSourcesForSearch(it) } ?: emptyList()
             val sourceIds = validSources.map { it.id }
 
             val nowEpoch = System.currentTimeMillis() / 1000L
@@ -459,10 +461,12 @@ class EpgBrowserViewModel(
                 val db = EpgIndexDatabase.getInstance(context)
                 val dao = db.epgIndexDao()
 
-                val activeProviderId = providerRepository.getActiveProvider()?.id ?: -1L
+                // EPG is provider-scoped: with no active provider there are no sources to search.
+                val activeProviderId = providerRepository.getActiveProvider()?.id
                 val settingsDb = SettingsDatabase.getInstance(context)
                 val sourceDao = settingsDb.epgSourceDao()
-                val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
+                val validSources =
+                    activeProviderId?.let { sourceDao.getEnabledSourcesForSearch(it) } ?: emptyList()
                 val sourceIds = validSources.map { it.id }
 
                 val matcher = channelMatcher

@@ -365,6 +365,9 @@ fun MobileNavHost(
                     onEditProvider = { id ->
                         navController.navigate(Screen.AddProvider(editId = id))
                     },
+                    onManageEpg = { id ->
+                        navController.navigate(Screen.EpgManagement(providerId = id))
+                    },
                     onBack = {
                         navController.navigateUp()
                     },
@@ -381,9 +384,6 @@ fun MobileNavHost(
                     onUiStyleChanged = onUiStyleChanged,
                     onManageProviders = {
                         navController.navigate(Screen.ProviderSelection)
-                    },
-                    onManageEpg = {
-                        navController.navigate(Screen.EpgManagement)
                     },
                     onCellularBuffers = {
                         navController.navigate(Screen.CellularBufferSettings)

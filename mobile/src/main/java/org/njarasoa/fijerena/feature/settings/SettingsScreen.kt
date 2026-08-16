@@ -42,7 +42,6 @@ fun MobileSettingsScreen(
     onThemeChanged: (String) -> Unit = {},
     onUiStyleChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
-    onManageEpg: () -> Unit = {},
     onCellularBuffers: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
@@ -251,7 +250,6 @@ fun MobileSettingsScreen(
             EpgSettingsCard(
                 context = context,
                 uiState = uiState,
-                onManageEpg = onManageEpg,
             )
 
             // === Developer Mode ===

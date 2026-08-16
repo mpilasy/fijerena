@@ -83,6 +83,10 @@ class SettingsExportManager(
         val label: String = "",
         val timezoneOffsetHours: Int = 0,
         val enabled: Boolean = true,
+        // EPG sources belong to a provider. Provider ids aren't stable across devices, so the
+        // owner is recorded by name + URL, matching how [ProviderFavorites] identifies providers.
+        val providerName: String = "",
+        val providerUrl: String = "",
     )
 
     @Serializable
@@ -203,13 +207,17 @@ class SettingsExportManager(
                     )
                 }
 
+            val providersById = allProviders.associateBy { it.id }
             val epgSources =
-                settingsDb.epgSourceDao().getAllSourcesOnce().map { source ->
+                settingsDb.epgSourceDao().getAllSourcesOnce().mapNotNull { source ->
+                    val owner = providersById[source.providerId] ?: return@mapNotNull null
                     ExportedEpgSource(
                         url = source.url,
                         label = source.label,
                         timezoneOffsetHours = source.timezoneOffsetHours,
                         enabled = source.enabled,
+                        providerName = owner.name,
+                        providerUrl = owner.url,
                     )
                 }
 
@@ -492,19 +500,34 @@ class SettingsExportManager(
                     }
                 }
 
-                // Import EPG sources (merge: add new, skip existing by URL)
+                // Re-fetch providers once for every provider-scoped section below (EPG sources,
+                // favorites) - the import may have added new providers with new ids.
+                val allProvidersForFavorites =
+                    if (providersAdded > 0 || providersUpdated > 0) {
+                        providerRepo.getAllProvidersList()
+                    } else {
+                        existingProviders
+                    }
+                val providersByNameUrl = allProvidersForFavorites.associateBy { "${it.name}\u0000${it.url}" }
+                val providersByName = allProvidersForFavorites.associateBy { it.name }
+
+                // Import EPG sources (merge: add new, skip existing by URL within the same provider)
                 var sourcesAdded = 0
                 var sourcesSkipped = 0
 
                 if (options.importEpgSources) {
                     val settingsDb = SettingsDatabase.getInstance(context)
                     val sourceDao = settingsDb.epgSourceDao()
-                    val existingSources = sourceDao.getAllSourcesOnce()
-                    val existingUrls = existingSources.map { it.url }.toSet()
+                    val existingKeys =
+                        sourceDao.getAllSourcesOnce().mapTo(HashSet()) { it.providerId to it.url }
 
                     for (es in exported.epgSources) {
-                        val exists = es.url in existingUrls
-                        if (exists) {
+                        // EPG belongs to a provider - skip sources whose owner isn't on this device.
+                        val owner =
+                            allProvidersForFavorites.firstOrNull {
+                                it.name == es.providerName && it.url == es.providerUrl
+                            } ?: providersByName[es.providerName]
+                        if (owner == null || (owner.id to es.url) in existingKeys) {
                             sourcesSkipped++
                             continue
                         }
@@ -514,6 +537,7 @@ class SettingsExportManager(
                                 label = es.label,
                                 timezoneOffsetHours = es.timezoneOffsetHours,
                                 enabled = es.enabled,
+                                providerId = owner.id,
                             ),
                         )
                         sourcesAdded++
@@ -522,16 +546,6 @@ class SettingsExportManager(
 
                 // Import favorites per provider (match by name + URL)
                 var favoritesRestored = 0
-
-                // Re-fetch providers once for all favorites sections (may have new providers from import)
-                val allProvidersForFavorites =
-                    if (providersAdded > 0 || providersUpdated > 0) {
-                        providerRepo.getAllProvidersList()
-                    } else {
-                        existingProviders
-                    }
-                val providersByNameUrl = allProvidersForFavorites.associateBy { "${it.name}\u0000${it.url}" }
-                val providersByName = allProvidersForFavorites.associateBy { it.name }
 
                 if (options.importFavorites && exported.providerFavorites.isNotEmpty()) {
                     for (pf in exported.providerFavorites) {

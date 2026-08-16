@@ -36,11 +36,17 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun MobileEpgManagementScreen(onBack: () -> Unit) {
+fun MobileEpgManagementScreen(
+    providerId: Long,
+    onBack: () -> Unit,
+) {
     val context = LocalContext.current
     val viewModel: EpgManagementViewModel =
         viewModel(
-            factory = remember { SettingsViewModelFactory(context.applicationContext) },
+            factory =
+                remember(providerId) {
+                    SettingsViewModelFactory(context.applicationContext, providerId = providerId)
+                },
         )
 
     val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
