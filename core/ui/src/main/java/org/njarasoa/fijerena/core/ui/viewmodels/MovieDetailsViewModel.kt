@@ -26,6 +26,8 @@ class MovieDetailsViewModel(
             val resumePositionMs: Long,
             val resumeDurationMs: Long,
             val isFavorite: Boolean,
+            /** Null when the category can't be resolved (unknown id, or hidden by category filters). */
+            val categoryName: String? = null,
         ) : UiState()
 
         data class Error(
@@ -68,12 +70,20 @@ class MovieDetailsViewModel(
                         // Check favorite
                         val isFav = repo.isFavorite(movieId, "MOVIES")
 
+                        val categoryName =
+                            repo
+                                .getFilteredCategories("MOVIES")
+                                .getOrNull()
+                                ?.firstOrNull { it.id == categoryId }
+                                ?.name
+
                         _uiState.value =
                             UiState.Success(
                                 movieDetail = detail,
                                 resumePositionMs = resumePos,
                                 resumeDurationMs = resumeDur,
                                 isFavorite = isFav,
+                                categoryName = categoryName,
                             )
                     },
                     onFailure = { e ->

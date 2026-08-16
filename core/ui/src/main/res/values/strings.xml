@@ -208,7 +208,7 @@
     <string name="provider_save_anyway">Save Anyway</string>
     <string name="provider_go_back">Go Back</string>
     <string name="provider_clear_cache_all_title">Clear All Cache?</string>
-    <string name="provider_clear_cache_all_message">This will remove all cached data (Live TV, Movies, TV Shows, EPG). The app will need to re-download data from the server.</string>
+    <string name="provider_clear_cache_all_message">This will remove this provider\'s cached Live TV, Movies and TV Shows data (categories and streams). The app will re-download it from the server.</string>
     <string name="provider_clear_all_button">Clear All</string>
     <string name="provider_clear_cache_live_title">Clear Live TV Cache?</string>
     <string name="provider_clear_cache_live_message">This will remove all cached Live TV data (categories and streams).</string>
@@ -693,6 +693,8 @@
     <string name="common_loading">Loading…</string>
     <string name="search_stream_name_placeholder">Enter stream name…</string>
     <string name="search_result_category_format">Category: %1$s</string>
+    <string name="details_category_format">Category: %1$s</string>
+    <string name="details_browse_category">Browse this category</string>
     <string name="content_type_movies_subtitle_short">Browse on-demand</string>
     <string name="content_type_tv_shows_subtitle_short">Series &amp; episodes</string>
 
