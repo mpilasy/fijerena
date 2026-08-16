@@ -64,12 +64,8 @@ interface XtreamSeriesDao {
 
     @Query("""
         SELECT s.* FROM xtream_series s
-        LEFT JOIN xtream_categories c ON s.categoryId = c.categoryId AND s.providerId = c.providerId AND c.type = 'SERIES'
-        WHERE (
-            s.rowid IN (
-                SELECT docid FROM xtream_series_fts WHERE xtream_series_fts MATCH :query
-            )
-            OR (c.categoryName LIKE :categoryQuery)
+        WHERE s.rowid IN (
+            SELECT docid FROM xtream_series_fts WHERE xtream_series_fts MATCH :query
         )
         AND s.providerId = :providerId
         AND (s.excluded = 0 OR :includeExcluded = 1)
@@ -78,7 +74,6 @@ interface XtreamSeriesDao {
     fun searchByFts(
         providerId: Long,
         query: String,
-        categoryQuery: String,
         includeExcluded: Boolean,
     ): List<XtreamSeriesEntity>
 

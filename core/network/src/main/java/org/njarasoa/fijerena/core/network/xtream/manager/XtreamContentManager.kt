@@ -208,7 +208,7 @@ class XtreamContentManager(
                     return@suspendResultOf if (ftsQuery.isEmpty()) {
                         emptyList()
                     } else {
-                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_LIVE, ftsQuery, cleanQueryForLike(ftsQuery), false)
+                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_LIVE, ftsQuery, false)
                             .map { mapStreamEntityToModel(it) }
                     }
                 }
@@ -266,7 +266,7 @@ class XtreamContentManager(
                     return@suspendResultOf if (ftsQuery.isEmpty()) {
                         emptyList()
                     } else {
-                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_VOD, ftsQuery, cleanQueryForLike(ftsQuery), false)
+                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_VOD, ftsQuery, false)
                             .map { mapStreamEntityToModel(it) }
                     }
                 }
@@ -324,7 +324,7 @@ class XtreamContentManager(
                     return@suspendResultOf if (ftsQuery.isEmpty()) {
                         emptyList()
                     } else {
-                        seriesDao.searchByFts(providerId, ftsQuery, cleanQueryForLike(ftsQuery), false).map { mapSeriesEntityToStream(it) }
+                        seriesDao.searchByFts(providerId, ftsQuery, false).map { mapSeriesEntityToStream(it) }
                     }
                 }
 
@@ -954,12 +954,12 @@ class XtreamContentManager(
 
     suspend fun searchStreams(type: String, query: String, includeExcluded: Boolean = false): List<XtreamStream> =
         withContext(Dispatchers.IO) {
-            streamDao.searchByFts(providerId, type, query, cleanQueryForLike(query), includeExcluded).map { mapStreamEntityToModel(it) }
+            streamDao.searchByFts(providerId, type, query, includeExcluded).map { mapStreamEntityToModel(it) }
         }
 
     suspend fun searchSeries(query: String, includeExcluded: Boolean = false): List<XtreamStream> =
         withContext(Dispatchers.IO) {
-            seriesDao.searchByFts(providerId, query, cleanQueryForLike(query), includeExcluded).map { mapSeriesEntityToStream(it) }
+            seriesDao.searchByFts(providerId, query, includeExcluded).map { mapSeriesEntityToStream(it) }
         }
 
     suspend fun recomputeExclusions() = withContext(Dispatchers.IO) {
@@ -971,11 +971,6 @@ class XtreamContentManager(
         withContext(Dispatchers.IO) {
             categoryDao.countCategories(providerId, type)
         }
-
-    private fun cleanQueryForLike(query: String): String {
-        val clean = query.replace("*", "").trim().replace("\\s+".toRegex(), "%")
-        return "%$clean%"
-    }
 
     private fun formatFtsQuery(query: String): String {
         val words = query.trim().split("\\s+".toRegex())
