@@ -17,7 +17,18 @@ object LocaleManager {
         val locale = Locale(AppSettings(base).language)
         Locale.setDefault(locale)
 
-        val config = Configuration(base.resources.configuration)
+        // Locale-only delta, NOT a copy of the current configuration: createConfigurationContext
+        // treats every non-default field of the passed Configuration as a permanent override, so
+        // copying the live config freezes orientation/screenWidthDp/uiMode/density at launch
+        // values. MainActivity declares configChanges=orientation|screenSize, so it is never
+        // recreated on rotation and attachBaseContext never re-runs — the frozen values would
+        // stay wrong for the whole process (broke the landscape Live TV preview: LocalConfiguration
+        // kept reporting portrait). Configuration.updateFrom() ignores unset fields, so an empty
+        // Configuration with only the locale set overrides only the locale.
+        val config = Configuration()
+        // setToDefaults() (run by the constructor) sets fontScale = 1, which would override the
+        // user's system font scale; 0 means "not set".
+        config.fontScale = 0f
         config.setLocale(locale)
         config.setLayoutDirection(locale)
         return base.createConfigurationContext(config)
