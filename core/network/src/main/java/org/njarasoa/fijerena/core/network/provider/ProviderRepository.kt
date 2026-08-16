@@ -10,6 +10,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 
 /**
  * Manages provider CRUD and per-provider encrypted password storage.
@@ -115,11 +116,25 @@ class ProviderRepository(
     suspend fun deleteProvider(id: Long) {
         val entity = dao.getProviderById(id) ?: return
         dao.deleteProvider(entity)
+        deleteProviderEpgSources(id)
         clearProviderPassword(id)
         clearProviderCache(id)
         settingsCache.remove(id)
         // Clear cached provider instance
         MediaProviderFactory.clearCache(id)
+    }
+
+    /**
+     * EPG sources belong to a single provider, and their indexed channels/programmes live in a
+     * separate database ([EpgIndexDatabase]), so no SQL cascade is possible - delete both by hand.
+     */
+    private suspend fun deleteProviderEpgSources(id: Long) {
+        val sourceDao = db.epgSourceDao()
+        val sourceIds = sourceDao.getSourceIdsForProvider(id)
+        if (sourceIds.isNotEmpty()) {
+            EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceIds(sourceIds)
+        }
+        sourceDao.deleteSourcesForProvider(id)
     }
 
     /**

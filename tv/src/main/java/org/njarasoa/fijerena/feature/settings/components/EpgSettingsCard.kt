@@ -24,7 +24,6 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
@@ -32,7 +31,6 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun EpgSettingsCard(
     context: Context,
     epgRefreshTrigger: Int,
-    onManageEpg: () -> Unit,
     scale: Float,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
@@ -84,11 +82,7 @@ fun EpgSettingsCard(
                     ),
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            CinemaSecondaryButton(
-                onClick = onManageEpg,
-                text = stringResource(R.string.epg_data_manage_button),
-            )
+            // EPG sources belong to a provider - they're managed per provider, from the provider list.
         }
     }
 }

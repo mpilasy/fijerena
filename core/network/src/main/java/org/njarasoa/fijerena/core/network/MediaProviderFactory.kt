@@ -61,6 +61,27 @@ object MediaProviderFactory {
     }
 
     /**
+     * Whether a provider carries live TV channels, and can therefore have an XMLTV EPG
+     * attached to it. EPG is a live-TV concept: Jellyfin and SMB serve on-demand media only,
+     * and a local folder only has channels when an M3U playlist is configured.
+     *
+     * Derived from type + config alone - no credentials, no network, no provider instance - so
+     * it is safe to call for every row of a provider list. Mirrors the `supportedContentTypes`
+     * declared by each provider's `capabilities`; keep it in sync with [create] above.
+     *
+     * Note this is deliberately NOT `capabilities.supportsEpg`, which means *native* EPG
+     * (Xtream's get_short_epg). A REMOTE_M3U provider has no native EPG but is exactly the
+     * case that needs an external XMLTV source.
+     */
+    fun hasLiveTv(entity: ProviderEntity): Boolean =
+        when (entity.type) {
+            "XTREAM", "REMOTE_M3U" -> true
+            "LOCAL" -> parseConfig(entity.config)["m3uPath"]?.isNotEmpty() == true
+            "JELLYFIN", "SMB" -> false
+            else -> true // unknown types fall back to Xtream in create()
+        }
+
+    /**
      * Clear cached provider for a specific ID (e.g., when credentials change).
      */
     fun clearCache(providerId: Long) {

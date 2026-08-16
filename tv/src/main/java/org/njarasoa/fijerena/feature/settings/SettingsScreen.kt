@@ -40,7 +40,6 @@ fun SettingsScreen(
     onUiStyleChanged: (String) -> Unit = {},
     onUiScaleChanged: (Float) -> Unit = {},
     onManageProviders: () -> Unit = {},
-    onManageEpg: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -253,7 +252,6 @@ fun SettingsScreen(
                     EpgSettingsCard(
                         context = context,
                         epgRefreshTrigger = uiState.epgRefreshTrigger,
-                        onManageEpg = onManageEpg,
                         scale = scale,
                     )
                 }

@@ -170,12 +170,15 @@ class XtreamSessionManager(
         user: String,
         pass: String,
     ) {
+        // EPG sources belong to a provider - without a real provider id there is nothing to attach to.
+        if (providerId <= 0) return
+
         try {
             val normalizedUrl = baseUrl.trimEnd('/')
             val xmltvUrl = "$normalizedUrl/xmltv.php?username=$user&password=$pass"
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
 
-            val existing = sourceDao.getSourceByUrl(xmltvUrl)
+            val existing = sourceDao.getSourceByUrl(xmltvUrl, providerId)
             if (existing == null) {
                 val label = EpgFileManager.extractLabel(baseUrl) + " (Bulk)"
                 sourceDao.insertSource(
@@ -183,7 +186,7 @@ class XtreamSessionManager(
                         url = xmltvUrl,
                         label = label,
                         enabled = true,
-                        providerId = if (providerId > 0) providerId else null,
+                        providerId = providerId,
                     ),
                 )
                 // Trigger an immediate background refresh if the index is empty

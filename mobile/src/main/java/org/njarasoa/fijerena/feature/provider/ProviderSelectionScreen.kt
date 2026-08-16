@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -38,6 +39,7 @@ fun MobileProviderSelectionScreen(
     onProviderSelected: (ProviderEntity) -> Unit,
     onAddProvider: () -> Unit,
     onEditProvider: (Long) -> Unit,
+    onManageEpg: (Long) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -110,6 +112,7 @@ fun MobileProviderSelectionScreen(
                         providers = listOf(state.provider),
                         onSelect = onProviderSelected,
                         onEdit = onEditProvider,
+                        onManageEpg = onManageEpg,
                         onDelete = { deleteConfirmProvider = it },
                     )
                 }
@@ -118,6 +121,7 @@ fun MobileProviderSelectionScreen(
                         providers = state.providers,
                         onSelect = onProviderSelected,
                         onEdit = onEditProvider,
+                        onManageEpg = onManageEpg,
                         onDelete = { deleteConfirmProvider = it },
                     )
                 }
@@ -158,6 +162,7 @@ private fun MobileProviderList(
     providers: List<ProviderEntity>,
     onSelect: (ProviderEntity) -> Unit,
     onEdit: (Long) -> Unit,
+    onManageEpg: (Long) -> Unit,
     onDelete: (ProviderEntity) -> Unit,
 ) {
     LazyColumn(
@@ -208,6 +213,16 @@ private fun MobileProviderList(
                                     CinemaIcons.CheckCircle,
                                     contentDescription = stringResource(R.string.common_select),
                                     tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                        // EPG only applies to providers that carry live channels
+                        if (MediaProviderFactory.hasLiveTv(provider)) {
+                            IconButton(onClick = { onManageEpg(provider.id) }) {
+                                Icon(
+                                    CinemaIcons.LiveTv,
+                                    contentDescription = stringResource(R.string.epg_data_manage_button),
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }

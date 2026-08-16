@@ -2,9 +2,10 @@ package org.njarasoa.fijerena.core.network.provider
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "epg_source")
+@Entity(tableName = "epg_source", indices = [Index("provider_id")])
 data class EpgSourceEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -33,5 +34,5 @@ data class EpgSourceEntity(
     @ColumnInfo(name = "last_download_duration_ms", defaultValue = "0")
     val lastDownloadDurationMs: Long = 0,
     @ColumnInfo(name = "provider_id")
-    val providerId: Long? = null,
+    val providerId: Long,
 )

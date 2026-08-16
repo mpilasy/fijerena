@@ -21,11 +21,20 @@ interface EpgSourceDao {
     @Query("SELECT * FROM epg_source WHERE id = :id")
     suspend fun getSourceById(id: Long): EpgSourceEntity?
 
-    @Query("SELECT * FROM epg_source WHERE url = :url LIMIT 1")
-    suspend fun getSourceByUrl(url: String): EpgSourceEntity?
+    @Query("SELECT * FROM epg_source WHERE url = :url AND provider_id = :providerId LIMIT 1")
+    suspend fun getSourceByUrl(
+        url: String,
+        providerId: Long,
+    ): EpgSourceEntity?
 
-    @Query("SELECT * FROM epg_source WHERE enabled = 1 AND (provider_id IS NULL OR provider_id = :providerId)")
-    suspend fun getEnabledSourcesForSearch(providerId: Long?): List<EpgSourceEntity>
+    @Query("SELECT * FROM epg_source WHERE provider_id = :providerId ORDER BY added_at_ms ASC")
+    fun getSourcesForProvider(providerId: Long): Flow<List<EpgSourceEntity>>
+
+    @Query("SELECT id FROM epg_source WHERE provider_id = :providerId")
+    suspend fun getSourceIdsForProvider(providerId: Long): List<Long>
+
+    @Query("SELECT * FROM epg_source WHERE enabled = 1 AND provider_id = :providerId")
+    suspend fun getEnabledSourcesForSearch(providerId: Long): List<EpgSourceEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSource(source: EpgSourceEntity): Long
@@ -38,6 +47,9 @@ interface EpgSourceDao {
 
     @Query("DELETE FROM epg_source WHERE id IN (:ids)")
     suspend fun deleteSources(ids: List<Long>)
+
+    @Query("DELETE FROM epg_source WHERE provider_id = :providerId")
+    suspend fun deleteSourcesForProvider(providerId: Long)
 
     @Query("DELETE FROM epg_source")
     suspend fun deleteAllSources()

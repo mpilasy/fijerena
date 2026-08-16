@@ -35,6 +35,7 @@ import androidx.tv.foundation.lazy.list.items
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -53,6 +54,7 @@ fun TvProviderSelectionScreen(
     onProviderSelected: (ProviderEntity) -> Unit,
     onAddProvider: () -> Unit,
     onEditProvider: (Long) -> Unit,
+    onManageEpg: (Long) -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -142,6 +144,7 @@ fun TvProviderSelectionScreen(
                     providers = listOf(state.provider),
                     onSelect = onProviderSelected,
                     onEdit = onEditProvider,
+                    onManageEpg = onManageEpg,
                     onDelete = { deleteConfirmProvider = it },
                 )
             }
@@ -150,6 +153,7 @@ fun TvProviderSelectionScreen(
                     providers = state.providers,
                     onSelect = onProviderSelected,
                     onEdit = onEditProvider,
+                    onManageEpg = onManageEpg,
                     onDelete = { deleteConfirmProvider = it },
                 )
             }
@@ -209,6 +213,7 @@ private fun ProviderList(
     providers: List<ProviderEntity>,
     onSelect: (ProviderEntity) -> Unit,
     onEdit: (Long) -> Unit,
+    onManageEpg: (Long) -> Unit,
     onDelete: (ProviderEntity) -> Unit,
 ) {
     val scale = LocalUiScale.current
@@ -258,6 +263,19 @@ private fun ProviderList(
                                 Icon(
                                     CinemaIcons.CheckCircle,
                                     contentDescription = stringResource(R.string.common_select),
+                                    tint = CinemaAccent
+                                )
+                            },
+                        )
+                    }
+                    // EPG only applies to providers that carry live channels
+                    if (MediaProviderFactory.hasLiveTv(provider)) {
+                        CinemaIconButton(
+                            onClick = { onManageEpg(provider.id) },
+                            icon = {
+                                Icon(
+                                    CinemaIcons.LiveTv,
+                                    contentDescription = stringResource(R.string.epg_data_manage_button),
                                     tint = CinemaAccent
                                 )
                             },

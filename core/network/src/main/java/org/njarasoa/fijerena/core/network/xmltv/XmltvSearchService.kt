@@ -72,10 +72,13 @@ class XmltvSearchService(
             val dao = db.epgIndexDao()
 
             val providerRepo = ProviderRepository(context)
-            val activeProviderId = providerRepo.getActiveProvider()?.id ?: -1L
+            // EPG is provider-scoped: with no active provider there is nothing to search.
+            val activeProviderId =
+                providerRepo.getActiveProvider()?.id
+                    ?: return rowsToSearchResult(emptyList(), searchedFromIndex = true)
             val settingsDb = SettingsDatabase.getInstance(context)
             val sourceDao = settingsDb.epgSourceDao()
-            val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
+            val validSources = sourceDao.getEnabledSourcesForSearch(activeProviderId)
             val sourceIds = validSources.map { it.id }
             if (sourceIds.isEmpty()) return rowsToSearchResult(emptyList(), searchedFromIndex = true)
 
@@ -128,10 +131,12 @@ class XmltvSearchService(
         val indexer = EpgIndexer.getInstance(context)
 
         val providerRepo = ProviderRepository(context)
-        val activeProviderId = providerRepo.getActiveProvider()?.id ?: -1L
+        // EPG is provider-scoped: with no active provider there are no sources to search.
+        val activeProviderId = providerRepo.getActiveProvider()?.id
         val settingsDb = SettingsDatabase.getInstance(context)
         val sourceDao = settingsDb.epgSourceDao()
-        val validSources = sourceDao.getEnabledSourcesForSearch(if (activeProviderId != -1L) activeProviderId else null)
+        val validSources =
+            activeProviderId?.let { sourceDao.getEnabledSourcesForSearch(it) } ?: emptyList()
         val sourceIds = validSources.map { it.id }
 
         var result: XmltvSearchResult? = null
