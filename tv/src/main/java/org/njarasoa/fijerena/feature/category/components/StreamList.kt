@@ -312,6 +312,13 @@ private fun StreamItem(
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
+    // Marquee only while focused. BounceMarqueeNode runs a withFrameNanos loop that invalidates
+    // draw every frame for as long as its text overflows, and IPTV channel names overflow
+    // constantly — with it applied unconditionally, every visible row kept two such loops running
+    // (title + "Now:"), so a dozen on-screen rows meant ~24 concurrent per-frame animations
+    // competing with the scroll itself. At rest the two look identical: fraction is 0, so the
+    // node draws the same clipped text a plain Text does.
+    var isFocused by remember { mutableStateOf(false) }
     val typography = MaterialTheme.typography
     val scaledStyles =
         remember(scale, typography) {
@@ -327,7 +334,10 @@ private fun StreamItem(
             modifier
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
-                .onFocusChanged { if (it.isFocused) onFocused() }
+                .onFocusChanged {
+                    isFocused = it.isFocused
+                    if (it.isFocused) onFocused()
+                }
                 .tvLongPress(onLongPress)
                 .then(
                     if (focusRequester != null) {
@@ -400,7 +410,7 @@ private fun StreamItem(
                             style = scaledStyles.titleMedium,
                             color = CinemaTextPrimary,
                             maxLines = 1,
-                            modifier = Modifier.bounceMarquee(),
+                            modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
                         )
                     }
                     // Rating (e.g. "7.9 | PG-13")
@@ -419,7 +429,7 @@ private fun StreamItem(
                             style = scaledStyles.bodySmall,
                             color = CinemaOrangeLight,
                             maxLines = 1,
-                            modifier = Modifier.bounceMarquee(),
+                            modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
                         )
                     }
                 }
