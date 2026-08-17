@@ -15,8 +15,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         XtreamEpisodeEntity::class,
         XtreamStreamFts::class,
         XtreamSeriesFts::class,
+        XtreamEpgCacheEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -27,6 +28,8 @@ abstract class XtreamDatabase : RoomDatabase() {
     abstract fun seriesDao(): XtreamSeriesDao
 
     abstract fun episodeDao(): XtreamEpisodeDao
+
+    abstract fun epgCacheDao(): XtreamEpgCacheDao
 
     companion object {
         @Volatile
@@ -93,6 +96,19 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /** Migration 12→13: move the per-stream EPG payload cache out of SharedPreferences. */
+        private val MIGRATION_12_13 =
+            object : Migration(12, 13) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `xtream_epg_cache` (" +
+                            "`providerId` INTEGER NOT NULL, `streamId` INTEGER NOT NULL, " +
+                            "`payload` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`providerId`, `streamId`))",
+                    )
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -100,7 +116,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                         context.applicationContext,
                         XtreamDatabase::class.java,
                         "xtream_v2.db",
-                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { INSTANCE = it }

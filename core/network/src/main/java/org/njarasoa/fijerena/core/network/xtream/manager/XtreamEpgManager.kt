@@ -8,23 +8,25 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.suspendResultOf
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpgCacheDao
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpgCacheEntity
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.EPG_CACHE_EXPIRY_MS
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_EPG_PREFIX
-import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_EPG_TIMESTAMP_PREFIX
+import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_LEGACY_EPG_PREFS_PURGED
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 
 class XtreamEpgManager(
     private val sessionManager: XtreamSessionManager,
     private val sharedPreferences: SharedPreferences,
     private val providerSettings: ProviderSettings,
+    private val epgCacheDao: XtreamEpgCacheDao,
+    private val providerId: Long,
 ) {
     private val json =
         Json {
@@ -32,18 +34,37 @@ class XtreamEpgManager(
             encodeDefaults = true
         }
 
-    // See MediaRepository's identical writeScope/commitAsync for the full rationale. This one
-    // matters more than most: getEpgForStreams() fans out up to 10 concurrent cache writes per
-    // category load, which can otherwise pile up a real QueuedWork backlog right as Media3's
-    // startForegroundService() dispatches are firing for the same channel-load.
+    // See MediaRepository's identical writeScope/commitAsync for the full rationale. Kept here
+    // only for the one-time legacy-prefs purge and for the fire-and-forget cache invalidations,
+    // which must not block the caller.
     private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
-
-    private fun commitAsync(action: SharedPreferences.Editor.() -> Unit) {
-        writeScope.launch { sharedPreferences.edit(commit = true, action = action) }
-    }
 
     /** Whether caching is enabled for this provider */
     private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
+
+    init {
+        purgeLegacyPrefsCache()
+    }
+
+    /**
+     * Drop the pre-SQLite `epg_*` blobs from SharedPreferences.
+     *
+     * A full live catalogue wrote one string + one long per channel into this file; on a 53k
+     * channel provider that reached 84 MB, all of it parsed into RAM for the lifetime of every
+     * process that touched the prefs, and rewritten whole on each commit. One purge shrinks the
+     * file back to the handful of keys that belong there.
+     */
+    private fun purgeLegacyPrefsCache() {
+        if (sharedPreferences.getBoolean(KEY_LEGACY_EPG_PREFS_PURGED, false)) return
+        writeScope.launch {
+            // KEY_EPG_TIMESTAMP_PREFIX starts with KEY_EPG_PREFIX, so one prefix covers both.
+            val stale = sharedPreferences.all.keys.filter { it.startsWith(KEY_EPG_PREFIX) }
+            sharedPreferences.edit(commit = true) {
+                stale.forEach { remove(it) }
+                putBoolean(KEY_LEGACY_EPG_PREFS_PURGED, true)
+            }
+        }
+    }
 
     /**
      * Fetches EPG data for a specific stream with caching
@@ -75,7 +96,12 @@ class XtreamEpgManager(
         }
 
     /**
-     * Fetches EPG data for multiple streams in parallel with concurrency limiting.
+     * Fetches EPG data for multiple streams, [CHUNK_SIZE] requests in flight at a time.
+     *
+     * Coroutines are created one chunk at a time on purpose. Mapping every id to an `async {}`
+     * up front — with a Semaphore gating only the in-flight requests — meant a 53k-channel
+     * catalogue allocated 53k coroutines and held every response at once, hundreds of MB
+     * resident and enough GC pressure to stall video playback into an ANR.
      *
      * Uses [fetchEpgDirect] to avoid per-call overhead from [getEpgForStream]
      * (redundant dispatcher switches, Result wrapping, and unstructured background
@@ -85,38 +111,33 @@ class XtreamEpgManager(
         withContext(Dispatchers.IO) {
             suspendResultOf {
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated")
-                coroutineScope {
-                    val semaphore = Semaphore(10)
-                    val deferreds =
-                        streamIds.map { streamId ->
-                            async {
-                                semaphore.withPermit {
-                                    val epg = fetchEpgDirect(streamId, service, cache = false)
-                                    if (epg != null) streamId to epg else null
-                                }
-                            }
-                        }
+                val results = mutableMapOf<Int, EpgResponse>()
+                for (chunk in streamIds.chunked(CHUNK_SIZE)) {
+                    val cached = getCachedEpgBatch(chunk)
+                    results.putAll(cached)
 
-                    val results = mutableMapOf<Int, EpgResponse>()
-                    // Freshly network-fetched entries only (cache hits didn't touch the network and
-                    // are already on disk) — written as a single commit() below instead of one
-                    // commit()+fsync per stream, which used to serialize up to 50 blocking fsyncs
-                    // to the same SharedPreferences file on every category/preview load.
-                    val toCache = mutableMapOf<Int, EpgResponse>()
-                    deferreds.awaitAll().forEach { pair ->
-                        if (pair != null) {
-                            val (streamId, epg) = pair
-                            results[streamId] = epg
-                            if (getCachedEpg(streamId) == null) {
-                                toCache[streamId] = epg
-                            }
-                        }
+                    val misses = chunk.filter { it !in cached }
+                    if (misses.isEmpty()) continue
+
+                    val fetched =
+                        coroutineScope {
+                            misses
+                                .map { streamId ->
+                                    async {
+                                        val epg = fetchEpgDirect(streamId, service, cache = false)
+                                        if (epg != null) streamId to epg else null
+                                    }
+                                }.awaitAll()
+                        }.filterNotNull()
+
+                    if (fetched.isNotEmpty()) {
+                        results.putAll(fetched)
+                        // One batched insert per chunk — the old path wrote every freshly fetched
+                        // entry back through a single blocking SharedPreferences commit.
+                        cacheEpgBatch(fetched.toMap())
                     }
-                    if (toCache.isNotEmpty()) {
-                        cacheEpgBatch(toCache)
-                    }
-                    results
                 }
+                results
             }
         }
 
@@ -150,17 +171,31 @@ class XtreamEpgManager(
      */
     private fun getCachedEpg(streamId: Int): EpgResponse? {
         if (!cachingEnabled) return null
-        val timestamp = sharedPreferences.getLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, 0L)
-        if (System.currentTimeMillis() - timestamp > EPG_CACHE_EXPIRY_MS) {
-            return null
+        val payload = epgCacheDao.getFreshPayload(providerId, streamId, freshnessCutoff()) ?: return null
+        return decode(payload)
+    }
+
+    /** Batched [getCachedEpg] — one query per chunk instead of one per stream. */
+    private fun getCachedEpgBatch(streamIds: List<Int>): Map<Int, EpgResponse> {
+        if (!cachingEnabled) return emptyMap()
+        val rows = epgCacheDao.getFresh(providerId, streamIds, freshnessCutoff())
+        if (rows.isEmpty()) return emptyMap()
+        val result = mutableMapOf<Int, EpgResponse>()
+        for (row in rows) {
+            val decoded = decode(row.payload) ?: continue
+            result[row.streamId] = decoded
         }
-        val cached = sharedPreferences.getString(KEY_EPG_PREFIX + streamId, null) ?: return null
-        return try {
-            json.decodeFromString<EpgResponse>(cached)
+        return result
+    }
+
+    private fun freshnessCutoff(): Long = System.currentTimeMillis() - EPG_CACHE_EXPIRY_MS
+
+    private fun decode(payload: String): EpgResponse? =
+        try {
+            json.decodeFromString<EpgResponse>(payload)
         } catch (e: Exception) {
             null
         }
-    }
 
     /**
      * Cache EPG data for a stream
@@ -169,43 +204,40 @@ class XtreamEpgManager(
         streamId: Int,
         epg: EpgResponse,
     ) {
-        if (!cachingEnabled) return
-        commitAsync {
-            putString(KEY_EPG_PREFIX + streamId, json.encodeToString(epg))
-                .putLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, System.currentTimeMillis())
-        }
+        cacheEpgBatch(mapOf(streamId to epg))
     }
 
-    /** Same as [cacheEpg] but writes every entry in a single commit() — see [getEpgForStreams]. */
     private fun cacheEpgBatch(entries: Map<Int, EpgResponse>) {
-        if (!cachingEnabled) return
+        if (!cachingEnabled || entries.isEmpty()) return
         val now = System.currentTimeMillis()
-        commitAsync {
-            for ((streamId, epg) in entries) {
-                putString(KEY_EPG_PREFIX + streamId, json.encodeToString(epg))
-                putLong(KEY_EPG_TIMESTAMP_PREFIX + streamId, now)
-            }
-        }
+        epgCacheDao.upsertAll(
+            entries.map { (streamId, epg) ->
+                XtreamEpgCacheEntity(
+                    providerId = providerId,
+                    streamId = streamId,
+                    payload = json.encodeToString(epg),
+                    updatedAt = now,
+                )
+            },
+        )
     }
 
     /**
      * Clear EPG cache for a specific stream
      */
     fun clearEpgCache(streamId: Int) {
-        commitAsync {
-            remove(KEY_EPG_PREFIX + streamId)
-                .remove(KEY_EPG_TIMESTAMP_PREFIX + streamId)
-        }
+        writeScope.launch { epgCacheDao.deleteStream(providerId, streamId) }
     }
 
     /**
      * Clear all EPG cache
      */
     fun clearAllEpgCache() {
-        commitAsync {
-            sharedPreferences.all.keys
-                .filter { it.startsWith(KEY_EPG_PREFIX) || it.startsWith(KEY_EPG_TIMESTAMP_PREFIX) }
-                .forEach { remove(it) }
-        }
+        writeScope.launch { epgCacheDao.deleteAll(providerId) }
+    }
+
+    private companion object {
+        /** Requests in flight per chunk — matches the concurrency the old Semaphore allowed. */
+        const val CHUNK_SIZE = 10
     }
 }

@@ -6,6 +6,14 @@ import androidx.room.MapColumn
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
+/** Minimal stream columns needed to index EPG — see [XtreamStreamDao.getEpgStreamInfoPaged]. */
+data class XtreamStreamEpgInfo(
+    val streamId: Int,
+    val name: String,
+    val epgChannelId: String?,
+    val streamIcon: String?,
+)
+
 @Dao
 interface XtreamStreamDao {
     @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId AND excluded = 0 ORDER BY num ASC")
@@ -20,6 +28,25 @@ interface XtreamStreamDao {
         providerId: Long,
         type: String,
     ): List<XtreamStreamEntity>
+
+    /**
+     * Paged, EPG-only projection of the stream table.
+     *
+     * The EPG ingest used to pull every [XtreamStreamEntity] for the provider in one list — 53k
+     * full rows resident before a single programme was indexed. Ordered by streamId (not num) so
+     * paging stays stable against a column that is unique per provider+type.
+     */
+    @Query(
+        "SELECT streamId, name, epgChannelId, streamIcon FROM xtream_streams " +
+            "WHERE providerId = :providerId AND type = :type AND excluded = 0 " +
+            "ORDER BY streamId ASC LIMIT :limit OFFSET :offset",
+    )
+    fun getEpgStreamInfoPaged(
+        providerId: Long,
+        type: String,
+        limit: Int,
+        offset: Int,
+    ): List<XtreamStreamEpgInfo>
 
     @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type ORDER BY num ASC")
     fun getAllStreamsIncludingExcluded(

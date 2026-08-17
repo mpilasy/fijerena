@@ -34,6 +34,8 @@ class XtreamEpgManagerTest {
             sessionManager = sessionManager,
             sharedPreferences = sharedPrefs,
             providerSettings = providerSettings,
+            epgCacheDao = mockk(relaxed = true),
+            providerId = 1L,
         )
     }
 
@@ -135,6 +137,8 @@ class XtreamEpgManagerTest {
                     sessionManager = sessionManager,
                     sharedPreferences = sharedPrefs,
                     providerSettings = providerSettings,
+                    epgCacheDao = mockk(relaxed = true),
+                    providerId = 1L,
                 )
 
             coEvery { apiService.getEpgForStream(any()) } returns EpgResponse(emptyList())
