@@ -35,6 +35,21 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 
 /**
+ * How long this screen stays up even once the app is ready.
+ *
+ * The splash in front of it cannot animate — on the Shields (API 30) core-splashscreen takes its
+ * compat path, which only sets the icon on an ImageView, and the art is a photograph so an
+ * AnimatedVectorDrawable isn't an option on newer devices either. This screen is the only part of
+ * startup that moves, and since startup disk I/O moved off the main thread it renders fast enough
+ * to be gone in a frame or two without a floor.
+ *
+ * Note this is a floor on *display* time, not on motion: a device with developer options'
+ * animator duration scale at 0 (as darcy is set) collapses every animation below to its end
+ * state, so the marble sits still there no matter how long this waits.
+ */
+const val APP_LOADING_MIN_MS = 900L
+
+/**
  * Startup screen shown while the app works out where to send you — provider lookup, credential
  * migration, session restore. Before this, both nav hosts rendered nothing at all during that
  * window, so a cold start was a blank window of indeterminate length.
