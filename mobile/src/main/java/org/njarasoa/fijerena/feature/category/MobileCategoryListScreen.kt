@@ -990,7 +990,9 @@ private fun CategoryChipRow(
                         },
                         colors = chipColors,
                         modifier =
-                            if (enteredCategoryIds.add(category.id)) {
+                            // remember-scoped: bare add() returns false on the first recomposition
+                            // of an already-visible chip, dropping staggeredEntrance mid-animation.
+                            if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
                                 Modifier.staggeredEntrance(index)
                             } else {
                                 Modifier
@@ -1035,7 +1037,8 @@ private fun CategoryChipRow(
                     },
                     modifier =
                         (
-                            if (enteredCategoryIds.add(category.id)) {
+                            // See above — remember-scoped so recomposition can't cancel it.
+                            if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
                                 Modifier.staggeredEntrance(index)
                             } else {
                                 Modifier
@@ -1163,7 +1166,9 @@ private fun StreamsList(
                             },
                             onLongClick = { onItemLongPress(item) },
                             modifier =
-                                if (enteredStreamIds.add(item.id)) {
+                                // See the chip rows above — remember-scoped so recomposition can't
+                                // cancel the entrance animation mid-flight.
+                                if (remember(item.id) { enteredStreamIds.add(item.id) }) {
                                     Modifier.staggeredEntrance(index)
                                 } else {
                                     Modifier

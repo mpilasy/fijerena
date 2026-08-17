@@ -286,7 +286,11 @@ internal fun StreamList(
                                 focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null,
                                 thumbnailScale = thumbnailScale,
                                 modifier =
-                                    if (enteredStreamIds.add(item.id)) {
+                                    // remember-scoped so a recomposition of an already-visible item
+                                    // reuses the same answer. Called bare, add() returned false on
+                                    // the first recomposition and dropped staggeredEntrance from the
+                                    // chain mid-animation, detaching the node.
+                                    if (remember(item.id) { enteredStreamIds.add(item.id) }) {
                                         Modifier.staggeredEntrance(index)
                                     } else {
                                         Modifier

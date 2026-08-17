@@ -26,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -122,13 +121,15 @@ internal fun CategoryList(
     // Animate rotation when refreshing
     var targetRotation by remember { mutableStateOf(0f) }
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { categoriesRefreshing }.collect { refreshing ->
-            if (refreshing) {
-                while (true) {
-                    targetRotation = (targetRotation + 360f) % 3600f
-                    kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
-                }
+    // Keyed on the flag, not Unit: the loop below never returns, so as a collector body it could
+    // never observe refreshing going false again — the spinner kept turning for the lifetime of the
+    // screen after the first refresh. As an effect key, a false value cancels it. Same shape as
+    // StreamList's identical loop.
+    LaunchedEffect(categoriesRefreshing) {
+        if (categoriesRefreshing) {
+            while (true) {
+                targetRotation = (targetRotation + 360f) % 3600f
+                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
             }
         }
     }
@@ -260,7 +261,9 @@ internal fun CategoryList(
                             onLongPress = { onCategoryLongPress(category) },
                             focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() },
                             modifier =
-                                if (enteredCategoryIds.add(category.id)) {
+                                // See StreamList: remember-scoped so recomposition of a visible row
+                                // doesn't drop the modifier and cancel the animation mid-flight.
+                                if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
                                     Modifier.staggeredEntrance(index)
                                 } else {
                                     Modifier
