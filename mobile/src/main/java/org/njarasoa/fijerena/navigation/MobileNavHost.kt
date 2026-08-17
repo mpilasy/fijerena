@@ -29,6 +29,8 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
 import org.njarasoa.fijerena.feature.contentselection.MobileContentTypeSelectionScreen
@@ -96,8 +98,11 @@ fun MobileNavHost(
 
     val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()
 
-    // Show nothing until initialization completes
-    if (hasProvider == null) return
+    // Provider lookup / credential migration — used to render nothing at all until it finished.
+    if (hasProvider == null) {
+        AppLoadingScreen(logoSize = 140.dp)
+        return
+    }
 
     // Determine initial destination based on provider configuration
     val startDestination =

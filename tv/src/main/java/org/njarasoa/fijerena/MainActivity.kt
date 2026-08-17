@@ -3,7 +3,9 @@ package org.njarasoa.fijerena
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -22,7 +24,25 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must run before super.onCreate() — this is what paints the marble over the cold-start
+        // window instead of leaving it bare black until Compose's first frame.
+        val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        // Hold the splash until Compose has actually drawn, then hand off to AppLoadingScreen,
+        // which carries the same marble on the same black while the nav host finishes init.
+        var contentReady = false
+        splash.setKeepOnScreenCondition { !contentReady }
+        splash.setOnExitAnimationListener { provider ->
+            provider.view
+                .animate()
+                .alpha(0f)
+                .scaleX(SPLASH_EXIT_SCALE)
+                .scaleY(SPLASH_EXIT_SCALE)
+                .setDuration(SPLASH_EXIT_MS)
+                .withEndAction { provider.remove() }
+                .start()
+        }
 
         val appSettings = AppSettings(applicationContext)
         var themeId by mutableStateOf(appSettings.themeId)
@@ -39,6 +59,10 @@ class MainActivity : ComponentActivity() {
                     density = currentDensity.density * uiScale,
                     fontScale = currentDensity.fontScale,
                 )
+
+            // First composition is close enough to first draw here: the nav host renders
+            // AppLoadingScreen immediately, so the splash never lifts onto an empty window.
+            LaunchedEffect(Unit) { contentReady = true }
 
             CompositionLocalProvider(
                 LocalUiScale provides uiScale,
@@ -62,6 +86,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private companion object {
+        const val SPLASH_EXIT_SCALE = 1.15f
+        const val SPLASH_EXIT_MS = 350L
     }
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
