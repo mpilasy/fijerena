@@ -548,6 +548,13 @@
     <string name="player_stats_position">Position</string>
     <string name="player_stats_duration">Duration</string>
     <string name="player_stats_drop_rate_per_sec">Drop Rate/sec</string>
+    <string name="player_stats_drop_rate_recent">Drop Rate (10s)</string>
+    <string name="player_stats_app">APP</string>
+    <string name="player_stats_heap">Heap</string>
+    <string name="player_stats_heap_format">%1$d / %2$d MB (%3$d%%)</string>
+    <string name="player_stats_gc">GC</string>
+    <string name="player_stats_gc_format">%1$d runs, %2$d ms</string>
+    <string name="player_stats_ui_skipped">UI Frames Skipped</string>
     <string name="player_stats_stream_health">Stream Health</string>
     <string name="player_stats_na">N/A</string>
     <string name="player_stream_type_live">Live</string>

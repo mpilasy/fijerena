@@ -21,8 +21,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,6 +40,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.performance.AppPerformanceMonitor
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -113,7 +116,19 @@ fun MobileStatsOverlay(
         ?: remember { mutableStateOf(0f) }
     val streamHealthState by StreamingPlaybackService.getInstance()?.streamHealthState?.collectAsStateWithLifecycle(org.njarasoa.fijerena.core.player.network.StreamHealthState())
         ?: remember { mutableStateOf(org.njarasoa.fijerena.core.player.network.StreamHealthState()) }
+    val serviceRecentDropRate by StreamingPlaybackService.getInstance()?.recentDropRate?.collectAsStateWithLifecycle(0f)
+        ?: remember { mutableStateOf(0f) }
     var streamElapsed by remember { mutableStateOf("0:00") }
+
+    // Process-side health. ExoPlayer's counters cannot see the app starving itself, which is
+    // exactly what a GC storm or a heavy background job looks like from the couch.
+    var heap by remember { mutableStateOf(AppPerformanceMonitor.heapSnapshot()) }
+    var uiFramesSkipped by remember { mutableLongStateOf(0L) }
+    val jankMonitor = remember { AppPerformanceMonitor.JankMonitor() }
+    DisposableEffect(Unit) {
+        jankMonitor.start()
+        onDispose { jankMonitor.stop() }
+    }
 
     LaunchedEffect(Unit) {
         // Persisted across ticks so an unchanged Tracks instance (no track/quality switch)
@@ -238,6 +253,9 @@ fun MobileStatsOverlay(
                     }
                 if (newNetworkSpeed != networkSpeed) networkSpeed = newNetworkSpeed
             }
+
+            heap = AppPerformanceMonitor.heapSnapshot()
+            uiFramesSkipped = jankMonitor.skippedFrames
 
             // Update stream elapsed time
             val startTime = serviceStartTimeMs
@@ -369,6 +387,21 @@ fun MobileStatsOverlay(
                     StatRowColored(stringResource(R.string.player_stats_drop_rate), String.format("%.2f%%", dropRate), dropColor)
                 }
 
+                // Short-window rate: the cumulative one above averages a bad burst away against
+                // however long the stream has already been clean.
+                val recentDropRate = serviceRecentDropRate
+                val recentDropColor =
+                    when {
+                        recentDropRate < 0.5f -> CinemaSuccess
+                        recentDropRate < 2.0f -> CinemaWarning
+                        else -> CinemaError
+                    }
+                StatRowColored(
+                    stringResource(R.string.player_stats_drop_rate_recent),
+                    String.format("%.2f%%", recentDropRate),
+                    recentDropColor,
+                )
+
                 val currentDropFps = serviceMeasuredDroppedFps
                 if (currentDropFps > 0f) {
                     val currentDropColor = when {
@@ -378,6 +411,28 @@ fun MobileStatsOverlay(
                     }
                     StatRowColored(stringResource(R.string.player_stats_drop_rate_per_sec), String.format("%.1f fps", currentDropFps), currentDropColor)
                 }
+
+                SectionHeader(stringResource(R.string.player_stats_app))
+                val heapColor =
+                    when {
+                        heap.usedPercent < 60 -> CinemaSuccess
+                        heap.usedPercent < 85 -> CinemaWarning
+                        else -> CinemaError
+                    }
+                StatRowColored(
+                    stringResource(R.string.player_stats_heap),
+                    stringResource(R.string.player_stats_heap_format, heap.usedMb, heap.maxMb, heap.usedPercent),
+                    heapColor,
+                )
+                StatRow(
+                    stringResource(R.string.player_stats_gc),
+                    stringResource(R.string.player_stats_gc_format, heap.gcCount, heap.gcTimeMs),
+                )
+                StatRowColored(
+                    stringResource(R.string.player_stats_ui_skipped),
+                    "$uiFramesSkipped",
+                    if (uiFramesSkipped == 0L) CinemaSuccess else CinemaWarning,
+                )
 
                 SectionHeader(stringResource(R.string.player_stats_stream))
                 StatRow(stringResource(R.string.player_stats_type), if (metadata.isLive) liveTypeText else vodTypeText)

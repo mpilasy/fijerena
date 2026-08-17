@@ -80,6 +80,12 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _measuredDroppedFps = MutableStateFlow(0f)
     val measuredDroppedFps: StateFlow<Float> = _measuredDroppedFps.asStateFlow()
 
+    // Percentage of frames dropped over the last ~10s. The cumulative rate averages a bad burst
+    // away against however long the stream has been clean — half an hour of perfect playback
+    // makes a 15-second stall look like a rounding error.
+    private val _recentDropRate = MutableStateFlow(0f)
+    val recentDropRate: StateFlow<Float> = _recentDropRate.asStateFlow()
+
     private val _streamHealthState = MutableStateFlow(org.njarasoa.fijerena.core.player.network.StreamHealthState())
     val streamHealthState: StateFlow<org.njarasoa.fijerena.core.player.network.StreamHealthState> = _streamHealthState.asStateFlow()
 
@@ -417,6 +423,9 @@ class StreamingPlaybackService : MediaSessionService() {
                 },
                 onDroppedFpsUpdate = { droppedFps ->
                     _measuredDroppedFps.value = droppedFps
+                },
+                onRecentDropRateUpdate = { dropRatePercent ->
+                    _recentDropRate.value = dropRatePercent
                 },
             )
         player.addAnalyticsListener(analyticsListener!!)
@@ -1057,6 +1066,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private val onQualitySwitch: (count: Int) -> Unit,
         private val onFpsUpdate: (fps: Float) -> Unit,
         private val onDroppedFpsUpdate: (droppedFps: Float) -> Unit,
+        private val onRecentDropRateUpdate: (dropRatePercent: Float) -> Unit,
     ) : androidx.media3.exoplayer.analytics.AnalyticsListener {
         private var droppedFrames = 0L
         private var totalFrames = 0L
@@ -1072,6 +1082,9 @@ class StreamingPlaybackService : MediaSessionService() {
         private var fpsLastTimeMs = 0L
         private var fpsLastFrameCount = 0L
         private var fpsLastDroppedFrameCount = 0L
+
+        /** Per-second (rendered, dropped) samples, trimmed to the last [RECENT_WINDOW_SAMPLES]. */
+        private val recentSamples = ArrayDeque<Pair<Long, Long>>()
 
         // playStream() zeroes the published StateFlow counters on every channel switch, but this
         // listener instance lives for the whole service lifetime — without resetting these too,
@@ -1091,6 +1104,8 @@ class StreamingPlaybackService : MediaSessionService() {
             fpsLastTimeMs = 0L
             fpsLastFrameCount = 0L
             fpsLastDroppedFrameCount = 0L
+            recentSamples.clear()
+            onRecentDropRateUpdate(0f)
         }
 
         override fun onVideoFrameProcessingOffset(
@@ -1114,7 +1129,15 @@ class StreamingPlaybackService : MediaSessionService() {
                     val dropped = droppedFrames - fpsLastDroppedFrameCount
                     val droppedFps = (dropped * 1000f) / delta
                     onDroppedFpsUpdate(droppedFps)
-                    
+
+                    recentSamples.addLast(frames to dropped)
+                    while (recentSamples.size > RECENT_WINDOW_SAMPLES) recentSamples.removeFirst()
+                    val windowFrames = recentSamples.sumOf { it.first }
+                    val windowDropped = recentSamples.sumOf { it.second }
+                    onRecentDropRateUpdate(
+                        if (windowFrames > 0) (windowDropped * 100f) / windowFrames else 0f,
+                    )
+
                     fpsLastTimeMs = currentTime
                     fpsLastFrameCount = totalFrames
                     fpsLastDroppedFrameCount = droppedFrames
@@ -1208,6 +1231,11 @@ class StreamingPlaybackService : MediaSessionService() {
                 }
                 lastVideoHeight = newHeight
             }
+        }
+
+        private companion object {
+            /** One sample per second, so this is a ~10s trailing window. */
+            const val RECENT_WINDOW_SAMPLES = 10
         }
     }
 
