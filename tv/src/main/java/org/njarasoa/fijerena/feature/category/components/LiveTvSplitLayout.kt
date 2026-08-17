@@ -43,6 +43,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -136,12 +138,22 @@ internal fun LiveTvSplitLayout(
     // stream churning in the background. Nothing auto-plays on entry until the user lands on a row —
     // unless this screen was entered with a specific stream already in mind (see the seeding effect
     // below), in which case it plays immediately.
-    var focusedItem by remember { mutableStateOf<MediaItem?>(null) }
+    // Focus is held in a StateFlow, not snapshot state, deliberately: as snapshot state it had to
+    // be read in composition to key the debouncing LaunchedEffect, so every single D-pad move
+    // invalidated this whole composable — video pane, EPG texts and the channel list all recomposed
+    // per keypress, at 600ms before anything even wanted to change. Writing to a flow notifies the
+    // collector without touching the snapshot system, so focus moves now cost no recomposition at
+    // all and only previewTarget (which changes once, after the debounce) drives the UI.
+    val focusedItemFlow = remember { MutableStateFlow<MediaItem?>(null) }
     var previewTarget by remember { mutableStateOf<MediaItem?>(null) }
-    LaunchedEffect(focusedItem) {
-        val f = focusedItem ?: return@LaunchedEffect
-        delay(600)
-        previewTarget = f
+    LaunchedEffect(Unit) {
+        // collectLatest, not debounce(): cancels the pending delay on each new focus, which is the
+        // same semantics, without opting into the FlowPreview API.
+        focusedItemFlow.collectLatest { item ->
+            if (item == null) return@collectLatest
+            delay(600)
+            previewTarget = item
+        }
     }
 
     // Seed the initial preview once the category's streams are loaded (runs once — hasSeeded
@@ -162,7 +174,7 @@ internal fun LiveTvSplitLayout(
             ?: lastPlayedItemId?.let { id -> list.firstOrNull { it.id == id } }
         if (seed != null) {
             previewTarget = seed
-            focusedItem = seed
+            focusedItemFlow.value = seed
         }
     }
 
@@ -208,7 +220,7 @@ internal fun LiveTvSplitLayout(
                 onStreamSelected = onStreamSelected,
                 onStreamPromote = { },
                 onStreamLongPress = { item -> favoriteMenuTarget = item.toFavoriteMenuTarget(contentType, favoriteIds) },
-                onStreamFocused = { item -> focusedItem = item },
+                onStreamFocused = { item -> focusedItemFlow.value = item },
                 onRefreshStreams = onRefreshStreams,
                 modifier = Modifier.weight(0.34f).fillMaxHeight(),
             )
@@ -381,20 +393,20 @@ internal fun LiveTvSplitLayout(
                 onStreamSelected = { newItem ->
                     // Switching channels while already full-screen is a real "commit to watching" —
                     // use the full loadStream (with side effects), still on the SAME loader/engine.
-                    focusedItem = newItem
+                    focusedItemFlow.value = newItem
                     previewTarget = newItem
                     loader.loadStream(newItem)
                 },
                 onNextChannel = {
                     neighborChannel(streams, target.id, +1)?.let { newItem ->
-                        focusedItem = newItem
+                        focusedItemFlow.value = newItem
                         previewTarget = newItem
                         loader.loadStream(newItem)
                     }
                 },
                 onPreviousChannel = {
                     neighborChannel(streams, target.id, -1)?.let { newItem ->
-                        focusedItem = newItem
+                        focusedItemFlow.value = newItem
                         previewTarget = newItem
                         loader.loadStream(newItem)
                     }
@@ -536,7 +548,7 @@ internal fun LiveTvSplitLayout(
                     // commit to it on the SAME loader/engine before promoting — still only one
                     // connection ever.
                     if (item.id != target.id) {
-                        focusedItem = item
+                        focusedItemFlow.value = item
                         previewTarget = item
                     }
                     // Always upgrade from the dock's light load (empty categoryStreams/
@@ -550,7 +562,7 @@ internal fun LiveTvSplitLayout(
                     fullScreen = true
                 },
                 onStreamLongPress = { item -> favoriteMenuTarget = item.toFavoriteMenuTarget(contentType, favoriteIds) },
-                onStreamFocused = { item -> focusedItem = item },
+                onStreamFocused = { item -> focusedItemFlow.value = item },
                 modifier =
                     Modifier
                         .weight(0.34f)
