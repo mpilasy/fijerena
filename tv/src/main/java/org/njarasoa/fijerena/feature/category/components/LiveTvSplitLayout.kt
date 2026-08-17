@@ -48,10 +48,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
@@ -177,6 +179,20 @@ internal fun LiveTvSplitLayout(
             previewTarget = seed
             focusedItemFlow.value = seed
         }
+    }
+
+    // This screen is Live-TV-only, but it deliberately never routes through TvPlayerScreen — it
+    // promotes the preview in place (see the doc comment above) — and TvPlayerScreen was the only
+    // thing on TV that ever called setContentType. So both the preview and the promoted
+    // full-screen player were running live channels on the VOD buffer profile: a 1000ms playback
+    // gate before first frame instead of the live profile's 500ms, plus a 10s back buffer that
+    // only makes sense for seeking. Set it on entry, before the focus debounce can trigger the
+    // first load. Re-applied whenever this screen is re-entered, since a VOD playback elsewhere
+    // (TvPlayerScreen) leaves the shared service on the VOD profile.
+    LaunchedEffect(Unit) {
+        StreamingPlaybackService
+            .awaitInstance()
+            .setContentType(PlayerConfigFactory.ContentType.LIVE_TV)
     }
 
     var fullScreen by remember { mutableStateOf(false) }
