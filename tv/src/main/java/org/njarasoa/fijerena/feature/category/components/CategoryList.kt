@@ -31,8 +31,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
@@ -294,12 +296,20 @@ private fun CategoryItem(
             typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
         }
 
+    // Marquee only while focused — same reasoning as StreamItem: BounceMarqueeNode runs a
+    // withFrameNanos loop that invalidates draw every frame for as long as its text overflows, and
+    // IPTV category names overflow constantly, so unconditionally every visible row kept its own
+    // loop running. At rest the two look identical: fraction is 0, so the node draws the same
+    // clipped text a plain Text does.
+    var isFocused by remember { mutableStateOf(false) }
+
     Card(
         onClick = onClick,
         modifier =
             modifier
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
+                .onFocusChanged { isFocused = it.isFocused }
                 .tvLongPress(onLongPress)
                 .then(
                     if (focusRequester != null) {
@@ -361,7 +371,8 @@ private fun CategoryItem(
                 style = scaledTitleMedium,
                 color = CinemaTextPrimary,
                 maxLines = 1,
-                modifier = Modifier.bounceMarquee(),
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
             )
         }
     }

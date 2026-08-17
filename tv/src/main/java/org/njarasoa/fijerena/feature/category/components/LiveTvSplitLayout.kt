@@ -520,8 +520,14 @@ internal fun LiveTvSplitLayout(
                         PreviewListSource.FAVORITES -> favoriteStreams
                     }
                 }
+            // Remembered, not built inline: an unremembered wrapper hands StreamList a new
+            // `streams` identity on every recomposition of this screen, which re-runs its
+            // `remember(streams)` blocks — re-arming the entrance animation for every visible row
+            // and, with it, a per-frame invalidateMeasurement loop. The list inside is already
+            // remembered above; only the wrapper was missing one.
+            val displayedStreamsList = remember(displayedStreams) { ImmutableMediaList(displayedStreams) }
             LiveTvChannelList(
-                streams = ImmutableMediaList(displayedStreams),
+                streams = displayedStreamsList,
                 streamsLoading = if (listSource == PreviewListSource.FAVORITES) favoriteStreamsLoading else lastWatchedStreamsLoading,
                 // Hardcoded, not the real browsed/searched/EPG'd-into selection — the panel's
                 // list and title always reflect history/favorites here, regardless of entry path
