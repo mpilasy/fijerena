@@ -357,6 +357,15 @@ private fun SearchResults(
 ) {
     var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
 
+    // Built once for the whole result list rather than once per row. CardDefaults.cardColors is
+    // @Composable, so it can't be wrapped in remember — hoisting the call out of the item bodies
+    // is what stops a CardColors being allocated per visible result per recomposition.
+    val categoryCardColors =
+        CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = CinemaAlpha.tint),
+        )
+    val streamCardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+
     fun toggleGroup(contentType: String) {
         expandedGroups = expandedGroups.toggled(contentType)
     }
@@ -485,6 +494,7 @@ private fun SearchResults(
                             items(typeCats, key = { "cat_${it.categoryId}_${it.contentType}" }, contentType = { "category" }) { catResult ->
                                 CategoryResultCard(
                                     result = catResult,
+                                    cardColors = categoryCardColors,
                                     onClick = { onCategoryClick(catResult) },
                                     onLongClick = { onCategoryLongPress(catResult) },
                                 )
@@ -496,6 +506,7 @@ private fun SearchResults(
                             ) { result ->
                                 SearchResultCard(
                                     result = result,
+                                    cardColors = streamCardColors,
                                     onClick = { onResultClick(result) },
                                     onLongClick = { onResultLongPress(result) },
                                 )
@@ -516,6 +527,7 @@ private fun SearchResults(
                     items(categoryResults, key = { "cat_${it.categoryId}_${it.contentType}" }, contentType = { "category" }) { catResult ->
                         CategoryResultCard(
                             result = catResult,
+                            cardColors = categoryCardColors,
                             onClick = { onCategoryClick(catResult) },
                             onLongClick = { onCategoryLongPress(catResult) },
                         )
@@ -537,6 +549,7 @@ private fun SearchResults(
                     ) { result ->
                         SearchResultCard(
                             result = result,
+                            cardColors = streamCardColors,
                             onClick = { onResultClick(result) },
                             onLongClick = { onResultLongPress(result) },
                         )
@@ -658,6 +671,7 @@ private fun MobileCollapsibleHeader(
 @OptIn(ExperimentalFoundationApi::class)
 private fun CategoryResultCard(
     result: SearchViewModel.CategorySearchResult,
+    cardColors: CardColors,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
 ) {
@@ -669,10 +683,7 @@ private fun CategoryResultCard(
                     onClick = onClick,
                     onLongClick = onLongClick,
                 ),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = CinemaAlpha.tint),
-            ),
+        colors = cardColors,
     ) {
         Row(
             modifier =
@@ -701,6 +712,7 @@ private fun CategoryResultCard(
 @OptIn(ExperimentalFoundationApi::class)
 private fun SearchResultCard(
     result: SearchViewModel.SearchResult,
+    cardColors: CardColors,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
 ) {
@@ -713,10 +725,7 @@ private fun SearchResultCard(
                     onClick = onClick,
                     onLongClick = onLongClick,
                 ),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
+        colors = cardColors,
     ) {
         Row(
             modifier =

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -302,6 +303,9 @@ private fun MobileEpgSearchContent(
                 )
             }
         } else {
+            // Built once for the list rather than once per row — CardDefaults.cardColors is
+            // @Composable, so it can't be remembered inside the item body.
+            val cardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = CinemaSpacing.xs),
@@ -312,6 +316,7 @@ private fun MobileEpgSearchContent(
                 }, contentType = { "epg_search_result" }) { result ->
                     MobileSearchResultCard(
                         result = result,
+                        cardColors = cardColors,
                         onClick = { onProgramSelected(result.program, result.channel) },
                     )
                 }
@@ -323,15 +328,13 @@ private fun MobileEpgSearchContent(
 @Composable
 private fun MobileSearchResultCard(
     result: EpgViewModel.EpgSearchResult,
+    cardColors: CardColors,
     onClick: () -> Unit,
 ) {
     CinemaCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
+        colors = cardColors,
     ) {
         Row(
             modifier =
