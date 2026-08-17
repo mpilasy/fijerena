@@ -21,6 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
@@ -30,6 +31,7 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
@@ -98,8 +100,16 @@ fun MobileNavHost(
 
     val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()
 
+    // Floor on the loading screen's time so its animation is actually seen — see
+    // APP_LOADING_MIN_MS for why nothing in front of it can move.
+    var minimumShownElapsed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(APP_LOADING_MIN_MS)
+        minimumShownElapsed = true
+    }
+
     // Provider lookup / credential migration — used to render nothing at all until it finished.
-    if (hasProvider == null) {
+    if (hasProvider == null || !minimumShownElapsed) {
         AppLoadingScreen(logoSize = 140.dp)
         return
     }
