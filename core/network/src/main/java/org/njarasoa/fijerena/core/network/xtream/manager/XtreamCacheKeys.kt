@@ -26,8 +26,12 @@ object XtreamCacheKeys {
     // Favorites tracking
     const val KEY_FAVORITES = "favorites"
 
-    // EPG caching
+    // EPG caching — payloads live in the xtream_epg_cache table; the KEY_EPG_* prefixes are
+    // retained only so the one-time purge can find the blobs older builds wrote here.
     const val KEY_EPG_PREFIX = "epg_"
     const val KEY_EPG_TIMESTAMP_PREFIX = "epg_timestamp_"
+
+    /** Deliberately not prefixed with `epg_` — the purge removes everything that is. */
+    const val KEY_LEGACY_EPG_PREFS_PURGED = "xtream_epg_prefs_purged"
     const val EPG_CACHE_EXPIRY_MS = 10 * 60 * 1000L // 10 minutes
 }

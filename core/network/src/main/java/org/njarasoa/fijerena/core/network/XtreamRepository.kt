@@ -92,7 +92,7 @@ class XtreamRepository(
 
     private val userDataManager = XtreamUserDataManager(cache, providerSettings, providerId)
 
-    private val epgManager = XtreamEpgManager(sessionManager, cache, providerSettings)
+    private val epgManager = XtreamEpgManager(sessionManager, cache, providerSettings, database.epgCacheDao(), providerId)
 
     // Delegate methods
 

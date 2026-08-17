@@ -357,130 +357,149 @@ class EpgIndexer private constructor(
     )
 
     /**
-     * Ingest EPG data fetched from the Xtream API into the SQLite index.
+     * Start an incremental ingest of EPG data fetched from the Xtream API.
      *
-     * Creates/upserts an EpgSource with ingestMethod=XTREAM_API.
-     * Deletes old programmes for that source before inserting fresh data.
+     * Creates/upserts an EpgSource with ingestMethod=XTREAM_API and deletes old programmes for
+     * that source, then hands back a session the caller feeds one page at a time. Paging is the
+     * point: the previous single-shot signature took the whole catalogue as one map, so the
+     * caller had to hold every channel's EPG in memory before indexing could start.
+     *
      * Channels are inserted with IGNORE to avoid overwriting XMLTV channels.
      */
-    suspend fun ingestFromXtreamEpg(
-        epgByStreamId: Map<Int, EpgResponse>,
-        streamInfo: Map<Int, XtreamStreamInfo>,
-        providerId: Long,
-    ) = withContext(Dispatchers.IO) {
-        if (epgByStreamId.isEmpty()) return@withContext
-
-        val ingestStartMs = System.currentTimeMillis()
-
-        try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
+    suspend fun beginXtreamIngest(providerId: Long): XtreamIngestSession =
+        withContext(Dispatchers.IO) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-
-            // Upsert EpgSource
             val sourceUrl = "xtream://$providerId"
-            val (sourceId, existingSource) =
+            val sourceId =
                 writeMutex.withLock {
                     val existing = sourceDao.getSourceByUrl(sourceUrl, providerId)
-                    if (existing != null) {
-                        existing.id to existing
-                    } else {
-                        sourceDao.insertSource(
+                    existing?.id
+                        ?: sourceDao.insertSource(
                             EpgSourceEntity(
                                 url = sourceUrl,
                                 label = "Xtream Provider $providerId",
                                 ingestMethod = "XTREAM_API",
                                 providerId = providerId,
                             ),
-                        ) to null
-                    }
+                        )
                 }
 
             // Clean slate for this source in the index
             writeMutex.withLock {
-                dao.deleteBySourceId(sourceId)
+                EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceId(sourceId)
             }
 
-            // Keep database size manageable:
-            // 1. Skip programmes that ended more than 12 hours ago
-            // 2. Skip programmes starting more than 7 days in the future
-            val nowMs = System.currentTimeMillis()
-            val cutoffEpoch = (nowMs / 1000) - 43200
-            val futureLimitEpoch = (nowMs / 1000) + 604800
+            XtreamIngestSession(sourceId)
+        }
 
-            // Build channels and programmes
-            val channelEntities = mutableListOf<EpgChannelEntity>()
-            val programmeBatch = mutableListOf<EpgProgrammeEntity>()
-            var totalProgrammes = 0
+    /**
+     * One Xtream ingest run. Feed it pages with [ingestChunk], then call [finish] exactly once.
+     * Nothing from a page is retained past its own call.
+     */
+    inner class XtreamIngestSession internal constructor(
+        private val sourceId: Long,
+    ) {
+        private val startedAtMs = System.currentTimeMillis()
+        private var channelCount = 0
+        private var programmeCount = 0
 
-            for ((streamId, epgResponse) in epgByStreamId) {
-                val info = streamInfo[streamId] ?: continue
-                val channelId = info.epgChannelId ?: streamId.toString()
+        suspend fun ingestChunk(
+            epgByStreamId: Map<Int, EpgResponse>,
+            streamInfo: Map<Int, XtreamStreamInfo>,
+        ) = withContext(Dispatchers.IO) {
+            if (epgByStreamId.isEmpty()) return@withContext
 
-                channelEntities.add(
-                    EpgChannelEntity(
-                        xmltvId = channelId,
-                        displayName = info.name,
-                        iconUrl = info.iconUrl,
-                        sourceId = sourceId,
-                    ),
-                )
+            try {
+                val db = EpgIndexDatabase.getInstance(context)
+                val dao = db.epgIndexDao()
 
-                for (prog in epgResponse.listings) {
-                    if (prog.endTime < cutoffEpoch || prog.startTime > futureLimitEpoch) continue
-                    programmeBatch.add(
-                        EpgProgrammeEntity(
-                            channelId = channelId,
-                            title = prog.title,
-                            titleLowercase = prog.title.lowercase(),
-                            description = prog.description,
-                            startEpoch = prog.startTime,
-                            endEpoch = prog.endTime,
+                // Keep database size manageable:
+                // 1. Skip programmes that ended more than 12 hours ago
+                // 2. Skip programmes starting more than 7 days in the future
+                val nowMs = System.currentTimeMillis()
+                val cutoffEpoch = (nowMs / 1000) - 43200
+                val futureLimitEpoch = (nowMs / 1000) + 604800
+
+                val channelEntities = mutableListOf<EpgChannelEntity>()
+                val programmeBatch = mutableListOf<EpgProgrammeEntity>()
+
+                for ((streamId, epgResponse) in epgByStreamId) {
+                    val info = streamInfo[streamId] ?: continue
+                    val channelId = info.epgChannelId ?: streamId.toString()
+
+                    channelEntities.add(
+                        EpgChannelEntity(
+                            xmltvId = channelId,
+                            displayName = info.name,
+                            iconUrl = info.iconUrl,
                             sourceId = sourceId,
                         ),
                     )
-                    totalProgrammes++
 
-                    if (programmeBatch.size >= getBatchSize(context)) {
-                        writeMutex.withLock {
-                            db.withTransaction { dao.insertProgrammes(programmeBatch) }
+                    for (prog in epgResponse.listings) {
+                        if (prog.endTime < cutoffEpoch || prog.startTime > futureLimitEpoch) continue
+                        programmeBatch.add(
+                            EpgProgrammeEntity(
+                                channelId = channelId,
+                                title = prog.title,
+                                titleLowercase = prog.title.lowercase(),
+                                description = prog.description,
+                                startEpoch = prog.startTime,
+                                endEpoch = prog.endTime,
+                                sourceId = sourceId,
+                            ),
+                        )
+                        programmeCount++
+
+                        if (programmeBatch.size >= getBatchSize(context)) {
+                            writeMutex.withLock {
+                                db.withTransaction { dao.insertProgrammes(programmeBatch) }
+                            }
+                            programmeBatch.clear()
                         }
-                        programmeBatch.clear()
                     }
                 }
-            }
 
-            // Flush remaining
-            if (channelEntities.isNotEmpty()) {
-                writeMutex.withLock {
-                    db.withTransaction { dao.insertChannelsIgnore(channelEntities) }
+                // Flush remaining
+                if (channelEntities.isNotEmpty()) {
+                    writeMutex.withLock {
+                        db.withTransaction { dao.insertChannelsIgnore(channelEntities) }
+                    }
+                    channelCount += channelEntities.size
                 }
-            }
-            if (programmeBatch.isNotEmpty()) {
-                writeMutex.withLock {
-                    db.withTransaction { dao.insertProgrammes(programmeBatch) }
+                if (programmeBatch.isNotEmpty()) {
+                    writeMutex.withLock {
+                        db.withTransaction { dao.insertProgrammes(programmeBatch) }
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Xtream EPG chunk ingestion failed: ${e.message}", e)
             }
-
-            // Update source stats in Settings database
-            writeMutex.withLock {
-                sourceDao.markIngested(
-                    id = sourceId,
-                    timestamp = System.currentTimeMillis(),
-                    channels = channelEntities.size,
-                    programmes = totalProgrammes,
-                    downloadBytes = 0,
-                    ingestMethod = "XTREAM_API",
-                    ingestionDurationMs = System.currentTimeMillis() - ingestStartMs,
-                )
-            }
-
-            lastIngestionStats = IngestionStats(channelEntities.size, totalProgrammes)
-
-            rebuildFtsAndUpdateState()
-        } catch (e: Exception) {
-            Log.e(TAG, "Xtream EPG ingestion failed: ${e.message}", e)
         }
+
+        suspend fun finish() =
+            withContext(Dispatchers.IO) {
+                try {
+                    val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+                    writeMutex.withLock {
+                        sourceDao.markIngested(
+                            id = sourceId,
+                            timestamp = System.currentTimeMillis(),
+                            channels = channelCount,
+                            programmes = programmeCount,
+                            downloadBytes = 0,
+                            ingestMethod = "XTREAM_API",
+                            ingestionDurationMs = System.currentTimeMillis() - startedAtMs,
+                        )
+                    }
+
+                    lastIngestionStats = IngestionStats(channelCount, programmeCount)
+
+                    rebuildFtsAndUpdateState()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Xtream EPG ingestion finish failed: ${e.message}", e)
+                }
+            }
     }
 
     /**
