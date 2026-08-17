@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.core.ui.di
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
@@ -34,54 +36,59 @@ class AppContainer(
      * Provides a MediaRepository instance for the specified provider ID.
      * If the ID is 0, the active provider is used.
      */
-    suspend fun getMediaRepository(providerId: Long = 0L): MediaRepository {
-        val resolvedId =
-            if (providerId > 0L) {
-                providerId
-            } else {
-                providerRepository.getActiveProvider()?.id ?: 0L
-            }
+    suspend fun getMediaRepository(providerId: Long = 0L): MediaRepository =
+        // Everything below touches disk: provider Room lookups, several SharedPreferences loads
+        // (MediaRepository's cache, XtreamRepository's cache) and an OkHttp/Ktor client build.
+        // Callers reach this from LaunchedEffect, which runs on Main, so without this the whole
+        // ~500ms lands on the UI thread during startup — measured with StrictMode on a Shield.
+        withContext(Dispatchers.IO) {
+            val resolvedId =
+                if (providerId > 0L) {
+                    providerId
+                } else {
+                    providerRepository.getActiveProvider()?.id ?: 0L
+                }
 
-        return mutex.withLock {
-            val repo =
-                mediaRepositories[resolvedId] ?: run {
-                    val settings = providerRepository.getProviderSettings(resolvedId)
-                    val newRepo = MediaRepository(context.applicationContext, resolvedId, settings)
+            mutex.withLock {
+                val repo =
+                    mediaRepositories[resolvedId] ?: run {
+                        val settings = providerRepository.getProviderSettings(resolvedId)
+                        val newRepo = MediaRepository(context.applicationContext, resolvedId, settings)
 
-                    // Set the provider implementation
-                    val entity =
-                        if (providerId > 0L) {
-                            providerRepository.getProviderById(providerId)
-                        } else {
-                            providerRepository.getActiveProvider()
+                        // Set the provider implementation
+                        val entity =
+                            if (providerId > 0L) {
+                                providerRepository.getProviderById(providerId)
+                            } else {
+                                providerRepository.getActiveProvider()
+                            }
+
+                        if (entity != null) {
+                            val password = providerRepository.getPassword(entity.id) ?: ""
+                            val provider = MediaProviderFactory.create(entity, context.applicationContext, password)
+                            newRepo.setProvider(provider)
+                            // Only cache once we actually have a backing provider — otherwise this
+                            // provider-less repo would get stuck at mediaRepositories[0L] forever,
+                            // even after a real active provider is set up later.
+                            mediaRepositories[resolvedId] = newRepo
                         }
-
-                    if (entity != null) {
-                        val password = providerRepository.getPassword(entity.id) ?: ""
-                        val provider = MediaProviderFactory.create(entity, context.applicationContext, password)
-                        newRepo.setProvider(provider)
-                        // Only cache once we actually have a backing provider — otherwise this
-                        // provider-less repo would get stuck at mediaRepositories[0L] forever,
-                        // even after a real active provider is set up later.
-                        mediaRepositories[resolvedId] = newRepo
+                        newRepo
                     }
-                    newRepo
+
+                // Surgical Fix: Auto-restore session if not connected.
+                // This ensures direct navigation (from search, EPG browser, etc.) has a valid session.
+                // We do this inside the lock to prevent concurrent restoration attempts.
+                if (!repo.isConnected()) {
+                    try {
+                        repo.connect()
+                    } catch (e: Exception) {
+                        android.util.Log.e("AppContainer", "Auto-connect failed for provider $resolvedId", e)
+                    }
                 }
 
-            // Surgical Fix: Auto-restore session if not connected.
-            // This ensures direct navigation (from search, EPG browser, etc.) has a valid session.
-            // We do this inside the lock to prevent concurrent restoration attempts.
-            if (!repo.isConnected()) {
-                try {
-                    repo.connect()
-                } catch (e: Exception) {
-                    android.util.Log.e("AppContainer", "Auto-connect failed for provider $resolvedId", e)
-                }
+                repo
             }
-
-            repo
         }
-    }
 
     /**
      * Clears all cached repositories and providers.

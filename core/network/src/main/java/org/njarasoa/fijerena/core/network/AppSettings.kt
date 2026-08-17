@@ -9,11 +9,12 @@ import androidx.core.content.edit
 class AppSettings(
     context: Context,
 ) {
-    private val prefs: SharedPreferences =
+    private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences(
             "app_settings",
             Context.MODE_PRIVATE,
         )
+    }
 
     companion object {
         private const val KEY_DEV_MODE = "dev_mode"

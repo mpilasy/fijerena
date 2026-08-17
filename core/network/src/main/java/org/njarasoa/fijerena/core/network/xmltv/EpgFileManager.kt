@@ -188,7 +188,8 @@ class EpgFileManager private constructor(
         ) : MultiSourceState
     }
 
-    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    // Lazy: this class is built in Application.onCreate, ahead of everything else on startup.
+    private val prefs: SharedPreferences by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     private val appSettings by lazy { AppSettings(context) }
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -207,12 +208,13 @@ class EpgFileManager private constructor(
     private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
     val state: StateFlow<MultiSourceState> = _state.asStateFlow()
 
-    private val okHttpClient =
+    private val okHttpClient by lazy {
         org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
             .newBuilder()
             .connectTimeout(60, TimeUnit.SECONDS)
             .readTimeout(3, TimeUnit.MINUTES)
             .build()
+    }
 
     private fun isFixedDevice(): Boolean {
         val type = DeviceDetector.detect().deviceType

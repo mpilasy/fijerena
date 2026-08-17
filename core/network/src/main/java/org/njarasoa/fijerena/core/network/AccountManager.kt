@@ -18,13 +18,18 @@ data class StoredCredentials(
 class AccountManager(
     context: Context,
 ) {
-    private val masterKey =
+    private val masterKey by lazy {
         MasterKey
             .Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
+    }
 
-    private val prefs: SharedPreferences =
+    // Lazy on purpose: keystore unlock + crypto + disk cost ~340ms, and the nav hosts construct
+    // an AccountManager during composition while only reading from it inside coroutines. Built
+    // eagerly it blocked the first frame; deferred, the cost lands on whichever background
+    // caller reads first.
+    private val prefs: SharedPreferences by lazy {
         EncryptedSharedPreferences.create(
             context,
             "xtream_secure_credentials",
@@ -32,6 +37,7 @@ class AccountManager(
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )
+    }
 
     private val json =
         Json {
