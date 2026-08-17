@@ -375,19 +375,21 @@ class CategoryViewModel(
             if (unmatchedItems.isEmpty()) return@launch
 
             val now = System.currentTimeMillis() / 1000
+            // Accumulate across chunks and emit once. Emitting per chunk published a fresh map up
+            // to five times per list load (50 items / 10 per request), and every one of those is a
+            // new ImmutableNowPlaying that recomposes the whole channel list — interleaved with the
+            // network waits between chunks, so the list churned for as long as the fallback ran.
+            val collected = mutableMapOf<String, EpgProgram>()
             for (chunk in unmatchedItems.chunked(10)) {
                 val streamIds = chunk.map { it.id }
                 val epgResult = repository.getEpgBulk(streamIds)?.getOrNull() ?: continue
-                val batchNowPlaying =
-                    epgResult
-                        .mapValues { (_, resp) ->
-                            resp.listings.firstOrNull { now in it.startTime..it.endTime }
-                        }.filterValues { it != null }
-                        .mapValues { it.value!! }
-
-                if (batchNowPlaying.isNotEmpty()) {
-                    _nowPlaying.value = _nowPlaying.value + batchNowPlaying
+                for ((itemId, resp) in epgResult) {
+                    val airing = resp.listings.firstOrNull { now in it.startTime..it.endTime }
+                    if (airing != null) collected[itemId] = airing
                 }
+            }
+            if (collected.isNotEmpty()) {
+                _nowPlaying.value = _nowPlaying.value + collected
             }
 
             // Fire-and-forget: ingest Xtream EPG into index for next time

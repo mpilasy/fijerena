@@ -25,6 +25,7 @@ class XmltvEpgService(
         private const val PARSED_CACHE_TTL_MS = 12L * 60 * 60 * 1000
         private const val KEY_CACHED_EPG = "xmltv_epg_data"
         private const val KEY_CACHE_TIMESTAMP = "xmltv_cache_timestamp"
+        private const val MISS_CACHE_MS = 60_000L
     }
 
     private val cache: SharedPreferences =
@@ -46,6 +47,15 @@ class XmltvEpgService(
     // Cached channel match maps — avoids full DB scan + 5 map builds on every getNowPlayingForItems call
     private var cachedChannelMaps: ChannelMatchMaps? = null
 
+    // A miss is cached too, briefly. Only the success path used to write cachedChannelMaps, so
+    // whenever the maps came out empty — no enabled source for this provider, or no indexed channel
+    // belonging to one — every single call redid the query, and getNowPlayingForItems runs on every
+    // channel-list render and channel switch. Bounded rather than permanent: the index can finish
+    // building after a miss, and the clearCache() that would reset it is called on a different
+    // XmltvEpgService instance than the one MediaRepository holds, so a permanent negative would
+    // strand EPG until process death.
+    private var missCachedUntilMs = 0L
+
     private data class ChannelMatchMaps(
         val byId: Map<String, String>,
         val byIdLower: Map<String, String>,
@@ -60,19 +70,22 @@ class XmltvEpgService(
     private suspend fun buildChannelMatchMaps(): ChannelMatchMaps? {
         // Return cached maps if available — avoids full DB scan on every call
         cachedChannelMaps?.let { return it }
+        if (System.currentTimeMillis() < missCachedUntilMs) return null
 
         // EPG is provider-scoped: without a real provider there is nothing to match against.
-        if (providerId <= 0L) return null
+        if (providerId <= 0L) return cacheMiss()
 
         val settingsDb = SettingsDatabase.getInstance(context)
         val sourceDao = settingsDb.epgSourceDao()
         val validSources = sourceDao.getEnabledSourcesForSearch(providerId)
-        val sourceIds = validSources.map { it.id }.toSet()
-        if (sourceIds.isEmpty()) return null
+        val sourceIds = validSources.map { it.id }
+        if (sourceIds.isEmpty()) return cacheMiss()
 
         val db = EpgIndexDatabase.getInstance(context)
-        val allXmltvChannels = db.epgIndexDao().getAllChannels().filter { it.sourceId in sourceIds }
-        if (allXmltvChannels.isEmpty()) return null
+        // Scoped in SQL rather than loading every indexed channel and filtering in memory: the
+        // table holds every channel of every source, and this runs per channel-list render.
+        val allXmltvChannels = db.epgIndexDao().getChannelsForSources(sourceIds)
+        if (allXmltvChannels.isEmpty()) return cacheMiss()
 
         val byId = mutableMapOf<String, String>()
         val byIdLower = mutableMapOf<String, String>()
@@ -104,7 +117,16 @@ class XmltvEpgService(
             byNormalized = byNormalized,
             normalizedNames = normalizedNamesList.toTypedArray(),
             normalizedIds = normalizedIdsList.toTypedArray()
-        ).also { cachedChannelMaps = it }
+        ).also {
+            cachedChannelMaps = it
+            missCachedUntilMs = 0L
+        }
+    }
+
+    /** Suppress the lookup above for [MISS_CACHE_MS] before it is retried. Always returns null. */
+    private fun cacheMiss(): ChannelMatchMaps? {
+        missCachedUntilMs = System.currentTimeMillis() + MISS_CACHE_MS
+        return null
     }
 
     private fun matchItems(
@@ -268,6 +290,7 @@ class XmltvEpgService(
         cache.edit { clear() }
         parsedEpgCache = null
         cachedChannelMaps = null
+        missCachedUntilMs = 0L
     }
 
     private fun getCachedEpg(): Map<String, EpgResponse>? {

@@ -213,8 +213,8 @@ interface EpgIndexDao {
     )
     suspend fun searchChannelsByName(queryLower: String, sourceIds: List<Long>): List<EpgChannelEntity>
 
-    @Query("SELECT * FROM epg_channel")
-    suspend fun getAllChannels(): List<EpgChannelEntity>
+    @Query("SELECT * FROM epg_channel WHERE source_id IN (:sourceIds)")
+    suspend fun getChannelsForSources(sourceIds: List<Long>): List<EpgChannelEntity>
 
     @Query(
         """
