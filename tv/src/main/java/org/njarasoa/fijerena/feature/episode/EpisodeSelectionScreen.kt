@@ -41,6 +41,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,8 +67,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
+import androidx.tv.material3.CardBorder
+import androidx.tv.material3.CardColors
 import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.CardGlow
+import androidx.tv.material3.CardScale
+import androidx.tv.material3.CardShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -209,6 +216,7 @@ private fun EpisodeListContent(
     val providerName by remember { mutableStateOf(appSettings.providerName) }
     val listState = rememberLazyListState()
     val scale = LocalUiScale.current
+    val episodeCardStyle = episodeCardStyle()
     val typography = MaterialTheme.typography
     val scaledStyles =
         remember(scale, typography) {
@@ -536,6 +544,7 @@ private fun EpisodeListContent(
                                 val isContinueWatching = episode.id == initialEpisodeId
                                 EpisodeCard(
                                     episode = episode,
+                                    cardStyle = episodeCardStyle,
                                     isContinueWatching = isContinueWatching,
                                     watchProgress = episodeProgress[episode.id] ?: 0f,
                                     isWatched = episode.id in watchedEpisodeIds,
@@ -930,9 +939,61 @@ private fun SeasonHeader(
     }
 }
 
+/**
+ * Episode card styling, built once per list composition instead of once per card.
+ * `CardDefaults.colors`/`.border` are `@Composable`, so they cannot be wrapped in `remember` —
+ * hoisting the calls out of the item body is what stops a full style set being allocated per
+ * visible card per recomposition. A data class so a fresh instance still compares equal and lets
+ * cards skip.
+ */
+@Immutable
+private data class EpisodeCardStyle(
+    val colors: CardColors,
+    val cardScale: CardScale,
+    val glow: CardGlow,
+    val shape: CardShape,
+    val border: CardBorder,
+    val continueWatchingBorder: CardBorder,
+)
+
+@Composable
+private fun episodeCardStyle(): EpisodeCardStyle =
+    EpisodeCardStyle(
+        colors =
+            CardDefaults.colors(
+                containerColor = CinemaSurface,
+                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+            ),
+        cardScale =
+            CardDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScaleContent,
+                pressedScale = TvFocusTokens.pressedScaleSubtle,
+            ),
+        glow =
+            CardDefaults.glow(
+                focusedGlow =
+                    Glow(
+                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                        elevation = TvFocusTokens.focusShadowElevation,
+                    ),
+            ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium)),
+        border = CardDefaults.border(),
+        continueWatchingBorder =
+            CardDefaults.border(
+                border =
+                    Border(
+                        border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccent),
+                        shape = RoundedCornerShape(CornerRadius.medium),
+                    ),
+            ),
+    )
+
 @Composable
 private fun EpisodeCard(
     episode: DomainEpisodeItem,
+    cardStyle: EpisodeCardStyle,
     isContinueWatching: Boolean = false,
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
@@ -957,38 +1018,11 @@ private fun EpisodeCard(
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight.scaled(scale))
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
-        colors =
-            CardDefaults.colors(
-                containerColor = CinemaSurface,
-                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-            ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium)),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleContent,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        border =
-            if (isContinueWatching) {
-                CardDefaults.border(
-                    border =
-                        Border(
-                            border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccent),
-                            shape = RoundedCornerShape(CornerRadius.medium),
-                        ),
-                )
-            } else {
-                CardDefaults.border()
-            },
-        glow =
-            CardDefaults.glow(
-                focusedGlow =
-                    androidx.tv.material3.Glow(
-                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                        elevation = TvFocusTokens.focusShadowElevation,
-                    ),
-            ),
+        colors = cardStyle.colors,
+        shape = cardStyle.shape,
+        scale = cardStyle.cardScale,
+        border = if (isContinueWatching) cardStyle.continueWatchingBorder else cardStyle.border,
+        glow = cardStyle.glow,
     ) {
         Row(
             modifier =

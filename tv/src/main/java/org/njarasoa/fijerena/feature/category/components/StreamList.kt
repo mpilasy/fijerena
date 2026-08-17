@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,8 +38,13 @@ import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Card
+import androidx.tv.material3.CardColors
 import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.CardGlow
+import androidx.tv.material3.CardScale
+import androidx.tv.material3.CardShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Glow
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -72,6 +78,49 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+
+/**
+ * Row card styling, built once per list composition instead of once per row.
+ * `CardDefaults.colors` is `@Composable`, so it cannot be wrapped in `remember` — hoisting the
+ * calls out of the item body is what stops a `CardColors`/`CardScale`/`CardGlow`/`CardShape` set
+ * being allocated per visible row per recomposition. A data class so a fresh instance (e.g. from
+ * the refresh-spinner rotation) still compares equal and lets rows skip.
+ */
+@Immutable
+private data class StreamCardStyle(
+    val colors: CardColors,
+    val cardScale: CardScale,
+    val glow: CardGlow,
+    val shape: CardShape,
+)
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun streamCardStyle(scale: Float): StreamCardStyle =
+    StreamCardStyle(
+        colors =
+            CardDefaults.colors(
+                containerColor = CinemaSurface,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                focusedContentColor = CinemaTextPrimary,
+            ),
+        cardScale =
+            CardDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScaleContent,
+                pressedScale = TvFocusTokens.pressedScaleSubtle,
+            ),
+        glow =
+            CardDefaults.glow(
+                focusedGlow =
+                    Glow(
+                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                        elevation = TvFocusTokens.focusShadowElevation,
+                    ),
+            ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
+    )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -117,6 +166,7 @@ internal fun StreamList(
     val lastPlayedFocusRequester = remember { FocusRequester() }
 
     val scale = LocalUiScale.current
+    val cardStyle = streamCardStyle(scale)
 
     // Auto-scroll and focus on last played item (on initial load and when returning from player).
     // Keyed to selectedCategoryId so switching list context (e.g. the Live TV preview panel's
@@ -285,6 +335,7 @@ internal fun StreamList(
                                 // Only the last-played item gets a focus requester for auto-scroll
                                 focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null,
                                 thumbnailScale = thumbnailScale,
+                                cardStyle = cardStyle,
                                 modifier =
                                     // remember-scoped so a recomposition of an already-visible item
                                     // reuses the same answer. Called bare, add() returned false on
@@ -317,6 +368,7 @@ private fun StreamItem(
     onFocused: () -> Unit = {},
     focusRequester: FocusRequester? = null,
     thumbnailScale: Float = 1f,
+    cardStyle: StreamCardStyle,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
@@ -354,28 +406,10 @@ private fun StreamItem(
                         Modifier
                     },
                 ),
-        colors =
-            CardDefaults.colors(
-                containerColor = CinemaSurface,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleContent,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        glow =
-            CardDefaults.glow(
-                focusedGlow =
-                    androidx.tv.material3.Glow(
-                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                        elevation = TvFocusTokens.focusShadowElevation,
-                    ),
-            ),
+        colors = cardStyle.colors,
+        shape = cardStyle.shape,
+        scale = cardStyle.cardScale,
+        glow = cardStyle.glow,
     ) {
         Column {
             Row(

@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,7 +48,12 @@ import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 
 import androidx.tv.material3.Card
+import androidx.tv.material3.CardColors
 import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.CardGlow
+import androidx.tv.material3.CardScale
+import androidx.tv.material3.CardShape
+import androidx.tv.material3.Glow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -78,6 +84,59 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 // Pre-compiled formatter — locale-aware full date (e.g., "Thursday, February 27, 2026")
 private val EPG_DATE_FORMATTER = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
 
+/**
+ * Card styling for the guide, built once per grid composition instead of once per cell.
+ * `CardDefaults.colors` is `@Composable`, so it cannot be wrapped in `remember` — hoisting the
+ * calls out of the item bodies is what stops the 50×N `CardColors`/`CardScale`/`CardGlow`
+ * allocations per recomposition. A data class so that a fresh instance from the 60s tick still
+ * compares equal and lets unaffected rows skip.
+ */
+@Immutable
+private data class EpgCardStyle(
+    val colors: CardColors,
+    val currentColors: CardColors,
+    val cardScale: CardScale,
+    val glow: CardGlow,
+    val shape: CardShape,
+)
+
+@Composable
+private fun epgCardStyle(): EpgCardStyle {
+    val accent = org.njarasoa.fijerena.ui.theme.CinemaAccent
+    val focusedContainer = accent.copy(alpha = CinemaAlpha.tint)
+    return EpgCardStyle(
+        colors =
+            CardDefaults.colors(
+                containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = focusedContainer,
+                focusedContentColor = CinemaTextPrimary,
+            ),
+        currentColors =
+            CardDefaults.colors(
+                containerColor = org.njarasoa.fijerena.ui.theme.CinemaAccentDark,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = focusedContainer,
+                focusedContentColor = CinemaTextPrimary,
+            ),
+        cardScale =
+            CardDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScaleContent,
+                pressedScale = TvFocusTokens.pressedScaleSubtle,
+            ),
+        glow =
+            CardDefaults.glow(
+                focusedGlow =
+                    Glow(
+                        elevationColor = accent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                        elevation = TvFocusTokens.focusShadowElevation,
+                    ),
+            ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
+    )
+}
+
 @Composable
 fun EpgGridLayout(
     categoryName: String,
@@ -103,6 +162,7 @@ fun EpgGridLayout(
     var isSearchActive by remember { mutableStateOf(false) }
 
     val nowEpochSeconds = rememberNowEpochSeconds()
+    val cardStyle = epgCardStyle()
 
     Column(
         modifier =
@@ -192,6 +252,7 @@ fun EpgGridLayout(
                             // Channel name on the left
                             ChannelItem(
                                 channel = row.channel,
+                                cardStyle = cardStyle,
                                 onClick = {
                                     onChannelSelected(
                                         row.channel.id,
@@ -209,6 +270,7 @@ fun EpgGridLayout(
                                 channelRow = row,
                                 timeSlots = timeSlots,
                                 nowEpochSeconds = nowEpochSeconds,
+                                cardStyle = cardStyle,
                                 scrollState = horizontalScrollState,
                                 onProgramSelected = { program ->
                                     onProgramSelected(program, row.channel)
@@ -339,6 +401,7 @@ private fun EmptyEpgMessage() {
 @Composable
 private fun ChannelItem(
     channel: MediaItem,
+    cardStyle: EpgCardStyle,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -357,32 +420,10 @@ private fun ChannelItem(
             modifier
                 .height(TvDimensions.epgRowHeight.scaled(scale))
                 .onFocusChanged { isFocused = it.isFocused },
-        colors =
-            CardDefaults.colors(
-                containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor =
-                    org.njarasoa.fijerena.ui.theme.CinemaAccent
-                        .copy(alpha = CinemaAlpha.tint),
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleContent,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        glow =
-            CardDefaults.glow(
-                focusedGlow =
-                    androidx.tv.material3.Glow(
-                        elevationColor =
-                            org.njarasoa.fijerena.ui.theme.CinemaAccent
-                                .copy(alpha = CinemaAlpha.cardElevationShadow),
-                        elevation = TvFocusTokens.focusShadowElevation,
-                    ),
-            ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
+        colors = cardStyle.colors,
+        scale = cardStyle.cardScale,
+        glow = cardStyle.glow,
+        shape = cardStyle.shape,
     ) {
         Box(
             modifier =
@@ -457,6 +498,7 @@ private fun ProgramRow(
     channelRow: EpgChannelRow,
     timeSlots: List<TimeSlot>,
     nowEpochSeconds: Long,
+    cardStyle: EpgCardStyle,
     scrollState: LazyListState,
     onProgramSelected: (EpgProgram) -> Unit,
     modifier: Modifier = Modifier,
@@ -479,6 +521,7 @@ private fun ProgramRow(
             ProgramCell(
                 program = program,
                 nowEpochSeconds = nowEpochSeconds,
+                cardStyle = cardStyle,
                 onClick = { onProgramSelected(program) },
             )
         }
@@ -489,6 +532,7 @@ private fun ProgramRow(
 private fun ProgramCell(
     program: EpgProgram,
     nowEpochSeconds: Long,
+    cardStyle: EpgCardStyle,
     onClick: () -> Unit,
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -514,32 +558,10 @@ private fun ProgramCell(
                 .fillMaxHeight()
                 .padding(Spacing.xxs.scaled(scale))
                 .onFocusChanged { isFocused = it.isFocused },
-        colors =
-            CardDefaults.colors(
-                containerColor = if (isCurrent) org.njarasoa.fijerena.ui.theme.CinemaAccentDark else org.njarasoa.fijerena.ui.theme.CinemaSurface,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor =
-                    org.njarasoa.fijerena.ui.theme.CinemaAccent
-                        .copy(alpha = CinemaAlpha.tint),
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleContent,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        glow =
-            CardDefaults.glow(
-                focusedGlow =
-                    androidx.tv.material3.Glow(
-                        elevationColor =
-                            org.njarasoa.fijerena.ui.theme.CinemaAccent
-                                .copy(alpha = CinemaAlpha.cardElevationShadow),
-                        elevation = TvFocusTokens.focusShadowElevation,
-                    ),
-            ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
+        colors = if (isCurrent) cardStyle.currentColors else cardStyle.colors,
+        scale = cardStyle.cardScale,
+        glow = cardStyle.glow,
+        shape = cardStyle.shape,
     ) {
         Column(
             modifier =
