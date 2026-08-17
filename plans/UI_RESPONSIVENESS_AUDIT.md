@@ -3,7 +3,8 @@
 Companion to `UX_FLOW_AUDIT.md`, which covers navigation *friction* (IA, discoverability). This
 is the orthogonal axis: how fast the app feels. Audited 2026-08-17.
 
-**Status:** findings only — nothing here has been acted on.
+**Status:** steps 1–4 done (2026-08-17) — §A1, B1, B5 (partial), D2, D3, E1, E2 are fixed and
+landed. Steps 5–10 are still findings only.
 
 ---
 
@@ -22,7 +23,7 @@ below are invisible while animations are off, and you've said the `0.0` is lefto
 
 ---
 
-### Step 1 — The two bugs · §E1, E2 · low risk
+### Step 1 — The two bugs · §E1, E2 · low risk — ✅ **done** (`3febc8c1`)
 `CategoryList.kt:125-134` key the spinner loop on `categoriesRefreshing` (copy `StreamList.kt:101`).
 Move the `enteredStreamIds`/`enteredCategoryIds` first-seen check out of composition —
 `StreamList.kt:289`, `CategoryList.kt:154/263`, `MobileCategoryListScreen.kt:958/993/1038/1078/1166`.
@@ -32,14 +33,14 @@ org.njarasoa.fijerena` — `Total frames rendered` must stop climbing at rest. T
 after the first refresh. Entrance animation should now play fully instead of snapping.
 **Commit:** `fix(browse): stop the refresh spinner and entrance animation fighting recomposition`
 
-### Step 2 — Live TV first frame · §A1 · low risk
+### Step 2 — Live TV first frame · §A1 · low risk — ✅ **done** (`537bc9d2`)
 Call `setContentType(LIVE_TV)` on the `LiveTvSplitLayout` path.
 
 **Check:** `adb logcat | grep -i loadcontrol` on a live channel — expect the LIVE profile, not VOD.
 Time OK→first frame from `screenrecord` frame counts, before and after; expect ~500ms off.
 **Commit:** `fix(live-tv): select the live buffer profile on the preview and promoted paths`
 
-### Step 3 — Permanent per-frame work in lists · §D2, D3 · low risk
+### Step 3 — Permanent per-frame work in lists · §D2, D3 · low risk — ✅ **done** (`8fa4be04`)
 `remember` the `ImmutableMediaList` wrapper at `LiveTvSplitLayout.kt:508`. Focus-gate the marquee at
 `CategoryList.kt:361` and the four mobile sites — finishing what `51c5f628` started.
 
@@ -47,7 +48,7 @@ Time OK→first frame from `screenrecord` frame counts, before and after; expect
 each overflowing row runs its own `invalidateDraw` loop. Scroll `Janky frames` % should drop.
 **Commit:** `perf(browse): stop marquee and entrance work on idle rows`
 
-### Step 4 — TV navigation feel · §B1, B5 · low risk
+### Step 4 — TV navigation feel · §B1, B5 · low risk — ✅ **done** (`b3659bb8`)
 Declare the four transitions on `TvNavHost` (mobile's 300ms is the obvious reference). Give TV's
 episode screen mobile's `lastSuccess` retention so refresh stops blanking the list.
 
@@ -56,7 +57,7 @@ double-fade; Live TV's double-push should no longer stack two crossfades. Refres
 confirm the list stays put.
 **Commit:** `feat(tv): declare navigation transitions, keep episode list through refresh`
 
-### Step 5 — Compose stability · §D1 · medium risk
+### Step 5 — Compose stability · §D1 · medium risk — ⏭ **skipped for now**
 Add the Compose compiler plugin (or a stability config) to `core:player`.
 
 **Check:** the one step that needs a real before/after artifact — build with
@@ -113,9 +114,9 @@ zap burst.
 session and it's tangled with service lifecycle. §D5/§D6 (vestigial `scaled()`, `composed {}`
 long-press) — wide, low-value; do opportunistically when touching those files anyway.
 
-**Natural stopping point: after step 4.** Steps 1–4 are all low-risk and cover both bugs, the live
-first-frame gate, both sources of permanent per-frame work, and the navigation feel. Measure there
-before deciding whether 5–10 earn their risk.
+**Natural stopping point: after step 4.** ✅ **Reached.** Steps 1–4 are all low-risk and cover both
+bugs, the live first-frame gate, both sources of permanent per-frame work, and the navigation feel.
+Measure here before deciding whether 5–10 earn their risk.
 
 ## Context
 
@@ -141,7 +142,7 @@ DB. Largest single Live TV category: **9,479 streams**.
 
 # A. Video start and switching
 
-### A1. Live TV runs on the VOD buffer profile — double the first-frame gate ✅*verified*
+### A1. Live TV runs on the VOD buffer profile — double the first-frame gate ✅*verified* — **FIXED** (`537bc9d2`)
 
 `StreamingPlaybackService.kt:313` defaults to `ContentType.VOD`. `setContentType` has exactly two
 call sites — `TvPlayerScreen.kt:139`, `MobilePlayerScreen.kt:321`.
@@ -205,7 +206,7 @@ build, wake-lock acquire.
 
 # B. Moving between screens
 
-### B1. TV declares no nav transitions — inherits a 700 ms crossfade ✅*verified*
+### B1. TV declares no nav transitions — inherits a 700 ms crossfade ✅*verified* — **FIXED** (`b3659bb8`)
 
 `TvNavHost.kt` declares **zero** of the four transition params (grep count: 0). navigation-compose
 2.8.5 then applies its default `fadeIn/fadeOut(tween(700))`. Every TV screen change is a 700 ms
@@ -252,7 +253,11 @@ passes over the stream list plus a `HashSet` the size of the category (`MediaRep
 `loadCategoriesInternal` sets `UiState.Loading` (`:167`) with no stale-content retention, so any
 re-load blanks the grid instead of updating in place.
 
-### B5. Detail screens serialize four round trips; series always hit network
+### B5. Detail screens serialize four round trips; series always hit network — **PARTIALLY FIXED** (`b3659bb8`)
+
+Fixed: TV `EpisodeSelectionScreen` now retains `lastSuccess` on refresh. Still open: the four
+sequential round trips in `MovieDetailsViewModel`/`SeriesDetailsViewModel`, and the missing series
+detail cache.
 
 `MovieDetailsViewModel.kt:49-80` emits `Success` only after four sequential suspend calls —
 including `getFilteredCategories("MOVIES")` plus a `firstOrNull` scan purely to resolve a category
@@ -333,7 +338,7 @@ and `CategoryViewModel` itself is threaded through `StreamList.kt:86`, `Category
 `TwoColumnLayout.kt:55`. The mobile module never uses `ImmutableCategoryList`/`ImmutableMediaList`
 at all.
 
-### D2. An unremembered wrapper defeats the stability work in the hottest path
+### D2. An unremembered wrapper defeats the stability work in the hottest path — **FIXED** (`8fa4be04`)
 
 `LiveTvSplitLayout.kt:508` — `streams = ImmutableMediaList(displayedStreams)`. The inner list *is*
 remembered (`:495-506`); the wrapper is not. So `StreamList`'s `streams` parameter gets a new
@@ -342,7 +347,7 @@ identity on **every recomposition**, which re-runs `remember(streams) { mutableS
 per-frame `invalidateMeasurement()` loop (`StaggeredEntrance.kt:55-73`). Line `:392-394` in the
 same file *is* correctly remembered — so this is an oversight, not a convention.
 
-### D3. Marquee is focus-gated in one place and unconditional everywhere else
+### D3. Marquee is focus-gated in one place and unconditional everywhere else — **FIXED** (`8fa4be04`)
 
 The `perf(live-tv)` commit gated it in `StreamItem` (`StreamList.kt:426`, `:445`). It was **not**
 applied to:
@@ -381,9 +386,9 @@ document avoiding `composed {}` for exactly this reason. Same again at `SearchSc
 
 ---
 
-# E. Two real bugs found on the way
+# E. Two real bugs found on the way — both **FIXED** (`3febc8c1`)
 
-### E1. `CategoryList`'s refresh spinner can never stop ✅*verified*
+### E1. `CategoryList`'s refresh spinner can never stop ✅*verified* — **FIXED**
 
 `CategoryList.kt:125-134`:
 ```kotlin
@@ -399,7 +404,7 @@ never observe it going `false`. After the first refresh it writes `targetRotatio
 `StreamList.kt:101` is keyed on `LaunchedEffect(streamsLoading)` and **is** cancelled correctly —
 so the correct version already exists one file over.
 
-### E2. Composition-time set mutation drops the entrance animation
+### E2. Composition-time set mutation drops the entrance animation — **FIXED**
 
 `StreamList.kt:289` — `if (enteredStreamIds.add(item.id))` inside the item lambda. Two effects:
 the set grows to full category size (thousands of entries), and `add` returns `false` on the first
@@ -407,7 +412,7 @@ the set grows to full category size (thousands of entries), and `add` returns `f
 detaching the node and cancelling the animation mid-flight. Same pattern at
 `MobileCategoryListScreen.kt:958, 993, 1038, 1078, 1166` and `CategoryList.kt:154, 263-267`.
 
-Adjacent: `MobileCategoryListScreen.kt:1014` calls `categoryViewModel.isFavoriteCategory(...)`
+Adjacent (**still open**): `MobileCategoryListScreen.kt:1026` calls `categoryViewModel.isFavoriteCategory(...)`
 **inside** the `LazyRow` item lambda, per category, per recomposition, over 869 categories. TV
 avoids this by passing a precomputed `favoriteCategoryIds` set (`CategoryList.kt:82, 258`) — mobile
 never adopted that flow. Also `MobileCategoryListScreen.kt:460` does an O(n) `find` over 869
@@ -432,15 +437,17 @@ categories inside `TopAppBar(actions = …)`.
 
 # If you only act on five
 
-1. **A1** — the `setContentType` gap. One missing call; halves the live first-frame gate.
+1. ✅ **A1** — the `setContentType` gap. One missing call; halves the live first-frame gate.
 2. **D1** — add the Compose compiler plugin (or a stability config) to `core:player`. One config
    change, improves skipping in every list.
-3. **B1** — declare TV nav transitions. A 700 ms library default is almost certainly not your
+3. ✅ **B1** — declare TV nav transitions. A 700 ms library default is almost certainly not your
    choice; restore darcy's `animator_duration_scale` first or you can't see it.
-4. **E1 + D3** — the never-terminating spinner loop, and finishing the marquee focus-gate in the
+4. ✅ **E1 + D3** — the never-terminating spinner loop, and finishing the marquee focus-gate in the
    two places the earlier commit missed. Both are small, and both remove permanent per-frame work.
 5. **A2** — stop gating first frame on EPG and watch-history. The decoder needs a URL; the rest can
    land after playback starts.
+
+Remaining from this list: **D1** (step 5) and **A2** (step 10).
 
 # How to verify any of it
 
