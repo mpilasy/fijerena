@@ -392,8 +392,9 @@ class CategoryViewModel(
                 _nowPlaying.value = _nowPlaying.value + collected
             }
 
-            // Fire-and-forget: ingest Xtream EPG into index for next time
-            launch { repository.ingestXtreamEpgIfNeeded() }
+            // The catalogue-wide EPG ingest used to be fired off here. It is EpgSyncWorker's job
+            // now — running it from a list load meant a whole-catalogue fetch competing with
+            // video decode in the same process, which stuttered playback and eventually ANR'd.
         }
     }
 

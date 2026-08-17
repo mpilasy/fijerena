@@ -12,7 +12,11 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.XtreamMediaProvider
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 
 /**
  * WorkManager worker for background EPG sync (all device types).
@@ -78,7 +82,7 @@ class EpgSyncWorker(
             } else {
                 fileManager.getStaleSources()
             }
-            if (staleSources.isEmpty()) {
+            val xmltvResult = if (staleSources.isEmpty()) {
                 Log.i(TAG, "doWork: all sources fresh, nothing to do")
                 Result.success()
             } else {
@@ -94,9 +98,51 @@ class EpgSyncWorker(
                     Result.success()
                 }
             }
+
+            ingestXtreamEpg()
+            xmltvResult
         } catch (e: Exception) {
             Log.w(TAG, "doWork: failed — ${e.message}", e)
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+        }
+    }
+
+    /**
+     * Pull the Xtream API EPG into the index for every Xtream provider.
+     *
+     * This used to be fired off from the Live TV list load, so a catalogue-wide EPG fetch ran
+     * against the same process that was decoding video — it starved playback badly enough to
+     * ANR. It belongs here: background, wake-lock-backed, and off the playback path. The
+     * per-provider 6h TTL still applies, so a worker run that fires sooner is nearly free.
+     */
+    private suspend fun ingestXtreamEpg() {
+        val providerRepo = ProviderRepository(applicationContext)
+        val providers =
+            try {
+                providerRepo.getAllProvidersList().filter { it.type == "XTREAM" }
+            } catch (e: Exception) {
+                Log.w(TAG, "ingestXtreamEpg: cannot list providers — ${e.message}", e)
+                return
+            }
+
+        for (provider in providers) {
+            try {
+                val password = providerRepo.getPassword(provider.id) ?: continue
+                val mediaProvider = MediaProviderFactory.create(provider, applicationContext, password)
+                if (mediaProvider !is XtreamMediaProvider) continue
+                if (!mediaProvider.isConnected()) mediaProvider.connect()
+                if (!mediaProvider.isConnected()) {
+                    Log.w(TAG, "ingestXtreamEpg: ${provider.name} not connected, skipping")
+                    continue
+                }
+
+                val repository = MediaRepository(applicationContext, provider.id)
+                repository.setProvider(mediaProvider)
+                repository.ingestXtreamEpgIfNeeded()
+                Log.i(TAG, "ingestXtreamEpg: ${provider.name} done")
+            } catch (e: Exception) {
+                Log.w(TAG, "ingestXtreamEpg: ${provider.name} failed — ${e.message}", e)
+            }
         }
     }
 
