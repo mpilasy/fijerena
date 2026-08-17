@@ -41,7 +41,10 @@ class StreamHealthMonitor(
     data class Config(
         val minBufferMs: Long = 8000L,
         val sustainedDegradationWindowMs: Long = 20000L,
-        val maxFrameDropRate: Float = 15.0f,
+        // 15 dropped frames/sec meant a 25fps stream could lose over half its frames and still
+        // report "Healthy" — visibly broken playback the stats panel called fine. 5/sec is still
+        // only tripped after sustainedDegradationWindowMs of it, so a brief hiccup won't recycle.
+        val maxFrameDropRate: Float = 5.0f,
         val evaluationIntervalMs: Long = 5000L,
         val maxRecycleAttempts: Int = 3,
         val degradedRecycleIntervalMs: Long = 30_000L,
