@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -1091,6 +1092,11 @@ private fun StreamsList(
 ) {
     val listState = rememberLazyListState()
 
+    // Built once per list composition rather than once per row. CardDefaults.cardColors is
+    // @Composable, so it can't be wrapped in remember — hoisting the call out of the item body
+    // is what stops a CardColors being allocated per visible row per recomposition.
+    val streamCardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
     // of the scroll buffer, so without this guard the fade/slide replays on every scroll.
     // Keyed to items so it resets (bounded) on category switch instead of growing unbounded
@@ -1178,6 +1184,7 @@ private fun StreamsList(
                             isCurrentlyPlaying = item.id == currentlyPlayingId,
                             isWatched = item.id in watchedIds,
                             watchProgress = watchProgress[item.id] ?: 0f,
+                            cardColors = streamCardColors,
                             onClick = {
                                 onItemSelected(item.id, item.name, item.categoryId)
                             },
@@ -1246,6 +1253,7 @@ private fun StreamCard(
     isCurrentlyPlaying: Boolean = false,
     isWatched: Boolean = false,
     watchProgress: Float = 0f,
+    cardColors: CardColors,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -1259,10 +1267,7 @@ private fun StreamCard(
                     onClick = onClick,
                     onLongClick = onLongClick,
                 ),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
+        colors = cardColors,
         border =
             if (isCurrentlyPlaying) {
                 androidx.compose.foundation.BorderStroke(2.dp, CinemaAccent)
