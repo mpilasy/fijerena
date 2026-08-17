@@ -104,6 +104,7 @@ internal fun LiveTvSplitLayout(
     favoriteIds: ImmutableStringSet,
     favoriteCategoryIds: ImmutableStringSet,
     watchProgress: ImmutableWatchProgress,
+    watchedIds: ImmutableStringSet,
     onCategorySelected: (String) -> Unit,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
     onRefreshCategories: () -> Unit,
@@ -216,6 +217,7 @@ internal fun LiveTvSplitLayout(
                 isDevMode = isDevMode,
                 favoriteIds = favoriteIds,
                 watchProgress = watchProgress,
+                watchedIds = watchedIds,
                 onCategorySelected = onCategorySelected,
                 onStreamSelected = onStreamSelected,
                 onStreamPromote = { },
@@ -525,6 +527,7 @@ internal fun LiveTvSplitLayout(
                 isDevMode = isDevMode,
                 favoriteIds = favoriteIds,
                 watchProgress = watchProgress,
+                watchedIds = watchedIds,
                 onCategorySelected = onCategorySelected,
                 onStreamSelected = onStreamSelected,
                 onRefreshStreams = {
@@ -624,6 +627,7 @@ private fun LiveTvChannelList(
     isDevMode: Boolean,
     favoriteIds: ImmutableStringSet,
     watchProgress: ImmutableWatchProgress,
+    watchedIds: ImmutableStringSet,
     onCategorySelected: (String) -> Unit,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
     onStreamPromote: (MediaItem) -> Unit,
@@ -644,6 +648,7 @@ private fun LiveTvChannelList(
         isDevMode = isDevMode,
         favoriteIds = favoriteIds,
         watchProgress = watchProgress,
+        watchedIds = watchedIds,
         onStreamSelected = { streamId, streamName, categoryId, providerData ->
             if (providerData["isCategoryRef"] == "true") {
                 providerData["categoryId"]?.let { onCategorySelected(it) }

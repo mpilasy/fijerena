@@ -9,24 +9,31 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Glow
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GradientOverlay
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -59,6 +66,7 @@ fun CinemaContentCard(
     contentType: ThumbnailContentType = ThumbnailContentType.DEFAULT,
     isFavorite: Boolean = false,
     watchProgress: Float = 0f,
+    isWatched: Boolean = false,
 ) {
     Card(
         onClick = onClick,
@@ -104,6 +112,20 @@ fun CinemaContentCard(
                         .align(Alignment.BottomCenter),
             )
 
+            // Watched check at top-left — top-right is the favorite star's corner
+            if (isWatched) {
+                Icon(
+                    imageVector = CinemaIcons.CheckCircle,
+                    contentDescription = stringResource(R.string.content_watched_badge),
+                    tint = CinemaSuccess,
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopStart)
+                            .padding(Spacing.xs)
+                            .size(TvDimensions.iconSmall),
+                )
+            }
+
             // Favorite star at top-right
             if (isFavorite) {
                 Text(
@@ -146,38 +168,16 @@ fun CinemaContentCard(
 
             // Watch progress bar at very bottom
             if (watchProgress > 0f) {
-                Box(
+                LinearProgressIndicator(
+                    progress = { watchProgress.coerceIn(0f, 1f) },
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .height(TvDimensions.borderFocused)
                             .align(Alignment.BottomCenter),
-                ) {
-                    // Track
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .padding(),
-                    )
-                    // Progress
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth(watchProgress.coerceIn(0f, 1f))
-                                .height(TvDimensions.borderFocused)
-                                .align(Alignment.CenterStart),
-                    ) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxSize()
-                                    .then(
-                                        Modifier.padding(), // accent bar
-                                    ),
-                        )
-                    }
-                }
+                    color = CinemaAccent,
+                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
+                )
             }
         }
     }

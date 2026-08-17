@@ -981,4 +981,16 @@ class XtreamContentManager(
             .joinToString(" ") { "$it*" }
         return ftsQuery
     }
+
+    /**
+     * Episode count per series id, from the local cache only — one grouped query, no network.
+     * Feeds the series-row watch bar's denominator; series never opened aren't in the cache and
+     * are simply absent from the map.
+     */
+    suspend fun getEpisodeCountsBySeries(): Map<String, Int> =
+        withContext(Dispatchers.IO) {
+            episodeDao
+                .countEpisodesBySeries(providerId)
+                .mapKeys { (seriesId, _) -> seriesId.toString() }
+        }
 }

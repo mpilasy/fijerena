@@ -150,6 +150,8 @@ class XtreamRepository(
 
     suspend fun syncStreams(type: String): Deferred<Unit> = contentManager.syncStreams(type)
 
+    suspend fun getEpisodeCountsBySeries(): Map<String, Int> = contentManager.getEpisodeCountsBySeries()
+
     suspend fun syncSeries(): Deferred<Unit> = contentManager.syncSeries()
 
     suspend fun recomputeExclusions() = contentManager.recomputeExclusions()

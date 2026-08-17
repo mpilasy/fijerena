@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
@@ -50,6 +51,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -263,10 +265,15 @@ private fun EpisodeListContent(
         }
     }
 
-    // Auto-expand season with next unwatched/in-progress episode
-    LaunchedEffect(seriesDetail) {
-        if (!hasMultipleSeasons) return@LaunchedEffect
+    // Per-episode resume fraction, drives the progress bar on each card. Re-read on every
+    // entry into this screen — including coming back from the player — so a just-watched
+    // episode's bar is current.
+    var episodeProgress by remember(seriesDetail) { mutableStateOf<Map<String, Float>>(emptyMap()) }
+    var watchedEpisodeIds by remember(seriesDetail) { mutableStateOf<Set<String>>(emptySet()) }
 
+    // Playback positions for every episode: the progress bars and watched checks above, plus
+    // auto-expanding the season holding the next unwatched/in-progress episode.
+    LaunchedEffect(seriesDetail) {
         // ⚡ Bolt: Avoid flatten().map to prevent intermediate list allocations
         val allEpisodeIds = mutableListOf<String>()
         for (episodes in seriesDetail.episodes.values) {
@@ -276,6 +283,21 @@ private fun EpisodeListContent(
         }
 
         val allWatched = mediaRepository.getPlaybackPositionsSuspend(allEpisodeIds, ContentType.TV_SHOWS)
+
+        episodeProgress =
+            buildMap {
+                for ((id, watched) in allWatched) {
+                    watched.resumeProgress()?.let { put(id, it) }
+                }
+            }
+        watchedEpisodeIds =
+            buildSet {
+                for ((id, watched) in allWatched) {
+                    if (watched.isCompleted) add(id)
+                }
+            }
+
+        if (!hasMultipleSeasons) return@LaunchedEffect
 
         val unwatchedSeason =
             firstSeasonWithUnwatchedEpisode(
@@ -389,6 +411,8 @@ private fun EpisodeListContent(
                         EpisodeCard(
                             episode = episode,
                             isContinueWatching = episode.id == initialEpisodeId,
+                            watchProgress = episodeProgress[episode.id] ?: 0f,
+                            isWatched = episode.id in watchedEpisodeIds,
                             onClick = {
                                 onEpisodeSelected(episode)
                             },
@@ -663,6 +687,8 @@ private fun SeasonHeader(
 private fun EpisodeCard(
     episode: DomainEpisodeItem,
     isContinueWatching: Boolean = false,
+    watchProgress: Float = 0f,
+    isWatched: Boolean = false,
     onClick: () -> Unit,
 ) {
     CinemaCard(
@@ -682,17 +708,35 @@ private fun EpisodeCard(
                     .padding(CinemaSpacing.sm),
             verticalAlignment = Alignment.Top,
         ) {
-            // Episode thumbnail
-            CinemaThumbnail(
-                url = episode.thumbnailUrl,
-                fallbackLetter = episode.title.firstOrNull(),
-                contentType = ThumbnailContentType.TV_SHOW,
+            // Episode thumbnail, with the resume bar and watched check overlaid on it so rows
+            // with and without either keep the same height. The two are mutually exclusive:
+            // resumeProgress() returns null once an episode is marked completed.
+            Box(
                 modifier =
                     Modifier.size(
                         width = MobileDimensions.posterWidth,
                         height = MobileDimensions.posterHeight,
                     ),
-            )
+            ) {
+                CinemaThumbnail(
+                    url = episode.thumbnailUrl,
+                    fallbackLetter = episode.title.firstOrNull(),
+                    contentType = ThumbnailContentType.TV_SHOW,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (watchProgress > 0f) {
+                    LinearProgressIndicator(
+                        progress = { watchProgress.coerceIn(0f, 1f) },
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(MobileDimensions.strokeWidth),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.focusedTint),
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.width(CinemaSpacing.sm))
 
@@ -704,12 +748,26 @@ private fun EpisodeCard(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
-                // Episode number
-                Text(
-                    text = stringResource(R.string.series_episode_number_short, episode.episodeNumber),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                // Episode number, with the watched check beside it — the 40dp thumbnail is too
+                // short to carry the check as an overlay the way the TV card does.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
+                ) {
+                    Text(
+                        text = stringResource(R.string.series_episode_number_short, episode.episodeNumber),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    if (isWatched) {
+                        Icon(
+                            imageVector = CinemaIcons.CheckCircle,
+                            contentDescription = stringResource(R.string.content_watched_badge),
+                            tint = CinemaSuccess,
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
 

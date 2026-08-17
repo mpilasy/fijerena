@@ -47,6 +47,18 @@ data class WatchedItem(
     val subtitleTrackIndex: Int? = null,
 )
 
+/**
+ * Fraction watched (0..1) when this item is far enough in to be worth resuming but
+ * not close enough to the end to count as done, else null. Same band as
+ * [MediaRepository.getInProgressItems], so anything that draws a progress bar is
+ * exactly what the detail screen offers a Resume button for.
+ */
+fun WatchedItem.resumeProgress(): Float? {
+    if (isCompleted || playbackPosition <= 0L || duration <= 0L) return null
+    val fraction = playbackPosition.toFloat() / duration.toFloat()
+    return if (fraction * 100f in 2.0..95.0) fraction else null
+}
+
 @Serializable
 data class FavoriteItem(
     val itemId: String,
@@ -833,6 +845,38 @@ class MediaRepository(
             }
             return result
         }
+    }
+
+    /**
+     * Per-series watch rollup for the TV Shows list: fraction of a series' episodes that are
+     * completed, keyed by series id.
+     *
+     * Series rows can't use [getPlaybackPositions] directly — watch history is keyed by episode
+     * id, with the series id only carried alongside — so this counts completed episodes per
+     * series and divides by the provider's cached episode count. Series the provider can't count
+     * locally are absent, and show no progress rather than a wrong one.
+     */
+    suspend fun getSeriesWatchProgress(): Map<String, Float> {
+        val totals = provider?.getEpisodeCountsBySeries() ?: return emptyMap()
+        if (totals.isEmpty()) return emptyMap()
+
+        val completedPerSeries = HashMap<String, MutableSet<String>>()
+        synchronized(watchHistoryLock) {
+            for (item in getWatchHistoryLocked()) {
+                if (item.contentType != ContentType.TV_SHOWS || !item.isCompleted) continue
+                val seriesId = item.seriesId ?: continue
+                // Distinct episode ids: history can hold several entries per episode over time.
+                completedPerSeries.getOrPut(seriesId) { HashSet() }.add(item.episodeId ?: item.itemId)
+            }
+        }
+
+        val result = HashMap<String, Float>(completedPerSeries.size)
+        for ((seriesId, completed) in completedPerSeries) {
+            val total = totals[seriesId] ?: continue
+            if (total <= 0) continue
+            result[seriesId] = (completed.size.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+        }
+        return result
     }
 
     fun getInProgressItems(contentType: String): List<MediaItem> {

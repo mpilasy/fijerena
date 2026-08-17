@@ -117,6 +117,8 @@ class XtreamMediaProvider(
         }
     }
 
+    override suspend fun getEpisodeCountsBySeries(): Map<String, Int> = repository.getEpisodeCountsBySeries()
+
     override suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> {
         seriesDetailCache.get(seriesId)?.let { return kotlin.Result.success(it) }
         val id =

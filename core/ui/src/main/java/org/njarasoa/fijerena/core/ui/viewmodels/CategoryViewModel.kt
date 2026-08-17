@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -117,6 +118,11 @@ class CategoryViewModel(
 
     private val _watchProgress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val watchProgress: StateFlow<Map<String, Float>> = _watchProgress.asStateFlow()
+
+    // Finished items, drawn with a watched check instead of a progress bar. Disjoint from
+    // [watchProgress] by construction: resumeProgress() returns null once isCompleted is set.
+    private val _watchedIds = MutableStateFlow<Set<String>>(emptySet())
+    val watchedIds: StateFlow<Set<String>> = _watchedIds.asStateFlow()
 
     // Lazily initialized in init coroutine to avoid blocking the UI thread
     private lateinit var repository: MediaRepository
@@ -441,12 +447,30 @@ class CategoryViewModel(
             val positions = repository.getPlaybackPositions(itemIds, ct)
 
             val progressMap = HashMap<String, Float>(positions.size)
-            for ((id, watched) in positions) {
-                if (watched.duration > 0) {
-                    progressMap[id] = (watched.playbackPosition.toFloat() / watched.duration.toFloat()).coerceIn(0f, 1f)
+            val watched = HashSet<String>()
+            for ((id, item) in positions) {
+                // Resumable band only, so a card's bar means the same thing everywhere:
+                // barely-started and finished items get no bar rather than a sliver or a full one.
+                item.resumeProgress()?.let { progressMap[id] = it }
+                if (item.isCompleted) watched.add(id)
+            }
+            // Series rows track episodes completed, not minutes: watch history is keyed by
+            // episode, so a series id never resolves through the lookup above. A fully watched
+            // series drops out of the bar map and gets the check instead, matching movies.
+            if (ct == ContentType.TV_SHOWS) {
+                val seriesProgress = repository.getSeriesWatchProgress()
+                for (item in streams) {
+                    val fraction = seriesProgress[item.id] ?: continue
+                    if (fraction >= 1f) {
+                        watched.add(item.id)
+                    } else {
+                        progressMap[item.id] = fraction
+                    }
                 }
             }
+
             _watchProgress.value = progressMap
+            _watchedIds.value = watched
         }
     }
 
