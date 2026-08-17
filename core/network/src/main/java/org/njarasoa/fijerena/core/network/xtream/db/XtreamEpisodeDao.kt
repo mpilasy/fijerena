@@ -37,6 +37,17 @@ interface XtreamEpisodeDao {
     @Query("SELECT COUNT(*) FROM xtream_episodes WHERE providerId = :providerId")
     fun countEpisodes(providerId: Long): Int
 
+    // Denominator for the series-row watch bar: how many episodes each cached series has.
+    // Only covers series whose detail has been opened at least once, which is exactly the set
+    // that can have completed episodes in watch history.
+    @Query("SELECT seriesId, COUNT(*) AS episodeCount FROM xtream_episodes WHERE providerId = :providerId GROUP BY seriesId")
+    fun countEpisodesBySeries(providerId: Long): Map<
+        @MapColumn(columnName = "seriesId")
+        Int,
+        @MapColumn(columnName = "episodeCount")
+        Int,
+    >
+
     // Only fills a missing plot (Xtream doesn't provide episode synopses) — never overwrites an existing one.
     @Query("UPDATE xtream_episodes SET plot = :plot WHERE id = :id AND providerId = :providerId AND (plot IS NULL OR plot = '')")
     fun updateOverviewIfBlank(

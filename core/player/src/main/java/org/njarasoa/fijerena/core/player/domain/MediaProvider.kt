@@ -78,6 +78,13 @@ interface MediaProvider {
 
     suspend fun getPlaybackPositions(itemIds: List<String>): Result<Map<String, PlaybackStatus>>? = null
 
+    /**
+     * Episode count per series id, cheap and local — used as the denominator for a series row's
+     * watch progress. Null when the provider can't answer without per-series network calls, in
+     * which case series rows simply show no progress.
+     */
+    suspend fun getEpisodeCountsBySeries(): Map<String, Int>? = null
+
     suspend fun onPlaybackStarted(itemId: String) {}
 
     suspend fun onPlaybackStopped(

@@ -90,6 +90,8 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.rememberFavoriteHintVisible
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
+import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
+import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
@@ -103,6 +105,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -152,6 +155,10 @@ fun MobileCategoryListScreen(
     val nowPlayingMap by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val nowPlaying = remember(nowPlayingMap) { ImmutableNowPlaying(nowPlayingMap) }
     val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsStateWithLifecycle()
+    val watchedIdsSet by viewModel.watchedIds.collectAsStateWithLifecycle()
+    val watchedIds = remember(watchedIdsSet) { ImmutableStringSet(watchedIdsSet) }
+    val watchProgressMap by viewModel.watchProgress.collectAsStateWithLifecycle()
+    val watchProgress = remember(watchProgressMap) { ImmutableWatchProgress(watchProgressMap) }
     val context = LocalContext.current
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
     val epgIndexState by epgIndexer.state.collectAsStateWithLifecycle()
@@ -635,6 +642,8 @@ fun MobileCategoryListScreen(
                                         },
                                     lastPlayedItemId = state.lastPlayedItemId,
                                     nowPlaying = nowPlaying,
+                                    watchedIds = watchedIds,
+                                    watchProgress = watchProgress,
                                     currentlyPlayingId = target?.id,
                                     onItemSelected = { itemId, itemName, categoryId ->
                                         // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
@@ -1049,6 +1058,8 @@ private fun StreamsList(
     selectedCategoryId: String?,
     lastPlayedItemId: String? = null,
     nowPlaying: ImmutableNowPlaying = ImmutableNowPlaying(),
+    watchedIds: ImmutableStringSet = ImmutableStringSet(),
+    watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
     currentlyPlayingId: String? = null,
     // Only set while docked (see MobileCategoryListScreen) — the category chip row above is
     // hidden there, so without this there's no way to tell Last Watched and Favorites apart
@@ -1145,6 +1156,8 @@ private fun StreamsList(
                             item = item,
                             nowPlayingProgram = nowPlaying[item.id],
                             isCurrentlyPlaying = item.id == currentlyPlayingId,
+                            isWatched = item.id in watchedIds,
+                            watchProgress = watchProgress[item.id] ?: 0f,
                             onClick = {
                                 onItemSelected(item.id, item.name, item.categoryId)
                             },
@@ -1209,6 +1222,8 @@ private fun StreamCard(
     item: org.njarasoa.fijerena.core.player.domain.MediaItem,
     nowPlayingProgram: EpgProgram? = null,
     isCurrentlyPlaying: Boolean = false,
+    isWatched: Boolean = false,
+    watchProgress: Float = 0f,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -1233,14 +1248,16 @@ private fun StreamCard(
                 null
             },
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(CinemaSpacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-        ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(CinemaSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+            ) {
             // Poster thumbnail
             CinemaThumbnail(
                 url = item.thumbnailUrl,
@@ -1254,12 +1271,25 @@ private fun StreamCard(
             )
             // Stream name + rating
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 2,
-                    modifier = Modifier.bounceMarquee(),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
+                ) {
+                    if (isWatched) {
+                        Icon(
+                            imageVector = CinemaIcons.CheckCircle,
+                            contentDescription = stringResource(R.string.content_watched_badge),
+                            tint = CinemaSuccess,
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
+                        )
+                    }
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 2,
+                        modifier = Modifier.bounceMarquee(),
+                    )
+                }
                 if (isCurrentlyPlaying) {
                     Text(
                         text = stringResource(R.string.category_now_playing_badge),
@@ -1286,6 +1316,20 @@ private fun StreamCard(
                         modifier = Modifier.bounceMarquee(),
                     )
                 }
+            }
+            }
+
+            // Progress bar
+            if (watchProgress > 0f) {
+                LinearProgressIndicator(
+                    progress = { watchProgress.coerceIn(0f, 1f) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(MobileDimensions.strokeWidth),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.focusedTint),
+                )
             }
         }
     }

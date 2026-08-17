@@ -64,6 +64,7 @@ internal fun TwoColumnLayout(
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
+    watchedIds: ImmutableStringSet = ImmutableStringSet(),
     supportsNativeEpg: Boolean,
     epgIndexState: EpgIndexState,
     onCategorySelected: (String) -> Unit,
@@ -269,6 +270,7 @@ internal fun TwoColumnLayout(
                 isDevMode = isDevMode,
                 favoriteIds = favoriteIds,
                 watchProgress = watchProgress,
+                watchedIds = watchedIds,
                 onStreamSelected = { streamId, streamName, categoryId, providerData ->
                     // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
                     if (providerData["isCategoryRef"] == "true") {

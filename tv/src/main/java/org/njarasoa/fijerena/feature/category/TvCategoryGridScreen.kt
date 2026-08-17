@@ -80,6 +80,7 @@ fun TvCategoryGridScreen(
     val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
     val favoriteCategoryIds by viewModel.favoriteCategoryIds.collectAsStateWithLifecycle()
     val watchProgress by viewModel.watchProgress.collectAsStateWithLifecycle()
+    val watchedIds by viewModel.watchedIds.collectAsStateWithLifecycle()
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
 
@@ -98,6 +99,7 @@ fun TvCategoryGridScreen(
     val immutableFavoriteIds = remember(favoriteIds) { ImmutableStringSet(favoriteIds) }
     val immutableFavoriteCategoryIds = remember(favoriteCategoryIds) { ImmutableStringSet(favoriteCategoryIds) }
     val immutableWatchProgress = remember(watchProgress) { ImmutableWatchProgress(watchProgress) }
+    val immutableWatchedIds = remember(watchedIds) { ImmutableStringSet(watchedIds) }
 
     CategoryGridContent(
         uiState = uiState,
@@ -106,6 +108,7 @@ fun TvCategoryGridScreen(
         favoriteIds = immutableFavoriteIds,
         favoriteCategoryIds = immutableFavoriteCategoryIds,
         watchProgress = immutableWatchProgress,
+        watchedIds = immutableWatchedIds,
         epgIndexState = epgIndexState,
         configuration = configuration,
         catViewModel = viewModel,
@@ -127,6 +130,7 @@ private fun CategoryGridContent(
     favoriteIds: ImmutableStringSet,
     favoriteCategoryIds: ImmutableStringSet,
     watchProgress: ImmutableWatchProgress,
+    watchedIds: ImmutableStringSet,
     epgIndexState: EpgIndexState,
     configuration: android.content.res.Configuration,
     catViewModel: CategoryViewModel,
@@ -185,6 +189,7 @@ private fun CategoryGridContent(
                         favoriteIds = favoriteIds,
                         favoriteCategoryIds = favoriteCategoryIds,
                         watchProgress = watchProgress,
+                        watchedIds = watchedIds,
                         onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
                         onStreamSelected = onStreamSelected,
                         onRefreshCategories = { catViewModel.refreshCategories() },
@@ -208,6 +213,7 @@ private fun CategoryGridContent(
                             favoriteIds = favoriteIds,
                             favoriteCategoryIds = favoriteCategoryIds,
                             watchProgress = watchProgress,
+                            watchedIds = watchedIds,
                             supportsNativeEpg = supportsNativeEpg,
                             epgIndexState = epgIndexState,
                             onCategorySelected = { categoryId ->

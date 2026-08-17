@@ -58,6 +58,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
@@ -86,6 +87,7 @@ internal fun StreamList(
     isDevMode: Boolean,
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
+    watchedIds: ImmutableStringSet = ImmutableStringSet(),
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
     onStreamLongPress: (MediaItem) -> Unit = {},
     onStreamFocused: (MediaItem) -> Unit = {},
@@ -275,6 +277,7 @@ internal fun StreamList(
                                 item = item,
                                 isFavorite = item.id in favoriteIds,
                                 watchProgress = watchProgress[item.id] ?: 0f,
+                                isWatched = item.id in watchedIds,
                                 nowPlayingProgram = nowPlaying[item.id],
                                 onClick = { onStreamSelected(item.id, item.name, item.categoryId, item.providerData) },
                                 onLongPress = { onStreamLongPress(item) },
@@ -303,6 +306,7 @@ private fun StreamItem(
     item: MediaItem,
     isFavorite: Boolean = false,
     watchProgress: Float = 0f,
+    isWatched: Boolean = false,
     nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
@@ -402,6 +406,15 @@ private fun StreamItem(
                                 text = "\u2605",
                                 style = scaledStyles.titleMedium,
                                 color = CinemaAccent,
+                            )
+                        }
+
+                        if (isWatched) {
+                            Icon(
+                                imageVector = CinemaIcons.CheckCircle,
+                                contentDescription = stringResource(R.string.content_watched_badge),
+                                tint = CinemaSuccess,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             )
                         }
 
