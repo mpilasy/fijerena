@@ -65,6 +65,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -985,7 +986,16 @@ private fun CategoryChipRow(
                             Text(
                                 text = category.name,
                                 maxLines = 1,
-                                modifier = Modifier.bounceMarquee(),
+                                overflow = TextOverflow.Ellipsis,
+                                // Marquee only on the selected chip. Touch has no focus, so gating on
+                                // selection is the nearest equivalent — otherwise every overflowing chip
+                                // runs its own per-frame invalidateDraw loop for as long as it's visible.
+                                modifier =
+                                    if (category.id == selectedCategoryId) {
+                                        Modifier.bounceMarquee()
+                                    } else {
+                                        Modifier
+                                    },
                             )
                         },
                         colors = chipColors,
@@ -1031,7 +1041,14 @@ private fun CategoryChipRow(
                             Text(
                                 text = category.name,
                                 maxLines = 1,
-                                modifier = Modifier.bounceMarquee(),
+                                overflow = TextOverflow.Ellipsis,
+                                // See the virtual chips above.
+                                modifier =
+                                    if (category.id == selectedCategoryId) {
+                                        Modifier.bounceMarquee()
+                                    } else {
+                                        Modifier
+                                    },
                             )
                         }
                     },
@@ -1292,7 +1309,9 @@ private fun StreamCard(
                         text = item.name,
                         style = MaterialTheme.typography.bodyLarge,
                         maxLines = 2,
-                        modifier = Modifier.bounceMarquee(),
+                        overflow = TextOverflow.Ellipsis,
+                        // Only the row that's actually playing scrolls its title.
+                        modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
                     )
                 }
                 if (isCurrentlyPlaying) {
@@ -1318,7 +1337,8 @@ private fun StreamCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary,
                         maxLines = 1,
-                        modifier = Modifier.bounceMarquee(),
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
                     )
                 }
             }
