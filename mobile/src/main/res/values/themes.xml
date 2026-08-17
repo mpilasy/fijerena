@@ -6,4 +6,11 @@
     </style>
 
     <style name="Theme.FirstVideoPlayer" parent="Base.Theme.FirstVideoPlayer" />
+
+    <!-- Launch theme — see the TV module's themes.xml for why this exists. -->
+    <style name="Theme.FirstVideoPlayer.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/black</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/app_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.FirstVideoPlayer</item>
+    </style>
 </resources>

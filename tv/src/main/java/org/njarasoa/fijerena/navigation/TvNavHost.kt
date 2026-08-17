@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.feature.category.TvCategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.epg.TvEpgGuideScreen
@@ -622,6 +623,10 @@ fun TvNavHost(
                     )
                 }
             }
+        } else {
+            // Provider lookup / credential migration / session restore — used to be a blank
+            // window for however long that took.
+            AppLoadingScreen()
         }
     }
 }

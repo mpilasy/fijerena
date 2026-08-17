@@ -4,4 +4,16 @@
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:colorBackground">@android:color/black</item>
     </style>
+
+    <!--
+        Launch theme. The Shield runs Android 11, which has no system splash of its own, so
+        without this the whole cold start — process fork through Compose's first frame — is the
+        bare black windowBackground above. core-splashscreen backports the icon window to API 21,
+        which is the only thing that can paint before Compose exists.
+    -->
+    <style name="Theme.FirstVideoPlayer.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/black</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/app_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.FirstVideoPlayer</item>
+    </style>
 </resources>
