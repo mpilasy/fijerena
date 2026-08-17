@@ -31,7 +31,7 @@ class TmdbApiService(
     // TMDB v4 read-access tokens are JWTs (Bearer); v3 keys are 32-char hex (query param).
     private val isV4Token: Boolean = apiKey.startsWith("eyJ")
 
-    private val client: HttpClient =
+    private val client: HttpClient by lazy {
         HttpClient(OkHttp) {
             install(ContentNegotiation) { json(json) }
             install(ContentEncoding) {
@@ -40,6 +40,7 @@ class TmdbApiService(
             }
             defaultRequest { url("https://api.themoviedb.org/3/") }
         }
+    }
 
     /**
      * Fetch a full season from TMDB. One call returns overviews for every episode

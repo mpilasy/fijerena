@@ -93,11 +93,12 @@ class MediaRepository(
     private var provider: MediaProvider? = null
 
     private val cacheName = "media_cache_$providerId"
-    private val cache: SharedPreferences =
+    private val cache: SharedPreferences by lazy {
         context.getSharedPreferences(
             cacheName,
             Context.MODE_PRIVATE,
         )
+    }
     private val appSettings = AppSettings(context) // Keep for global settings (isDevMode)
     private val json =
         Json {
