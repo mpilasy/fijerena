@@ -145,33 +145,44 @@ fun EpisodeSelectionScreen(
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Retained across a background refresh so the episode list stays on screen with just a
+    // spinning refresh icon, instead of the whole thing dropping to a full-screen loading state
+    // and losing scroll position and the expanded season. Mirrors the mobile screen, which
+    // already did this.
+    var lastSuccess by remember { mutableStateOf<SeriesDetailsViewModel.UiState.Success?>(null) }
+    (uiState as? SeriesDetailsViewModel.UiState.Success)?.let { lastSuccess = it }
+    val isRefreshing = uiState is SeriesDetailsViewModel.UiState.Loading && lastSuccess != null
+
     // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
-        when (val state = uiState) {
-            is SeriesDetailsViewModel.UiState.Loading -> {
-                LoadingScreen()
-            }
-            is SeriesDetailsViewModel.UiState.Error -> {
+        val state = uiState
+        val shown = lastSuccess
+        when {
+            state is SeriesDetailsViewModel.UiState.Error -> {
                 ErrorScreen(
                     message = state.message,
                     onBack = onBack,
                 )
             }
-            is SeriesDetailsViewModel.UiState.Success -> {
+            shown != null -> {
                 EpisodeListContent(
-                    seriesDetail = state.seriesDetail,
+                    seriesDetail = shown.seriesDetail,
                     seriesName = seriesName,
                     categoryId = categoryId,
                     mediaRepository = viewModel.mediaRepository!!,
                     initialEpisodeId = initialEpisodeId,
-                    isFavorite = state.isFavorite,
-                    categoryName = state.categoryName,
+                    isFavorite = shown.isFavorite,
+                    categoryName = shown.categoryName,
+                    isRefreshing = isRefreshing,
                     onToggleFavorite = { viewModel.toggleFavorite(seriesName) },
                     onEpisodeSelected = onEpisodeSelected,
                     onCategorySelected = { onCategorySelected(categoryId) },
                     onRefresh = { viewModel.loadSeriesInfo() },
                     onBack = onBack,
                 )
+            }
+            else -> {
+                LoadingScreen()
             }
         }
     }
@@ -186,6 +197,7 @@ private fun EpisodeListContent(
     initialEpisodeId: String? = null,
     isFavorite: Boolean,
     categoryName: String?,
+    isRefreshing: Boolean,
     onToggleFavorite: () -> Unit,
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: () -> Unit,
@@ -219,7 +231,6 @@ private fun EpisodeListContent(
     }
 
     // Track refresh state for animation
-    var isRefreshing by remember { mutableStateOf(false) }
     var targetRotation by remember { mutableStateOf(0f) }
 
     val rotation by animateFloatAsState(
@@ -228,9 +239,11 @@ private fun EpisodeListContent(
         label = "refresh_rotation",
     )
 
+    // isRefreshing is now a parameter, so the old `while (isRefreshing)` guard would never
+    // observe it changing. The effect key does that job: a false value cancels the loop.
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
-            while (isRefreshing) {
+            while (true) {
                 targetRotation = (targetRotation + 360f) % 3600f
                 kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
             }
@@ -416,11 +429,7 @@ private fun EpisodeListContent(
                             )
                             // Refresh button
                             CinemaIconButton(
-                                onClick = {
-                                    isRefreshing = true
-                                    onRefresh()
-                                    isRefreshing = false
-                                },
+                                onClick = { onRefresh() },
                                 enabled = !isRefreshing,
                                 icon = {
                                     Icon(

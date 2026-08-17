@@ -1,6 +1,9 @@
 package org.njarasoa.fijerena.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +37,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.feature.category.TvCategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.epg.TvEpgGuideScreen
@@ -169,6 +173,17 @@ fun TvNavHost(
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
+                // Declared, not inherited: with none of these set, navigation-compose applies its
+                // own default of fadeIn/fadeOut over 700ms, during which both the outgoing and
+                // incoming screen are composed and drawn at once. That is a long time to hold two
+                // full screens live on a Shield, and Live TV pushes two entries back to back so it
+                // paid for it twice. Fade rather than mobile's slide: a slide has to lay out both
+                // screens off-axis, and on a 10-foot D-pad UI it reads as drift rather than
+                // direction.
+                enterTransition = { fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
+                exitTransition = { fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
+                popExitTransition = { fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
             ) {
                 // Content Type Selection Screen
                 composable<Screen.ContentTypeSelection> {
