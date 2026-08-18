@@ -903,19 +903,6 @@ private fun SeasonHeader(
             tint = CinemaAccentLight,
             modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
         )
-        // Season cover thumbnail (if available)
-        season.coverUrl?.let { url ->
-            CinemaThumbnail(
-                url = url,
-                fallbackLetter = null,
-                contentType = ThumbnailContentType.TV_SHOW,
-                modifier =
-                    Modifier.size(
-                        width = TvDimensions.posterHeight.scaled(scale),
-                        height = TvDimensions.posterHeight.scaled(scale),
-                    ),
-            )
-        }
         Text(
             text = stringResource(R.string.series_season_label, season.seasonNumber),
             style =
