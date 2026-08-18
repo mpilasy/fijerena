@@ -57,7 +57,7 @@ double-fade; Live TV's double-push should no longer stack two crossfades. Refres
 confirm the list stays put.
 **Commit:** `feat(tv): declare navigation transitions, keep episode list through refresh`
 
-### Step 5 — Compose stability · §D1 · medium risk — ✅ **done** (`stability`)
+### Step 5 — Compose stability · §D1 · medium risk — ✅ **done** (`425848f5`)
 Add the Compose compiler plugin (or a stability config) to `core:player`.
 
 **Check:** the one step that needs a real before/after artifact — build with
