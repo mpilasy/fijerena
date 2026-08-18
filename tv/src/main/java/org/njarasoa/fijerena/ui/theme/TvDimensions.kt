@@ -71,6 +71,9 @@ object TvDimensions {
     // Borders
     val borderDefault: Dp = 1.dp
     val borderFocused: Dp = 2.dp
+
+    /** Thickness of the resume-progress bar along the bottom of stream and episode rows. */
+    val resumeBarHeight: Dp = 5.dp
     val borderFocusedStats: Dp = 3.dp
     val borderThin: Dp = 0.5.dp
 }

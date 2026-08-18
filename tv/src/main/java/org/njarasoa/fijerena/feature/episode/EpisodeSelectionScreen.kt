@@ -1129,7 +1129,7 @@ private fun EpisodeCard(
                         // bottom edge — without this inset a bar of the same thickness as the
                         // stroke is completely hidden underneath it.
                         .padding(bottom = TvDimensions.borderFocused.scaled(scale))
-                        .height(TvDimensions.borderFocused.scaled(scale)),
+                        .height(TvDimensions.resumeBarHeight.scaled(scale)),
                 color = CinemaAccent,
                 trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
             )

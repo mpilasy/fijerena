@@ -795,7 +795,7 @@ private fun EpisodeCard(
                         .fillMaxWidth()
                         // Clear the continue-watching border, which is drawn over the card edge.
                         .padding(bottom = MobileDimensions.strokeWidth)
-                        .height(MobileDimensions.strokeWidth),
+                        .height(MobileDimensions.resumeBarHeight),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.focusedTint),
             )
