@@ -66,6 +66,44 @@ class MediaRepositoryTest {
     }
 
     @Test
+    fun savePlaybackPosition_marksCompletedPastThreshold() {
+        every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
+        repository = MediaRepository(context, 1L)
+
+        // Played to the end: finalizeSession reports position == duration for PlaybackState.Ended.
+        repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 2_500_000L, 2_500_000L)
+
+        val saved = repository.getWatchHistory().single { it.itemId == "ep1" }
+        assert(saved.isCompleted) { "an item watched to the end must be marked completed" }
+        assert(saved.resumeProgress() == null) { "a completed item must not offer a resume point" }
+    }
+
+    @Test
+    fun savePlaybackPosition_emptySessionDoesNotEraseExistingEntry() {
+        val existing =
+            listOf(
+                WatchedItem(
+                    itemId = "ep1",
+                    itemName = "Episode 1",
+                    categoryId = "cat1",
+                    contentType = ContentType.TV_SHOWS,
+                    playbackPosition = 2_400_000L,
+                    duration = 2_500_000L,
+                    isCompleted = true,
+                ),
+            )
+        every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns json.encodeToString(existing)
+        repository = MediaRepository(context, 1L)
+
+        // Leaving while idle/buffering reports 0/0 — it must not overwrite what is already there.
+        repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 0L, 0L)
+
+        val saved = repository.getWatchHistory().single { it.itemId == "ep1" }
+        assert(saved.isCompleted) { "an empty write must not clear the completed mark" }
+        assert(saved.playbackPosition == 2_400_000L) { "an empty write must not zero the position" }
+    }
+
+    @Test
     fun getWatchHistory_empty() {
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
         repository = MediaRepository(context, 1L)
