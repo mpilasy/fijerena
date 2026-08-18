@@ -3,8 +3,8 @@
 Companion to `UX_FLOW_AUDIT.md`, which covers navigation *friction* (IA, discoverability). This
 is the orthogonal axis: how fast the app feels. Audited 2026-08-17.
 
-**Status:** steps 1–4 done (2026-08-17) — §A1, B1, B5 (partial), D2, D3, E1, E2 are fixed and
-landed. Steps 5–10 are still findings only.
+**Status:** steps 1–6 done (2026-08-17) — §A1, B1, B5 (partial), C4, D1, D2, D3, E1, E2 are
+fixed and landed. Steps 7–10 are still findings only.
 
 ---
 
@@ -57,7 +57,7 @@ double-fade; Live TV's double-push should no longer stack two crossfades. Refres
 confirm the list stays put.
 **Commit:** `feat(tv): declare navigation transitions, keep episode list through refresh`
 
-### Step 5 — Compose stability · §D1 · medium risk — ⏭ **skipped for now**
+### Step 5 — Compose stability · §D1 · medium risk — ✅ **done** (`stability`)
 Add the Compose compiler plugin (or a stability config) to `core:player`.
 
 **Check:** the one step that needs a real before/after artifact — build with
@@ -66,7 +66,7 @@ Expect `MediaItem`/`MediaCategory`/`EpgProgram` to move to stable and their comp
 Then scroll-test to confirm nothing regressed.
 **Commit:** `perf(compose): make core:player domain types stable`
 
-### Step 6 — Per-item card styling · §C4 · low risk, wide
+### Step 6 — Per-item card styling · §C4 · low risk, wide — ✅ **done** (`371181d3`, mobile follow-up `0cbbcdcc`)
 Hoist `CardDefaults.colors/scale/glow` and the `Color.copy` calls out of the item bodies: EPG cells
 (`EpgGridLayout.kt:509-542`, `:360-385`), `StreamList.kt:353-374`, TV `EpisodeCard`.
 
@@ -303,7 +303,7 @@ slot, and **twice** per search result (`:704-707`). Mobile hits the same path
 (`:481`). The shared ticker is itself a good design — it replaced per-cell
 `System.currentTimeMillis()` — but every tick now invalidates the whole grid.
 
-### C4. Per-cell card styling allocated on every recomposition ✅*verified*
+### C4. Per-cell card styling allocated on every recomposition ✅*verified* — **FIXED** (`371181d3`, `0cbbcdcc`)
 
 `EpgGridLayout.kt:509-542` (and `:360-385`) construct `CardDefaults.colors(...)`,
 `CardDefaults.scale(...)`, `CardDefaults.glow(...)` inline, including `Color.copy(alpha = …)`
@@ -320,7 +320,7 @@ channels (`:129-132`), `buildChannelRows` (`:223-250`), and 48 `ZonedDateTime` c
 
 # D. Systemic — affects everything above
 
-### D1. `core:player` has no Compose compiler plugin, so every domain type is unstable
+### D1. `core:player` has no Compose compiler plugin, so every domain type is unstable — **FIXED**
 
 `core/player/build.gradle.kts:1-4` applies only `android.library` + `kotlin.serialization`. Every
 type crossing into composition is therefore inferred **unstable**: `MediaItem` (which also carries
