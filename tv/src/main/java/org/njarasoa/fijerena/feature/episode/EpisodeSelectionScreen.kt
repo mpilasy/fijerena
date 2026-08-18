@@ -1016,7 +1016,7 @@ private fun EpisodeCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(TvDimensions.cardHeight.scaled(scale))
+                .height(TvDimensions.episodeCardHeight.scaled(scale))
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
         colors = cardStyle.colors,
         shape = cardStyle.shape,

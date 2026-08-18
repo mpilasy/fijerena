@@ -24,6 +24,13 @@ object TvDimensions {
     // Button / Card heights
     val buttonHeight: Dp = 64.dp
     val cardHeight: Dp = 80.dp
+
+    /**
+     * Episode rows are taller than [cardHeight]: they carry a [posterHeight] thumbnail plus the
+     * continue-watching badge, the title and a plot line. At 80.dp the poster was squeezed and the
+     * plot was clipped mid-sentence on exactly the row the viewer is most likely reading.
+     */
+    val episodeCardHeight: Dp = 122.dp
     val trackItemHeight: Dp = 56.dp
     val moviePosterHeight: Dp = 60.dp
     val statsOverlayPanelHeight: Dp = 200.dp
