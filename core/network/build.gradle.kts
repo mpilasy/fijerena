@@ -27,6 +27,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+    testOptions {
+        unitTests {
+            // MediaRepository starts a HandlerThread; without this the android.jar stubs throw
+            // "Method getLooper in android.os.HandlerThread not mocked" and every test in
+            // MediaRepositoryTest fails before reaching its assertions.
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {

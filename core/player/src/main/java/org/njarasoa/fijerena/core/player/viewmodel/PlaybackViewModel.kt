@@ -206,7 +206,7 @@ class PlaybackViewModel(
                 is PlaybackState.Paused -> state.position
                 PlaybackState.Idle,
                 PlaybackState.Buffering,
-                PlaybackState.Ended,
+                is PlaybackState.Ended,
                 is PlaybackState.Error,
                 -> return
             }
@@ -216,7 +216,7 @@ class PlaybackViewModel(
                 is PlaybackState.Paused -> state.duration
                 PlaybackState.Idle,
                 PlaybackState.Buffering,
-                PlaybackState.Ended,
+                is PlaybackState.Ended,
                 is PlaybackState.Error,
                 -> return
             }

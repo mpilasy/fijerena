@@ -18,7 +18,14 @@ sealed class PlaybackState {
         val duration: Long,
     ) : PlaybackState()
 
-    data object Ended : PlaybackState()
+    /**
+     * Playback reached the natural end of the stream. Carries the duration so the session can be
+     * finalized as *completed* — the player is torn down moments later, so reading position off it
+     * at exit time yields 0 and the item silently loses both its resume point and its watched mark.
+     */
+    data class Ended(
+        val duration: Long = 0L,
+    ) : PlaybackState()
 
     data class Error(
         val message: String,

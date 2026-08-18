@@ -514,12 +514,16 @@ fun finalizeSession(
         when (playbackState) {
             is PlaybackState.Playing -> playbackState.position
             is PlaybackState.Paused -> playbackState.position
+            // Played to the end: report the full duration so the >95% rule marks it completed.
+            // The player is torn down before this runs, so asking it for a position gives 0.
+            is PlaybackState.Ended -> playbackState.duration
             else -> 0L
         }
     val dur =
         when (playbackState) {
             is PlaybackState.Playing -> playbackState.duration
             is PlaybackState.Paused -> playbackState.duration
+            is PlaybackState.Ended -> playbackState.duration
             else -> 0L
         }
     val service = StreamingPlaybackService.getInstance()

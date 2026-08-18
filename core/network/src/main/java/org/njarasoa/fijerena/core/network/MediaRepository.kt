@@ -783,6 +783,9 @@ class MediaRepository(
     ) {
         if (contentType == ContentType.LIVE_TV) return
         if (usesServerUserData) return
+        // An empty session (left while idle or still buffering) carries no information, and
+        // writing it would overwrite a real resume point — and any completed mark — with zeroes.
+        if (position <= 0L && duration <= 0L) return
         val progressPercent =
             if (duration > 0) {
                 (position.toFloat() / duration.toFloat()) * 100f

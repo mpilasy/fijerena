@@ -574,8 +574,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private fun handleStreamEndedOrError(errorMessage: String?) {
         val metadata = _currentMetadata.value
         if (errorMessage == null && !metadata.isLive) {
-            // Natural end of VOD content — not a fault, never retried.
-            _playbackState.value = PlaybackState.Ended
+            // Natural end of VOD content — not a fault, never retried. Grab the duration while
+            // the player still has it: finalizeSession runs after teardown, when it reads 0.
+            _playbackState.value = PlaybackState.Ended(getPlayer()?.duration?.coerceAtLeast(0L) ?: 0L)
             return
         }
         lastErrorMessage = errorMessage
