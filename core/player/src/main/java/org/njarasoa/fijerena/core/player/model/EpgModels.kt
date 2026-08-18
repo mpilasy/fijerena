@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.player.model
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -34,6 +35,8 @@ data class EpgResponse(
     @SerialName("epg_listings") val listings: List<EpgProgram> = emptyList(),
 )
 
+/** Built once per EPG load and never mutated — see the note on [MediaItem]. */
+@Immutable
 data class EpgChannelRow(
     val channel: MediaItem,
     val programs: List<EpgProgram>,

@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.core.player.domain
 
+import androidx.compose.runtime.Immutable
+
 enum class MediaType {
     LIVE_CHANNEL,
     MOVIE,
@@ -24,6 +26,13 @@ data class MediaMetadata(
     val year: Int? = null,
 )
 
+/**
+ * `providerData` is a `Map`, which the Compose compiler cannot prove immutable, so without this
+ * annotation the whole class infers unstable and every list row in the app loses its skip. Every
+ * construction site builds the map with `mapOf`/`buildMap` and every read site only indexes into
+ * it — nothing mutates it after construction, so the promise holds. Keep it that way.
+ */
+@Immutable
 data class MediaItem(
     val id: String,
     val name: String,

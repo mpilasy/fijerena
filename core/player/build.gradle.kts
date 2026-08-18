@@ -1,5 +1,10 @@
 plugins {
     alias(libs.plugins.android.library)
+    // No @Composable code lives here, but the domain types below cross into composition in every
+    // list in the app. Without the Compose compiler running over this module they carry no
+    // stability metadata and are inferred *unstable* downstream, which is what forces list items
+    // to recompose. Applying the plugin makes the compiler emit @StabilityInferred for them.
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -32,6 +37,11 @@ android {
 }
 
 dependencies {
+    // Compose runtime only — no UI. The compiler plugin above needs it to emit the stability
+    // annotations onto the domain types; api() so the annotations resolve for consumers.
+    api(platform(libs.androidx.compose.bom))
+    api("androidx.compose.runtime:runtime")
+
     // Media3 (ExoPlayer) - Latest stable 1.7.1
     api(libs.bundles.media)
 

@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.player.model
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
 sealed class PlaybackState {
@@ -25,6 +26,8 @@ sealed class PlaybackState {
     ) : PlaybackState()
 }
 
+/** `headers` is built at construction and only ever read — see the note on [MediaItem]. */
+@Immutable
 @Serializable
 data class PlayerMetadata(
     val title: String = "",
