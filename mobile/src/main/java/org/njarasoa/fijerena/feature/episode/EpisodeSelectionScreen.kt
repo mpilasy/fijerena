@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -332,11 +333,25 @@ private fun EpisodeListContent(
             ) {
                 Column(modifier = Modifier.padding(CinemaSpacing.md)) {
                     seriesDetail.metadata.plot?.let { plot ->
+                        // Long synopses are clipped to three lines. Tap to read the rest, tap
+                        // again to collapse — but only once we know it actually overflows, so a
+                        // short plot has no invisible tap target that appears to do nothing.
+                        var plotExpanded by rememberSaveable(plot) { mutableStateOf(false) }
+                        var plotOverflows by remember(plot) { mutableStateOf(false) }
                         Text(
                             text = plot,
                             style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 3,
+                            maxLines = if (plotExpanded) Int.MAX_VALUE else 3,
                             overflow = TextOverflow.Ellipsis,
+                            onTextLayout = { result ->
+                                if (!plotExpanded) plotOverflows = result.hasVisualOverflow
+                            },
+                            modifier =
+                                if (plotOverflows || plotExpanded) {
+                                    Modifier.clickable { plotExpanded = !plotExpanded }
+                                } else {
+                                    Modifier
+                                },
                         )
                     }
                     if (metadataParts.isNotEmpty()) {
