@@ -708,35 +708,16 @@ private fun EpisodeCard(
                     .padding(CinemaSpacing.sm),
             verticalAlignment = Alignment.Top,
         ) {
-            // Episode thumbnail, with the resume bar and watched check overlaid on it so rows
-            // with and without either keep the same height. The two are mutually exclusive:
-            // resumeProgress() returns null once an episode is marked completed.
-            Box(
+            CinemaThumbnail(
+                url = episode.thumbnailUrl,
+                fallbackLetter = episode.title.firstOrNull(),
+                contentType = ThumbnailContentType.TV_SHOW,
                 modifier =
                     Modifier.size(
                         width = MobileDimensions.posterWidth,
                         height = MobileDimensions.posterHeight,
                     ),
-            ) {
-                CinemaThumbnail(
-                    url = episode.thumbnailUrl,
-                    fallbackLetter = episode.title.firstOrNull(),
-                    contentType = ThumbnailContentType.TV_SHOW,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                if (watchProgress > 0f) {
-                    LinearProgressIndicator(
-                        progress = { watchProgress.coerceIn(0f, 1f) },
-                        modifier =
-                            Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .height(MobileDimensions.strokeWidth),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.focusedTint),
-                    )
-                }
-            }
+            )
 
             Spacer(modifier = Modifier.width(CinemaSpacing.sm))
 
@@ -801,6 +782,21 @@ private fun EpisodeCard(
                     )
                 }
             }
+        }
+
+        // Resume progress, card-width at the bottom edge — same placement as the stream card in
+        // MobileCategoryListScreen, so a half-watched episode and a half-watched film read the
+        // same. Poster-width was too short to be legible.
+        if (watchProgress > 0f) {
+            LinearProgressIndicator(
+                progress = { watchProgress.coerceIn(0f, 1f) },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(MobileDimensions.strokeWidth),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.focusedTint),
+            )
         }
     }
 }

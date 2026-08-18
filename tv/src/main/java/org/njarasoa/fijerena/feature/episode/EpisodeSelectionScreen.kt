@@ -1027,13 +1027,13 @@ private fun EpisodeCard(
         Row(
             modifier =
                 Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .weight(1f)
                     .padding(Spacing.md.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Episode thumbnail, with the resume bar and watched check overlaid on it so rows
-            // with and without either keep the same height. The two are mutually exclusive:
-            // resumeProgress() returns null once an episode is marked completed.
+            // Episode thumbnail, with the watched check overlaid on it. The resume bar is a
+            // card-width footer below this row instead — see the note there.
             Box(
                 modifier =
                     Modifier.size(
@@ -1047,18 +1047,6 @@ private fun EpisodeCard(
                     contentType = ThumbnailContentType.TV_SHOW,
                     modifier = Modifier.fillMaxSize(),
                 )
-                if (watchProgress > 0f) {
-                    LinearProgressIndicator(
-                        progress = { watchProgress.coerceIn(0f, 1f) },
-                        modifier =
-                            Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .height(TvDimensions.borderFocused.scaled(scale)),
-                        color = CinemaAccent,
-                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
-                    )
-                }
                 if (isWatched) {
                     Icon(
                         imageVector = CinemaIcons.CheckCircle,
@@ -1122,6 +1110,21 @@ private fun EpisodeCard(
                     color = CinemaTextSecondary,
                 )
             }
+        }
+
+        // Resume progress, card-width at the bottom edge — same placement as the stream row in
+        // StreamList, so a half-watched episode and a half-watched film read the same. Poster-width
+        // was too short to be legible.
+        if (watchProgress > 0f) {
+            LinearProgressIndicator(
+                progress = { watchProgress.coerceIn(0f, 1f) },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(TvDimensions.borderFocused.scaled(scale)),
+                color = CinemaAccent,
+                trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
+            )
         }
     }
 }
