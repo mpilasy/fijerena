@@ -1024,11 +1024,14 @@ private fun EpisodeCard(
         border = if (isContinueWatching) cardStyle.continueWatchingBorder else cardStyle.border,
         glow = cardStyle.glow,
     ) {
+        // Box, not a Column with a weighted row: the card is pinned to cardHeight and its content
+        // already fills that, so a footer that consumes layout height gets pushed past the card's
+        // clip bounds — it lays out (and shows up in semantics) but never paints.
+        Box(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
+                    .fillMaxSize()
                     .padding(Spacing.md.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1112,7 +1115,7 @@ private fun EpisodeCard(
             }
         }
 
-        // Resume progress, card-width at the bottom edge — same placement as the stream row in
+        // Resume progress, card-width along the bottom edge — same placement as the stream row in
         // StreamList, so a half-watched episode and a half-watched film read the same. Poster-width
         // was too short to be legible.
         if (watchProgress > 0f) {
@@ -1120,11 +1123,17 @@ private fun EpisodeCard(
                 progress = { watchProgress.coerceIn(0f, 1f) },
                 modifier =
                     Modifier
+                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
+                        // Sit above the continue-watching border, which is drawn over the card's
+                        // bottom edge — without this inset a bar of the same thickness as the
+                        // stroke is completely hidden underneath it.
+                        .padding(bottom = TvDimensions.borderFocused.scaled(scale))
                         .height(TvDimensions.borderFocused.scaled(scale)),
                 color = CinemaAccent,
                 trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
             )
+        }
         }
     }
 }
