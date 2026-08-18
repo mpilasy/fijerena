@@ -27,6 +27,9 @@ object MobileDimensions {
     val dividerThin: Dp = 0.5.dp
     val strokeWidth: Dp = 2.dp
 
+    /** Thickness of the resume-progress bar along the bottom of stream and episode rows. */
+    val resumeBarHeight: Dp = 5.dp
+
     // Poster / Thumbnail
     val posterWidth: Dp = 72.dp
     val posterHeight: Dp = 40.dp

@@ -493,7 +493,8 @@ private fun StreamItem(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(TvDimensions.borderFocused.scaled(scale)),
+                            .padding(bottom = TvDimensions.borderFocused.scaled(scale))
+                            .height(TvDimensions.resumeBarHeight.scaled(scale)),
                     color = CinemaAccent,
                     trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
                 )

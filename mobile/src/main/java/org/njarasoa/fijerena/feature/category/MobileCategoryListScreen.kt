@@ -1356,7 +1356,8 @@ private fun StreamCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(MobileDimensions.strokeWidth),
+                            .padding(bottom = MobileDimensions.strokeWidth)
+                            .height(MobileDimensions.resumeBarHeight),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.focusedTint),
                 )
