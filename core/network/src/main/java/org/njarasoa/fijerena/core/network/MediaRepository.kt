@@ -930,10 +930,13 @@ class MediaRepository(
     /**
      * A history entry as a Recent row card. TV Shows entries become series cards carrying the
      * episode to resume in `resumeSeries`/`episodeId`, which is what the nav hosts route on;
-     * entries written before series ids were recorded stay episode cards.
+     * entries written before series ids were recorded stay episode cards that play directly.
      */
     private fun WatchedItem.toRecentMediaItem(mediaType: MediaType): MediaItem {
-        val seriesCardId = if (contentType == ContentType.TV_SHOWS) seriesId else null
+        // A row whose series id is its own stream id is an episode wearing a series' clothes —
+        // written when an episode card was opened as if it were a show and the episode played from
+        // there. Treating it as a series would ask the provider for episodes of an episode.
+        val seriesCardId = if (contentType == ContentType.TV_SHOWS) seriesId?.takeIf { it != itemId } else null
         return MediaItem(
             id = seriesCardId ?: itemId,
             name = if (seriesCardId != null) seriesName ?: itemName else itemName,
@@ -950,7 +953,13 @@ class MediaRepository(
                         put("seriesId", seriesCardId)
                         put("seriesName", seriesName ?: itemName)
                     } else {
-                        episodeId?.let { put("episodeId", it) }
+                        // A TV Shows history entry is always written from the player, whose stream
+                        // id is the episode's — so itemId names the episode even on entries too
+                        // old to carry an explicit episodeId. Without this the nav hosts read the
+                        // card as a plain series and ask the provider for episodes of an id it
+                        // only knows as a stream, which fails the whole screen.
+                        val episodeCardId = if (contentType == ContentType.TV_SHOWS) episodeId ?: itemId else episodeId
+                        episodeCardId?.let { put("episodeId", it) }
                         seriesId?.let { put("seriesId", it) }
                         seriesName?.let { put("seriesName", it) }
                     }
