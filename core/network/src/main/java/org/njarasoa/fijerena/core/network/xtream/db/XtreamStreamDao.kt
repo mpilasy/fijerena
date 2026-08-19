@@ -127,6 +127,20 @@ interface XtreamStreamDao {
         includeExcluded: Boolean,
     ): List<XtreamStreamEntity>
 
+    @Query("""
+        SELECT COUNT(*) FROM xtream_streams s
+        WHERE s.rowid IN (
+            SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
+        )
+        AND s.providerId = :providerId AND s.type = :type
+        AND s.excluded = 1
+    """)
+    fun countExcludedByFts(
+        providerId: Long,
+        type: String,
+        query: String,
+    ): Int
+
     @Query("INSERT INTO xtream_streams_fts(xtream_streams_fts) VALUES('rebuild')")
     fun rebuildFts()
 

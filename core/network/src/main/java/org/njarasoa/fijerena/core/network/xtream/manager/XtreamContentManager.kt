@@ -962,6 +962,17 @@ class XtreamContentManager(
             seriesDao.searchByFts(providerId, query, includeExcluded).map { mapSeriesEntityToStream(it) }
         }
 
+    /** How many matches for [query] are hidden because their category is excluded. */
+    suspend fun countExcludedStreams(type: String, query: String): Int =
+        withContext(Dispatchers.IO) {
+            streamDao.countExcludedByFts(providerId, type, query)
+        }
+
+    suspend fun countExcludedSeries(query: String): Int =
+        withContext(Dispatchers.IO) {
+            seriesDao.countExcludedByFts(providerId, query)
+        }
+
     suspend fun recomputeExclusions() = withContext(Dispatchers.IO) {
         XtreamCategoryExclusionSync.recompute(categoryDao, streamDao, seriesDao, providerId, providerSettings.categoryFilters)
     }

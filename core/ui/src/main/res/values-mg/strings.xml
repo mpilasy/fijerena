@@ -651,6 +651,7 @@
     <string name="search_no_results_query_format_tv">Tsy nahita valiny ho an\'ny \'%1$s\'. Andramo teny hafa.</string>
     <string name="search_no_results_type_format_tv">Tsy nahita valiny ao amin\'ny %1$s ho an\'ny \'%2$s\'. Andramo teny hafa.</string>
     <string name="search_results_count_format">Valiny %1$d</string>
+    <string name="search_results_hidden_format">%1$d nafenin\'ny sivana sokajy</string>
     <string name="provider_none_label">Tsy misy mpanome</string>
 
     <!-- Punctuation-adjacent literal audit fixes -->

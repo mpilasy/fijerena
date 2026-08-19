@@ -248,6 +248,7 @@ fun MobileSearchScreen(
                         SearchResults(
                             categoryResults = state.categoryResults,
                             results = state.filteredResults,
+                            excludedCount = state.excludedCount,
                             query = state.query,
                             queryContentType = contentType,
                             isSearching = state.isSearching,
@@ -341,6 +342,7 @@ private fun ErrorView(message: String) {
 private fun SearchResults(
     categoryResults: List<SearchViewModel.CategorySearchResult>,
     results: List<SearchViewModel.SearchResult>,
+    excludedCount: Int,
     query: String,
     queryContentType: String,
     isSearching: Boolean,
@@ -469,8 +471,15 @@ private fun SearchResults(
             // Result count
             if (categoryResults.isNotEmpty() || results.isNotEmpty()) {
                 item(key = "result_count", contentType = "status") {
+                    val count = stringResource(R.string.search_results_count_format, categoryResults.size + results.size)
+                    val hidden =
+                        if (excludedCount > 0) {
+                            " · " + stringResource(R.string.search_results_hidden_format, excludedCount)
+                        } else {
+                            ""
+                        }
                     Text(
-                        text = stringResource(R.string.search_results_count_format, categoryResults.size + results.size),
+                        text = count + hidden,
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )

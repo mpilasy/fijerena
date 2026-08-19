@@ -265,6 +265,12 @@ class MediaRepository(
         includeExcluded: Boolean = false,
     ): kotlin.Result<List<MediaItem>>? = provider?.search(query, contentType, includeExcluded)
 
+    /** Matches for [query] that search skipped because their category is hidden by category filters. */
+    suspend fun countExcludedSearchMatches(
+        query: String,
+        contentType: String,
+    ): Int = provider?.countExcludedSearchMatches(query, contentType) ?: 0
+
     fun getLastSearchDataSize(contentType: String): Long? = provider?.getLastSearchDataSize(contentType)
 
     suspend fun getEpg(streamId: String): kotlin.Result<EpgResponse>? = provider?.getEpg(streamId)

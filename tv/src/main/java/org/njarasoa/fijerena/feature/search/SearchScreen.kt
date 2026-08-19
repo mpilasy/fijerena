@@ -211,6 +211,7 @@ fun SearchScreen(
                             query = successState.query,
                             categoryResults = successState.categoryResults,
                             results = successState.filteredResults,
+                            excludedCount = successState.excludedCount,
                             isSearching = successState.isSearching,
                             searchProgress = successState.searchProgress ?: "",
                             devStats = devStats,
@@ -333,6 +334,7 @@ private fun SearchContent(
     query: String,
     categoryResults: List<CategorySearchResult>,
     results: List<SearchResult>,
+    excludedCount: Int,
     isSearching: Boolean,
     searchProgress: String?,
     devStats: String?,
@@ -407,6 +409,7 @@ private fun SearchContent(
             SearchResultsList(
                 categoryResults = categoryResults,
                 results = results,
+                excludedCount = excludedCount,
                 query = query,
                 queryContentType = contentType,
                 isSearching = isSearching,
@@ -512,6 +515,7 @@ private fun SearchHistorySection(
 private fun SearchResultsList(
     categoryResults: List<CategorySearchResult>,
     results: List<SearchResult>,
+    excludedCount: Int,
     query: String,
     queryContentType: String,
     isSearching: Boolean,
@@ -583,8 +587,14 @@ private fun SearchResultsList(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val hidden =
+                    if (excludedCount > 0) {
+                        " · " + stringResource(R.string.search_results_hidden_format, excludedCount)
+                    } else {
+                        ""
+                    }
                 Text(
-                    text = stringResource(R.string.search_results_count_format, totalResults),
+                    text = stringResource(R.string.search_results_count_format, totalResults) + hidden,
                     style = MaterialTheme.typography.titleMedium,
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )

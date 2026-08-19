@@ -346,30 +346,42 @@ class XtreamMediaProvider(
         return cached?.map { it.toDomain(mediaType) }
     }
 
+    /** Builds the FTS MATCH expression for [query], or null when nothing searchable remains. */
+    private fun buildFtsQuery(query: String): String? {
+        val words = query.trim().split("\\s+".toRegex())
+            .filter { it.isNotBlank() && !it.startsWith("-") }
+        if (words.isEmpty()) return null
+        // Sanitize input to prevent SQLite FTS syntax errors (like **) that trigger fallback hangs
+        val ftsQuery = words.map { it.replace(Regex("[*\"'()\\^]"), "") }
+            .filter { it.isNotBlank() }
+            .joinToString(" ") { "${it}*" }
+        return ftsQuery.ifBlank { null }
+    }
+
     override suspend fun search(
         query: String,
         contentType: String,
         includeExcluded: Boolean,
     ): kotlin.Result<List<MediaItem>>? {
-        val words = query.trim().split("\\s+".toRegex())
-            .filter { it.isNotBlank() && !it.startsWith("-") }
-        return if (words.isEmpty()) {
+        val ftsQuery = buildFtsQuery(query) ?: return null
+        val mediaType = getMediaType(contentType)
+        return try {
+            val results = repository.searchByFts(contentType, ftsQuery, includeExcluded)
+            kotlin.Result.success(results.map { it.toDomain(mediaType) })
+        } catch (e: Exception) {
             null
-        } else {
-            // Sanitize input to prevent SQLite FTS syntax errors (like **) that trigger fallback hangs
-            val ftsQuery = words.map { it.replace(Regex("[*\"'()\\^]"), "") }
-                .filter { it.isNotBlank() }
-                .joinToString(" ") { "${it}*" }
-            
-            if (ftsQuery.isBlank()) return null
+        }
+    }
 
-            val mediaType = getMediaType(contentType)
-            try {
-                val results = repository.searchByFts(contentType, ftsQuery, includeExcluded)
-                kotlin.Result.success(results.map { it.toDomain(mediaType) })
-            } catch (e: Exception) {
-                null
-            }
+    override suspend fun countExcludedSearchMatches(
+        query: String,
+        contentType: String,
+    ): Int {
+        val ftsQuery = buildFtsQuery(query) ?: return 0
+        return try {
+            repository.countExcludedByFts(contentType, ftsQuery)
+        } catch (e: Exception) {
+            0
         }
     }
 
