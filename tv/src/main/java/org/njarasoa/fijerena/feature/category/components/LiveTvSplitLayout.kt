@@ -70,6 +70,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
+import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
@@ -262,7 +263,15 @@ internal fun LiveTvSplitLayout(
     // normally everywhere else (the full-screen Category flyout, EPG/search entry, etc.).
     // D-pad Left/Right (see the onPreviewKeyEvent below) toggles it over to Favorites instead.
     var listSource by remember { mutableStateOf(PreviewListSource.RECENT) }
-    val recentStreams by categoryViewModel.recentItems.collectAsStateWithLifecycle()
+    // Bumped by the panel's own refresh action — the viewer asking for current truth, and so the
+    // one place the frozen order below is allowed to re-sort.
+    var recentOrderResetTick by remember { mutableStateOf(0) }
+    val publishedRecentStreams by categoryViewModel.recentItems.collectAsStateWithLifecycle()
+    // Held in display order: a channel previewed past the watch delay is recorded while this
+    // panel is on screen, and promoting it to the top live would shift every row under the
+    // viewer's cursor.
+    val recentStreams =
+        rememberStableRecentOrder(publishedRecentStreams.orEmpty(), resetKey = recentOrderResetTick)
     var favoriteStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var favoriteStreamsLoading by remember { mutableStateOf(true) }
     val composableScope = rememberCoroutineScope()
@@ -301,13 +310,15 @@ internal fun LiveTvSplitLayout(
     val success = streamState as? StreamLoaderViewModel.StreamState.Success
 
     // Re-point the loader whenever the previewed channel changes, via the lean resolution path
-    // (skips the channel-switcher list refetch and watch-history write that a real "commit to
-    // watching" does — a preview thumbnail isn't a real watch session).
+    // (skips the channel-switcher list refetch that a real "commit to watching" does — a preview
+    // doesn't render that list). Watch history is still recorded on the usual delay.
     // Skipped while full-screen: the full-screen next/previous/select handlers already call the
     // full loader.loadStream() directly for the new target.id, so firing this too would race two
     // loads for the same channel on the same loader/loadJob (duplicate DB/EPG work per switch).
+    // Also skipped for the channel the loader was constructed with, which it is already
+    // resolving — otherwise every entry into the preview resolved the same stream and EPG twice.
     LaunchedEffect(target.id) {
-        if (!fullScreen) {
+        if (!fullScreen && loader.requestedStreamId != target.id) {
             loader.loadStreamLight(target)
         }
     }
@@ -403,7 +414,7 @@ internal fun LiveTvSplitLayout(
                 categoryStreams = streams ?: ImmutableMediaList(),
                 recentStreams =
                     remember(recentStreams, target.id) {
-                        ImmutableMediaList(recentStreams.orEmpty().withCurrentChannel(target, CurrentChannelPolicy.EXCLUDE))
+                        ImmutableMediaList(recentStreams.withCurrentChannel(target, CurrentChannelPolicy.EXCLUDE))
                     },
                 onStreamSelected = { newItem ->
                     // Switching channels while already full-screen is a real "commit to watching" —
@@ -507,7 +518,7 @@ internal fun LiveTvSplitLayout(
                 remember(listSource, recentStreams, favoriteStreams, target.id) {
                     when (listSource) {
                         PreviewListSource.RECENT ->
-                            recentStreams.orEmpty().withCurrentChannel(target, CurrentChannelPolicy.INCLUDE)
+                            recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE)
                         PreviewListSource.FAVORITES -> favoriteStreams
                     }
                 }
@@ -520,7 +531,11 @@ internal fun LiveTvSplitLayout(
             LiveTvChannelList(
                 streams = displayedStreamsList,
                 streamsLoading =
-                    if (listSource == PreviewListSource.FAVORITES) favoriteStreamsLoading else recentStreams == null,
+                    if (listSource == PreviewListSource.FAVORITES) {
+                        favoriteStreamsLoading
+                    } else {
+                        publishedRecentStreams == null
+                    },
                 // Hardcoded, not the real browsed/searched/EPG'd-into selection — the panel's
                 // list and title always reflect Recent/Favorites here, regardless of entry path
                 // (see listSource above). categoryMap always has both ids (virtual categories
@@ -547,7 +562,10 @@ internal fun LiveTvSplitLayout(
                 onRefreshStreams = {
                     composableScope.launch {
                         when (listSource) {
-                            PreviewListSource.RECENT -> categoryViewModel.refreshRecentItems()
+                            PreviewListSource.RECENT -> {
+                                categoryViewModel.refreshRecentItems()
+                                recentOrderResetTick++
+                            }
                             PreviewListSource.FAVORITES -> {
                                 favoriteStreamsLoading = true
                                 favoriteStreams = categoryViewModel.getFavoritesSnapshot()
@@ -565,7 +583,7 @@ internal fun LiveTvSplitLayout(
                         previewTarget = item
                     }
                     // Always upgrade from the dock's light load (empty categoryStreams/
-                    // recent-channel list, no watch-history recording — see loadStreamLight's doc
+                    // recent-channel list — see loadStreamLight's doc
                     // comment) to a full load so the promoted full-screen view has real category/
                     // last-watched lists and actually records watch history. Safe to call even when
                     // it's the same channel already previewing: playback itself is driven by a

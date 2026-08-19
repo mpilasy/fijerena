@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
+import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.feature.player.components.AudioTrackSelectorDialog
 import org.njarasoa.fijerena.feature.player.components.ChannelToast
 import org.njarasoa.fijerena.feature.player.components.ErrorOverlay
@@ -218,8 +219,10 @@ fun MobilePlayerContent(
     var showRecoverySpinner by remember { mutableStateOf(false) }
 
     // The flyout offers channels to switch to, so the one already playing is filtered out below —
-    // unlike the docked preview panel, which keeps it as the highlighted row.
-    val recentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
+    // unlike the docked preview panel, which keeps it as the highlighted row. Held in display
+    // order so watching past the delay doesn't re-sort the list the viewer may have open.
+    val publishedRecentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
+    val recentStreams = rememberStableRecentOrder(publishedRecentStreams)
 
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
