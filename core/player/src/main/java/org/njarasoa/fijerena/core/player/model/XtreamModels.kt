@@ -199,8 +199,12 @@ data class SeriesInfo(
  */
 @Serializable
 data class SeriesDetails(
+    // Nullable: some Xtream servers omit it from `info` entirely, or send it as `title`. It is
+    // only a display fallback (the series list already carries the name), so a missing one must
+    // not fail the whole episode list — which is what a required field did.
+    @JsonNames("name", "title")
     @SerialName("name")
-    val name: String,
+    val name: String? = null,
     @JsonNames("cover", "movie_image")
     @SerialName("cover")
     val cover: String? = null,
