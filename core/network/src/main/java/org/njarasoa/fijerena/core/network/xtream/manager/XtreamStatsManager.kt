@@ -65,6 +65,9 @@ class XtreamStatsManager(
             streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_LIVE)
             streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_VOD)
             seriesDao.deleteAll(providerId)
+            // Episodes hang off series rows; leaving them behind means a cleared catalogue still
+            // serves episode ids the provider may no longer recognise.
+            database.episodeDao().deleteAll(providerId)
         }
 
     /**
@@ -91,6 +94,7 @@ class XtreamStatsManager(
                         metricsManager.removeFetchTime("series_categories")
                         categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_SERIES)
                         seriesDao.deleteAll(providerId)
+                        database.episodeDao().deleteAll(providerId)
                     }
                 }
             }

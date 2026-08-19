@@ -276,9 +276,11 @@ class XtreamApiService(
 
         val responseText = response.bodyAsText()
 
-        // Some providers return an empty array [] instead of an object when series info is unavailable
+        // An empty array instead of an object is how these servers say "no such series" — usually a
+        // catalogue id that has since changed. Reporting it as an empty series would render a show
+        // with no synopsis and no episodes, indistinguishable from a real but empty one.
         if (responseText.trim().startsWith("[")) {
-            return SeriesInfo()
+            throw XtreamItemUnavailableException(seriesId, "get_series_info")
         }
 
         return json.decodeFromString(responseText)
@@ -302,9 +304,9 @@ class XtreamApiService(
 
         val responseText = response.bodyAsText()
 
-        // Some providers return an empty array [] instead of an object when VOD info is unavailable
+        // See getSeriesInfo — an empty array means the provider no longer has this id.
         if (responseText.trim().startsWith("[")) {
-            return VodInfo(info = null, movieData = null)
+            throw XtreamItemUnavailableException(vodId, "get_vod_info")
         }
 
         return json.decodeFromString(responseText)

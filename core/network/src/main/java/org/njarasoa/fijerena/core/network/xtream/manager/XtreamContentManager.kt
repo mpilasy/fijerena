@@ -825,6 +825,20 @@ class XtreamContentManager(
         streamDao.updateDetailCache(providerId, vodId, XtreamStreamEntity.TYPE_VOD, contentRating, tmdbId, containerExtension, fetchedAt)
     }
 
+    /**
+     * Re-syncs the series catalogue and returns the id the provider currently uses for [name], or
+     * null if it isn't there any more. Recovery path for a stored id the provider has stopped
+     * recognising — ids change when a provider rebuilds its catalogue.
+     */
+    suspend fun resolveSeriesIdByName(name: String): Int? =
+        withContext(Dispatchers.IO) {
+            runCatching { syncSeries().await() }
+            seriesDao
+                .getAllSeries(providerId)
+                .firstOrNull { it.name.equals(name, ignoreCase = true) }
+                ?.seriesId
+        }
+
     /** Cached series row, used only to check for a still-fresh persisted TMDB content rating — episode list is always fetched live. */
     suspend fun getCachedSeriesEntity(seriesId: Int): XtreamSeriesEntity? =
         withContext(Dispatchers.IO) { seriesDao.getSeriesById(providerId, seriesId) }
