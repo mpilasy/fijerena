@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +63,12 @@ fun MobileMovieDetailsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
+    // Retained across a refresh so pulling down leaves the details on screen under the spinner,
+    // instead of blanking to a full-screen loading state. Mirrors the episode screen.
+    var lastSuccess by remember { mutableStateOf<MovieDetailsViewModel.UiState.Success?>(null) }
+    (uiState as? MovieDetailsViewModel.UiState.Success)?.let { lastSuccess = it }
+    val isRefreshing = uiState is MovieDetailsViewModel.UiState.Loading && lastSuccess != null
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -93,27 +100,35 @@ fun MobileMovieDetailsScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
         ) {
-            when (val state = uiState) {
-                is MovieDetailsViewModel.UiState.Loading -> {
-                    LoadingScreen()
-                }
-                is MovieDetailsViewModel.UiState.Error -> {
+            val state = uiState
+            val shown = lastSuccess
+            when {
+                state is MovieDetailsViewModel.UiState.Error -> {
                     ErrorScreen(
                         message = state.message,
                         onBack = onBack,
                     )
                 }
-                is MovieDetailsViewModel.UiState.Success -> {
-                    MovieDetailsContent(
-                        movieDetail = state.movieDetail,
-                        movieId = movieId,
-                        movieName = movieName,
-                        resumePositionMs = state.resumePositionMs,
-                        resumeDurationMs = state.resumeDurationMs,
-                        categoryName = state.categoryName,
-                        onPlayMovie = onPlayMovie,
-                        onCategorySelected = { onCategorySelected(categoryId) },
-                    )
+                shown != null -> {
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { viewModel.refreshMovieInfo() },
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        MovieDetailsContent(
+                            movieDetail = shown.movieDetail,
+                            movieId = movieId,
+                            movieName = movieName,
+                            resumePositionMs = shown.resumePositionMs,
+                            resumeDurationMs = shown.resumeDurationMs,
+                            categoryName = shown.categoryName,
+                            onPlayMovie = onPlayMovie,
+                            onCategorySelected = { onCategorySelected(categoryId) },
+                        )
+                    }
+                }
+                else -> {
+                    LoadingScreen()
                 }
             }
         }
