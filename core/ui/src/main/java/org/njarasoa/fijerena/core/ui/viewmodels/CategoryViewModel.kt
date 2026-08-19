@@ -164,7 +164,16 @@ class CategoryViewModel(
     }
 
     private suspend fun loadCategoriesInternal() {
-        _uiState.value = UiState.Loading
+        // Keep whatever is already on screen and mark it refreshing, rather than blanking the
+        // grid to a full-screen spinner on every reload. Only a genuinely empty screen (first
+        // load, or a previous failure) falls back to Loading.
+        val current = _uiState.value
+        _uiState.value =
+            if (current is UiState.Success && current.categories.isNotEmpty()) {
+                current.copy(categoriesRefreshing = true)
+            } else {
+                UiState.Loading
+            }
 
         if (!repository.isConnected()) {
             val connectResult = repository.connect()

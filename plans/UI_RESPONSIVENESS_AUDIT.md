@@ -3,9 +3,9 @@
 Companion to `UX_FLOW_AUDIT.md`, which covers navigation *friction* (IA, discoverability). This
 is the orthogonal axis: how fast the app feels. Audited 2026-08-17.
 
-**Status:** steps 1–7 done (steps 1–6 on 2026-08-17, step 7 on 2026-08-18) — §A1, B1, B5
-(partial), C2, C3, C4, D1, D2, D3, E1, E2 are fixed and landed. §C1 was deliberately skipped, see
-step 7. Steps 8–10 are still findings only.
+**Status:** steps 1–8 done (steps 1–6 on 2026-08-17, steps 7–8 on 2026-08-18) — §A1, B1, B2, B4,
+B5 (partial), C2, C3, C4, D1, D2, D3, E1, E2 are fixed and landed. §C1 was deliberately skipped,
+see step 7. Steps 9–10 are still findings only.
 
 ---
 
@@ -102,12 +102,32 @@ cannot exercise them. Re-measure on a category with real programme density befor
 **Not verified:** the on-air highlight. C3 moved `isCurrent` to a `derivedStateOf`, and confirming
 it needs a programme airing inside the loaded window — neither category tried had one.
 
-### Step 8 — Category entry cost · §B2, B4 · medium risk
-Move the `toDomain` mapping and `ScriptDetector` filtering off Main. Keep stale content on reload
-instead of flashing to a spinner.
+### Step 8 — Category entry cost · §B2, B4 · medium risk — ✅ **done** (2026-08-18)
+Moved the `toDomain` mapping and the `ScriptDetector` category filtering onto
+`Dispatchers.Default`, and made a category reload keep the current grid (marked refreshing)
+instead of blanking to a spinner.
 
-**Check:** time Home → a large category (the 9,479-stream one) before and after. StrictMode is
-already wired debug-only; add timing around the mapping passes.
+**Measured on darcy** with temporary timing logs around both passes (removed before commit),
+entering the largest category — `DE - FILME 1940/2024`, 9,480 items:
+
+| Pass | Before | After |
+|---|---|---|
+| `toDomain` mapping, 9,480 items | **50ms on `main`** | 19ms on `DefaultDispatcher-worker` (warm) |
+| category filtering, 347 categories | **21ms on `main`** | off-main, `DefaultDispatcher-worker` |
+
+The first post-change load measured 80ms wall — thread-pool spin-up and CPU scaling on a cold
+worker. Warm steady state is 19ms, so this is faster in absolute terms *and* off the UI thread;
+but note the first category entry after launch still pays the cold-start penalty.
+
+Live TV is the worse case for the filtering pass and was not measured: 855 visible categories
+against Movies' 347.
+
+**Not addressed, deliberately.** Two §B2 sub-items were left alone as sub-millisecond noise
+against the two above: the 869-element list copies in `rebuildVirtualCategories` /
+`refreshCategoriesLocal` on every favourite toggle, and the two `SharedPreferences.getBoolean`
+reads per state emission. The latter cannot simply be cached — `isDevMode` is toggled at runtime
+and a cached copy would stop reflecting it.
+
 **Commit:** `perf(browse): map catalogue rows off the main thread`
 
 ### Step 9 — Thumbnails and backdrop · §D4, B6 · medium risk
@@ -166,7 +186,9 @@ watch-history caching in `MediaRepository` (`:659-693`) — the AGENTS.md "#1 ho
 fixed**.
 
 **Scale that makes this matter:** 230,310 streams, 45,128 series, 1,639 categories, 122 MB Xtream
-DB. Largest single Live TV category: **9,479 streams**.
+DB. Largest single category: **9,480 streams** — `DE - FILME 1940/2024`, which is a *Movies*
+category, not Live TV as an earlier revision of this doc said. Largest visible Live TV category is
+`US| ESPN+ PPV ⱽᴵᴾ` at 1,001. Counts verified 2026-08-18 by querying darcy's `xtream_v2.db`.
 
 ---
 
