@@ -478,17 +478,15 @@ private fun EpisodeDetailContent(
 ) {
     val extension = episode.extension ?: "mp4"
 
-    // Load resume position
-    var resumePositionMs by remember { mutableStateOf(0L) }
+    // Load resume position. Keyed on the episode so stepping to another one clears the previous
+    // episode's value immediately rather than showing its resume time until the lookup lands —
+    // and the lookup assigns unconditionally, so an episode with nothing to resume resets it
+    // instead of leaving the last one's position behind.
+    var resumePositionMs by remember(episode.id) { mutableStateOf(0L) }
 
     LaunchedEffect(episode.id) {
         val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
-        if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
-            val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
-            if (progress in 2.0..95.0) {
-                resumePositionMs = watched.playbackPosition
-            }
-        }
+        resumePositionMs = watched?.resumeProgress()?.let { watched.playbackPosition } ?: 0L
     }
 
     Column(
