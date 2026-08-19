@@ -133,8 +133,26 @@ class XtreamMediaProvider(
      * name and tries once more. Catalogue ids change when a provider rebuilds; the locally stored
      * one then points at nothing, and every later visit would show an empty show forever.
      */
+    /** A response carrying no episodes and no info at all — the provider gave us nothing usable. */
+    private fun SeriesInfo.isEmptyShell(): Boolean = episodes.values.all { it.isEmpty() } && info == null
+
     private suspend fun resolveSeriesInfo(id: Int): Result<SeriesInfo> {
         val first = repository.getSeriesInfo(id)
+
+        // Some providers (proxies especially) intermittently answer with a well-formed but empty
+        // object instead of failing. Taken at face value that renders as a real series with no
+        // synopsis and no episodes, so retry once and only then give up — as a failure, so the
+        // screen can say something, rather than as a show that looks like it has nothing in it.
+        if (first is Result.Success && first.data.isEmptyShell()) {
+            val retry = repository.getSeriesInfo(id)
+            return if (retry is Result.Success && !retry.data.isEmptyShell()) {
+                retry
+            } else {
+                Log.w("XtreamMediaProvider", "Series $id came back empty twice; treating as unavailable")
+                Result.Error(XtreamItemUnavailableException(id, "get_series_info"))
+            }
+        }
+
         if (first !is Result.Error || first.exception !is XtreamItemUnavailableException) return first
 
         val name = repository.getCachedSeriesEntity(id)?.name
