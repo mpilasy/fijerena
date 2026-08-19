@@ -538,7 +538,7 @@ internal fun LiveTvSplitLayout(
                     if (listSource == PreviewListSource.FAVORITES) {
                         CategoryViewModel.FAVORITES_CATEGORY_ID
                     } else {
-                        CategoryViewModel.LAST_WATCHED_CATEGORY_ID
+                        CategoryViewModel.RECENT_CATEGORY_ID
                     },
                 categoryMap = categoryMap,
                 // Highlight whatever's actually previewing, if present in the current list.

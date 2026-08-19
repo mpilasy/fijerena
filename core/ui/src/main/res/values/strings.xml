@@ -462,7 +462,6 @@
 
     <!-- Channel Overlays -->
     <string name="player_category_channels">Category Channels</string>
-    <string name="player_last_watched">Last Watched</string>
     <string name="player_no_last_watched">No recently watched channels yet</string>
 
     <!-- Audio format -->
@@ -769,6 +768,7 @@
     <string name="category_error_load_failed">Failed to load categories</string>
     <string name="category_favorite_categories_label">Favorite Categories</string>
     <string name="category_recent_categories_label">Recent Categories</string>
+    <string name="category_recent_label">Recent</string>
     <string name="search_error_session_expired">Session expired. Please login again.</string>
     <string name="search_error_failed">Failed to search</string>
     <string name="epg_error_file_too_large">EPG file too large for search. Try a more specific query.</string>

@@ -632,7 +632,7 @@ fun MobileCategoryListScreen(
                                         when {
                                             target == null -> state.selectedCategoryId
                                             listSource == PreviewListSource.FAVORITES -> CategoryViewModel.FAVORITES_CATEGORY_ID
-                                            else -> CategoryViewModel.LAST_WATCHED_CATEGORY_ID
+                                            else -> CategoryViewModel.RECENT_CATEGORY_ID
                                         },
                                     panelTitle =
                                         if (target == null) {
@@ -640,7 +640,7 @@ fun MobileCategoryListScreen(
                                         } else if (listSource == PreviewListSource.FAVORITES) {
                                             stringResource(R.string.settings_import_favorites_label)
                                         } else {
-                                            stringResource(R.string.player_last_watched)
+                                            stringResource(R.string.category_recent_label)
                                         },
                                     lastPlayedItemId = state.lastPlayedItemId,
                                     nowPlaying = nowPlaying,

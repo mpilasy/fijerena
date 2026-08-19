@@ -609,7 +609,7 @@ fun MobilePlayerContent(
                 exit = slideOutHorizontally { it },
             ) {
                 MobileChannelListSheet(
-                    title = stringResource(R.string.player_last_watched),
+                    title = stringResource(R.string.category_recent_label),
                     streams =
                         remember(state.lastWatchedStreams, state.streamId) {
                             ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId })

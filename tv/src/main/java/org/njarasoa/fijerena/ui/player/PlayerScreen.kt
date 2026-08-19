@@ -340,7 +340,7 @@ fun PlayerScreen(
             exit = slideOutHorizontally { it },
         ) {
             TvChannelListOverlay(
-                title = stringResource(R.string.player_last_watched),
+                title = stringResource(R.string.category_recent_label),
                 streams = lastWatchedStreams,
                 panelAlignment = Alignment.CenterEnd,
                 emptyMessage = stringResource(R.string.player_no_last_watched),

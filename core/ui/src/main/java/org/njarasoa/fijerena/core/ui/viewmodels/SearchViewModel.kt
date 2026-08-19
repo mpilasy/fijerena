@@ -133,7 +133,7 @@ class SearchViewModel(
             targetContentTypes.forEach { type ->
                 val result = repo.getFilteredCategories(type)
                 result.onSuccess { categories ->
-                    val realCategories = categories.filter { it.id != "last_watched" && !it.isVirtual }
+                    val realCategories = categories.filter { !it.isVirtual }
                     realCategories.forEach { cat ->
                         allCategories.add(SearchableCategory(cat, type))
                     }
@@ -238,7 +238,7 @@ class SearchViewModel(
                 prefetchedCategories?.takeIf { it.isNotEmpty() }
                     ?: targetContentTypes.flatMap { type ->
                         repo.getFilteredCategories(type).getOrNull()
-                            ?.filter { it.id != "last_watched" && !it.isVirtual }
+                            ?.filter { !it.isVirtual }
                             ?.map { SearchableCategory(it, type) }
                             ?: emptyList()
                     }
