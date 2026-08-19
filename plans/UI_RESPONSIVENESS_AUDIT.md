@@ -3,8 +3,9 @@
 Companion to `UX_FLOW_AUDIT.md`, which covers navigation *friction* (IA, discoverability). This
 is the orthogonal axis: how fast the app feels. Audited 2026-08-17.
 
-**Status:** steps 1–6 done (2026-08-17) — §A1, B1, B5 (partial), C4, D1, D2, D3, E1, E2 are
-fixed and landed. Steps 7–10 are still findings only.
+**Status:** steps 1–7 done (steps 1–6 on 2026-08-17, step 7 on 2026-08-18) — §A1, B1, B5
+(partial), C2, C3, C4, D1, D2, D3, E1, E2 are fixed and landed. §C1 was deliberately skipped, see
+step 7. Steps 8–10 are still findings only.
 
 ---
 
@@ -74,14 +75,32 @@ Hoist `CardDefaults.colors/scale/glow` and the `Color.copy` calls out of the ite
 `gfxinfo`, reset between runs.
 **Commit:** `perf(tv): hoist per-item card styling out of composition`
 
-### Step 7 — EPG grid · §C2, C3, C1 · medium risk
-Memoize the `is24HourFormat`/formatting path (`TimeFormat`), scope the 60s tick so it doesn't
-invalidate the whole grid, then — separately, and only if the first two aren't enough — give each
-row its own `LazyListState` instead of sharing one.
+### Step 7 — EPG grid · §C2, C3 · medium risk — ✅ **done** (2026-08-18) · §C1 **skipped**
+Memoized the `is24HourFormat`/formatting path (`TimeFormat`) and scoped the 60s tick so it no
+longer invalidates the whole grid. §C1 (per-row `LazyListState`) was not attempted — the plan
+gated it on "only if the first two aren't enough", and it is the one item that can visibly break
+row sync.
 
-**Check:** scroll the guide horizontally and vertically; watch jank and confirm rows still scroll in
-sync. C1 is the one item here that can visibly break sync — treat it as its own commit if attempted.
-**Commit:** `perf(epg): memoize cell time formatting, scope the minute tick`
+**Check result:** functional pass on darcy — cell and time-header labels render identically to the
+pre-change build, and the time header stays in sync with the program rows while scrolling.
+
+**Jank: no measurable signal, and the available data can't produce one.** Identical scripted
+workload (20 right, 15 down, 20 right, 15 up), `gfxinfo --reset` between runs, same category:
+
+| Run | Frames | Janky | 90th | 99th |
+|---|---|---|---|---|
+| before | 775 | 4 (0.52%) | 11ms | 15ms |
+| after | 775 | 9 (1.16%) | 12ms | 17ms |
+| after, repeat | 620 | 14 (2.26%) | 12ms | 21ms |
+
+The two after-runs alone span 1.16%→2.26%, so the before/after gap sits inside run-to-run noise.
+Cause is the data, not the change: this provider's XMLTV coverage is thin — the CANAL+ category
+matches 50/50 channels by name but has no programmes in the loaded window, so the grid renders 50
+channel rows and zero program cells. C2 and C3 both target per-cell work, so a grid without cells
+cannot exercise them. Re-measure on a category with real programme density before judging.
+
+**Not verified:** the on-air highlight. C3 moved `isCurrent` to a `derivedStateOf`, and confirming
+it needs a programme airing inside the loaded window — neither category tried had one.
 
 ### Step 8 — Category entry cost · §B2, B4 · medium risk
 Move the `toDomain` mapping and `ScriptDetector` filtering off Main. Keep stale content on reload
@@ -113,6 +132,17 @@ zap burst.
 **Not scheduled:** §A5 (cold-start `awaitInstance`) — real, but startup is already ~2s better this
 session and it's tangled with service lifecycle. §D5/§D6 (vestigial `scaled()`, `composed {}`
 long-press) — wide, low-value; do opportunistically when touching those files anyway.
+
+**Belongs to no step** — findings that fell between the ten steps rather than being ruled out.
+Schedule deliberately or drop them on purpose; don't let them go missing by default:
+- §B3 — `refreshPerItemData`'s four separate `MutableStateFlow`s, up to four screen-wide
+  recompositions per refresh.
+- §B5 remainder — the four sequential round trips in `MovieDetailsViewModel`/`SeriesDetailsViewModel`,
+  and the missing series detail cache (movies have a 7-day Room cache; series always hit network).
+  Only the TV `lastSuccess` retention half of B5 landed.
+- §E2 adjacent — `MobileCategoryListScreen.kt:1026` calls `isFavoriteCategory` inside the `LazyRow`
+  item lambda over 869 categories, and `:460` does an O(n) `find` inside `TopAppBar(actions = …)`.
+  TV already solved this with a precomputed `favoriteCategoryIds` set.
 
 **Natural stopping point: after step 4.** ✅ **Reached.** Steps 1–4 are all low-risk and cover both
 bugs, the live first-frame gate, both sources of permanent per-frame work, and the navigation feel.
@@ -320,7 +350,7 @@ channels (`:129-132`), `buildChannelRows` (`:223-250`), and 48 `ZonedDateTime` c
 
 # D. Systemic — affects everything above
 
-### D1. `core:player` has no Compose compiler plugin, so every domain type is unstable — **FIXED**
+### D1. `core:player` has no Compose compiler plugin, so every domain type is unstable — **FIXED** (`425848f5`)
 
 `core/player/build.gradle.kts:1-4` applies only `android.library` + `kotlin.serialization`. Every
 type crossing into composition is therefore inferred **unstable**: `MediaItem` (which also carries
@@ -438,7 +468,7 @@ categories inside `TopAppBar(actions = …)`.
 # If you only act on five
 
 1. ✅ **A1** — the `setContentType` gap. One missing call; halves the live first-frame gate.
-2. **D1** — add the Compose compiler plugin (or a stability config) to `core:player`. One config
+2. ✅ **D1** — add the Compose compiler plugin (or a stability config) to `core:player`. One config
    change, improves skipping in every list.
 3. ✅ **B1** — declare TV nav transitions. A 700 ms library default is almost certainly not your
    choice; restore darcy's `animator_duration_scale` first or you can't see it.
@@ -447,7 +477,8 @@ categories inside `TopAppBar(actions = …)`.
 5. **A2** — stop gating first frame on EPG and watch-history. The decoder needs a URL; the rest can
    land after playback starts.
 
-Remaining from this list: **D1** (step 5) and **A2** (step 10).
+Remaining from this list: **A2** (step 10) only. D1 landed in `425848f5` — `core/player/build.gradle.kts`
+now applies `kotlin.compose`.
 
 # How to verify any of it
 
