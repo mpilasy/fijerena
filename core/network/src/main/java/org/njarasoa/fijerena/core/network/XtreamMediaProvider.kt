@@ -135,11 +135,17 @@ class XtreamMediaProvider(
         // content-rating round trip below is skipped when we already have a fresh persisted value.
         return when (val result = repository.getSeriesInfo(id)) {
             is Result.Success -> {
-                val detail = result.data.toDomain(seriesId)
+                // Xtream re-sends the episode list on every visit, and it rarely carries synopses —
+                // so fill in the ones TMDB gave us last time before deciding whether to ask TMDB
+                // again. Without this the season fetches below repeat on every cold start, since
+                // their in-memory cache dies with the process.
+                val detail = result.data.toDomain(seriesId).withPlots(repository.getPersistedEpisodePlots(id))
                 val tmdbSeriesId = result.data.info?.tmdb.asString()?.toIntOrNull()
                 var enriched = detail
                 if (tmdb.hasApiKey() && tmdbSeriesId != null) {
-                    enriched = enrichWithTmdbOverviews(enriched, tmdbSeriesId)
+                    if (detail.hasEpisodeWithoutPlot()) {
+                        enriched = enrichWithTmdbOverviews(enriched, tmdbSeriesId)
+                    }
 
                     val cachedSeries = repository.getCachedSeriesEntity(id)
                     val cachedRating = cachedSeries?.contentRating
@@ -224,6 +230,29 @@ class XtreamMediaProvider(
             }
         return detail.copy(episodes = enrichedEpisodes)
     }
+
+    /** This detail with [plots] (keyed by episode id) filling in any episode that has none. */
+    private fun SeriesDetail.withPlots(plots: Map<String, String>): SeriesDetail =
+        if (plots.isEmpty()) {
+            this
+        } else {
+            copy(
+                episodes =
+                    episodes.mapValues { (_, list) ->
+                        list.map { ep ->
+                            val stored = plots[ep.id]
+                            if (ep.metadata.plot.isNullOrBlank() && !stored.isNullOrBlank()) {
+                                ep.copy(metadata = ep.metadata.copy(plot = stored))
+                            } else {
+                                ep
+                            }
+                        }
+                    },
+            )
+        }
+
+    /** Whether any episode still lacks a synopsis — the only reason to spend TMDB season calls. */
+    private fun SeriesDetail.hasEpisodeWithoutPlot(): Boolean = episodes.values.any { list -> list.any { it.metadata.plot.isNullOrBlank() } }
 
     private suspend fun fetchTmdbOverviews(
         tmdbSeriesId: Int,
