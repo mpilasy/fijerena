@@ -43,6 +43,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
+import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.player.PlayerScreen
@@ -213,8 +214,10 @@ private fun PlayerContent(
     onBack: () -> Unit,
 ) {
     // The flyout offers channels to switch to, so the one already playing is filtered out —
-    // unlike the split preview panel, which keeps it as the highlighted row.
-    val recentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
+    // unlike the split preview panel, which keeps it as the highlighted row. Held in display
+    // order so watching past the delay doesn't re-sort the list the viewer may have open.
+    val publishedRecentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
+    val recentStreams = rememberStableRecentOrder(publishedRecentStreams)
     PlayerScreen(
         viewModel = playbackViewModel,
         currentStreamId = data.streamId,

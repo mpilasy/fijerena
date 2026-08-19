@@ -41,6 +41,44 @@ class RecentChannelsTest {
     }
 
     @Test
+    fun displayOrderKeepsVisibleRowsWhereTheyAre() {
+        val displayed = listOf(channel("bbc"), channel("cnn"), channel("arte"))
+        // cnn was just watched, so the store now lists it first.
+        val republished = listOf(channel("cnn"), channel("bbc"), channel("arte"))
+
+        assertEquals(
+            listOf("bbc", "cnn", "arte"),
+            republished.inDisplayOrderOf(displayed).map { it.id },
+        )
+    }
+
+    @Test
+    fun displayOrderPutsGenuinelyNewEntriesFirst() {
+        val displayed = listOf(channel("bbc"), channel("cnn"))
+        val republished = listOf(channel("arte"), channel("cnn"), channel("bbc"))
+
+        assertEquals(
+            listOf("arte", "bbc", "cnn"),
+            republished.inDisplayOrderOf(displayed).map { it.id },
+        )
+    }
+
+    @Test
+    fun displayOrderDropsEntriesThatAreGone() {
+        val displayed = listOf(channel("bbc"), channel("cnn"))
+
+        assertEquals(
+            listOf("bbc"),
+            listOf(channel("bbc")).inDisplayOrderOf(displayed).map { it.id },
+        )
+    }
+
+    @Test
+    fun displayOrderOfNothingDisplayedAdoptsTheIncomingOrder() {
+        assertEquals(recent, recent.inDisplayOrderOf(emptyList()))
+    }
+
+    @Test
     fun noCurrentChannelLeavesTheListAlone() {
         assertEquals(recent, recent.withCurrentChannel(null, CurrentChannelPolicy.INCLUDE))
         assertEquals(recent, recent.withCurrentChannel(null, CurrentChannelPolicy.EXCLUDE))

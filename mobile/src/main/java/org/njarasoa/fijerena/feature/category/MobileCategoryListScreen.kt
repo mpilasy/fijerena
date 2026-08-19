@@ -113,6 +113,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
+import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
@@ -262,7 +263,15 @@ fun MobileCategoryListScreen(
     // Shows (target is always null there). Swipe left/right on the list (see
     // listSourceSwipeModifier below) toggles it over to Favorites instead.
     var listSource by remember { mutableStateOf(PreviewListSource.RECENT) }
-    val recentStreams by viewModel.recentItems.collectAsStateWithLifecycle()
+    // Bumped by pull-to-refresh on the docked panel — the viewer asking for current truth, and so
+    // the one place the frozen order below is allowed to re-sort.
+    var recentOrderResetTick by remember { mutableStateOf(0) }
+    val publishedRecentStreams by viewModel.recentItems.collectAsStateWithLifecycle()
+    // Held in display order: a channel previewed past the watch delay is recorded while this
+    // panel is on screen, and promoting it to the top live would shift the rows under the
+    // viewer's thumb.
+    val recentStreams =
+        rememberStableRecentOrder(publishedRecentStreams.orEmpty(), resetKey = recentOrderResetTick)
     var favoriteStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var favoriteStreamsLoading by remember { mutableStateOf(true) }
     val composableScope = rememberCoroutineScope()
@@ -563,7 +572,7 @@ fun MobileCategoryListScreen(
                             } else if (listSource == PreviewListSource.FAVORITES) {
                                 favoriteStreams
                             } else {
-                                recentStreams.orEmpty().withCurrentChannel(target, CurrentChannelPolicy.INCLUDE)
+                                recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE)
                             }
                         val displayedStreamsLoading =
                             if (target == null) {
@@ -571,7 +580,7 @@ fun MobileCategoryListScreen(
                             } else if (listSource == PreviewListSource.FAVORITES) {
                                 favoriteStreamsLoading
                             } else {
-                                recentStreams == null
+                                publishedRecentStreams == null
                             }
                         // Swipe left/right toggles the docked panel between Recent and
                         // Favorites — mirrors TV's D-pad Left/Right on the same panel
@@ -615,6 +624,7 @@ fun MobileCategoryListScreen(
                                         }
                                     } else {
                                         composableScope.launch { viewModel.refreshRecentItems() }
+                                        recentOrderResetTick++
                                     }
                                 },
                                 modifier = Modifier.fillMaxSize().then(listSourceSwipeModifier),

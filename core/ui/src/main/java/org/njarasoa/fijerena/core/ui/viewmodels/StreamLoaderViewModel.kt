@@ -79,6 +79,16 @@ class StreamLoaderViewModel(
     // Retain last request for error retry
     private var lastLoadRequest: MediaItem? = null
 
+    /**
+     * Stream this loader has most recently been asked to resolve, whether or not that resolution
+     * has finished. Callers that re-point the loader when their target changes read it to skip a
+     * redundant load of the channel it is already on — the split preview constructs the loader
+     * with its target and would otherwise immediately resolve the same stream (and its EPG) a
+     * second time.
+     */
+    var requestedStreamId: String? = initialStreamId
+        private set
+
     // Job to handle delayed history saving (mimics original 5s delay)
     private var historyJob: Job? = null
     private var loadJob: Job? = null
@@ -134,13 +144,12 @@ class StreamLoaderViewModel(
         streamId: String,
         streamName: String,
         currentStreams: List<MediaItem>,
-        // Preview (embedded, non-committed) playback skips write-side bookkeeping: no
-        // onPlaybackStarted notification, no "last played" / watch-history persistence. A preview
-        // thumbnail isn't a real watch session, and every SharedPreferences write adds to a backlog
-        // that can make an unrelated, unavoidable Service dispatch (WorkManager, media session, ...)
-        // block the main thread for seconds (QueuedWork.waitToFinish flushes all pending writes
-        // before any Service's onStartCommand is processed — a well-known Android ANR trap).
-        recordSideEffects: Boolean = true,
+        // Whether to tell the provider a playback session started. Suppressed for embedded
+        // previews: the server counts that as a real session, and a preview re-points on every
+        // focus change, so it would open and close sessions as fast as the user scrolls.
+        // Watch history is NOT gated on this — a preview that lasts past the watch delay is a
+        // real view and is recorded like one (see the history job below).
+        notifyProviderStarted: Boolean = true,
     ) {
         val repo = mediaRepository ?: return
 
@@ -209,7 +218,7 @@ class StreamLoaderViewModel(
                     }
 
                     // Notify provider that playback started (e.g. for Jellyfin session tracking)
-                    if (recordSideEffects) {
+                    if (notifyProviderStarted) {
                         viewModelScope.launch(Dispatchers.IO) {
                             repo.onPlaybackStarted(streamId)
                         }
@@ -266,10 +275,15 @@ class StreamLoaderViewModel(
                             savedSubtitleTrackIndex = savedSubtitleIndex,
                         )
 
-                    // Schedule history update (Recent Channels) after configured delay — LIVE TV ONLY
-                    // For VOD, history is recorded via recordHistory() once a threshold (%) is reached
+                    // Schedule history update (Recent) after the configured delay — LIVE TV ONLY.
+                    // For VOD, history is recorded via recordHistory() once a threshold (%) is
+                    // reached. Previews schedule this too: the delay is what separates a real
+                    // view from a channel the user merely passed over, and re-pointing to another
+                    // channel cancels the pending write below, so scrolling never records
+                    // anything. What a preview must not do is reorder the list while the user is
+                    // looking at it — that's handled where the list is displayed, not here.
                     historyJob?.cancel()
-                    if (recordSideEffects && contentType == ContentType.LIVE_TV) {
+                    if (contentType == ContentType.LIVE_TV) {
                         historyJob =
                             viewModelScope.launch(Dispatchers.IO) {
                                 delay(AppSettings(context).watchDelaySeconds * 1000L)
@@ -302,6 +316,7 @@ class StreamLoaderViewModel(
 
     fun loadStream(item: MediaItem) {
         lastLoadRequest = item
+        requestedStreamId = item.id
         loadJob?.cancel()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
             val repo = mediaRepository ?: return@launch
@@ -333,13 +348,15 @@ class StreamLoaderViewModel(
 
     /**
      * Lean resolution for embedded previews (e.g. the Live TV split preview pane): resolves the
-     * stream URL + EPG only, skipping the channel-switcher category list refresh and watch-history
-     * fetch that [loadStream] does — neither is rendered by a small preview. Those two calls can
-     * each be an expensive full-category / history fetch; doing them on every focus-driven preview
-     * change (potentially once per few hundred ms while scrolling) saturated CPU and caused ANRs.
+     * stream URL + EPG only, skipping the channel-switcher category list refresh that [loadStream]
+     * does — a small preview doesn't render it. That call can be an expensive full-category fetch;
+     * doing it on every focus-driven preview change (potentially once per few hundred ms while
+     * scrolling) saturated CPU and caused ANRs. Watch history is still recorded on the usual
+     * delay, so a channel previewed long enough counts as watched.
      */
     fun loadStreamLight(item: MediaItem) {
         lastLoadRequest = item
+        requestedStreamId = item.id
         loadJob?.cancel()
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
@@ -349,7 +366,7 @@ class StreamLoaderViewModel(
                     item.id,
                     item.name,
                     currentStreams = emptyList(),
-                    recordSideEffects = false,
+                    notifyProviderStarted = false,
                 )
             }
     }
