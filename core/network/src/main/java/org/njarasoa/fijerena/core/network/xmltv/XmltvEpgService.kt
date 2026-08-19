@@ -23,8 +23,10 @@ class XmltvEpgService(
     companion object {
         private const val TAG = "XmltvEpgService"
         private const val PARSED_CACHE_TTL_MS = 12L * 60 * 60 * 1000
-        private const val KEY_CACHED_EPG = "xmltv_epg_data"
-        private const val KEY_CACHE_TIMESTAMP = "xmltv_cache_timestamp"
+        // v2: entries cached before the per-source dedup fix can hold duplicate
+        // programmes, which crashes the lazy lists keyed on listing id.
+        private const val KEY_CACHED_EPG = "xmltv_epg_data_v2"
+        private const val KEY_CACHE_TIMESTAMP = "xmltv_cache_timestamp_v2"
         private const val MISS_CACHE_MS = 60_000L
     }
 
@@ -191,18 +193,21 @@ class XmltvEpgService(
                 // ⚡ Bolt: Performance Optimization
                 // Replaced chunked().flatMap() and .groupBy() with explicit loops to avoid
                 // intermediate list and Map.Entry allocations.
-                val programmesByChannel = mutableMapOf<String, MutableList<EpgSearchResultRow>>()
+                // A channel id can be indexed from several EPG sources, which yields the same
+                // programme once per source. Keep one row per start time: listing ids are
+                // built from channel id + start epoch and must stay unique.
+                val programmesByChannel = mutableMapOf<String, LinkedHashMap<Long, EpgSearchResultRow>>()
                 for (chunk in uniqueXmltvIds.chunked(500)) {
                     val rows = dao.getProgrammesForChannels(chunk, windowStart, windowEnd)
                     for (row in rows) {
-                        val list = programmesByChannel.getOrPut(row.channelId) { ArrayList() }
-                        list.add(row)
+                        val byStart = programmesByChannel.getOrPut(row.channelId) { LinkedHashMap() }
+                        byStart.putIfAbsent(row.startEpoch, row)
                     }
                 }
 
                 val result = mutableMapOf<String, EpgResponse>()
                 for ((itemId, xmltvId) in matchedIds) {
-                    val progs = programmesByChannel[xmltvId] ?: continue
+                    val progs = programmesByChannel[xmltvId]?.values ?: continue
                     if (progs.isEmpty()) continue
                     result[itemId] =
                         EpgResponse(
