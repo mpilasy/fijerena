@@ -164,7 +164,13 @@ class XtreamMediaProvider(
                     }
                 }
                 repository.persistEpisodeOverviews(enriched.episodes)
-                seriesDetailCache.put(seriesId, enriched)
+                // A series with no episodes is never a legitimate answer — it means the provider
+                // returned nothing useful this time. Caching it would serve the empty screen for
+                // the cache's whole lifetime, which no amount of clearing the provider's stored
+                // catalogue would fix, since this cache lives in memory.
+                if (enriched.episodes.values.any { it.isNotEmpty() }) {
+                    seriesDetailCache.put(seriesId, enriched)
+                }
                 kotlin.Result.success(enriched)
             }
             is Result.Error ->
