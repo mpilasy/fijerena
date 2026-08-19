@@ -32,6 +32,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,7 +64,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -161,7 +163,9 @@ fun EpgGridLayout(
     val scale = LocalUiScale.current
     var isSearchActive by remember { mutableStateOf(false) }
 
-    val nowEpochSeconds = rememberNowEpochSeconds()
+    // Held as State, not read here: reading it in this scope would make the 60s tick recompose the
+    // whole grid. Only ProgramCell reads it, and only through a derived on-air flag (see below).
+    val nowEpochSeconds = rememberNowEpochSecondsState()
     val cardStyle = epgCardStyle()
 
     Column(
@@ -497,7 +501,7 @@ private fun TimeHeaderRow(
 private fun ProgramRow(
     channelRow: EpgChannelRow,
     timeSlots: List<TimeSlot>,
-    nowEpochSeconds: Long,
+    nowEpochSeconds: State<Long>,
     cardStyle: EpgCardStyle,
     scrollState: LazyListState,
     onProgramSelected: (EpgProgram) -> Unit,
@@ -531,13 +535,17 @@ private fun ProgramRow(
 @Composable
 private fun ProgramCell(
     program: EpgProgram,
-    nowEpochSeconds: Long,
+    nowEpochSeconds: State<Long>,
     cardStyle: EpgCardStyle,
     onClick: () -> Unit,
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    // Use shared nowEpochSeconds instead of per-cell System.currentTimeMillis()
-    val isCurrent = nowEpochSeconds in program.startTime..program.endTime
+    // Shared tick instead of per-cell System.currentTimeMillis(), read through derivedStateOf so a
+    // cell recomposes only when its own on-air state actually flips — not on every 60s tick.
+    val isCurrent by
+        remember(program.startTime, program.endTime, nowEpochSeconds) {
+            derivedStateOf { nowEpochSeconds.value in program.startTime..program.endTime }
+        }
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
     // Memoize scaled TextStyles to avoid allocating new copies per cell per recomposition (50×N cells)
