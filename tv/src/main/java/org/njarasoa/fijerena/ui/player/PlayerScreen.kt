@@ -75,7 +75,7 @@ fun PlayerScreen(
     nextEpgProgram: EpgProgram? = null,
     currentStreamId: String? = null,
     categoryStreams: ImmutableMediaList = ImmutableMediaList(),
-    lastWatchedStreams: ImmutableMediaList = ImmutableMediaList(),
+    recentStreams: ImmutableMediaList = ImmutableMediaList(),
     onStreamSelected: ((MediaItem) -> Unit)? = null,
     // When provided (by LiveTvSplitLayout, as a movableContentOf node), rendered instead of a
     // fresh EmbeddedPlayerSurface — keeps the same underlying Android View/Surface alive across
@@ -341,7 +341,7 @@ fun PlayerScreen(
         ) {
             TvChannelListOverlay(
                 title = stringResource(R.string.category_recent_label),
-                streams = lastWatchedStreams,
+                streams = recentStreams,
                 panelAlignment = Alignment.CenterEnd,
                 emptyMessage = stringResource(R.string.player_no_last_watched),
                 onSelect = { item ->

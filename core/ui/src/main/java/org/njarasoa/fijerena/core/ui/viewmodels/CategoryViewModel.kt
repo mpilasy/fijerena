@@ -118,6 +118,11 @@ class CategoryViewModel(
     private val _supportsNativeEpg = MutableStateFlow(false)
     val supportsNativeEpg: StateFlow<Boolean> = _supportsNativeEpg.asStateFlow()
 
+    // Mirrors the repository's shared Recent list so the Live TV preview panels can render it
+    // without owning a fetch of their own. null until the first load lands.
+    private val _recentItems = MutableStateFlow<List<MediaItem>?>(null)
+    val recentItems: StateFlow<List<MediaItem>?> = _recentItems.asStateFlow()
+
     // Pre-computed per-item data — avoids calling ViewModel methods inline per visible item
     private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
     val favoriteIds: StateFlow<Set<String>> = _favoriteIds.asStateFlow()
@@ -146,7 +151,14 @@ class CategoryViewModel(
     init {
         viewModelScope.launch {
             repository = AppContainer.getInstance(context).getMediaRepository()
+            launch { repository.recentItems(contentType).collect { _recentItems.value = it } }
             loadCategoriesInternal()
+            // Entering on a real category (from the EPG, search, or a saved selection) never
+            // loads the Recent row, but the Live TV preview panel shows that list regardless of
+            // what was browsed into — without this warm-up it would sit on its spinner forever.
+            if (repository.recentItems(contentType).value == null) {
+                repository.refreshRecentItems(contentType)
+            }
         }
         // Refresh pre-computed per-item data only when the actual stream list changes
         viewModelScope.launch {
@@ -302,7 +314,7 @@ class CategoryViewModel(
         // Handle virtual categories
         when (categoryId) {
             RECENT_CATEGORY_ID -> {
-                emitStreams(repository.getRecentItemsSuspend(contentType))
+                emitStreams(repository.refreshRecentItems(contentType))
                 loadNowPlaying(currentStreams)
                 return
             }
@@ -621,18 +633,19 @@ class CategoryViewModel(
     }
 
     /**
-     * Watch history fetch that bypasses [uiState] entirely — for callers (the Live TV preview
-     * pane) that need the history list independent of whatever category is actually selected/
-     * browsed, without disturbing that selection or its own streams list.
+     * Reloads the shared Recent list — for callers (the Live TV preview panel) that show it
+     * independently of whatever category is actually selected, without disturbing that
+     * selection or its streams list. The result arrives via [recentItems].
      */
-    suspend fun getLastWatchedSnapshot(): List<MediaItem> {
-        if (!::repository.isInitialized) return emptyList()
-        return repository.getRecentItemsSuspend(contentType)
+    suspend fun refreshRecentItems() {
+        if (::repository.isInitialized) {
+            repository.refreshRecentItems(contentType)
+        }
     }
 
     /**
-     * Favorites fetch, same shape as [getLastWatchedSnapshot] — for the same Live TV preview
-     * pane callers, toggling between the two without disturbing the selected/browsed category.
+     * Favorites fetch, bypassing [uiState] the same way — for the same Live TV preview panel,
+     * toggling between the two without disturbing the selected/browsed category.
      */
     suspend fun getFavoritesSnapshot(): List<MediaItem> {
         if (!::repository.isInitialized) return emptyList()

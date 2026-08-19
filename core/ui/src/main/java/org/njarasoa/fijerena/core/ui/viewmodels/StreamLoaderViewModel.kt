@@ -45,7 +45,6 @@ class StreamLoaderViewModel(
             val isLive: Boolean,
             val description: String? = null,
             val categoryStreams: List<MediaItem> = emptyList(),
-            val lastWatchedStreams: List<MediaItem> = emptyList(),
             val currentEpgProgram: EpgProgram? = null,
             val nextEpgProgram: EpgProgram? = null,
             val isFavorite: Boolean = false,
@@ -60,6 +59,12 @@ class StreamLoaderViewModel(
 
     private val _state = MutableStateFlow<StreamState>(StreamState.Loading)
     val state: StateFlow<StreamState> = _state.asStateFlow()
+
+    // The shared Recent list, mirrored from the repository so the channel flyout shows exactly
+    // what the browse row and the preview panel show. Live TV only — no VOD player surface
+    // renders it, and collecting it there would cost a fetch nobody reads.
+    private val _recentItems = MutableStateFlow<List<MediaItem>>(emptyList())
+    val recentItems: StateFlow<List<MediaItem>> = _recentItems.asStateFlow()
 
     private var mediaRepository: MediaRepository? = null
     private val appSettings = AppSettings(context)
@@ -93,11 +98,13 @@ class StreamLoaderViewModel(
                 val repo = container.getMediaRepository()
                 mediaRepository = repo
 
-                // 2. Load Channel List (if Live TV) & Last Watched
+                // 2. Load Channel List (Live TV only) and start mirroring the shared Recent list
                 var currentStreams: List<MediaItem> = emptyList()
-                var lastWatched: List<MediaItem> = emptyList()
 
                 if (contentType == ContentType.LIVE_TV) {
+                    launch { repo.recentItems(contentType).collect { _recentItems.value = it.orEmpty() } }
+                    repo.refreshRecentItems(contentType)
+
                     val result = repo.getItems(currentCategoryId, contentType)
                     result.fold(
                         onSuccess = { items ->
@@ -108,8 +115,6 @@ class StreamLoaderViewModel(
                         },
                         onFailure = { Log.e("StreamLoader", "Failed to load category streams", it) },
                     )
-
-                    lastWatched = repo.getWatchHistoryForContentTypeSuspend(contentType)
                 }
 
                 // 3. Resolve Initial Stream
@@ -117,7 +122,6 @@ class StreamLoaderViewModel(
                     streamId = initialStreamId,
                     streamName = initialStreamName,
                     currentStreams = currentStreams,
-                    lastWatched = lastWatched,
                 )
             } catch (e: Exception) {
                 Log.e("StreamLoader", "Initialization error", e)
@@ -130,7 +134,6 @@ class StreamLoaderViewModel(
         streamId: String,
         streamName: String,
         currentStreams: List<MediaItem>,
-        lastWatched: List<MediaItem>,
         // Preview (embedded, non-committed) playback skips write-side bookkeeping: no
         // onPlaybackStarted notification, no "last played" / watch-history persistence. A preview
         // thumbnail isn't a real watch session, and every SharedPreferences write adds to a backlog
@@ -256,7 +259,6 @@ class StreamLoaderViewModel(
                             isLive = contentType == ContentType.LIVE_TV,
                             description = description,
                             categoryStreams = currentStreams,
-                            lastWatchedStreams = lastWatched,
                             currentEpgProgram = currentProgram,
                             nextEpgProgram = nextProgram,
                             isFavorite = isFav,
@@ -282,12 +284,10 @@ class StreamLoaderViewModel(
                                     seriesName = seriesName,
                                 )
 
-                                // Refresh history in the current state so the "Last Watched" overlay is up-to-date
-                                val updatedHistory = repo.getWatchHistoryForContentTypeSuspend(contentType)
-                                val currentState = _state.value
-                                if (currentState is StreamState.Success && currentState.streamId == streamId) {
-                                    _state.value = currentState.copy(lastWatchedStreams = updatedHistory)
-                                }
+                                // Republish the shared Recent list so every surface showing it —
+                                // this player's flyout, the preview panel behind it, the browse
+                                // row — picks the channel up at the same moment.
+                                repo.refreshRecentItems(contentType)
                             }
                     }
                 },
@@ -327,10 +327,7 @@ class StreamLoaderViewModel(
             // 2. Update index
             currentStreamIndex = streamList.indexOfFirst { it.id == item.id }
 
-            // 3. Re-fetch history to ensure we have the latest watched items from previous stream
-            val lastWatched = repo.getWatchHistoryForContentTypeSuspend(contentType)
-
-            loadStreamInternal(item.id, item.name, currentStreams, lastWatched)
+            loadStreamInternal(item.id, item.name, currentStreams)
         }
     }
 
@@ -352,7 +349,6 @@ class StreamLoaderViewModel(
                     item.id,
                     item.name,
                     currentStreams = emptyList(),
-                    lastWatched = emptyList(),
                     recordSideEffects = false,
                 )
             }

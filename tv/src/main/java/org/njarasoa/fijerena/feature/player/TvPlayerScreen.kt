@@ -212,6 +212,9 @@ private fun PlayerContent(
     loaderViewModel: StreamLoaderViewModel,
     onBack: () -> Unit,
 ) {
+    // The flyout offers channels to switch to, so the one already playing is filtered out —
+    // unlike the split preview panel, which keeps it as the highlighted row.
+    val recentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
     PlayerScreen(
         viewModel = playbackViewModel,
         currentStreamId = data.streamId,
@@ -226,9 +229,9 @@ private fun PlayerContent(
         currentEpgProgram = data.currentEpgProgram,
         nextEpgProgram = data.nextEpgProgram,
         categoryStreams = ImmutableMediaList(data.categoryStreams),
-        lastWatchedStreams =
-            remember(data.lastWatchedStreams, data.streamId) {
-                ImmutableMediaList(data.lastWatchedStreams.filter { it.id != data.streamId })
+        recentStreams =
+            remember(recentStreams, data.streamId) {
+                ImmutableMediaList(recentStreams.filter { it.id != data.streamId })
             },
         onStreamSelected = { item ->
             finalizeSession(playbackViewModel.playbackState.value, loaderViewModel)
