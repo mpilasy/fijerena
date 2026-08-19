@@ -28,4 +28,9 @@ class TtlCache<K : Any, V : Any>(private val ttlMs: Long) {
     ) {
         map[key] = Entry(value, System.currentTimeMillis() + ttlMs)
     }
+
+    /** Drops [key], so the next read misses and refetches — used by explicit refresh actions. */
+    fun remove(key: K) {
+        map.remove(key)
+    }
 }

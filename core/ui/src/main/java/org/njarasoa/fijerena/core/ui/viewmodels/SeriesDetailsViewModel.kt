@@ -54,6 +54,18 @@ class SeriesDetailsViewModel(
         loadSeriesInfo()
     }
 
+    /**
+     * Explicit user refresh: drop what the provider cached for this series first, so the reload
+     * actually goes back to the server. Without it the refresh action re-serves the cached detail
+     * — including an empty one — and appears to do nothing.
+     */
+    fun refreshSeriesInfo() {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { ensureRepo().invalidateCachedDetail(seriesId) }
+            loadSeriesInfo()
+        }
+    }
+
     fun loadSeriesInfo() {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading

@@ -134,7 +134,7 @@ fun MovieDetailsScreen(
                     onPlayMovie = onPlayMovie,
                     onCategorySelected = { onCategorySelected(categoryId) },
                     onToggleFavorite = { viewModel.toggleFavorite(state.movieDetail.name.ifEmpty { movieName }) },
-                    onRefresh = { viewModel.loadMovieInfo() },
+                    onRefresh = { viewModel.refreshMovieInfo() },
                     onBack = onBack,
                 )
             }

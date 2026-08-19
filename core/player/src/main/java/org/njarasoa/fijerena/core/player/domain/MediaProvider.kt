@@ -25,6 +25,13 @@ interface MediaProvider {
 
     suspend fun getMovieDetail(movieId: String): Result<MovieDetail>
 
+    /**
+     * Drops whatever this provider has cached for [itemId]'s detail, so the next read goes back to
+     * the server. Refresh actions call it — without it a "refresh" re-serves the cached copy and
+     * looks like it did nothing. No-op for providers that don't cache.
+     */
+    suspend fun invalidateCachedDetail(itemId: String) {}
+
     suspend fun resolvePlayableStream(
         itemId: String,
         contentType: String,

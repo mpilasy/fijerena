@@ -192,7 +192,7 @@ fun MobileEpisodeSelectionScreen(
                 displaySeriesDetail != null -> {
                     PullToRefreshBox(
                         isRefreshing = isRefreshing,
-                        onRefresh = { viewModel.loadSeriesInfo() },
+                        onRefresh = { viewModel.refreshSeriesInfo() },
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         EpisodeListContent(
