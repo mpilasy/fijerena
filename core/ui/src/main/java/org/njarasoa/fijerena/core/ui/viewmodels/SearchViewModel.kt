@@ -40,8 +40,8 @@ class SearchViewModel(
             val allResults: List<SearchResult>,
             val filteredResults: List<SearchResult>,
             val query: String,
-            /** Matches hidden because their category is excluded by the provider's category filters. */
-            val excludedCount: Int = 0,
+            /** Per content type, matches hidden because their category is excluded by the provider's category filters. */
+            val excludedCountByType: Map<String, Int> = emptyMap(),
             val isSearching: Boolean = false,
             val searchProgress: String? = null,
             val searchDataSize: String? = null,
@@ -262,7 +262,10 @@ class SearchViewModel(
                     }
                 }
 
-            val excludedCount = targetContentTypes.sumOf { repo.countExcludedSearchMatches(query, it) }
+            val excludedCountByType =
+                targetContentTypes
+                    .associateWith { repo.countExcludedSearchMatches(query, it) }
+                    .filterValues { it > 0 }
 
             // Try server-side search first (e.g., Jellyfin)
             val serverResults = mutableListOf<SearchResult>()
@@ -304,7 +307,7 @@ class SearchViewModel(
                         allResults = sortedResults,
                         filteredResults = sortedResults,
                         query = query,
-                        excludedCount = excludedCount,
+                        excludedCountByType = excludedCountByType,
                         totalDuration = formatSeconds(elapsed),
                         networkCalls = 1,
                     )
@@ -349,7 +352,7 @@ class SearchViewModel(
                     allResults = finalResults,
                     filteredResults = finalResults,
                     query = query,
-                    excludedCount = excludedCount,
+                    excludedCountByType = excludedCountByType,
                     totalDuration = formatSeconds(elapsed),
                 )
         } catch (e: Exception) {

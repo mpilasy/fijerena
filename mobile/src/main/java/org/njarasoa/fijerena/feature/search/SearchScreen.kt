@@ -248,7 +248,7 @@ fun MobileSearchScreen(
                         SearchResults(
                             categoryResults = state.categoryResults,
                             results = state.filteredResults,
-                            excludedCount = state.excludedCount,
+                            excludedCountByType = state.excludedCountByType,
                             query = state.query,
                             queryContentType = contentType,
                             isSearching = state.isSearching,
@@ -342,7 +342,7 @@ private fun ErrorView(message: String) {
 private fun SearchResults(
     categoryResults: List<SearchViewModel.CategorySearchResult>,
     results: List<SearchViewModel.SearchResult>,
-    excludedCount: Int,
+    excludedCountByType: Map<String, Int>,
     query: String,
     queryContentType: String,
     isSearching: Boolean,
@@ -468,24 +468,6 @@ private fun SearchResults(
                 }
             }
 
-            // Result count
-            if (categoryResults.isNotEmpty() || results.isNotEmpty()) {
-                item(key = "result_count", contentType = "status") {
-                    val count = stringResource(R.string.search_results_count_format, categoryResults.size + results.size)
-                    val hidden =
-                        if (excludedCount > 0) {
-                            " · " + stringResource(R.string.search_results_hidden_format, excludedCount)
-                        } else {
-                            ""
-                        }
-                    Text(
-                        text = count + hidden,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                    )
-                }
-            }
-
             if (queryContentType == "ALL") {
                 groupedByType.forEach { (type, typeCats, typeStreams) ->
 
@@ -494,6 +476,8 @@ private fun SearchResults(
                         item(key = "header_$type", contentType = "header") {
                             MobileCollapsibleHeader(
                                 title = localizedContentTypeLabel(type),
+                                count = typeCats.size + typeStreams.size,
+                                hiddenCount = excludedCountByType[type] ?: 0,
                                 isExpanded = isExpanded,
                                 onToggle = { toggleGroup(type) },
                             )
@@ -526,11 +510,10 @@ private fun SearchResults(
             } else {
                 if (categoryResults.isNotEmpty()) {
                     item(key = "category_header", contentType = "header") {
-                        Text(
-                            text = stringResource(R.string.search_tab_categories),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = Spacing.xxs),
+                        SearchSectionHeader(
+                            title = stringResource(R.string.search_tab_categories),
+                            count = categoryResults.size,
+                            hiddenCount = 0,
                         )
                     }
                     items(categoryResults, key = { "cat_${it.categoryId}_${it.contentType}" }, contentType = { "category" }) { catResult ->
@@ -544,11 +527,10 @@ private fun SearchResults(
                 }
                 if (results.isNotEmpty()) {
                     item(key = "stream_header", contentType = "header") {
-                        Text(
-                            text = stringResource(R.string.search_tab_streams),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = Spacing.xxs),
+                        SearchSectionHeader(
+                            title = stringResource(R.string.search_tab_streams),
+                            count = results.size,
+                            hiddenCount = excludedCountByType[queryContentType] ?: 0,
                         )
                     }
                     items(
@@ -637,9 +619,52 @@ private fun MobileSearchHistorySection(
     }
 }
 
+/** "12 results" or "12 results · 3 hidden" when the provider's category filters hid matches. */
+@Composable
+private fun searchCountLabel(
+    count: Int,
+    hiddenCount: Int,
+): String {
+    val label = stringResource(R.string.search_results_count_format, count)
+    return if (hiddenCount > 0) {
+        label + " · " + stringResource(R.string.search_results_hidden_format, hiddenCount)
+    } else {
+        label
+    }
+}
+
+@Composable
+private fun SearchSectionHeader(
+    title: String,
+    count: Int,
+    hiddenCount: Int,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = Spacing.xxs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = searchCountLabel(count, hiddenCount),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+        )
+    }
+}
+
 @Composable
 private fun MobileCollapsibleHeader(
     title: String,
+    count: Int,
+    hiddenCount: Int,
     isExpanded: Boolean,
     onToggle: () -> Unit,
 ) {
@@ -665,6 +690,13 @@ private fun MobileCollapsibleHeader(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = searchCountLabel(count, hiddenCount),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                modifier = Modifier.padding(end = Spacing.xs),
             )
             Icon(
                 imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
