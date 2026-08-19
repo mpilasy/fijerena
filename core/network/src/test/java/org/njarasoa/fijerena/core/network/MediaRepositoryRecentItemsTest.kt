@@ -170,6 +170,53 @@ class MediaRepositoryRecentItemsTest {
     }
 
     @Test
+    fun legacyEpisodeWithoutEpisodeIdStillPlaysAsAnEpisode() {
+        // Entries written before episode/series ids were recorded: itemId is the episode's stream
+        // id, so the card must route to the player, not to a series the provider has no such id for.
+        val repository =
+            repositoryWith(
+                WatchedItem(
+                    itemId = "242136",
+                    itemName = "EN - Law & Order - S06E18",
+                    categoryId = "cat1",
+                    contentType = ContentType.TV_SHOWS,
+                    playbackPosition = 30L,
+                    duration = 100L,
+                ),
+            )
+
+        val card = repository.getRecentItems(ContentType.TV_SHOWS).single()
+
+        assertEquals("242136", card.id)
+        assertNull(card.providerData["resumeSeries"])
+        assertEquals("242136", card.providerData["episodeId"])
+    }
+
+    @Test
+    fun episodeCarryingItselfAsItsSeriesPlaysAsAnEpisode() {
+        // Poisoned by the old mis-route: the episode's own stream id was stored as the series id.
+        val repository =
+            repositoryWith(
+                WatchedItem(
+                    itemId = "242136",
+                    itemName = "EN - Law & Order - S06E18",
+                    categoryId = "cat1",
+                    contentType = ContentType.TV_SHOWS,
+                    playbackPosition = 30L,
+                    duration = 100L,
+                    episodeId = "242136",
+                    seriesId = "242136",
+                    seriesName = "EN - Law & Order - S06E18",
+                ),
+            )
+
+        val card = repository.getRecentItems(ContentType.TV_SHOWS).single()
+
+        assertNull(card.providerData["resumeSeries"])
+        assertEquals("242136", card.providerData["episodeId"])
+    }
+
+    @Test
     fun respectsResumeBandBoundaries() {
         val repository =
             repositoryWith(
