@@ -39,6 +39,7 @@ import org.njarasoa.fijerena.core.player.domain.defaultExpandedSeason
 import org.njarasoa.fijerena.core.player.domain.episodeScrollIndex
 import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
+import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
 import org.njarasoa.fijerena.core.player.domain.seasonNumberContaining
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
@@ -97,6 +98,12 @@ fun MobileEpisodeSelectionScreen(
     // Selected episode for detail panel — only set by an explicit tap (including on the
     // Continue Watching resume episode below); arriving here never auto-opens it.
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
+
+    // Episode to come back to: the route's Continue Watching argument at first, then whichever
+    // episode was last sent to the player, or the one derived from watch history below.
+    // Saveable and hoisted above the list, because both the detail panel and the player dispose
+    // the list — plain remember would drop it and land the user back on season 1 at the top.
+    var resumeEpisodeId by rememberSaveable { mutableStateOf(initialEpisodeId) }
 
     // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {
@@ -177,6 +184,7 @@ fun MobileEpisodeSelectionScreen(
                         nextEpisode = nextEpisode,
                         onNavigate = { next -> selectedEpisode = next },
                         onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
+                            resumeEpisodeId = episodeId
                             onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
                         },
                     )
@@ -190,7 +198,8 @@ fun MobileEpisodeSelectionScreen(
                         EpisodeListContent(
                             seriesDetail = displaySeriesDetail,
                             mediaRepository = viewModel.mediaRepository!!,
-                            initialEpisodeId = initialEpisodeId,
+                            resumeEpisodeId = resumeEpisodeId,
+                            onResumeEpisodeDerived = { resumeEpisodeId = it },
                             categoryName = lastSuccess?.categoryName,
                             onEpisodeSelected = { episode ->
                                 selectedEpisode = episode
@@ -208,7 +217,8 @@ fun MobileEpisodeSelectionScreen(
 private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     mediaRepository: MediaRepository,
-    initialEpisodeId: String? = null,
+    resumeEpisodeId: String? = null,
+    onResumeEpisodeDerived: (String) -> Unit,
     categoryName: String?,
     onEpisodeSelected: (DomainEpisodeItem) -> Unit,
     onCategorySelected: () -> Unit,
@@ -233,8 +243,8 @@ private fun EpisodeListContent(
     // both the "first season" and "next unwatched" defaults below, so backing out of its
     // detail panel lands on that season expanded, everything else collapsed.
     val resumeSeasonNumber =
-        remember(seriesDetail, initialEpisodeId) {
-            initialEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
+        remember(seriesDetail, resumeEpisodeId) {
+            resumeEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
         }
 
     // Accordion: only one season expanded at a time (first season by default)
@@ -251,8 +261,8 @@ private fun EpisodeListContent(
 
     // Scroll the resume episode into view once its season is expanded, so "highlighted" also
     // means visible without the user having to scroll to find it.
-    LaunchedEffect(resumeSeasonNumber, expandedSeasons) {
-        val targetId = initialEpisodeId ?: return@LaunchedEffect
+    LaunchedEffect(resumeEpisodeId, resumeSeasonNumber, expandedSeasons) {
+        val targetId = resumeEpisodeId ?: return@LaunchedEffect
         val index =
             episodeScrollIndex(
                 sortedSeasons = sortedSeasons,
@@ -298,16 +308,33 @@ private fun EpisodeListContent(
                 }
             }
 
+        // Entering from the series list carries no episode argument, so derive the anchor from
+        // watch history instead: the episode with the newest playback timestamp (or the one
+        // after it, if that one is finished). Whatever the route or a play already set wins.
+        val derivedAnchor =
+            if (resumeEpisodeId == null) {
+                seriesDetail.resumeAnchorEpisodeId(
+                    sortedSeasons = sortedSeasons,
+                    lastPlayedEpisodeId = allWatched.maxByOrNull { it.value.timestamp }?.key,
+                    isCompleted = { allWatched[it]?.isCompleted == true },
+                )?.also(onResumeEpisodeDerived)
+            } else {
+                resumeEpisodeId
+            }
+
         if (!hasMultipleSeasons) return@LaunchedEffect
 
-        val unwatchedSeason =
-            firstSeasonWithUnwatchedEpisode(
-                sortedSeasons = sortedSeasons,
-                episodesBySeason = sortedEpisodesBySeason,
-                isCompleted = { allWatched[it]?.isCompleted == true },
-            )
-        if (unwatchedSeason != null && !hasManuallyToggledSeasons) {
-            expandedSeasons = setOf(unwatchedSeason)
+        // The derived anchor's season beats the "first season with anything unwatched" guess:
+        // a viewer mid-season 13 doesn't want season 1 opened because they skipped an episode.
+        val targetSeason =
+            derivedAnchor?.let { seriesDetail.seasonNumberContaining(it) }
+                ?: firstSeasonWithUnwatchedEpisode(
+                    sortedSeasons = sortedSeasons,
+                    episodesBySeason = sortedEpisodesBySeason,
+                    isCompleted = { allWatched[it]?.isCompleted == true },
+                )
+        if (targetSeason != null && !hasManuallyToggledSeasons) {
+            expandedSeasons = setOf(targetSeason)
         }
     }
 
@@ -425,7 +452,7 @@ private fun EpisodeListContent(
                     items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
                         EpisodeCard(
                             episode = episode,
-                            isContinueWatching = episode.id == initialEpisodeId,
+                            isContinueWatching = episode.id == resumeEpisodeId,
                             watchProgress = episodeProgress[episode.id] ?: 0f,
                             isWatched = episode.id in watchedEpisodeIds,
                             onClick = {

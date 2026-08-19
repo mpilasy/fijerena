@@ -102,6 +102,28 @@ fun firstSeasonWithUnwatchedEpisode(
 }
 
 /**
+ * Episode to land on when the series screen opens: the most recently played one, or the
+ * episode right after it when that one was already finished (nobody comes back to a series
+ * to rewatch what they just completed). Null when nothing here has been played yet.
+ *
+ * [lastPlayedEpisodeId] is the id with the newest playback timestamp among this series'
+ * episodes; [isCompleted] reports whether an episode was watched past the completion mark.
+ */
+fun SeriesDetail.resumeAnchorEpisodeId(
+    sortedSeasons: List<SeasonInfo>,
+    lastPlayedEpisodeId: String?,
+    isCompleted: (episodeId: String) -> Boolean,
+): String? {
+    val lastPlayed = lastPlayedEpisodeId ?: return null
+    if (!isCompleted(lastPlayed)) return lastPlayed
+    val flat = flattenedEpisodes(sortedSeasons)
+    val index = flat.indexOfFirst { it.id == lastPlayed }
+    if (index < 0) return lastPlayed
+    // Last episode of the series finished: stay on it rather than pointing at nothing.
+    return flat.getOrNull(index + 1)?.id ?: lastPlayed
+}
+
+/**
  * Flat-list index of [targetEpisodeId] within an accordion season list (header
  * rows counted when [hasMultipleSeasons]), or null if it isn't in an expanded
  * season.

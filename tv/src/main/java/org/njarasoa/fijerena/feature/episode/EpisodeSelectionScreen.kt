@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,6 +88,7 @@ import org.njarasoa.fijerena.core.player.domain.defaultExpandedSeason
 import org.njarasoa.fijerena.core.player.domain.episodeScrollIndex
 import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
+import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
 import org.njarasoa.fijerena.core.player.domain.seasonNumberContaining
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
@@ -96,12 +98,12 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.WatchedBadge
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
-import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -274,12 +276,18 @@ private fun EpisodeListContent(
         }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
-    // Season containing the Continue Watching resume episode, if any — takes priority over
-    // both the "first season" and "next unwatched" defaults below, so backing out of its
-    // detail panel lands on that season expanded, everything else collapsed.
+    // Episode to come back to: the route's Continue Watching argument at first, then whichever
+    // episode was last sent to the player from here. Saveable, because navigating to the player
+    // disposes this composable — a plain remember would drop it and land the user back on
+    // season 1 at the top of the list.
+    var resumeEpisodeId by rememberSaveable { mutableStateOf(initialEpisodeId) }
+
+    // Season containing the resume episode, if any — takes priority over both the
+    // "first season" and "next unwatched" defaults below, so backing out of its detail panel
+    // (or out of the player) lands on that season expanded, everything else collapsed.
     val resumeSeasonNumber =
-        remember(seriesDetail, initialEpisodeId) {
-            initialEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
+        remember(seriesDetail, resumeEpisodeId) {
+            resumeEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
         }
 
     // Accordion: only one season expanded at a time (first season by default)
@@ -299,8 +307,8 @@ private fun EpisodeListContent(
     // Scroll the resume episode into view once its season is expanded, so "highlighted" also
     // means visible without the user having to scroll to find it — then move D-pad focus onto
     // it directly.
-    LaunchedEffect(resumeSeasonNumber, expandedSeasons) {
-        val targetId = initialEpisodeId ?: return@LaunchedEffect
+    LaunchedEffect(resumeEpisodeId, resumeSeasonNumber, expandedSeasons) {
+        val targetId = resumeEpisodeId ?: return@LaunchedEffect
         val index =
             episodeScrollIndex(
                 sortedSeasons = sortedSeasons,
@@ -352,16 +360,32 @@ private fun EpisodeListContent(
                 }
             }
 
+        // Entering from the series list carries no episode argument, so derive the anchor from
+        // watch history instead: the episode with the newest playback timestamp (or the one
+        // after it, if that one is finished). Whatever the route or a play from this screen
+        // already set wins — it's the more recent truth.
+        if (resumeEpisodeId == null) {
+            resumeEpisodeId =
+                seriesDetail.resumeAnchorEpisodeId(
+                    sortedSeasons = sortedSeasons,
+                    lastPlayedEpisodeId = allWatched.maxByOrNull { it.value.timestamp }?.key,
+                    isCompleted = { allWatched[it]?.isCompleted == true },
+                )
+        }
+
         if (!hasMultipleSeasons) return@LaunchedEffect
 
-        val unwatchedSeason =
-            firstSeasonWithUnwatchedEpisode(
-                sortedSeasons = sortedSeasons,
-                episodesBySeason = sortedEpisodesBySeason,
-                isCompleted = { allWatched[it]?.isCompleted == true },
-            )
-        if (unwatchedSeason != null && !hasManuallyToggledSeasons) {
-            expandedSeasons = setOf(unwatchedSeason)
+        // The derived anchor's season beats the "first season with anything unwatched" guess:
+        // a viewer mid-season 13 doesn't want season 1 opened because they skipped an episode.
+        val targetSeason =
+            resumeEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
+                ?: firstSeasonWithUnwatchedEpisode(
+                    sortedSeasons = sortedSeasons,
+                    episodesBySeason = sortedEpisodesBySeason,
+                    isCompleted = { allWatched[it]?.isCompleted == true },
+                )
+        if (targetSeason != null && !hasManuallyToggledSeasons) {
+            expandedSeasons = setOf(targetSeason)
         }
     }
 
@@ -396,6 +420,7 @@ private fun EpisodeListContent(
                 nextEpisode = nextEpisode,
                 onNavigate = { next -> selectedEpisode = next },
                 onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
+                    resumeEpisodeId = episodeId
                     onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
                 },
                 onBack = { selectedEpisode = null },
@@ -541,7 +566,7 @@ private fun EpisodeListContent(
 
                         if (isExpanded) {
                             items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
-                                val isContinueWatching = episode.id == initialEpisodeId
+                                val isContinueWatching = episode.id == resumeEpisodeId
                                 EpisodeCard(
                                     episode = episode,
                                     cardStyle = episodeCardStyle,
@@ -1038,15 +1063,12 @@ private fun EpisodeCard(
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (isWatched) {
-                    Icon(
-                        imageVector = CinemaIcons.CheckCircle,
-                        contentDescription = stringResource(R.string.content_watched_badge),
-                        tint = CinemaSuccess,
+                    WatchedBadge(
+                        size = TvDimensions.iconMedium.scaled(scale),
                         modifier =
                             Modifier
                                 .align(Alignment.TopEnd)
-                                .padding(Spacing.xxs.scaled(scale))
-                                .size(TvDimensions.iconSmall.scaled(scale)),
+                                .padding(Spacing.xxs.scaled(scale)),
                     )
                 }
             }
