@@ -29,11 +29,11 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GradientOverlay
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.WatchedBadge
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -114,15 +114,12 @@ fun CinemaContentCard(
 
             // Watched check at top-left — top-right is the favorite star's corner
             if (isWatched) {
-                Icon(
-                    imageVector = CinemaIcons.CheckCircle,
-                    contentDescription = stringResource(R.string.content_watched_badge),
-                    tint = CinemaSuccess,
+                WatchedBadge(
+                    size = TvDimensions.iconMedium,
                     modifier =
                         Modifier
                             .align(Alignment.TopStart)
-                            .padding(Spacing.xs)
-                            .size(TvDimensions.iconSmall),
+                            .padding(Spacing.xs),
                 )
             }
 
