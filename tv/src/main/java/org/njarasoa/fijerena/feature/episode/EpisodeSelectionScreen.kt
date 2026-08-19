@@ -360,18 +360,17 @@ private fun EpisodeListContent(
                 }
             }
 
-        // Entering from the series list carries no episode argument, so derive the anchor from
-        // watch history instead: the episode with the newest playback timestamp (or the one
-        // after it, if that one is finished). Whatever the route or a play from this screen
-        // already set wins — it's the more recent truth.
-        if (resumeEpisodeId == null) {
-            resumeEpisodeId =
-                seriesDetail.resumeAnchorEpisodeId(
-                    sortedSeasons = sortedSeasons,
-                    lastPlayedEpisodeId = allWatched.maxByOrNull { it.value.timestamp }?.key,
-                    isCompleted = { allWatched[it]?.isCompleted == true },
-                )
-        }
+        // Anchor on the episode worth watching next. The route (or a play from this screen)
+        // names the episode last played; entering from the series list names none, so fall back
+        // to the newest playback timestamp. Either way the anchor moves on when that episode is
+        // already finished — re-evaluated on every entry, so backing out of an episode the user
+        // just completed lands on the following one.
+        seriesDetail
+            .resumeAnchorEpisodeId(
+                sortedSeasons = sortedSeasons,
+                lastPlayedEpisodeId = resumeEpisodeId ?: allWatched.maxByOrNull { it.value.timestamp }?.key,
+                isCompleted = { allWatched[it]?.isCompleted == true },
+            )?.let { resumeEpisodeId = it }
 
         if (!hasMultipleSeasons) return@LaunchedEffect
 

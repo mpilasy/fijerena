@@ -37,6 +37,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.feature.category.TvCategoryGridScreen
 import org.njarasoa.fijerena.feature.contentselection.ContentTypeSelectionScreen
@@ -200,9 +201,19 @@ fun TvNavHost(
                             ) {
                                 popUpTo(Screen.ContentTypeSelection) { inclusive = false }
                             }
-                            navController.navigate(
-                                Screen.CategoryList(contentType.name, showPreviewPane = true),
-                            )
+                            // ...but only when there is a channel to preview. With no watch
+                            // history the preview screen has nothing to seed itself with and
+                            // renders an empty pane with no way to reach the categories, so a
+                            // first-run user would be stuck there. Browsing is the useful screen
+                            // then, and picking a channel from it pushes the preview anyway.
+                            coroutineScope.launch {
+                                val repository = AppContainer.getInstance(context).getMediaRepository()
+                                if (repository.getLastItemId(ContentType.LIVE_TV) != null) {
+                                    navController.navigate(
+                                        Screen.CategoryList(contentType.name, showPreviewPane = true),
+                                    )
+                                }
+                            }
                         } else {
                             navController.navigate(Screen.CategoryList(contentType.name)) {
                                 popUpTo(Screen.ContentTypeSelection) { inclusive = false }
