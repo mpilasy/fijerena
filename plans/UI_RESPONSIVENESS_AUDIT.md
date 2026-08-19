@@ -75,7 +75,7 @@ Hoist `CardDefaults.colors/scale/glow` and the `Color.copy` calls out of the ite
 `gfxinfo`, reset between runs.
 **Commit:** `perf(tv): hoist per-item card styling out of composition`
 
-### Step 7 — EPG grid · §C2, C3 · medium risk — ✅ **done** (2026-08-18) · §C1 **skipped**
+### Step 7 — EPG grid · §C2, C3 · medium risk — ✅ **done** (`628a0817`) · §C1 **skipped**
 Memoized the `is24HourFormat`/formatting path (`TimeFormat`) and scoped the 60s tick so it no
 longer invalidates the whole grid. §C1 (per-row `LazyListState`) was not attempted — the plan
 gated it on "only if the first two aren't enough", and it is the one item that can visibly break
