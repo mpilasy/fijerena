@@ -55,6 +55,10 @@ class XtreamContentManager(
         private const val KEY_SERIES_CATEGORIES_TIMESTAMP = "series_categories_ts"
         private const val KEY_STREAMS_TIMESTAMP_PREFIX = "streams_ts_"
         private const val CACHE_EXPIRATION_MS = 24 * 3600 * 1000L // 24 hours
+        // Episode synopses are written once and essentially never revised, so they get a much
+        // longer life than the catalogue itself — long enough to make refetching rare, short
+        // enough that a correction upstream still lands eventually.
+        private const val OVERVIEW_CACHE_TTL_MS = 30L * 24 * 3600 * 1000 // 30 days
 
         // SQLite caps bound variables per statement (historically 999 on Android); chunk large
         // DELETE ... IN (...) batches well under that so deletes don't fail outright on
@@ -842,19 +846,26 @@ class XtreamContentManager(
      */
     suspend fun getPersistedEpisodePlots(seriesId: Int): Map<String, String> =
         withContext(Dispatchers.IO) {
+            val oldest = System.currentTimeMillis() - OVERVIEW_CACHE_TTL_MS
             episodeDao
                 .getEpisodes(providerId, seriesId)
-                .mapNotNull { entity -> entity.plot?.takeIf { it.isNotBlank() }?.let { entity.id to it } }
-                .toMap()
+                .mapNotNull { entity ->
+                    val plot = entity.plot?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                    // Plots that predate the timestamp column, or that have aged out, are treated as
+                    // absent so the next visit refetches them.
+                    val fetchedAt = entity.plotFetchedAt ?: return@mapNotNull null
+                    if (fetchedAt >= oldest) entity.id to plot else null
+                }.toMap()
         }
 
     /** Backfills episode plots that TMDB filled in (Xtream itself rarely provides episode synopses) — never overwrites an existing plot. */
     suspend fun persistEpisodeOverviews(episodes: Map<String, List<EpisodeItem>>) =
         withContext(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
             episodes.values.flatten().forEach { ep ->
                 val plot = ep.metadata.plot
                 if (!plot.isNullOrBlank()) {
-                    episodeDao.updateOverviewIfBlank(providerId, ep.id, plot)
+                    episodeDao.updateOverviewIfBlank(providerId, ep.id, plot, now)
                 }
             }
         }

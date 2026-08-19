@@ -17,7 +17,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         XtreamSeriesFts::class,
         XtreamEpgCacheEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -109,6 +109,14 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /** Migration 13→14: remember when a TMDB episode synopsis was stored, so it can expire. */
+        private val MIGRATION_13_14 =
+            object : Migration(13, 14) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `xtream_episodes` ADD COLUMN `plotFetchedAt` INTEGER")
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -116,7 +124,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                         context.applicationContext,
                         XtreamDatabase::class.java,
                         "xtream_v2.db",
-                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { INSTANCE = it }
