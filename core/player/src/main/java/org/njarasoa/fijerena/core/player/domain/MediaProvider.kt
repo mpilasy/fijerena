@@ -44,6 +44,15 @@ interface MediaProvider {
         includeExcluded: Boolean = false,
     ): Result<List<MediaItem>>? = null
 
+    /**
+     * Number of items matching [query] that search skipped because their category is hidden
+     * by the provider's category filters. 0 for providers with no exclusion concept.
+     */
+    suspend fun countExcludedSearchMatches(
+        query: String,
+        contentType: String,
+    ): Int = 0
+
     /** Returns estimated byte size of the full dataset fetched for the last search (before filtering). */
     fun getLastSearchDataSize(contentType: String): Long? = null
 

@@ -178,6 +178,14 @@ class XtreamRepository(
             else -> emptyList()
         }
 
+    suspend fun countExcludedByFts(contentType: String, ftsQuery: String): Int =
+        when (contentType) {
+            ContentType.LIVE_TV -> contentManager.countExcludedStreams(XtreamStreamEntity.TYPE_LIVE, ftsQuery)
+            ContentType.MOVIES -> contentManager.countExcludedStreams(XtreamStreamEntity.TYPE_VOD, ftsQuery)
+            ContentType.TV_SHOWS -> contentManager.countExcludedSeries(ftsQuery)
+            else -> 0
+        }
+
     fun buildStreamUrl(
         streamId: Int,
         contentType: String = ContentType.LIVE_TV,
