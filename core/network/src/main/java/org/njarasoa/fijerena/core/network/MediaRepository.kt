@@ -5,6 +5,8 @@ import androidx.core.content.edit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -894,6 +896,65 @@ class MediaRepository(
         return result
     }
 
+    /**
+     * The single "Recent" list: everything watched for [contentType], resumable items first and
+     * the rest of the history after, each half newest-first.
+     *
+     * LIVE_TV degenerates to plain recency — [savePlaybackPosition] never records a position for
+     * live streams, so no live entry can fall in the resumable band.
+     *
+     * Bounded by the watch-history cap, which is shared across content types: an in-progress
+     * movie pushed out by heavy channel surfing disappears from here too.
+     */
+    fun getRecentItems(contentType: String): List<MediaItem> {
+        val mediaType = contentTypeToMediaType(contentType)
+        val history = getWatchHistory().filter { it.contentType == contentType }
+        // TV Shows: one card per series rather than one per episode. Collapsing before the
+        // partition below is what keeps a series from appearing twice — once as a resume card
+        // and again as plain history. History is newest-first, so this keeps each series' most
+        // recently watched episode.
+        val entries =
+            if (contentType == ContentType.TV_SHOWS) {
+                history.distinctBy { it.seriesId ?: it.itemId }
+            } else {
+                history
+            }
+        val (inProgress, rest) = entries.partition { it.resumeProgress() != null }
+        return (inProgress + rest).map { it.toRecentMediaItem(mediaType) }
+    }
+
+    /**
+     * A history entry as a Recent row card. TV Shows entries become series cards carrying the
+     * episode to resume in `resumeSeries`/`episodeId`, which is what the nav hosts route on;
+     * entries written before series ids were recorded stay episode cards.
+     */
+    private fun WatchedItem.toRecentMediaItem(mediaType: MediaType): MediaItem {
+        val seriesCardId = if (contentType == ContentType.TV_SHOWS) seriesId else null
+        return MediaItem(
+            id = seriesCardId ?: itemId,
+            name = if (seriesCardId != null) seriesName ?: itemName else itemName,
+            mediaType = mediaType,
+            categoryId = categoryId,
+            providerData =
+                buildMap {
+                    put("playbackPosition", playbackPosition.toString())
+                    put("duration", duration.toString())
+                    put("isCompleted", isCompleted.toString())
+                    if (seriesCardId != null) {
+                        put("resumeSeries", "true")
+                        put("episodeId", episodeId ?: itemId)
+                        put("seriesId", seriesCardId)
+                        put("seriesName", seriesName ?: itemName)
+                    } else {
+                        episodeId?.let { put("episodeId", it) }
+                        seriesId?.let { put("seriesId", it) }
+                        seriesName?.let { put("seriesName", it) }
+                    }
+                    episodeExtension?.let { put("episodeExtension", it) }
+                },
+        )
+    }
+
     fun getInProgressItems(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
         val inProgress =
@@ -983,6 +1044,32 @@ class MediaRepository(
             return provider?.getFavoriteItems(contentType)?.getOrNull() ?: emptyList()
         }
         return rehydrateThumbnails(getFavoritesForContentType(contentType), contentType)
+    }
+
+    /**
+     * Server-backed providers own the resume/recency semantics themselves, so the two endpoints
+     * are merged rather than re-filtered: resume items first, then recently-played minus
+     * anything already shown. Providers implementing only one endpoint degrade to just that one.
+     */
+    suspend fun getRecentItemsSuspend(contentType: String): List<MediaItem> {
+        val items =
+            if (usesServerUserData) {
+                val mediaProvider = provider
+                if (mediaProvider == null) {
+                    emptyList()
+                } else {
+                    coroutineScope {
+                        val resumeItems = async { mediaProvider.getResumeItems(contentType)?.getOrNull().orEmpty() }
+                        val recentlyPlayed = async { mediaProvider.getRecentlyPlayed(contentType)?.getOrNull().orEmpty() }
+                        val resume = resumeItems.await()
+                        val shown = resume.mapTo(HashSet()) { it.id }
+                        resume + recentlyPlayed.await().filter { it.id !in shown }
+                    }
+                }
+            } else {
+                rehydrateThumbnails(getRecentItems(contentType), contentType)
+            }
+        return items
     }
 
     suspend fun getInProgressItemsSuspend(contentType: String): List<MediaItem> {
