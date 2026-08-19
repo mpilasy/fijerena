@@ -716,7 +716,7 @@
     <string name="search_no_results_query_format_tv">Aucun résultat pour \'%1$s\'. Essayez d\'autres mots-clés.</string>
     <string name="search_no_results_type_format_tv">Aucun résultat dans %1$s pour \'%2$s\'. Essayez d\'autres mots-clés.</string>
     <string name="search_results_count_format">%1$d résultats</string>
-    <string name="search_results_hidden_format">%1$d masqués par les filtres de catégories</string>
+    <string name="search_results_hidden_format">%1$d masqués</string>
     <string name="provider_none_label">Aucun fournisseur</string>
 
     <!-- Punctuation-adjacent literal audit fixes -->

@@ -211,7 +211,7 @@ fun SearchScreen(
                             query = successState.query,
                             categoryResults = successState.categoryResults,
                             results = successState.filteredResults,
-                            excludedCount = successState.excludedCount,
+                            excludedCountByType = successState.excludedCountByType,
                             isSearching = successState.isSearching,
                             searchProgress = successState.searchProgress ?: "",
                             devStats = devStats,
@@ -334,7 +334,7 @@ private fun SearchContent(
     query: String,
     categoryResults: List<CategorySearchResult>,
     results: List<SearchResult>,
-    excludedCount: Int,
+    excludedCountByType: Map<String, Int>,
     isSearching: Boolean,
     searchProgress: String?,
     devStats: String?,
@@ -409,7 +409,7 @@ private fun SearchContent(
             SearchResultsList(
                 categoryResults = categoryResults,
                 results = results,
-                excludedCount = excludedCount,
+                excludedCountByType = excludedCountByType,
                 query = query,
                 queryContentType = contentType,
                 isSearching = isSearching,
@@ -515,7 +515,7 @@ private fun SearchHistorySection(
 private fun SearchResultsList(
     categoryResults: List<CategorySearchResult>,
     results: List<SearchResult>,
-    excludedCount: Int,
+    excludedCountByType: Map<String, Int>,
     query: String,
     queryContentType: String,
     isSearching: Boolean,
@@ -578,27 +578,14 @@ private fun SearchResultsList(
         }
     } else {
         Column {
-            val totalResults = categoryResults.size + results.size
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .padding(bottom = Spacing.sm),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val hidden =
-                    if (excludedCount > 0) {
-                        " · " + stringResource(R.string.search_results_hidden_format, excludedCount)
-                    } else {
-                        ""
-                    }
-                Text(
-                    text = stringResource(R.string.search_results_count_format, totalResults) + hidden,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                )
-
                 if (searchProgress != null) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -654,6 +641,8 @@ private fun SearchResultsList(
                             item(key = "header_$type", contentType = "header") {
                                 CollapsibleHeader(
                                     title = localizedContentTypeLabel(type),
+                                    count = typeCats.size + typeStreams.size,
+                                    hiddenCount = excludedCountByType[type] ?: 0,
                                     isExpanded = isExpanded,
                                     onToggle = { toggleGroup(type) },
                                 )
@@ -695,15 +684,10 @@ private fun SearchResultsList(
                     // Specific content type search - no need for collapsible groups
                     if (categoryResults.isNotEmpty()) {
                         item(key = "category_header", contentType = "header") {
-                            Text(
-                                text = stringResource(R.string.search_tab_categories),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = CinemaAccent,
-                                modifier =
-                                    Modifier.padding(
-                                        horizontal = Spacing.md,
-                                        vertical = Spacing.xs,
-                                    ),
+                            SearchSectionHeader(
+                                title = stringResource(R.string.search_tab_categories),
+                                count = categoryResults.size,
+                                hiddenCount = 0,
                             )
                         }
                         itemsIndexed(
@@ -722,15 +706,10 @@ private fun SearchResultsList(
 
                     if (results.isNotEmpty()) {
                         item(key = "stream_header", contentType = "header") {
-                            Text(
-                                text = stringResource(R.string.search_tab_streams),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = CinemaAccent,
-                                modifier =
-                                    Modifier.padding(
-                                        horizontal = Spacing.md,
-                                        vertical = Spacing.xs,
-                                    ),
+                            SearchSectionHeader(
+                                title = stringResource(R.string.search_tab_streams),
+                                count = results.size,
+                                hiddenCount = excludedCountByType[queryContentType] ?: 0,
                             )
                         }
                         itemsIndexed(results, key = { _, it -> "${it.itemId}_${it.categoryId}" }, contentType = { _, _ -> "stream" }) { index, result ->
@@ -748,9 +727,52 @@ private fun SearchResultsList(
     }
 }
 
+/** "12 results" or "12 results · 3 hidden" when the provider's category filters hid matches. */
+@Composable
+private fun searchCountLabel(
+    count: Int,
+    hiddenCount: Int,
+): String {
+    val label = stringResource(R.string.search_results_count_format, count)
+    return if (hiddenCount > 0) {
+        label + " · " + stringResource(R.string.search_results_hidden_format, hiddenCount)
+    } else {
+        label
+    }
+}
+
+@Composable
+private fun SearchSectionHeader(
+    title: String,
+    count: Int,
+    hiddenCount: Int,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = CinemaAccent,
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = searchCountLabel(count, hiddenCount),
+            style = MaterialTheme.typography.bodyMedium,
+            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+        )
+    }
+}
+
 @Composable
 private fun CollapsibleHeader(
     title: String,
+    count: Int,
+    hiddenCount: Int,
     isExpanded: Boolean,
     onToggle: () -> Unit,
 ) {
@@ -791,6 +813,13 @@ private fun CollapsibleHeader(
                 style = MaterialTheme.typography.titleMedium,
                 color = CinemaAccent,
                 fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = searchCountLabel(count, hiddenCount),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                modifier = Modifier.padding(end = Spacing.sm),
             )
             Icon(
                 imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
