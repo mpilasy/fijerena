@@ -835,6 +835,19 @@ class XtreamContentManager(
         seriesDao.updateDetailCache(providerId, seriesId, contentRating, tmdbId, fetchedAt)
     }
 
+    /**
+     * Episode plots already stored for [seriesId], keyed by Xtream episode id. These are the TMDB
+     * overviews [persistEpisodeOverviews] backfilled on an earlier visit; reading them back is what
+     * stops the season fetches repeating on every cold start.
+     */
+    suspend fun getPersistedEpisodePlots(seriesId: Int): Map<String, String> =
+        withContext(Dispatchers.IO) {
+            episodeDao
+                .getEpisodes(providerId, seriesId)
+                .mapNotNull { entity -> entity.plot?.takeIf { it.isNotBlank() }?.let { entity.id to it } }
+                .toMap()
+        }
+
     /** Backfills episode plots that TMDB filled in (Xtream itself rarely provides episode synopses) — never overwrites an existing plot. */
     suspend fun persistEpisodeOverviews(episodes: Map<String, List<EpisodeItem>>) =
         withContext(Dispatchers.IO) {
