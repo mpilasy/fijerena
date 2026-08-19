@@ -217,6 +217,10 @@ fun MobilePlayerContent(
     var hasStartedPlaying by remember { mutableStateOf(false) }
     var showRecoverySpinner by remember { mutableStateOf(false) }
 
+    // The flyout offers channels to switch to, so the one already playing is filtered out below —
+    // unlike the docked preview panel, which keeps it as the highlighted row.
+    val recentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
+
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
     val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
@@ -611,8 +615,8 @@ fun MobilePlayerContent(
                 MobileChannelListSheet(
                     title = stringResource(R.string.category_recent_label),
                     streams =
-                        remember(state.lastWatchedStreams, state.streamId) {
-                            ImmutableMediaList(state.lastWatchedStreams.filter { it.id != state.streamId })
+                        remember(recentStreams, state.streamId) {
+                            ImmutableMediaList(recentStreams.filter { it.id != state.streamId })
                         },
                     panelAlignment = Alignment.CenterEnd,
                     onSelect = { item ->

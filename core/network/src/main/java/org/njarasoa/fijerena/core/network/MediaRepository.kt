@@ -7,6 +7,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -52,7 +55,7 @@ data class WatchedItem(
 /**
  * Fraction watched (0..1) when this item is far enough in to be worth resuming but
  * not close enough to the end to count as done, else null. Same band as
- * [MediaRepository.getInProgressItems], so anything that draws a progress bar is
+ * [MediaRepository.getRecentItems], so anything that draws a progress bar is
  * exactly what the detail screen offers a Resume button for.
  */
 fun WatchedItem.resumeProgress(): Float? {
@@ -114,6 +117,9 @@ class MediaRepository(
 
     private val payloadSizes = ConcurrentHashMap<String, Long>()
     private val fetchTimes = ConcurrentHashMap<String, Long>()
+
+    // Keyed by content type; see recentItems().
+    private val recentItemsFlows = ConcurrentHashMap<String, MutableStateFlow<List<MediaItem>?>>()
 
     // In-memory caches to avoid repeated JSON deserialization from SharedPreferences
     private var cachedWatchHistory: List<WatchedItem>? = null
@@ -593,31 +599,6 @@ class MediaRepository(
         return history
     }
 
-    fun getWatchHistoryForContentType(contentType: String): List<MediaItem> {
-        val mediaType = contentTypeToMediaType(contentType)
-        return getWatchHistory()
-            .asSequence()
-            .filter { it.contentType == contentType }
-            .map { watched ->
-                MediaItem(
-                    id = watched.itemId,
-                    name = watched.itemName,
-                    mediaType = mediaType,
-                    categoryId = watched.categoryId,
-                    providerData =
-                        buildMap {
-                            put("playbackPosition", watched.playbackPosition.toString())
-                            put("duration", watched.duration.toString())
-                            put("isCompleted", watched.isCompleted.toString())
-                            watched.episodeId?.let { put("episodeId", it) }
-                            watched.episodeExtension?.let { put("episodeExtension", it) }
-                            watched.seriesId?.let { put("seriesId", it) }
-                            watched.seriesName?.let { put("seriesName", it) }
-                        },
-                )
-            }.toList()
-    }
-
     fun flushWatchHistory() {
         synchronized(watchHistoryLock) {
             if (!watchHistoryDirty) return
@@ -897,6 +878,24 @@ class MediaRepository(
     }
 
     /**
+     * Shared per-content-type Recent list. One list feeding every surface that shows it — the
+     * browse row, the Live TV preview panel and the player's channel flyout — so they cannot
+     * disagree after a write. null means "not loaded yet", which is what callers render a
+     * spinner for; an empty list means loaded and genuinely empty.
+     */
+    fun recentItems(contentType: String): StateFlow<List<MediaItem>?> = recentItemsFlow(contentType).asStateFlow()
+
+    /** Re-reads the Recent list and publishes it to every [recentItems] collector. */
+    suspend fun refreshRecentItems(contentType: String): List<MediaItem> {
+        val items = getRecentItemsSuspend(contentType)
+        recentItemsFlow(contentType).value = items
+        return items
+    }
+
+    private fun recentItemsFlow(contentType: String): MutableStateFlow<List<MediaItem>?> =
+        recentItemsFlows.getOrPut(contentType) { MutableStateFlow(null) }
+
+    /**
      * The single "Recent" list: everything watched for [contentType], resumable items first and
      * the rest of the history after, each half newest-first.
      *
@@ -953,56 +952,6 @@ class MediaRepository(
                     episodeExtension?.let { put("episodeExtension", it) }
                 },
         )
-    }
-
-    fun getInProgressItems(contentType: String): List<MediaItem> {
-        val mediaType = contentTypeToMediaType(contentType)
-        val inProgress =
-            getWatchHistory()
-                .asSequence()
-                .filter { item ->
-                    item.contentType == contentType &&
-                        !item.isCompleted &&
-                        item.playbackPosition > 0 &&
-                        item.duration > 0 &&
-                        run {
-                            val progress = (item.playbackPosition.toFloat() / item.duration.toFloat()) * 100f
-                            progress in 2.0..95.0
-                        }
-                }
-        // TV Shows: collapse to one card per series instead of one per in-progress episode —
-        // watch history is already newest-first, so keeping the first entry per seriesId keeps
-        // the most recently watched one. Selecting the card resumes that exact episode via
-        // providerData["resumeSeries"]; see TvNavHost/MobileNavHost's TV_SHOWS routing.
-        val collapsed =
-            if (contentType == ContentType.TV_SHOWS) {
-                inProgress.distinctBy { it.seriesId ?: it.itemId }
-            } else {
-                inProgress
-            }
-        return collapsed
-            .map { watched ->
-                val isSeriesResume = contentType == ContentType.TV_SHOWS && watched.seriesId != null
-                MediaItem(
-                    id = if (isSeriesResume) watched.seriesId!! else watched.itemId,
-                    name = if (isSeriesResume) (watched.seriesName ?: watched.itemName) else watched.itemName,
-                    mediaType = mediaType,
-                    categoryId = watched.categoryId,
-                    providerData =
-                        buildMap {
-                            put("playbackPosition", watched.playbackPosition.toString())
-                            put("duration", watched.duration.toString())
-                            put("isCompleted", watched.isCompleted.toString())
-                            if (isSeriesResume) {
-                                put("resumeSeries", "true")
-                                put("episodeId", watched.episodeId ?: watched.itemId)
-                                watched.episodeExtension?.let { put("episodeExtension", it) }
-                                put("seriesId", watched.seriesId!!)
-                                put("seriesName", watched.seriesName ?: watched.itemName)
-                            }
-                        },
-                )
-            }.toList()
     }
 
     // --- Server-aware suspend methods (branch on supportsServerUserData) ---
@@ -1070,20 +1019,6 @@ class MediaRepository(
                 rehydrateThumbnails(getRecentItems(contentType), contentType)
             }
         return items
-    }
-
-    suspend fun getInProgressItemsSuspend(contentType: String): List<MediaItem> {
-        if (usesServerUserData) {
-            return provider?.getResumeItems(contentType)?.getOrNull() ?: emptyList()
-        }
-        return rehydrateThumbnails(getInProgressItems(contentType), contentType)
-    }
-
-    suspend fun getWatchHistoryForContentTypeSuspend(contentType: String): List<MediaItem> {
-        if (usesServerUserData) {
-            return provider?.getRecentlyPlayed(contentType)?.getOrNull() ?: emptyList()
-        }
-        return rehydrateThumbnails(getWatchHistoryForContentType(contentType), contentType)
     }
 
     /**

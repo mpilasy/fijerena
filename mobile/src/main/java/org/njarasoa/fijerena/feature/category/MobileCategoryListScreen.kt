@@ -112,6 +112,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
+import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
@@ -252,24 +254,19 @@ fun MobileCategoryListScreen(
     val target = dockTarget
     val dockPlayback: PlaybackViewModel? = if (isLiveTv && target != null) viewModel() else null
 
-    // While a preview is docked, the list below defaults to watch history — regardless of which
-    // category/tab (if any) was actually browsed to get here — with the currently previewed
-    // channel included and highlighted. Independent of the CategoryViewModel's own
+    // While a preview is docked, the list below defaults to the shared Recent list — regardless
+    // of which category/tab (if any) was actually browsed to get here — with the currently
+    // previewed channel included and highlighted. Independent of the CategoryViewModel's own
     // selectedCategoryId/streams so normal category/tab browsing is untouched when nothing's
     // docked, and mirrors TV's LiveTvSplitLayout for the same reason. Not used for Movies/TV
     // Shows (target is always null there). Swipe left/right on the list (see
     // listSourceSwipeModifier below) toggles it over to Favorites instead.
-    var listSource by remember { mutableStateOf(PreviewListSource.LAST_WATCHED) }
-    var lastWatchedStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
-    var lastWatchedStreamsLoading by remember { mutableStateOf(true) }
+    var listSource by remember { mutableStateOf(PreviewListSource.RECENT) }
+    val recentStreams by viewModel.recentItems.collectAsStateWithLifecycle()
     var favoriteStreams by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
     var favoriteStreamsLoading by remember { mutableStateOf(true) }
     val composableScope = rememberCoroutineScope()
     if (target != null) {
-        LaunchedEffect(Unit) {
-            lastWatchedStreams = viewModel.getLastWatchedSnapshot()
-            lastWatchedStreamsLoading = false
-        }
         LaunchedEffect(Unit) {
             favoriteStreams = viewModel.getFavoritesSnapshot()
             favoriteStreamsLoading = false
@@ -404,14 +401,14 @@ fun MobileCategoryListScreen(
     }
 
     if (target != null && dockPlayback != null && dockLoader != null && fullScreen) {
-        // Refresh both the history and favorites lists on demote (fullScreen leaving
-        // composition) so they reflect what was just watched/(un)favorited — promoting/demoting
-        // never leaves this screen, so nothing else would ever re-fetch them. Mirrors TV's
+        // Refresh the favorites list on demote (fullScreen leaving composition) so it reflects
+        // what was just (un)favorited — promoting/demoting never leaves this screen, so nothing
+        // else would re-fetch it. The Recent list needs no equivalent: the player's own delayed
+        // history write republishes the shared list this screen collects. Mirrors TV's
         // LiveTvSplitLayout for the same reason.
         DisposableEffect(Unit) {
             onDispose {
                 composableScope.launch {
-                    lastWatchedStreams = viewModel.getLastWatchedSnapshot()
                     favoriteStreams = viewModel.getFavoritesSnapshot()
                 }
             }
@@ -557,15 +554,16 @@ fun MobileCategoryListScreen(
                         }
 
                         // Streams list with pull-to-refresh — while a preview is docked, always
-                        // history or favorites (see listSource above), regardless of the real
-                        // selected category/tab.
+                        // Recent or favorites (see listSource above), regardless of the real
+                        // selected category/tab. INCLUDE keeps the docked channel in the list
+                        // even before its delayed history write lands.
                         val displayedStreams =
                             if (target == null) {
                                 state.streams
                             } else if (listSource == PreviewListSource.FAVORITES) {
                                 favoriteStreams
                             } else {
-                                lastWatchedStreams
+                                recentStreams.orEmpty().withCurrentChannel(target, CurrentChannelPolicy.INCLUDE)
                             }
                         val displayedStreamsLoading =
                             if (target == null) {
@@ -573,9 +571,9 @@ fun MobileCategoryListScreen(
                             } else if (listSource == PreviewListSource.FAVORITES) {
                                 favoriteStreamsLoading
                             } else {
-                                lastWatchedStreamsLoading
+                                recentStreams == null
                             }
-                        // Swipe left/right toggles the docked panel between Last Watched and
+                        // Swipe left/right toggles the docked panel between Recent and
                         // Favorites — mirrors TV's D-pad Left/Right on the same panel
                         // (LiveTvSplitLayout.kt). Only active while docked; normal category/tab
                         // browsing has no swipe. Threshold/accumulator pattern matches the
@@ -598,7 +596,7 @@ fun MobileCategoryListScreen(
                                         if (!fired && kotlin.math.abs(accumulator) > 80f) {
                                             fired = true
                                             listSource =
-                                                if (accumulator < 0) PreviewListSource.FAVORITES else PreviewListSource.LAST_WATCHED
+                                                if (accumulator < 0) PreviewListSource.FAVORITES else PreviewListSource.RECENT
                                         }
                                     }
                                 }
@@ -616,11 +614,7 @@ fun MobileCategoryListScreen(
                                             favoriteStreamsLoading = false
                                         }
                                     } else {
-                                        composableScope.launch {
-                                            lastWatchedStreamsLoading = true
-                                            lastWatchedStreams = viewModel.getLastWatchedSnapshot()
-                                            lastWatchedStreamsLoading = false
-                                        }
+                                        composableScope.launch { viewModel.refreshRecentItems() }
                                     }
                                 },
                                 modifier = Modifier.fillMaxSize().then(listSourceSwipeModifier),
@@ -909,7 +903,7 @@ fun MobileCategoryListScreen(
 }
 
 /** Which list the docked Live TV preview's channel panel is showing, toggled via swipe left/right. */
-private enum class PreviewListSource { LAST_WATCHED, FAVORITES }
+private enum class PreviewListSource { RECENT, FAVORITES }
 
 /**
  * One-time hint pointing at the long-press-to-favorite gesture, which otherwise has zero
