@@ -212,9 +212,14 @@ class MediaRepository(
         val filters = providerSettings.categoryFilters
         if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) return result
 
-        return result.map { categories ->
-            categories.filter { category ->
-                filters.shouldShowCategory(category.name)
+        // ScriptDetector.detectScript allocates a map and walks Character.UnicodeBlock per
+        // category. With ~870 categories that is tens of milliseconds, and callers run on
+        // Dispatchers.Main.immediate, so it landed on the UI thread at screen entry.
+        return withContext(Dispatchers.Default) {
+            result.map { categories ->
+                categories.filter { category ->
+                    filters.shouldShowCategory(category.name)
+                }
             }
         }
     }

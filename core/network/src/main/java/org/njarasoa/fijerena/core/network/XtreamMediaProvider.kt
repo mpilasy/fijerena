@@ -1,8 +1,10 @@
 package org.njarasoa.fijerena.core.network
 
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
 import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
@@ -99,7 +101,10 @@ class XtreamMediaProvider(
             }
         return when (result) {
             is Result.Success ->
-                kotlin.Result.success(result.data.map { it.toDomain(mediaType) })
+                // Callers run on Dispatchers.Main.immediate, and each toDomain allocates a
+                // MediaItem, a providerData map and a MediaMetadata. On the largest category
+                // (9,480 items) that measured 50ms of main-thread work at the moment of the tap.
+                kotlin.Result.success(withContext(Dispatchers.Default) { result.data.map { it.toDomain(mediaType) } })
             is Result.Error ->
                 kotlin.Result.failure(result.exception)
         }
@@ -111,7 +116,7 @@ class XtreamMediaProvider(
         val result = repository.getAllStreams(contentType)
         return when (result) {
             is Result.Success ->
-                kotlin.Result.success(result.data.map { it.toDomain(mediaType) })
+                kotlin.Result.success(withContext(Dispatchers.Default) { result.data.map { it.toDomain(mediaType) } })
             is Result.Error ->
                 kotlin.Result.failure(result.exception)
         }
