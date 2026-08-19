@@ -29,5 +29,7 @@ data class XtreamEpisodeEntity(
     val rating: String? = null,
     val movieImage: String? = null,
     val tmdbId: String? = null,
+    /** When [plot] was backfilled from TMDB — synopses go stale far slower than an episode list. */
+    val plotFetchedAt: Long? = null,
     val contentHash: Int = 0,
 )

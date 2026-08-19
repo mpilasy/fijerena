@@ -49,10 +49,14 @@ interface XtreamEpisodeDao {
     >
 
     // Only fills a missing plot (Xtream doesn't provide episode synopses) — never overwrites an existing one.
-    @Query("UPDATE xtream_episodes SET plot = :plot WHERE id = :id AND providerId = :providerId AND (plot IS NULL OR plot = '')")
+    @Query(
+        "UPDATE xtream_episodes SET plot = :plot, plotFetchedAt = :fetchedAt " +
+            "WHERE id = :id AND providerId = :providerId AND (plot IS NULL OR plot = '')",
+    )
     fun updateOverviewIfBlank(
         providerId: Long,
         id: String,
         plot: String,
+        fetchedAt: Long,
     )
 }

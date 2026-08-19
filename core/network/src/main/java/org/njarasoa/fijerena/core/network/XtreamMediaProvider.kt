@@ -4,6 +4,8 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
 import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
@@ -259,10 +261,13 @@ class XtreamMediaProvider(
         seasons: Set<Int>,
     ): Map<Pair<Int, Int>, String> =
         coroutineScope {
+            // A long-running show would otherwise fan out one request per season at once, which is
+            // the shape most likely to get throttled at the other end.
+            val inFlight = Semaphore(MAX_CONCURRENT_TMDB_REQUESTS)
             seasons
                 .map { season ->
                     async {
-                        runCatching { tmdb.getSeason(tmdbSeriesId, season) }
+                        runCatching { inFlight.withPermit { tmdb.getSeason(tmdbSeriesId, season) } }
                             .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
                             .getOrNull()
                             ?.episodes
@@ -474,5 +479,6 @@ class XtreamMediaProvider(
         // Detail data (plot/cast/genre/rating/contentRating) rarely changes for a given title —
         // long TTL avoids re-hitting Xtream + TMDB every time a detail screen is reopened.
         private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
+        private const val MAX_CONCURRENT_TMDB_REQUESTS = 10
     }
 }
