@@ -12,6 +12,8 @@ import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.player.model.SeriesInfo
+import org.njarasoa.fijerena.core.player.api.XtreamItemUnavailableException
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -126,6 +128,25 @@ class XtreamMediaProvider(
 
     override suspend fun getEpisodeCountsBySeries(): Map<String, Int> = repository.getEpisodeCountsBySeries()
 
+    /**
+     * Fetches the series info, and when the provider says it has no such id, re-resolves the id by
+     * name and tries once more. Catalogue ids change when a provider rebuilds; the locally stored
+     * one then points at nothing, and every later visit would show an empty show forever.
+     */
+    private suspend fun resolveSeriesInfo(id: Int): Result<SeriesInfo> {
+        val first = repository.getSeriesInfo(id)
+        if (first !is Result.Error || first.exception !is XtreamItemUnavailableException) return first
+
+        val name = repository.getCachedSeriesEntity(id)?.name
+        val currentId = name?.let { repository.resolveSeriesIdByName(it) }
+        return if (currentId == null || currentId == id) {
+            first
+        } else {
+            Log.i("XtreamMediaProvider", "Series $id is gone; provider now lists \"$name\" as $currentId")
+            repository.getSeriesInfo(currentId)
+        }
+    }
+
     override suspend fun invalidateCachedDetail(itemId: String) {
         seriesDetailCache.remove(itemId)
         movieDetailCache.remove(itemId)
@@ -150,7 +171,7 @@ class XtreamMediaProvider(
         // Always hit Xtream for the episode list — ongoing shows add episodes, and skipping this
         // call would mean not noticing new ones until the persisted cache expires. Only the TMDB
         // content-rating round trip below is skipped when we already have a fresh persisted value.
-        return when (val result = repository.getSeriesInfo(id)) {
+        return when (val result = resolveSeriesInfo(id)) {
             is Result.Success -> {
                 // Xtream re-sends the episode list on every visit, and it rarely carries synopses —
                 // so fill in the ones TMDB gave us last time before deciding whether to ask TMDB

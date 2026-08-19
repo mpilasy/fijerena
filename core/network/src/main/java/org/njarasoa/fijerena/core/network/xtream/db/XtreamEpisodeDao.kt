@@ -17,6 +17,9 @@ interface XtreamEpisodeDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(episodes: List<XtreamEpisodeEntity>)
 
+    @Query("DELETE FROM xtream_episodes WHERE providerId = :providerId")
+    fun deleteAll(providerId: Long)
+
     @Query("DELETE FROM xtream_episodes WHERE providerId = :providerId AND seriesId = :seriesId")
     fun deleteBySeriesId(
         providerId: Long,

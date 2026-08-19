@@ -225,6 +225,8 @@ class XtreamRepository(
         fetchedAt: Long,
     ) = contentManager.saveSeriesDetailCache(seriesId, contentRating, tmdbId, fetchedAt)
 
+    suspend fun resolveSeriesIdByName(name: String): Int? = contentManager.resolveSeriesIdByName(name)
+
     suspend fun getPersistedEpisodePlots(seriesId: Int): Map<String, String> = contentManager.getPersistedEpisodePlots(seriesId)
 
     suspend fun persistEpisodeOverviews(episodes: Map<String, List<EpisodeItem>>) = contentManager.persistEpisodeOverviews(episodes)
