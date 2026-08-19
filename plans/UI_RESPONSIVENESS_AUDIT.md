@@ -102,7 +102,7 @@ cannot exercise them. Re-measure on a category with real programme density befor
 **Not verified:** the on-air highlight. C3 moved `isCurrent` to a `derivedStateOf`, and confirming
 it needs a programme airing inside the loaded window — neither category tried had one.
 
-### Step 8 — Category entry cost · §B2, B4 · medium risk — ✅ **done** (2026-08-18)
+### Step 8 — Category entry cost · §B2, B4 · medium risk — ✅ **done** (`b68698ee`)
 Moved the `toDomain` mapping and the `ScriptDetector` category filtering onto
 `Dispatchers.Default`, and made a category reload keep the current grid (marked refreshing)
 instead of blanking to a spinner.
@@ -272,7 +272,7 @@ one tap, two overlapping 700 ms crossfades.
 **Currently masked on darcy** by `animator_duration_scale = 0.0`. Since that's leftover, restoring
 it to 1 will make this immediately visible on both Shields.
 
-### B2. Selecting a category maps thousands of objects on the main thread
+### B2. Selecting a category maps thousands of objects on the main thread — **FIXED** (`b68698ee`)
 
 `CategoryViewModel` launches everything from `viewModelScope` = `Dispatchers.Main.immediate`. The
 I/O is wrapped, but post-processing lands back on Main:
@@ -300,7 +300,7 @@ and re-wrapped (`TvCategoryGridScreen.kt:99-102`). One refresh can trigger up to
 recompositions, each handing every visible row new wrapper instances. It also makes three full
 passes over the stream list plus a `HashSet` the size of the category (`MediaRepository.kt:830`).
 
-### B4. Category grid flashes to a spinner on every reload ✅*verified*
+### B4. Category grid flashes to a spinner on every reload ✅*verified* — **FIXED** (`b68698ee`)
 
 `loadCategoriesInternal` sets `UiState.Loading` (`:167`) with no stale-content retention, so any
 re-load blanks the grid instead of updating in place.
@@ -342,14 +342,14 @@ designed to back a single list; here every visible row registers against one ins
 with a nested `LazyRow` per row inside the outer `TvLazyColumn` (`:177-220`, `:466-485`), each
 channel row is its own lazy list with its own measure/layout/recycling.
 
-### C2. `DateFormat.is24HourFormat(context)` per cell, per composition
+### C2. `DateFormat.is24HourFormat(context)` per cell, per composition — **FIXED** (`628a0817`)
 
 `EpgGridLayout.kt:552` → `TimeFormat.kt:23-33`: `Instant.ofEpochSecond` + `ZoneId.systemDefault()`
 + `is24HourFormat(context)` + `format(...)`, none of it remembered. Same at `:444` per time-header
 slot, and **twice** per search result (`:704-707`). Mobile hits the same path
 (`MobileEpgTimeline.kt:253`, `:290`).
 
-### C3. One 60-second tick recomposes the entire visible grid
+### C3. One 60-second tick recomposes the entire visible grid — **FIXED** (`628a0817`)
 
 `rememberNowEpochSeconds()` (`:105`) is threaded to every `ProgramRow` (`:211`) and `ProgramCell`
 (`:481`). The shared ticker is itself a good design — it replaced per-cell
