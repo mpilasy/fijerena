@@ -18,26 +18,11 @@ data class StoredCredentials(
 class AccountManager(
     context: Context,
 ) {
-    private val masterKey by lazy {
-        MasterKey
-            .Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-    }
-
     // Lazy on purpose: keystore unlock + crypto + disk cost ~340ms, and the nav hosts construct
     // an AccountManager during composition while only reading from it inside coroutines. Built
-    // eagerly it blocked the first frame; deferred, the cost lands on whichever background
-    // caller reads first.
-    private val prefs: SharedPreferences by lazy {
-        EncryptedSharedPreferences.create(
-            context,
-            "xtream_secure_credentials",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
-    }
+    // eagerly it blocked the first frame; deferred, the cost lands on whichever caller reads
+    // first — so [warmUp] exists to make that caller a background one.
+    private val prefs: SharedPreferences by lazy { encryptedPrefs(context) }
 
     private val json =
         Json {
@@ -46,6 +31,27 @@ class AccountManager(
         }
 
     companion object {
+        // Process-wide, not per instance: EncryptedSharedPreferences.create rebuilds the master
+        // key and the crypto each call, so an AccountManager constructed per screen would pay the
+        // full cost every time instead of sharing one store.
+        @Volatile
+        private var sharedPrefs: SharedPreferences? = null
+
+        private fun encryptedPrefs(context: Context): SharedPreferences =
+            sharedPrefs ?: synchronized(this) {
+                sharedPrefs ?: EncryptedSharedPreferences
+                    .create(
+                        context.applicationContext,
+                        "xtream_secure_credentials",
+                        MasterKey
+                            .Builder(context.applicationContext)
+                            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                            .build(),
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                    ).also { sharedPrefs = it }
+            }
+
         private const val KEY_URL = "url"
         private const val KEY_USERNAME = "username"
         private const val KEY_PASSWORD = "password"
@@ -79,6 +85,16 @@ class AccountManager(
         val username = prefs.getString(KEY_USERNAME, null) ?: return null
         val password = prefs.getString(KEY_PASSWORD, null)
         return StoredCredentials(url, username, password)
+    }
+
+    /**
+     * Resolves the lazy [prefs] delegate — keystore unlock, crypto and disk, together roughly a
+     * third of a second. Call it from a background thread at startup: the deferral above only
+     * moves that cost to the first reader, and the first reader has turned out to be a
+     * LaunchedEffect on the main dispatcher, which puts the whole stall back on the UI thread.
+     */
+    fun warmUp() {
+        prefs
     }
 
     fun hasStoredCredentials(): Boolean = prefs.contains(KEY_URL) && prefs.contains(KEY_USERNAME)

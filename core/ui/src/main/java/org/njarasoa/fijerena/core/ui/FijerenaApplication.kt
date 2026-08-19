@@ -13,6 +13,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
@@ -45,6 +46,9 @@ class FijerenaApplication :
         // prefix shape — see ProviderRepository.migrateLegacyCategoryFilterPrefixes().
         CoroutineScope(Dispatchers.IO).launch {
             ProviderRepository(this@FijerenaApplication).migrateLegacyCategoryFilterPrefixes()
+            // Build the encrypted credential store off the main thread, before the nav host's
+            // session-restore effect asks for it from the main dispatcher.
+            AccountManager(this@FijerenaApplication).warmUp()
         }
     }
 
