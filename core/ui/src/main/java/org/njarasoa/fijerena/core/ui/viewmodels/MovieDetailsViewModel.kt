@@ -45,6 +45,14 @@ class MovieDetailsViewModel(
         loadMovieInfo()
     }
 
+    /** Explicit user refresh — see SeriesDetailsViewModel.refreshSeriesInfo. */
+    fun refreshMovieInfo() {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { getRepository().invalidateCachedDetail(movieId) }
+            loadMovieInfo()
+        }
+    }
+
     fun loadMovieInfo() {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading

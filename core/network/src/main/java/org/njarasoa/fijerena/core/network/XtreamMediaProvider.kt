@@ -126,6 +126,21 @@ class XtreamMediaProvider(
 
     override suspend fun getEpisodeCountsBySeries(): Map<String, Int> = repository.getEpisodeCountsBySeries()
 
+    override suspend fun invalidateCachedDetail(itemId: String) {
+        seriesDetailCache.remove(itemId)
+        movieDetailCache.remove(itemId)
+        // Also expire the persisted TMDB-derived row, otherwise a refresh still gets the stored
+        // content rating (and, for a movie, the whole stored detail) for the rest of its 7 days.
+        itemId.toIntOrNull()?.let { id ->
+            repository.getCachedMovieDetail(id)?.let {
+                repository.saveMovieDetailCache(id, it.contentRating, it.tmdbId, it.containerExtension, 0L)
+            }
+            repository.getCachedSeriesEntity(id)?.let {
+                repository.saveSeriesDetailCache(id, it.contentRating, it.tmdbId, 0L)
+            }
+        }
+    }
+
     override suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> {
         seriesDetailCache.get(seriesId)?.let { return kotlin.Result.success(it) }
         val id =

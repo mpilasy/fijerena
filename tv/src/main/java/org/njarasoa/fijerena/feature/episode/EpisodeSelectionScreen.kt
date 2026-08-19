@@ -186,7 +186,7 @@ fun EpisodeSelectionScreen(
                     onToggleFavorite = { viewModel.toggleFavorite(seriesName) },
                     onEpisodeSelected = onEpisodeSelected,
                     onCategorySelected = { onCategorySelected(categoryId) },
-                    onRefresh = { viewModel.loadSeriesInfo() },
+                    onRefresh = { viewModel.refreshSeriesInfo() },
                     onBack = onBack,
                 )
             }
