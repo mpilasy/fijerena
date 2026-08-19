@@ -510,23 +510,36 @@ fun finalizeSession(
     playbackState: PlaybackState,
     loaderViewModel: StreamLoaderViewModel,
 ) {
-    val pos =
-        when (playbackState) {
-            is PlaybackState.Playing -> playbackState.position
-            is PlaybackState.Paused -> playbackState.position
-            // Played to the end: report the full duration so the >95% rule marks it completed.
-            // The player is torn down before this runs, so asking it for a position gives 0.
-            is PlaybackState.Ended -> playbackState.duration
-            else -> 0L
-        }
-    val dur =
-        when (playbackState) {
-            is PlaybackState.Playing -> playbackState.duration
-            is PlaybackState.Paused -> playbackState.duration
-            is PlaybackState.Ended -> playbackState.duration
-            else -> 0L
-        }
     val service = StreamingPlaybackService.getInstance()
+    // PlaybackState carries a snapshot taken the last time the player raised an event
+    // (state change, pause, seek, rebuffer). An uninterrupted stretch of playback raises
+    // none, so that snapshot can be many minutes behind by the time the user backs out —
+    // and writing it here would overwrite the fresher position the periodic save loop
+    // already stored. Ask the live player instead, and only fall back to the snapshot when
+    // it's gone (Ended tears the player down, so its position reads 0).
+    val livePosition =
+        service?.getPlayer()?.let { player ->
+            val position = player.currentPosition
+            val duration = player.duration
+            if (position > 0L && duration > 0L) position to duration else null
+        }
+    val pos =
+        livePosition?.first
+            ?: when (playbackState) {
+                is PlaybackState.Playing -> playbackState.position
+                is PlaybackState.Paused -> playbackState.position
+                // Played to the end: report the full duration so the >95% rule marks it completed.
+                is PlaybackState.Ended -> playbackState.duration
+                else -> 0L
+            }
+    val dur =
+        livePosition?.second
+            ?: when (playbackState) {
+                is PlaybackState.Playing -> playbackState.duration
+                is PlaybackState.Paused -> playbackState.duration
+                is PlaybackState.Ended -> playbackState.duration
+                else -> 0L
+            }
     val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
     val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
     loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
