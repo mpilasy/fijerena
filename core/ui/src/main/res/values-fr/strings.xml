@@ -462,7 +462,6 @@
 
     <!-- Channel Overlays -->
     <string name="player_category_channels">Chaînes de la catégorie</string>
-    <string name="player_last_watched">Dernièrement regardées</string>
     <string name="player_no_last_watched">Aucune chaîne regardée récemment</string>
 
     <!-- Audio format -->
@@ -764,6 +763,7 @@
     <string name="category_error_load_failed">Échec du chargement des catégories</string>
     <string name="category_favorite_categories_label">Catégories favorites</string>
     <string name="category_recent_categories_label">Catégories récentes</string>
+    <string name="category_recent_label">Récents</string>
     <string name="search_error_session_expired">Session expirée. Veuillez vous reconnecter.</string>
     <string name="search_error_failed">Échec de la recherche</string>
     <string name="epg_error_file_too_large">Fichier EPG trop volumineux pour la recherche. Essayez une requête plus précise.</string>

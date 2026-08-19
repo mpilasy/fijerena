@@ -25,20 +25,29 @@ class CategoryViewModel(
     private val initialCategoryId: String? = null,
 ) : ViewModel() {
     companion object {
-        const val CONTINUE_WATCHING_CATEGORY_ID = "continue_watching"
+        const val RECENT_CATEGORY_ID = "recent"
         const val FAVORITES_CATEGORY_ID = "favorites"
         const val FAVORITE_CATEGORIES_ID = "favorite_categories"
-        const val LAST_WATCHED_CATEGORY_ID = "last_watched"
         const val RECENTLY_VIEWED_CATEGORIES_ID = "recently_viewed_categories"
 
         val VIRTUAL_CATEGORY_IDS =
             setOf(
                 FAVORITES_CATEGORY_ID,
                 FAVORITE_CATEGORIES_ID,
-                LAST_WATCHED_CATEGORY_ID,
-                CONTINUE_WATCHING_CATEGORY_ID,
+                RECENT_CATEGORY_ID,
                 RECENTLY_VIEWED_CATEGORIES_ID,
             )
+
+        /**
+         * Maps the ids of the two rows Recent replaced onto it. Nothing persists a virtual
+         * category id today, but a restored saved state or a hand-written deep link carrying
+         * one would otherwise resolve to a category that no longer exists.
+         */
+        fun canonicalCategoryId(categoryId: String?): String? =
+            when (categoryId) {
+                "continue_watching", "last_watched" -> RECENT_CATEGORY_ID
+                else -> categoryId
+            }
     }
 
     sealed class UiState {
@@ -226,18 +235,16 @@ class CategoryViewModel(
             )
 
         if (categories.isNotEmpty()) {
+            val requestedCategoryId = canonicalCategoryId(initialCategoryId)
             val categoryToLoad =
-                if (initialCategoryId != null &&
-                    categories.any { it.id == initialCategoryId }
+                if (requestedCategoryId != null &&
+                    categories.any { it.id == requestedCategoryId }
                 ) {
-                    initialCategoryId
-                } else if (contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS) {
-                    // Movies/TV Shows: default to Continue Watching so the landing page shows
-                    // what's in progress, not just the single most-recently-touched item.
-                    CONTINUE_WATCHING_CATEGORY_ID
+                    requestedCategoryId
                 } else {
-                    // Live TV: default to "Last Watched" so focus lands on the last played stream
-                    LAST_WATCHED_CATEGORY_ID
+                    // Every content type lands on Recent: what's in progress first, then the
+                    // rest of the history — for Live TV that's the last played channels.
+                    RECENT_CATEGORY_ID
                 }
             loadStreams(categoryToLoad)
         }
@@ -294,13 +301,8 @@ class CategoryViewModel(
 
         // Handle virtual categories
         when (categoryId) {
-            CONTINUE_WATCHING_CATEGORY_ID -> {
-                emitStreams(repository.getInProgressItemsSuspend(contentType))
-                loadNowPlaying(currentStreams)
-                return
-            }
-            LAST_WATCHED_CATEGORY_ID -> {
-                emitStreams(repository.getWatchHistoryForContentTypeSuspend(contentType))
+            RECENT_CATEGORY_ID -> {
+                emitStreams(repository.getRecentItemsSuspend(contentType))
                 loadNowPlaying(currentStreams)
                 return
             }
@@ -532,15 +534,13 @@ class CategoryViewModel(
 
     private fun rebuildVirtualCategories(regularCategories: List<MediaCategory>): List<MediaCategory> {
         val virtualCats = mutableListOf<MediaCategory>()
-        if (contentType != ContentType.LIVE_TV) {
-            virtualCats.add(
-                MediaCategory(
-                    id = CONTINUE_WATCHING_CATEGORY_ID,
-                    name = context.getString(R.string.series_continue_watching_badge),
-                    isVirtual = true,
-                ),
-            )
-        }
+        virtualCats.add(
+            MediaCategory(
+                id = RECENT_CATEGORY_ID,
+                name = context.getString(R.string.category_recent_label),
+                isVirtual = true,
+            ),
+        )
         virtualCats.add(
             MediaCategory(
                 id = FAVORITES_CATEGORY_ID,
@@ -558,13 +558,6 @@ class CategoryViewModel(
                 ),
             )
         }
-        virtualCats.add(
-            MediaCategory(
-                id = LAST_WATCHED_CATEGORY_ID,
-                name = context.getString(R.string.player_last_watched),
-                isVirtual = true,
-            ),
-        )
         val recentCategories = repository.getRecentlyViewedCategories(contentType)
         if (recentCategories.isNotEmpty()) {
             virtualCats.add(
@@ -634,7 +627,7 @@ class CategoryViewModel(
      */
     suspend fun getLastWatchedSnapshot(): List<MediaItem> {
         if (!::repository.isInitialized) return emptyList()
-        return repository.getWatchHistoryForContentTypeSuspend(contentType)
+        return repository.getRecentItemsSuspend(contentType)
     }
 
     /**

@@ -698,6 +698,7 @@
     <string name="category_error_load_failed">Tsy nahomby ny fakana ny sokajy</string>
     <string name="category_favorite_categories_label">Sokajy tiana indrindra</string>
     <string name="category_recent_categories_label">Sokajy vao haingana</string>
+    <string name="category_recent_label">Vao haingana</string>
     <string name="search_error_session_expired">Tapitra ny fotoana. Midira indray azafady.</string>
     <string name="search_error_failed">Tsy nahomby ny fikarohana</string>
     <string name="epg_error_file_too_large">Lehibe loatra ny rakitra EPG. Andramo fangatahana mazava kokoa.</string>
