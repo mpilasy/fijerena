@@ -586,6 +586,9 @@ private fun EpisodeListContent(
     }
 }
 
+/** Direction the viewer stepped through episodes in, so focus can stay on that button. */
+private enum class EpisodeStep { PREVIOUS, NEXT }
+
 @Composable
 private fun EpisodeDetailPanel(
     episode: DomainEpisodeItem,
@@ -619,23 +622,36 @@ private fun EpisodeDetailPanel(
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
 
-    // Load resume position
-    var resumePositionMs by remember { mutableStateOf(0L) }
+    // Load resume position. Keyed on the episode so stepping to another one clears the previous
+    // episode's value immediately rather than showing its resume time until the lookup lands —
+    // and the lookup assigns unconditionally, so an episode with nothing to resume resets it
+    // instead of leaving the last one's position behind.
+    var resumePositionMs by remember(episode.id) { mutableStateOf(0L) }
 
     LaunchedEffect(episode.id) {
         val watched = mediaRepository.getPlaybackPositionSuspend(episode.id, ContentType.TV_SHOWS)
-        if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
-            val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
-            if (progress in 2.0..95.0) {
-                resumePositionMs = watched.playbackPosition
-            }
-        }
+        resumePositionMs = watched?.resumeProgress()?.let { watched.playbackPosition } ?: 0L
     }
 
-    // Request focus on Play/Resume button when screen loads, resume data arrives, or episode changes
+    // Which button moved us here, so stepping through episodes doesn't drop focus back onto
+    // Play every time — pressing Next repeatedly would otherwise mean navigating back down to
+    // the Next button after each episode. Reset when the panel closes, so opening an episode
+    // from the list still starts on Play.
+    var arrivedVia by remember { mutableStateOf<EpisodeStep?>(null) }
+    val previousButtonFocusRequester = remember { FocusRequester() }
+    val nextButtonFocusRequester = remember { FocusRequester() }
+
+    // Request focus on Play/Resume button when screen loads, resume data arrives, or episode
+    // changes — or back onto the step button just used, when there is still an episode that way.
     LaunchedEffect(episode.id, resumePositionMs) {
+        val target =
+            when {
+                arrivedVia == EpisodeStep.PREVIOUS && previousEpisode != null -> previousButtonFocusRequester
+                arrivedVia == EpisodeStep.NEXT && nextEpisode != null -> nextButtonFocusRequester
+                else -> playButtonFocusRequester
+            }
         try {
-            playButtonFocusRequester.requestFocus()
+            target.requestFocus()
         } catch (_: IllegalStateException) {
         }
     }
@@ -647,8 +663,18 @@ private fun EpisodeDetailPanel(
                 .onPreviewKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                     when (event.key) {
-                        Key.MediaNext -> nextEpisode?.let { onNavigate(it); true } ?: false
-                        Key.MediaPrevious -> previousEpisode?.let { onNavigate(it); true } ?: false
+                        Key.MediaNext ->
+                            nextEpisode?.let {
+                                arrivedVia = EpisodeStep.NEXT
+                                onNavigate(it)
+                                true
+                            } ?: false
+                        Key.MediaPrevious ->
+                            previousEpisode?.let {
+                                arrivedVia = EpisodeStep.PREVIOUS
+                                onNavigate(it)
+                                true
+                            } ?: false
                         else -> false
                     }
                 }
@@ -800,20 +826,37 @@ private fun EpisodeDetailPanel(
                         }
                     }
 
-                    // Prev/Next episode hint (remote media keys)
+                    // Step to the adjacent episode without going back to the list. These used to
+                    // be a text hint for the remote's transport keys, which the Shield and Bravia
+                    // remotes don't have — so they read as buttons that did nothing. The key
+                    // handler above still works for remotes that do have them.
                     if (previousEpisode != null || nextEpisode != null) {
-                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        val hint =
-                            buildString {
-                                if (previousEpisode != null) append(stringResource(R.string.player_prev_episode))
-                                if (previousEpisode != null && nextEpisode != null) append("   ")
-                                if (nextEpisode != null) append(stringResource(R.string.player_next_episode))
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            previousEpisode?.let { previous ->
+                                CinemaSecondaryButton(
+                                    onClick = {
+                                        arrivedVia = EpisodeStep.PREVIOUS
+                                        onNavigate(previous)
+                                    },
+                                    text = stringResource(R.string.player_prev_episode),
+                                    modifier = Modifier.focusRequester(previousButtonFocusRequester),
+                                )
                             }
-                        Text(
-                            text = hint,
-                            style = detailScaledStyles.bodySmall,
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
-                        )
+                            nextEpisode?.let { next ->
+                                CinemaSecondaryButton(
+                                    onClick = {
+                                        arrivedVia = EpisodeStep.NEXT
+                                        onNavigate(next)
+                                    },
+                                    text = stringResource(R.string.player_next_episode),
+                                    modifier = Modifier.focusRequester(nextButtonFocusRequester),
+                                )
+                            }
+                        }
                     }
 
                     // Plot/Description
