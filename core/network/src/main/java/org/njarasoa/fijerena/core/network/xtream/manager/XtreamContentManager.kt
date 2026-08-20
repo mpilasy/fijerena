@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.resultOf
 import org.njarasoa.fijerena.core.network.suspendResultOf
+import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.network.xtream.db.*
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.*
@@ -707,17 +708,24 @@ class XtreamContentManager(
         return RefreshQueue.submit(task)
     }
 
-    suspend fun getSeriesInfo(seriesId: Int): Result<SeriesInfo> =
+    /**
+     * Fetches a series' episode list, persisting what came back. The classification of the answer
+     * is the API layer's ([XtreamResponse]); this only adds the side effects, and only for a
+     * response that actually carried something.
+     */
+    suspend fun getSeriesInfo(seriesId: Int): XtreamResponse<SeriesInfo> =
         withContext(Dispatchers.IO) {
-            suspendResultOf {
+            try {
                 val service =
                     sessionManager.apiService
-                        ?: throw Exception("Not authenticated. Please login first.")
+                        ?: return@withContext XtreamResponse.Failed(Exception("Not authenticated. Please login first."))
 
                 val startTime = System.currentTimeMillis()
-                val seriesInfo = service.getSeriesInfo(seriesId)
+                val response = service.getSeriesInfo(seriesId)
                 val fetchTime = System.currentTimeMillis() - startTime
                 metricsManager.trackFetchTime("series_$seriesId", fetchTime)
+
+                val seriesInfo = (response as? XtreamResponse.Ok)?.value ?: return@withContext response
 
                 // Update series metadata
                 val info = seriesInfo.info
@@ -773,20 +781,25 @@ class XtreamContentManager(
                     episodeDao.insertAll(episodesToInsert)
                 }
 
-                seriesInfo
+                response
+            } catch (e: Exception) {
+                XtreamResponse.Failed(e)
             }
         }
 
-    suspend fun getVodInfo(vodId: Int): Result<VodInfo> =
+    /** Fetches a movie's details, persisting what came back. See [getSeriesInfo]. */
+    suspend fun getVodInfo(vodId: Int): XtreamResponse<VodInfo> =
         withContext(Dispatchers.IO) {
-            suspendResultOf {
+            try {
                 val service =
                     sessionManager.apiService
-                        ?: throw Exception("Not authenticated. Please login first.")
+                        ?: return@withContext XtreamResponse.Failed(Exception("Not authenticated. Please login first."))
                 val startTime = System.currentTimeMillis()
-                val vodInfo = service.getVodInfo(vodId)
+                val response = service.getVodInfo(vodId)
                 val fetchTime = System.currentTimeMillis() - startTime
                 metricsManager.trackFetchTime("vod_$vodId", fetchTime)
+
+                val vodInfo = (response as? XtreamResponse.Ok)?.value ?: return@withContext response
 
                 // Update movie metadata for AI and UI
                 val info = vodInfo.info
@@ -806,7 +819,9 @@ class XtreamContentManager(
                     )
                 }
 
-                vodInfo
+                response
+            } catch (e: Exception) {
+                XtreamResponse.Failed(e)
             }
         }
 

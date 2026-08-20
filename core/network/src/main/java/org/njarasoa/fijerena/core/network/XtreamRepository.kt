@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.network.xtream.manager.XtreamUserDataManager
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.EpgResponse
+import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
@@ -202,9 +203,9 @@ class XtreamRepository(
         contentType: String,
     ): String? = contentManager.getStreamName(streamId, contentType)
 
-    suspend fun getSeriesInfo(seriesId: Int): Result<SeriesInfo> = contentManager.getSeriesInfo(seriesId)
+    suspend fun getSeriesInfo(seriesId: Int): XtreamResponse<SeriesInfo> = contentManager.getSeriesInfo(seriesId)
 
-    suspend fun getVodInfo(vodId: Int): Result<VodInfo> = contentManager.getVodInfo(vodId)
+    suspend fun getVodInfo(vodId: Int): XtreamResponse<VodInfo> = contentManager.getVodInfo(vodId)
 
     suspend fun getCachedMovieDetail(vodId: Int) = contentManager.getCachedMovieDetail(vodId)
 
