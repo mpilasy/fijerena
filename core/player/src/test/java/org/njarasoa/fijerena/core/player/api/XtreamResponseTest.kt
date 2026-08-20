@@ -68,13 +68,15 @@ class XtreamResponseTest {
     }
 
     @Test
-    fun oneUnreadableEpisodeCostsTheWholeList() {
-        // Current behaviour, pinned rather than endorsed: EpisodesMapSerializer catches its own
-        // decode failure and returns an empty map, so a single episode missing a required field
-        // takes every other episode of that show with it — and the show then reads as unavailable.
+    fun oneUnreadableEpisodeCostsOnlyItself() {
+        // It used to cost the whole show: the map decode aborted on the first episode it could
+        // not read, and the series came back with no episodes at all.
         val response = series(XtreamPayloads.SERIES_ONE_EPISODE_MALFORMED)
 
-        assertEquals(XtreamResponse.Unavailable(4080, "get_series_info"), response)
+        assertTrue("expected the readable episode to survive, got $response", response is XtreamResponse.Ok)
+        val episodes = (response as XtreamResponse.Ok).value.episodes.getValue("1")
+        assertEquals(1, episodes.size)
+        assertEquals("242136", episodes.single().id)
     }
 
     @Test

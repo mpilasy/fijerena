@@ -37,10 +37,10 @@ object XtreamPayloads {
             """{"id":"242136","episode_num":18,"title":"S06E18","container_extension":"mkv"}]}}"""
 
     /**
-     * Two episodes, one of them missing `container_extension` — a required field on the model.
-     * `EpisodesMapSerializer` swallows the failure and returns an empty map, so the good episode
-     * goes with the bad one and the whole show reads as having none. Pinned by a test; not the
-     * serializer's intended behaviour so much as its current one.
+     * Two episodes, one of them missing `container_extension` — a required field on the model,
+     * and the one the stream URL is built from, so that episode is unplayable either way. Only it
+     * is dropped; the readable episode survives. Before `EpisodesMapSerializer` decoded episodes
+     * one at a time, the bad one took the whole show's list with it.
      */
     const val SERIES_ONE_EPISODE_MALFORMED =
         """{"episodes":{"1":[""" +
