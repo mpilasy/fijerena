@@ -66,6 +66,15 @@ object TvFocusTokens {
         @Composable @ReadOnlyComposable get() = CinemaAccent.copy(alpha = CinemaAlpha.tint)
 
     /**
+     * Container for a row or button that is both selected and focused. Letting [focusedContainer]
+     * win here would drop the only container-level selection cue at exactly the moment the user is
+     * looking at the item, leaving nothing but the bold label to say "this is the current one".
+     * A brighter accent instead reads as selected *and* lifted.
+     */
+    val focusedSelectedContainer: Color
+        @Composable @ReadOnlyComposable get() = CinemaAccent.copy(alpha = CinemaAlpha.scrim)
+
+    /**
      * Focus glow, honouring [org.njarasoa.fijerena.core.ui.theme.UiGridTokens.focusUsesShadow]:
      * Cupertino and BRAVIA lift focused elements with a shadow, Material and Roku do not.
      * [Glow.None] on the styles that opt out, so this can be passed unconditionally.
