@@ -233,7 +233,13 @@ fun CinemaTertiaryButton(
 
 /**
  * Icon Button - For icon-only actions
- * Square button with icon, uses primary color scheme.
+ * Circular button with icon.
+ *
+ * Focus is a lifted container plus an accent ring, matching every other control, rather than a
+ * solid accent fill. The fill collided with the content: most call sites tint their glyph
+ * [CinemaAccent] — decoratively (Add, Edit, LiveTv, the select check) or to mark an "on" state
+ * (the favourite star) — so focusing the button painted an accent glyph onto an accent circle and
+ * the icon disappeared at exactly the moment the viewer was pointing at it.
  *
  * @param onClick Callback when button is clicked
  * @param icon Composable icon content
@@ -256,22 +262,24 @@ fun CinemaIconButton(
         modifier = modifier.size(size.scaled(scale)),
         colors =
             androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                containerColor = CinemaTextPrimary.copy(alpha = 0.15f),
+                containerColor = TvFocusTokens.restingContainer,
                 contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaAccent,
-                focusedContentColor = CinemaBackground,
-                pressedContainerColor = CinemaAccentLight,
-                pressedContentColor = CinemaBackground,
+                focusedContainerColor = TvFocusTokens.focusedContainer,
+                focusedContentColor = CinemaTextPrimary,
+                pressedContainerColor = TvFocusTokens.focusedContainer,
+                pressedContentColor = CinemaTextPrimary,
             ),
         scale =
             androidx.tv.material3.ClickableSurfaceDefaults.scale(
-                focusedScale = 1.1f,
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScale,
+                pressedScale = TvFocusTokens.pressedScale,
             ),
         shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
         border =
             androidx.tv.material3.ClickableSurfaceDefaults.border(
-                border = Border(BorderStroke(1.dp.scaled(scale), CinemaTextPrimary.copy(alpha = 0.3f))),
-                focusedBorder = Border(BorderStroke(2.dp.scaled(scale), CinemaTextPrimary)),
+                border = Border(BorderStroke(TvFocusTokens.borderDefault.scaled(scale), CinemaTextPrimary.copy(alpha = 0.3f))),
+                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaAccentLight)),
             ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
@@ -221,7 +222,13 @@ private fun ProviderList(
     TvLazyColumn(
         contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-        modifier = Modifier.fillMaxSize().focusRestorer(),
+        // `focusRestorer()` with no argument compiles to a `focusRestorer$default(Modifier, Function0,
+        // int, Object)` synthetic that does not exist in the Compose UI actually shipped in the APK
+        // (compile classpath resolves 1.7.x, runtime resolves 1.8.2, where the default-arg overload takes
+        // a FocusRequester instead) — it throws NoSuchMethodError the moment the screen composes. Passing
+        // the fallback explicitly binds the direct overload, which both versions have. Same version-skew
+        // trap as FlowRow, see the note in ProviderDialogs.kt.
+        modifier = Modifier.fillMaxSize().focusRestorer { FocusRequester.Default },
     ) {
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
             Row(
