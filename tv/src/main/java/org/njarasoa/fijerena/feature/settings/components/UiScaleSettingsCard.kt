@@ -14,8 +14,7 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
@@ -68,22 +67,12 @@ fun UiScaleSettingsCard(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                 ) {
                     rowItems.forEach { (scaleValue, label) ->
-                        val isSelected = uiScale == scaleValue
-                        if (isSelected) {
-                            CinemaPrimaryButton(
-                                onClick = { },
-                                text = label,
-                                modifier = Modifier.weight(1f),
-                            )
-                        } else {
-                            CinemaSecondaryButton(
-                                onClick = {
-                                    onScaleSelected(scaleValue)
-                                },
-                                text = label,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
+                        TvSelectableButton(
+                            selected = uiScale == scaleValue,
+                            onSelect = { onScaleSelected(scaleValue) },
+                            text = label,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
             }

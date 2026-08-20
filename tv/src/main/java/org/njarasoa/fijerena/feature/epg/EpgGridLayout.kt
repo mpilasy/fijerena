@@ -25,6 +25,8 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.tv.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -74,6 +76,7 @@ import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
+import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -240,7 +243,13 @@ fun EpgGridLayout(
                 // Single unified vertical list: each item is channel + programs
                 TvLazyColumn(
                     state = verticalScrollState,
-                    modifier = Modifier.fillMaxSize(),
+                    // `focusRestorer()` with no argument compiles to a `focusRestorer$default(Modifier, Function0,
+                    // int, Object)` synthetic that does not exist in the Compose UI actually shipped in the APK
+                    // (compile classpath resolves 1.7.x, runtime resolves 1.8.2, where the default-arg overload takes
+                    // a FocusRequester instead) — it throws NoSuchMethodError the moment the screen composes. Passing
+                    // the fallback explicitly binds the direct overload, which both versions have. Same version-skew
+                    // trap as FlowRow, see the note in ProviderDialogs.kt.
+                    modifier = Modifier.fillMaxSize().focusRestorer { FocusRequester.Default },
                     verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale)),
                 ) {
                     items(
@@ -613,7 +622,8 @@ private fun EpgSearchContent(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(bottom = Spacing.sm.scaled(scale)),
+                    .padding(bottom = Spacing.sm.scaled(scale))
+                    .tvDpadEscape(),
         )
 
         if (searchQuery.isNotBlank() && searchResults.isEmpty()) {
@@ -634,7 +644,13 @@ private fun EpgSearchContent(
             }
         } else {
             TvLazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                // `focusRestorer()` with no argument compiles to a `focusRestorer$default(Modifier, Function0,
+                // int, Object)` synthetic that does not exist in the Compose UI actually shipped in the APK
+                // (compile classpath resolves 1.7.x, runtime resolves 1.8.2, where the default-arg overload takes
+                // a FocusRequester instead) — it throws NoSuchMethodError the moment the screen composes. Passing
+                // the fallback explicitly binds the direct overload, which both versions have. Same version-skew
+                // trap as FlowRow, see the note in ProviderDialogs.kt.
+                modifier = Modifier.fillMaxSize().focusRestorer { FocusRequester.Default },
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
             ) {
                 items(

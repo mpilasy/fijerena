@@ -8,13 +8,12 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -26,9 +25,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
@@ -54,8 +56,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
+import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
-import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
+import org.njarasoa.fijerena.ui.components.input.TvCheckRow
+import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -124,6 +128,10 @@ fun CategoryFilterDialog(
     var pendingAddMatchType by remember { mutableStateOf(MatchType.STARTS_WITH) }
     var selectedScripts by remember { mutableStateOf(currentFilters.allowedScripts) }
 
+    // The panel's content is in the dialog's `text` slot, so the default initial-focus target is
+    // the Save/Cancel row at the very bottom. Start on the first real control instead.
+    val firstControlFocusRequester = remember { FocusRequester() }
+
     @Composable
     fun matchTypeLabel(type: MatchType): String =
         when (type) {
@@ -143,14 +151,11 @@ fun CategoryFilterDialog(
             MatchType.entries.chunked(2).forEach { rowTypes ->
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                     rowTypes.forEach { type ->
-                        CinemaButton(
-                            onClick = { onSelect(type) },
-                            modifier = Modifier.tvFocusableNoScale(),
-                            colors =
-                                androidx.tv.material3.ButtonDefaults.colors(
-                                    containerColor = if (selected == type) CinemaAccent else CinemaSurfaceVariant,
-                                ),
-                        ) { Text(matchTypeLabel(type)) }
+                        TvSelectableButton(
+                            selected = selected == type,
+                            onSelect = { onSelect(type) },
+                            text = matchTypeLabel(type),
+                        )
                     }
                 }
             }
@@ -172,20 +177,17 @@ fun CategoryFilterDialog(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CinemaButton(
-                        onClick = { filterMode = FilterMode.EXCLUDE },
-                        colors =
-                            androidx.tv.material3.ButtonDefaults.colors(
-                                containerColor = if (filterMode == FilterMode.EXCLUDE) CinemaAccent else CinemaSurfaceVariant,
-                            ),
-                    ) { Text(stringResource(R.string.provider_filter_exclude)) }
-                    CinemaButton(
-                        onClick = { filterMode = FilterMode.INCLUDE },
-                        colors =
-                            androidx.tv.material3.ButtonDefaults.colors(
-                                containerColor = if (filterMode == FilterMode.INCLUDE) CinemaAccent else CinemaSurfaceVariant,
-                            ),
-                    ) { Text(stringResource(R.string.provider_filter_include_short)) }
+                    TvSelectableButton(
+                        selected = filterMode == FilterMode.EXCLUDE,
+                        onSelect = { filterMode = FilterMode.EXCLUDE },
+                        text = stringResource(R.string.provider_filter_exclude),
+                        modifier = Modifier.focusRequester(firstControlFocusRequester),
+                    )
+                    TvSelectableButton(
+                        selected = filterMode == FilterMode.INCLUDE,
+                        onSelect = { filterMode = FilterMode.INCLUDE },
+                        text = stringResource(R.string.provider_filter_include_short),
+                    )
                 }
                 Text(
                     if (filterMode == FilterMode.EXCLUDE) {
@@ -285,26 +287,16 @@ fun CategoryFilterDialog(
                 }
 
                 Text(stringResource(R.string.provider_filter_add_rules_section_label), style = scaledStyles.titleSmall, color = CinemaTextPrimary)
-                OutlinedTextField(
+                // A live OutlinedTextField sitting in the D-pad path is a dead end on TV: once
+                // focused it swallows every direction key, so the Add button and the entire
+                // script filter below it were unreachable by remote. ReadOnlyFieldWithEdit exists
+                // for exactly this — the field is entered deliberately with OK and left with
+                // Enter or Back, and is an ordinary focus stop the rest of the time.
+                ReadOnlyFieldWithEdit(
                     value = addRulesText,
                     onValueChange = { addRulesText = it },
-                    label = { Text(stringResource(R.string.provider_filter_add_rules_label)) },
-                    placeholder = { Text(stringResource(R.string.provider_filter_rules_placeholder)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = false,
-                    maxLines = 3,
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = CinemaSurface,
-                            unfocusedContainerColor = CinemaSurface,
-                            focusedBorderColor = CinemaAccent,
-                            unfocusedBorderColor = CinemaSurfaceVariant,
-                            focusedTextColor = CinemaTextPrimary,
-                            unfocusedTextColor = CinemaTextPrimary,
-                            focusedLabelColor = CinemaAccent,
-                            unfocusedLabelColor = CinemaTextSecondary,
-                            cursorColor = CinemaAccent,
-                        ),
+                    label = stringResource(R.string.provider_filter_add_rules_label),
+                    placeholder = stringResource(R.string.provider_filter_rules_placeholder),
                 )
                 CinemaButton(
                     onClick = {
@@ -346,31 +338,19 @@ fun CategoryFilterDialog(
                     color = CinemaTextSecondary,
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    val scriptCheckboxColors =
-                        CheckboxDefaults.colors(
-                            checkedColor = CinemaAccent,
-                            uncheckedColor = CinemaTextSecondary,
-                            checkmarkColor = CinemaTextPrimary,
-                        )
                     ScriptType.entries.forEach { script ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.tvFocusableNoScale(),
-                        ) {
-                            Checkbox(
-                                checked = script in selectedScripts,
-                                onCheckedChange = { checked ->
-                                    selectedScripts = if (checked) selectedScripts + script else selectedScripts - script
-                                },
-                                colors = scriptCheckboxColors,
-                            )
-                            Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                            Text(text = script.displayName, style = scaledStyles.bodyMedium, color = CinemaTextPrimary)
-                        }
+                        TvCheckRow(
+                            checked = script in selectedScripts,
+                            onCheckedChange = { checked ->
+                                selectedScripts = if (checked) selectedScripts + script else selectedScripts - script
+                            },
+                            label = script.displayName,
+                        )
                     }
                 }
             }
         },
+        initialFocus = firstControlFocusRequester,
         confirmButton = {
             CinemaDialogActionButton(
                 onClick = {

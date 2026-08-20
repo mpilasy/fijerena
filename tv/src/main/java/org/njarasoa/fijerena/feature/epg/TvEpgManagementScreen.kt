@@ -7,6 +7,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,6 +38,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
+import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -109,7 +112,13 @@ fun TvEpgManagementScreen(
             TvLazyColumn(
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                modifier = Modifier.fillMaxSize(),
+                // `focusRestorer()` with no argument compiles to a `focusRestorer$default(Modifier, Function0,
+                // int, Object)` synthetic that does not exist in the Compose UI actually shipped in the APK
+                // (compile classpath resolves 1.7.x, runtime resolves 1.8.2, where the default-arg overload takes
+                // a FocusRequester instead) — it throws NoSuchMethodError the moment the screen composes. Passing
+                // the fallback explicitly binds the direct overload, which both versions have. Same version-skew
+                // trap as FlowRow, see the note in ProviderDialogs.kt.
+                modifier = Modifier.fillMaxSize().focusRestorer { FocusRequester.Default },
             ) {
                 // Header Actions
                 item {
@@ -757,7 +766,7 @@ private fun EpgSourceEditDialog(
                     value = url,
                     onValueChange = { url = it },
                     label = { Text(stringResource(R.string.epg_xmltv_url_label)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                         focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
@@ -773,7 +782,7 @@ private fun EpgSourceEditDialog(
                     value = label,
                     onValueChange = { label = it },
                     label = { Text(stringResource(R.string.epg_label_optional)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                         focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
@@ -789,7 +798,7 @@ private fun EpgSourceEditDialog(
                     value = tzOffset,
                     onValueChange = { tzOffset = it },
                     label = { Text(stringResource(R.string.epg_timezone_label)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                         focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
