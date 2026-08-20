@@ -2,8 +2,13 @@ package org.njarasoa.fijerena.ui.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
@@ -11,6 +16,11 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
  * Scale, border, and glow values for D-pad focus states, driven by the active look-and-feel
  * style's [org.njarasoa.fijerena.core.ui.theme.UiGridTokens] where the style expresses an opinion
  * (focus scale, outline weight) — press feedback and elevation stay fixed across styles.
+ *
+ * Focus and selection are two independent channels and must stay simultaneously legible: a focused
+ * row that happens to be unselected, and a selected row that happens to be unfocused, both have to
+ * read from ten feet. [focusedContainer] carries focus, [selectedContainer] carries selection, and
+ * they are deliberately different hues rather than two shades of the same grey.
  */
 object TvFocusTokens {
     val focusedScale: Float
@@ -26,8 +36,32 @@ object TvFocusTokens {
     const val pressedScaleSubtle = 0.98f
     const val defaultScale = 1.0f
 
+    /**
+     * Floor on the focus outline. [org.njarasoa.fijerena.core.ui.theme.RokuStyle] pins
+     * `focusScale` to 1.0, so on that style the outline is the *only* focus cue and a hairline
+     * leaves focus invisible.
+     */
+    val minFocusBorderWidth: Dp = 2.dp
+
     val focusBorderWidth: Dp
-        @Composable @ReadOnlyComposable get() = if (LocalUiStyle.current.grid.focusUsesOutline) 3.dp else 1.5.dp
+        @Composable @ReadOnlyComposable get() =
+            (if (LocalUiStyle.current.grid.focusUsesOutline) 3.dp else 1.5.dp).coerceAtLeast(minFocusBorderWidth)
+
+    /** Resting container for an interactive row or button. */
+    val restingContainer: Color
+        @Composable @ReadOnlyComposable get() = CinemaSurfaceVariant
+
+    /**
+     * Container behind the focused row or button. Must stay *lighter* than [restingContainer]:
+     * focus should lift an element toward the viewer, and the previous mapping (`CinemaSurface`)
+     * was darker than rest on every palette, which read as the element receding.
+     */
+    val focusedContainer: Color
+        @Composable @ReadOnlyComposable get() = CinemaSurfaceLight
+
+    /** Container behind a selected row or button that does not currently hold focus. */
+    val selectedContainer: Color
+        @Composable @ReadOnlyComposable get() = CinemaAccent.copy(alpha = CinemaAlpha.tint)
 
     val borderDefault: Dp = 1.dp
     val borderThin: Dp = 0.5.dp

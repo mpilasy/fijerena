@@ -1,0 +1,241 @@
+# TV Focus & Input Overhaul
+
+Audit of every D-pad-reachable surface in `:tv`, and a delivery plan to fix two systemic defects:
+
+1. **Focus is not visible.** On dialogs and settings cards you cannot tell which item the D-pad is
+   on. Several surfaces have *no* focus visual at all.
+2. **Focus is not retained.** Committing a field, or picking an option, destroys the focused node
+   and drops focus to the window root — the next D-pad press restarts from the top of the screen.
+
+Both trace to a small number of shared patterns, not to 40 independent bugs. Fixing the patterns
+fixes every call site at once.
+
+**Scope:** `:tv` only. `:mobile` behaviour must not change.
+**Status:** step 1 of 8 landed; steps 2-8 pending.
+**Audited:** 2026-08-20, against `c99ffbd3`.
+
+---
+
+## 1. Root causes
+
+### R1 — Focused container is *darker* than resting container
+
+`CinemaSecondaryButton` (`ui/components/buttons/CinemaButton.kt:130-133`):
+
+| state | container | palette "cinema" | palette "midnight" |
+|---|---|---|---|
+| resting | `CinemaSurfaceVariant` | `#1E2228` | `#121212` |
+| **focused** | `CinemaSurface` | `#161A20` | `#0A0A0A` |
+
+Focus makes the button *recede*. The only additive cues are a 1.5 dp accent border and a 1.04×
+scale (`TvFocusTokens.focusBorderWidth`, `MaterialStyle.grid.focusScale` in
+`core/ui/.../UiStyle.kt:80`). Under `RokuStyle` the scale is `1.0f` — border only. At 10 feet on a
+55" panel neither reads.
+
+This is the single highest-impact finding: `CinemaSecondaryButton` is the default control on every
+settings card and most dialogs.
+
+### R2 — Bare Material3 selection controls, which have no TV focus state
+
+Material3 `Checkbox` / `RadioButton` / `Switch` render focus through `LocalIndication` (a ripple),
+which is invisible without a pointer. Call sites:
+
+| file:line | control |
+|---|---|
+| `feature/epgbrowser/TvEpgBrowserScreen.kt:354` | `RadioButton` — EPG search-mode picker |
+| `feature/epgbrowser/TvEpgBrowserScreen.kt:386` | `Checkbox` — "matched only" |
+| `feature/provider/components/ProviderDialogs.kt:360` | `Checkbox` — **script exclusion list** |
+| `feature/settings/components/ImportDialogs.kt:222` | `Checkbox` — import option rows (shared row helper) |
+| `feature/epg/TvEpgManagementScreen.kt:244` | `Switch` — per-source enable |
+| `feature/provider/components/ProviderSettingsSection.kt:104, 349` | `Switch` — auto-resume, caching |
+| `feature/settings/components/DeveloperSettingsCard.kt:43` | `Switch` — dev mode |
+
+### R3 — `tvFocusableNoScale()` wrapped around an already-focusable child
+
+`Modifier.focusable()` on a `Row` that contains a `Checkbox`/`Switch`/`Button` creates a **second**
+focus target. The result is two D-pad stops per item, and the outer one has no `onClick` — pressing
+OK on it does nothing.
+
+- `ProviderDialogs.kt:358` (script rows) — Row + `Checkbox`
+- `ProviderDialogs.kt:148` (`MatchTypeChipRow`) — modifier on a `CinemaButton`
+- `ProviderSettingsSection.kt:86, 335` — Row + `Switch`
+- `DeveloperSettingsCard.kt:43` — Row + `Switch`
+
+`tvFocusableNoScale()` also draws border-only feedback (`FocusModifiers.kt:80-91`), so even the
+stop that *is* focusable is barely marked.
+
+### R4 — Selection toggles swap the composable type, destroying the focused node
+
+The pattern `if (isSelected) CinemaPrimaryButton(…) else CinemaSecondaryButton(…)` puts two
+*different* composables in one slot. Selecting an option makes Compose remove the focused node and
+insert a new one; focus falls to the root, and the next D-pad press lands on the first focusable in
+the screen. This is the "focus jumps to the top" report.
+
+| file:line | picker |
+|---|---|
+| `feature/settings/components/ThemeSettingsCard.kt:71, 126` | palette, UI style |
+| `feature/settings/components/UiScaleSettingsCard.kt:72` | UI scale |
+| `feature/settings/components/PlaybackSettingsCard.kt:65` | watch delay |
+| `feature/settings/components/LanguageSettingsCard.kt:67` | language |
+| `feature/provider/components/ProviderSettingsSection.kt:202, 239` | stream format, playlist type |
+
+Two aggravating factors: the selected variant is wired to `onClick = { }`, so OK on the current
+option gives no feedback at all; and `UiScaleSettingsCard` / `ThemeSettingsCard` additionally
+remeasure the whole tree via `LocalUiScale` / `CinemaThemeHolder`.
+
+### R5 — Field edit-commit destroys the focused node, with nothing to return to
+
+`ui/components/ReadOnlyFieldWithEdit.kt:70-176` swaps an `OutlinedTextField` for a `Row` + pencil
+`CinemaIconButton` when `isEditing` flips false. Same node-destruction as R4, and no
+`FocusRequester` is aimed back at the pencil. Every provider form is built from this component
+(`XtreamForm.kt:33/55/66`, `JellyfinForm.kt:48/68/79`, `SmbForm.kt:32/44/56/67`,
+`RemoteM3uForm.kt:25`, `TvAddProviderScreen.kt:235`), and they all live in one
+`Column.verticalScroll` (`TvAddProviderScreen.kt:210-214`) — so committing a field also scrolls the
+form back to the top.
+
+`ProviderSettingsSection.kt:399-457` and `477-556` (watch-history size, favourites max) repeat the
+same if/else by hand.
+
+### R6 — No focus restoration on any lazy container
+
+`focusRestorer()` appears twice in the whole module, both in `ImportDialogs.kt` (`:117`, `:280`).
+Eleven files use `TvLazyColumn` / `LazyColumn` / `LazyRow` / `LazyVerticalGrid` without it, so
+scrolling a row off-screen and back loses the focused item. `SettingsScreen.kt:189` is the one the
+user meets first.
+
+### R7 — Dialogs that never receive focus
+
+`CinemaAlertDialog` (`core/ui/.../CinemaAlertDialog.kt:73-84`) lands initial focus on the dismiss
+button, or on the confirm button when there is no dismiss button. Two consequences:
+
+- **`LanguageSettingsCard.kt:86` passes `confirmButton = {}`** and no dismiss button. The requester
+  is attached to an empty `Box`; `requestFocus()` cannot land. The dialog opens with focus nowhere,
+  and D-pad keys fall through to the screen behind it.
+- When the dialog's real content lives in the `text` slot (language options, `CategoryFilterDialog`
+  at `ProviderDialogs.kt:160-395`), focus starts on the button row at the *bottom*, so the user
+  must D-pad up through the whole panel to reach the first option.
+
+### R8 — Player selector dialogs report the wrong "Active" track
+
+`AudioTrackSelectorDialog`, `SubtitleSelectorDialog`, `QualitySelectorDialog`,
+`ChapterSelectorDialog` (1104 lines, near-identical) each do
+`onFocusChanged { if (isFocused) selectedIndex = index }`, then style `isSelected` from
+`selectedIndex`. Merely *navigating* re-points the selected styling and, for the "Off" row, the
+"Active" label. The real current track is only recoverable from `track.isSelected`.
+
+---
+
+## 2. Target design
+
+One rule, applied everywhere: **focus and selection are two independent, simultaneously legible
+channels.**
+
+- **Focus** = brighter container (`CinemaSurfaceLight`) + full-weight accent outline + the style's
+  scale. Never darker than resting. Never outline-only.
+- **Selection** = a leading state glyph (`CinemaIcons.CheckCircle` /
+  `RadioButtonChecked` / `RadioButtonUnchecked`) plus an accent left-edge bar. Independent of focus,
+  so a focused-but-unselected row and an unfocused-but-selected row both read correctly.
+
+Five new primitives in `tv/ui/components/input/`, each a **single composable with a `selected:
+Boolean` parameter** — never a type swap — and each with exactly **one** focus target:
+
+| primitive | built on | replaces |
+|---|---|---|
+| `TvSelectableButton` | `Surface(checked=…)` (`ToggleableSurfaceDefaults`) | the R4 `if (isSelected) Primary else Secondary` pairs |
+| `TvOptionRow` | `ListItem(selected=…)` | option rows in the four player selector dialogs |
+| `TvCheckRow` | `ListItem` + inert `tv.material3.Checkbox` | Material3 `Checkbox` + label rows (R2/R3) |
+| `TvRadioRow` | `ListItem` + inert `tv.material3.RadioButton` | Material3 `RadioButton` + label rows |
+| `TvSwitchRow` | `ListItem` + inert `tv.material3.Switch` | Material3 `Switch` + label/description rows |
+
+`androidx.tv.material3` alpha10 already ships `ListItem(selected, onClick, …)` with a complete
+focused × selected state matrix, plus TV flavours of `Checkbox` / `RadioButton` / `Switch` that
+accept a `null` callback and render as inert indicators. So the row primitives are thin wrappers,
+not hand-drawn controls: the row owns focus and the click, the indicator only draws state. That is
+what collapses R3's two D-pad stops per item into one.
+
+Plus two helpers:
+
+- `rememberFocusReturn(active)` — re-aims focus at the trigger control on the `true -> false` edge
+  of a transient editor. Used by `ReadOnlyFieldWithEdit` and the hand-rolled edit toggles (R5).
+- `CinemaAlertDialog(initialFocus = …)` — an opt-in slot so a dialog can land focus on its first
+  content item instead of the button row. Default stays today's behaviour, so `:mobile`'s 11 call
+  sites are unaffected.
+
+`TvFocusTokens` gains `restingContainer`, `focusedContainer`, `selectedContainer`, and a
+`minFocusBorderWidth` floor so no style can render an unreadable outline.
+
+**Not changing:** palettes, typography, spacing, layout, navigation graph, screen structure, or any
+`:mobile` file. Every step is a like-for-like control substitution.
+
+---
+
+## 3. Delivery plan
+
+Eight steps. Each builds, passes `ktlintCheck` + `lintDebug`, deploys via
+`scripts/deploy-tv-ip.sh`, has a named on-device check, and lands as one commit. Stopping after any
+step leaves the app coherent.
+
+### Step 1 — Tokens and primitives · no call sites yet — ✅ **done**
+Added `TvFocusTokens.restingContainer` / `focusedContainer` / `selectedContainer` and the
+`minFocusBorderWidth` floor. Added the five primitives, `TvInputDefaults`, `TvInputListItem` and
+`rememberFocusReturn()` under `tv/ui/components/input/`. Nothing imports them yet.
+**Check:** build + `ktlintCheck` only. One incidental visual change: the border floor raises the
+focus outline from 1.5 dp to 2 dp under `CupertinoStyle` (the only style with
+`focusUsesOutline = false`).
+
+### Step 2 — R1, at the source
+Repoint `CinemaSecondaryButton.focusedContainerColor` to `CinemaSurfaceLight` and raise the focus
+border to the new floor. This alone makes every settings card and dialog legible.
+**Check:** Settings → arrow through Theme, Language, UI Scale. Focused button is visibly lighter
+than its neighbours in all four palettes.
+
+### Step 3 — R4: the settings pickers
+Migrate `ThemeSettingsCard`, `UiScaleSettingsCard`, `PlaybackSettingsCard`, `LanguageSettingsCard`
+and `ProviderSettingsSection`'s two format pickers to `TvSelectableButton`.
+**Check:** pick a different UI scale. Focus stays on the option you pressed; the list does not
+scroll to the top. Repeat for palette and UI style.
+
+### Step 4 — R7: dialog initial focus
+Add the `initialFocus` slot to `CinemaAlertDialog`; give `LanguageSettingsCard` a real
+`confirmButton`; point `CategoryFilterDialog` and the language dialog at their first content item.
+**Check:** open Settings → Language. Focus is on a language row, not lost. Back closes it.
+
+### Step 5 — R2 + R3: the filter panel
+`CategoryFilterDialog` script list → `TvCheckRow`; `MatchTypeChipRow` → `TvSelectableButton`; drop
+the redundant `tvFocusableNoScale()` wrappers.
+**Check:** Providers → Manage Filters. One D-pad stop per script; OK toggles it; the checked state
+is readable while unfocused.
+
+### Step 6 — R2 + R3: switches and the remaining checkboxes
+`ProviderSettingsSection` (×2), `DeveloperSettingsCard`, `TvEpgManagementScreen:244`,
+`TvEpgBrowserScreen:354/386`, `ImportDialogs` → `TvSwitchRow` / `TvCheckRow` / `TvRadioRow`.
+**Check:** EPG Browser search-mode radios show focus. Provider settings switches take one stop and
+respond to OK.
+
+### Step 7 — R5: field editing
+`rememberFocusReturn()` into `ReadOnlyFieldWithEdit` (fixed in place — no new component, the
+existing one already has the right shape) and into the two hand-rolled editors in
+`ProviderSettingsSection`.
+**Check:** Add Provider → edit the URL, press Enter. Focus returns to that field's pencil and the
+form does not scroll away. Repeat with Back (cancel).
+
+### Step 8 — R6 + R8: restoration and the player dialogs
+`focusRestorer()` on the eleven lazy containers. Collapse the four player selector dialogs onto one
+`TvOptionRow`-based `TvSelectorDialog`, with `selected` driven by the track's real state, not by
+focus.
+**Check:** Settings, scroll to the bottom card, scroll back — focus returns to where it was. In the
+player, open Subtitles and arrow through: "Active" stays on the real current track.
+
+---
+
+## 4. Risks
+
+- **Step 2 is a shared-component change.** `CinemaSecondaryButton` lives in `:tv`, so `:mobile` is
+  safe, but it is used on 22 TV files — the whole point, though it means step 2 needs a wider
+  visual sweep than its own check implies.
+- **`CinemaAlertDialog` is shared with `:mobile`** (11 call sites). Step 4 must add an opt-in
+  parameter with today's behaviour as the default, and must not touch the existing focus logic.
+- **`androidx.tv.foundation`'s `TvLazyColumn` is deprecated alpha.** Step 8's `focusRestorer()`
+  works on both it and `LazyColumn`; migrating off `TvLazyColumn` is explicitly out of scope here.
+- **`FlowRow` is unusable in this project** — see the comment at `ProviderDialogs.kt:138-141`. The
+  new primitives must keep the manual `chunked(2)` wrapping.
