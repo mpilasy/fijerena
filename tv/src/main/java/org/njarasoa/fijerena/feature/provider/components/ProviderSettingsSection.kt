@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -199,19 +200,11 @@ fun ProviderSettingsSection(
             ) {
                 val currentFormat = providerSettings.streamOutputFormat
                 listOf("m3u8", "ts").forEach { format ->
-                    if (format == currentFormat) {
-                        CinemaPrimaryButton(
-                            onClick = {},
-                            text = format,
-                        )
-                    } else {
-                        CinemaSecondaryButton(
-                            onClick = {
-                                onUpdateSettings(providerSettings.copy(streamOutputFormat = format))
-                            },
-                            text = format,
-                        )
-                    }
+                    TvSelectableButton(
+                        selected = format == currentFormat,
+                        onSelect = { onUpdateSettings(providerSettings.copy(streamOutputFormat = format)) },
+                        text = format,
+                    )
                 }
             }
         }
@@ -236,19 +229,11 @@ fun ProviderSettingsSection(
             ) {
                 val currentType = providerSettings.playlistType
                 listOf("m3u_plus", "simple").forEach { type ->
-                    if (type == currentType) {
-                        CinemaPrimaryButton(
-                            onClick = {},
-                            text = type,
-                        )
-                    } else {
-                        CinemaSecondaryButton(
-                            onClick = {
-                                onUpdateSettings(providerSettings.copy(playlistType = type))
-                            },
-                            text = type,
-                        )
-                    }
+                    TvSelectableButton(
+                        selected = type == currentType,
+                        onSelect = { onUpdateSettings(providerSettings.copy(playlistType = type)) },
+                        text = type,
+                    )
                 }
             }
         }

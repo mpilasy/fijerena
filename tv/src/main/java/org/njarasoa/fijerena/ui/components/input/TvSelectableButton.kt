@@ -60,7 +60,7 @@ fun TvSelectableButton(
                 focusedContentColor = CinemaTextPrimary,
                 selectedContainerColor = TvFocusTokens.selectedContainer,
                 selectedContentColor = CinemaTextPrimary,
-                focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
+                focusedSelectedContainerColor = TvFocusTokens.focusedSelectedContainer,
                 focusedSelectedContentColor = CinemaTextPrimary,
                 disabledContainerColor = TvFocusTokens.restingContainer.copy(alpha = CinemaAlpha.scrim),
                 disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),

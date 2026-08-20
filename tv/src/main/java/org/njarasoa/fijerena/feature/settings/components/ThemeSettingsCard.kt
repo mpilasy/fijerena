@@ -19,8 +19,7 @@ import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
@@ -67,22 +66,12 @@ fun ThemeSettingsCard(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                     ) {
                         rowPalettes.forEach { palette ->
-                            val isSelected = selectedThemeId == palette.id
-                            if (isSelected) {
-                                CinemaPrimaryButton(
-                                    onClick = { },
-                                    text = palette.displayName,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            } else {
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        onThemeSelected(palette.id)
-                                    },
-                                    text = palette.displayName,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
+                            TvSelectableButton(
+                                selected = selectedThemeId == palette.id,
+                                onSelect = { onThemeSelected(palette.id) },
+                                text = palette.displayName,
+                                modifier = Modifier.weight(1f),
+                            )
                         }
                     }
                 }
@@ -122,22 +111,12 @@ fun ThemeSettingsCard(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                     ) {
                         rowStyles.forEach { style ->
-                            val isSelected = selectedUiStyleId == style.id
-                            if (isSelected) {
-                                CinemaPrimaryButton(
-                                    onClick = { },
-                                    text = style.displayName,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            } else {
-                                CinemaSecondaryButton(
-                                    onClick = {
-                                        onUiStyleSelected(style.id)
-                                    },
-                                    text = style.displayName,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
+                            TvSelectableButton(
+                                selected = selectedUiStyleId == style.id,
+                                onSelect = { onUiStyleSelected(style.id) },
+                                text = style.displayName,
+                                modifier = Modifier.weight(1f),
+                            )
                         }
                     }
                 }

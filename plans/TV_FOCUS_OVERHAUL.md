@@ -11,7 +11,7 @@ Both trace to a small number of shared patterns, not to 40 independent bugs. Fix
 fixes every call site at once.
 
 **Scope:** `:tv` only. `:mobile` behaviour must not change.
-**Status:** steps 1-2 of 8 landed; steps 3-8 pending.
+**Status:** steps 1-3 of 8 landed; steps 4-8 pending.
 **Audited:** 2026-08-20, against `c99ffbd3`.
 
 ---
@@ -197,11 +197,15 @@ passthrough the focus outline and scale its semantic siblings already had (40 ca
 their unfocused neighbours and carry a full accent outline, while the selected option stays solid
 accent — the two states no longer collapse into one another.
 
-### Step 3 — R4: the settings pickers
-Migrate `ThemeSettingsCard`, `UiScaleSettingsCard`, `PlaybackSettingsCard`, `LanguageSettingsCard`
-and `ProviderSettingsSection`'s two format pickers to `TvSelectableButton`.
-**Check:** pick a different UI scale. Focus stays on the option you pressed; the list does not
-scroll to the top. Repeat for palette and UI style.
+### Step 3 — R4: the settings pickers — ✅ **done**
+Migrated `ThemeSettingsCard` (×2), `UiScaleSettingsCard`, `PlaybackSettingsCard`,
+`LanguageSettingsCard` and `ProviderSettingsSection`'s two format pickers to `TvSelectableButton`.
+Added `TvFocusTokens.focusedSelectedContainer` along the way — letting the focus container win when
+a row is *both* focused and selected dropped the only container-level selection cue exactly when
+the user was looking at it.
+**Verified** on darcy against the hardest case, UI scale (a global `LocalDensity` remeasure):
+selecting 80% then 60% kept focus on the pressed option both times, where it previously fell to the
+top of the screen.
 
 ### Step 4 — R7: dialog initial focus
 Add the `initialFocus` slot to `CinemaAlertDialog`; give `LanguageSettingsCard` a real

@@ -11,8 +11,8 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
@@ -63,23 +63,17 @@ fun LanguageSettingsCard(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                     languages.forEach { (code, name) ->
-                        val isSelected = selectedLanguage == code
-                        if (isSelected) {
-                            CinemaPrimaryButton(
-                                onClick = { showDialog = false },
-                                text = name,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        } else {
-                            CinemaSecondaryButton(
-                                onClick = { 
+                        TvSelectableButton(
+                            selected = selectedLanguage == code,
+                            onSelect = {
+                                if (selectedLanguage != code) {
                                     onLanguageSelected(code)
-                                    showDialog = false
-                                },
-                                text = name,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                                }
+                                showDialog = false
+                            },
+                            text = name,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             },
