@@ -3,8 +3,10 @@ package org.njarasoa.fijerena.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Glow
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
@@ -62,6 +64,34 @@ object TvFocusTokens {
     /** Container behind a selected row or button that does not currently hold focus. */
     val selectedContainer: Color
         @Composable @ReadOnlyComposable get() = CinemaAccent.copy(alpha = CinemaAlpha.tint)
+
+    /**
+     * Focus glow, honouring [org.njarasoa.fijerena.core.ui.theme.UiGridTokens.focusUsesShadow]:
+     * Cupertino and BRAVIA lift focused elements with a shadow, Material and Roku do not.
+     * [Glow.None] on the styles that opt out, so this can be passed unconditionally.
+     */
+    val focusedGlow: Glow
+        @Composable @ReadOnlyComposable get() =
+            if (LocalUiStyle.current.grid.focusUsesShadow) {
+                Glow(
+                    elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                    elevation = focusShadowElevation,
+                )
+            } else {
+                Glow.None
+            }
+
+    /**
+     * Weight for text that carries selection. Taken from the active style rather than a literal
+     * [FontWeight.Bold] so Roku's heavier emphasis (800) and Cupertino's lighter one (500) both
+     * come through — the typography scale gets the same treatment in `Type.kt`, and a raw literal
+     * here would opt this text out of it.
+     */
+    val emphasisWeight: FontWeight
+        @Composable @ReadOnlyComposable get() = FontWeight(LocalUiStyle.current.type.weightEmphasis)
+
+    val regularWeight: FontWeight
+        @Composable @ReadOnlyComposable get() = FontWeight(LocalUiStyle.current.type.weightRegular)
 
     val borderDefault: Dp = 1.dp
     val borderThin: Dp = 0.5.dp

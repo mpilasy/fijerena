@@ -5,13 +5,13 @@ package org.njarasoa.fijerena.ui.components.input
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * One choice in a full-width picker list — audio track, subtitle track, quality, chapter.
@@ -56,7 +56,7 @@ fun TvOptionRow(
         Text(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            fontWeight = if (selected) TvFocusTokens.emphasisWeight else TvFocusTokens.regularWeight,
         )
     }
 }

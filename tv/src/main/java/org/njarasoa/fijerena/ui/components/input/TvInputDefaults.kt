@@ -10,6 +10,7 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.ListItemBorder
 import androidx.tv.material3.ListItemColors
 import androidx.tv.material3.ListItemDefaults
+import androidx.tv.material3.ListItemGlow
 import androidx.tv.material3.ListItemScale
 import androidx.tv.material3.ListItemShape
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -22,12 +23,17 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 /**
  * The one focus/selection language shared by every D-pad control in `ui/components/input`.
  *
+ * Every value here resolves through the active [org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette]
+ * (colour) and [org.njarasoa.fijerena.core.ui.theme.UiStyle] (corner radius, focus scale, outline
+ * weight, focus shadow), so these controls follow the user's theme and look-and-feel settings the
+ * same way the rest of the TV UI does.
+ *
  * `androidx.tv.material3.ListItem` carries a full focused × selected state matrix, which is what
  * these tokens fill in. That matrix is the whole point: a row can be focused-and-unselected or
  * selected-and-unfocused, and both have to read at ten feet.
  *
  * - **Focus** lifts: [TvFocusTokens.focusedContainer] (lighter than rest) plus a full-weight accent
- *   outline plus the active style's scale.
+ *   outline plus the active style's scale and, where the style asks for one, its shadow.
  * - **Selection** tints: [TvFocusTokens.selectedContainer] plus a hairline accent outline, and the
  *   control's own glyph (check / radio dot / switch thumb).
  *
@@ -74,6 +80,13 @@ object TvInputDefaults {
 
     @Composable
     fun shape(): ListItemShape = ListItemDefaults.shape(shape = RoundedCornerShape(CornerRadius.small))
+
+    @Composable
+    fun glow(): ListItemGlow =
+        ListItemDefaults.glow(
+            focusedGlow = TvFocusTokens.focusedGlow,
+            focusedSelectedGlow = TvFocusTokens.focusedGlow,
+        )
 
     @ReadOnlyComposable
     @Composable

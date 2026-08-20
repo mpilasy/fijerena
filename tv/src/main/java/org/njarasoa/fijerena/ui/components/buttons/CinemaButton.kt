@@ -123,9 +123,9 @@ fun CinemaSecondaryButton(
         enabled = enabled,
         colors =
             ButtonDefaults.colors(
-                containerColor = CinemaSurfaceVariant,
+                containerColor = TvFocusTokens.restingContainer,
                 contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaSurface,
+                focusedContainerColor = TvFocusTokens.focusedContainer,
                 focusedContentColor = CinemaAccentLight,
                 pressedContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.textMedium),
                 disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
@@ -338,6 +338,10 @@ fun CinemaDangerIconButton(
  * Generic Button - shape-themed passthrough for raw call sites with custom colors that don't
  * fit the semantic Primary/Secondary/Tertiary/Danger variants above. M3's default TV button
  * shape ignores the app's [org.njarasoa.fijerena.core.ui.theme.UiStyle] shape tokens.
+ *
+ * Callers own [colors], so the focus outline and scale are supplied here rather than left to
+ * M3's defaults — otherwise a call site that passes only a `containerColor` ends up with a button
+ * whose focused and resting states are told apart by container colour alone.
  */
 @Composable
 fun CinemaButton(
@@ -353,6 +357,20 @@ fun CinemaButton(
         modifier = modifier,
         enabled = enabled,
         colors = colors,
+        scale =
+            ButtonDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScale,
+                pressedScale = TvFocusTokens.pressedScale,
+                disabledScale = TvFocusTokens.defaultScale,
+            ),
+        border =
+            ButtonDefaults.border(
+                focusedBorder =
+                    Border(
+                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight),
+                    ),
+            ),
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
         content = content,
     )

@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.tv.material3.Border
 import androidx.tv.material3.Surface
@@ -35,6 +34,9 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  *
  * Pressing OK on the already-selected option re-invokes [onSelect]; callers should treat that as
  * idempotent rather than wiring it to `{}`, so the press still gives visible feedback.
+ *
+ * Colour comes from the active palette and shape / scale / outline weight / focus shadow /
+ * emphasis weight from the active look-and-feel style, via [TvFocusTokens].
  */
 @Composable
 fun TvSelectableButton(
@@ -84,6 +86,7 @@ fun TvSelectableButton(
                         shape = RoundedCornerShape(CornerRadius.small),
                     ),
             ),
+        glow = ToggleableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
     ) {
         Box(
             modifier =
@@ -94,7 +97,7 @@ fun TvSelectableButton(
             Text(
                 text = text,
                 textAlign = TextAlign.Center,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                fontWeight = if (selected) TvFocusTokens.emphasisWeight else TvFocusTokens.regularWeight,
             )
         }
     }
