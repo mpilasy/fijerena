@@ -18,6 +18,69 @@ import org.njarasoa.fijerena.core.ui.theme.UiStyleHolder
 import org.njarasoa.fijerena.core.ui.theme.paletteById
 import org.njarasoa.fijerena.core.ui.theme.styleById
 
+/**
+ * Non-TV Material3 mirror of the palette.
+ *
+ * TV screens only theme `androidx.tv.material3.MaterialTheme`, but the dialogs, text fields and
+ * selection controls inside them come from `androidx.compose.material3`, which reads its *own*
+ * `MaterialTheme`. Left unprovided that resolves to Material3's stock **light** scheme, which is
+ * why every [org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog] on TV rendered as a white
+ * panel with a purple button regardless of the selected theme.
+ *
+ * The `surfaceContainer*` roles matter specifically: `AlertDialogDefaults.containerColor` resolves
+ * to `surfaceContainerHigh`.
+ */
+private fun cinemaMaterialColorScheme(palette: org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette) =
+    androidx.compose.material3.darkColorScheme(
+        primary = palette.accent,
+        onPrimary = androidx.compose.ui.graphics.Color.White,
+        primaryContainer = palette.accentDark,
+        onPrimaryContainer = palette.accentLight,
+        secondary = palette.orange,
+        onSecondary = androidx.compose.ui.graphics.Color.Black,
+        secondaryContainer = palette.orangeDark,
+        onSecondaryContainer = palette.orangeLight,
+        tertiary = palette.accentLight,
+        onTertiary = androidx.compose.ui.graphics.Color.Black,
+        tertiaryContainer = palette.surface,
+        onTertiaryContainer = palette.accentLight,
+        error = palette.error,
+        onError = androidx.compose.ui.graphics.Color.White,
+        errorContainer = palette.error.copy(alpha = 0.2f),
+        onErrorContainer = palette.error.copy(alpha = 0.8f),
+        background = palette.background,
+        onBackground = palette.textPrimary,
+        surface = palette.surface,
+        onSurface = palette.textPrimary,
+        surfaceVariant = palette.surfaceVariant,
+        onSurfaceVariant = palette.textSecondary,
+        // Dialogs land on `surfaceContainerHigh`, and the controls inside them rest on
+        // `surfaceVariant` — so the dialog has to sit one step *below* that, or an unfocused
+        // option is the same colour as the panel behind it and disappears.
+        surfaceContainerLowest = palette.background,
+        surfaceContainerLow = palette.background,
+        surfaceContainer = palette.surface,
+        surfaceContainerHigh = palette.surface,
+        surfaceContainerHighest = palette.surfaceVariant,
+        outline = palette.surfaceLight,
+        outlineVariant = palette.surfaceVariant,
+        surfaceTint = palette.accent,
+        inverseSurface = palette.textPrimary,
+        inverseOnSurface = palette.background,
+        scrim =
+            androidx.compose.ui.graphics.Color.Black
+                .copy(alpha = 0.5f),
+    )
+
+private fun cinemaMaterialShapes(tokens: UiShapeTokens) =
+    androidx.compose.material3.Shapes(
+        extraSmall = RoundedCornerShape(4.dp),
+        small = RoundedCornerShape(tokens.chip),
+        medium = RoundedCornerShape(tokens.card),
+        large = RoundedCornerShape(tokens.card + 4.dp),
+        extraLarge = RoundedCornerShape(tokens.dialog),
+    )
+
 private fun cinemaShapes(tokens: UiShapeTokens) =
     Shapes(
         extraSmall = RoundedCornerShape(4.dp),
@@ -87,12 +150,20 @@ fun FirstVideoPlayerTheme(
         )
     }
 
+    val typography = remember(style) { cinemaTypography(style.type) }
+
     CompositionLocalProvider(LocalCinemaTheme provides palette, LocalUiStyle provides style) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = remember(style) { cinemaTypography(style.type) },
-            shapes = remember(style) { cinemaShapes(style.shapes) },
-            content = content,
-        )
+        androidx.compose.material3.MaterialTheme(
+            colorScheme = remember(palette) { cinemaMaterialColorScheme(palette) },
+            shapes = remember(style) { cinemaMaterialShapes(style.shapes) },
+            typography = remember(typography) { cinemaMaterialTypography(typography) },
+        ) {
+            MaterialTheme(
+                colorScheme = colorScheme,
+                typography = typography,
+                shapes = remember(style) { cinemaShapes(style.shapes) },
+                content = content,
+            )
+        }
     }
 }

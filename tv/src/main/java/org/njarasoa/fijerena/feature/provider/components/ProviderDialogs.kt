@@ -26,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -124,6 +126,10 @@ fun CategoryFilterDialog(
     var pendingAddMatchType by remember { mutableStateOf(MatchType.STARTS_WITH) }
     var selectedScripts by remember { mutableStateOf(currentFilters.allowedScripts) }
 
+    // The panel's content is in the dialog's `text` slot, so the default initial-focus target is
+    // the Save/Cancel row at the very bottom. Start on the first real control instead.
+    val firstControlFocusRequester = remember { FocusRequester() }
+
     @Composable
     fun matchTypeLabel(type: MatchType): String =
         when (type) {
@@ -174,6 +180,7 @@ fun CategoryFilterDialog(
                 ) {
                     CinemaButton(
                         onClick = { filterMode = FilterMode.EXCLUDE },
+                        modifier = Modifier.focusRequester(firstControlFocusRequester),
                         colors =
                             androidx.tv.material3.ButtonDefaults.colors(
                                 containerColor = if (filterMode == FilterMode.EXCLUDE) CinemaAccent else CinemaSurfaceVariant,
@@ -371,6 +378,7 @@ fun CategoryFilterDialog(
                 }
             }
         },
+        initialFocus = firstControlFocusRequester,
         confirmButton = {
             CinemaDialogActionButton(
                 onClick = {

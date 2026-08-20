@@ -179,3 +179,30 @@ fun cinemaTypography(tokens: UiTypeTokens): Typography {
         labelSmall = BaseTypography.labelSmall.body(),
     )
 }
+
+/**
+ * Non-TV Material3 mirror of [cinemaTypography].
+ *
+ * `androidx.compose.material3` and `androidx.tv.material3` each have their own `Typography` type
+ * and their own `MaterialTheme`. TV screens theme the latter, but the dialogs, text fields and
+ * selection controls they contain are the former — so without this mirror those components fall
+ * back to Material3's stock scale, whose 14sp body text is well under the 18sp TV floor.
+ */
+fun cinemaMaterialTypography(source: Typography): androidx.compose.material3.Typography =
+    androidx.compose.material3.Typography(
+        displayLarge = source.displayLarge,
+        displayMedium = source.displayMedium,
+        displaySmall = source.displaySmall,
+        headlineLarge = source.headlineLarge,
+        headlineMedium = source.headlineMedium,
+        headlineSmall = source.headlineSmall,
+        titleLarge = source.titleLarge,
+        titleMedium = source.titleMedium,
+        titleSmall = source.titleSmall,
+        bodyLarge = source.bodyLarge,
+        bodyMedium = source.bodyMedium,
+        bodySmall = source.bodySmall,
+        labelLarge = source.labelLarge,
+        labelMedium = source.labelMedium,
+        labelSmall = source.labelSmall,
+    )
