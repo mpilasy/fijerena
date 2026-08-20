@@ -130,6 +130,20 @@ class XtreamMediaProvider(
     override suspend fun getEpisodeCountsBySeries(): Map<String, Int> = repository.getEpisodeCountsBySeries()
 
     /**
+     * One line whenever a lookup ends as an error on screen. Without it a call that never
+     * completed left no trace at all, so in a log capture "the user never opened anything" and
+     * "the provider was unreachable" looked exactly the same.
+     */
+    private fun XtreamResponse<*>.logAsFailure(action: String, id: String) {
+        when (this) {
+            is XtreamResponse.Ok -> {}
+            is XtreamResponse.Unavailable -> Log.w("XtreamMediaProvider", "$action $id: provider has nothing for it")
+            is XtreamResponse.Malformed -> Log.w("XtreamMediaProvider", "$action $id: response could not be read", cause)
+            is XtreamResponse.Failed -> Log.w("XtreamMediaProvider", "$action $id: call did not complete", cause)
+        }
+    }
+
+    /**
      * Fetches the series info, applying the two recoveries worth trying when the provider answers
      * with nothing usable — [XtreamResponse] having already decided that it did.
      *
@@ -218,7 +232,10 @@ class XtreamMediaProvider(
                 }
                 kotlin.Result.success(enriched)
             }
-            else -> kotlin.Result.failure(result.asThrowable())
+            else -> {
+                result.logAsFailure("get_series_info", seriesId)
+                kotlin.Result.failure(result.asThrowable())
+            }
         }
     }
 
@@ -373,7 +390,10 @@ class XtreamMediaProvider(
                 )
                 kotlin.Result.success(enriched)
             }
-            else -> kotlin.Result.failure(result.asThrowable())
+            else -> {
+                result.logAsFailure("get_vod_info", movieId)
+                kotlin.Result.failure(result.asThrowable())
+            }
         }
     }
 
