@@ -444,6 +444,9 @@ class StreamLoaderViewModel(
                     )
                 }
 
+                // Metadata goes with every position write, not only the ones past the threshold
+                // above: this call creates the row for a session too short to reach it, and a row
+                // without it is an episode that cannot say which show it belongs to.
                 repo.savePlaybackPosition(
                     currentState.streamId,
                     currentState.streamName,
@@ -453,6 +456,10 @@ class StreamLoaderViewModel(
                     duration,
                     audioTrackIndex = audioTrackIndex,
                     subtitleTrackIndex = subtitleTrackIndex,
+                    episodeId = episodeId,
+                    episodeExtension = episodeExtension,
+                    seriesId = seriesId,
+                    seriesName = seriesName,
                 )
             }
 
@@ -492,6 +499,9 @@ class StreamLoaderViewModel(
                     )
                 }
 
+                // Metadata goes with every position write, not only the ones past the threshold
+                // above: this call creates the row for a session too short to reach it, and a row
+                // without it is an episode that cannot say which show it belongs to.
                 repo.savePlaybackPosition(
                     currentState.streamId,
                     currentState.streamName,
@@ -501,6 +511,10 @@ class StreamLoaderViewModel(
                     duration,
                     audioTrackIndex = audioTrackIndex,
                     subtitleTrackIndex = subtitleTrackIndex,
+                    episodeId = episodeId,
+                    episodeExtension = episodeExtension,
+                    seriesId = seriesId,
+                    seriesName = seriesName,
                 )
             }
 

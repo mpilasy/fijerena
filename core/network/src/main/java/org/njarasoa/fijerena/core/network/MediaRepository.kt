@@ -770,6 +770,16 @@ class MediaRepository(
         cache.commitAsync { remove(KEY_FAVORITE_CATEGORIES) }
     }
 
+    /**
+     * Records a resume point, and with it the identity of what was played.
+     *
+     * The episode/series fields matter because this is the write that *creates* the row for a
+     * short session: [saveLastPlayedItem] only runs once a couple of percent has been watched, so
+     * sampling an episode and leaving used to mint a history row carrying a position and nothing
+     * that says which episode of which show it was. Recent then had only the id to go on and read
+     * an episode as a series. Callers that know the metadata must pass it; what they omit falls
+     * back to whatever the existing row already had.
+     */
     fun savePlaybackPosition(
         itemId: String,
         itemName: String,
@@ -779,6 +789,10 @@ class MediaRepository(
         duration: Long,
         audioTrackIndex: Int? = null,
         subtitleTrackIndex: Int? = null,
+        episodeId: String? = null,
+        episodeExtension: String? = null,
+        seriesId: String? = null,
+        seriesName: String? = null,
     ) {
         if (contentType == ContentType.LIVE_TV) return
         if (usesServerUserData) return
@@ -805,10 +819,10 @@ class MediaRepository(
             position,
             duration,
             isCompleted,
-            episodeId = existing?.episodeId,
-            episodeExtension = existing?.episodeExtension,
-            seriesId = existing?.seriesId,
-            seriesName = existing?.seriesName,
+            episodeId = episodeId ?: existing?.episodeId,
+            episodeExtension = episodeExtension ?: existing?.episodeExtension,
+            seriesId = seriesId ?: existing?.seriesId,
+            seriesName = seriesName ?: existing?.seriesName,
             audioTrackIndex = audioTrackIndex ?: existing?.audioTrackIndex,
             subtitleTrackIndex = subtitleTrackIndex ?: existing?.subtitleTrackIndex,
         )
@@ -933,10 +947,7 @@ class MediaRepository(
      * entries written before series ids were recorded stay episode cards that play directly.
      */
     private fun WatchedItem.toRecentMediaItem(mediaType: MediaType): MediaItem {
-        // A row whose series id is its own stream id is an episode wearing a series' clothes —
-        // written when an episode card was opened as if it were a show and the episode played from
-        // there. Treating it as a series would ask the provider for episodes of an episode.
-        val seriesCardId = if (contentType == ContentType.TV_SHOWS) seriesId?.takeIf { it != itemId } else null
+        val seriesCardId = if (contentType == ContentType.TV_SHOWS) seriesId else null
         return MediaItem(
             id = seriesCardId ?: itemId,
             name = if (seriesCardId != null) seriesName ?: itemName else itemName,

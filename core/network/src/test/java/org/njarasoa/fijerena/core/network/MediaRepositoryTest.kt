@@ -104,6 +104,31 @@ class MediaRepositoryTest {
     }
 
     @Test
+    fun savePlaybackPosition_shortSessionStillRecordsWhichEpisodePlayed() {
+        every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
+        repository = MediaRepository(context, 1L)
+
+        // 1.3% watched — below the threshold that records the last-played item, so this write is
+        // the one creating the row. It must still say which episode of which show it was.
+        repository.savePlaybackPosition(
+            "242136",
+            "EN - Law & Order - S06E18",
+            "156",
+            ContentType.TV_SHOWS,
+            37_365L,
+            2_811_558L,
+            episodeId = "242136",
+            episodeExtension = "mkv",
+            seriesId = "4080",
+            seriesName = "EN - Law & Order (1990) (US)",
+        )
+
+        val saved = repository.getWatchHistory().single { it.itemId == "242136" }
+        assert(saved.seriesId == "4080") { "a row created by a short session must carry its series id" }
+        assert(saved.episodeId == "242136") { "a row created by a short session must carry its episode id" }
+    }
+
+    @Test
     fun getWatchHistory_empty() {
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
         repository = MediaRepository(context, 1L)
