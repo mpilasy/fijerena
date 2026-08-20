@@ -11,7 +11,7 @@ Both trace to a small number of shared patterns, not to 40 independent bugs. Fix
 fixes every call site at once.
 
 **Scope:** `:tv` only. `:mobile` behaviour must not change.
-**Status:** steps 1-4 of 8 landed; steps 5-8 pending.
+**Status:** steps 1-5 of 8 landed; steps 6-8 pending.
 **Audited:** 2026-08-20, against `c99ffbd3`.
 
 ---
@@ -114,6 +114,20 @@ button, or on the confirm button when there is no dismiss button. Two consequenc
 - When the dialog's real content lives in the `text` slot (language options, `CategoryFilterDialog`
   at `ProviderDialogs.kt:160-395`), focus starts on the button row at the *bottom*, so the user
   must D-pad up through the whole panel to reach the first option.
+
+### R10 — A focused text field is a D-pad dead end
+
+On TV a focused `OutlinedTextField` consumes every direction key, so focus can never leave it.
+`ReadOnlyFieldWithEdit` exists precisely to avoid that (see its KDoc), but three panels place a
+live text field directly in the D-pad path anyway:
+
+- `ProviderDialogs.kt` — "Add rules" in the category filter panel. Everything below it, including
+  the whole script filter, was unreachable by remote.
+- `TvEpgManagementScreen.kt:756/772/788` — the EPG source edit dialog's three fields.
+- `EpgGridLayout.kt`, `TvEpgBrowserScreen.kt`, `SearchScreen.kt` — search fields; less severe,
+  since those are the last stop in their row, but the same trap.
+
+Found while verifying step 5; the filter panel is fixed there.
 
 ### R9 — Every TV dialog ignores the selected theme
 
@@ -234,11 +248,20 @@ scheme, style-derived M3 shapes, and an M3 mirror of `cinemaTypography`.
 **Verified** on darcy: Settings → Language opens on-palette (dark panel, accent Cancel), with focus
 on the active language rather than nowhere at all.
 
-### Step 5 — R2 + R3: the filter panel
-`CategoryFilterDialog` script list → `TvCheckRow`; `MatchTypeChipRow` → `TvSelectableButton`; drop
-the redundant `tvFocusableNoScale()` wrappers.
-**Check:** Providers → Manage Filters. One D-pad stop per script; OK toggles it; the checked state
-is readable while unfocused.
+### Step 5 — R2 + R3 + R10: the filter panel — ✅ **done**
+`CategoryFilterDialog`'s script list → `TvCheckRow`, `MatchTypeChipRow` and the Exclude/Include
+pair → `TvSelectableButton`, and the redundant `tvFocusableNoScale()` wrappers dropped.
+
+Found **R10** while verifying, and it is the more serious half: the "Add rules" `OutlinedTextField`
+sat directly in the D-pad path, and a focused text field on TV swallows every direction key. Focus
+entered it and never came out, so the Add button and **the entire script filter below it were
+unreachable by remote** — the exact thing the user reported as broken. Making it `singleLine` was
+not enough; the fix is to keep a live text field out of the navigation path at all, using the
+`ReadOnlyFieldWithEdit` pattern the project already has for this.
+
+**Verified** on darcy: the script rows are reachable, one D-pad stop each, and the three states are
+legible at once — Greek checked-unfocused (accent tint + filled box), Cyrillic focused-unchecked
+(lifted grey + accent outline), Latin/Arabic resting.
 
 ### Step 6 — R2 + R3: switches and the remaining checkboxes
 `ProviderSettingsSection` (×2), `DeveloperSettingsCard`, `TvEpgManagementScreen:244`,
