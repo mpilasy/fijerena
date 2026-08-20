@@ -170,6 +170,25 @@ Collapse into a single normalization at the API boundary returning a sealed
 "provider returned junk" is handled once and every caller gets the same three cases to
 `when` over. Seed it with response fixtures captured from the real proxy.
 
+### Done (2026-08-19)
+
+Landed as `XtreamResponse<T>` in `core/player/api`, with four cases rather than three:
+`Failed(cause)` was needed so a call that never completes travels the same channel as one
+that completed with nothing, which is what let `getSeriesInfo`/`getVodInfo` stop returning
+`Result` and stop throwing.
+
+`XtreamApiService.fetchItem` is now the only place that reads a single-item response, so
+`[]`, an object with nothing in it, an unparseable body and a dead connection are decided
+once. `resolveSeriesInfo` shrank to its actual policy: one retry, then re-resolve the id
+by name. Both recoveries now apply to every kind of nothing — previously a `[]` skipped
+the retry and an empty object skipped the name lookup, for no reason either could defend.
+
+**Left as it was, deliberately:** a response carrying an `info` object but no episodes
+still reads as `Ok`, and the screen shows a show with nothing under it. Treating it as
+unavailable would be a behaviour change (a genuinely empty show would start erroring),
+and that call belongs to a decision, not to this refactor. `XtreamResponseTest` pins the
+current answer so the choice is visible when someone wants to revisit it.
+
 ## Phase 5 — fixtures that encode the broken shapes
 **Effort: ongoing, ~2 hours to seed.**
 
