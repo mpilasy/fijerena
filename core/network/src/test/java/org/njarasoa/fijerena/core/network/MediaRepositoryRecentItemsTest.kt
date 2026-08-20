@@ -18,6 +18,8 @@ import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.EpisodeId
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 
 /**
  * Ordering, filtering and dedup rules of the merged "Recent" list — the single row that
@@ -91,8 +93,8 @@ class MediaRepositoryRecentItemsTest {
         playbackPosition = position,
         duration = duration,
         isCompleted = isCompleted,
-        episodeId = id,
-        seriesId = seriesId,
+        episodeId = EpisodeId(id),
+        seriesId = seriesId?.let(::SeriesId),
         seriesName = seriesId?.let { "Series $it" },
     )
 
@@ -143,7 +145,7 @@ class MediaRepositoryRecentItemsTest {
         val recent = repository.getRecentItems(ContentType.TV_SHOWS)
 
         assertEquals(listOf("s1", "s2"), recent.map { it.id })
-        assertEquals(BrowseTarget.Series("s1", resumeEpisodeId = "s1e3"), recent.first().target)
+        assertEquals(BrowseTarget.Series(SeriesId("s1"), resumeEpisodeId = EpisodeId("s1e3")), recent.first().target)
     }
 
     @Test
@@ -154,7 +156,7 @@ class MediaRepositoryRecentItemsTest {
 
         assertEquals("s1", card.id)
         assertEquals("Series s1", card.name)
-        assertEquals(BrowseTarget.Series("s1", resumeEpisodeId = "s1e3"), card.target)
+        assertEquals(BrowseTarget.Series(SeriesId("s1"), resumeEpisodeId = EpisodeId("s1e3")), card.target)
     }
 
     @Test
@@ -164,7 +166,7 @@ class MediaRepositoryRecentItemsTest {
         val card = repository.getRecentItems(ContentType.TV_SHOWS).single()
 
         assertEquals("orphan", card.id)
-        assertEquals(BrowseTarget.Episode(episodeId = "orphan"), card.target)
+        assertEquals(BrowseTarget.Episode(episodeId = EpisodeId("orphan")), card.target)
     }
 
     @Test
@@ -186,7 +188,7 @@ class MediaRepositoryRecentItemsTest {
         val card = repository.getRecentItems(ContentType.TV_SHOWS).single()
 
         assertEquals("242136", card.id)
-        assertEquals(BrowseTarget.Episode(episodeId = "242136"), card.target)
+        assertEquals(BrowseTarget.Episode(episodeId = EpisodeId("242136")), card.target)
     }
 
     @Test

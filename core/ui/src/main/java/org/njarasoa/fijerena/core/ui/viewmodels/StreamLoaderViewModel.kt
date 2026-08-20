@@ -15,6 +15,8 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.player.domain.EpisodeId
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -33,6 +35,10 @@ class StreamLoaderViewModel(
     private val seriesName: String? = null,
     private val startFromBeginning: Boolean = false,
 ) : ViewModel() {
+    // Nav hands these over as plain strings; typed once here so nothing below can mix them up.
+    private val episode = episodeId?.let(::EpisodeId)
+    private val series = seriesId?.let(::SeriesId)
+
     sealed class StreamState {
         data object Loading : StreamState()
 
@@ -235,7 +241,7 @@ class StreamLoaderViewModel(
                         // Special case for episodes: if we have episodeId, we should try to get the episode-specific plot
                         if (episodeId != null && contentType == ContentType.TV_SHOWS && seriesId != null) {
                             Log.d("StreamLoader", "Fetching series detail for $seriesId to get episode $episodeId plot")
-                            val seriesDetailResult = repo.getSeriesDetail(seriesId)
+                            val seriesDetailResult = repo.getSeriesDetail(SeriesId(seriesId))
                             seriesDetailResult.getOrNull()?.let { detail ->
                                 // Performance optimization: Use firstNotNullOfOrNull instead of flatten().find()
                                 // to avoid creating an intermediate list of all episodes, reducing GC pressure and lookup time
@@ -292,9 +298,9 @@ class StreamLoaderViewModel(
                                     itemId = streamId,
                                     itemName = streamName,
                                     contentType = contentType,
-                                    episodeId = episodeId,
+                                    episodeId = episode,
                                     episodeExtension = episodeExtension,
-                                    seriesId = seriesId,
+                                    seriesId = series,
                                     seriesName = seriesName,
                                 )
 
@@ -437,9 +443,9 @@ class StreamLoaderViewModel(
                         itemId = currentState.streamId,
                         itemName = currentState.streamName,
                         contentType = contentType,
-                        episodeId = episodeId,
+                        episodeId = episode,
                         episodeExtension = episodeExtension,
-                        seriesId = seriesId,
+                        seriesId = series,
                         seriesName = seriesName,
                     )
                 }
@@ -456,9 +462,9 @@ class StreamLoaderViewModel(
                     duration,
                     audioTrackIndex = audioTrackIndex,
                     subtitleTrackIndex = subtitleTrackIndex,
-                    episodeId = episodeId,
+                    episodeId = episode,
                     episodeExtension = episodeExtension,
-                    seriesId = seriesId,
+                    seriesId = series,
                     seriesName = seriesName,
                 )
             }
@@ -492,9 +498,9 @@ class StreamLoaderViewModel(
                         itemId = currentState.streamId,
                         itemName = currentState.streamName,
                         contentType = contentType,
-                        episodeId = episodeId,
+                        episodeId = episode,
                         episodeExtension = episodeExtension,
-                        seriesId = seriesId,
+                        seriesId = series,
                         seriesName = seriesName,
                     )
                 }
@@ -511,9 +517,9 @@ class StreamLoaderViewModel(
                     duration,
                     audioTrackIndex = audioTrackIndex,
                     subtitleTrackIndex = subtitleTrackIndex,
-                    episodeId = episodeId,
+                    episodeId = episode,
                     episodeExtension = episodeExtension,
-                    seriesId = seriesId,
+                    seriesId = series,
                     seriesName = seriesName,
                 )
             }

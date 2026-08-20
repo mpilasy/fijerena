@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.player.api.asThrowable
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -185,11 +186,13 @@ class XtreamMediaProvider(
         }
     }
 
-    override suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> {
-        seriesDetailCache.get(seriesId)?.let { return kotlin.Result.success(it) }
+    override suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> {
+        // Xtream numbers its catalogue; unwrap once here and keep the rest raw.
+        val rawSeriesId = seriesId.raw
+        seriesDetailCache.get(rawSeriesId)?.let { return kotlin.Result.success(it) }
         val id =
-            seriesId.toIntOrNull() ?: return kotlin.Result.failure(
-                Exception("Invalid series ID: $seriesId"),
+            rawSeriesId.toIntOrNull() ?: return kotlin.Result.failure(
+                Exception("Invalid series ID: $rawSeriesId"),
             )
         // Always hit Xtream for the episode list — ongoing shows add episodes, and skipping this
         // call would mean not noticing new ones until the persisted cache expires. Only the TMDB
@@ -200,7 +203,7 @@ class XtreamMediaProvider(
                 // so fill in the ones TMDB gave us last time before deciding whether to ask TMDB
                 // again. Without this the season fetches below repeat on every cold start, since
                 // their in-memory cache dies with the process.
-                val detail = result.value.toDomain(seriesId).withPlots(repository.getPersistedEpisodePlots(id))
+                val detail = result.value.toDomain(rawSeriesId).withPlots(repository.getPersistedEpisodePlots(id))
                 val tmdbSeriesId = result.value.info?.tmdb.asString()?.toIntOrNull()
                 var enriched = detail
                 if (tmdb.hasApiKey() && tmdbSeriesId != null) {
@@ -228,12 +231,12 @@ class XtreamMediaProvider(
                 // the cache's whole lifetime, which no amount of clearing the provider's stored
                 // catalogue would fix, since this cache lives in memory.
                 if (enriched.episodes.values.any { it.isNotEmpty() }) {
-                    seriesDetailCache.put(seriesId, enriched)
+                    seriesDetailCache.put(rawSeriesId, enriched)
                 }
                 kotlin.Result.success(enriched)
             }
             else -> {
-                result.logAsFailure("get_series_info", seriesId)
+                result.logAsFailure("get_series_info", rawSeriesId)
                 kotlin.Result.failure(result.asThrowable())
             }
         }

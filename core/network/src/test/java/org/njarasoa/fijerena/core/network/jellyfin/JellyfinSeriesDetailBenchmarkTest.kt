@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.jellyfin
 
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -84,7 +85,7 @@ class JellyfinSeriesDetailBenchmarkTest {
 
             // Warmup
             repeat(3) {
-                provider.getSeriesDetail(seriesId)
+                provider.getSeriesDetail(SeriesId(seriesId))
             }
 
             // Measure
@@ -94,7 +95,7 @@ class JellyfinSeriesDetailBenchmarkTest {
             repeat(iterations) {
                 val elapsed =
                     measureTimeMillis {
-                        val result = provider.getSeriesDetail(seriesId)
+                        val result = provider.getSeriesDetail(SeriesId(seriesId))
                         assertTrue("getSeriesDetail should succeed", result.isSuccess)
                         val detail = result.getOrThrow()
                         // Verify correctness

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 
 class SeriesDetailsViewModel(
@@ -72,7 +73,7 @@ class SeriesDetailsViewModel(
             try {
                 val repo = ensureRepo()
 
-                val result = repo.getSeriesDetail(seriesId)
+                val result = repo.getSeriesDetail(SeriesId(seriesId))
                 result.fold(
                     onSuccess = { detail ->
                         val isFav = repo.isFavorite(seriesId, "TV_SHOWS")

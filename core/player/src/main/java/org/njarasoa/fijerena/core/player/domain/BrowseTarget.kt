@@ -11,7 +11,7 @@ import androidx.compose.runtime.Immutable
  * its episodes asked for. Stated as a type, the same mistake is a compile error, and a new kind of
  * row breaks the build at every `when` that has to learn about it.
  *
- * Ids stay `String` here; making them distinct types is its own change.
+ * Ids are [SeriesId]/[EpisodeId] where a swap between the two was possible; the rest stay raw.
  */
 @Immutable
 sealed interface BrowseTarget {
@@ -25,7 +25,7 @@ sealed interface BrowseTarget {
      * A show, which opens its episode list. [resumeEpisodeId] is the episode to open the detail
      * panel on — set when the row came from watch history.
      */
-    data class Series(val seriesId: String, val resumeEpisodeId: String? = null) : BrowseTarget
+    data class Series(val seriesId: SeriesId, val resumeEpisodeId: EpisodeId? = null) : BrowseTarget
 
     /**
      * One episode, which plays. [seriesId] and [seriesName] are what the player reports progress
@@ -33,8 +33,8 @@ sealed interface BrowseTarget {
      * that cannot name its show still plays.
      */
     data class Episode(
-        val episodeId: String,
-        val seriesId: String? = null,
+        val episodeId: EpisodeId,
+        val seriesId: SeriesId? = null,
         val seriesName: String? = null,
         val extension: String? = null,
     ) : BrowseTarget
@@ -57,6 +57,6 @@ fun browseTargetFor(
 ): BrowseTarget =
     when (contentType) {
         ContentType.MOVIES -> BrowseTarget.Movie(itemId)
-        ContentType.TV_SHOWS -> BrowseTarget.Series(itemId)
+        ContentType.TV_SHOWS -> BrowseTarget.Series(SeriesId(itemId))
         else -> BrowseTarget.Channel(itemId)
     }

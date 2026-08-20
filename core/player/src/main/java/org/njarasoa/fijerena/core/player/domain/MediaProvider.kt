@@ -21,7 +21,7 @@ interface MediaProvider {
 
     suspend fun getAllItems(contentType: String): Result<List<MediaItem>> = Result.failure(Exception("Not supported"))
 
-    suspend fun getSeriesDetail(seriesId: String): Result<SeriesDetail>
+    suspend fun getSeriesDetail(seriesId: SeriesId): Result<SeriesDetail>
 
     suspend fun getMovieDetail(movieId: String): Result<MovieDetail>
 

@@ -164,6 +164,24 @@ are still written into `providerData` by three producers (`MediaRepository`,
 `@JvmInline` means no allocation at runtime, and kotlinx-serialization handles value
 classes, so nav-arg serialization keeps working.
 
+### Done (2026-08-19)
+
+`SeriesId` and `EpisodeId` are `@JvmInline @Serializable` value classes in
+`core/player/domain`. They are carried by `BrowseTarget`, by `WatchedItem`, by
+`MediaProvider.getSeriesDetail` and its four implementations, and by the history-write
+signatures on `MediaRepository`. Each provider unwraps once at its own edge (`.raw`),
+where the provider's numbering takes over.
+
+**Nav args stayed `String`, deliberately.** Typing `Screen.EpisodeSelection` would need a
+custom `NavType` per id for Navigation Compose's type-safe routes, and the destinations
+are now built inside an exhaustive `when (target)` that already knows which id it holds —
+so the conversion sits at the two nav hosts (`target.seriesId.raw`) and buys nothing more.
+
+`WatchedItemSerializationTest` pins the thing that would have been catastrophic and
+silent: a value class serializes as the bare string it wraps, so watch history written by
+every earlier version still reads, and still writes back byte-identical. The fixture is a
+real row copied off the phone.
+
 ## Phase 3 — version the watch-history schema and migrate once
 **Effort: ~3 hours.**
 

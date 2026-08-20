@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -61,7 +62,7 @@ abstract class BaseM3uMediaProvider : MediaProvider {
         return kotlin.Result.success(filtered)
     }
 
-    override suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> =
+    override suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> =
         kotlin.Result.failure(UnsupportedOperationException("M3U does not support series"))
 
     override suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> {

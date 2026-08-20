@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.network.smb
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -83,7 +84,7 @@ class SmbMediaProvider(
         return Result.success(items.filter { it.categoryId == categoryId })
     }
 
-    override suspend fun getSeriesDetail(seriesId: String): Result<SeriesDetail> =
+    override suspend fun getSeriesDetail(seriesId: SeriesId): Result<SeriesDetail> =
         Result.failure(UnsupportedOperationException("SMB does not support series"))
 
     override suspend fun getMovieDetail(movieId: String): Result<MovieDetail> {
