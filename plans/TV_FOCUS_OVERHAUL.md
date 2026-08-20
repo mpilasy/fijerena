@@ -11,7 +11,7 @@ Both trace to a small number of shared patterns, not to 40 independent bugs. Fix
 fixes every call site at once.
 
 **Scope:** `:tv` only. `:mobile` behaviour must not change.
-**Status:** step 1 of 8 landed; steps 2-8 pending.
+**Status:** steps 1-2 of 8 landed; steps 3-8 pending.
 **Audited:** 2026-08-20, against `c99ffbd3`.
 
 ---
@@ -164,6 +164,12 @@ Plus two helpers:
 `TvFocusTokens` gains `restingContainer`, `focusedContainer`, `selectedContainer`, and a
 `minFocusBorderWidth` floor so no style can render an unreadable outline.
 
+Every value in the new primitives resolves through the active `CinemaThemePalette` (colour) and
+`UiStyle` (corner radius, focus scale, outline weight, focus shadow, emphasis font weight), so the
+controls follow the user's Theme and Look-and-Feel settings exactly as the rest of the TV UI does.
+`UiGridTokens.focusUsesShadow` was declared but read nowhere before this — `TvFocusTokens.focusedGlow`
+is its first consumer.
+
 **Not changing:** palettes, typography, spacing, layout, navigation graph, screen structure, or any
 `:mobile` file. Every step is a like-for-like control substitution.
 
@@ -183,11 +189,13 @@ Added `TvFocusTokens.restingContainer` / `focusedContainer` / `selectedContainer
 focus outline from 1.5 dp to 2 dp under `CupertinoStyle` (the only style with
 `focusUsesOutline = false`).
 
-### Step 2 — R1, at the source
-Repoint `CinemaSecondaryButton.focusedContainerColor` to `CinemaSurfaceLight` and raise the focus
-border to the new floor. This alone makes every settings card and dialog legible.
-**Check:** Settings → arrow through Theme, Language, UI Scale. Focused button is visibly lighter
-than its neighbours in all four palettes.
+### Step 2 — R1, at the source — ✅ **done**
+Repointed `CinemaSecondaryButton`'s resting/focused containers at
+`TvFocusTokens.restingContainer` / `focusedContainer`, and gave the generic `CinemaButton`
+passthrough the focus outline and scale its semantic siblings already had (40 call sites had none).
+**Verified** on darcy: in Settings, focused "5s" and focused "Amethyst" are visibly lighter than
+their unfocused neighbours and carry a full accent outline, while the selected option stays solid
+accent — the two states no longer collapse into one another.
 
 ### Step 3 — R4: the settings pickers
 Migrate `ThemeSettingsCard`, `UiScaleSettingsCard`, `PlaybackSettingsCard`, `LanguageSettingsCard`

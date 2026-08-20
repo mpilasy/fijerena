@@ -34,6 +34,7 @@ internal fun TvInputListItem(
         colors = TvInputDefaults.colors(),
         scale = TvInputDefaults.scale(),
         border = TvInputDefaults.border(),
+        glow = TvInputDefaults.glow(),
         headlineContent = headlineContent,
     )
 }
