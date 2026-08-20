@@ -71,6 +71,34 @@ Classify every `TV_SHOWS` row into: (a) no `seriesId` at all — legacy pre-Marc
 whether Phase 3's migration needs to repair rows or only normalize them, and confirms
 or kills the propagation theory. Record the answer in this file.
 
+### Result (2026-08-19, phone `b048cf47`, 12 TV_SHOWS rows across providers 2/8/9)
+
+All shape (a): no `episodeId`, no `seriesId`, no `episodeExtension`. **No row of shape
+(b) exists** — the propagation theory was wrong, and the `seriesId == itemId` guard in
+`toRecentMediaItem` guards a shape nothing produces.
+
+Ids confirmed against the device's own catalogue (`xtream_v2.db`): `242136` is
+`xtream_episodes.id`, S06E18 of series **4080** "EN - Law & Order (1990) (US)", which is
+present locally with 543 episodes. It is not a stream id and not a series id anywhere.
+So the provider was right and the app asked with an episode id.
+
+**These rows are not old.** They are being written continuously — three on 2026-08-19
+(14:30, 15:40, 18:17). Sorting all 12 rows by watched fraction separates them perfectly:
+
+| metadata | watched | rows |
+|---|---|---|
+| present | 2.08 % – 96.32 % | 6 |
+| absent | 0.08 % – 1.33 % | 6 |
+
+Cause is in `StreamLoaderViewModel.recordHistory`/`stopPlayback`: the 2 % gate wraps
+`saveLastPlayedItem` — the only call that carries `episodeId`/`seriesId`/`seriesName`/
+extension — while `savePlaybackPosition` runs unconditionally and creates the row via
+`addToWatchHistory`, inheriting metadata from an existing row that does not exist yet.
+Sample under 2 % of an episode and quit, and history gains a row with a position and no
+identity. That is the source of every broken Recent card, and it needs a write-side fix
+(pass the metadata into `savePlaybackPosition`, or move it outside the gate) — the
+read-side guard already shipped only stops that row from mis-routing.
+
 ## Phase 1 — a typed browse target, not a string map
 **Effort: ~4 hours. Kills the defect class that caused this bug.**
 
