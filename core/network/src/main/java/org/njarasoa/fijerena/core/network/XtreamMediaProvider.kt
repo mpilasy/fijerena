@@ -393,7 +393,22 @@ class XtreamMediaProvider(
                 )
                 kotlin.Result.success(enriched)
             }
-            else -> {
+            // The provider answered and had nothing to say about this movie. Its own catalogue
+            // row is still local, and a movie needs no more than that to play — the stream URL is
+            // built from the id, with the extension defaulting to mp4. Failing here would refuse
+            // to open a film whose only problem is missing metadata, which is what this did
+            // between 4220ce69 and now.
+            is XtreamResponse.Unavailable, is XtreamResponse.Malformed -> {
+                result.logAsFailure("get_vod_info", movieId)
+                val cached =
+                    repository.getCachedMovieDetail(id)
+                        ?: return kotlin.Result.failure(result.asThrowable())
+                // Deliberately not cached: this is the degraded answer, and the next visit should
+                // ask the provider again rather than replay it.
+                kotlin.Result.success(cached.toMovieDetail(movieId))
+            }
+            // The call never completed, so nothing else will either — including playback.
+            is XtreamResponse.Failed -> {
                 result.logAsFailure("get_vod_info", movieId)
                 kotlin.Result.failure(result.asThrowable())
             }
