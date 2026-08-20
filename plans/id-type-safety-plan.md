@@ -244,12 +244,13 @@ Two fixture sources, each naming shapes rather than describing them:
   named for the commit that had to learn about it: `[]`, an empty object, seasons-and-
   episodes-both-empty, info-without-name, a gateway HTML page.
 
-**Found while writing them:** `EpisodesMapSerializer` catches its own decode failure and
-returns an empty map, so a single episode missing a required field (`title`,
-`container_extension`) discards every other episode of that show, and the series then
-reads as unavailable. Pinned by `oneUnreadableEpisodeCostsTheWholeList` as current
-behaviour, not endorsed — the fix is to decode episodes one at a time and drop only the
-bad one, which is a behaviour change and so its own decision.
+**Found while writing them, and since fixed:** `EpisodesMapSerializer` caught its own
+decode failure and returned an empty map, so a single episode missing a required field
+(`title`, `container_extension`) discarded every other episode of that show, and the
+series then read as unavailable — an empty show with nothing reporting why. It now decodes
+episodes one at a time and drops only the unreadable one, which for a missing
+`container_extension` is unplayable regardless, since the stream URL is built from it.
+`oneUnreadableEpisodeCostsOnlyItself` covers it.
 
 ## Sequencing
 

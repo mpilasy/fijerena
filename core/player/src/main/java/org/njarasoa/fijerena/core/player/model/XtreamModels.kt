@@ -10,6 +10,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonNames
 import kotlinx.serialization.json.JsonObject
@@ -388,7 +389,14 @@ data class AudioInfo(
 )
 
 /**
- * Custom serializer for episodes map that handles APIs returning [] instead of {}
+ * Custom serializer for the episodes map: some servers answer `[]` where the object belongs, and
+ * some send an episode the model cannot read.
+ *
+ * Episodes are decoded one at a time. Handing the whole map to the generated serializer meant one
+ * episode missing a required field — `title`, `container_extension` — aborted the decode and cost
+ * the show every other episode it had, leaving a series that read as empty for a reason nothing
+ * reported. An episode we cannot read is dropped on its own; a missing `container_extension` in
+ * particular is unplayable anyway, since the stream URL is built from it.
  */
 object EpisodesMapSerializer : KSerializer<Map<String, List<Episode>>> {
     private val mapSerializer = MapSerializer(String.serializer(), ListSerializer(Episode.serializer()))
@@ -399,15 +407,22 @@ object EpisodesMapSerializer : KSerializer<Map<String, List<Episode>>> {
         val jsonDecoder = decoder as? JsonDecoder ?: return emptyMap()
         val element = jsonDecoder.decodeJsonElement()
 
-        // If it's an array (e.g. []), return empty map
-        return if (element is JsonObject) {
-            try {
-                jsonDecoder.json.decodeFromJsonElement(mapSerializer, element)
-            } catch (e: Exception) {
-                emptyMap()
+        // An array (e.g. []) where the object belongs means the show has no episodes.
+        if (element !is JsonObject) return emptyMap()
+
+        return buildMap {
+            for ((season, seasonElement) in element) {
+                val rawEpisodes = seasonElement as? JsonArray ?: continue
+                val episodes =
+                    rawEpisodes.mapNotNull { raw ->
+                        try {
+                            jsonDecoder.json.decodeFromJsonElement(Episode.serializer(), raw)
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
+                if (episodes.isNotEmpty()) put(season, episodes)
             }
-        } else {
-            emptyMap()
         }
     }
 
