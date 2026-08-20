@@ -11,7 +11,7 @@ Both trace to a small number of shared patterns, not to 40 independent bugs. Fix
 fixes every call site at once.
 
 **Scope:** `:tv` only. `:mobile` behaviour must not change.
-**Status:** steps 1-3 of 8 landed; steps 4-8 pending.
+**Status:** steps 1-4 of 8 landed; steps 5-8 pending.
 **Audited:** 2026-08-20, against `c99ffbd3`.
 
 ---
@@ -115,6 +115,17 @@ button, or on the confirm button when there is no dismiss button. Two consequenc
   at `ProviderDialogs.kt:160-395`), focus starts on the button row at the *bottom*, so the user
   must D-pad up through the whole panel to reach the first option.
 
+### R9 — Every TV dialog ignores the selected theme
+
+`FirstVideoPlayerTheme` (`tv/ui/theme/Theme.kt`) provides `androidx.tv.material3.MaterialTheme`
+only. `CinemaAlertDialog` is built on `androidx.compose.material3.AlertDialog`, and the text fields,
+checkboxes, radios and switches inside these screens are M3 too — all of which read the *other*
+`MaterialTheme`, which TV never provided. It therefore fell back to Material3's stock **light**
+scheme: every TV dialog was a white panel with a purple button whatever palette the user picked,
+and its body text was M3's stock 14sp, below the project's 18sp TV floor.
+
+Found while fixing R7; fixed in the same step.
+
 ### R8 — Player selector dialogs report the wrong "Active" track
 
 `AudioTrackSelectorDialog`, `SubtitleSelectorDialog`, `QualitySelectorDialog`,
@@ -207,10 +218,21 @@ the user was looking at it.
 selecting 80% then 60% kept focus on the pressed option both times, where it previously fell to the
 top of the screen.
 
-### Step 4 — R7: dialog initial focus
-Add the `initialFocus` slot to `CinemaAlertDialog`; give `LanguageSettingsCard` a real
-`confirmButton`; point `CategoryFilterDialog` and the language dialog at their first content item.
-**Check:** open Settings → Language. Focus is on a language row, not lost. Back closes it.
+### Step 4 — R7: dialog initial focus, and R9: dialogs ignoring the palette — ✅ **done**
+Added the `initialFocus` slot to `CinemaAlertDialog` (opt-in, default unchanged so `:mobile`'s 11
+call sites are untouched) and guarded its `requestFocus()`. Gave `LanguageSettingsCard` a real
+`confirmButton` and pointed both it and `CategoryFilterDialog` at their first content item.
+
+Uncovered and fixed **R9** in the process: `FirstVideoPlayerTheme` only themed
+`androidx.tv.material3.MaterialTheme`, but `CinemaAlertDialog`, `OutlinedTextField`, `Checkbox`,
+`RadioButton` and `Switch` all read `androidx.compose.material3.MaterialTheme`, which was never
+provided on TV and therefore resolved to Material3's stock **light** scheme. Every TV dialog
+rendered as a white panel with a purple button regardless of the selected theme, and its body text
+sat at M3's stock 14sp, under the 18sp TV floor. The theme root now provides a palette-derived M3
+scheme, style-derived M3 shapes, and an M3 mirror of `cinemaTypography`.
+
+**Verified** on darcy: Settings → Language opens on-palette (dark panel, accent Cancel), with focus
+on the active language rather than nowhere at all.
 
 ### Step 5 — R2 + R3: the filter panel
 `CategoryFilterDialog` script list → `TvCheckRow`; `MatchTypeChipRow` → `TvSelectableButton`; drop

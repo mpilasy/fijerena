@@ -5,10 +5,13 @@ package org.njarasoa.fijerena.feature.settings.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.*
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -57,27 +60,44 @@ fun LanguageSettingsCard(
             "fr" to stringResource(R.string.settings_language_fr)
         )
         
+        // Land focus on the language that is currently active, not on the button row at the
+        // bottom of the dialog. Without this the dialog opened with focus nowhere at all — the
+        // requester was attached to the empty `confirmButton = {}` slot — and D-pad presses fell
+        // through to the screen behind it.
+        val activeLanguageFocusRequester = remember { FocusRequester() }
+
         CinemaAlertDialog(
             onDismissRequest = { showDialog = false },
             title = { androidx.compose.material3.Text(stringResource(R.string.settings_language)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                     languages.forEach { (code, name) ->
+                        val isSelected = selectedLanguage == code
                         TvSelectableButton(
-                            selected = selectedLanguage == code,
+                            selected = isSelected,
                             onSelect = {
-                                if (selectedLanguage != code) {
+                                if (!isSelected) {
                                     onLanguageSelected(code)
                                 }
                                 showDialog = false
                             },
                             text = name,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (isSelected) Modifier.focusRequester(activeLanguageFocusRequester) else Modifier,
+                                    ),
                         )
                     }
                 }
             },
-            confirmButton = {}
+            initialFocus = activeLanguageFocusRequester,
+            confirmButton = {
+                CinemaDialogActionButton(onClick = { showDialog = false }) {
+                    androidx.compose.material3.Text(stringResource(R.string.common_cancel))
+                }
+            },
         )
     }
 }
