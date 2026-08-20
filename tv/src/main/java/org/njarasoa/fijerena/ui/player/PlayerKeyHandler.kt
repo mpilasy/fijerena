@@ -67,8 +67,8 @@ fun handlePlayerKeyEvent(
             }
         }
         Key.DirectionUp -> {
-            // Let D-pad navigate inside overlays when they are open
-            if (state.showCategoryOverlay || state.showLastWatchedOverlay) {
+            // Let D-pad navigate inside anything modal that is open
+            if (state.isModalOpen) {
                 false
             } else if (!state.showControls && currentMetadata.isLive) {
                 // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
@@ -88,8 +88,8 @@ fun handlePlayerKeyEvent(
             }
         }
         Key.DirectionDown -> {
-            // Let D-pad navigate inside overlays when they are open
-            if (state.showCategoryOverlay || state.showLastWatchedOverlay) {
+            // Let D-pad navigate inside anything modal that is open
+            if (state.isModalOpen) {
                 false
             } else if (!state.showControls) {
                 if (currentMetadata.isLive) {
@@ -111,7 +111,10 @@ fun handlePlayerKeyEvent(
             }
         }
         Key.DirectionLeft -> {
-            if (!state.showControls && currentMetadata.isLive) {
+            if (state.isModalOpen) {
+                // A track picker or overlay owns the D-pad; do not also seek or swap overlays.
+                false
+            } else if (!state.showControls && currentMetadata.isLive) {
                 // Live TV: Left opens category overlay (or closes last-watched)
                 when {
                     state.showLastWatchedOverlay -> state.showLastWatchedOverlay = false
@@ -128,7 +131,10 @@ fun handlePlayerKeyEvent(
             }
         }
         Key.DirectionRight -> {
-            if (!state.showControls && currentMetadata.isLive) {
+            if (state.isModalOpen) {
+                // A track picker or overlay owns the D-pad; do not also seek or swap overlays.
+                false
+            } else if (!state.showControls && currentMetadata.isLive) {
                 // Live TV: Right opens last-watched overlay (or closes category)
                 when {
                     state.showCategoryOverlay -> state.showCategoryOverlay = false

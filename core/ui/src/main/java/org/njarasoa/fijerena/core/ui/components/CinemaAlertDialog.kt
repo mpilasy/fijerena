@@ -57,6 +57,7 @@ fun CinemaAlertDialog(
     icon: (@Composable () -> Unit)? = null,
     title: (@Composable () -> Unit)? = null,
     text: (@Composable () -> Unit)? = null,
+    initialFocus: FocusRequester? = null,
     containerColor: Color = AlertDialogDefaults.containerColor,
     iconContentColor: Color = AlertDialogDefaults.iconContentColor,
     titleContentColor: Color = AlertDialogDefaults.titleContentColor,
@@ -70,17 +71,32 @@ fun CinemaAlertDialog(
     // without an explicit initial-focus request TV's D-pad has nothing to move onto — key
     // events fall through to the (now invisible) triggering button. Land focus on the safer
     // default action (dismiss, if present) once per dialog appearance.
-    val initialFocusRequester = remember { FocusRequester() }
+    //
+    // A dialog whose real content lives in [text] — a list of options to choose from — should pass
+    // [initialFocus] instead, attached to its first item, so the user does not have to D-pad up
+    // through the whole panel to reach it. When it is supplied the buttons are left alone.
+    val buttonFocusRequester = remember { FocusRequester() }
+    val focusButtons = initialFocus == null
     val focusedDismissButton: (@Composable () -> Unit)? =
-        dismissButton?.let { real -> { Box(Modifier.focusRequester(initialFocusRequester).focusGroup()) { real() } } }
+        if (focusButtons) {
+            dismissButton?.let { real -> { Box(Modifier.focusRequester(buttonFocusRequester).focusGroup()) { real() } } }
+        } else {
+            dismissButton
+        }
     val focusedConfirmButton: @Composable () -> Unit =
-        if (dismissButton != null) {
+        if (!focusButtons || dismissButton != null) {
             confirmButton
         } else {
-            { Box(Modifier.focusRequester(initialFocusRequester).focusGroup()) { confirmButton() } }
+            { Box(Modifier.focusRequester(buttonFocusRequester).focusGroup()) { confirmButton() } }
         }
     LaunchedEffect(Unit) {
-        initialFocusRequester.requestFocus()
+        // An empty confirm/dismiss slot leaves the requester attached to a Box with nothing
+        // focusable inside it, and a caller-supplied target may not be composed yet. Neither is
+        // worth crashing the dialog over.
+        try {
+            (initialFocus ?: buttonFocusRequester).requestFocus()
+        } catch (_: IllegalStateException) {
+        }
     }
 
     when (tokens.position) {

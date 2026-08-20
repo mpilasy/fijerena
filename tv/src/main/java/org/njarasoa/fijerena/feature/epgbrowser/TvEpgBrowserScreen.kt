@@ -103,6 +103,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
+import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -344,65 +345,30 @@ private fun EpgBrowserContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                 ) {
+                    // Bare Material3 RadioButton/Checkbox draw focus through LocalIndication, which
+                    // is a ripple — invisible without a pointer, so on TV these had no focus state
+                    // at all. They are 2-way and 1-way pickers respectively, so the selectable
+                    // button carries both states properly.
                     EpgBrowserViewModel.SearchMode.entries.forEach { mode ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier =
-                                Modifier
-                                    .padding(end = Spacing.sm.scaled(scale)),
-                        ) {
-                            androidx.compose.material3.RadioButton(
-                                selected = searchMode == mode,
-                                onClick = { onSearchModeChange(mode) },
-                                colors =
-                                    androidx.compose.material3.RadioButtonDefaults.colors(
-                                        selectedColor = CinemaAccent,
-                                        unselectedColor = CinemaTextSecondary,
-                                    ),
-                            )
-                            Text(
-                                text =
-                                    when (mode) {
-                                        EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_search_mode_programme)
-                                        EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_search_mode_channel)
-                                    },
-                                style =
-                                    MaterialTheme.typography.labelLarge.copy(
-                                        fontSize =
-                                            MaterialTheme.typography.labelLarge.fontSize
-                                                .scaled(scale),
-                                    ),
-                                color = if (searchMode == mode) CinemaTextPrimary else CinemaTextSecondary,
-                            )
-                        }
+                        TvSelectableButton(
+                            selected = searchMode == mode,
+                            onSelect = { onSearchModeChange(mode) },
+                            text =
+                                when (mode) {
+                                    EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_search_mode_programme)
+                                    EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_search_mode_channel)
+                                },
+                            modifier = Modifier.padding(end = Spacing.sm.scaled(scale)),
+                        )
                     }
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    // Matched only checkbox
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        androidx.compose.material3.Checkbox(
-                            checked = matchedOnly,
-                            onCheckedChange = { matchedOnly = it },
-                            colors =
-                                androidx.compose.material3.CheckboxDefaults.colors(
-                                    checkedColor = CinemaAccent,
-                                    uncheckedColor = CinemaTextSecondary,
-                                ),
-                        )
-                        Text(
-                            text = stringResource(R.string.epg_browser_matched_only_label),
-                            style =
-                                MaterialTheme.typography.labelLarge.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.labelLarge.fontSize
-                                            .scaled(scale),
-                                ),
-                            color = CinemaTextPrimary,
-                        )
-                    }
+                    TvSelectableButton(
+                        selected = matchedOnly,
+                        onSelect = { matchedOnly = !matchedOnly },
+                        text = stringResource(R.string.epg_browser_matched_only_label),
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))

@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -107,7 +108,7 @@ fun EditProviderScreen(
                     label = { Text(stringResource(R.string.edit_provider_url_label)) },
                     placeholder = { Text(stringResource(R.string.edit_provider_url_placeholder)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     colors =
                         OutlinedTextFieldDefaults.colors(
                             focusedTextColor = CinemaTextPrimary,

@@ -1,62 +1,10 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
-
 package org.njarasoa.fijerena.ui.player.components.dialogs
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.CenterHorizontally
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Border
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
-import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
-import org.njarasoa.fijerena.ui.components.TvGlassPanel
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
-import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable
 fun AudioTrackSelectorDialog(
@@ -64,193 +12,22 @@ fun AudioTrackSelectorDialog(
     onDismiss: () -> Unit,
 ) {
     val audioTracks = remember { viewModel.getAudioTracks() }
-    var selectedIndex by remember { mutableStateOf(audioTracks.indexOfFirst { it.isSelected }.coerceAtLeast(0)) }
-    val focusRequesters = remember { List(audioTracks.size) { FocusRequester() } }
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
 
-    // Request focus on selected item
-    LaunchedEffect(Unit) {
-        if (selectedIndex in focusRequesters.indices) {
-            focusRequesters[selectedIndex].requestFocus()
-        }
-    }
-
-    BackHandler { onDismiss() }
-
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
-        contentAlignment = Alignment.Center,
-    ) {
-        TvGlassPanel(
-            modifier =
-                Modifier
-                    .width(TvDimensions.dialogWidth)
-                    .heightIn(max = screenHeight * 0.8f)
-                    .padding(Spacing.xxl),
-        ) {
-            Column(
-                modifier =
-                    Modifier
-                        .padding(Spacing.xxl)
-                        .verticalScroll(rememberScrollState())
-                        .focusProperties { exit = { FocusRequester.Cancel } },
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
-                // Header
-                Text(
-                    text = stringResource(R.string.player_select_audio),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
+    TvSelectorDialog(
+        title = stringResource(R.string.player_select_audio),
+        emptyText = stringResource(R.string.player_no_audio),
+        onDismiss = onDismiss,
+        options =
+            audioTracks.map { track ->
+                TvSelectorOption(
+                    title = track.label,
+                    selected = track.isSelected,
+                    subtitle = stringResource(R.string.player_audio_format_hint, track.channelCount, track.sampleRate / 1000),
+                    onSelect = {
+                        viewModel.selectAudioTrack(track.groupIndex, track.trackIndex)
+                        onDismiss()
+                    },
                 )
-
-                if (audioTracks.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.player_no_audio),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = CinemaTextSecondary,
-                        modifier = Modifier.padding(vertical = Spacing.md),
-                    )
-                    CinemaButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.align(CenterHorizontally),
-                    ) {
-                        Text(stringResource(R.string.common_close))
-                    }
-                } else {
-                    val defaultColors =
-                        ButtonDefaults.colors(
-                            containerColor = CinemaSurfaceVariant,
-                            contentColor = CinemaTextPrimary,
-                            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
-                            focusedContentColor = CinemaTextPrimary,
-                        )
-                    val selectedColors =
-                        ButtonDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.tint),
-                            contentColor = CinemaTextPrimary,
-                            focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.scrim),
-                            focusedContentColor = CinemaTextPrimary,
-                        )
-                    val focusedBorder =
-                        ButtonDefaults.border(
-                            focusedBorder =
-                                Border(
-                                    border =
-                                        BorderStroke(
-                                            width = TvDimensions.borderFocused,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        ),
-                                    shape = RoundedCornerShape(CinemaCornerRadius.small),
-                                ),
-                        )
-
-                    // Track list
-                    audioTracks.forEachIndexed { index, track ->
-                        val isSelected = index == selectedIndex
-                        Button(
-                            onClick = {
-                                selectedIndex = index
-                                viewModel.selectAudioTrack(track.groupIndex, track.trackIndex)
-                                onDismiss()
-                            },
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(focusRequesters[index])
-                                    .onFocusChanged { focusState ->
-                                        if (focusState.isFocused) {
-                                            selectedIndex = index
-                                        }
-                                    },
-                            colors = if (isSelected) selectedColors else defaultColors,
-                            shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small)),
-                            border =
-                                if (isSelected) {
-                                    ButtonDefaults.border(
-                                        border =
-                                            Border(
-                                                border =
-                                                    BorderStroke(
-                                                        width = TvDimensions.borderFocused,
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                    ),
-                                                shape = RoundedCornerShape(CinemaCornerRadius.small),
-                                            ),
-                                        focusedBorder =
-                                            Border(
-                                                border =
-                                                    BorderStroke(
-                                                        width = TvDimensions.borderFocused,
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                    ),
-                                                shape = RoundedCornerShape(CinemaCornerRadius.small),
-                                            ),
-                                    )
-                                } else {
-                                    focusedBorder
-                                },
-                        ) {
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(Spacing.xs),
-                                verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = track.label,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    )
-                                    if (track.isSelected) {
-                                        Text(
-                                            text = stringResource(R.string.player_active),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = stringResource(R.string.player_audio_format_hint, track.channelCount, track.sampleRate / 1000),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextTertiary,
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(Spacing.xs))
-
-                    // Close button
-                    CinemaButton(
-                        onClick = onDismiss,
-                        modifier =
-                            Modifier
-                                .align(CenterHorizontally)
-                                .width(TvDimensions.selectionListWidth),
-                    ) {
-                        Text(stringResource(R.string.common_cancel))
-                    }
-                }
-
-                // Hint text
-                Text(
-                    text = stringResource(R.string.player_nav_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CinemaTextDisabled,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-    }
+            },
+    )
 }

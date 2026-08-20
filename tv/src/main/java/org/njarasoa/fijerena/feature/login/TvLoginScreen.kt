@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModelFactory
+import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -141,6 +142,7 @@ fun TvLoginScreen(
                     Modifier
                         .width(TvDimensions.formFieldWidth) // Wide field for TV
                         .padding(bottom = 20.dp)
+                        .tvDpadEscape()
                         .focusRequester(urlFocusRequester),
                 colors =
                     OutlinedTextFieldDefaults.colors(
@@ -179,6 +181,7 @@ fun TvLoginScreen(
                     Modifier
                         .width(TvDimensions.formFieldWidth)
                         .padding(bottom = 20.dp)
+                        .tvDpadEscape()
                         .focusRequester(usernameFocusRequester),
                 colors =
                     OutlinedTextFieldDefaults.colors(
@@ -216,6 +219,7 @@ fun TvLoginScreen(
                     Modifier
                         .width(TvDimensions.formFieldWidth)
                         .padding(bottom = 32.dp)
+                        .tvDpadEscape()
                         .focusRequester(passwordFocusRequester),
                 colors =
                     OutlinedTextFieldDefaults.colors(
