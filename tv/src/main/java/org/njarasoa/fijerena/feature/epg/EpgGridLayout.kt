@@ -74,6 +74,7 @@ import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
+import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -613,7 +614,8 @@ private fun EpgSearchContent(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(bottom = Spacing.sm.scaled(scale)),
+                    .padding(bottom = Spacing.sm.scaled(scale))
+                    .tvDpadEscape(),
         )
 
         if (searchQuery.isNotBlank() && searchResults.isEmpty()) {

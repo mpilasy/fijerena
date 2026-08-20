@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,14 +28,13 @@ import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
-import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
+import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -80,41 +77,14 @@ fun ProviderSettingsSection(
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
     // Auto-Resume
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .tvFocusableNoScale(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.provider_auto_resume_label),
-                style = styles.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = stringResource(R.string.provider_auto_resume_desc),
-                style = styles.bodySmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
-        }
-        Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-        Switch(
-            checked = providerSettings.autoResumeEnabled,
-            onCheckedChange = { enabled ->
-                onUpdateSettings(providerSettings.copy(autoResumeEnabled = enabled))
-            },
-            colors =
-                SwitchDefaults.colors(
-                    checkedThumbColor = CinemaAccent,
-                    checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-                    uncheckedThumbColor = CinemaTextSecondary,
-                    uncheckedTrackColor = CinemaSurfaceVariant,
-                ),
-        )
-    }
+    TvSwitchRow(
+        checked = providerSettings.autoResumeEnabled,
+        onCheckedChange = { enabled ->
+            onUpdateSettings(providerSettings.copy(autoResumeEnabled = enabled))
+        },
+        label = stringResource(R.string.provider_auto_resume_label),
+        description = stringResource(R.string.provider_auto_resume_desc),
+    )
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
@@ -313,41 +283,14 @@ fun ProviderSettingsSection(
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
         // Enable Caching
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .tvFocusableNoScale(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.provider_enable_caching_label),
-                    style = styles.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = stringResource(R.string.provider_enable_caching_desc),
-                    style = styles.bodySmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                )
-            }
-            Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-            Switch(
-                checked = providerSettings.cachingEnabled,
-                onCheckedChange = { enabled ->
-                    onUpdateSettings(providerSettings.copy(cachingEnabled = enabled))
-                },
-                colors =
-                    SwitchDefaults.colors(
-                        checkedThumbColor = CinemaAccent,
-                        checkedTrackColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-                        uncheckedThumbColor = CinemaTextSecondary,
-                        uncheckedTrackColor = CinemaSurfaceVariant,
-                    ),
-            )
-        }
+        TvSwitchRow(
+            checked = providerSettings.cachingEnabled,
+            onCheckedChange = { enabled ->
+                onUpdateSettings(providerSettings.copy(cachingEnabled = enabled))
+            },
+            label = stringResource(R.string.provider_enable_caching_label),
+            description = stringResource(R.string.provider_enable_caching_desc),
+        )
     }
 }
 
