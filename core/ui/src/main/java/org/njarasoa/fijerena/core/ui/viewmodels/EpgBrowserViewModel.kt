@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -172,26 +175,55 @@ class EpgBrowserViewModel(
 
     val epgProcessingState: StateFlow<EpgFileManager.MultiSourceState> = epgFileManager.state
 
+    /**
+     * The sources of the provider being browsed, not of every provider configured. This screen is
+     * titled with one provider's name, so a source belonging to another one has no business
+     * reporting on it — reading them all is what let a provider whose EPG had never run make a
+     * freshly-synced one read as "Never refreshed".
+     */
     private val sourcesFlow: Flow<List<org.njarasoa.fijerena.core.network.provider.EpgSourceEntity>> =
-        SettingsDatabase.getInstance(context).epgSourceDao().getAllSources()
+        flow {
+            val providerId =
+                withContext(Dispatchers.IO) {
+                    runCatching { SettingsDatabase.getInstance(context).providerDao().getActiveProvider()?.id }.getOrNull()
+                }
+            val dao = SettingsDatabase.getInstance(context).epgSourceDao()
+            emitAll(if (providerId == null) flowOf(emptyList()) else dao.getSourcesForProvider(providerId))
+        }
 
-    /** Oldest `lastIngestedAtMs` across enabled sources — the data is only as fresh as its stalest source.
-     *  `null` when there are no enabled sources. `0L` when at least one enabled source has never been ingested. */
+    /**
+     * Oldest `lastIngestedAtMs` among enabled sources that have actually run — the data is only as
+     * fresh as its stalest source, but a source that has never run is not a freshness figure at
+     * all, it is a count. It shows up in [staleSourceCount] instead, so one never-run source no
+     * longer hides how current everything else is.
+     *
+     * `null` when there are no enabled sources, `0L` when none of them has ever run.
+     */
     val oldestEnabledIngestedAtMs: StateFlow<Long?> =
         sourcesFlow
             .map { list ->
                 val enabled = list.filter { it.enabled }
-                if (enabled.isEmpty()) null else enabled.minOf { it.lastIngestedAtMs }
+                when {
+                    enabled.isEmpty() -> null
+                    else -> enabled.filter { it.lastIngestedAtMs > 0L }.minOfOrNull { it.lastIngestedAtMs } ?: 0L
+                }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    /** Enabled sources that ran, but longer ago than the refresh interval allows. */
     val staleSourceCount: StateFlow<Int> =
         sourcesFlow
             .combine(epgSettings) { list, settings ->
                 val interval = settings.epgRefreshInterval
                 val staleThreshold = if (interval <= 0) 24L * 3600 * 1000 else interval.toLong() * 3600 * 1000
                 val threshold = System.currentTimeMillis() - staleThreshold
-                list.count { it.enabled && (it.lastIngestedAtMs == 0L || it.lastIngestedAtMs < threshold) }
+                list.count { it.enabled && it.lastIngestedAtMs > 0L && it.lastIngestedAtMs < threshold }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    /** Enabled sources that have never run at all — counted, not aged. */
+    val neverRunSourceCount: StateFlow<Int> =
+        sourcesFlow
+            .map { list -> list.count { it.enabled && it.lastIngestedAtMs == 0L } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     private val _toastMessage = MutableSharedFlow<UiText>(extraBufferCapacity = 1)
     val toastMessage: SharedFlow<UiText> = _toastMessage.asSharedFlow()

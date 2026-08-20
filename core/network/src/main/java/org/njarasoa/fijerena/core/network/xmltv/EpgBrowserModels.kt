@@ -71,11 +71,19 @@ fun formatCount(count: Int): String =
         else -> count.toString()
     }
 
+/**
+ * How current the EPG is, in one line.
+ *
+ * [oldestIngestedAtMs] is the stalest source that has actually run; a source that has never run
+ * is not a freshness figure but a count, and arrives in [neverRunSourceCount]. Collapsing the two
+ * meant one never-run source read as "Never refreshed" while everything else was minutes old.
+ */
 fun freshnessLabel(
     context: Context,
     oldestIngestedAtMs: Long?,
     nowEpoch: Long,
     staleSourceCount: Int,
+    neverRunSourceCount: Int = 0,
 ): String {
     if (oldestIngestedAtMs == null) return context.getString(R.string.epg_freshness_no_sources)
     if (oldestIngestedAtMs == 0L) return context.getString(R.string.epg_freshness_never_refreshed)
@@ -87,6 +95,13 @@ fun freshnessLabel(
             ageSec < 86_400 -> context.getString(R.string.epg_freshness_hours_ago_format, ageSec / 3600)
             else -> context.getString(R.string.epg_freshness_days_ago_format, ageSec / 86_400)
         }
-    val suffix = if (staleSourceCount > 0) context.getString(R.string.epg_freshness_stale_suffix_format, staleSourceCount) else ""
-    return context.getString(R.string.epg_freshness_updated_format, ageLabel) + suffix
+    val staleSuffix =
+        if (staleSourceCount > 0) context.getString(R.string.epg_freshness_stale_suffix_format, staleSourceCount) else ""
+    val neverRunSuffix =
+        if (neverRunSourceCount > 0) {
+            context.getString(R.string.epg_freshness_never_run_suffix_format, neverRunSourceCount)
+        } else {
+            ""
+        }
+    return context.getString(R.string.epg_freshness_updated_format, ageLabel) + staleSuffix + neverRunSuffix
 }

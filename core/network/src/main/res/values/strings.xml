@@ -37,6 +37,7 @@
     <string name="epg_freshness_hours_ago_format">%1$dh ago</string>
     <string name="epg_freshness_days_ago_format">%1$dd ago</string>
     <string name="epg_freshness_stale_suffix_format"> • %1$d stale</string>
+    <string name="epg_freshness_never_run_suffix_format"> • %1$d never run</string>
     <string name="epg_freshness_updated_format">Updated %1$s</string>
 
     <!-- EpgFileManager error fallbacks -->

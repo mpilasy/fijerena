@@ -37,6 +37,7 @@
     <string name="epg_freshness_hours_ago_format">il y a %1$dh</string>
     <string name="epg_freshness_days_ago_format">il y a %1$dj</string>
     <string name="epg_freshness_stale_suffix_format"> • %1$d périmée(s)</string>
+    <string name="epg_freshness_never_run_suffix_format"> • %1$d jamais lancée(s)</string>
     <string name="epg_freshness_updated_format">Actualisé %1$s</string>
 
     <!-- EpgFileManager error fallbacks -->
