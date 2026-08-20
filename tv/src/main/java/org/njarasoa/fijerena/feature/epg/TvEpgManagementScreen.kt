@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
+import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -757,7 +758,7 @@ private fun EpgSourceEditDialog(
                     value = url,
                     onValueChange = { url = it },
                     label = { Text(stringResource(R.string.epg_xmltv_url_label)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                         focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
@@ -773,7 +774,7 @@ private fun EpgSourceEditDialog(
                     value = label,
                     onValueChange = { label = it },
                     label = { Text(stringResource(R.string.epg_label_optional)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                         focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
@@ -789,7 +790,7 @@ private fun EpgSourceEditDialog(
                     value = tzOffset,
                     onValueChange = { tzOffset = it },
                     label = { Text(stringResource(R.string.epg_timezone_label)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                         focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,

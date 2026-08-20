@@ -34,6 +34,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -86,7 +87,8 @@ fun TvSearchTextField(
                                 else -> false
                             }
                         } else false
-                    },
+                    }
+                    .tvDpadEscape(),
             shape = CircleShape,
             colors =
                 OutlinedTextFieldDefaults.colors(

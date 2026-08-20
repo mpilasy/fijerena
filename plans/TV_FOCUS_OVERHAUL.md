@@ -11,7 +11,7 @@ Both trace to a small number of shared patterns, not to 40 independent bugs. Fix
 fixes every call site at once.
 
 **Scope:** `:tv` only. `:mobile` behaviour must not change.
-**Status:** steps 1-5 of 8 landed; steps 6-8 pending.
+**Status:** steps 1-6 of 8 landed; steps 7-8 pending.
 **Audited:** 2026-08-20, against `c99ffbd3`.
 
 ---
@@ -263,11 +263,24 @@ not enough; the fix is to keep a live text field out of the navigation path at a
 legible at once — Greek checked-unfocused (accent tint + filled box), Cyrillic focused-unchecked
 (lifted grey + accent outline), Latin/Arabic resting.
 
-### Step 6 — R2 + R3: switches and the remaining checkboxes
-`ProviderSettingsSection` (×2), `DeveloperSettingsCard`, `TvEpgManagementScreen:244`,
-`TvEpgBrowserScreen:354/386`, `ImportDialogs` → `TvSwitchRow` / `TvCheckRow` / `TvRadioRow`.
-**Check:** EPG Browser search-mode radios show focus. Provider settings switches take one stop and
-respond to OK.
+### Step 6 — R2 + R3 + the rest of R10 — ✅ **done**
+`ProviderSettingsSection` (×2) and `DeveloperSettingsCard` → `TvSwitchRow`. The EPG browser's
+search-mode radios and "matched only" checkbox → `TvSelectableButton` (they are a 2-way and a 1-way
+picker; the full-width row primitives are the wrong shape for a toolbar).
+
+`TvEpgManagementScreen:228` and `ImportDialogs:200` were **left alone on purpose** — they already
+wrap an inert control in a TV `Surface` that owns the click, which is the shape everything else is
+being moved to.
+
+Added `Modifier.tvDpadEscape()` and applied it to the six remaining single-line fields
+(`TvSearchTextField`, the EPG grid search, the three EPG source-edit fields, the edit-provider URL,
+the three login fields). It forwards D-pad Up/Down to the focus manager so a focused field stops
+being a dead end, without changing how the field behaves otherwise — the right fix where the field
+should stay in the navigation path, as opposed to the filter panel's, where it should not.
+
+**Verified** on darcy: from the EPG browser search field, D-pad Up now lands on "What's on", and
+the three toolbar states (Programme selected, What's on focused, Matched only selected) are all
+legible where the bare radios and checkbox previously showed no focus at all.
 
 ### Step 7 — R5: field editing
 `rememberFocusReturn()` into `ReadOnlyFieldWithEdit` (fixed in place — no new component, the
