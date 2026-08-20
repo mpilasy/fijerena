@@ -11,7 +11,12 @@ Both trace to a small number of shared patterns, not to 40 independent bugs. Fix
 fixes every call site at once.
 
 **Scope:** `:tv` only. `:mobile` behaviour must not change.
-**Status:** all 10 steps landed and verified on device. No open gaps.
+**Status:** all 10 steps landed, each verified by running the app. No open gaps.
+
+**Where each step was verified:** steps 1-8 on the NVIDIA Shield `darcy` (`192.168.68.21`); steps
+9-10 on the TV emulator (`emulator-5554`), after the user asked that testing move off real hardware.
+Both matter for reading the notes below: the emulator is where the provider credentials are known
+good, and the Shield is where the Compose version-skew crash in R12 first showed up.
 **Audited:** 2026-08-20, against `c99ffbd3`.
 
 ---
