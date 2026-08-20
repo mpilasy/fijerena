@@ -20,6 +20,7 @@ import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -942,9 +943,10 @@ class MediaRepository(
     }
 
     /**
-     * A history entry as a Recent row card. TV Shows entries become series cards carrying the
-     * episode to resume in `resumeSeries`/`episodeId`, which is what the nav hosts route on;
-     * entries written before series ids were recorded stay episode cards that play directly.
+     * A history entry as a Recent row card. A TV Shows entry that knows its series becomes a card
+     * for the show, carrying the episode to resume; one that does not stays a card for the episode
+     * itself, which plays. Both say so in [MediaItem.target] rather than leaving the nav hosts to
+     * infer it — inferring it is what once sent an episode id to the series screen.
      */
     private fun WatchedItem.toRecentMediaItem(mediaType: MediaType): MediaItem {
         val seriesCardId = if (contentType == ContentType.TV_SHOWS) seriesId else null
@@ -954,30 +956,34 @@ class MediaRepository(
             mediaType = mediaType,
             categoryId = categoryId,
             providerData =
-                buildMap {
-                    put("playbackPosition", playbackPosition.toString())
-                    put("duration", duration.toString())
-                    put("isCompleted", isCompleted.toString())
-                    if (seriesCardId != null) {
-                        put("resumeSeries", "true")
-                        put("episodeId", episodeId ?: itemId)
-                        put("seriesId", seriesCardId)
-                        put("seriesName", seriesName ?: itemName)
-                    } else {
-                        // A TV Shows history entry is always written from the player, whose stream
-                        // id is the episode's — so itemId names the episode even on entries too
-                        // old to carry an explicit episodeId. Without this the nav hosts read the
-                        // card as a plain series and ask the provider for episodes of an id it
-                        // only knows as a stream, which fails the whole screen.
-                        val episodeCardId = if (contentType == ContentType.TV_SHOWS) episodeId ?: itemId else episodeId
-                        episodeCardId?.let { put("episodeId", it) }
-                        seriesId?.let { put("seriesId", it) }
-                        seriesName?.let { put("seriesName", it) }
-                    }
-                    episodeExtension?.let { put("episodeExtension", it) }
-                },
+                mapOf(
+                    "playbackPosition" to playbackPosition.toString(),
+                    "duration" to duration.toString(),
+                    "isCompleted" to isCompleted.toString(),
+                ),
+            target = recentTarget(seriesCardId),
         )
     }
+
+    /**
+     * A TV Shows history entry is always written from the player, whose stream id is the
+     * episode's — so [WatchedItem.itemId] names the episode even on entries too old to carry an
+     * explicit `episodeId`, and an entry with no series id is still safe to play.
+     */
+    private fun WatchedItem.recentTarget(seriesCardId: String?): BrowseTarget =
+        when {
+            seriesCardId != null ->
+                BrowseTarget.Series(seriesId = seriesCardId, resumeEpisodeId = episodeId ?: itemId)
+            contentType == ContentType.TV_SHOWS ->
+                BrowseTarget.Episode(
+                    episodeId = episodeId ?: itemId,
+                    seriesId = seriesId,
+                    seriesName = seriesName,
+                    extension = episodeExtension,
+                )
+            contentType == ContentType.MOVIES -> BrowseTarget.Movie(itemId)
+            else -> BrowseTarget.Channel(itemId)
+        }
 
     // --- Server-aware suspend methods (branch on supportsServerUserData) ---
 

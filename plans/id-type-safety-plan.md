@@ -130,6 +130,22 @@ must still be impossible, because an `Episode` target cannot reach `EpisodeSelec
 Compose note: `MediaItem` is `@Immutable` for skipping (see its KDoc). `BrowseTarget`
 must be `@Immutable` too, and hold only stable types, or every list row loses its skip.
 
+### Done (2026-08-19)
+
+`BrowseTarget` lives in `core/player/domain`, with `Channel` / `Movie` / `Series` /
+`Episode` / `CategoryRef`, and `MediaItem` carries it. Both nav hosts now `when` over it
+and no longer read a single routing key; the fallback for a plain catalogue row — the row
+that carries no target of its own — is `browseTargetFor(contentType, id)`, the one place
+content type is read as intent.
+
+`providerData` is out of the routing business entirely. What is left in it across the
+whole app is `smbPath` and `epgChannelId`, both genuine provider payload.
+
+Not done here, and worth its own pass: `playbackPosition`, `duration` and `isCompleted`
+are still written into `providerData` by three producers (`MediaRepository`,
+`XtreamMapper`, `JellyfinMediaProvider`) and read by nobody — list progress comes from
+`CategoryViewModel.watchProgress`. Dead before this change, dead after it.
+
 ## Phase 2 — value-class ids, starting with the pair that actually collided
 **Effort: ~4 hours, mechanical but wide.**
 

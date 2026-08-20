@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.resumeProgress
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -332,7 +333,7 @@ class CategoryViewModel(
                             name = cat.name,
                             mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
                             categoryId = FAVORITE_CATEGORIES_ID,
-                            providerData = mapOf("isCategoryRef" to "true", "categoryId" to cat.id),
+                            target = BrowseTarget.CategoryRef(cat.id),
                         )
                     },
                 )
@@ -347,7 +348,7 @@ class CategoryViewModel(
                             name = recent.categoryName,
                             mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
                             categoryId = RECENTLY_VIEWED_CATEGORIES_ID,
-                            providerData = mapOf("isCategoryRef" to "true", "categoryId" to recent.categoryId),
+                            target = BrowseTarget.CategoryRef(recent.categoryId),
                         )
                     },
                 )

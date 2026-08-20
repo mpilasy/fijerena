@@ -26,6 +26,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
@@ -68,7 +69,7 @@ internal fun TwoColumnLayout(
     supportsNativeEpg: Boolean,
     epgIndexState: EpgIndexState,
     onCategorySelected: (String) -> Unit,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
     onSearchClick: () -> Unit,
@@ -271,15 +272,12 @@ internal fun TwoColumnLayout(
                 favoriteIds = favoriteIds,
                 watchProgress = watchProgress,
                 watchedIds = watchedIds,
-                onStreamSelected = { streamId, streamName, categoryId, providerData ->
-                    // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
-                    if (providerData["isCategoryRef"] == "true") {
-                        val targetCategoryId = providerData["categoryId"]
-                        if (targetCategoryId != null) {
-                            onCategorySelected(targetCategoryId)
-                        }
+                onStreamSelected = { streamId, streamName, categoryId, target ->
+                    // A row from "Recent Categories"/"Favorite Categories" browses, it doesn't play.
+                    if (target is BrowseTarget.CategoryRef) {
+                        onCategorySelected(target.categoryId)
                     } else {
-                        onStreamSelected(streamId, streamName, categoryId, providerData)
+                        onStreamSelected(streamId, streamName, categoryId, target)
                     }
                 },
                 onStreamLongPress = { item ->
