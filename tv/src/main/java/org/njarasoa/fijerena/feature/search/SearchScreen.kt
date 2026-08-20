@@ -61,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.material3.Border
@@ -74,6 +73,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaFlowRow
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -475,10 +475,15 @@ private fun SearchHistorySection(
                 },
             )
         }
-        TvLazyRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
+        // and a D-pad user should not have to scroll a rail to reach the last entry. CinemaFlowRow
+        // rather than FlowRow — see its KDoc for why the latter cannot be called here.
+        CinemaFlowRow(
+            horizontalSpacing = Spacing.sm,
+            verticalSpacing = Spacing.sm,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            itemsIndexed(history) { index, term ->
+            history.forEachIndexed { index, term ->
                 Card(
                     onClick = { onItemClick(term) },
                     modifier =

@@ -2,9 +2,7 @@ package org.njarasoa.fijerena.feature.search
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +33,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaFlowRow
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -582,13 +581,12 @@ private fun MobileSearchHistorySection(
                 )
             }
         }
-        // Horizontally-scrollable single row, not FlowRow — see MatchTypeChipRow note in
-        // tv/ProviderDialogs.kt for why FlowRow is avoided right now. Unlike that fixed-4-item
-        // case, this list is unbounded, so a manual 2-per-row wrap isn't a safe substitute here;
-        // a scrolling row is the standard pattern for an open-ended chip list like this.
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        // Wraps rather than scrolling sideways: the whole history should be visible at a glance.
+        // CinemaFlowRow rather than FlowRow — see its KDoc for why the latter cannot be called here.
+        CinemaFlowRow(
+            horizontalSpacing = Spacing.xs,
+            verticalSpacing = Spacing.xs,
+            modifier = Modifier.fillMaxWidth(),
         ) {
             history.forEach { term ->
                 CinemaAssistChip(
