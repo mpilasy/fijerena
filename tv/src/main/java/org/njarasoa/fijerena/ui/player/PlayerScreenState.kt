@@ -42,6 +42,19 @@ class PlayerScreenState(
     var showCategoryOverlay by mutableStateOf(false)
     var showLastWatchedOverlay by mutableStateOf(false)
     var showChapterSelector by mutableStateOf(false)
+
+    /**
+     * True while anything that owns the D-pad is on screen. The player's key handler treats Up and
+     * Down as channel change on live, so without this a track picker could be open and arrowing
+     * through it would change channel instead of moving between its options.
+     */
+    val isModalOpen: Boolean
+        get() = showCategoryOverlay ||
+            showLastWatchedOverlay ||
+            showAudioTrackSelector ||
+            showSubtitleSelector ||
+            showQualitySelector ||
+            showChapterSelector
     var showTopOfHourClock by mutableStateOf(false)
     var showControlHints by mutableStateOf(false)
 

@@ -4,6 +4,7 @@ package org.njarasoa.fijerena.ui.player.components.dialogs
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -111,7 +111,10 @@ fun TvSelectorDialog(
                     Modifier
                         .padding(Spacing.xxl)
                         .verticalScroll(rememberScrollState())
-                        .focusProperties { exit = { FocusRequester.Cancel } },
+                        // Keep focus inside the dialog. `exit = Cancel` (carried over from the
+                        // four dialogs this replaced) also blocked movement *between* the options,
+                        // so the picker opened on the active track and then would not move at all.
+                        .focusGroup(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 Text(
