@@ -16,7 +16,7 @@ class BrowseTargetTest {
 
     @Test
     fun plainCatalogueRowIsWhateverItsContentTypeSays() {
-        assertEquals(BrowseTarget.Series("4080"), item().browseTarget(ContentType.TV_SHOWS))
+        assertEquals(BrowseTarget.Series(SeriesId("4080")), item().browseTarget(ContentType.TV_SHOWS))
         assertEquals(BrowseTarget.Movie("4080"), item().browseTarget(ContentType.MOVIES))
         assertEquals(BrowseTarget.Channel("4080"), item().browseTarget(ContentType.LIVE_TV))
     }
@@ -25,7 +25,7 @@ class BrowseTargetTest {
     fun aRowThatKnowsBetterKeepsItsOwnTarget() {
         // A history row for one episode of a TV show: the content type would say "series", and
         // acting on that is exactly how an episode id once reached the series screen.
-        val episode = BrowseTarget.Episode(episodeId = "242136", seriesId = null)
+        val episode = BrowseTarget.Episode(episodeId = EpisodeId("242136"), seriesId = null)
 
         assertEquals(episode, item(episode).browseTarget(ContentType.TV_SHOWS))
     }

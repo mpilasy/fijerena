@@ -22,6 +22,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.EpisodeId
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -45,9 +47,9 @@ data class WatchedItem(
     val playbackPosition: Long = 0L,
     val duration: Long = 0L,
     val isCompleted: Boolean = false,
-    val episodeId: String? = null,
+    val episodeId: EpisodeId? = null,
     val episodeExtension: String? = null,
-    val seriesId: String? = null,
+    val seriesId: SeriesId? = null,
     val seriesName: String? = null,
     val audioTrackIndex: Int? = null,
     val subtitleTrackIndex: Int? = null,
@@ -261,7 +263,7 @@ class MediaRepository(
         provider?.invalidateCachedDetail(itemId)
     }
 
-    suspend fun getSeriesDetail(seriesId: String): kotlin.Result<SeriesDetail> =
+    suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> =
         provider?.getSeriesDetail(seriesId)
             ?: kotlin.Result.failure(Exception("No provider set"))
 
@@ -438,9 +440,9 @@ class MediaRepository(
         itemId: String,
         itemName: String,
         contentType: String,
-        episodeId: String? = null,
+        episodeId: EpisodeId? = null,
         episodeExtension: String? = null,
-        seriesId: String? = null,
+        seriesId: SeriesId? = null,
         seriesName: String? = null,
     ) {
         cache.commitAsync {
@@ -536,9 +538,9 @@ class MediaRepository(
         playbackPosition: Long = 0L,
         duration: Long = 0L,
         isCompleted: Boolean = false,
-        episodeId: String? = null,
+        episodeId: EpisodeId? = null,
         episodeExtension: String? = null,
-        seriesId: String? = null,
+        seriesId: SeriesId? = null,
         seriesName: String? = null,
         audioTrackIndex: Int? = null,
         subtitleTrackIndex: Int? = null,
@@ -790,9 +792,9 @@ class MediaRepository(
         duration: Long,
         audioTrackIndex: Int? = null,
         subtitleTrackIndex: Int? = null,
-        episodeId: String? = null,
+        episodeId: EpisodeId? = null,
         episodeExtension: String? = null,
-        seriesId: String? = null,
+        seriesId: SeriesId? = null,
         seriesName: String? = null,
     ) {
         if (contentType == ContentType.LIVE_TV) return
@@ -882,9 +884,9 @@ class MediaRepository(
         synchronized(watchHistoryLock) {
             for (item in getWatchHistoryLocked()) {
                 if (item.contentType != ContentType.TV_SHOWS || !item.isCompleted) continue
-                val seriesId = item.seriesId ?: continue
+                val seriesId = item.seriesId?.raw ?: continue
                 // Distinct episode ids: history can hold several entries per episode over time.
-                completedPerSeries.getOrPut(seriesId) { HashSet() }.add(item.episodeId ?: item.itemId)
+                completedPerSeries.getOrPut(seriesId) { HashSet() }.add(item.episodeId?.raw ?: item.itemId)
             }
         }
 
@@ -934,7 +936,7 @@ class MediaRepository(
         // recently watched episode.
         val entries =
             if (contentType == ContentType.TV_SHOWS) {
-                history.distinctBy { it.seriesId ?: it.itemId }
+                history.distinctBy { it.seriesId?.raw ?: it.itemId }
             } else {
                 history
             }
@@ -951,7 +953,7 @@ class MediaRepository(
     private fun WatchedItem.toRecentMediaItem(mediaType: MediaType): MediaItem {
         val seriesCardId = if (contentType == ContentType.TV_SHOWS) seriesId else null
         return MediaItem(
-            id = seriesCardId ?: itemId,
+            id = seriesCardId?.raw ?: itemId,
             name = if (seriesCardId != null) seriesName ?: itemName else itemName,
             mediaType = mediaType,
             categoryId = categoryId,
@@ -970,13 +972,13 @@ class MediaRepository(
      * episode's — so [WatchedItem.itemId] names the episode even on entries too old to carry an
      * explicit `episodeId`, and an entry with no series id is still safe to play.
      */
-    private fun WatchedItem.recentTarget(seriesCardId: String?): BrowseTarget =
+    private fun WatchedItem.recentTarget(seriesCardId: SeriesId?): BrowseTarget =
         when {
             seriesCardId != null ->
-                BrowseTarget.Series(seriesId = seriesCardId, resumeEpisodeId = episodeId ?: itemId)
+                BrowseTarget.Series(seriesId = seriesCardId, resumeEpisodeId = episodeId ?: EpisodeId(itemId))
             contentType == ContentType.TV_SHOWS ->
                 BrowseTarget.Episode(
-                    episodeId = episodeId ?: itemId,
+                    episodeId = episodeId ?: EpisodeId(itemId),
                     seriesId = seriesId,
                     seriesName = seriesName,
                     extension = episodeExtension,

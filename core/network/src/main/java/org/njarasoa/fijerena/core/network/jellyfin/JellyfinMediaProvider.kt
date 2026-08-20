@@ -5,6 +5,7 @@ import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.njarasoa.fijerena.core.network.TtlCache
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -186,12 +187,14 @@ class JellyfinMediaProvider(
         }
     }
 
-    override suspend fun getSeriesDetail(seriesId: String): Result<SeriesDetail> {
-        seriesDetailCache.get(seriesId)?.let { return Result.success(it) }
+    override suspend fun getSeriesDetail(seriesId: SeriesId): Result<SeriesDetail> {
+        // Jellyfin's own ids are opaque strings; unwrap once here and keep the rest raw.
+        val id = seriesId.raw
+        seriesDetailCache.get(id)?.let { return Result.success(it) }
         if (!ensureConnected()) return Result.failure(Exception("Not connected"))
 
-        return withAutoReconnect { fetchSeriesDetail(seriesId) }
-            .also { result -> result.getOrNull()?.let { seriesDetailCache.put(seriesId, it) } }
+        return withAutoReconnect { fetchSeriesDetail(id) }
+            .also { result -> result.getOrNull()?.let { seriesDetailCache.put(id, it) } }
     }
 
     private suspend fun fetchSeriesDetail(seriesId: String): Result<SeriesDetail> {

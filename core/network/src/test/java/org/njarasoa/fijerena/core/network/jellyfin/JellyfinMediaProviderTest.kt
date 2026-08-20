@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.jellyfin
 
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -57,7 +58,7 @@ class JellyfinMediaProviderTest {
             every { api.isAuthenticated() } returns true
 
             // Execute
-            val result = provider.getSeriesDetail(seriesId)
+            val result = provider.getSeriesDetail(SeriesId(seriesId))
 
             // Verify
             assertTrue(result.isSuccess)
@@ -99,7 +100,7 @@ class JellyfinMediaProviderTest {
             } returns Result.success(listOf(ep1))
             every { api.isAuthenticated() } returns true
 
-            val result = provider.getSeriesDetail(seriesId)
+            val result = provider.getSeriesDetail(SeriesId(seriesId))
 
             assertTrue(result.isSuccess)
 
@@ -123,7 +124,7 @@ class JellyfinMediaProviderTest {
             } returns Result.success(emptyList())
             every { api.isAuthenticated() } returns true
 
-            val result = provider.getSeriesDetail(seriesId)
+            val result = provider.getSeriesDetail(SeriesId(seriesId))
 
             assertTrue(result.isFailure)
             assertNotNull(result.exceptionOrNull())
@@ -142,7 +143,7 @@ class JellyfinMediaProviderTest {
             } returns Result.success(emptyList())
             every { api.isAuthenticated() } returns true
 
-            val result = provider.getSeriesDetail(seriesId)
+            val result = provider.getSeriesDetail(SeriesId(seriesId))
 
             assertTrue(result.isFailure)
             assertNotNull(result.exceptionOrNull())
@@ -162,7 +163,7 @@ class JellyfinMediaProviderTest {
             } returns Result.failure(Exception("Timeout"))
             every { api.isAuthenticated() } returns true
 
-            val result = provider.getSeriesDetail(seriesId)
+            val result = provider.getSeriesDetail(SeriesId(seriesId))
 
             // Should still succeed — episode failure is gracefully handled
             assertTrue(result.isSuccess)

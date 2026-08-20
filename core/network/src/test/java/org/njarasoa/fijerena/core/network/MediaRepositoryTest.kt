@@ -16,6 +16,8 @@ import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.player.domain.EpisodeId
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
 
 class MediaRepositoryTest {
@@ -117,15 +119,15 @@ class MediaRepositoryTest {
             ContentType.TV_SHOWS,
             37_365L,
             2_811_558L,
-            episodeId = "242136",
+            episodeId = EpisodeId("242136"),
             episodeExtension = "mkv",
-            seriesId = "4080",
+            seriesId = SeriesId("4080"),
             seriesName = "EN - Law & Order (1990) (US)",
         )
 
         val saved = repository.getWatchHistory().single { it.itemId == "242136" }
-        assert(saved.seriesId == "4080") { "a row created by a short session must carry its series id" }
-        assert(saved.episodeId == "242136") { "a row created by a short session must carry its episode id" }
+        assert(saved.seriesId == SeriesId("4080")) { "a row created by a short session must carry its series id" }
+        assert(saved.episodeId == EpisodeId("242136")) { "a row created by a short session must carry its episode id" }
     }
 
     @Test

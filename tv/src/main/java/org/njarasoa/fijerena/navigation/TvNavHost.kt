@@ -298,10 +298,10 @@ fun TvNavHost(
                                 is BrowseTarget.Series ->
                                     navController.navigate(
                                         Screen.EpisodeSelection(
-                                            seriesId = target.seriesId,
+                                            seriesId = target.seriesId.raw,
                                             seriesName = streamName,
                                             categoryId = categoryId,
-                                            initialEpisodeId = target.resumeEpisodeId,
+                                            initialEpisodeId = target.resumeEpisodeId?.raw,
                                         ),
                                     )
                                 // The card represents one episode — play it, whether or not it
@@ -309,13 +309,13 @@ fun TvNavHost(
                                 is BrowseTarget.Episode ->
                                     navController.navigate(
                                         Screen.Player(
-                                            streamId = target.episodeId,
+                                            streamId = target.episodeId.raw,
                                             streamName = streamName,
                                             categoryId = categoryId,
                                             contentType = ContentType.TV_SHOWS,
-                                            episodeId = target.episodeId,
+                                            episodeId = target.episodeId.raw,
                                             episodeExtension = target.extension,
-                                            seriesId = target.seriesId,
+                                            seriesId = target.seriesId?.raw,
                                             seriesName = target.seriesName,
                                         ),
                                     )
