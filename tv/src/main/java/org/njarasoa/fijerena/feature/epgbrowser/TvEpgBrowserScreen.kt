@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -319,10 +320,20 @@ private fun EpgBrowserContent(
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     val firstItemFocusRequester = remember { FocusRequester() }
+
+    // Down from the search field should reach the first recent-search chip. Left to a spatial
+    // focus search it lands on the "Recent Searches" header's clear-all button instead, which sits
+    // between the field and the chips. Only wired up while the history is actually on screen —
+    // aiming `down` at an unattached requester would stop Down working at all.
+    val historyFocusRequester = remember { FocusRequester() }
     var localQuery by remember { mutableStateOf("") }
     var matchedOnly by remember { mutableStateOf(true) }
     val scale = LocalUiScale.current
     val hasResults = (uiState as? EpgBrowserViewModel.UiState.Results)?.totalPrograms ?: 0 > 0
+
+    // The history chips only render in the Idle state, so that is the only time `down` has a
+    // target to aim at.
+    val showsHistory = uiState is EpgBrowserViewModel.UiState.Idle && epgSearchHistory.isNotEmpty()
 
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
     LaunchedEffect(uiState) {
@@ -374,6 +385,12 @@ private fun EpgBrowserContent(
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
 
                 TvSearchTextField(
+                    modifier =
+                        if (showsHistory) {
+                            Modifier.focusProperties { down = historyFocusRequester }
+                        } else {
+                            Modifier
+                        },
                     query = localQuery,
                     onQueryChange = { localQuery = it },
                     onSearchSubmit = { onSearch(localQuery) },
@@ -471,7 +488,6 @@ private fun EpgBrowserContent(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     if (epgSearchHistory.isNotEmpty()) {
-                        val historyFocusRequester = remember { FocusRequester() }
                         EpgSearchHistorySection(
                             history = epgSearchHistory,
                             onItemClick = { term ->
