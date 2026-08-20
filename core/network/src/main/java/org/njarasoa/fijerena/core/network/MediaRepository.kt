@@ -957,12 +957,6 @@ class MediaRepository(
             name = if (seriesCardId != null) seriesName ?: itemName else itemName,
             mediaType = mediaType,
             categoryId = categoryId,
-            providerData =
-                mapOf(
-                    "playbackPosition" to playbackPosition.toString(),
-                    "duration" to duration.toString(),
-                    "isCompleted" to isCompleted.toString(),
-                ),
             target = recentTarget(seriesCardId),
         )
     }

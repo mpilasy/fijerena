@@ -580,18 +580,6 @@ class JellyfinMediaProvider(
                 else -> if (contentType == ContentType.TV_SHOWS) MediaType.SERIES else MediaType.MOVIE
             }
 
-        val provData =
-            buildMap {
-                userData?.let { ud ->
-                    val posMs = ud.playbackPositionTicks / 10_000
-                    val durMs = runTimeTicks?.let { it / 10_000 } ?: 0L
-                    put("playbackPosition", posMs.toString())
-                    put("duration", durMs.toString())
-                    put("isFavorite", ud.isFavorite.toString())
-                    put("isCompleted", ud.played.toString())
-                }
-            }
-
         return MediaItem(
             id = id,
             name = name,
@@ -612,7 +600,6 @@ class JellyfinMediaProvider(
                     contentRating = officialRating,
                     duration = runTimeTicks?.let { formatTicks(it) },
                 ),
-            providerData = provData,
         )
     }
 

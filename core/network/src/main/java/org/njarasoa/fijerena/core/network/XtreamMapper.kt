@@ -36,13 +36,8 @@ object XtreamMapper {
             mediaType = mediaType,
             categoryId = categoryId,
             thumbnailUrl = streamIcon,
-            providerData =
-                buildMap {
-                    put("streamType", streamType)
-                    epgChannelId?.let { put("epgChannelId", it) }
-                    if (tvArchive != 0) put("tvArchive", tvArchive.toString())
-                    directSource?.let { put("directSource", it) }
-                },
+            // Only what something actually reads: the EPG pipeline matches rows by this id.
+            providerData = epgChannelId?.let { mapOf("epgChannelId" to it) } ?: emptyMap(),
             metadata =
                 MediaMetadata(
                     plot = description.asString(),
@@ -186,12 +181,6 @@ object XtreamMapper {
             name = streamName,
             mediaType = mediaType,
             categoryId = categoryId,
-            providerData =
-                buildMap {
-                    put("playbackPosition", playbackPosition.toString())
-                    put("duration", duration.toString())
-                    put("isCompleted", isCompleted.toString())
-                },
         )
 
     fun FavoriteStream.toDomain(mediaType: MediaType): MediaItem =

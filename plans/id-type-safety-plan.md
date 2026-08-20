@@ -141,10 +141,11 @@ content type is read as intent.
 `providerData` is out of the routing business entirely. What is left in it across the
 whole app is `smbPath` and `epgChannelId`, both genuine provider payload.
 
-Not done here, and worth its own pass: `playbackPosition`, `duration` and `isCompleted`
-are still written into `providerData` by three producers (`MediaRepository`,
-`XtreamMapper`, `JellyfinMediaProvider`) and read by nobody — list progress comes from
-`CategoryViewModel.watchProgress`. Dead before this change, dead after it.
+Follow-up, done the same day: `playbackPosition`, `duration`, `isCompleted`, `isFavorite`,
+`streamType`, `tvArchive` and `directSource` were all written into `providerData` and read
+by nobody — list progress comes from `CategoryViewModel.watchProgress`. Removed. What is
+left in the map anywhere is `epgChannelId` (matched by the EPG pipeline) and `smbPath`,
+both of which have a reader.
 
 ## Phase 2 — value-class ids, starting with the pair that actually collided
 **Effort: ~4 hours, mechanical but wide.**
