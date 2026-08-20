@@ -37,6 +37,7 @@
     <string name="epg_freshness_hours_ago_format">%1$do lasa</string>
     <string name="epg_freshness_days_ago_format">%1$dandro lasa</string>
     <string name="epg_freshness_stale_suffix_format"> • %1$d lany andro</string>
+    <string name="epg_freshness_never_run_suffix_format"> • %1$d tsy mbola nandeha</string>
     <string name="epg_freshness_updated_format">Navaozina %1$s</string>
 
     <!-- EpgFileManager error fallbacks -->
