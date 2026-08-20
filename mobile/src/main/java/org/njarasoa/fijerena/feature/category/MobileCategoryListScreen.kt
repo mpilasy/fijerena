@@ -80,6 +80,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.browseTarget
+import org.njarasoa.fijerena.core.player.domain.browseTargetFor
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -141,7 +144,7 @@ fun MobileCategoryListScreen(
         itemName: String,
         categoryId: String,
         contentType: String,
-        providerData: Map<String, String>,
+        target: BrowseTarget,
     ) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
@@ -652,20 +655,17 @@ fun MobileCategoryListScreen(
                                     watchProgress = watchProgress,
                                     currentlyPlayingId = target?.id,
                                     onItemSelected = { itemId, itemName, categoryId ->
-                                        // Check if this is a category reference from "Recent Categories" or "Favorite Categories"
                                         val item = displayedStreams?.firstOrNull { it.id == itemId }
-                                        val providerData = item?.providerData ?: emptyMap()
-                                        if (providerData["isCategoryRef"] == "true") {
-                                            val targetCategoryId = providerData["categoryId"]
-                                            if (targetCategoryId != null) {
-                                                viewModel.loadStreams(targetCategoryId)
+                                        val selected = item?.browseTarget(contentType) ?: browseTargetFor(contentType, itemId)
+                                        when {
+                                            // A row from "Recent Categories"/"Favorite Categories" browses, it doesn't play.
+                                            selected is BrowseTarget.CategoryRef -> viewModel.loadStreams(selected.categoryId)
+                                            isLiveTv && item != null -> {
+                                                // Dock locally instead of navigating away — mirrors
+                                                // TV's LiveTvChannelList.onStreamPromote interception.
+                                                dockTarget = item
                                             }
-                                        } else if (isLiveTv && item != null) {
-                                            // Dock locally instead of navigating away — mirrors
-                                            // TV's LiveTvChannelList.onStreamPromote interception.
-                                            dockTarget = item
-                                        } else {
-                                            onStreamSelected(itemId, itemName, categoryId, contentType, providerData)
+                                            else -> onStreamSelected(itemId, itemName, categoryId, contentType, selected)
                                         }
                                     },
                                     onItemLongPress = { item ->

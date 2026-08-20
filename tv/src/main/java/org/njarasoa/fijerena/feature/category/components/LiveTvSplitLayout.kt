@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.elapsedFraction
@@ -111,7 +112,7 @@ internal fun LiveTvSplitLayout(
     watchProgress: ImmutableWatchProgress,
     watchedIds: ImmutableStringSet,
     onCategorySelected: (String) -> Unit,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
     onBack: () -> Unit,
@@ -657,7 +658,7 @@ private fun LiveTvChannelList(
     watchProgress: ImmutableWatchProgress,
     watchedIds: ImmutableStringSet,
     onCategorySelected: (String) -> Unit,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onStreamPromote: (MediaItem) -> Unit,
     onStreamLongPress: (MediaItem) -> Unit,
     onStreamFocused: (MediaItem) -> Unit,
@@ -677,9 +678,9 @@ private fun LiveTvChannelList(
         favoriteIds = favoriteIds,
         watchProgress = watchProgress,
         watchedIds = watchedIds,
-        onStreamSelected = { streamId, streamName, categoryId, providerData ->
-            if (providerData["isCategoryRef"] == "true") {
-                providerData["categoryId"]?.let { onCategorySelected(it) }
+        onStreamSelected = { streamId, streamName, categoryId, target ->
+            if (target is BrowseTarget.CategoryRef) {
+                onCategorySelected(target.categoryId)
             } else {
                 val item = streams?.firstOrNull { it.id == streamId }
                 if (item != null) {
@@ -687,7 +688,7 @@ private fun LiveTvChannelList(
                 } else {
                     // Not resolvable from the current list (shouldn't normally happen) — fall back to
                     // the caller's own handling.
-                    onStreamSelected(streamId, streamName, categoryId, providerData)
+                    onStreamSelected(streamId, streamName, categoryId, target)
                 }
             }
         },

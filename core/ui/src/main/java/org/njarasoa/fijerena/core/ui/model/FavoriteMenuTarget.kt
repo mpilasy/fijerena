@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.ui.model
 
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 
@@ -52,13 +53,13 @@ fun MediaItem.toFavoriteMenuTarget(
     isFavorite: (itemId: String) -> Boolean,
     isFavoriteCategory: (categoryId: String) -> Boolean,
 ): FavoriteMenuTarget {
-    val realCategoryId = providerData["categoryId"]
-    return if (providerData["isCategoryRef"] == "true" && realCategoryId != null) {
+    val categoryRef = target as? BrowseTarget.CategoryRef
+    return if (categoryRef != null) {
         FavoriteMenuTarget.Category(
-            categoryId = realCategoryId,
+            categoryId = categoryRef.categoryId,
             categoryName = name,
             contentType = contentType,
-            isFavorite = isFavoriteCategory(realCategoryId),
+            isFavorite = isFavoriteCategory(categoryRef.categoryId),
         )
     } else {
         FavoriteMenuTarget.Stream(

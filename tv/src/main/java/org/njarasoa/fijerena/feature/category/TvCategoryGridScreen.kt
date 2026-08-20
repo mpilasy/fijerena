@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -59,7 +60,7 @@ fun TvCategoryGridScreen(
     initialCategoryId: String? = null,
     initialStreamId: String? = null,
     showPreviewPane: Boolean = true,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onBack: () -> Unit = {},
@@ -134,7 +135,7 @@ private fun CategoryGridContent(
     epgIndexState: EpgIndexState,
     configuration: android.content.res.Configuration,
     catViewModel: CategoryViewModel,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onSearchClick: () -> Unit,
     onEpgClick: (categoryId: String, categoryName: String) -> Unit,
     onBack: () -> Unit,
@@ -219,8 +220,8 @@ private fun CategoryGridContent(
                             onCategorySelected = { categoryId ->
                                 catViewModel.loadStreams(categoryId)
                             },
-                            onStreamSelected = { streamId, streamName, categoryId, providerData ->
-                                onStreamSelected(streamId, streamName, categoryId, providerData)
+                            onStreamSelected = { streamId, streamName, categoryId, target ->
+                                onStreamSelected(streamId, streamName, categoryId, target)
                             },
                             onRefreshCategories = {
                                 catViewModel.refreshCategories()

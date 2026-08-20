@@ -29,6 +29,7 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
@@ -232,65 +233,51 @@ fun MobileNavHost(
                     contentType = categoryListScreen.contentType,
                     initialCategoryId = categoryListScreen.initialCategoryId,
                     initialStreamId = categoryListScreen.initialStreamId,
-                    onStreamSelected = { itemId, itemName, categoryId, contentType, providerData ->
-                        when (categoryListScreen.contentType) {
-                            ContentType.TV_SHOWS -> {
-                                val episodeId = providerData["episodeId"]
-                                if (providerData["resumeSeries"] == "true") {
-                                    // Continue Watching: this card represents the show, not the
-                                    // episode — open episode selection with the last-watched
-                                    // episode's detail/resume panel already up.
-                                    navController.navigate(
-                                        Screen.EpisodeSelection(
-                                            seriesId = itemId,
-                                            seriesName = itemName,
-                                            categoryId = categoryId,
-                                            initialEpisodeId = episodeId,
-                                        ),
-                                    )
-                                } else if (episodeId != null) {
-                                    // Last-watched episode: go directly to player
-                                    navController.navigate(
-                                        Screen.Player(
-                                            streamId = itemId,
-                                            streamName = itemName,
-                                            categoryId = categoryId,
-                                            contentType = ContentType.TV_SHOWS,
-                                            episodeId = episodeId,
-                                            episodeExtension = providerData["episodeExtension"],
-                                            seriesId = providerData["seriesId"],
-                                            seriesName = providerData["seriesName"],
-                                        ),
-                                    )
-                                } else {
-                                    // Regular series: navigate to episode selection
-                                    navController.navigate(
-                                        Screen.EpisodeSelection(
-                                            seriesId = itemId,
-                                            seriesName = itemName,
-                                            categoryId = categoryId,
-                                        ),
-                                    )
-                                }
-                            }
-                            ContentType.MOVIES -> {
-                                // For movies, navigate to movie details
+                    onStreamSelected = { itemId, itemName, categoryId, contentType, target ->
+                        when (target) {
+                            // Continue Watching: the card stands for the show, so open episode
+                            // selection with the last-watched episode's panel already up.
+                            is BrowseTarget.Series ->
+                                navController.navigate(
+                                    Screen.EpisodeSelection(
+                                        seriesId = target.seriesId,
+                                        seriesName = itemName,
+                                        categoryId = categoryId,
+                                        initialEpisodeId = target.resumeEpisodeId,
+                                    ),
+                                )
+                            // The card stands for one episode — play it, whether or not it can
+                            // name the show it belongs to.
+                            is BrowseTarget.Episode ->
+                                navController.navigate(
+                                    Screen.Player(
+                                        streamId = target.episodeId,
+                                        streamName = itemName,
+                                        categoryId = categoryId,
+                                        contentType = ContentType.TV_SHOWS,
+                                        episodeId = target.episodeId,
+                                        episodeExtension = target.extension,
+                                        seriesId = target.seriesId,
+                                        seriesName = target.seriesName,
+                                    ),
+                                )
+                            is BrowseTarget.Movie ->
                                 navController.navigate(
                                     Screen.MovieDetails(
-                                        movieId = itemId,
+                                        movieId = target.movieId,
                                         movieName = itemName,
                                         categoryId = categoryId,
                                     ),
                                 )
-                            }
-                            else -> {
-                                // Live TV: unreachable in practice for a genuine stream tap —
-                                // MobileCategoryListScreen docks it locally instead of calling
-                                // this callback (mirrors TV's LiveTvChannelList.onStreamPromote
-                                // interception). Kept as a fallback for the "not resolvable from
-                                // the current list" case, same as TV.
-                                navController.navigate(Screen.Player(itemId, itemName, categoryId, contentType))
-                            }
+                            // Live TV: unreachable in practice for a genuine stream tap —
+                            // MobileCategoryListScreen docks it locally instead of calling this
+                            // callback (mirrors TV's LiveTvChannelList.onStreamPromote
+                            // interception). Kept for the "not resolvable from the current list"
+                            // case, same as TV.
+                            is BrowseTarget.Channel ->
+                                navController.navigate(Screen.Player(target.streamId, itemName, categoryId, contentType))
+                            // Browsed into by the list screen itself; it never reaches nav.
+                            is BrowseTarget.CategoryRef -> Unit
                         }
                     },
                     onSearchClick = {

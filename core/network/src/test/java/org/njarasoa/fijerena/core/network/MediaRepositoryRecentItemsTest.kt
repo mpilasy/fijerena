@@ -14,9 +14,9 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 
 /**
@@ -143,7 +143,7 @@ class MediaRepositoryRecentItemsTest {
         val recent = repository.getRecentItems(ContentType.TV_SHOWS)
 
         assertEquals(listOf("s1", "s2"), recent.map { it.id })
-        assertEquals("s1e3", recent.first().providerData["episodeId"])
+        assertEquals(BrowseTarget.Series("s1", resumeEpisodeId = "s1e3"), recent.first().target)
     }
 
     @Test
@@ -154,8 +154,7 @@ class MediaRepositoryRecentItemsTest {
 
         assertEquals("s1", card.id)
         assertEquals("Series s1", card.name)
-        assertEquals("true", card.providerData["resumeSeries"])
-        assertEquals("s1e3", card.providerData["episodeId"])
+        assertEquals(BrowseTarget.Series("s1", resumeEpisodeId = "s1e3"), card.target)
     }
 
     @Test
@@ -165,8 +164,7 @@ class MediaRepositoryRecentItemsTest {
         val card = repository.getRecentItems(ContentType.TV_SHOWS).single()
 
         assertEquals("orphan", card.id)
-        assertNull(card.providerData["resumeSeries"])
-        assertEquals("orphan", card.providerData["episodeId"])
+        assertEquals(BrowseTarget.Episode(episodeId = "orphan"), card.target)
     }
 
     @Test
@@ -188,8 +186,7 @@ class MediaRepositoryRecentItemsTest {
         val card = repository.getRecentItems(ContentType.TV_SHOWS).single()
 
         assertEquals("242136", card.id)
-        assertNull(card.providerData["resumeSeries"])
-        assertEquals("242136", card.providerData["episodeId"])
+        assertEquals(BrowseTarget.Episode(episodeId = "242136"), card.target)
     }
 
     @Test

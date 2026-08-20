@@ -42,4 +42,11 @@ data class MediaItem(
     val streamUri: String? = null,
     val metadata: MediaMetadata = MediaMetadata(),
     val providerData: Map<String, String> = emptyMap(),
+    /**
+     * What selecting this row opens, when the row knows something its id alone doesn't say — a
+     * history row that stands for a whole show, a row that stands for a category. Null on a plain
+     * catalogue row, whose content type already answers it; read it through
+     * [browseTarget][org.njarasoa.fijerena.core.player.domain.browseTarget] rather than directly.
+     */
+    val target: BrowseTarget? = null,
 )

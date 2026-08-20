@@ -48,6 +48,8 @@ import androidx.tv.material3.Glow
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
@@ -137,7 +139,7 @@ internal fun StreamList(
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
     watchedIds: ImmutableStringSet = ImmutableStringSet(),
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, providerData: Map<String, String>) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onStreamLongPress: (MediaItem) -> Unit = {},
     onStreamFocused: (MediaItem) -> Unit = {},
     onRefreshStreams: (String) -> Unit,
@@ -329,7 +331,7 @@ internal fun StreamList(
                                 watchProgress = watchProgress[item.id] ?: 0f,
                                 isWatched = item.id in watchedIds,
                                 nowPlayingProgram = nowPlaying[item.id],
-                                onClick = { onStreamSelected(item.id, item.name, item.categoryId, item.providerData) },
+                                onClick = { onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType)) },
                                 onLongPress = { onStreamLongPress(item) },
                                 onFocused = { onStreamFocused(item) },
                                 // Only the last-played item gets a focus requester for auto-scroll
