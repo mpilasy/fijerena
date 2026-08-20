@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.input.rememberFocusReturn
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
@@ -67,6 +68,12 @@ fun ReadOnlyFieldWithEdit(
     var isEditing by remember { mutableStateOf(false) }
     var editValue by remember(value) { mutableStateOf(value) }
     val editFocusRequester = remember { FocusRequester() }
+
+    // Committing or cancelling removes the text field from the composition entirely. Without
+    // somewhere to hand focus back to, Compose drops it to the window root and the next D-pad
+    // press restarts from the top of the form — which, in a provider form of six of these inside
+    // one scrolling Column, also scrolls the whole thing back to the start.
+    val returnFocusRequester = rememberFocusReturn(active = isEditing)
 
     if (isEditing) {
         OutlinedTextField(
@@ -166,6 +173,7 @@ fun ReadOnlyFieldWithEdit(
                     editValue = value
                     isEditing = true
                 },
+                modifier = Modifier.focusRequester(returnFocusRequester),
                 icon = { Icon(CinemaIcons.Edit, contentDescription = stringResource(R.string.common_edit_field_description_format, label)) },
             )
         }

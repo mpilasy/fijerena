@@ -11,7 +11,7 @@ Both trace to a small number of shared patterns, not to 40 independent bugs. Fix
 fixes every call site at once.
 
 **Scope:** `:tv` only. `:mobile` behaviour must not change.
-**Status:** steps 1-6 of 8 landed; steps 7-8 pending.
+**Status:** steps 1-7 of 8 landed; step 8 pending.
 **Audited:** 2026-08-20, against `c99ffbd3`.
 
 ---
@@ -282,12 +282,12 @@ should stay in the navigation path, as opposed to the filter panel's, where it s
 the three toolbar states (Programme selected, What's on focused, Matched only selected) are all
 legible where the bare radios and checkbox previously showed no focus at all.
 
-### Step 7 — R5: field editing
+### Step 7 — R5: field editing — ✅ **done**
 `rememberFocusReturn()` into `ReadOnlyFieldWithEdit` (fixed in place — no new component, the
-existing one already has the right shape) and into the two hand-rolled editors in
-`ProviderSettingsSection`.
-**Check:** Add Provider → edit the URL, press Enter. Focus returns to that field's pencil and the
-form does not scroll away. Repeat with Back (cancel).
+existing one already had the right shape) and into the two hand-rolled size editors in
+`ProviderSettingsSection`, whose number fields also picked up `tvDpadEscape()`.
+**Verified** on darcy: Edit Provider → open the Server URL editor → Back. Focus lands back on that
+field's pencil, not on the first control in the form, and the form does not scroll away.
 
 ### Step 8 — R6 + R8: restoration and the player dialogs
 `focusRestorer()` on the eleven lazy containers. Collapse the four player selector dialogs onto one

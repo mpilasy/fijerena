@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,6 +36,8 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
+import org.njarasoa.fijerena.ui.components.input.rememberFocusReturn
+import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -312,6 +315,10 @@ private fun WatchHistorySizeSetting(
     var isEditing by remember { mutableStateOf(false) }
     var newSize by remember { mutableStateOf("") }
 
+    // Leaving edit mode destroys the focused TextField; without a hand-off Compose drops focus to
+    // the window root and the next D-pad press restarts at the top of the form.
+    val editButtonFocusRequester = rememberFocusReturn(active = isEditing)
+
     Column {
         Text(
             text = stringResource(R.string.provider_watch_history_size_label),
@@ -342,6 +349,7 @@ private fun WatchHistorySizeSetting(
                         newSize = currentSize.toString()
                     },
                     text = stringResource(R.string.provider_edit_button),
+                    modifier = Modifier.focusRequester(editButtonFocusRequester),
                 )
             }
         } else {
@@ -359,7 +367,7 @@ private fun WatchHistorySizeSetting(
                     label = { Text(stringResource(R.string.provider_queue_size_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale)),
+                    modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale)).tvDpadEscape(),
                 )
                 Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 CinemaSecondaryButton(
@@ -405,6 +413,10 @@ private fun FavoritesMaxSizeSetting(
     var isEditing by remember { mutableStateOf(false) }
     var newSize by remember { mutableStateOf("") }
 
+    // Leaving edit mode destroys the focused TextField; without a hand-off Compose drops focus to
+    // the window root and the next D-pad press restarts at the top of the form.
+    val editButtonFocusRequester = rememberFocusReturn(active = isEditing)
+
     Column {
         Text(
             text = stringResource(R.string.provider_favorites_max_size_label),
@@ -435,6 +447,7 @@ private fun FavoritesMaxSizeSetting(
                         newSize = currentSize.toString()
                     },
                     text = stringResource(R.string.provider_edit_button),
+                    modifier = Modifier.focusRequester(editButtonFocusRequester),
                 )
             }
         } else {
@@ -452,7 +465,7 @@ private fun FavoritesMaxSizeSetting(
                     label = { Text(stringResource(R.string.provider_max_size_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale)),
+                    modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale)).tvDpadEscape(),
                 )
                 Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 CinemaSecondaryButton(
