@@ -229,12 +229,27 @@ reader finds the decision rather than re-deriving it.
 **Effort: ongoing, ~2 hours to seed.**
 
 `MediaRepositoryRecentItemsTest.episode()` always set `episodeId`, so the shape that
-broke was structurally untestable. Replace with a fixture matrix covering: legacy row
-(no episode/series ids), poisoned row (`seriesId == itemId`), healthy row, server-backed
-row. Assert every row maps to a `BrowseTarget` and that no `TV_SHOWS` row can ever
-produce `Series` with an id that also appears as an `itemId` in history.
+broke was structurally untestable — there was even a test named for the legacy case, and
+it could not fail. Replace with fixtures covering the shapes that exist on devices.
 
----
+### Done (2026-08-19)
+
+Two fixture sources, each naming shapes rather than describing them:
+
+- `core/network/.../fixtures/WatchHistoryFixtures` — `episode` (full metadata),
+  `anonymousEpisode` (position and nothing else, six such rows on the phone),
+  `seriesUnknownEpisode`, `movie`, `channel`, plus `Stored.*` holding two rows exactly as
+  they sit in `shared_prefs`. The local helpers that hid the broken shape are gone.
+- `core/player/.../api/XtreamPayloads` — the bodies this provider really returns, each
+  named for the commit that had to learn about it: `[]`, an empty object, seasons-and-
+  episodes-both-empty, info-without-name, a gateway HTML page.
+
+**Found while writing them:** `EpisodesMapSerializer` catches its own decode failure and
+returns an empty map, so a single episode missing a required field (`title`,
+`container_extension`) discards every other episode of that show, and the series then
+reads as unavailable. Pinned by `oneUnreadableEpisodeCostsTheWholeList` as current
+behaviour, not endorsed — the fix is to decode episodes one at a time and drop only the
+bad one, which is a behaviour change and so its own decision.
 
 ## Sequencing
 

@@ -5,6 +5,7 @@ import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 
@@ -20,19 +21,9 @@ class WatchedItemSerializationTest {
             encodeDefaults = true
         }
 
-    /** Copied from a real device (provider 9), the row that started the whole investigation. */
-    private val storedRow =
-        """
-        {"itemId":"242136","itemName":"EN - Law & Order - S06E18","categoryId":"156",
-        "contentType":"TV_SHOWS","timestamp":1787181459349,"playbackPosition":37365,
-        "duration":2811558,"isCompleted":false,"episodeId":"242136","episodeExtension":null,
-        "seriesId":"4080","seriesName":"EN - Law & Order (1990) (US)","audioTrackIndex":0,
-        "subtitleTrackIndex":-1}
-        """.trimIndent().replace("\n", "")
-
     @Test
     fun readsIdsWrittenBeforeTheyHadTypes() {
-        val item = json.decodeFromString<WatchedItem>(storedRow)
+        val item = json.decodeFromString<WatchedItem>(WatchHistoryFixtures.Stored.LAW_AND_ORDER)
 
         assertEquals(EpisodeId("242136"), item.episodeId)
         assertEquals(SeriesId("4080"), item.seriesId)
@@ -41,7 +32,7 @@ class WatchedItemSerializationTest {
 
     @Test
     fun writesThemBackAsPlainStrings() {
-        val encoded = json.encodeToString(json.decodeFromString<WatchedItem>(storedRow))
+        val encoded = json.encodeToString(json.decodeFromString<WatchedItem>(WatchHistoryFixtures.Stored.LAW_AND_ORDER))
 
         assertTrue("""expected a bare string for seriesId, got: $encoded""", encoded.contains(""""seriesId":"4080""""))
         assertTrue("""expected a bare string for episodeId, got: $encoded""", encoded.contains(""""episodeId":"242136""""))
@@ -51,10 +42,7 @@ class WatchedItemSerializationTest {
     fun aRowWithNoIdsAtAllStillReads() {
         // The shape six rows on the test phone are in: written by a session too short to record
         // what was playing.
-        val legacy =
-            """{"itemId":"749050","itemName":"FR - From - S01E01","categoryId":"153","contentType":"TV_SHOWS"}"""
-
-        val item = json.decodeFromString<WatchedItem>(legacy)
+        val item = json.decodeFromString<WatchedItem>(WatchHistoryFixtures.Stored.ANONYMOUS)
 
         assertEquals(null, item.episodeId)
         assertEquals(null, item.seriesId)
