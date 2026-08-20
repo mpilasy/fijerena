@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -149,16 +150,24 @@ fun TvPlayerControlsOverlay(
         }
     }
 
-    // Focus requester for the first focusable control
+    // Focus requester for the first focusable control.
+    //
+    // [controlsFocusRequester] is attached to the centre play/pause button, which is hidden for
+    // live (there is nothing to pause). Aiming at it on a live stream targets a node that was
+    // never composed, so the request failed into a log line and the icon row below — subtitles,
+    // favourite, stats — could not be reached by D-pad at all. Live lands on that row instead;
+    // it is a focus group, so focus falls through to whichever of its buttons is first for this
+    // stream (the row's contents vary with the track counts).
     val controlsFocusRequester = remember { FocusRequester() }
+    val iconRowFocusRequester = remember { FocusRequester() }
     var isProgressBarFocused by remember { mutableStateOf(false) }
 
-    LaunchedEffect(showFullControls) {
+    LaunchedEffect(showFullControls, isLive) {
         if (showFullControls) {
             // Small delay to allow composition to complete
             delay(100)
             try {
-                controlsFocusRequester.requestFocus()
+                if (isLive) iconRowFocusRequester.requestFocus() else controlsFocusRequester.requestFocus()
             } catch (e: Exception) {
                 android.util.Log.e("TvPlayerControlsOverlay", "Failed to request focus for controls", e)
             }
@@ -514,7 +523,11 @@ fun TvPlayerControlsOverlay(
                 // Icon controls row (only when full controls are visible)
                 if (showFullControls) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .focusRequester(iconRowFocusRequester)
+                                .focusGroup(),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         verticalAlignment = CenterVertically,
                     ) {

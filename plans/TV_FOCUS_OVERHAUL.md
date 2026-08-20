@@ -11,7 +11,7 @@ Both trace to a small number of shared patterns, not to 40 independent bugs. Fix
 fixes every call site at once.
 
 **Scope:** `:tv` only. `:mobile` behaviour must not change.
-**Status:** all 9 steps landed. One verification gap remains: the player selector dialogs (step 8) are build- and lint-clean but were never exercised against a playing stream.
+**Status:** all 10 steps landed and verified on device. No open gaps.
 **Audited:** 2026-08-20, against `c99ffbd3`.
 
 ---
@@ -324,10 +324,8 @@ the per-screen pass was done and mostly reversed.
 The four player selector dialogs collapse onto one `TvSelectorDialog` built on `TvOptionRow`:
 1104 lines to 340, with `selected` coming from the track's real state instead of `onFocusChanged`.
 
-**Gap:** the player dialogs are build- and lint-clean but **not device-verified** — the Xtream
-provider on darcy is currently failing login ("Login failed. Check your username and password"), so
-no stream would start to open a track picker over. Everything else in this plan was verified on
-device.
+**Verified in step 10** on the TV emulator against a playing stream — see that step for the three
+further bugs the attempt uncovered.
 
 ---
 
@@ -347,6 +345,33 @@ because the screen's own requester won. Leaving inert code there would only misl
 **Verified** on the TV emulator (`emulator-5554`), per the user's request to stop testing on the
 Shield: Settings opens without crashing, scrolls down and back with focus tracking correctly, the
 provider list's focused LiveTv button keeps its glyph, and Live TV browse is unchanged.
+
+---
+
+### Step 10 — closing the step 8 verification gap — ✅ **done**
+Played a live channel on the TV emulator and opened the subtitle picker. Getting there surfaced
+three more bugs, all fixed:
+
+- **R13** — `controlsFocusRequester` is attached only to the centre play/pause button, which is
+  hidden for live (`!isLive`). On a live stream the request targeted a node that was never composed,
+  failed into a log line, and the icon row below — subtitles, favourite, stats — could not be
+  reached by D-pad at all. Live now lands on that row, which is a focus group so focus falls
+  through to whichever button is first for the stream.
+- **R14** — `PlayerKeyHandler` only treated the category and last-watched overlays as "modal". With
+  a track picker open, Up/Down still changed channel and Left/Right still swapped overlays. Replaced
+  with `PlayerScreenState.isModalOpen`, which covers the four selector dialogs too.
+- **R15** — `focusProperties { exit = { FocusRequester.Cancel } }`, carried over verbatim from the
+  four dialogs `TvSelectorDialog` replaced, froze focus on the option it opened on: the picker could
+  not be navigated at all. `focusGroup()` keeps focus inside the dialog without blocking movement
+  within it.
+
+**Verified** end to end: the picker opens on the genuinely active option ("Off", marked *Active*),
+D-pad moves to "Subtitle 1", and *Active* **stays on "Off"** — the real current track. Under the old
+`onFocusChanged` code the marker would have followed focus. Reopening the dialog still reports the
+player's actual state. No crash.
+
+One incidental note: OK appearing not to activate a focused control was a red herring — the controls
+auto-hide, so a single press just re-shows them. Two presses in quick succession work correctly.
 
 ---
 
