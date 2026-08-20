@@ -16,6 +16,11 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.anonymousEpisode
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.channel
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.episode
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.movie
+import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.seriesUnknownEpisode
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
@@ -63,48 +68,6 @@ class MediaRepositoryRecentItemsTest {
         every { sharedPreferences.getString(keyWatchHistory, null) } returns json.encodeToString(history.toList())
         return MediaRepository(context, 1L)
     }
-
-    private fun movie(
-        id: String,
-        position: Long = 0L,
-        duration: Long = 0L,
-        isCompleted: Boolean = false,
-    ) = WatchedItem(
-        itemId = id,
-        itemName = id,
-        categoryId = "cat1",
-        contentType = ContentType.MOVIES,
-        playbackPosition = position,
-        duration = duration,
-        isCompleted = isCompleted,
-    )
-
-    private fun episode(
-        id: String,
-        seriesId: String?,
-        position: Long = 0L,
-        duration: Long = 0L,
-        isCompleted: Boolean = false,
-    ) = WatchedItem(
-        itemId = id,
-        itemName = id,
-        categoryId = "cat1",
-        contentType = ContentType.TV_SHOWS,
-        playbackPosition = position,
-        duration = duration,
-        isCompleted = isCompleted,
-        episodeId = EpisodeId(id),
-        seriesId = seriesId?.let(::SeriesId),
-        seriesName = seriesId?.let { "Series $it" },
-    )
-
-    private fun channel(id: String) =
-        WatchedItem(
-            itemId = id,
-            itemName = id,
-            categoryId = "cat1",
-            contentType = ContentType.LIVE_TV,
-        )
 
     @Test
     fun ordersInProgressBeforeRest() {
@@ -160,8 +123,8 @@ class MediaRepositoryRecentItemsTest {
     }
 
     @Test
-    fun legacyEpisodeWithoutSeriesIdStaysAnEpisodeCard() {
-        val repository = repositoryWith(episode("orphan", seriesId = null, position = 30L, duration = 100L))
+    fun anEpisodeThatKnowsItselfButNotItsShowStaysAnEpisodeCard() {
+        val repository = repositoryWith(seriesUnknownEpisode("orphan", position = 30L, duration = 100L))
 
         val card = repository.getRecentItems(ContentType.TV_SHOWS).single()
 
@@ -170,20 +133,11 @@ class MediaRepositoryRecentItemsTest {
     }
 
     @Test
-    fun legacyEpisodeWithoutEpisodeIdStillPlaysAsAnEpisode() {
-        // Entries written before episode/series ids were recorded: itemId is the episode's stream
-        // id, so the card must route to the player, not to a series the provider has no such id for.
-        val repository =
-            repositoryWith(
-                WatchedItem(
-                    itemId = "242136",
-                    itemName = "EN - Law & Order - S06E18",
-                    categoryId = "cat1",
-                    contentType = ContentType.TV_SHOWS,
-                    playbackPosition = 30L,
-                    duration = 100L,
-                ),
-            )
+    fun aRowWithNoIdentityAtAllStillPlaysAsAnEpisode() {
+        // Six rows on the test phone are in this shape. itemId is the episode's stream id — the
+        // player is the only thing that writes these — so the card must route there, not to a
+        // series the provider has no such id for.
+        val repository = repositoryWith(anonymousEpisode("242136", position = 30L, duration = 100L))
 
         val card = repository.getRecentItems(ContentType.TV_SHOWS).single()
 
