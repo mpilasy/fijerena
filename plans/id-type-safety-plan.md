@@ -218,11 +218,12 @@ once. `resolveSeriesInfo` shrank to its actual policy: one retry, then re-resolv
 by name. Both recoveries now apply to every kind of nothing — previously a `[]` skipped
 the retry and an empty object skipped the name lookup, for no reason either could defend.
 
-**Left as it was, deliberately:** a response carrying an `info` object but no episodes
-still reads as `Ok`, and the screen shows a show with nothing under it. Treating it as
-unavailable would be a behaviour change (a genuinely empty show would start erroring),
-and that call belongs to a decision, not to this refactor. `XtreamResponseTest` pins the
-current answer so the choice is visible when someone wants to revisit it.
+**Left as it was, and now settled:** a response carrying an `info` object but no episodes
+reads as `Ok`, and the screen shows a show with nothing under it. Treating it as
+unavailable would start erroring on shows that are genuinely empty in the catalogue, and
+nothing in the response distinguishes those from a provider having a bad day. Asked and
+answered on 2026-08-19: leave it. `XtreamResponseTest` pins the behaviour, so a future
+reader finds the decision rather than re-deriving it.
 
 ## Phase 5 — fixtures that encode the broken shapes
 **Effort: ongoing, ~2 hours to seed.**
