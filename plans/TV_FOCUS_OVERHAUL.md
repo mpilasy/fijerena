@@ -11,7 +11,7 @@ Both trace to a small number of shared patterns, not to 40 independent bugs. Fix
 fixes every call site at once.
 
 **Scope:** `:tv` only. `:mobile` behaviour must not change.
-**Status:** all 8 steps landed. One verification gap (player selector dialogs, see step 8) and one new finding (R11) left open.
+**Status:** all 9 steps landed. One verification gap remains: the player selector dialogs (step 8) are build- and lint-clean but were never exercised against a playing stream.
 **Audited:** 2026-08-20, against `c99ffbd3`.
 
 ---
@@ -115,16 +115,30 @@ button, or on the confirm button when there is no dismiss button. Two consequenc
   at `ProviderDialogs.kt:160-395`), focus starts on the button row at the *bottom*, so the user
   must D-pad up through the whole panel to reach the first option.
 
-### R11 — An "on" icon tinted with the accent disappears when focused (open)
+### R11 — An accent-tinted icon disappears when focused — ✅ **fixed (step 9)**
 
-`CinemaIconButton` uses `focusedContainerColor = CinemaAccent`, and call sites tint the active
-state of their icon with `CinemaAccent` too — so a favourited star, or the active-provider check,
-becomes accent-on-accent and vanishes at exactly the moment the user is pointing at it. Same shape
-as R1: a state colour colliding with the focus colour.
+`CinemaIconButton` used `focusedContainerColor = CinemaAccent`, and call sites tint their glyph
+`CinemaAccent` too — decoratively (Add, Edit, LiveTv, the select check on
+`ProviderSelectionScreen`) or to mark an "on" state (the favourite star on
+`EpisodeSelectionScreen.kt:452` and `MovieDetailsScreen.kt:248`). Focusing the button painted an
+accent glyph onto an accent circle and the icon vanished at exactly the moment the viewer was
+pointing at it. Same shape as R1: a state colour colliding with the focus colour.
 
-Seen on `EpisodeSelectionScreen.kt:452` (favourite star) and `ProviderSelectionScreen` (set-active
-check). Found while verifying step 8; **not fixed** — the tint is chosen per call site, so this
-needs its own pass over every `CinemaIconButton` use rather than a one-line token change.
+Fixed at the button rather than across 25 call sites: focus is now a lifted container plus an
+accent ring, the same language as every other control.
+
+### R12 — `focusRestorer()` with no argument crashes at runtime — ✅ **fixed (step 9)**
+
+The compile classpath resolves Compose UI 1.7.x, where `focusRestorer(onRestoreFailed: (() ->
+FocusRequester)? = null)` — so a no-arg call emits `focusRestorer$default(Modifier, Function0, int,
+Object)`. The APK ships 1.8.2, where the default-arg overload takes a `FocusRequester` instead, so
+that synthetic does not exist and the screen throws `NoSuchMethodError` the moment it composes.
+Exactly the version-skew trap already documented for `FlowRow` at `ProviderDialogs.kt:138`.
+
+Step 8 shipped this and it crashed Settings on open — caught on device, not by the build or by
+lint. Every call now passes its fallback explicitly, which binds a direct overload present in both
+versions. This is why the two pre-existing uses in `ImportDialogs` never crashed: they always
+passed a lambda.
 
 ### R10 — A focused text field is a D-pad dead end
 
@@ -304,11 +318,8 @@ field's pencil, not on the first control in the form, and the form does not scro
 `focusRestorer()` added to the three settings-family lists that had no focus handling at all —
 `SettingsScreen`, `TvEpgManagementScreen`, `ProviderSelectionScreen`.
 
-**Deliberately not applied** to the other thirteen lazy containers. `CategoryList`, `StreamList`,
-`EpisodeSelectionScreen`, `SearchScreen`, `EpgGridLayout` and the player overlays all carry bespoke
-`FocusRequester` logic tuned to the browse flow, and that flow is not what the user reported as
-broken. Adding a restorer on top of hand-rolled requesters risks the two fighting over initial
-focus. Worth doing later, per screen, with a device check each — not as a blanket edit.
+**Deliberately not applied** to the other thirteen lazy containers at the time — see step 9, where
+the per-screen pass was done and mostly reversed.
 
 The four player selector dialogs collapse onto one `TvSelectorDialog` built on `TvOptionRow`:
 1104 lines to 340, with `selected` coming from the track's real state instead of `onFocusChanged`.
@@ -317,6 +328,25 @@ The four player selector dialogs collapse onto one `TvSelectorDialog` built on `
 provider on darcy is currently failing login ("Login failed. Check your username and password"), so
 no stream would start to open a track picker over. Everything else in this plan was verified on
 device.
+
+---
+
+### Step 9 — R11, and the per-screen `focusRestorer` pass — ✅ **done**
+Fixed R11 in `CinemaIconButton` and R12 across all 11 restorer call sites.
+
+The per-screen pass added `focusRestorer` to eight more lists and then **removed six of them**.
+`CategoryList`, `StreamList`, `EpisodeSelectionScreen`, `SearchScreen`, `TvEpgBrowserScreen` and
+`TvChannelListOverlay` each already request focus explicitly on re-entry, and an explicit
+`requestFocus()` beats the restorer — measured, not assumed: with the restorer on `CategoryList`,
+leaving the category pane at "AMAZON REALITY" and coming back still landed on "Recent Categories",
+because the screen's own requester won. Leaving inert code there would only mislead.
+
+`focusRestorer` therefore stays on the four containers where nothing else claims focus:
+`SettingsScreen`, `TvEpgManagementScreen`, `ProviderSelectionScreen` and `EpgGridLayout` (×2).
+
+**Verified** on the TV emulator (`emulator-5554`), per the user's request to stop testing on the
+Shield: Settings opens without crashing, scrolls down and back with focus tracking correctly, the
+provider list's focused LiveTv button keeps its glyph, and Live TV browse is unchanged.
 
 ---
 
