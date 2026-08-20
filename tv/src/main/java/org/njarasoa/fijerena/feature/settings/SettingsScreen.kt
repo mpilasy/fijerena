@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -191,7 +192,10 @@ fun SettingsScreen(
             TvLazyColumn(
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                modifier = Modifier.fillMaxSize(),
+                // Scrolling a focused card out of view and back otherwise loses it: the item is
+                // disposed, focus falls to the root, and the next D-pad press restarts at the top
+                // of the list. focusRestorer remembers the last focused child and hands it back.
+                modifier = Modifier.fillMaxSize().focusRestorer(),
             ) {
                 // Provider Details
                 item {

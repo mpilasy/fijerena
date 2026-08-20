@@ -11,7 +11,7 @@ Both trace to a small number of shared patterns, not to 40 independent bugs. Fix
 fixes every call site at once.
 
 **Scope:** `:tv` only. `:mobile` behaviour must not change.
-**Status:** steps 1-7 of 8 landed; step 8 pending.
+**Status:** all 8 steps landed. One verification gap (player selector dialogs, see step 8) and one new finding (R11) left open.
 **Audited:** 2026-08-20, against `c99ffbd3`.
 
 ---
@@ -114,6 +114,17 @@ button, or on the confirm button when there is no dismiss button. Two consequenc
 - When the dialog's real content lives in the `text` slot (language options, `CategoryFilterDialog`
   at `ProviderDialogs.kt:160-395`), focus starts on the button row at the *bottom*, so the user
   must D-pad up through the whole panel to reach the first option.
+
+### R11 — An "on" icon tinted with the accent disappears when focused (open)
+
+`CinemaIconButton` uses `focusedContainerColor = CinemaAccent`, and call sites tint the active
+state of their icon with `CinemaAccent` too — so a favourited star, or the active-provider check,
+becomes accent-on-accent and vanishes at exactly the moment the user is pointing at it. Same shape
+as R1: a state colour colliding with the focus colour.
+
+Seen on `EpisodeSelectionScreen.kt:452` (favourite star) and `ProviderSelectionScreen` (set-active
+check). Found while verifying step 8; **not fixed** — the tint is chosen per call site, so this
+needs its own pass over every `CinemaIconButton` use rather than a one-line token change.
 
 ### R10 — A focused text field is a D-pad dead end
 
@@ -289,12 +300,23 @@ existing one already had the right shape) and into the two hand-rolled size edit
 **Verified** on darcy: Edit Provider → open the Server URL editor → Back. Focus lands back on that
 field's pencil, not on the first control in the form, and the form does not scroll away.
 
-### Step 8 — R6 + R8: restoration and the player dialogs
-`focusRestorer()` on the eleven lazy containers. Collapse the four player selector dialogs onto one
-`TvOptionRow`-based `TvSelectorDialog`, with `selected` driven by the track's real state, not by
-focus.
-**Check:** Settings, scroll to the bottom card, scroll back — focus returns to where it was. In the
-player, open Subtitles and arrow through: "Active" stays on the real current track.
+### Step 8 — R6 + R8: restoration and the player dialogs — ✅ **done, with one gap**
+`focusRestorer()` added to the three settings-family lists that had no focus handling at all —
+`SettingsScreen`, `TvEpgManagementScreen`, `ProviderSelectionScreen`.
+
+**Deliberately not applied** to the other thirteen lazy containers. `CategoryList`, `StreamList`,
+`EpisodeSelectionScreen`, `SearchScreen`, `EpgGridLayout` and the player overlays all carry bespoke
+`FocusRequester` logic tuned to the browse flow, and that flow is not what the user reported as
+broken. Adding a restorer on top of hand-rolled requesters risks the two fighting over initial
+focus. Worth doing later, per screen, with a device check each — not as a blanket edit.
+
+The four player selector dialogs collapse onto one `TvSelectorDialog` built on `TvOptionRow`:
+1104 lines to 340, with `selected` coming from the track's real state instead of `onFocusChanged`.
+
+**Gap:** the player dialogs are build- and lint-clean but **not device-verified** — the Xtream
+provider on darcy is currently failing login ("Login failed. Check your username and password"), so
+no stream would start to open a track picker over. Everything else in this plan was verified on
+device.
 
 ---
 

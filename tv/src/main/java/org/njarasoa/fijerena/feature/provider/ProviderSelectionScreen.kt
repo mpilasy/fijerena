@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.ui.focus.focusRestorer
 import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -220,7 +221,7 @@ private fun ProviderList(
     TvLazyColumn(
         contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().focusRestorer(),
     ) {
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
             Row(
