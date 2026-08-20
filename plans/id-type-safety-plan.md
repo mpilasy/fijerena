@@ -1,9 +1,20 @@
 # Plan: stop routing on untyped ids and string maps
 
 ## Status (2026-08-19)
-Proposed, nothing started. Written after the "Provider has no get_series_info for id
-242136" bug on the phone, which was the third symptom of the same defect class this
-week ("0 episodes" screens being the earlier two).
+**Phases 0, 1, 2, 4 and 5 are done, committed and deployed to every device. Phase 3 is
+open and deliberately unstarted** — its payoff is deleting two read-time guards, and no
+new broken rows are being written, so it is tidying rather than repair.
+
+Written after the "Provider has no get_series_info for id 242136" bug on the phone, which
+was the third symptom of the same defect class that week ("0 episodes" screens being the
+earlier two). Each phase carries its own "Done" note below, including where the shipped
+work differs from what was planned.
+
+Verified on `emulator-5556` against a real provider, with the broken history shapes
+written into `shared_prefs` on purpose: an anonymous row opens the player, a full row
+opens the episode list on its resume episode, and a network drop mid-browse reports
+itself and logs which outcome it was. The two cases needing crafted provider payloads —
+the movie-detail fallback and the episode-decoding fix — are covered by unit tests only.
 
 ## Context
 
