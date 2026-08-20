@@ -13,7 +13,8 @@ import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
-import org.njarasoa.fijerena.core.player.api.XtreamItemUnavailableException
+import org.njarasoa.fijerena.core.player.api.XtreamResponse
+import org.njarasoa.fijerena.core.player.api.asThrowable
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -129,36 +130,26 @@ class XtreamMediaProvider(
     override suspend fun getEpisodeCountsBySeries(): Map<String, Int> = repository.getEpisodeCountsBySeries()
 
     /**
-     * Fetches the series info, and when the provider says it has no such id, re-resolves the id by
-     * name and tries once more. Catalogue ids change when a provider rebuilds; the locally stored
-     * one then points at nothing, and every later visit would show an empty show forever.
+     * Fetches the series info, applying the two recoveries worth trying when the provider answers
+     * with nothing usable — [XtreamResponse] having already decided that it did.
+     *
+     * One retry, because these proxies blip: a second ask often returns the episode list the first
+     * one omitted. Then a re-resolve by name, because a catalogue id the provider has stopped
+     * recognising is the other reason for a permanent nothing — every later visit would show an
+     * empty show forever otherwise.
      */
-    /** A response carrying no episodes and no info at all — the provider gave us nothing usable. */
-    private fun SeriesInfo.isEmptyShell(): Boolean = episodes.values.all { it.isEmpty() } && info == null
-
-    private suspend fun resolveSeriesInfo(id: Int): Result<SeriesInfo> {
+    private suspend fun resolveSeriesInfo(id: Int): XtreamResponse<SeriesInfo> {
         val first = repository.getSeriesInfo(id)
+        if (first is XtreamResponse.Ok || first is XtreamResponse.Failed) return first
 
-        // Some providers (proxies especially) intermittently answer with a well-formed but empty
-        // object instead of failing. Taken at face value that renders as a real series with no
-        // synopsis and no episodes, so retry once and only then give up — as a failure, so the
-        // screen can say something, rather than as a show that looks like it has nothing in it.
-        if (first is Result.Success && first.data.isEmptyShell()) {
-            val retry = repository.getSeriesInfo(id)
-            return if (retry is Result.Success && !retry.data.isEmptyShell()) {
-                retry
-            } else {
-                Log.w("XtreamMediaProvider", "Series $id came back empty twice; treating as unavailable")
-                Result.Error(XtreamItemUnavailableException(id, "get_series_info"))
-            }
-        }
-
-        if (first !is Result.Error || first.exception !is XtreamItemUnavailableException) return first
+        val retry = repository.getSeriesInfo(id)
+        if (retry is XtreamResponse.Ok) return retry
+        Log.w("XtreamMediaProvider", "Series $id gave nothing usable twice")
 
         val name = repository.getCachedSeriesEntity(id)?.name
         val currentId = name?.let { repository.resolveSeriesIdByName(it) }
         return if (currentId == null || currentId == id) {
-            first
+            retry
         } else {
             Log.i("XtreamMediaProvider", "Series $id is gone; provider now lists \"$name\" as $currentId")
             repository.getSeriesInfo(currentId)
@@ -190,13 +181,13 @@ class XtreamMediaProvider(
         // call would mean not noticing new ones until the persisted cache expires. Only the TMDB
         // content-rating round trip below is skipped when we already have a fresh persisted value.
         return when (val result = resolveSeriesInfo(id)) {
-            is Result.Success -> {
+            is XtreamResponse.Ok -> {
                 // Xtream re-sends the episode list on every visit, and it rarely carries synopses —
                 // so fill in the ones TMDB gave us last time before deciding whether to ask TMDB
                 // again. Without this the season fetches below repeat on every cold start, since
                 // their in-memory cache dies with the process.
-                val detail = result.data.toDomain(seriesId).withPlots(repository.getPersistedEpisodePlots(id))
-                val tmdbSeriesId = result.data.info?.tmdb.asString()?.toIntOrNull()
+                val detail = result.value.toDomain(seriesId).withPlots(repository.getPersistedEpisodePlots(id))
+                val tmdbSeriesId = result.value.info?.tmdb.asString()?.toIntOrNull()
                 var enriched = detail
                 if (tmdb.hasApiKey() && tmdbSeriesId != null) {
                     if (detail.hasEpisodeWithoutPlot()) {
@@ -227,8 +218,7 @@ class XtreamMediaProvider(
                 }
                 kotlin.Result.success(enriched)
             }
-            is Result.Error ->
-                kotlin.Result.failure(result.exception)
+            else -> kotlin.Result.failure(result.asThrowable())
         }
     }
 
@@ -359,8 +349,8 @@ class XtreamMediaProvider(
         }
 
         return when (val result = repository.getVodInfo(id)) {
-            is Result.Success -> {
-                val detail = result.data.toDomain(movieId)
+            is XtreamResponse.Ok -> {
+                val detail = result.value.toDomain(movieId)
                 val tmdbMovieId = detail.metadata.tmdbId?.toIntOrNull()
                 val enriched =
                     if (tmdb.hasApiKey() && tmdbMovieId != null) {
@@ -383,8 +373,7 @@ class XtreamMediaProvider(
                 )
                 kotlin.Result.success(enriched)
             }
-            is Result.Error ->
-                kotlin.Result.failure(result.exception)
+            else -> kotlin.Result.failure(result.asThrowable())
         }
     }
 

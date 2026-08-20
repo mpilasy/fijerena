@@ -5,6 +5,7 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.prepareGet
@@ -262,54 +263,49 @@ class XtreamApiService(
      * Fetches detailed information about a specific series including seasons and episodes.
      *
      * @param seriesId The series ID to fetch info for
-     * @return Series info with seasons and episodes
-     * @throws Exception if the request fails
+     * @return the seasons and episodes, or which way the provider had nothing to give
      */
-    suspend fun getSeriesInfo(seriesId: Int): SeriesInfo {
-        val response =
-            client.get("player_api.php") {
-                parameter("username", username)
-                parameter("password", password)
-                parameter("action", "get_series_info")
-                parameter("series_id", seriesId)
-            }
-
-        val responseText = response.bodyAsText()
-
-        // An empty array instead of an object is how these servers say "no such series" — usually a
-        // catalogue id that has since changed. Reporting it as an empty series would render a show
-        // with no synopsis and no episodes, indistinguishable from a real but empty one.
-        if (responseText.trim().startsWith("[")) {
-            throw XtreamItemUnavailableException(seriesId, "get_series_info")
+    suspend fun getSeriesInfo(seriesId: Int): XtreamResponse<SeriesInfo> =
+        fetchItem(seriesId, "get_series_info", SeriesInfo::carriesNothing) {
+            parameter("series_id", seriesId)
         }
-
-        return json.decodeFromString(responseText)
-    }
 
     /**
      * Fetches detailed information about a specific VOD movie.
      *
      * @param vodId The VOD movie ID to fetch info for
-     * @return VOD info with movie details
-     * @throws Exception if the request fails
+     * @return the movie details, or which way the provider had nothing to give
      */
-    suspend fun getVodInfo(vodId: Int): VodInfo {
-        val response =
-            client.get("player_api.php") {
-                parameter("username", username)
-                parameter("password", password)
-                parameter("action", "get_vod_info")
-                parameter("vod_id", vodId)
-            }
-
-        val responseText = response.bodyAsText()
-
-        // See getSeriesInfo — an empty array means the provider no longer has this id.
-        if (responseText.trim().startsWith("[")) {
-            throw XtreamItemUnavailableException(vodId, "get_vod_info")
+    suspend fun getVodInfo(vodId: Int): XtreamResponse<VodInfo> =
+        fetchItem(vodId, "get_vod_info", VodInfo::carriesNothing) {
+            parameter("vod_id", vodId)
         }
 
-        return json.decodeFromString(responseText)
+    /**
+     * Runs one single-item lookup and classifies whatever comes back, including the ways it can
+     * fail: a call that never completes is [XtreamResponse.Failed] rather than a thrown exception,
+     * so a caller handles every outcome in one `when` instead of a `when` plus a `try`.
+     */
+    private suspend inline fun <reified T> fetchItem(
+        itemId: Int,
+        action: String,
+        noinline carriesNothing: (T) -> Boolean,
+        crossinline params: HttpRequestBuilder.() -> Unit,
+    ): XtreamResponse<T> {
+        val raw =
+            try {
+                client
+                    .get("player_api.php") {
+                        parameter("username", username)
+                        parameter("password", password)
+                        parameter("action", action)
+                        params()
+                    }.bodyAsText()
+            } catch (e: Exception) {
+                return XtreamResponse.Failed(e)
+            }
+
+        return json.parseItemResponse(raw, itemId, action, carriesNothing)
     }
 
     /**
