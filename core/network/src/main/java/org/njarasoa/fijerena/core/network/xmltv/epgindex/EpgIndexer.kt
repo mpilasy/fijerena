@@ -783,11 +783,19 @@ class EpgIndexer private constructor(
             // a gap between each batch and keeps any one transaction small.
             while (remaining > 0) {
                 sdb.execPragma("PRAGMA incremental_vacuum($VACUUM_CHUNK_PAGES)")
-                val left = freelistCount(sdb)
-                // A chunk that frees nothing means the rest cannot be reclaimed right now (pages
-                // pinned by an open read snapshot, or auto_vacuum off on an older file). Stop
-                // rather than spin.
-                if (left >= remaining) break
+                var left = freelistCount(sdb)
+                if (left >= remaining) {
+                    // A batch that frees nothing usually is not the end of the freelist. In WAL
+                    // mode the moved pages only leave the file when the log is checkpointed, and
+                    // once the log hits journal_size_limit with a reader holding it open the
+                    // vacuum stops making progress. Force a checkpoint and retry the batch before
+                    // concluding there is nothing left to reclaim — on a Shield this was the
+                    // difference between 43 MB and 1.3 GB.
+                    sdb.execPragma("PRAGMA wal_checkpoint(TRUNCATE)")
+                    sdb.execPragma("PRAGMA incremental_vacuum($VACUUM_CHUNK_PAGES)")
+                    left = freelistCount(sdb)
+                    if (left >= remaining) break
+                }
                 remaining = left
             }
             if (started > 0) {
