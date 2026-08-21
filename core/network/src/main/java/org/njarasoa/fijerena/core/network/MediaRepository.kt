@@ -258,6 +258,9 @@ class MediaRepository(
         provider?.invalidateCachedDetail(itemId)
     }
 
+    /** See [MediaProvider.getCachedSeriesDetail]. */
+    suspend fun getCachedSeriesDetail(seriesId: SeriesId): SeriesDetail? = provider?.getCachedSeriesDetail(seriesId)
+
     suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> =
         provider?.getSeriesDetail(seriesId)
             ?: kotlin.Result.failure(Exception("No provider set"))

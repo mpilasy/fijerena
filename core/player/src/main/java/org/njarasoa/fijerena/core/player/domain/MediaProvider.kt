@@ -23,6 +23,13 @@ interface MediaProvider {
 
     suspend fun getSeriesDetail(seriesId: SeriesId): Result<SeriesDetail>
 
+    /**
+     * The series as last stored locally, with no network call, or null when nothing usable is
+     * cached. Lets a caller draw the screen while [getSeriesDetail] goes to the provider —
+     * that call still runs, because only it can notice episodes added since.
+     */
+    suspend fun getCachedSeriesDetail(seriesId: SeriesId): SeriesDetail? = null
+
     suspend fun getMovieDetail(movieId: String): Result<MovieDetail>
 
     /**
