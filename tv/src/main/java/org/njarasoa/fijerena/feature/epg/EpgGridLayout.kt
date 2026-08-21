@@ -243,13 +243,7 @@ fun EpgGridLayout(
                 // Single unified vertical list: each item is channel + programs
                 TvLazyColumn(
                     state = verticalScrollState,
-                    // `focusRestorer()` with no argument compiles to a `focusRestorer$default(Modifier, Function0,
-                    // int, Object)` synthetic that does not exist in the Compose UI actually shipped in the APK
-                    // (compile classpath resolves 1.7.x, runtime resolves 1.8.2, where the default-arg overload takes
-                    // a FocusRequester instead) — it throws NoSuchMethodError the moment the screen composes. Passing
-                    // the fallback explicitly binds the direct overload, which both versions have. Same version-skew
-                    // trap as FlowRow, see the note in ProviderDialogs.kt.
-                    modifier = Modifier.fillMaxSize().focusRestorer { FocusRequester.Default },
+                    modifier = Modifier.fillMaxSize().focusRestorer(),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale)),
                 ) {
                     items(
@@ -644,13 +638,7 @@ private fun EpgSearchContent(
             }
         } else {
             TvLazyColumn(
-                // `focusRestorer()` with no argument compiles to a `focusRestorer$default(Modifier, Function0,
-                // int, Object)` synthetic that does not exist in the Compose UI actually shipped in the APK
-                // (compile classpath resolves 1.7.x, runtime resolves 1.8.2, where the default-arg overload takes
-                // a FocusRequester instead) — it throws NoSuchMethodError the moment the screen composes. Passing
-                // the fallback explicitly binds the direct overload, which both versions have. Same version-skew
-                // trap as FlowRow, see the note in ProviderDialogs.kt.
-                modifier = Modifier.fillMaxSize().focusRestorer { FocusRequester.Default },
+                modifier = Modifier.fillMaxSize().focusRestorer(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
             ) {
                 items(

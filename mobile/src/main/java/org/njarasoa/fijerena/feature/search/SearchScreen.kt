@@ -33,7 +33,6 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaFlowRow
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -582,11 +581,10 @@ private fun MobileSearchHistorySection(
             }
         }
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance.
-        // CinemaFlowRow rather than FlowRow — see its KDoc for why the latter cannot be called here.
-        CinemaFlowRow(
-            horizontalSpacing = Spacing.xs,
-            verticalSpacing = Spacing.xs,
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             history.forEach { term ->
                 CinemaAssistChip(
