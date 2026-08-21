@@ -23,8 +23,16 @@ lifecycleViewmodelKtx = "2.8.7"
 lifecycleViewmodelCompose = "2.8.7"
 
 # UI & Compose
-composeBom = "2024.12.01"
-composeMaterial3 = "1.4.0"
+# Ships Compose 1.8.3, which is what Material3 1.4.0 below already dragged the *runtime* classpath
+# to. Keeping the BOM behind that pin is what split the two classpaths: code compiled against the
+# BOM's Compose and ran against Material3's, so anything whose signature changed between them threw
+# NoSuchMethodError on device while building and linting clean (FlowRow, focusRestorer).
+#
+# Do not raise this past 1.8.x while androidx.tv:tv-foundation is still in use: alpha10 is
+# abandoned, and Compose 1.9 removes LazyLayoutPrefetchState.schedulePrefetch, which
+# TvLazyListState calls on every scroll. Migrating TvLazyColumn/TvLazyRow to the plain Compose
+# equivalents is the prerequisite for going further.
+composeBom = "2025.06.01"
 tvFoundation = "1.0.0-alpha10"
 tvMaterial = "1.0.0-alpha10"
 navigationCompose = "2.8.5"
@@ -87,7 +95,9 @@ androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "composeMaterial3" }
+# `strictly` so this wins on the compile classpath too. A plain version loses to the BOM's
+# constraint there while still winning conflict resolution at runtime, which splits the two.
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version = { strictly = "1.4.0" } }
 
 # Navigation
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
