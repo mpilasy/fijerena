@@ -59,6 +59,22 @@ interface MediaProvider {
     ): Result<List<MediaItem>>? = null
 
     /**
+     * Titles related to [itemId] that this provider actually carries, for the two rows on a detail
+     * screen.
+     *
+     * The related titles come from TMDB, which answers in TMDB titles rather than in the user's
+     * catalogue, so an implementation has to match them back against what it holds and drop
+     * whatever it cannot play — a row of titles the provider does not carry is a row of dead ends.
+     * Either list is empty for every reason its row should simply not appear: no TMDB id, no API
+     * key, a failed call, or too few surviving matches to be worth a row.
+     */
+    suspend fun getRelatedTitles(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): RelatedTitles = RelatedTitles()
+
+    /**
      * Number of items matching [query] that search skipped because their category is hidden
      * by the provider's category filters. 0 for providers with no exclusion concept.
      */

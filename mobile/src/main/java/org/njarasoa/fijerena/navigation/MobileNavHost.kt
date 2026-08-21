@@ -432,6 +432,7 @@ fun MobileNavHost(
                 val searchScreen = backStackEntry.toRoute<Screen.Search>()
                 MobileSearchScreen(
                     contentType = searchScreen.contentType,
+                    initialQuery = searchScreen.initialQuery,
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
                         // Navigate based on content type
                         when (contentType) {
@@ -504,6 +505,9 @@ fun MobileNavHost(
                     onBack = {
                         navController.navigateUp()
                     },
+                    onSearchTitle = { title ->
+                        navController.navigate(Screen.Search(ContentType.MOVIES, title))
+                    },
                 )
             }
 
@@ -540,6 +544,9 @@ fun MobileNavHost(
                     },
                     onBack = {
                         navController.navigateUp()
+                    },
+                    onSearchTitle = { title ->
+                        navController.navigate(Screen.Search(ContentType.TV_SHOWS, title))
                     },
                 )
             }

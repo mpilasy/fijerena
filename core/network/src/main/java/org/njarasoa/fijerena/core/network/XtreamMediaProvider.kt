@@ -9,6 +9,8 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
 import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
+import org.njarasoa.fijerena.core.network.tmdb.TitleMatcher
+import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
@@ -24,6 +26,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.PlayableStream
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
+import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 
@@ -505,6 +508,95 @@ class XtreamMediaProvider(
         }
     }
 
+    override suspend fun getRelatedTitles(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): RelatedTitles {
+        if (!tmdb.hasApiKey()) return RelatedTitles()
+        val id = tmdbId?.toIntOrNull() ?: return RelatedTitles()
+        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return RelatedTitles()
+
+        // Two independent endpoints, so ask for both at once rather than paying the round trips
+        // one after the other.
+        val (recommended, similar) =
+            coroutineScope {
+                val recommendedCall = async { fetchRelated(id, contentType, similar = false) }
+                val similarCall = async { fetchRelated(id, contentType, similar = true) }
+                recommendedCall.await() to similarCall.await()
+            }
+
+        val mediaType = getMediaType(contentType)
+        val taken = mutableSetOf<String>()
+        return RelatedTitles(
+            recommended = matchToCatalogue(recommended, itemId, contentType, mediaType, taken),
+            // Runs second and shares [taken], so a title TMDB returns from both endpoints appears
+            // only under the stronger heading instead of filling both rows.
+            similar = matchToCatalogue(similar, itemId, contentType, mediaType, taken),
+        )
+    }
+
+    private suspend fun fetchRelated(
+        tmdbId: Int,
+        contentType: String,
+        similar: Boolean,
+    ): List<TmdbRecommendation> =
+        try {
+            when {
+                contentType == ContentType.MOVIES && similar -> tmdb.getMovieSimilar(tmdbId)
+                contentType == ContentType.MOVIES -> tmdb.getMovieRecommendations(tmdbId)
+                similar -> tmdb.getTvSimilar(tmdbId)
+                else -> tmdb.getTvRecommendations(tmdbId)
+            }.results
+        } catch (e: Exception) {
+            // A title filed under the wrong type 404s here. The rows are a bonus, never an error,
+            // and one endpoint failing must not cost the other its row.
+            Log.w("XtreamMediaProvider", "TMDB ${if (similar) "similar" else "recommendations"} for $contentType $tmdbId: ${e.message}")
+            emptyList()
+        }
+
+    /**
+     * Keeps the TMDB titles this provider can actually play, in the order TMDB ranked them.
+     * [taken] carries normalized titles already claimed — by an earlier row, or by an earlier
+     * entry in this one — so nothing is listed twice.
+     */
+    private suspend fun matchToCatalogue(
+        results: List<TmdbRecommendation>,
+        itemId: String,
+        contentType: String,
+        mediaType: MediaType,
+        taken: MutableSet<String>,
+    ): List<MediaItem> {
+        val matches = mutableListOf<MediaItem>()
+        for (result in results) {
+            val title = result.displayTitle ?: continue
+            val key = TitleMatcher.normalize(title).text
+            // Providers list the same film in several categories and qualities; one row each.
+            if (key.isBlank() || key in taken) continue
+
+            val ftsQuery = buildFtsQuery(title) ?: continue
+            val candidates =
+                try {
+                    repository.searchByFts(contentType, ftsQuery, includeExcluded = false)
+                } catch (e: Exception) {
+                    continue
+                }
+            val hit =
+                candidates.firstOrNull { candidate ->
+                    candidate.streamId.toString() != itemId &&
+                        TitleMatcher.matches(
+                            catalogueTitle = candidate.name,
+                            catalogueYear = candidate.releaseDate?.take(4)?.toIntOrNull(),
+                            tmdbTitle = title,
+                            tmdbYear = result.year,
+                        )
+                } ?: continue
+            taken += key
+            matches += hit.toDomain(mediaType)
+        }
+        return if (matches.size < MIN_RELATED_TITLES) emptyList() else matches
+    }
+
     override suspend fun countExcludedSearchMatches(
         query: String,
         contentType: String,
@@ -573,5 +665,8 @@ class XtreamMediaProvider(
         // long TTL avoids re-hitting Xtream + TMDB every time a detail screen is reopened.
         private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
         private const val MAX_CONCURRENT_TMDB_REQUESTS = 10
+
+        // Below this a row reads as an accident rather than a suggestion, so it is not shown.
+        private const val MIN_RELATED_TITLES = 3
     }
 }

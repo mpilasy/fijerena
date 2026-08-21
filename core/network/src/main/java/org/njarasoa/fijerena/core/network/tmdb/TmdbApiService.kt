@@ -64,6 +64,46 @@ class TmdbApiService(
     suspend fun getTvContentRatings(tvId: Int): TmdbContentRatingsResponse =
         client.get("tv/$tvId/content_ratings") { authenticate() }.body()
 
+    /**
+     * Algorithmic "if you liked this" list for a movie. TMDB also offers `/similar`, which always
+     * returns 20 genre-adjacent rows of noticeably worse quality; `/recommendations` returning
+     * few or zero rows for an obscure title is the better failure.
+     */
+    suspend fun getMovieRecommendations(movieId: Int): TmdbRecommendationsResponse =
+        client
+            .get("movie/$movieId/recommendations") {
+                authenticate()
+                parameter("language", "en-US")
+            }.body()
+
+    /** As [getMovieRecommendations], for a TV series. */
+    suspend fun getTvRecommendations(tvId: Int): TmdbRecommendationsResponse =
+        client
+            .get("tv/$tvId/recommendations") {
+                authenticate()
+                parameter("language", "en-US")
+            }.body()
+
+    /**
+     * Keyword and genre overlap for a movie. Always answers with a full page, and the further down
+     * it goes the looser the connection — noticeably weaker than [getMovieRecommendations], which
+     * is why the two are shown as separate rows rather than merged into one.
+     */
+    suspend fun getMovieSimilar(movieId: Int): TmdbRecommendationsResponse =
+        client
+            .get("movie/$movieId/similar") {
+                authenticate()
+                parameter("language", "en-US")
+            }.body()
+
+    /** As [getMovieSimilar], for a TV series. */
+    suspend fun getTvSimilar(tvId: Int): TmdbRecommendationsResponse =
+        client
+            .get("tv/$tvId/similar") {
+                authenticate()
+                parameter("language", "en-US")
+            }.body()
+
     private fun io.ktor.client.request.HttpRequestBuilder.authenticate() {
         if (isV4Token) {
             header(HttpHeaders.Authorization, "Bearer $apiKey")

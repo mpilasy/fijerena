@@ -66,3 +66,43 @@ data class TmdbContentRatingCountry(
     @SerialName("rating")
     val rating: String? = null,
 )
+
+/**
+ * One page of `/recommendations`. TMDB answers a 404 with a JSON error body rather than a
+ * results array, which lands here as an empty list — the caller treats that the same as
+ * "nothing to show".
+ */
+@Serializable
+data class TmdbRecommendationsResponse(
+    @SerialName("results")
+    val results: List<TmdbRecommendation> = emptyList(),
+)
+
+/** Movies and TV share this shape apart from the title and date fields, which are named differently. */
+@Serializable
+data class TmdbRecommendation(
+    @SerialName("id")
+    val id: Int,
+    @SerialName("title")
+    val title: String? = null,
+    @SerialName("name")
+    val name: String? = null,
+    @SerialName("release_date")
+    val releaseDate: String? = null,
+    @SerialName("first_air_date")
+    val firstAirDate: String? = null,
+    @SerialName("poster_path")
+    val posterPath: String? = null,
+    @SerialName("overview")
+    val overview: String? = null,
+    @SerialName("vote_average")
+    val voteAverage: Double? = null,
+) {
+    /** `title` for movies, `name` for TV; null when TMDB sent neither. */
+    val displayTitle: String?
+        get() = title?.takeIf { it.isNotBlank() } ?: name?.takeIf { it.isNotBlank() }
+
+    /** Release/air year, or null when the date is missing or not a `yyyy-MM-dd` string. */
+    val year: Int?
+        get() = (releaseDate ?: firstAirDate)?.take(4)?.toIntOrNull()
+}

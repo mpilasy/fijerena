@@ -86,9 +86,10 @@ import org.njarasoa.fijerena.core.player.domain.browseTargetFor
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
-import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.elapsedFraction
+import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -1333,7 +1334,7 @@ private fun StreamCard(
                 }
                 item.metadata.rating?.let { rating ->
                     Text(
-                        text = "★ $rating",
+                        text = "★ ${formatRating(rating)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textMedium),
                         maxLines = 1,
