@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -60,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.material3.Border
@@ -73,6 +73,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaFlowRow
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -351,6 +352,14 @@ private fun SearchContent(
     onCategoryLongPress: (CategorySearchResult) -> Unit,
 ) {
     val searchFocusRequester = remember { FocusRequester() }
+
+    // Down from the search field should reach the first recent-search chip. Left to a spatial
+    // focus search it lands on the "Recent Searches" header's clear-all button instead, which sits
+    // between the field and the chips. Hoisted so the field can point at it; only wired up while
+    // the history is actually on screen, since aiming `down` at an unattached requester would stop
+    // Down working at all.
+    val historyFocusRequester = remember { FocusRequester() }
+
     // Local state for text field - manages user input independently
     var localQuery by remember { mutableStateOf(query) }
 
@@ -361,9 +370,19 @@ private fun SearchContent(
         }
     }
 
+    // Results or empty state — show results whenever they exist, even if text field is cleared
+    val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
+    val showsHistory = !hasResults && query.isEmpty() && searchHistory.isNotEmpty()
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Search field
         TvSearchTextField(
+            modifier =
+                if (showsHistory) {
+                    Modifier.focusProperties { down = historyFocusRequester }
+                } else {
+                    Modifier
+                },
             query = localQuery,
             onQueryChange = { localQuery = it },
             onSearchSubmit = { onSearchSubmit(localQuery) },
@@ -378,11 +397,8 @@ private fun SearchContent(
 
         Spacer(modifier = Modifier.height(Spacing.lg))
 
-        // Results or empty state — show results whenever they exist, even if text field is cleared
-        val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
         if (!hasResults && query.isEmpty()) {
             if (searchHistory.isNotEmpty()) {
-                val historyFocusRequester = remember { FocusRequester() }
                 SearchHistorySection(
                     history = searchHistory,
                     onItemClick = { term ->
@@ -459,10 +475,15 @@ private fun SearchHistorySection(
                 },
             )
         }
-        TvLazyRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
+        // and a D-pad user should not have to scroll a rail to reach the last entry. CinemaFlowRow
+        // rather than FlowRow — see its KDoc for why the latter cannot be called here.
+        CinemaFlowRow(
+            horizontalSpacing = Spacing.sm,
+            verticalSpacing = Spacing.sm,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            itemsIndexed(history) { index, term ->
+            history.forEachIndexed { index, term ->
                 Card(
                     onClick = { onItemClick(term) },
                     modifier =
