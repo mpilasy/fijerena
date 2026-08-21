@@ -354,158 +354,36 @@ class EpgIndexer private constructor(
             }
         }
 
-    data class XtreamStreamInfo(
-        val streamId: Int,
-        val name: String,
-        val epgChannelId: String?,
-        val iconUrl: String?,
-    )
-
     /**
-     * Start an incremental ingest of EPG data fetched from the Xtream API.
+     * Delete the EPG sources this app used to create for itself — one `xtream://<providerId>` row
+     * per Xtream provider, from the since-removed Xtream-API ingest — along with whatever they put
+     * in the index.
      *
-     * Creates/upserts an EpgSource with ingestMethod=XTREAM_API and deletes old programmes for
-     * that source, then hands back a session the caller feeds one page at a time. Paging is the
-     * point: the previous single-shot signature took the whole catalogue as one map, so the
-     * caller had to hold every channel's EPG in memory before indexing could start.
-     *
-     * Channels are inserted with IGNORE to avoid overwriting XMLTV channels.
+     * Those rows were never added by a user: the sync worker inserted one for every configured
+     * Xtream provider, where they sat in the sources list next to hand-added ones. Runs on every
+     * start rather than behind a one-shot flag, because it is a scan of a table with a handful of
+     * rows and staying self-healing is worth more than the microseconds. The FTS rebuild is the
+     * only expensive part, so it happens only when something was actually deleted.
      */
-    suspend fun beginXtreamIngest(providerId: Long): XtreamIngestSession =
+    suspend fun purgeXtreamApiSources() =
         withContext(Dispatchers.IO) {
-            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-            val sourceUrl = "xtream://$providerId"
-            val sourceId =
-                writeMutex.withLock {
-                    val existing = sourceDao.getSourceByUrl(sourceUrl, providerId)
-                    existing?.id
-                        ?: sourceDao.insertSource(
-                            EpgSourceEntity(
-                                url = sourceUrl,
-                                label = "Xtream Provider $providerId",
-                                ingestMethod = "XTREAM_API",
-                                providerId = providerId,
-                            ),
-                        )
-                }
-
-            // Clean slate for this source in the index
-            writeMutex.withLock {
-                EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceId(sourceId)
-            }
-
-            XtreamIngestSession(sourceId)
-        }
-
-    /**
-     * One Xtream ingest run. Feed it pages with [ingestChunk], then call [finish] exactly once.
-     * Nothing from a page is retained past its own call.
-     */
-    inner class XtreamIngestSession internal constructor(
-        private val sourceId: Long,
-    ) {
-        private val startedAtMs = System.currentTimeMillis()
-        private var channelCount = 0
-        private var programmeCount = 0
-
-        suspend fun ingestChunk(
-            epgByStreamId: Map<Int, EpgResponse>,
-            streamInfo: Map<Int, XtreamStreamInfo>,
-        ) = withContext(Dispatchers.IO) {
-            if (epgByStreamId.isEmpty()) return@withContext
-
             try {
-                val db = EpgIndexDatabase.getInstance(context)
-                val dao = db.epgIndexDao()
+                val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+                val stale = sourceDao.getAllSourcesOnce().filter { it.url.startsWith("xtream://") }
+                if (stale.isEmpty()) return@withContext
 
-                // Keep database size manageable:
-                // 1. Skip programmes that ended more than 12 hours ago
-                // 2. Skip programmes starting more than 7 days in the future
-                val nowMs = System.currentTimeMillis()
-                val cutoffEpoch = (nowMs / 1000) - 43200
-                val futureLimitEpoch = (nowMs / 1000) + 604800
-
-                val channelEntities = mutableListOf<EpgChannelEntity>()
-                val programmeBatch = mutableListOf<EpgProgrammeEntity>()
-
-                for ((streamId, epgResponse) in epgByStreamId) {
-                    val info = streamInfo[streamId] ?: continue
-                    val channelId = info.epgChannelId ?: streamId.toString()
-
-                    channelEntities.add(
-                        EpgChannelEntity(
-                            xmltvId = channelId,
-                            displayName = info.name,
-                            iconUrl = info.iconUrl,
-                            sourceId = sourceId,
-                        ),
-                    )
-
-                    for (prog in epgResponse.listings) {
-                        if (prog.endTime < cutoffEpoch || prog.startTime > futureLimitEpoch) continue
-                        programmeBatch.add(
-                            EpgProgrammeEntity(
-                                channelId = channelId,
-                                title = prog.title,
-                                titleLowercase = prog.title.lowercase(),
-                                description = prog.description,
-                                startEpoch = prog.startTime,
-                                endEpoch = prog.endTime,
-                                sourceId = sourceId,
-                            ),
-                        )
-                        programmeCount++
-
-                        if (programmeBatch.size >= getBatchSize(context)) {
-                            writeMutex.withLock {
-                                db.withTransaction { dao.insertProgrammes(programmeBatch) }
-                            }
-                            programmeBatch.clear()
-                        }
-                    }
+                val ids = stale.map { it.id }
+                writeMutex.withLock {
+                    EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceIds(ids)
+                    sourceDao.deleteSources(ids)
                 }
+                Log.i(TAG, "purgeXtreamApiSources: removed ${ids.size} self-created source(s)")
 
-                // Flush remaining
-                if (channelEntities.isNotEmpty()) {
-                    writeMutex.withLock {
-                        db.withTransaction { dao.insertChannelsIgnore(channelEntities) }
-                    }
-                    channelCount += channelEntities.size
-                }
-                if (programmeBatch.isNotEmpty()) {
-                    writeMutex.withLock {
-                        db.withTransaction { dao.insertProgrammes(programmeBatch) }
-                    }
-                }
+                rebuildFtsAndUpdateState()
             } catch (e: Exception) {
-                Log.e(TAG, "Xtream EPG chunk ingestion failed: ${e.message}", e)
+                Log.e(TAG, "purgeXtreamApiSources failed: ${e.message}", e)
             }
         }
-
-        suspend fun finish() =
-            withContext(Dispatchers.IO) {
-                try {
-                    val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-                    writeMutex.withLock {
-                        sourceDao.markIngested(
-                            id = sourceId,
-                            timestamp = System.currentTimeMillis(),
-                            channels = channelCount,
-                            programmes = programmeCount,
-                            downloadBytes = 0,
-                            ingestMethod = "XTREAM_API",
-                            ingestionDurationMs = System.currentTimeMillis() - startedAtMs,
-                        )
-                    }
-
-                    lastIngestionStats = IngestionStats(channelCount, programmeCount)
-
-                    rebuildFtsAndUpdateState()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Xtream EPG ingestion finish failed: ${e.message}", e)
-                }
-            }
-    }
 
     /**
      * Rebuild FTS index and update metadata/state from current DB contents.

@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
 import org.njarasoa.fijerena.core.player.network.NetworkModule
 
@@ -49,6 +50,9 @@ class FijerenaApplication :
             // Build the encrypted credential store off the main thread, before the nav host's
             // session-restore effect asks for it from the main dispatcher.
             AccountManager(this@FijerenaApplication).warmUp()
+            // Drop the EPG sources the app used to create for itself — see
+            // EpgIndexer.purgeXtreamApiSources().
+            EpgIndexer.getInstance(this@FijerenaApplication).purgeXtreamApiSources()
         }
     }
 
