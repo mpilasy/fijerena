@@ -370,7 +370,6 @@ fun TvNavHost(
                     val searchScreen = backStackEntry.toRoute<Screen.Search>()
                     SearchScreen(
                         contentType = searchScreen.contentType,
-                        initialQuery = searchScreen.initialQuery,
                         onStreamSelected = { itemId, streamName, categoryId, streamContentType ->
                             // Navigate based on content type
                             when (streamContentType) {
@@ -445,8 +444,14 @@ fun TvNavHost(
                         onBack = {
                             navController.navigateUp()
                         },
-                        onSearchTitle = { title ->
-                            navController.navigate(Screen.Search(ContentType.MOVIES, title))
+                        onRelatedTitleSelected = { related ->
+                            navController.navigate(
+                                Screen.MovieDetails(
+                                    movieId = related.id,
+                                    movieName = related.name,
+                                    categoryId = related.categoryId,
+                                ),
+                            )
                         },
                     )
                 }
@@ -485,8 +490,14 @@ fun TvNavHost(
                         onBack = {
                             navController.navigateUp()
                         },
-                        onSearchTitle = { title ->
-                            navController.navigate(Screen.Search(ContentType.TV_SHOWS, title))
+                        onRelatedTitleSelected = { related ->
+                            navController.navigate(
+                                Screen.EpisodeSelection(
+                                    seriesId = related.id,
+                                    seriesName = related.name,
+                                    categoryId = related.categoryId,
+                                ),
+                            )
                         },
                     )
                 }

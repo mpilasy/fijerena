@@ -592,7 +592,9 @@ class XtreamMediaProvider(
                         )
                 } ?: continue
             taken += key
-            matches += hit.toDomain(mediaType)
+            // The card shows this name and the screen it opens is titled with it, so the provider's
+            // "NF - " / "4K-AMZ - " tags come off here rather than at either call site.
+            matches += hit.toDomain(mediaType).let { it.copy(name = TitleMatcher.stripProviderPrefix(it.name)) }
         }
         return if (matches.size < MIN_RELATED_TITLES) emptyList() else matches
     }

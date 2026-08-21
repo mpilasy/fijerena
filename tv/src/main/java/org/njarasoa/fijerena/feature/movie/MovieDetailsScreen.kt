@@ -50,6 +50,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.channelLabel
@@ -101,7 +102,7 @@ fun MovieDetailsScreen(
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
-    onSearchTitle: (query: String) -> Unit = {},
+    onRelatedTitleSelected: (MediaItem) -> Unit = {},
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -143,7 +144,7 @@ fun MovieDetailsScreen(
                     onToggleFavorite = { viewModel.toggleFavorite(state.movieDetail.name.ifEmpty { movieName }) },
                     onRefresh = { viewModel.refreshMovieInfo() },
                     onBack = onBack,
-                    onSearchTitle = onSearchTitle,
+                    onRelatedTitleSelected = onRelatedTitleSelected,
                 )
             }
         }
@@ -165,7 +166,7 @@ private fun MovieDetailsContent(
     onToggleFavorite: () -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
-    onSearchTitle: (query: String) -> Unit,
+    onRelatedTitleSelected: (MediaItem) -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -558,13 +559,13 @@ private fun MovieDetailsContent(
                     RelatedTitlesRow(
                         title = stringResource(R.string.details_more_like_this),
                         items = relatedTitles.recommended,
-                        onItemClick = { onSearchTitle(it.name) },
+                        onItemClick = onRelatedTitleSelected,
                         modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
                     )
                     RelatedTitlesRow(
                         title = stringResource(R.string.details_similar_titles),
                         items = relatedTitles.similar,
-                        onItemClick = { onSearchTitle(it.name) },
+                        onItemClick = onRelatedTitleSelected,
                         modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
                     )
                 } // GlassPanel Column

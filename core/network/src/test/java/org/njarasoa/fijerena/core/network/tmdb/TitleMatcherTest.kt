@@ -117,4 +117,34 @@ class TitleMatcherTest {
         assertFalse(TitleMatcher.matches("", null, "", null))
         assertFalse(TitleMatcher.matches("[VIP]", null, "Dune", 2021))
     }
+
+    @Test
+    fun `strips a provider prefix for display without touching the rest`() {
+        assertEquals("The Title", TitleMatcher.stripProviderPrefix("NF - The Title"))
+        assertEquals("The Title", TitleMatcher.stripProviderPrefix("EN - The Title"))
+        assertEquals("Dune: Part Two", TitleMatcher.stripProviderPrefix("4K - Dune: Part Two"))
+        assertEquals("Vengeance (2022)", TitleMatcher.stripProviderPrefix("UNV - Vengeance (2022)"))
+    }
+
+    @Test
+    fun `strips the compound tags real catalogues use`() {
+        assertEquals("Vengeance (2026)", TitleMatcher.stripProviderPrefix("4K-AMZ - Vengeance (2026)"))
+        assertEquals("Fistful of Vengeance (2022)", TitleMatcher.stripProviderPrefix("KU-S - Fistful of Vengeance (2022)"))
+        assertEquals("Gundam: Requiem for Vengeance", TitleMatcher.stripProviderPrefix("AR-SUBS - Gundam: Requiem for Vengeance"))
+    }
+
+    @Test
+    fun `display strip keeps a title that only looks like a tag`() {
+        // "Alien" is five characters, past the cap, so the spaced dash is not read as a separator.
+        assertEquals("Alien - Covenant", TitleMatcher.stripProviderPrefix("Alien - Covenant"))
+        assertEquals("X-Men", TitleMatcher.stripProviderPrefix("X-Men"))
+        assertEquals("Dune: Part Two", TitleMatcher.stripProviderPrefix("Dune: Part Two"))
+    }
+
+    @Test
+    fun `display strip never returns nothing`() {
+        // A name that is only a tag would otherwise leave an empty card label.
+        assertEquals("NF -", TitleMatcher.stripProviderPrefix("NF -"))
+        assertEquals("[VIP]", TitleMatcher.stripProviderPrefix("[VIP]"))
+    }
 }

@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.resumeProgress
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
@@ -78,7 +79,7 @@ fun MobileEpisodeSelectionScreen(
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
-    onSearchTitle: (query: String) -> Unit = {},
+    onRelatedTitleSelected: (MediaItem) -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: SeriesDetailsViewModel =
@@ -212,7 +213,7 @@ fun MobileEpisodeSelectionScreen(
                                 selectedEpisode = episode
                             },
                             onCategorySelected = { onCategorySelected(categoryId) },
-                            onSearchTitle = onSearchTitle,
+                            onRelatedTitleSelected = onRelatedTitleSelected,
                         )
                     }
                 }
@@ -231,7 +232,7 @@ private fun EpisodeListContent(
     categoryName: String?,
     onEpisodeSelected: (DomainEpisodeItem) -> Unit,
     onCategorySelected: () -> Unit,
-    onSearchTitle: (query: String) -> Unit,
+    onRelatedTitleSelected: (MediaItem) -> Unit,
 ) {
     val context = LocalContext.current
     val sortedSeasons =
@@ -480,7 +481,7 @@ private fun EpisodeListContent(
                     RelatedTitlesRow(
                         title = stringResource(R.string.details_more_like_this),
                         items = relatedTitles.recommended,
-                        onItemClick = { onSearchTitle(it.name) },
+                        onItemClick = onRelatedTitleSelected,
                         modifier = Modifier.padding(top = CinemaSpacing.md),
                     )
                 }
@@ -490,7 +491,7 @@ private fun EpisodeListContent(
                     RelatedTitlesRow(
                         title = stringResource(R.string.details_similar_titles),
                         items = relatedTitles.similar,
-                        onItemClick = { onSearchTitle(it.name) },
+                        onItemClick = onRelatedTitleSelected,
                         modifier = Modifier.padding(top = CinemaSpacing.md),
                     )
                 }
