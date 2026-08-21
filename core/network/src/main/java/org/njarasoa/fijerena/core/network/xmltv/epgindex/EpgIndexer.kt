@@ -3,6 +3,7 @@ import android.content.Context
 import android.util.Log
 import androidx.core.content.edit
 import androidx.room.withTransaction
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +57,9 @@ class EpgIndexer private constructor(
         private const val TAG = "EpgIndexer"
         const val BATCH_SIZE_MOBILE = 500
         const val BATCH_SIZE_TV = 5000
+
+        /** Free pages moved per `incremental_vacuum` batch — about 2 MB at this DB's page size. */
+        private const val VACUUM_CHUNK_PAGES = 2000
 
         private fun getBatchSize(context: Context): Int {
             val isTv = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
@@ -526,7 +530,7 @@ class EpgIndexer private constructor(
                     _state.value = EpgIndexState.Optimizing(currentChannelCount, currentProgrammeCount)
 
                     // Checkpoint WAL to reduce contention during rebuild
-                    sdb.query("PRAGMA wal_checkpoint(TRUNCATE)").close()
+                    sdb.execPragma("PRAGMA wal_checkpoint(TRUNCATE)")
 
                     // Optimize rebuild speed
                     sdb.execSQL("PRAGMA synchronous = OFF")
@@ -770,14 +774,42 @@ class EpgIndexer private constructor(
 
     fun incrementalVacuum() {
         try {
-            val db = EpgIndexDatabase.getInstance(context)
-            // Use query() instead of execSQL() — Android's SQLite wrapper rejects
-            // execSQL for PRAGMAs that may return results.
-            db.openHelper.writableDatabase
-                .query("PRAGMA incremental_vacuum")
-                .close()
+            val sdb = EpgIndexDatabase.getInstance(context).openHelper.writableDatabase
+            var remaining = freelistCount(sdb)
+            val started = remaining
+            // One unbounded `PRAGMA incremental_vacuum` would move every free page inside a single
+            // transaction — on a database that has accumulated over a million of them that is a
+            // multi-minute write with the DB locked throughout. Walking it in chunks gives readers
+            // a gap between each batch and keeps any one transaction small.
+            while (remaining > 0) {
+                sdb.execPragma("PRAGMA incremental_vacuum($VACUUM_CHUNK_PAGES)")
+                val left = freelistCount(sdb)
+                // A chunk that frees nothing means the rest cannot be reclaimed right now (pages
+                // pinned by an open read snapshot, or auto_vacuum off on an older file). Stop
+                // rather than spin.
+                if (left >= remaining) break
+                remaining = left
+            }
+            if (started > 0) {
+                Log.i(TAG, "Incremental vacuum reclaimed ${started - remaining} of $started free pages")
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Incremental vacuum failed: ${e.message}", e)
         }
     }
+
+    private fun freelistCount(sdb: SupportSQLiteDatabase): Long =
+        sdb.query("PRAGMA freelist_count").use { if (it.moveToFirst()) it.getLong(0) else 0L }
+}
+
+/**
+ * Runs a PRAGMA that Requery refuses through `execSQL` because it can return rows.
+ *
+ * [SupportSQLiteDatabase.query] alone is not enough: Android's cursors are lazy, so a statement
+ * issued that way never executes unless something fills the cursor window. Closing the cursor
+ * without stepping it silently discards the PRAGMA — which is how `incremental_vacuum` came to be
+ * called after every purge and every ingest while the EPG database sat at 87% free pages.
+ */
+internal fun SupportSQLiteDatabase.execPragma(sql: String) {
+    query(sql).use { it.moveToFirst() }
 }
