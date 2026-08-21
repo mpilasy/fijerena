@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.channelLabel
@@ -55,7 +56,7 @@ fun MobileMovieDetailsScreen(
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
-    onSearchTitle: (query: String) -> Unit = {},
+    onRelatedTitleSelected: (MediaItem) -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: MovieDetailsViewModel =
@@ -131,7 +132,7 @@ fun MobileMovieDetailsScreen(
                             categoryName = shown.categoryName,
                             onPlayMovie = onPlayMovie,
                             onCategorySelected = { onCategorySelected(categoryId) },
-                            onSearchTitle = onSearchTitle,
+                            onRelatedTitleSelected = onRelatedTitleSelected,
                         )
                     }
                 }
@@ -154,7 +155,7 @@ private fun MovieDetailsContent(
     categoryName: String?,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: () -> Unit,
-    onSearchTitle: (query: String) -> Unit,
+    onRelatedTitleSelected: (MediaItem) -> Unit,
 ) {
     val extension = movieDetail.extension ?: "mp4"
     val scrollState = rememberScrollState()
@@ -442,13 +443,13 @@ private fun MovieDetailsContent(
         RelatedTitlesRow(
             title = stringResource(R.string.details_more_like_this),
             items = relatedTitles.recommended,
-            onItemClick = { onSearchTitle(it.name) },
+            onItemClick = onRelatedTitleSelected,
             modifier = Modifier.padding(top = CinemaSpacing.lg),
         )
         RelatedTitlesRow(
             title = stringResource(R.string.details_similar_titles),
             items = relatedTitles.similar,
-            onItemClick = { onSearchTitle(it.name) },
+            onItemClick = onRelatedTitleSelected,
             modifier = Modifier.padding(top = CinemaSpacing.lg),
         )
     }

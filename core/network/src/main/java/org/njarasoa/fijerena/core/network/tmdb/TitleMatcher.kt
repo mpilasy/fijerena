@@ -23,15 +23,23 @@ data class NormalizedTitle(
  */
 object TitleMatcher {
     /** Leading junk providers prepend, e.g. `[VIP] `, `(FR) `, `|EN| `. */
-    private val LEADING_BRACKET = Regex("""^\s*[\[(|{][^\])|}]{0,12}[\])|}]\s*""")
+    private val LEADING_BRACKET =
+        Regex("""^\s*[\[(|{][^\])|}]{0,12}[\])|}]\s*""", RegexOption.IGNORE_CASE)
 
     /**
-     * Language/quality tags providers put before a spaced dash, e.g. `EN - `, `4K - `. The space is
-     * required: without it "X-Men" loses its "X", and a colon is never a separator here because
+     * One segment of a provider tag: short enough not to be a word, or a known label. Capped at
+     * four characters so a real title survives — "Alien - Covenant" must keep its "Alien".
+     */
+    private const val TAG_SEGMENT = """(?:[a-z0-9]{1,4}|multi|vostfr|vost|subs|vip)"""
+
+    /**
+     * Language and quality tags providers put before a spaced dash: `EN - `, `4K - `, and stacked
+     * forms real catalogues use — `4K-AMZ - `, `AR-SUBS - `, `KU-S - `. The space around the dash
+     * is required: without it "X-Men" loses its "X", and a colon is never a separator here because
      * titles use one ("Dune: Part Two").
      */
     private val LEADING_TAG =
-        Regex("""^\s*([a-z]{2,3}|4k|uhd|fhd|vip|multi|vostfr|vost)\s+-\s+""")
+        Regex("""^\s*$TAG_SEGMENT(?:-$TAG_SEGMENT)*\s+-\s+""", RegexOption.IGNORE_CASE)
 
     /** An unambiguous year at the end: `Dune (2021)`, `Dune [2021]`. */
     private val BRACKETED_YEAR = Regex("""\s*[(\[]((?:19|20)\d{2})[)\]]\s*$""")
@@ -45,16 +53,9 @@ object TitleMatcher {
     fun normalize(raw: String): NormalizedTitle {
         var text =
             Normalizer
-                .normalize(raw, Normalizer.Form.NFD)
+                .normalize(stripProviderPrefix(raw), Normalizer.Form.NFD)
                 .replace(COMBINING_MARKS, "")
                 .lowercase()
-
-        // Providers stack these, so keep stripping until nothing leading is left: "EN - 4K - Dune".
-        while (true) {
-            val stripped = text.replace(LEADING_BRACKET, "").replace(LEADING_TAG, "")
-            if (stripped == text) break
-            text = stripped
-        }
 
         // Years come out before punctuation does, while "(2021)" is still recognisable as one.
         var year = BRACKETED_YEAR.find(text)?.groupValues?.get(1)?.toIntOrNull()
@@ -77,6 +78,22 @@ object TitleMatcher {
     }
 
     private fun clean(text: String): String = text.replace(NON_ALPHANUMERIC, " ").trim()
+
+    /**
+     * [raw] with the provider's leading tags removed and nothing else touched — case, punctuation
+     * and any trailing year all survive, because this is what gets shown to the viewer and carried
+     * into the screen it opens. "NF - The Title" becomes "The Title".
+     */
+    fun stripProviderPrefix(raw: String): String {
+        var text = raw.trim()
+        // Providers stack these, so keep stripping until nothing leading is left: "EN - 4K - Dune".
+        while (true) {
+            val stripped = text.replace(LEADING_BRACKET, "").replace(LEADING_TAG, "").trim()
+            if (stripped == text || stripped.isEmpty()) break
+            text = stripped
+        }
+        return text.ifBlank { raw.trim() }
+    }
 
     /**
      * True when [catalogueTitle] is the same work as [tmdbTitle]. Titles must be equal once

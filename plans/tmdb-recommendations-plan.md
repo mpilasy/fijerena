@@ -7,9 +7,10 @@
 Phase 1 landed as `MediaProvider.getRecommendations`, implemented only in `XtreamMediaProvider`
 (where the TMDB client and the FTS index already sit) and defaulting to an empty list everywhere
 else — Phase 2 drops into the same slot without touching the UI. Matching lives in
-`core/network/.../tmdb/TitleMatcher.kt`. Tapping a card opens search pre-filled with the title
-rather than navigating into the item's detail screen, which is why `Screen.Search` grew an
-`initialQuery`.
+`core/network/.../tmdb/TitleMatcher.kt`. Tapping a card opens the matched item's own detail screen
+directly — the row already carries its real provider id and category, so nothing has to be
+re-resolved. Card labels come through `TitleMatcher.stripProviderPrefix`, so "NF - The Title" reads
+as "The Title" both on the card and as the title of the screen it opens.
 
 Against the endpoint-choice section below, `/similar` was added afterwards as a **second row**
 rather than as filler for the first. The objection there was to padding one row with weaker
