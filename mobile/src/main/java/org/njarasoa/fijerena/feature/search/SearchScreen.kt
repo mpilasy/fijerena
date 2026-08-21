@@ -75,6 +75,7 @@ fun MobileSearchScreen(
     onStreamSelected: (itemId: String, itemName: String, categoryId: String, contentType: String) -> Unit,
     onCategorySelected: (categoryId: String, contentType: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
+    initialQuery: String? = null,
     viewModel: SearchViewModel =
         viewModel(
             factory =
@@ -126,6 +127,14 @@ fun MobileSearchScreen(
         val vmQuery = (viewModel.uiState.value as? SearchViewModel.UiState.Success)?.query ?: ""
         if (vmQuery.isNotEmpty() && searchQuery.isEmpty()) {
             searchQuery = vmQuery
+        }
+    }
+
+    // Arrived from a "more like this" card: fill the field with its title and run the search.
+    LaunchedEffect(initialQuery) {
+        if (!initialQuery.isNullOrBlank()) {
+            searchQuery = initialQuery
+            viewModel.performSearch(initialQuery)
         }
     }
 

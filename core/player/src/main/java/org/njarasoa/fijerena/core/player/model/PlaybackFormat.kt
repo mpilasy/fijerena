@@ -91,6 +91,18 @@ fun formatDuration(duration: String): String {
     }
 }
 
+/**
+ * Trims a star rating to one decimal place. Providers pass TMDB's vote average straight through,
+ * which carries three decimals ("6.666") and reads as false precision on a 10-point scale.
+ *
+ * Returns the input unchanged when it is not a bare number — some providers send the rating
+ * combined with a certificate, e.g. "7.9 | PG-13", and that must not be mangled into a number.
+ */
+fun formatRating(rating: String): String {
+    val value = rating.trim().toDoubleOrNull() ?: return rating
+    return "%.1f".format(value)
+}
+
 /** Resolution bucket label, e.g. "4K", "1080p", "720p". */
 fun resolutionLabel(
     width: Int,

@@ -21,9 +21,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.channelLabel
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
@@ -37,6 +39,7 @@ import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -52,6 +55,7 @@ fun MobileMovieDetailsScreen(
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
+    onSearchTitle: (query: String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: MovieDetailsViewModel =
@@ -62,6 +66,7 @@ fun MobileMovieDetailsScreen(
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
     // Retained across a refresh so pulling down leaves the details on screen under the spinner,
@@ -118,6 +123,7 @@ fun MobileMovieDetailsScreen(
                     ) {
                         MovieDetailsContent(
                             movieDetail = shown.movieDetail,
+                            relatedTitles = relatedTitles,
                             movieId = movieId,
                             movieName = movieName,
                             resumePositionMs = shown.resumePositionMs,
@@ -125,6 +131,7 @@ fun MobileMovieDetailsScreen(
                             categoryName = shown.categoryName,
                             onPlayMovie = onPlayMovie,
                             onCategorySelected = { onCategorySelected(categoryId) },
+                            onSearchTitle = onSearchTitle,
                         )
                     }
                 }
@@ -139,6 +146,7 @@ fun MobileMovieDetailsScreen(
 @Composable
 private fun MovieDetailsContent(
     movieDetail: MovieDetail,
+    relatedTitles: RelatedTitles,
     movieId: String,
     movieName: String,
     resumePositionMs: Long,
@@ -146,6 +154,7 @@ private fun MovieDetailsContent(
     categoryName: String?,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: () -> Unit,
+    onSearchTitle: (query: String) -> Unit,
 ) {
     val extension = movieDetail.extension ?: "mp4"
     val scrollState = rememberScrollState()
@@ -219,7 +228,7 @@ private fun MovieDetailsContent(
                 }
                 movieDetail.metadata.rating?.let { rating ->
                     Text(
-                        text = "★ $rating",
+                        text = "★ ${formatRating(rating)}",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.secondary,
                     )
@@ -427,6 +436,21 @@ private fun MovieDetailsContent(
                 Text(stringResource(R.string.details_category_format, categoryName))
             }
         }
+
+        // Last thing on the screen, below the technical rows and the category: the rows are a
+        // place to go next, so they sit after everything about this title.
+        RelatedTitlesRow(
+            title = stringResource(R.string.details_more_like_this),
+            items = relatedTitles.recommended,
+            onItemClick = { onSearchTitle(it.name) },
+            modifier = Modifier.padding(top = CinemaSpacing.lg),
+        )
+        RelatedTitlesRow(
+            title = stringResource(R.string.details_similar_titles),
+            items = relatedTitles.similar,
+            onItemClick = { onSearchTitle(it.name) },
+            modifier = Modifier.padding(top = CinemaSpacing.lg),
+        )
     }
     }
 }

@@ -128,6 +128,7 @@ fun SearchScreen(
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, contentType: String) -> Unit,
     onCategorySelected: (categoryId: String, contentType: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
+    initialQuery: String? = null,
 ) {
     val context = LocalContext.current
     val viewModel: SearchViewModel =
@@ -142,6 +143,13 @@ fun SearchScreen(
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
+
+    // Arrived from a "more like this" card: run its title straight away. The text field picks the
+    // term up from the ViewModel's state on its own.
+    LaunchedEffect(initialQuery) {
+        if (!initialQuery.isNullOrBlank()) viewModel.performSearch(initialQuery)
+    }
+
     val configuration = LocalConfiguration.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }

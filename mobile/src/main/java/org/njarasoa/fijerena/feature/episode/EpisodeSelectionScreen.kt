@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.resumeProgress
+import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
@@ -46,6 +47,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -56,6 +58,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
+import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -75,6 +78,7 @@ fun MobileEpisodeSelectionScreen(
     onEpisodeSelected: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
+    onSearchTitle: (query: String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: SeriesDetailsViewModel =
@@ -85,6 +89,7 @@ fun MobileEpisodeSelectionScreen(
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? SeriesDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
     // Retained across a background refresh so the list stays visible with just a pull-spinner
@@ -198,6 +203,7 @@ fun MobileEpisodeSelectionScreen(
                     ) {
                         EpisodeListContent(
                             seriesDetail = displaySeriesDetail,
+                            relatedTitles = relatedTitles,
                             mediaRepository = viewModel.mediaRepository!!,
                             resumeEpisodeId = resumeEpisodeId,
                             onResumeEpisodeDerived = { resumeEpisodeId = it },
@@ -206,6 +212,7 @@ fun MobileEpisodeSelectionScreen(
                                 selectedEpisode = episode
                             },
                             onCategorySelected = { onCategorySelected(categoryId) },
+                            onSearchTitle = onSearchTitle,
                         )
                     }
                 }
@@ -217,12 +224,14 @@ fun MobileEpisodeSelectionScreen(
 @Composable
 private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
+    relatedTitles: RelatedTitles,
     mediaRepository: MediaRepository,
     resumeEpisodeId: String? = null,
     onResumeEpisodeDerived: (String) -> Unit,
     categoryName: String?,
     onEpisodeSelected: (DomainEpisodeItem) -> Unit,
     onCategorySelected: () -> Unit,
+    onSearchTitle: (query: String) -> Unit,
 ) {
     val context = LocalContext.current
     val sortedSeasons =
@@ -347,7 +356,7 @@ private fun EpisodeListContent(
             remember(seriesDetail) {
                 listOfNotNull(
                     seriesDetail.metadata.genre,
-                    seriesDetail.metadata.rating?.let { context.getString(R.string.series_rating_format, it) },
+                    seriesDetail.metadata.rating?.let { context.getString(R.string.series_rating_format, formatRating(it)) },
                     seriesDetail.metadata.contentRating,
                     seriesDetail.metadata.tmdbId?.let { context.getString(R.string.details_tmdb_format, it) },
                 )
@@ -463,6 +472,29 @@ private fun EpisodeListContent(
                     }
                 }
             }
+
+            // Last rows of the list rather than below it: the list fills the screen, so anything
+            // placed after it would sit off screen.
+            if (relatedTitles.recommended.isNotEmpty()) {
+                item(key = "recommended", contentType = "related") {
+                    RelatedTitlesRow(
+                        title = stringResource(R.string.details_more_like_this),
+                        items = relatedTitles.recommended,
+                        onItemClick = { onSearchTitle(it.name) },
+                        modifier = Modifier.padding(top = CinemaSpacing.md),
+                    )
+                }
+            }
+            if (relatedTitles.similar.isNotEmpty()) {
+                item(key = "similar", contentType = "related") {
+                    RelatedTitlesRow(
+                        title = stringResource(R.string.details_similar_titles),
+                        items = relatedTitles.similar,
+                        onItemClick = { onSearchTitle(it.name) },
+                        modifier = Modifier.padding(top = CinemaSpacing.md),
+                    )
+                }
+            }
         }
     }
 }
@@ -570,7 +602,7 @@ private fun EpisodeDetailContent(
             ) {
                 rating?.let {
                     Text(
-                        text = "★ $it",
+                        text = "★ ${formatRating(it)}",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.secondary,
                     )

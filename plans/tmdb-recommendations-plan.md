@@ -1,8 +1,22 @@
 # TMDB "More Like This" — Plan
 
-**Status:** proposed, not started
+**Status:** Phase 1 (Xtream) built. Phase 0 item 1 and Phase 2 not started.
 **Scope:** every provider *except* Jellyfin — Xtream, Remote M3U, Local files, SMB
 **Date:** 2026-08-21
+
+Phase 1 landed as `MediaProvider.getRecommendations`, implemented only in `XtreamMediaProvider`
+(where the TMDB client and the FTS index already sit) and defaulting to an empty list everywhere
+else — Phase 2 drops into the same slot without touching the UI. Matching lives in
+`core/network/.../tmdb/TitleMatcher.kt`. Tapping a card opens search pre-filled with the title
+rather than navigating into the item's detail screen, which is why `Screen.Search` grew an
+`initialQuery`.
+
+Against the endpoint-choice section below, `/similar` was added afterwards as a **second row**
+rather than as filler for the first. The objection there was to padding one row with weaker
+results; two separately-labelled rows do not hide which source a title came from. Both endpoints
+are fetched concurrently and returned as `RelatedTitles(recommended, similar)`; the similar row is
+matched second and skips anything the recommendations row already claimed, so a title TMDB returns
+from both endpoints is listed once.
 
 ---
 

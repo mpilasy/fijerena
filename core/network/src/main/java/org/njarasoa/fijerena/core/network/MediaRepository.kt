@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.PlayableStream
@@ -283,6 +284,13 @@ class MediaRepository(
         contentType: String,
         includeExcluded: Boolean = false,
     ): kotlin.Result<List<MediaItem>>? = provider?.search(query, contentType, includeExcluded)
+
+    /** See [MediaProvider.getRelatedTitles]. Either list is empty when its row should not appear. */
+    suspend fun getRelatedTitles(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): RelatedTitles = provider?.getRelatedTitles(itemId, tmdbId, contentType) ?: RelatedTitles()
 
     /** Matches for [query] that search skipped because their category is hidden by category filters. */
     suspend fun countExcludedSearchMatches(

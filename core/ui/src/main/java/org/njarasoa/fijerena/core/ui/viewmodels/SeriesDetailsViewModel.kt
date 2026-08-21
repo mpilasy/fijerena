@@ -5,11 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 
@@ -51,6 +53,17 @@ class SeriesDetailsViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
+    /**
+     * Related-title rows for the series on screen, empty until they resolve and empty when there
+     * is nothing to show. Deliberately separate from [uiState]: the rows are a bonus that must
+     * never delay the detail screen or fail it.
+     */
+    private val _relatedTitles = MutableStateFlow(RelatedTitles())
+    val relatedTitles: StateFlow<RelatedTitles> = _relatedTitles.asStateFlow()
+
+    private var relatedTitlesJob: Job? = null
+    private var relatedTitlesTmdbId: String? = null
+
     init {
         loadSeriesInfo()
     }
@@ -71,6 +84,10 @@ class SeriesDetailsViewModel(
 
     fun loadSeriesInfo(useCache: Boolean = true) {
         viewModelScope.launch(Dispatchers.IO) {
+            // A load already in flight belongs to the previous series or provider — drop it.
+            relatedTitlesJob?.cancel()
+            relatedTitlesJob = null
+            _relatedTitles.value = RelatedTitles()
             try {
                 val repo = ensureRepo()
 
@@ -88,6 +105,7 @@ class SeriesDetailsViewModel(
                             isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
                             categoryName = categoryNameOrNull(repo),
                         )
+                    loadRelatedTitles(cached)
                 } else {
                     _uiState.value = UiState.Loading
                 }
@@ -101,6 +119,8 @@ class SeriesDetailsViewModel(
                                 isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
                                 categoryName = categoryNameOrNull(repo),
                             )
+
+                        loadRelatedTitles(detail)
                     },
                     // A failed refresh must not blank a screen already drawn from the cache — the
                     // episodes on it are still playable.
@@ -110,6 +130,24 @@ class SeriesDetailsViewModel(
                 reportFailure(e)
             }
         }
+    }
+
+    /**
+     * The cached detail draws first and the fetched one follows, so this runs twice per load with
+     * the same TMDB id — fetch the rows only for the first of them.
+     */
+    private fun loadRelatedTitles(detail: SeriesDetail) {
+        val tmdbId = detail.metadata.tmdbId
+        if (relatedTitlesJob != null && tmdbId == relatedTitlesTmdbId) return
+        relatedTitlesJob?.cancel()
+        relatedTitlesTmdbId = tmdbId
+        relatedTitlesJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                _relatedTitles.value =
+                    runCatching {
+                        ensureRepo().getRelatedTitles(seriesId, tmdbId, "TV_SHOWS")
+                    }.getOrDefault(RelatedTitles())
+            }
     }
 
     private suspend fun categoryNameOrNull(repo: MediaRepository): String? =

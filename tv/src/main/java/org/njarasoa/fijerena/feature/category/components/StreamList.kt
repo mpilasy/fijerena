@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
+import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
@@ -469,7 +470,7 @@ private fun StreamItem(
                     // Rating (e.g. "7.9 | PG-13")
                     item.metadata.rating?.let { rating ->
                         Text(
-                            text = "★ $rating",
+                            text = "★ ${formatRating(rating)}",
                             style = scaledStyles.bodySmall,
                             color = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
                             maxLines = 1,

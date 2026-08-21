@@ -51,9 +51,11 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
+import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.channelLabel
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
@@ -70,6 +72,7 @@ import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -98,6 +101,7 @@ fun MovieDetailsScreen(
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
+    onSearchTitle: (query: String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -110,6 +114,7 @@ fun MovieDetailsScreen(
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
 
     // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
@@ -126,6 +131,7 @@ fun MovieDetailsScreen(
             is MovieDetailsViewModel.UiState.Success -> {
                 MovieDetailsContent(
                     movieDetail = state.movieDetail,
+                    relatedTitles = relatedTitles,
                     movieId = movieId,
                     movieName = movieName,
                     isFavorite = state.isFavorite,
@@ -137,6 +143,7 @@ fun MovieDetailsScreen(
                     onToggleFavorite = { viewModel.toggleFavorite(state.movieDetail.name.ifEmpty { movieName }) },
                     onRefresh = { viewModel.refreshMovieInfo() },
                     onBack = onBack,
+                    onSearchTitle = onSearchTitle,
                 )
             }
         }
@@ -146,6 +153,7 @@ fun MovieDetailsScreen(
 @Composable
 private fun MovieDetailsContent(
     movieDetail: MovieDetail,
+    relatedTitles: RelatedTitles,
     movieId: String,
     movieName: String,
     isFavorite: Boolean,
@@ -157,6 +165,7 @@ private fun MovieDetailsContent(
     onToggleFavorite: () -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
+    onSearchTitle: (query: String) -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -321,7 +330,7 @@ private fun MovieDetailsContent(
                         }
                         movieDetail.metadata.rating?.let { rating ->
                             Text(
-                                text = "★ $rating",
+                                text = "★ ${formatRating(rating)}",
                                 style = scaledStyles.titleMedium,
                                 color = CinemaAccent,
                             )
@@ -543,6 +552,21 @@ private fun MovieDetailsContent(
                             text = stringResource(R.string.details_category_format, categoryName),
                         )
                     }
+
+                    // Last thing on the screen, below the technical rows and the category: the
+                    // rows are a place to go next, so they sit after everything about this title.
+                    RelatedTitlesRow(
+                        title = stringResource(R.string.details_more_like_this),
+                        items = relatedTitles.recommended,
+                        onItemClick = { onSearchTitle(it.name) },
+                        modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
+                    )
+                    RelatedTitlesRow(
+                        title = stringResource(R.string.details_similar_titles),
+                        items = relatedTitles.similar,
+                        onItemClick = { onSearchTitle(it.name) },
+                        modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
+                    )
                 } // GlassPanel Column
             } // GlassPanel
         } // Outer Row (poster + metadata)

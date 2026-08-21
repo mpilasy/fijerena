@@ -125,10 +125,13 @@ sealed interface Screen {
      * Allows users to search across all categories for a specific content type.
      *
      * @param contentType The type of content to search (LIVE_TV, MOVIES, TV_SHOWS)
+     * @param initialQuery Search term to run on arrival, e.g. a title tapped in a
+     *   "more like this" row. Null when the user opened search themselves.
      */
     @Serializable
     data class Search(
         val contentType: String,
+        val initialQuery: String? = null,
     ) : Screen
 
     /**
