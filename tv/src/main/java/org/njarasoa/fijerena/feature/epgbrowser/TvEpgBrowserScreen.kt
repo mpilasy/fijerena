@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -58,7 +59,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
@@ -79,6 +79,7 @@ import org.njarasoa.fijerena.core.network.xmltv.formatCount
 import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.ui.components.CinemaFlowRow
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
@@ -319,10 +320,20 @@ private fun EpgBrowserContent(
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     val firstItemFocusRequester = remember { FocusRequester() }
+
+    // Down from the search field should reach the first recent-search chip. Left to a spatial
+    // focus search it lands on the "Recent Searches" header's clear-all button instead, which sits
+    // between the field and the chips. Only wired up while the history is actually on screen —
+    // aiming `down` at an unattached requester would stop Down working at all.
+    val historyFocusRequester = remember { FocusRequester() }
     var localQuery by remember { mutableStateOf("") }
     var matchedOnly by remember { mutableStateOf(true) }
     val scale = LocalUiScale.current
     val hasResults = (uiState as? EpgBrowserViewModel.UiState.Results)?.totalPrograms ?: 0 > 0
+
+    // The history chips only render in the Idle state, so that is the only time `down` has a
+    // target to aim at.
+    val showsHistory = uiState is EpgBrowserViewModel.UiState.Idle && epgSearchHistory.isNotEmpty()
 
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
     LaunchedEffect(uiState) {
@@ -374,6 +385,12 @@ private fun EpgBrowserContent(
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
 
                 TvSearchTextField(
+                    modifier =
+                        if (showsHistory) {
+                            Modifier.focusProperties { down = historyFocusRequester }
+                        } else {
+                            Modifier
+                        },
                     query = localQuery,
                     onQueryChange = { localQuery = it },
                     onSearchSubmit = { onSearch(localQuery) },
@@ -471,7 +488,6 @@ private fun EpgBrowserContent(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     if (epgSearchHistory.isNotEmpty()) {
-                        val historyFocusRequester = remember { FocusRequester() }
                         EpgSearchHistorySection(
                             history = epgSearchHistory,
                             onItemClick = { term ->
@@ -575,10 +591,15 @@ private fun EpgSearchHistorySection(
                 },
             )
         }
-        TvLazyRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+        // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
+        // and a D-pad user should not have to scroll a rail to reach the last entry. CinemaFlowRow
+        // rather than FlowRow — see its KDoc for why the latter cannot be called here.
+        CinemaFlowRow(
+            horizontalSpacing = Spacing.sm.scaled(scale),
+            verticalSpacing = Spacing.sm.scaled(scale),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            itemsIndexed(history) { index, term ->
+            history.forEachIndexed { index, term ->
                 Card(
                     onClick = { onItemClick(term) },
                     modifier =
