@@ -61,6 +61,7 @@ class EpgIndexer private constructor(
         /** Free pages moved per `incremental_vacuum` batch — about 2 MB at this DB's page size. */
         private const val VACUUM_CHUNK_PAGES = 2000
 
+
         private fun getBatchSize(context: Context): Int {
             val isTv = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
             return if (isTv) BATCH_SIZE_TV else BATCH_SIZE_MOBILE
@@ -806,8 +807,10 @@ class EpgIndexer private constructor(
         }
     }
 
-    private fun freelistCount(sdb: SupportSQLiteDatabase): Long =
-        sdb.query("PRAGMA freelist_count").use { if (it.moveToFirst()) it.getLong(0) else 0L }
+    private fun freelistCount(sdb: SupportSQLiteDatabase): Long = pragmaLong(sdb, "PRAGMA freelist_count")
+
+    private fun pragmaLong(sdb: SupportSQLiteDatabase, sql: String): Long =
+        sdb.query(sql).use { if (it.moveToFirst()) it.getLong(0) else 0L }
 }
 
 /**
