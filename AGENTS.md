@@ -255,6 +255,7 @@ For deep-dives, see the `docs/` directory:
 | [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Complete database schema for all Room DBs and SharedPreferences |
 | [docs/epg_guide.md](docs/epg_guide.md) | EPG pipeline implementation guide with data models and file inventory |
 | [docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md) | Type-safe navigation system, screen definitions, and flow diagrams |
+| [docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md) | Why the EPG index grew to 87% dead space, the PRAGMA/Requery traps behind it, and how to read DB state from a file header |
 | [docs/ui-theme-options.md](docs/ui-theme-options.md) | Theme system design decisions and options |
 | [docs/MOBILE_RUN_GUIDE.md](docs/MOBILE_RUN_GUIDE.md) | Mobile build, install, and run guide |
 | [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) | Version history and changelog |
