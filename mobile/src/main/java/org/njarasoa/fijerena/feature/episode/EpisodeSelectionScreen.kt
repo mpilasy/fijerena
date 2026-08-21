@@ -55,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -348,6 +349,7 @@ private fun EpisodeListContent(
                     seriesDetail.metadata.genre,
                     seriesDetail.metadata.rating?.let { context.getString(R.string.series_rating_format, it) },
                     seriesDetail.metadata.contentRating,
+                    seriesDetail.metadata.tmdbId?.let { context.getString(R.string.details_tmdb_format, it) },
                 )
             }
         if (hasPlot || metadataParts.isNotEmpty()) {
@@ -631,6 +633,19 @@ private fun EpisodeDetailContent(
             }
         }
 
+        // The trailer is the show's, not this episode's — Xtream and Jellyfin only ever
+        // carry one per series.
+        seriesDetail.metadata.trailerUrl?.let { trailer ->
+            val trailerContext = LocalContext.current
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            CinemaOutlinedButton(
+                onClick = { openExternalUrl(trailerContext, trailer) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.details_watch_trailer))
+            }
+        }
+
         // Plot/Description
         episode.metadata.plot?.let { plotText ->
             Spacer(modifier = Modifier.height(CinemaSpacing.lg))
@@ -660,6 +675,16 @@ private fun EpisodeDetailContent(
         director?.let {
             Text(
                 text = stringResource(R.string.movie_director_format, it),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+            )
+        }
+
+        // TMDB id: the episode's own when it has one, else the show's
+        (episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId)?.let {
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+            Text(
+                text = stringResource(R.string.details_tmdb_format, it),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
             )

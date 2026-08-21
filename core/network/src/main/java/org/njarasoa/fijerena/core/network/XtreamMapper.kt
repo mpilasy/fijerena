@@ -11,6 +11,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.trailerUrl
 import org.njarasoa.fijerena.core.player.domain.VideoTechInfo
 import org.njarasoa.fijerena.core.player.model.Episode
 import org.njarasoa.fijerena.core.player.model.Season
@@ -80,6 +81,8 @@ object XtreamMapper {
                     genre = info?.genre,
                     releaseDate = info?.releaseDate,
                     rating = info?.rating.asString(),
+                    tmdbId = info?.tmdb.asString(),
+                    trailerUrl = trailerUrl(info?.youtubeTrailer),
                 ),
             coverUrl = info?.cover,
             seasons = seasons.map { it.toDomain() },
@@ -132,6 +135,7 @@ object XtreamMapper {
                     rating = info?.rating.asString(),
                     duration = info?.duration.asString(),
                     tmdbId = info?.tmdbId,
+                    trailerUrl = trailerUrl(info?.youtubeTrailer),
                 ),
             coverUrl = info?.coverBig ?: info?.movieImage,
             extension = movieData?.containerExtension,
@@ -170,6 +174,7 @@ object XtreamMapper {
                     duration = duration,
                     contentRating = contentRating,
                     tmdbId = tmdbId,
+                    trailerUrl = trailerUrl(youtubeTrailer),
                 ),
             coverUrl = streamIcon,
             extension = containerExtension,

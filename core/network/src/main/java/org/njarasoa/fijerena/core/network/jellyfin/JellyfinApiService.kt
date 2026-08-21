@@ -320,7 +320,7 @@ class JellyfinApiService(
             val response =
                 client
                     .get("$serverUrl/Users/$userId/Items/$itemId") {
-                        parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData")
+                        parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData,RemoteTrailers,ProviderIds")
                     }.body<JellyfinItem>()
             Result.success(response)
         } catch (e: Exception) {

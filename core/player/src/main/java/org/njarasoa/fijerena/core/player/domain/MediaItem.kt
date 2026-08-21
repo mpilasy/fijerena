@@ -24,7 +24,27 @@ data class MediaMetadata(
     val airDate: String? = null,
     val tmdbId: String? = null,
     val year: Int? = null,
+    /** Ready-to-open trailer URL, already normalized by [trailerUrl]. */
+    val trailerUrl: String? = null,
 )
+
+private val YOUTUBE_ID = Regex("[A-Za-z0-9_-]{11}")
+
+/**
+ * Turns whatever a provider calls a trailer into a URL a browser can open, or null when there is
+ * nothing usable. Xtream's `youtube_trailer` is a bare video id about as often as it is a link,
+ * and both empty strings and scheme-less hosts show up; Jellyfin sends full URLs.
+ */
+fun trailerUrl(raw: String?): String? {
+    val value = raw?.trim().orEmpty()
+    return when {
+        value.isEmpty() -> null
+        value.startsWith("http://") || value.startsWith("https://") -> value
+        YOUTUBE_ID.matches(value) -> "https://www.youtube.com/watch?v=$value"
+        value.startsWith("www.") || value.contains('/') -> "https://$value"
+        else -> null
+    }
+}
 
 /**
  * `providerData` is a `Map`, which the Compose compiler cannot prove immutable, so without this
