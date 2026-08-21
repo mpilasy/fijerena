@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.provider.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -28,6 +29,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 
 @Composable
 fun ProviderTypeDropdown(
@@ -80,19 +82,24 @@ fun ProviderTypeDropdown(
             onDismissRequest = { typeDropdownExpanded = false },
             containerColor = CinemaSurface,
         ) {
-            ProviderType.entries.forEach { type ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = type.displayName,
-                            color = if (type == selectedType) CinemaAccent else CinemaTextPrimary,
+            // The menu is a Popup, so it gets its own window and loses the scaled density.
+            ProvideUiScaledDensity {
+                Column {
+                    ProviderType.entries.forEach { type ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = type.displayName,
+                                    color = if (type == selectedType) CinemaAccent else CinemaTextPrimary,
+                                )
+                            },
+                            onClick = {
+                                onTypeSelected(type)
+                                typeDropdownExpanded = false
+                            },
                         )
-                    },
-                    onClick = {
-                        onTypeSelected(type)
-                        typeDropdownExpanded = false
-                    },
-                )
+                    }
+                }
             }
         }
     }

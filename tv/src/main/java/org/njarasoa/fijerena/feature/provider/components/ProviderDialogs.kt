@@ -66,6 +66,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
+/** Share of the screen the category-filter panel takes at 100% UI scale. */
+private const val PANEL_SCREEN_FRACTION = 0.85f
+
 @Composable
 fun ConfirmActionDialog(
     title: String,
@@ -160,7 +163,10 @@ fun CategoryFilterDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth(0.85f).fillMaxHeight(0.85f),
+        // The panel is sized as a fraction of the screen, which no dp scaling can reach — fold the
+        // UI scale in by hand so the box shrinks with the text inside it instead of framing tiny
+        // controls in a full-screen panel.
+        modifier = Modifier.fillMaxWidth(PANEL_SCREEN_FRACTION * scale).fillMaxHeight(PANEL_SCREEN_FRACTION * scale),
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = { Text(stringResource(R.string.provider_category_filters_title), color = CinemaTextPrimary) },
         text = {

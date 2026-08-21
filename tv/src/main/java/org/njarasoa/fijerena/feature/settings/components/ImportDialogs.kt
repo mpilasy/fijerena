@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -82,96 +83,98 @@ fun ImportOptionsDialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(CinemaBackground.copy(alpha = LocalUiStyle.current.dialog.scrimAlpha)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Surface(
+        ProvideUiScaledDensity {
+            Box(
                 modifier =
                     Modifier
-                        .width(TvDimensions.dialogWidth)
-                        .height(600.dp)
-                        .padding(Spacing.xxl),
-                color = CinemaSurface,
-                shape = RoundedCornerShape(CornerRadius.large),
+                        .fillMaxSize()
+                        .background(CinemaBackground.copy(alpha = LocalUiStyle.current.dialog.scrimAlpha)),
+                contentAlignment = Alignment.Center,
             ) {
-                Column(
-                    modifier = Modifier.padding(Spacing.xxl),
+                Surface(
+                    modifier =
+                        Modifier
+                            .width(TvDimensions.dialogWidth)
+                            .height(600.dp)
+                            .padding(Spacing.xxl),
+                    color = CinemaSurface,
+                    shape = RoundedCornerShape(CornerRadius.large),
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_import_select_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = CinemaAccent,
-                    )
-
-                    Spacer(modifier = Modifier.height(Spacing.md))
-
                     Column(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .verticalScroll(rememberScrollState())
-                                .focusRestorer { firstOptionFocusRequester },
-                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        modifier = Modifier.padding(Spacing.xxl),
                     ) {
-                        OptionRow(
-                            label = stringResource(R.string.settings_import_general_label),
-                            checked = optGlobal,
-                            onToggle = { optGlobal = !optGlobal },
-                            modifier = Modifier.focusRequester(firstOptionFocusRequester),
+                        Text(
+                            text = stringResource(R.string.settings_import_select_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = CinemaAccent,
                         )
 
-                        if (parsed.hasProviders) {
-                            OptionRow(
-                                label = stringResource(R.string.settings_import_providers_count_format, parsed.settings.providers.size),
-                                checked = optProviders,
-                                onToggle = { optProviders = !optProviders },
-                            )
-                        }
-                        if (parsed.hasEpgSources) {
-                            OptionRow(
-                                label = stringResource(R.string.settings_import_epg_sources_count_format, parsed.settings.epgSources.size),
-                                checked = optEpg,
-                                onToggle = { optEpg = !optEpg },
-                            )
-                        }
-                        if (parsed.hasFavorites) {
-                            OptionRow(
-                                label = stringResource(R.string.settings_import_favorites_label),
-                                checked = optFavorites,
-                                onToggle = { optFavorites = !optFavorites },
-                            )
-                        }
-                    }
+                        Spacer(modifier = Modifier.height(Spacing.md))
 
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                        Column(
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .verticalScroll(rememberScrollState())
+                                    .focusRestorer { firstOptionFocusRequester },
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        ) {
+                            OptionRow(
+                                label = stringResource(R.string.settings_import_general_label),
+                                checked = optGlobal,
+                                onToggle = { optGlobal = !optGlobal },
+                                modifier = Modifier.focusRequester(firstOptionFocusRequester),
+                            )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                    ) {
-                        CinemaPrimaryButton(
-                            onClick = {
-                                onConfirm(
-                                    SettingsExportManager.ImportOptions(
-                                        importProviders = optProviders,
-                                        importEpgSources = optEpg,
-                                        importGlobalSettings = optGlobal,
-                                        importFavorites = optFavorites,
-                                    ),
+                            if (parsed.hasProviders) {
+                                OptionRow(
+                                    label = stringResource(R.string.settings_import_providers_count_format, parsed.settings.providers.size),
+                                    checked = optProviders,
+                                    onToggle = { optProviders = !optProviders },
                                 )
-                            },
-                            text = stringResource(R.string.common_import),
-                            modifier = Modifier.weight(1f),
-                        )
-                        CinemaSecondaryButton(
-                            onClick = onCancel,
-                            text = stringResource(R.string.common_cancel),
-                            modifier = Modifier.weight(1f),
-                        )
+                            }
+                            if (parsed.hasEpgSources) {
+                                OptionRow(
+                                    label = stringResource(R.string.settings_import_epg_sources_count_format, parsed.settings.epgSources.size),
+                                    checked = optEpg,
+                                    onToggle = { optEpg = !optEpg },
+                                )
+                            }
+                            if (parsed.hasFavorites) {
+                                OptionRow(
+                                    label = stringResource(R.string.settings_import_favorites_label),
+                                    checked = optFavorites,
+                                    onToggle = { optFavorites = !optFavorites },
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        ) {
+                            CinemaPrimaryButton(
+                                onClick = {
+                                    onConfirm(
+                                        SettingsExportManager.ImportOptions(
+                                            importProviders = optProviders,
+                                            importEpgSources = optEpg,
+                                            importGlobalSettings = optGlobal,
+                                            importFavorites = optFavorites,
+                                        ),
+                                    )
+                                },
+                                text = stringResource(R.string.common_import),
+                                modifier = Modifier.weight(1f),
+                            )
+                            CinemaSecondaryButton(
+                                onClick = onCancel,
+                                text = stringResource(R.string.common_cancel),
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }
@@ -257,113 +260,115 @@ fun ConflictResolutionDialog(
         onDismissRequest = onCancel,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(CinemaBackground.copy(alpha = LocalUiStyle.current.dialog.scrimAlpha)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Surface(
+        ProvideUiScaledDensity {
+            Box(
                 modifier =
                     Modifier
-                        .width(TvDimensions.dialogWidth)
-                        .height(600.dp)
-                        .padding(Spacing.xxl),
-                color = CinemaSurface,
-                shape = RoundedCornerShape(CornerRadius.large),
+                        .fillMaxSize()
+                        .background(CinemaBackground.copy(alpha = LocalUiStyle.current.dialog.scrimAlpha)),
+                contentAlignment = Alignment.Center,
             ) {
-                Column(
+                Surface(
                     modifier =
                         Modifier
-                            .padding(Spacing.xxl)
-                            .focusRestorer { conflictDialogFocusRequester }
-                            .focusProperties { exit = { FocusRequester.Cancel } },
+                            .width(TvDimensions.dialogWidth)
+                            .height(600.dp)
+                            .padding(Spacing.xxl),
+                    color = CinemaSurface,
+                    shape = RoundedCornerShape(CornerRadius.large),
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_import_provider_conflict_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = CinemaAccent,
-                    )
-
-                    Spacer(modifier = Modifier.height(Spacing.sm))
-
-                    Text(
-                        text = stringResource(R.string.settings_import_conflict_intro),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary,
-                    )
-
-                    Spacer(modifier = Modifier.height(Spacing.md))
-
                     Column(
                         modifier =
                             Modifier
-                                .weight(1f)
-                                .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                .padding(Spacing.xxl)
+                                .focusRestorer { conflictDialogFocusRequester }
+                                .focusProperties { exit = { FocusRequester.Cancel } },
                     ) {
-                        conflicts.forEach { name ->
-                            Text(
-                                text = "\u2022 $name",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = CinemaTextSecondary,
-                                modifier = Modifier.padding(start = Spacing.sm),
-                            )
-                        }
-                    }
+                        Text(
+                            text = stringResource(R.string.settings_import_provider_conflict_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = CinemaAccent,
+                        )
 
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.sm))
 
-                    Text(
-                        text = stringResource(R.string.settings_import_choose_action),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = CinemaTextPrimary,
-                    )
+                        Text(
+                            text = stringResource(R.string.settings_import_conflict_intro),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextPrimary,
+                        )
 
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                    ) {
-                        CinemaPrimaryButton(
-                            onClick = {
-                                onResolve(SettingsExportManager.ConflictResolution.OVERWRITE)
-                            },
-                            text = stringResource(R.string.common_overwrite),
+                        Column(
                             modifier =
                                 Modifier
                                     .weight(1f)
-                                    .focusRequester(conflictDialogFocusRequester),
-                        )
-                        CinemaSecondaryButton(
-                            onClick = {
-                                onResolve(SettingsExportManager.ConflictResolution.DUPLICATE)
-                            },
-                            text = stringResource(R.string.common_duplicate),
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                                    .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        ) {
+                            conflicts.forEach { name ->
+                                Text(
+                                    text = "\u2022 $name",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = CinemaTextSecondary,
+                                    modifier = Modifier.padding(start = Spacing.sm),
+                                )
+                            }
+                        }
 
-                    Spacer(modifier = Modifier.height(Spacing.md))
+                        Spacer(modifier = Modifier.height(Spacing.md))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                    ) {
-                        CinemaSecondaryButton(
-                            onClick = {
-                                onResolve(SettingsExportManager.ConflictResolution.SKIP)
-                            },
-                            text = stringResource(R.string.settings_import_skip_duplicates_button),
-                            modifier = Modifier.weight(1f),
+                        Text(
+                            text = stringResource(R.string.settings_import_choose_action),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextPrimary,
                         )
-                        CinemaSecondaryButton(
-                            onClick = onCancel,
-                            text = stringResource(R.string.common_cancel),
-                            modifier = Modifier.weight(1f),
-                        )
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        ) {
+                            CinemaPrimaryButton(
+                                onClick = {
+                                    onResolve(SettingsExportManager.ConflictResolution.OVERWRITE)
+                                },
+                                text = stringResource(R.string.common_overwrite),
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .focusRequester(conflictDialogFocusRequester),
+                            )
+                            CinemaSecondaryButton(
+                                onClick = {
+                                    onResolve(SettingsExportManager.ConflictResolution.DUPLICATE)
+                                },
+                                text = stringResource(R.string.common_duplicate),
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.md))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        ) {
+                            CinemaSecondaryButton(
+                                onClick = {
+                                    onResolve(SettingsExportManager.ConflictResolution.SKIP)
+                                },
+                                text = stringResource(R.string.settings_import_skip_duplicates_button),
+                                modifier = Modifier.weight(1f),
+                            )
+                            CinemaSecondaryButton(
+                                onClick = onCancel,
+                                text = stringResource(R.string.common_cancel),
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }
