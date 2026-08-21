@@ -170,11 +170,6 @@ class MediaRepository(
         private const val KEY_LAST_TVSHOWS_CATEGORY = "last_tvshows_category"
         private const val KEY_LAST_TVSHOWS_ITEM = "last_tvshows_item"
         private const val KEY_LAST_CONTENT_TYPE = "last_content_type"
-        private const val KEY_XTREAM_EPG_INGESTED_AT = "xtream_epg_ingested_at"
-        private const val XTREAM_EPG_TTL_MS = 6L * 60 * 60 * 1000 // 6 hours
-
-        /** Channels per ingest page — bounds how much EPG is resident at any one moment. */
-        private const val XTREAM_EPG_PAGE_SIZE = 200
     }
 
     private val usesServerUserData: Boolean
@@ -333,72 +328,6 @@ class MediaRepository(
         } catch (_: Exception) {
             emptyMap()
         }
-
-    /**
-     * Ingest Xtream API EPG into the EPG index if not done recently.
-     * Fetches EPG for all live streams and stores in SQLite for search/now-playing.
-     */
-    suspend fun ingestXtreamEpgIfNeeded() {
-        val prefs = context.getSharedPreferences("epg_ingestion_$providerId", Context.MODE_PRIVATE)
-        val lastIngested = prefs.getLong(KEY_XTREAM_EPG_INGESTED_AT, 0L)
-        if (System.currentTimeMillis() - lastIngested < XTREAM_EPG_TTL_MS) return
-
-        val activeProvider = provider ?: return
-        val streamDao = XtreamDatabase.getInstance(context).streamDao()
-
-        try {
-            // Page through the catalogue: fetch a page of EPG, index it, drop it, repeat. Loading
-            // every stream row and then every EPG response into one map before indexing put
-            // hundreds of MB on the heap at once on a large provider.
-            var session: EpgIndexer.XtreamIngestSession? = null
-            var offset = 0
-            while (true) {
-                val page =
-                    withContext(Dispatchers.IO) {
-                        streamDao.getEpgStreamInfoPaged(
-                            providerId = providerId,
-                            type = XtreamStreamEntity.TYPE_LIVE,
-                            limit = XTREAM_EPG_PAGE_SIZE,
-                            offset = offset,
-                        )
-                    }
-                if (page.isEmpty()) break
-                offset += page.size
-
-                val epgMap = activeProvider.getEpgBulk(page.map { it.streamId.toString() })?.getOrNull()
-                if (epgMap.isNullOrEmpty()) continue
-
-                val intEpgMap = mutableMapOf<Int, org.njarasoa.fijerena.core.player.model.EpgResponse>()
-                for ((key, value) in epgMap) {
-                    val intKey = key.toIntOrNull() ?: continue
-                    intEpgMap[intKey] = value
-                }
-                if (intEpgMap.isEmpty()) continue
-
-                val streamInfo =
-                    page.associate { stream ->
-                        stream.streamId to
-                            EpgIndexer.XtreamStreamInfo(
-                                streamId = stream.streamId,
-                                name = stream.name,
-                                epgChannelId = stream.epgChannelId,
-                                iconUrl = stream.streamIcon,
-                            )
-                    }
-
-                // Opened lazily so a provider with no usable EPG at all never wipes the index.
-                val active = session ?: EpgIndexer.getInstance(context).beginXtreamIngest(providerId).also { session = it }
-                active.ingestChunk(epgByStreamId = intEpgMap, streamInfo = streamInfo)
-            }
-
-            val opened = session ?: return
-            opened.finish()
-
-            prefs.commitAsync { putLong(KEY_XTREAM_EPG_INGESTED_AT, System.currentTimeMillis()) }
-        } catch (_: Exception) {
-            // Non-critical — silently fail
-        }
-    }
 
     /**
      * Check whether the SQLite EPG index has data available for search/display.
