@@ -63,43 +63,66 @@ class SeriesDetailsViewModel(
     fun refreshSeriesInfo() {
         viewModelScope.launch(Dispatchers.IO) {
             runCatching { ensureRepo().invalidateCachedDetail(seriesId) }
-            loadSeriesInfo()
+            // Deliberately not from the cache: an explicit refresh that redraws the stored copy
+            // first is the "refresh appears to do nothing" bug 6f031cf6 fixed.
+            loadSeriesInfo(useCache = false)
         }
     }
 
-    fun loadSeriesInfo() {
+    fun loadSeriesInfo(useCache: Boolean = true) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = UiState.Loading
             try {
                 val repo = ensureRepo()
+
+                // Draw what was stored last time before asking the provider. Xtream re-sends the
+                // whole episode list on every visit and never caches it server-side, so a show the
+                // size of Law & Order left the screen on a spinner for twenty seconds after a
+                // restart — showing episodes it already had on disk the whole time. The fetch below
+                // still runs: only it can notice episodes added since.
+                val cached =
+                    if (useCache) runCatching { repo.getCachedSeriesDetail(SeriesId(seriesId)) }.getOrNull() else null
+                if (cached != null) {
+                    _uiState.value =
+                        UiState.Success(
+                            seriesDetail = cached,
+                            isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
+                            categoryName = categoryNameOrNull(repo),
+                        )
+                } else {
+                    _uiState.value = UiState.Loading
+                }
 
                 val result = repo.getSeriesDetail(SeriesId(seriesId))
                 result.fold(
                     onSuccess = { detail ->
-                        val isFav = repo.isFavorite(seriesId, "TV_SHOWS")
-                        val categoryName =
-                            repo
-                                .getFilteredCategories("TV_SHOWS")
-                                .getOrNull()
-                                ?.firstOrNull { it.id == categoryId }
-                                ?.name
                         _uiState.value =
                             UiState.Success(
                                 seriesDetail = detail,
-                                isFavorite = isFav,
-                                categoryName = categoryName,
+                                isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
+                                categoryName = categoryNameOrNull(repo),
                             )
                     },
-                    onFailure = { e ->
-                        _uiState.value =
-                            UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.series_error_load_failed))
-                    },
+                    // A failed refresh must not blank a screen already drawn from the cache — the
+                    // episodes on it are still playable.
+                    onFailure = { e -> reportFailure(e) },
                 )
             } catch (e: Exception) {
-                _uiState.value =
-                    UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.series_error_load_failed))
+                reportFailure(e)
             }
         }
+    }
+
+    private suspend fun categoryNameOrNull(repo: MediaRepository): String? =
+        repo
+            .getFilteredCategories("TV_SHOWS")
+            .getOrNull()
+            ?.firstOrNull { it.id == categoryId }
+            ?.name
+
+    private fun reportFailure(e: Throwable) {
+        if (_uiState.value is UiState.Success) return
+        _uiState.value =
+            UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.series_error_load_failed))
     }
 
     fun toggleFavorite(seriesName: String) {

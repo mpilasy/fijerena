@@ -230,6 +230,9 @@ class XtreamRepository(
 
     suspend fun getPersistedEpisodePlots(seriesId: Int): Map<String, String> = contentManager.getPersistedEpisodePlots(seriesId)
 
+    /** See [XtreamContentManager.getCachedSeriesDetail]. */
+    suspend fun getCachedSeriesDetail(seriesId: Int) = contentManager.getCachedSeriesDetail(seriesId)
+
     suspend fun persistEpisodeOverviews(episodes: Map<String, List<EpisodeItem>>) = contentManager.persistEpisodeOverviews(episodes)
 
     suspend fun getEpgForStream(streamId: Int): Result<EpgResponse> = epgManager.getEpgForStream(streamId)

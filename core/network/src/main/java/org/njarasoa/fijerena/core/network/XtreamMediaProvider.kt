@@ -186,6 +186,12 @@ class XtreamMediaProvider(
         }
     }
 
+    override suspend fun getCachedSeriesDetail(seriesId: SeriesId): SeriesDetail? {
+        seriesDetailCache.get(seriesId.raw)?.let { return it }
+        val id = seriesId.raw.toIntOrNull() ?: return null
+        return repository.getCachedSeriesDetail(id)
+    }
+
     override suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> {
         // Xtream numbers its catalogue; unwrap once here and keep the rest raw.
         val rawSeriesId = seriesId.raw

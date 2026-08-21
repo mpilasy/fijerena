@@ -20,6 +20,8 @@ import org.njarasoa.fijerena.core.network.suspendResultOf
 import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.network.xtream.db.*
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.MediaMetadata
+import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.*
 
 /**
@@ -925,6 +927,22 @@ class XtreamContentManager(
                     val fetchedAt = entity.plotFetchedAt ?: return@mapNotNull null
                     if (fetchedAt >= oldest) entity.id to plot else null
                 }.toMap()
+        }
+
+    /**
+     * The series as it was last stored — series row plus every episode row — with no network call.
+     *
+     * Both halves are already written on every [getSeriesInfo]: the series row picks up the plot,
+     * cast and genre, and every episode is inserted. Nothing read this back as a whole, so opening
+     * a show after a restart waited on a fresh get_series_info before it could draw anything, which
+     * on a series the size of Law & Order is a several-hundred-episode response.
+     *
+     * See [buildCachedSeriesDetail] for what a stored row does and doesn't carry.
+     */
+    suspend fun getCachedSeriesDetail(seriesId: Int): SeriesDetail? =
+        withContext(Dispatchers.IO) {
+            val series = seriesDao.getSeriesById(providerId, seriesId) ?: return@withContext null
+            buildCachedSeriesDetail(series, episodeDao.getEpisodes(providerId, seriesId))
         }
 
     /** Backfills episode plots that TMDB filled in (Xtream itself rarely provides episode synopses) — never overwrites an existing plot. */
