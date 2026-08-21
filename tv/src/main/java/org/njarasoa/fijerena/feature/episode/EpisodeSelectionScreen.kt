@@ -107,6 +107,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
@@ -499,6 +500,7 @@ private fun EpisodeListContent(
                                     seriesDetail.metadata.rating?.let { context.getString(R.string.series_rating_format, it) },
                                     seriesDetail.metadata.contentRating,
                                     seriesDetail.metadata.cast?.let { context.getString(R.string.movie_cast_format, it) },
+                                    seriesDetail.metadata.tmdbId?.let { context.getString(R.string.details_tmdb_format, it) },
                                 )
                             }
                         if (metadataParts.isNotEmpty()) {
@@ -520,13 +522,27 @@ private fun EpisodeListContent(
                     )
                 }
 
-                // Category this series belongs to — OK opens its series list
-                if (categoryName != null) {
+                // Category this series belongs to — OK opens its series list — and the trailer
+                val trailer = seriesDetail.metadata.trailerUrl
+                if (categoryName != null || trailer != null) {
                     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                    CinemaSecondaryButton(
-                        onClick = onCategorySelected,
-                        text = stringResource(R.string.details_category_format, categoryName),
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (categoryName != null) {
+                            CinemaSecondaryButton(
+                                onClick = onCategorySelected,
+                                text = stringResource(R.string.details_category_format, categoryName),
+                            )
+                        }
+                        trailer?.let {
+                            CinemaSecondaryButton(
+                                onClick = { openExternalUrl(context, it) },
+                                text = stringResource(R.string.details_watch_trailer),
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
@@ -792,6 +808,16 @@ private fun EpisodeDetailPanel(
                         )
                     }
 
+                    // TMDB id: the episode's own when it has one, else the show's
+                    (episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId)?.let { tmdbId ->
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        Text(
+                            text = stringResource(R.string.details_tmdb_format, tmdbId),
+                            style = detailScaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
 
                     // Play / Resume buttons + Favorite
@@ -822,6 +848,15 @@ private fun EpisodeDetailPanel(
                                 },
                                 text = stringResource(R.string.series_play_episode_action),
                                 modifier = Modifier.focusRequester(playButtonFocusRequester),
+                            )
+                        }
+                        // The trailer is the show's, not this episode's — Xtream and Jellyfin
+                        // only ever carry one per series.
+                        seriesDetail.metadata.trailerUrl?.let { trailer ->
+                            val trailerContext = LocalContext.current
+                            CinemaSecondaryButton(
+                                onClick = { openExternalUrl(trailerContext, trailer) },
+                                text = stringResource(R.string.details_watch_trailer),
                             )
                         }
                     }

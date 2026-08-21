@@ -335,6 +335,9 @@
     <string name="movie_released_format">Sortie : %1$s</string>
     <string name="movie_cast_format">Distribution : %1$s</string>
     <string name="movie_director_format">Réalisateur : %1$s</string>
+    <string name="details_watch_trailer">▶ Bande-annonce</string>
+    <string name="details_tmdb_format">TMDB : %1$s</string>
+    <string name="details_no_link_handler">Aucune application de cet appareil ne peut ouvrir ce lien</string>
     <string name="movie_loading_details">Chargement des détails…</string>
     <string name="movie_error_loading">Erreur de chargement du film</string>
     <string name="movie_back_to_movies">Retour aux films</string>

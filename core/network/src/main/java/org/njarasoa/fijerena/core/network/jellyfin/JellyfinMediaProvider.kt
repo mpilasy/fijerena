@@ -22,6 +22,7 @@ import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SubtitleTechInfo
 import org.njarasoa.fijerena.core.player.domain.VideoTechInfo
+import org.njarasoa.fijerena.core.player.domain.trailerUrl
 
 class JellyfinMediaProvider(
     override val providerId: Long,
@@ -262,6 +263,8 @@ class JellyfinMediaProvider(
                             genre = seriesItem.genres.joinToString(", ").ifEmpty { null },
                             rating = seriesItem.communityRating?.let { String.format("%.1f", it) },
                             contentRating = seriesItem.officialRating,
+                            tmdbId = seriesItem.tmdbId(),
+                            trailerUrl = seriesItem.firstTrailerUrl(),
                         ),
                     coverUrl =
                         if (seriesItem.imageTags.containsKey("Primary")) {
@@ -629,6 +632,8 @@ class JellyfinMediaProvider(
                     director = director,
                     cast = cast,
                     duration = item.runTimeTicks?.let { formatTicks(it) },
+                    tmdbId = item.tmdbId(),
+                    trailerUrl = item.firstTrailerUrl(),
                 ),
             coverUrl =
                 if (item.imageTags.containsKey("Primary")) {
@@ -670,6 +675,12 @@ class JellyfinMediaProvider(
                 },
         )
     }
+
+    /** Jellyfin keys its external ids case-inconsistently across versions; match either spelling. */
+    private fun JellyfinItem.tmdbId(): String? =
+        providerIds.entries.firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }?.value?.ifBlank { null }
+
+    private fun JellyfinItem.firstTrailerUrl(): String? = remoteTrailers.firstNotNullOfOrNull { trailerUrl(it.url) }
 
     private fun formatTicks(ticks: Long): String {
         val totalSeconds = ticks / 10_000_000

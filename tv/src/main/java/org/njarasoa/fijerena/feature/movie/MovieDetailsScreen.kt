@@ -66,6 +66,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
@@ -400,6 +401,13 @@ private fun MovieDetailsContent(
                                         .focusRequester(playButtonFocusRequester),
                             )
                         }
+                        movieDetail.metadata.trailerUrl?.let { trailer ->
+                            val trailerContext = LocalContext.current
+                            CinemaSecondaryButton(
+                                onClick = { openExternalUrl(trailerContext, trailer) },
+                                text = stringResource(R.string.details_watch_trailer),
+                            )
+                        }
                     }
 
                     // Plot/Description
@@ -430,6 +438,14 @@ private fun MovieDetailsContent(
                     movieDetail.metadata.director?.let { director ->
                         Text(
                             text = stringResource(R.string.movie_director_format, director),
+                            style = scaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    }
+                    movieDetail.metadata.tmdbId?.let { tmdbId ->
+                        Text(
+                            text = stringResource(R.string.details_tmdb_format, tmdbId),
                             style = scaledStyles.bodySmall,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         )

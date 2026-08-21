@@ -349,6 +349,8 @@ data class MovieInfo(
     val audio: AudioInfo? = null,
     @SerialName("tmdb_id")
     val tmdbId: String? = null,
+    @SerialName("youtube_trailer")
+    val youtubeTrailer: String? = null,
 )
 
 /**

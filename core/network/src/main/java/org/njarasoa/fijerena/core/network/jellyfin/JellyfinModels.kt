@@ -48,6 +48,14 @@ data class JellyfinItem(
     @SerialName("ImageTags") val imageTags: Map<String, String> = emptyMap(),
     @SerialName("BackdropImageTags") val backdropImageTags: List<String> = emptyList(),
     @SerialName("Container") val container: String? = null,
+    @SerialName("RemoteTrailers") val remoteTrailers: List<JellyfinTrailer> = emptyList(),
+    @SerialName("ProviderIds") val providerIds: Map<String, String> = emptyMap(),
+)
+
+@Serializable
+data class JellyfinTrailer(
+    @SerialName("Url") val url: String? = null,
+    @SerialName("Name") val name: String? = null,
 )
 
 @Serializable

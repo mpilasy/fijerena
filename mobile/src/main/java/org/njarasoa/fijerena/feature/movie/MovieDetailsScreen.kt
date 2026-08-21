@@ -33,6 +33,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
@@ -281,6 +282,17 @@ private fun MovieDetailsContent(
             }
         }
 
+        movieDetail.metadata.trailerUrl?.let { trailer ->
+            val trailerContext = LocalContext.current
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            CinemaOutlinedButton(
+                onClick = { openExternalUrl(trailerContext, trailer) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.details_watch_trailer))
+            }
+        }
+
         // Plot/Description
         movieDetail.metadata.plot?.let { plot ->
             Spacer(modifier = Modifier.height(CinemaSpacing.lg))
@@ -318,6 +330,16 @@ private fun MovieDetailsContent(
         movieDetail.metadata.director?.let { director ->
             Text(
                 text = stringResource(R.string.movie_director_format, director),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+            )
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+        }
+
+        // TMDB id
+        movieDetail.metadata.tmdbId?.let { tmdbId ->
+            Text(
+                text = stringResource(R.string.details_tmdb_format, tmdbId),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
             )
