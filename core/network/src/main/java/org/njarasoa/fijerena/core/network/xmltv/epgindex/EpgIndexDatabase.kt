@@ -36,8 +36,44 @@ abstract class EpgIndexDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): EpgIndexDatabase =
             INSTANCE ?: synchronized(this) {
-                INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
+                INSTANCE ?: run {
+                    seedPageSize(context)
+                    buildDatabase(context)
+                }.also { INSTANCE = it }
             }
+
+        /**
+         * Creates the database file with a 4 KB page size before Room can put a table in it.
+         *
+         * Page size is frozen by the first `CREATE TABLE` and, on a WAL database, not even
+         * `VACUUM` will change it afterwards — so the only opportunity is while the file does not
+         * exist yet. Requery hardcodes 1024 (its `SQLiteGlobal.getDefaultPageSize()` measures the
+         * filesystem block size and then returns a literal), and applies it per connection; that
+         * application is a no-op here because this seeds a header first. Creating and dropping a
+         * throwaway table is what forces the header to be written.
+         *
+         * Existing files are left alone: nothing here can migrate them, only a delete-and-rebuild.
+         */
+        private fun seedPageSize(context: Context) {
+            val dbFile = context.applicationContext.getDatabasePath(DB_NAME)
+            if (dbFile.exists()) return
+            try {
+                dbFile.parentFile?.mkdirs()
+                // Framework SQLite, deliberately, not Requery: Requery forces its hardcoded 1024
+                // onto every connection it opens, so seeding through it produces the very file we
+                // are trying to avoid. The framework honours the requested size — which is why
+                // Room's other databases are already on 4 KB pages.
+                android.database.sqlite.SQLiteDatabase
+                    .openOrCreateDatabase(dbFile.path, null)
+                    .use { raw ->
+                        raw.execSQL("PRAGMA page_size = 4096")
+                        raw.execSQL("CREATE TABLE _page_size_seed (x INTEGER)")
+                        raw.execSQL("DROP TABLE _page_size_seed")
+                    }
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not seed page size — index will use the SQLite default", e)
+            }
+        }
 
         private fun buildDatabase(context: Context): EpgIndexDatabase =
             Room
