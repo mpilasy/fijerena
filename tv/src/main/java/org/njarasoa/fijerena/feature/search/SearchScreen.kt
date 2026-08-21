@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -73,7 +74,6 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaFlowRow
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
@@ -476,12 +476,11 @@ private fun SearchHistorySection(
             )
         }
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
-        // and a D-pad user should not have to scroll a rail to reach the last entry. CinemaFlowRow
-        // rather than FlowRow — see its KDoc for why the latter cannot be called here.
-        CinemaFlowRow(
-            horizontalSpacing = Spacing.sm,
-            verticalSpacing = Spacing.sm,
+        // and a D-pad user should not have to scroll a rail to reach the last entry.
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             history.forEachIndexed { index, term ->
                 Card(

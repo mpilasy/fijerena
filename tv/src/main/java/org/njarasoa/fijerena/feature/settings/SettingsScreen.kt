@@ -196,13 +196,7 @@ fun SettingsScreen(
                 // Scrolling a focused card out of view and back otherwise loses it: the item is
                 // disposed, focus falls to the root, and the next D-pad press restarts at the top
                 // of the list. focusRestorer remembers the last focused child and hands it back.
-                // `focusRestorer()` with no argument compiles to a `focusRestorer$default(Modifier, Function0,
-                // int, Object)` synthetic that does not exist in the Compose UI actually shipped in the APK
-                // (compile classpath resolves 1.7.x, runtime resolves 1.8.2, where the default-arg overload takes
-                // a FocusRequester instead) — it throws NoSuchMethodError the moment the screen composes. Passing
-                // the fallback explicitly binds the direct overload, which both versions have. Same version-skew
-                // trap as FlowRow, see the note in ProviderDialogs.kt.
-                modifier = Modifier.fillMaxSize().focusRestorer { FocusRequester.Default },
+                modifier = Modifier.fillMaxSize().focusRestorer(),
             ) {
                 // Provider Details
                 item {

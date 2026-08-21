@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -79,7 +80,6 @@ import org.njarasoa.fijerena.core.network.xmltv.formatCount
 import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
-import org.njarasoa.fijerena.core.ui.components.CinemaFlowRow
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
@@ -592,12 +592,11 @@ private fun EpgSearchHistorySection(
             )
         }
         // Wraps rather than scrolling sideways: the whole history should be visible at a glance,
-        // and a D-pad user should not have to scroll a rail to reach the last entry. CinemaFlowRow
-        // rather than FlowRow — see its KDoc for why the latter cannot be called here.
-        CinemaFlowRow(
-            horizontalSpacing = Spacing.sm.scaled(scale),
-            verticalSpacing = Spacing.sm.scaled(scale),
+        // and a D-pad user should not have to scroll a rail to reach the last entry.
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
         ) {
             history.forEachIndexed { index, term ->
                 Card(
