@@ -54,12 +54,16 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                                 // Optimize for performance - run directly on the opened connection
                                 db.execSQL("PRAGMA synchronous = NORMAL")
                                 db.execSQL("PRAGMA cache_size = -64000") // 64MB cache
+                                // Inert on an existing file: page_size only takes effect before the
+                                // first table is created, or through a full VACUUM. Left here as a
+                                // statement of intent for a future rebuild — the live databases are
+                                // on 1 KB pages.
                                 db.execSQL("PRAGMA page_size = 4096")
                                 db.execSQL("PRAGMA temp_store = MEMORY")
-                                // mmap_size and journal_size_limit echo their new value — Requery
-                                // rejects execSQL for any statement that produces rows, so use query().
-                                db.query("PRAGMA mmap_size = 268435456").close()
-                                db.query("PRAGMA journal_size_limit = 10485760").close()
+                                // journal_size_limit echoes its new value — Requery rejects execSQL
+                                // for any statement that produces rows, so it goes through
+                                // execPragma, which steps the cursor so the statement actually runs.
+                                db.execPragma("PRAGMA journal_size_limit = 10485760")
 
                                 val currentMode =
                                     db.query("PRAGMA auto_vacuum").use { cursor ->
