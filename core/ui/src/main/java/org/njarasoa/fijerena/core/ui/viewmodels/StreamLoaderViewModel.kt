@@ -115,30 +115,33 @@ class StreamLoaderViewModel(
                 mediaRepository = repo
 
                 // 2. Load Channel List (Live TV only) and start mirroring the shared Recent list
-                var currentStreams: List<MediaItem> = emptyList()
-
                 if (contentType == ContentType.LIVE_TV) {
                     launch { repo.recentItems(contentType).collect { _recentItems.value = it.orEmpty() } }
                     repo.refreshRecentItems(contentType)
-
-                    val result = repo.getItems(currentCategoryId, contentType)
-                    result.fold(
-                        onSuccess = { items ->
-                            currentStreams = items
-                            streamList = items
-                            currentStreamIndex = items.indexOfFirst { it.id == initialStreamId }
-                            if (currentStreamIndex == -1 && items.isNotEmpty()) currentStreamIndex = 0
-                        },
-                        onFailure = { Log.e("StreamLoader", "Failed to load category streams", it) },
-                    )
                 }
 
-                // 3. Resolve Initial Stream
+                // 3. Resolve Initial Stream on FAST PATH
                 loadStreamInternal(
                     streamId = initialStreamId,
                     streamName = initialStreamName,
-                    currentStreams = currentStreams,
+                    currentStreams = emptyList(),
                 )
+
+                // 4. Asynchronously fetch Category Channel list in background (Live TV only)
+                if (contentType == ContentType.LIVE_TV) {
+                    launch {
+                        val result = repo.getItems(currentCategoryId, contentType)
+                        result.fold(
+                            onSuccess = { items ->
+                                streamList = items
+                                currentStreamIndex = items.indexOfFirst { it.id == initialStreamId }
+                                if (currentStreamIndex == -1 && items.isNotEmpty()) currentStreamIndex = 0
+                                updateCategoryStreams(items)
+                            },
+                            onFailure = { Log.e("StreamLoader", "Failed to load category streams", it) },
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("StreamLoader", "Initialization error", e)
                 _state.value = StreamState.Error(e.message ?: context.getString(R.string.stream_error_initialization_failed))
@@ -160,7 +163,7 @@ class StreamLoaderViewModel(
         val repo = mediaRepository ?: return
 
         try {
-            // Resolve URL
+            // Resolve URL & Playback Position (FAST PATH)
             val result =
                 repo.resolvePlayableStream(
                     itemId = streamId,
@@ -196,74 +199,9 @@ class StreamLoaderViewModel(
 
                     // Check Favorite
                     val isFav = repo.isFavoriteSuspend(streamId, contentType)
+                    val activeStreams = if (currentStreams.isNotEmpty()) currentStreams else streamList
 
-                    // Get EPG (Live TV)
-                    var currentProgram: EpgProgram? = null
-                    var nextProgram: EpgProgram? = null
-
-                    if (contentType == ContentType.LIVE_TV) {
-                        val currentItem =
-                            currentStreams.find { it.id == streamId }
-                                ?: MediaItem(
-                                    streamId,
-                                    streamName,
-                                    org.njarasoa.fijerena.core.player.domain.MediaType.LIVE_CHANNEL,
-                                    currentCategoryId,
-                                )
-
-                        val epgData = repo.getEpgBulkForItems(listOf(currentItem)).getOrNull()
-                        val listings = epgData?.get(streamId)?.listings ?: emptyList()
-                        val now = System.currentTimeMillis() / 1000
-                        currentProgram = listings.firstOrNull { now in it.startTime..it.endTime }
-                        nextProgram =
-                            if (currentProgram != null) {
-                                listings.firstOrNull { it.startTime >= currentProgram.endTime }
-                            } else {
-                                null
-                            }
-                    }
-
-                    // Notify provider that playback started (e.g. for Jellyfin session tracking)
-                    if (notifyProviderStarted) {
-                        viewModelScope.launch(Dispatchers.IO) {
-                            repo.onPlaybackStarted(streamId)
-                        }
-                    }
-
-                    // Get Description (VOD/Series)
-                    var description: String? = null
-                    if (contentType != ContentType.LIVE_TV) {
-                        // For episodes, the repository.resolvePlayableStream doesn't return metadata
-                        // We might need to fetch the item's metadata if we don't have it
-                        val currentItem = currentStreams.find { it.id == streamId }
-                        description = currentItem?.metadata?.plot
-
-                        // Special case for episodes: if we have episodeId, we should try to get the episode-specific plot
-                        if (episodeId != null && contentType == ContentType.TV_SHOWS && seriesId != null) {
-                            Log.d("StreamLoader", "Fetching series detail for $seriesId to get episode $episodeId plot")
-                            val seriesDetailResult = repo.getSeriesDetail(SeriesId(seriesId))
-                            seriesDetailResult.getOrNull()?.let { detail ->
-                                // Performance optimization: Use firstNotNullOfOrNull instead of flatten().find()
-                                // to avoid creating an intermediate list of all episodes, reducing GC pressure and lookup time
-                                val episode = detail.episodes.values.firstNotNullOfOrNull { seasonEpisodes ->
-                                    seasonEpisodes.find { it.id == episodeId }
-                                }
-                                Log.d("StreamLoader", "Found episode: ${episode?.title}, plot present: ${episode?.metadata?.plot != null}")
-                                description = episode?.metadata?.plot ?: detail.metadata.plot
-                            }
-                        } else if (contentType == ContentType.MOVIES) {
-                            val movieDetailResult = repo.getMovieDetail(streamId)
-                            movieDetailResult.getOrNull()?.let { detail ->
-                                description = detail.metadata.plot
-                            }
-                        }
-                    } else if (currentProgram != null) {
-                        description = currentProgram.description
-                    }
-
-                    Log.d("StreamLoader", "Final description for $streamId: ${description?.take(20)}...")
-
-
+                    // Emit Success immediately so player begins network buffering & decoding right away
                     _state.value =
                         StreamState.Success(
                             streamUrl = playable.uri,
@@ -272,22 +210,23 @@ class StreamLoaderViewModel(
                             streamId = streamId,
                             resumePosition = resumePos,
                             isLive = contentType == ContentType.LIVE_TV,
-                            description = description,
-                            categoryStreams = currentStreams,
-                            currentEpgProgram = currentProgram,
-                            nextEpgProgram = nextProgram,
+                            description = null,
+                            categoryStreams = activeStreams,
+                            currentEpgProgram = null,
+                            nextEpgProgram = null,
                             isFavorite = isFav,
                             savedAudioTrackIndex = savedAudioIndex,
                             savedSubtitleTrackIndex = savedSubtitleIndex,
                         )
 
+                    // Notify provider that playback started (e.g. for Jellyfin session tracking)
+                    if (notifyProviderStarted) {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            repo.onPlaybackStarted(streamId)
+                        }
+                    }
+
                     // Schedule history update (Recent) after the configured delay — LIVE TV ONLY.
-                    // For VOD, history is recorded via recordHistory() once a threshold (%) is
-                    // reached. Previews schedule this too: the delay is what separates a real
-                    // view from a channel the user merely passed over, and re-pointing to another
-                    // channel cancels the pending write below, so scrolling never records
-                    // anything. What a preview must not do is reorder the list while the user is
-                    // looking at it — that's handled where the list is displayed, not here.
                     historyJob?.cancel()
                     if (contentType == ContentType.LIVE_TV) {
                         historyJob =
@@ -304,19 +243,96 @@ class StreamLoaderViewModel(
                                     seriesName = seriesName,
                                 )
 
-                                // Republish the shared Recent list so every surface showing it —
-                                // this player's flyout, the preview panel behind it, the browse
-                                // row — picks the channel up at the same moment.
                                 repo.refreshRecentItems(contentType)
                             }
                     }
+
+                    // Enrich metadata (EPG & Plot description) asynchronously in background
+                    loadJob?.cancel()
+                    loadJob =
+                        viewModelScope.launch(Dispatchers.IO) {
+                            enrichStreamMetadata(streamId, streamName, activeStreams)
+                        }
                 },
-                onFailure = { e ->
-                    _state.value = StreamState.Error(e.message ?: context.getString(R.string.stream_error_resolve_failed))
+                onFailure = { error ->
+                    _state.value = StreamState.Error(error.message ?: context.getString(R.string.stream_error_resolve_failed))
                 },
             )
         } catch (e: Exception) {
+            Log.e("StreamLoader", "Failed to load stream $streamId", e)
             _state.value = StreamState.Error(e.message ?: context.getString(R.string.stream_error_unknown))
+        }
+    }
+
+    private suspend fun enrichStreamMetadata(
+        streamId: String,
+        streamName: String,
+        currentStreams: List<MediaItem>,
+    ) {
+        val repo = mediaRepository ?: return
+        var currentProgram: EpgProgram? = null
+        var nextProgram: EpgProgram? = null
+
+        if (contentType == ContentType.LIVE_TV) {
+            val currentItem =
+                currentStreams.find { it.id == streamId }
+                    ?: MediaItem(
+                        streamId,
+                        streamName,
+                        org.njarasoa.fijerena.core.player.domain.MediaType.LIVE_CHANNEL,
+                        currentCategoryId,
+                    )
+
+            val epgData = repo.getEpgBulkForItems(listOf(currentItem)).getOrNull()
+            val listings = epgData?.get(streamId)?.listings ?: emptyList()
+            val now = System.currentTimeMillis() / 1000
+            currentProgram = listings.firstOrNull { now in it.startTime..it.endTime }
+            nextProgram =
+                if (currentProgram != null) {
+                    listings.firstOrNull { it.startTime >= currentProgram.endTime }
+                } else {
+                    null
+                }
+        }
+
+        var description: String? = null
+        if (contentType != ContentType.LIVE_TV) {
+            val currentItem = currentStreams.find { it.id == streamId }
+            description = currentItem?.metadata?.plot
+
+            if (episodeId != null && contentType == ContentType.TV_SHOWS && seriesId != null) {
+                val seriesDetailResult = repo.getSeriesDetail(SeriesId(seriesId))
+                seriesDetailResult.getOrNull()?.let { detail ->
+                    val episode = detail.episodes.values.firstNotNullOfOrNull { seasonEpisodes ->
+                        seasonEpisodes.find { it.id == episodeId }
+                    }
+                    description = episode?.metadata?.plot ?: detail.metadata.plot
+                }
+            } else if (contentType == ContentType.MOVIES) {
+                val movieDetailResult = repo.getMovieDetail(streamId)
+                movieDetailResult.getOrNull()?.let { detail ->
+                    description = detail.metadata.plot
+                }
+            }
+        } else if (currentProgram != null) {
+            description = currentProgram.description
+        }
+
+        val currentState = _state.value
+        if (currentState is StreamState.Success && currentState.streamId == streamId) {
+            _state.value =
+                currentState.copy(
+                    currentEpgProgram = currentProgram,
+                    nextEpgProgram = nextProgram,
+                    description = description,
+                )
+        }
+    }
+
+    private fun updateCategoryStreams(items: List<MediaItem>) {
+        val currentState = _state.value
+        if (currentState is StreamState.Success) {
+            _state.value = currentState.copy(categoryStreams = items)
         }
     }
 
@@ -324,32 +340,37 @@ class StreamLoaderViewModel(
         lastLoadRequest = item
         requestedStreamId = item.id
         loadJob?.cancel()
-        loadJob = viewModelScope.launch(Dispatchers.IO) {
-            val repo = mediaRepository ?: return@launch
+        loadJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                val repo = mediaRepository ?: return@launch
 
-            // Capture current state before setting Loading, so we preserve categoryStreams
-            val previousState = _state.value
-            _state.value = StreamState.Loading
+                val previousState = _state.value
+                _state.value = StreamState.Loading
 
-            // 1. Update Category if it changed (e.g. from Last Watched)
-            var currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else streamList
-            if (item.categoryId != currentCategoryId && contentType == ContentType.LIVE_TV) {
-                currentCategoryId = item.categoryId
-                val result = repo.getItems(currentCategoryId, contentType)
-                result.fold(
-                    onSuccess = { items ->
-                        currentStreams = items
-                        streamList = items
-                    },
-                    onFailure = { Log.e("StreamLoader", "Failed to refresh category streams", it) },
-                )
+                val currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else streamList
+
+                // Fast path: start loading stream immediately
+                loadStreamInternal(item.id, item.name, currentStreams)
+
+                // If category changed, refresh category stream list asynchronously in background
+                if (item.categoryId != currentCategoryId && contentType == ContentType.LIVE_TV) {
+                    currentCategoryId = item.categoryId
+                    launch {
+                        val result = repo.getItems(currentCategoryId, contentType)
+                        result.fold(
+                            onSuccess = { items ->
+                                streamList = items
+                                currentStreamIndex = items.indexOfFirst { it.id == item.id }
+                                if (currentStreamIndex == -1 && items.isNotEmpty()) currentStreamIndex = 0
+                                updateCategoryStreams(items)
+                            },
+                            onFailure = { Log.e("StreamLoader", "Failed to refresh category streams", it) },
+                        )
+                    }
+                } else {
+                    currentStreamIndex = streamList.indexOfFirst { it.id == item.id }
+                }
             }
-
-            // 2. Update index
-            currentStreamIndex = streamList.indexOfFirst { it.id == item.id }
-
-            loadStreamInternal(item.id, item.name, currentStreams)
-        }
     }
 
     /**
