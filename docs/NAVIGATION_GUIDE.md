@@ -28,12 +28,15 @@ sealed interface Screen {
         val contentType: String, val initialCategoryId: String? = null,
         val initialStreamId: String? = null, val showPreviewPane: Boolean = true
     ) : Screen
-    @Serializable data class EpisodeSelection(val seriesId: String, val seriesName: String, val categoryId: String) : Screen
+    @Serializable data class EpisodeSelection(
+        val seriesId: String, val seriesName: String, val categoryId: String,
+        val initialEpisodeId: String? = null
+    ) : Screen
     @Serializable data class MovieDetails(val movieId: String, val movieName: String, val categoryId: String) : Screen
-    @Serializable data class Search(val contentType: String) : Screen
+    @Serializable data class Search(val contentType: String, val initialQuery: String? = null) : Screen
     @Serializable data class EpgGuide(val categoryId: String, val categoryName: String) : Screen
     @Serializable data object EpgBrowser : Screen
-    @Serializable data object EpgManagement : Screen
+    @Serializable data class EpgManagement(val providerId: Long) : Screen
     @Serializable data object CellularBufferSettings : Screen  // Dev mode only
     @Serializable data class Player(
         val streamId: String, val streamName: String, val categoryId: String, val contentType: String,
@@ -90,7 +93,7 @@ ContentTypeSelection
       ├─→ ProviderSelection
       │     ├─→ AddProvider (new)
       │     └─→ AddProvider(editId) (edit)
-      ├─→ EpgManagement
+      ├─→ EpgManagement(providerId)
       └─→ CellularBufferSettings (dev mode only)
 ```
 

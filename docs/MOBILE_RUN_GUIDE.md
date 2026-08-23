@@ -30,7 +30,7 @@ Once JDK is installed:
 ./gradlew :mobile:assembleDebug
 ```
 
-**Output**: `mobile/build/outputs/apk/debug/mobile-debug.apk`
+**Output**: `build/outputs/apk/fijerena-mobile-debug.apk` (and `mobile/build/outputs/apk/debug/mobile-debug.apk`)
 
 ### Release Build (for production)
 ```bash

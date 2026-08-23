@@ -89,7 +89,7 @@ RemoteM3uMediaProvider           -- remote M3U URL fetching + parsing
 
 | Store | Purpose | Location |
 |-------|---------|----------|
-| `providers.db` (Room v7) | Provider configurations (name, URL, type, config JSON, active flag, sync stats), EPG sources, pipeline stats | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity` |
+| `providers.db` (Room v8) | Provider configurations (name, URL, type, config JSON, active flag, sync stats), EPG sources, pipeline stats | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity` |
 | EncryptedSharedPreferences | Per-provider passwords (keyed by provider ID) | `provider_password_{id}` |
 | `xtream_cache_{id}` SharedPreferences | Per-provider Xtream category/item cache | JSON blobs |
 | `app_settings` SharedPreferences | Global settings (theme, dev mode, buffer multipliers) | `AppSettings` |
