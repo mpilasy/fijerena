@@ -22,16 +22,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import coil3.size.Size
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -67,13 +64,8 @@ fun CinemaThumbnail(
     val context = LocalContext.current
 
     // Track measured size so Coil decodes at display resolution, not full source resolution
-    var measuredSize by remember { mutableStateOf(IntSize.Zero) }
-
     Box(
-        modifier =
-            modifier
-                .clip(shape)
-                .onSizeChanged { measuredSize = it },
+        modifier = modifier.clip(shape),
         contentAlignment = Alignment.Center,
     ) {
         if (!url.isNullOrBlank()) {
@@ -82,16 +74,12 @@ fun CinemaThumbnail(
             var showFallback by remember(url) { mutableStateOf(false) }
 
             val model =
-                remember(context, url, measuredSize) {
+                remember(context, url) {
                     ImageRequest
                         .Builder(context)
                         .data(url)
                         .crossfade(CinemaAnimation.imageLoadCrossfadeMs)
-                        .apply {
-                            if (measuredSize.width > 0 && measuredSize.height > 0) {
-                                size(Size(measuredSize.width, measuredSize.height))
-                            }
-                        }.build()
+                        .build()
                 }
 
             if (!showFallback) {

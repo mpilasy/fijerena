@@ -168,6 +168,8 @@ fun MobileCategoryListScreen(
     val watchedIds = remember(watchedIdsSet) { ImmutableStringSet(watchedIdsSet) }
     val watchProgressMap by viewModel.watchProgress.collectAsStateWithLifecycle()
     val watchProgress = remember(watchProgressMap) { ImmutableWatchProgress(watchProgressMap) }
+    val favoriteCategoryIdsSet by viewModel.favoriteCategoryIds.collectAsStateWithLifecycle()
+    val favoriteCategoryIds = remember(favoriteCategoryIdsSet) { ImmutableStringSet(favoriteCategoryIdsSet) }
     val context = LocalContext.current
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
     val epgIndexState by epgIndexer.state.collectAsStateWithLifecycle()
@@ -545,6 +547,7 @@ fun MobileCategoryListScreen(
                                 categories = state.categories,
                                 selectedCategoryId = state.selectedCategoryId,
                                 contentType = contentType,
+                                favoriteCategoryIds = favoriteCategoryIds,
                                 categoryViewModel = viewModel,
                                 onCategorySelected = { categoryId ->
                                     viewModel.loadStreams(categoryId)
@@ -942,6 +945,7 @@ private fun CategoryChipRow(
     categories: List<org.njarasoa.fijerena.core.player.domain.MediaCategory>,
     selectedCategoryId: String?,
     contentType: String,
+    favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
     categoryViewModel: CategoryViewModel,
     onCategorySelected: (String) -> Unit,
     onCategoryLongPress: (org.njarasoa.fijerena.core.player.domain.MediaCategory) -> Unit = {},
@@ -1029,7 +1033,7 @@ private fun CategoryChipRow(
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
             itemsIndexed(regularCategories, key = { _, category -> category.id }, contentType = { _, _ -> "category" }) { index, category ->
-                val isFavCat = categoryViewModel.isFavoriteCategory(category.id, contentType)
+                val isFavCat = category.id in favoriteCategoryIds
                 CinemaFilterChip(
                     selected = category.id == selectedCategoryId,
                     onClick = { onCategorySelected(category.id) },
