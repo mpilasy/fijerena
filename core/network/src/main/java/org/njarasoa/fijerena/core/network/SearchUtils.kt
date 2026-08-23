@@ -1,4 +1,4 @@
-package org.njarasoa.fijerena.core.ui.viewmodels
+package org.njarasoa.fijerena.core.network
 
 data class ParsedQuery(
     val positiveWords: List<String>,
@@ -22,6 +22,17 @@ object SearchUtils {
             }
         }
         return ParsedQuery(positive, negative)
+    }
+
+    /**
+     * Check if text matches all query words using a raw string query.
+     */
+    fun matchesQuery(
+        text: String,
+        query: String,
+    ): Boolean {
+        val parsed = parseQuery(query)
+        return matchesQuery(text, parsed)
     }
 
     /**

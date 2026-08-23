@@ -24,7 +24,7 @@ class MediaRepositoryBenchmarkTest {
             ignoreUnknownKeys = true
             encodeDefaults = true
         }
-    private val KEY_WATCH_HISTORY = "watch_history_v2"
+    private val KEY_WATCH_HISTORY = "watch_history_v3"
 
     @Before
     fun setup() {

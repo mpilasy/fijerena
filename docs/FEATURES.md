@@ -60,8 +60,8 @@ Minimum 2 characters to trigger. Background pre-fetch warms cache on category sc
 ### Jellyfin (server-side)
 Native Jellyfin REST search. Returns movies and series matching the query.
 
-### Local / SMB
-Filename matching against scanned file list.
+### Local / SMB / Remote M3U
+Direct provider-level search matching titles against loaded item list via `BaseM3uMediaProvider.search`.
 
 ---
 
