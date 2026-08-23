@@ -319,7 +319,7 @@ fun ContentTypeSelectionScreen(
                                 onClick = onEpgBrowser,
                                 icon = {
                                     Icon(
-                                        imageVector = CinemaIcons.MenuBook,
+                                        imageVector = CinemaIcons.DateRange,
                                         contentDescription = stringResource(R.string.epg_browser_title),
                                         tint = CinemaTextPrimary,
                                     )

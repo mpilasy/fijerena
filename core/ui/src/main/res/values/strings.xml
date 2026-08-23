@@ -501,8 +501,8 @@
     <string name="epg_current_status_error">Current Status Error: %1$s</string>
 
     <!-- EPG Browser -->
-    <string name="epg_browser_title">EPG Browser</string>
-    <string name="epg_browser_title_with_provider">EPG Browser — %1$s</string>
+    <string name="epg_browser_title">EPG Search</string>
+    <string name="epg_browser_title_with_provider">EPG Search — %1$s</string>
     <string name="epg_browser_refresh_stale_description">Refresh stale EPG sources</string>
     <string name="epg_browser_mode_programme">Prog.</string>
     <string name="epg_browser_mode_channel">Chan.</string>

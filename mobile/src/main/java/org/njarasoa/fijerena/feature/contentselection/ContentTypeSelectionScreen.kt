@@ -232,7 +232,7 @@ fun MobileContentTypeSelectionScreen(
                     if (hasEpgData) {
                         CinemaIconButton(onClick = onEpgBrowser,
                             icon = {
-                                Icon(CinemaIcons.MenuBook, stringResource(R.string.epg_browser_title), tint = CinemaTextPrimary)
+                                Icon(CinemaIcons.DateRange, stringResource(R.string.epg_browser_title), tint = CinemaTextPrimary)
                             }
                         )
                     }
