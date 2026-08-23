@@ -12,9 +12,13 @@
 ### Content Discovery & TMDB Integration
 - **TMDB Recommendations & Similar Titles:** Added `MediaProvider.getRecommendations` for Xtream providers. Concurrently fetches TMDB `/recommendations` and `/similar` endpoints, matching titles against on-device FTS index via `TitleMatcher`.
 
-### Database Schema Upgrades
+### Database Schema & Storage Upgrades
+- **Watch History (`watch_history_v3`):** Upgraded watch history storage to `v3` with automatic background migration from `v2`. Guarantees `episodeId` population across all TV show entries and eliminates legacy fallback read guards.
 - **Settings Database (`providers.db` v8):** Backfilled global EPG sources to active/first provider and enforced `provider_id INTEGER NOT NULL`.
 - **Xtream Cache Database (`xtream_v2.db` v14):** Added category/stream/series exclusion flags (v11), TMDB metadata fields & rating caching (v12), per-stream EPG payload cache table `xtream_epg_cache` (v13), and TMDB synopsis fetch timestamping `plotFetchedAt` (v14).
+
+### Provider Search Standardization
+- **BaseM3uMediaProvider Search:** Implemented `search()` override in `BaseM3uMediaProvider` using `SearchUtils.matchesQuery`, standardizing direct title search capability for Remote M3U, Local files, and SMB network share providers.
 
 ---
 

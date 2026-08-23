@@ -158,7 +158,8 @@ class MediaRepository(
     }
 
     companion object {
-        private const val KEY_WATCH_HISTORY = "watch_history_v2"
+        private const val KEY_WATCH_HISTORY = "watch_history_v3"
+        private const val KEY_WATCH_HISTORY_V2 = "watch_history_v2"
         private const val KEY_FAVORITES = "favorites_v2"
         private const val KEY_FAVORITE_CATEGORIES = "favorite_categories"
         private const val KEY_RECENT_CATEGORIES = "recent_categories"
@@ -526,24 +527,42 @@ class MediaRepository(
     }
 
     private fun getWatchHistoryLocked(): List<WatchedItem> {
-        // Return cached value if available
-        cachedWatchHistory?.let { return it }
-
-        val historyJson = cache.getString(KEY_WATCH_HISTORY, null)
-        val history =
-            if (historyJson == null) {
-                emptyList()
-            } else {
+        val currentCache = cachedWatchHistory
+        val history = if (currentCache != null) {
+            currentCache
+        } else {
+            val v3Json = cache.getString(KEY_WATCH_HISTORY, null)
+            val loaded = if (v3Json != null) {
                 try {
-                    json.decodeFromString<List<WatchedItem>>(historyJson)
+                    json.decodeFromString<List<WatchedItem>>(v3Json)
                 } catch (e: Exception) {
                     emptyList()
                 }
+            } else {
+                val v2Json = cache.getString(KEY_WATCH_HISTORY_V2, null)
+                if (v2Json != null) {
+                    try {
+                        val v2Items = json.decodeFromString<List<WatchedItem>>(v2Json)
+                        val normalized = v2Items.map { item ->
+                            if (item.contentType == ContentType.TV_SHOWS && item.episodeId == null) {
+                                item.copy(episodeId = EpisodeId(item.itemId))
+                            } else {
+                                item
+                            }
+                        }
+                        cache.commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(normalized)) }
+                        normalized
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+                } else {
+                    emptyList()
+                }
             }
-
-        // Populate cache
-        cachedWatchHistory = history
-        watchHistoryLookup = null
+            cachedWatchHistory = loaded
+            watchHistoryLookup = null
+            loaded
+        }
         return history
     }
 
@@ -563,7 +582,10 @@ class MediaRepository(
             cachedWatchHistory = emptyList()
             watchHistoryLookup = null
             watchHistoryDirty = false
-            cache.commitAsync { remove(KEY_WATCH_HISTORY) }
+            cache.commitAsync {
+                remove(KEY_WATCH_HISTORY)
+                remove(KEY_WATCH_HISTORY_V2)
+            }
         }
     }
 

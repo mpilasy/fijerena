@@ -101,4 +101,15 @@ abstract class BaseM3uMediaProvider : MediaProvider {
             ),
         )
     }
+
+    override suspend fun search(
+        query: String,
+        contentType: String,
+        includeExcluded: Boolean,
+    ): kotlin.Result<List<MediaItem>> {
+        val matched = items.filter { item ->
+            SearchUtils.matchesQuery(item.name, query)
+        }
+        return kotlin.Result.success(matched)
+    }
 }

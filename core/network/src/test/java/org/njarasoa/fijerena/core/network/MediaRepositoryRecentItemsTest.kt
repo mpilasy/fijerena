@@ -39,7 +39,7 @@ class MediaRepositoryRecentItemsTest {
             ignoreUnknownKeys = true
             encodeDefaults = true
         }
-    private val keyWatchHistory = "watch_history_v2"
+    private val keyWatchHistory = "watch_history_v3"
 
     @Before
     fun setup() {

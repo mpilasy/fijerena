@@ -13,6 +13,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -31,7 +32,7 @@ class MediaRepositoryTest {
             ignoreUnknownKeys = true
             encodeDefaults = true
         }
-    private val KEY_WATCH_HISTORY = "watch_history_v2"
+    private val KEY_WATCH_HISTORY = "watch_history_v3"
     private val KEY_LAST_LIVE_CATEGORY = "last_live_category"
     private val KEY_LAST_LIVE_ITEM = "last_live_item"
     private val KEY_LAST_CONTENT_TYPE = "last_content_type"
@@ -195,5 +196,19 @@ class MediaRepositoryTest {
 
         assert(repository.getWatchHistory().isEmpty())
         verify(exactly = 1) { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } // Only initial check
+    }
+
+    @Test
+    fun v2ToV3Migration_populatesEpisodeIdForTvShows() {
+        val v2History = listOf(WatchedItem("101", "Episode 1", "cat1", ContentType.TV_SHOWS, episodeId = null))
+        val v2Json = json.encodeToString(v2History)
+        every { sharedPreferences.getString("watch_history_v3", null) } returns null
+        every { sharedPreferences.getString("watch_history_v2", null) } returns v2Json
+
+        repository = MediaRepository(context, 1L)
+        val history = repository.getWatchHistory()
+
+        assertEquals(1, history.size)
+        assertEquals(org.njarasoa.fijerena.core.player.domain.EpisodeId("101"), history[0].episodeId)
     }
 }

@@ -222,7 +222,7 @@ Data is stored as serialized JSON strings of Kotlin Data Classes.
 
 | Key | Data Class | Description |
 |-----|------------|-------------|
-| `watch_history_v2` | `List<WatchedItem>` | Playback positions and completion status. |
+| `watch_history_v3` | `List<WatchedItem>` | Playback positions and completion status (auto-migrated from `v2`). |
 | `favorites_v2` | `List<FavoriteItem>` | User-starred streams. |
 | `favorite_categories`| `List<FavoriteCategoryItem>`| User-starred categories. |
 | `favorite_shows` | `List<FavoriteShowItem>` | User-starred TV series. |
