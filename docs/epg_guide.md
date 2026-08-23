@@ -329,7 +329,7 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 
 ## Settings & Configuration
 
-EPG is configured via **Settings -> Manage EPG Data** (`Screen.EpgManagement`). Multiple XMLTV sources can be added, edited, and deleted.
+EPG is configured via **Settings -> Manage EPG Data** (`Screen.EpgManagement(providerId)`). EPG sources belong to a specific provider and multiple XMLTV sources can be added, edited, and deleted.
 
 **`EpgSourceEntity` fields:**
 

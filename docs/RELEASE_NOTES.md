@@ -1,5 +1,23 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: TV Focus Overhaul, TMDB Recommendations & DB Schema Upgrades
+**Release Date:** 2026-08-21
+
+### TV Focus & Input Overhaul
+- **Focus Visibility & Retention:** Complete overhaul of D-pad navigation across `:tv`. Replaced color-collapsing button states with distinct resting, focused, and selected visuals.
+- **Dedicated TV Input Primitives:** Introduced single-target input components (`TvSelectableButton`, `TvOptionRow`, `TvCheckRow`, `TvRadioRow`, `TvSwitchRow`) built on `androidx.tv.material3.ListItem` / `Surface`, eliminating redundant D-pad stops.
+- **D-Pad Text Field Escape & Restoration:** Added `Modifier.tvDpadEscape()` and `rememberFocusReturn()` to prevent text fields from becoming D-pad dead ends and retain focus on field edit commits.
+- **Player Selector Dialog Consolidation:** Replaced fragmented player dialogs with `TvSelectorDialog`, resolving track selection styling and modal key handling.
+
+### Content Discovery & TMDB Integration
+- **TMDB Recommendations & Similar Titles:** Added `MediaProvider.getRecommendations` for Xtream providers. Concurrently fetches TMDB `/recommendations` and `/similar` endpoints, matching titles against on-device FTS index via `TitleMatcher`.
+
+### Database Schema Upgrades
+- **Settings Database (`providers.db` v8):** Backfilled global EPG sources to active/first provider and enforced `provider_id INTEGER NOT NULL`.
+- **Xtream Cache Database (`xtream_v2.db` v14):** Added category/stream/series exclusion flags (v11), TMDB metadata fields & rating caching (v12), per-stream EPG payload cache table `xtream_epg_cache` (v13), and TMDB synopsis fetch timestamping `plotFetchedAt` (v14).
+
+---
+
 ## Version: Live TV Preview Pane (TV + Mobile)
 **Release Date:** 2026-07-30
 

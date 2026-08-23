@@ -5,7 +5,7 @@ This document details the complete database schema for the Fijerena application,
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 7
+**Version:** 8
 
 Manages media provider configurations, authentication metadata, and persistent EPG source URLs.
 
@@ -43,7 +43,7 @@ Manages media provider configurations, authentication metadata, and persistent E
 | `id` | INTEGER (PK) | Auto-generated ID |
 | `url` | TEXT | XMLTV source URL |
 | `label` | TEXT | Display label for the source |
-| `provider_id` | INTEGER | Owning provider ID, nullable — `NULL` means the source applies to all providers (added v7) |
+| `provider_id` | INTEGER | Owning provider ID (enforced `NOT NULL` in v8, backfilled from active/first provider) |
 | `timezone_offset_hours` | INTEGER | Manual offset for parsing |
 | `added_at_ms` | INTEGER | Timestamp when added |
 | `last_ingested_at_ms` | INTEGER | Timestamp of last successful sync |
@@ -114,9 +114,9 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 10
+**Version:** 14
 
-Persistent cache for Xtream Codes API metadata to enable offline browsing. (v8 removed AI vector embedding tables that existed in v7; v9 added richer episode metadata; v10 added FTS4 search tables for streams and series.)
+Persistent cache for Xtream Codes API metadata to enable offline browsing. (v10 added FTS4 search tables for streams/series; v11 added `excluded` flags and indexes; v12 added TMDB detail fields; v13 added `xtream_epg_cache` table; v14 added `plotFetchedAt` for TMDB synopses.)
 
 ### Table: `xtream_categories`
 | Column | Type | Description |
@@ -127,6 +127,7 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing. (v8 r
 | `categoryName` | TEXT | Display name |
 | `parentId` | INTEGER | Parent category reference |
 | `contentHash` | INTEGER | For stale data detection |
+| `excluded` | INTEGER | Category exclusion toggle flag (added v11) |
 
 ### Table: `xtream_streams`
 | Column | Type | Description |
@@ -150,6 +151,11 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing. (v8 r
 | `rating` | TEXT | Content rating |
 | `duration` | TEXT | Runtime |
 | `youtubeTrailer` | TEXT | YouTube video ID |
+| `excluded` | INTEGER | Exclusion toggle flag (added v11) |
+| `contentRating` | TEXT | Age/content classification rating (added v12) |
+| `tmdbId` | TEXT | Sourced TMDB ID (added v12) |
+| `containerExtension` | TEXT | Extension (e.g. `mp4`, `mkv`) (added v12) |
+| `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 
 ### Table: `xtream_series`
 | Column | Type | Description |
@@ -167,6 +173,10 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing. (v8 r
 | `rating` | TEXT | Content rating |
 | `rating5based` | REAL | Numerical score |
 | `youtubeTrailer` | TEXT | YouTube video ID |
+| `excluded` | INTEGER | Exclusion toggle flag (added v11) |
+| `contentRating` | TEXT | Age/content classification rating (added v12) |
+| `tmdbId` | TEXT | Sourced TMDB ID (added v12) |
+| `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 
 ### Table: `xtream_episodes`
 | Column | Type | Description |
@@ -183,6 +193,17 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing. (v8 r
 | `durationSecs` | INTEGER | Runtime in seconds (added v9) |
 | `bitrate` | INTEGER | Encoded bitrate (added v9) |
 | `tmdbId` | TEXT | TMDB identifier, used for synopsis enrichment (added v9) |
+| `plotFetchedAt` | INTEGER | Timestamp of TMDB synopsis fetch (added v14) |
+
+### Table: `xtream_epg_cache` (added v13)
+Per-stream EPG payload cache table.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `providerId` | INTEGER (PK)| Foreign key to `providers.id` |
+| `streamId` | INTEGER (PK)| Provider stream ID |
+| `payload` | TEXT | JSON string of EPG listings |
+| `updatedAt` | INTEGER | Timestamp when cached |
 
 ### Virtual Table: `xtream_streams_fts` (FTS4, added v10)
 Full-text search over `xtream_streams.name`. Content table: `xtream_streams`. Tokenizer: `unicode61`.
