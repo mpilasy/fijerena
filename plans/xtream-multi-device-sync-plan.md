@@ -1,218 +1,260 @@
-# Multi-device Xtream sync + "who's playing" presence/kick
+# Multi-device Xtream Sync + "Who's Playing" Presence/Kick Plan
 
 ## Context
 
-Fijerena runs on phone + 2 Shields, all pointed at the same Xtream subscription. Xtream favorites/history/resume-position are currently **local-only**, stored per-device in `SharedPreferences` (`XtreamUserDataManager`) — nothing syncs between devices. Jellyfin already solves this server-side (favorites/history/resume via its own API, sessions via `/Sessions`), so **this plan is Xtream-only**; Jellyfin-backed providers are untouched.
+Fijerena runs on mobile phones and Android TV devices (e.g. NVIDIA Shield, Chromecast with Google TV), all pointed at the same Xtream subscription. Xtream favorites, watch history, and resume positions are currently **local-only**, stored per-device in `SharedPreferences` via `MediaRepository` (backing `"media_cache_$providerId"`) — nothing syncs between devices. Jellyfin already handles favorites, watch history, resume positions, and active sessions natively on its server side, so **this plan is strictly Xtream-only**; Jellyfin-backed providers remain untouched.
 
 Three related problems to solve:
-1. **Data sync** — favorites/watch-history/resume-position should follow the user across phone/Shield/Shield.
-2. **Connection visibility** — Xtream subscriptions cap concurrent connections. The Xtream API only exposes a connection *count* (`active_cons`/`max_connections`), never *what* is playing *where*. When the count is maxed and something looks stuck/errant, there's currently no way to see which device it is or stop it.
-3. **User profiles** — the household shares devices (Alice and Bob both use either Shield), so sync can't be single-namespace. Alice's favorites/history should follow *Alice* between Shield 1, Shield 2, and her phone; Bob gets his own, separate. One shared Xtream subscription/catalog underneath — profiles only personalize favorites/history/position/presence, they don't imply separate Xtream accounts. (Same Jellyfin exception as above: Jellyfin already has native per-user accounts, so this is Xtream-only, same as the rest of this plan.)
+1. **Data sync** — favorites, watch history, and resume positions should follow the user across mobile and TV devices.
+2. **Connection visibility & kick** — Xtream subscriptions cap concurrent connections (`active_cons` / `max_connections`). The Xtream API only exposes connection *counts*, never *what* is playing *where*. When connections are maxed out, there is currently no way to see which device is playing or remotely stop errant streams.
+3. **User profiles** — households share TV devices (e.g., Alice and Bob both use the living room Shield), so sync cannot be single-namespace. Alice's favorites and watch history should follow *Alice* across devices, while Bob maintains his own separate profile. Underneath, a single Xtream subscription/catalog is shared — profiles personalize user data without requiring multiple Xtream accounts.
 
-User decisions (already made):
-- **Backend hosting: undecided, three viable options being planned in parallel** — self-hosted Go server, Firebase, Supabase. See "Backend options" section below. Everything else in this document (data model concepts, phases, app-side profile/kick/presence logic) is written to apply to all three; only the sections marked per-option cover what differs.
-- Presence is self-reported: each device heartbeats "I am playing X" to the server; other devices read that list.
-- Kick = remote-stop signal, not just visibility: server flags a device, that device's own app stops its playback on the next heartbeat.
-- Auth = per-device token, issued out-of-band (not self-service signup — personal use, 3 devices).
-- Profiles: open picker, no PIN. Created in-app (Netflix-style "Add profile" in the picker, syncs to server immediately). Each device remembers its own last-used profile across launches until manually switched.
+Key decisions (aligned with existing architecture):
+- **Backend hosting: undecided, three viable options planned in parallel** — self-hosted Go server (Option A), Firebase (Option B), or Supabase (Option C). Details for all three options are specified in the "Backend Options" section.
+- **Presence is self-reported**: each device heartbeats "I am playing X" to the server; other devices query/observe that list.
+- **Kick = remote-stop signal**: server flags a device for kick; that device's app stops its own playback upon receiving the signal.
+- **Auth = per-device token**: issued out-of-band during setup (no self-service public signup — personal multi-device setup).
+- **Profiles**: open picker without PINs. Created in-app (Netflix-style "Add profile" in the picker, synced to server). Each device remembers its active profile across app restarts.
+- **Strict String IDs**: all media IDs (`stream_id` / `item_id`) across all models, API endpoints, and schemas are `String` (matching Rule #3 in `AGENTS.md`).
 
-## Backend options
+---
 
-Three ways to host everything described in this plan. The data model, phases, profiles, kick, and app-side plumbing are the same regardless of which one gets picked — what changes is who runs the server, how auth/offline-writes/realtime work, and how much code this repo ends up owning. Decision is deferred; **Architecture** below is written for Option A in full detail (it's the default/fallback) with Options B and C as sibling subsections covering only what differs.
+## Codebase Audit & Architectural Reality
 
-**Comparison**
+An empirical review of the existing codebase (`core/network` and `core/ui`) reveals the exact integration points required for this feature:
 
-| | A: Self-hosted (Go + SQLite) | B: Firebase (Firestore + Auth) | C: Supabase (Postgres + Realtime) |
+1. **Central User-Data Authority (`MediaRepository`)**:
+   - The UI ViewModels (`StreamLoaderViewModel`, `CategoryViewModel`, `MovieDetailsViewModel`, `SeriesDetailsViewModel`, `SearchViewModel`) do **not** call `XtreamUserDataManager` directly. They interact exclusively with `MediaRepository` (`core/network/MediaRepository.kt`).
+   - `MediaRepository` currently manages user data (favorites, watch history, playback position, recent items) for non-Jellyfin providers via local `SharedPreferences` (`"media_cache_$providerId"`).
+   - Therefore, local cache re-scoping and sync outbox hooks must attach directly to **`MediaRepository`** (and `XtreamMediaProvider`), not `XtreamUserDataManager`.
+
+2. **Domain Models (`WatchedItem` and `FavoriteItem`)**:
+   - `MediaRepository` stores rich watch history via `@Serializable data class WatchedItem`:
+     - `itemId: String`
+     - `itemName: String`
+     - `categoryId: String`
+     - `contentType: String` (`LIVE_TV`, `MOVIES`, `TV_SHOWS`)
+     - `timestamp: Long`
+     - `playbackPosition: Long`
+     - `duration: Long`
+     - `isCompleted: Boolean`
+     - `episodeId: EpisodeId?`
+     - `episodeExtension: String?`
+     - `seriesId: SeriesId?`
+     - `seriesName: String?`
+     - `audioTrackIndex: Int?`
+     - `subtitleTrackIndex: Int?`
+   - Favorites are stored via `@Serializable data class FavoriteItem`:
+     - `itemId: String`, `itemName: String`, `categoryId: String`, `contentType: String`, `timestamp: Long`.
+   - The sync server schema and API payloads must preserve these fields so episode and series metadata (`seriesId`, `seriesName`, `episodeId`) sync losslessly across devices.
+
+3. **Playback Lifecycle Hooks (`MediaProvider` & `XtreamMediaProvider`)**:
+   - `StreamLoaderViewModel` already triggers playback lifecycle hooks on `MediaRepository`:
+     - `repo.onPlaybackStarted(streamId)`
+     - `repo.onPlaybackProgress(streamId, position, duration, isPaused)`
+     - `repo.onPlaybackStopped(streamId, position, duration)`
+   - `XtreamMediaProvider` (`core/network/XtreamMediaProvider.kt`) inherits default no-op implementations for these methods from `MediaProvider` (`core/player/domain/MediaProvider.kt`).
+   - Presence heartbeats and stop signals will be implemented inside `XtreamMediaProvider`'s overrides of these three methods.
+
+4. **Dependency Architecture Constraints (`AGENTS.md`)**:
+   - **No Circular Dependencies**: `core:player` MUST NOT depend on `core:network`. Adding presence metadata (such as optional `seriesName: String? = null`) to `MediaProvider` interface methods in `core:player` keeps the domain interface clean and decoupled.
+   - **Repository Injection**: `AppContainer` (`core/ui/di/AppContainer.kt`) provides singletons. Profile switches will interact with `AppContainer` to re-key or evict repository caches cleanly.
+
+---
+
+## Backend Options
+
+Three options for hosting the backend sync and presence services. Data models, app-side profile/kick logic, and implementation phases remain identical across all three options — only the server runtime, storage engine, auth mechanism, and outbox strategy differ.
+
+### Comparison
+
+| Metric / Capability | Option A: Self-hosted (Go + SQLite) | Option B: Firebase (Firestore + Auth) | Option C: Supabase (Postgres + Realtime) |
 |---|---|---|---|
-| Ops burden | You run/patch/TLS the container | None — fully managed | None — fully managed (hosted tier) |
-| Query model | Plain SQL — exact fit for `GET /history?profileId=&deviceId=` | NoSQL, composite indexes for compound filters | SQL (Postgres) — same schema as Option A ports over |
-| Offline write queue | Hand-built (`pending_sync_ops` + `SyncPushWorker`) | Free — Firestore SDK does this natively | Partial — needs a thinner version of Option A's outbox |
-| Presence/kick latency | ~20s heartbeat poll (custom) | Near-instant (realtime listeners) | Near-instant (Realtime, Postgres-replication-based) |
-| Stale-presence cleanup | Manual TTL/cron logic | Native document TTL | Needs a scheduled job (pg_cron or similar) |
-| Authorization model | Application code (Go handlers) | Firestore Security Rules (declarative) | Row-Level Security (SQL `USING`/`WITH CHECK`) |
-| Self-hosted alignment | Full match | Conflicts with it | Conflicts with hosted tier; self-host path exists but is heavier than Option A |
-| Vendor lock-in | None | High — no self-host path, real rewrite to leave | Low — open source, can self-host later without a data-model rewrite |
-| Relative build effort | Most (full Phase 0 + outbox) | Least | Middle (no server ops, but still SQL/RLS design work + a partial outbox) |
+| **Ops & Hosting** | Self-hosted container (Go binary + SQLite file) | Fully managed cloud (Google) | Managed cloud or self-hosted Docker stack |
+| **Data Engine** | Embedded SQLite (`TEXT` primary keys) | Document Store (NoSQL collections) | Relational Postgres (`TEXT` primary keys) |
+| **Offline Sync Outbox** | App-side outbox (`pending_sync_ops` + `SyncPushWorker`) | Built-in Firestore offline persistence | App-side outbox (`pending_sync_ops` + `SyncPushWorker`) |
+| **Presence & Kick Latency** | ~20s polling via heartbeats | Realtime listeners (<1s latency) | Postgres Realtime channels (<1s latency) |
+| **Stale Cleanup** | Server-side background sweeper thread | Native Firestore Document TTL on timestamp | Scheduled SQL function (`pg_cron` / Edge Function) |
+| **Authorization** | Application logic in Go middleware | Firestore Security Rules | Postgres Row-Level Security (RLS) |
+| **Vendor Lock-in** | None (100% open, self-contained) | High (proprietary Firestore client/rules) | Low (standard Postgres SQL and open REST APIs) |
+| **Development Burden** | Server code + App sync outbox | Minimal server code; Security rules configuration | SQL schema/RLS setup + App sync outbox |
 
-**Option A — Self-hosted Go server**
-- \+ Full control, no third-party account; matches the original self-hosted requirement exactly.
-- \+ No usage-based cost or free-tier ceiling.
-- \+ Data never leaves infrastructure you control.
-- \+ Small, fully auditable stack — one Go binary, one SQLite file, nothing to trust blindly.
-- \+ API shaped exactly to this app's needs, nothing extra.
-- \- Most total code to write: full auth layer, schema/migrations, Docker, deploy, and you own uptime/patching/TLS (reverse proxy) yourself.
-- \- Outbox/retry for offline writes is hand-built — the single biggest chunk of Phase 2.
-- \- No realtime primitive — presence/kick latency is bounded by the heartbeat interval (~20s) unless a websocket/long-poll layer is added on top, and stale-presence cleanup is a manual job.
+---
 
-**Option B — Firebase (Firestore + Auth)**
-- \+ Least code overall — Phase 0 shrinks to "mint a custom auth token" (a script, not a deployed service).
-- \+ Offline writes are close to free — Firestore SDK has built-in persistence + automatic retry, eliminating most of the outbox.
-- \+ Presence/kick becomes realtime (listeners) instead of poll-based — better UX for less code, and native document TTL replaces manual staleness cleanup.
-- \+ Fully managed — no hosting/ops/TLS/uptime burden.
-- \+ Mature Android SDK, large community, extensive docs.
-- \- Conflicts directly with the original self-hosted requirement — data sits on Google's infrastructure.
-- \- Security Rules replace application code for authorization; the cross-panel URL guard and device-token/profile-self-service trust model have to be re-expressed declaratively, a different (not obviously easier) paradigm to get right.
-- \- NoSQL query model is a worse fit for ad hoc filtering like `GET /history?profileId=&deviceId=` — needs composite indexes, more rigid than SQL `WHERE`.
-- \- Real vendor lock-in — no self-host escape hatch if you ever want to leave.
-- \- New footprint: Google account/project, `google-services.json`, Play Services dependency (this repo already pulls in `play-services-auth`/Drive APIs for backup, so not entirely novel, but still growth).
-- \- Usage-based billing exists past the free tier (unlikely to bite at 3-device personal scale, but it's there).
+## Architecture Details
 
-**Option C — Supabase (Postgres + Realtime + Auth)**
-- \+ Middle ground: hosted/managed like Firebase, but Postgres underneath — the exact schema and `GET /history?profileId=&deviceId=`-style query design already written for Option A ports over almost unchanged, unlike a Firestore remodel.
-- \+ Open source with a genuine self-host path later, without a data-model rewrite, if the hosted tier ever stops making sense — Firebase has no equivalent exit.
-- \+ Built-in Realtime gives the same near-instant presence/kick benefit as Firebase.
-- \+ Row-Level Security is SQL-based (`USING`/`WITH CHECK`) — maps naturally onto authorization logic already designed for Option A, arguably an easier mental transfer than Firestore rules.
-- \- Same self-hosted-preference conflict as Firebase on the hosted tier; self-hosting Supabase yourself is a materially heavier deploy than the plain Go server (Postgres + Realtime + Auth + Studio, several containers vs. one).
-- \- Smaller ecosystem and less mature Android tooling than Firebase — fewer examples, smaller community.
-- \- Offline write queuing is less automatic/battle-tested than Firestore's — still likely need a thinner version of Option A's outbox, so less of a clean win than Firebase's "free" offline story.
-- \- Still a hosted project with usage ceilings and keys/RLS policies to manage even though there's no server code to write.
+### Option A — Self-hosted Server (`server/` subfolder, Go + SQLite)
 
-## Architecture
+A lightweight Go microservice located in `server/` (excluded from the Gradle build). Single static binary containerized with Docker.
 
-### Option A — Self-hosted `server/` (Go + SQLite)
+#### Data Model (SQLite)
+- `devices(id TEXT PRIMARY KEY, token_hash TEXT NOT NULL, name TEXT NOT NULL, created_at INTEGER NOT NULL)`
+- `server_config(key TEXT PRIMARY KEY, value TEXT NOT NULL)` — contains `xtream_server_url` recorded from the first device's sync.
+- `profiles(id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at INTEGER NOT NULL)`
+- `favorites(profile_id TEXT NOT NULL, item_id TEXT NOT NULL, content_type TEXT NOT NULL, item_name TEXT NOT NULL, category_id TEXT NOT NULL, updated_at INTEGER NOT NULL, deleted_at INTEGER, PRIMARY KEY (profile_id, item_id, content_type))`
+- `watch_history(profile_id TEXT NOT NULL, item_id TEXT NOT NULL, content_type TEXT NOT NULL, item_name TEXT NOT NULL, category_id TEXT NOT NULL, position_ms INTEGER NOT NULL, duration_ms INTEGER NOT NULL, is_completed INTEGER NOT NULL, episode_id TEXT, episode_extension TEXT, series_id TEXT, series_name TEXT, audio_track_index INTEGER, subtitle_track_index INTEGER, updated_at INTEGER NOT NULL, device_id TEXT NOT NULL, device_name TEXT NOT NULL, PRIMARY KEY (profile_id, item_id, content_type))`
+- `presence(device_id TEXT PRIMARY KEY, device_name TEXT NOT NULL, profile_id TEXT NOT NULL, profile_name TEXT NOT NULL, content_type TEXT NOT NULL, stream_id TEXT NOT NULL, stream_name TEXT NOT NULL, series_name TEXT, started_at INTEGER NOT NULL, last_heartbeat_at INTEGER NOT NULL, kick_requested INTEGER NOT NULL DEFAULT 0)`
 
-Everything in this **Architecture** section (through "Server-down / offline behavior") describes Option A specifically, in full detail as the default/fallback plan. Options B and C are covered afterward, each only spelling out what differs — data model shape, profile scoping, series-context, cross-panel guard *intent*, and everything in **App changes** is identical across all three.
+#### API Endpoints (Bearer Token Auth)
+- `GET /profiles` — returns profile list.
+- `POST /profiles {name}` — creates a profile.
+- `PUT /profiles/{profileId}/favorites/{itemId}` / `DELETE /profiles/{profileId}/favorites/{itemId}` — syncs favorite state.
+- `PUT /profiles/{profileId}/history/{itemId}` — upserts watch history / resume position.
+- `GET /profiles/{profileId}/state` — returns complete snapshot of active favorites and history for `profileId`.
+- `GET /history?profileId=&deviceId=` — query endpoint for server-side diagnostics.
+- `POST /presence/heartbeat` `{deviceName, profileId, profileName, contentType, streamId, streamName, seriesName?}` -> `{kick: boolean}`.
+- `POST /presence/stop` — explicit playback stop notification.
+- `POST /presence/{deviceId}/kick` — flags `kick_requested = 1` for target device.
 
-### New component: `server/` (subfolder in this repo, not part of the Gradle build)
-
-Lives at `server/` alongside `core/`, `mobile/`, `tv/`. `settings.gradle.kts` only builds modules it explicitly lists, so this folder is invisible to the Android build — no entanglement. Docker build just points at `server/Dockerfile`. Monorepo chosen deliberately: the API contract (sync fields, presence payload, kick semantics) will churn during build-out across both phases, and keeping client+server changes in one commit beats lockstep-versioning a two-party internal API. Can be split into its own repo later once the contract stabilizes and independent deploy cadence is actually wanted.
-
-Minimal Go service (single static binary, tiny Docker image, no cgo) + SQLite. Single implicit *server* namespace (one Xtream subscription shared by all your devices) with **profiles as the actual data-ownership boundary** underneath it — no multi-tenant/multi-subscription modeling needed, just multi-profile.
-
-**Data model (SQLite):**
-- `devices(id, token_hash, name, created_at)` — identifies a trusted physical device/app install, not a person.
-- `server_config(key, value)` — single row `xtream_server_url`, set from the first device's sync call and checked against on every subsequent one (see cross-panel guard below).
-- `profiles(id, name, created_at)` — Alice, Bob, ... created in-app, synced to all devices.
-- `favorites(profile_id, stream_id, content_type, stream_name, category_id, updated_at, deleted_at NULL)` — tombstone on delete, so an offline device pulling a stale list can't resurrect a favorite someone else removed. Unique on `(profile_id, stream_id, content_type)`.
-- `watch_history(profile_id, stream_id, content_type, stream_name, category_id, position_ms, duration_ms, is_completed, updated_at, device_id, device_name)` — same uniqueness (`profile_id, stream_id, content_type`), scoped by profile. `device_id`/`device_name` record whichever device last wrote this row — derived server-side from the authenticated Bearer token on the write, never a client-supplied field, so it can't be spoofed. Note this is "last device to touch it," not a full multi-device play-by-play — if the same episode is watched partway on Shield 1 then finished on the phone, the row just ends up attributed to the phone, matching how resume position already collapses to one row per item today.
-- `presence(device_id, device_name, profile_id, profile_name, content_type, stream_id, stream_name, series_name NULL, started_at, last_heartbeat_at, kick_requested)` — a presence row is "this device, currently being used by this profile, playing this." `series_name` is set only for `TV_SHOWS` playback, so the "Now Playing" panel can show "Breaking Bad, S1E3" instead of a bare episode title.
-
-**API (Bearer token per device, validated against `devices.token_hash`; every sync/presence call also carries a `profileId`):**
-- `GET /profiles` — list profiles for the picker.
-- `POST /profiles {name}` — create profile in-app; any device can call this (device token is the trust boundary, not the profile itself, matching "open picker, no PIN").
-- `PUT /profiles/{id}/favorites/{streamId}` / `DELETE /profiles/{id}/favorites/{streamId}` — mirrors `XtreamUserDataManager.addFavorite`/`removeFavorite` call sites 1:1.
-- `PUT /profiles/{id}/history/{streamId}` — upsert position/duration/completed, mirrors `savePlaybackPosition`.
-- `GET /profiles/{id}/state` — full current favorites + history snapshot for that profile (dataset is tiny — capped by `favoritesMaxSize`/`watchHistorySize` — so a full snapshot beats delta/cursor complexity). Used by `SyncPullWorker` to hydrate a device.
-- `GET /history?profileId=&deviceId=` — API-only query endpoint (no app UI), at least one of the two params required: both given → that profile's history on that device; `profileId` alone → that profile across all devices; `deviceId` alone → everything watched on that device regardless of profile. Just filters `watch_history` by the columns above, sorted by `updated_at` desc — same table `/profiles/{id}/state` already reads, no new storage.
-- `POST /presence/heartbeat` `{deviceName, profileId, profileName, contentType, streamId, streamName, seriesName?}` → response `{kick: bool}`. Sent on `onPlaybackStarted` and throttled during `onPlaybackProgress` (e.g. every ~20s, not every progress tick). Stale entries (no heartbeat for N seconds) auto-expire server-side — covers app kills/crashes without needing an explicit stop call to always land.
-- `POST /presence/stop` — explicit stop on `onPlaybackStopped` (best-effort; TTL expiry is the fallback).
-- `POST /presence/{deviceId}/kick` — sets `kick_requested`; picked up by that device's *own* next heartbeat response, which is the actual remote-stop trigger. Targets the device (whatever profile is currently active there), since stopping playback is inherently a device-level action.
-
-No self-service *device* registration endpoint — devices are provisioned by inserting a row (CLI or one-off admin call) and copying the token into the app's Settings, same trust model as entering Xtream server URL/creds today. *Profiles*, by contrast, are self-service from any already-trusted device. Server expected to sit behind the user's own reverse proxy for TLS; the container itself just speaks plain HTTP.
-
-### Cross-panel safety guard
-
-The whole sync design assumes every device points at the *same* Xtream panel (confirmed — one shared subscription, multiple independently-configured devices). `stream_id` is only a stable, meaningful key for favorites/history/resume *within one panel's catalog*; if a device were ever pointed at a different Xtream server/reseller instance (even with identical login), the same `stream_id` can mean a different piece of content, and syncing it would silently favorite/resume the wrong title. Guarding against this cheaply:
-
-- Every `PUT/DELETE /profiles/{id}/favorites/...`, `/history/...`, and `POST /presence/heartbeat` call includes a normalized Xtream server URL (scheme + host, no path/query/trailing slash) alongside the existing device token and `profileId` — read from the active `ProviderEntity.url` locally, not a new field the user has to enter.
-- Server checks it against `server_config['xtream_server_url']`. First device to ever sync sets it. Every call after that must match, or the server rejects with a distinct error code (e.g. `409 xtream_server_mismatch`) instead of silently accepting mismatched data.
-- App treats that rejection as non-fatal and visible, not a crash: surface "This device's Xtream server doesn't match the others — sync paused" in the Connected Devices screen (same non-blocking pattern as the reachability indicator), keep working purely locally otherwise.
-- This is a cheap tripwire, not a migration path — if the panel URL legitimately changes (re-subscription, provider switch), the fix is an explicit admin action (update `server_config`), not automatic silent adoption of a new "same" URL.
-
-### App changes (this repo)
-
-**Playback-code impact — deliberately minimal.** Media3/ExoPlayer itself is never touched. Phases 0-2 (auth, profiles, data sync) only add code inside `core/network`, riding on `onPlaybackStarted/onPlaybackProgress/onPlaybackStopped` calls and `XtreamUserDataManager` mutation points that already exist and already fire from `StreamLoaderViewModel` today — no call-site or signature changes needed. Two small, deliberate exceptions:
-- **Series context for presence (Phase 3):** `onPlaybackStarted`/`onPlaybackProgress` don't currently carry `seriesId`/`seriesName`, even though `StreamLoaderViewModel` already has both locally (constructor params, `StreamLoaderViewModel.kt:29,31`) — needed so the "Now Playing" panel can show "Breaking Bad, S1E3" instead of a bare episode title. Add an optional `seriesName: String? = null` param to both `MediaProvider` interface methods (`core/player`) and thread it through `MediaRepository` → `XtreamMediaProvider`. Default-null keeps Jellyfin's override source-compatible (it ignores the new param, matching how Jellyfin already handles this server-side anyway).
-- **Kick (Phase 4):** `onPlaybackProgress` returns `Unit`, so there's no channel back up to the caller to say "stop now." `MediaRepository` (`core/network`) exposes a `Flow<KickEvent>`; `StreamLoaderViewModel` (`core/ui`) collects it and calls its own existing `stopPlayback()` + shows a message.
-
-Both stay within the existing `core/network` → `core/ui` dependency direction (the interface param addition touches `core/player`'s domain layer, but as an optional, additive parameter — not a new dependency edge) and don't touch the "`core:player` must not depend on `core:network`" constraint (AGENTS.md).
-
-**Reused hook points — already exist, no new plumbing needed for call timing:**
-- `MediaProvider.onPlaybackStarted/onPlaybackProgress/onPlaybackStopped` (`core/player/src/main/java/org/njarasoa/fijerena/core/player/domain/MediaProvider.kt:57-79`), called from `StreamLoaderViewModel.updateProgress`/`stopPlayback` (`core/ui/.../StreamLoaderViewModel.kt:446,494`) via `MediaRepository` (`core/network/.../MediaRepository.kt:360-378`). `XtreamMediaProvider` currently no-ops these (inherits interface defaults) — this is where presence heartbeats get wired in.
-- `XtreamUserDataManager.addFavorite/removeFavorite/savePlaybackPosition` (`core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamUserDataManager.kt:207,238,301`) — where local mutations happen today; sync push calls go right next to the existing `commitAsync` writes. Favorites are series-level (`SeriesDetailsViewModel` favorites by `seriesId`), watch history/position is per-episode (`StreamLoaderViewModel`'s `streamId` is the episode's own Xtream stream ID) — both already keyed by `(streamId, contentType)` locally, matching the server's `(profile_id, stream_id, content_type)` uniqueness exactly. No new collision risk between movies/episodes/live channels beyond what already exists today.
-
-**Not touched: category browsing, search, EPG.** Those are catalog reads served by `XtreamContentManager`/`XtreamEpgManager` off the *shared* per-provider cache (`xtream_cache_$providerId`) — same catalog for every profile under one subscription, no reason to scope it per-profile. `getCategories`/`getItems`/`search`/`getEpg`/`getEpgBulk` on `XtreamMediaProvider` are unchanged by every phase of this plan. Only `XtreamUserDataManager` (favorites/history/position/last-played) moves to a profile-scoped file.
-
-**New pieces:**
-1. `SyncClient` (Ktor, new file in `core/network/.../xtream/sync/`) — thin wrapper for the API above, holding the device token and the currently-active profile ID.
-2. Device token + server URL storage: new `EncryptedSharedPreferences` entry, same pattern as `ProviderRepository`'s per-provider creds (`core/network/.../provider/ProviderRepository.kt:290-328`). Device name is user-editable in Settings, sent with every heartbeat.
-3. **Active profile identity**: new small `ProfileManager` — persists `activeProfileId`/`activeProfileName` per device (plain `SharedPreferences`, not encrypted — not sensitive), matching the "remember per-device" decision. Exposes the active profile as a `StateFlow` so UI (and `XtreamRepository`) can react to a switch.
-4. **Local cache re-scoping**: `XtreamUserDataManager` currently shares the same `SharedPreferences` file (`xtream_cache_$providerId`) as `XtreamContentManager`/`XtreamStatsManager`/`XtreamEpgManager` (catalog/EPG data — not profile-specific, stays shared). Give `XtreamUserDataManager` its own file, scoped by profile: `xtream_userdata_${providerId}_${profileId}`. `XtreamRepository`'s constructor takes the active `profileId` and passes this dedicated prefs file in; switching profiles means re-instantiating `XtreamUserDataManager` (or lazily swapping its backing prefs + clearing its in-memory caches) against the new file, then triggering a `SyncPullWorker` one-shot pull to hydrate it. `favoritesCacheMap`'s key (currently just `providerId`, `XtreamUserDataManager.kt:60`) becomes `Pair(providerId, profileId)`.
-5. Wire pushes into `XtreamUserDataManager`'s three mutation points (fire-and-forget on the existing `writeScope`, so no new threading model) and into `XtreamMediaProvider`'s playback lifecycle overrides for presence — every push/heartbeat call includes the active `profileId`/`profileName` from `ProfileManager`.
-6. `SyncPullWorker` — new `CoroutineWorker`, same shape as `XtreamSyncWorker` (`core/network/.../xtream/XtreamSyncWorker.kt`), periodic pull of `GET /profiles/{activeProfileId}/state`, merges into the profile-scoped local `SharedPreferences` by `updated_at` (server wins if newer) — also run once on app foreground/provider activation and immediately after a profile switch, not just on the periodic schedule.
-7. **Profile picker screen** ("Who's watching?"): shown on first run and whenever the user explicitly chooses to switch (e.g. an avatar/profile entry point in Settings); pulls `GET /profiles`, lets the user pick one (sets active profile, re-scopes local cache per #4, triggers a pull) or "Add profile" (`POST /profiles`, then picks it). No PIN prompt.
-8. New Settings screen "Connected Devices": server URL + token entry (paste-once setup), and a live "Now Playing" panel (`GET /presence`, polled while the screen is open) listing profile name / device name / title / since-when, each row with a "Boot" button calling `POST /presence/{deviceId}/kick`.
-9. Kick receiving: the heartbeat call site checks the `{kick: true}` response and tells `StreamLoaderViewModel` to stop playback + surface a "disconnected from another device" message. Delivery latency = one heartbeat interval (~20s) — acceptable for this use case, avoids standing up a websocket/push channel.
-
-**Gating:** all of the above only activates when the active `ProviderEntity.type == "XTREAM"` — no Jellyfin code paths touched.
-
-### Server-down / offline behavior
-
-Local `SharedPreferences` is always the source of truth for reads — browsing, favoriting, resuming playback all work exactly as they do today with the sync server fully unreachable. The server is a best-effort overlay, never a blocker, with two exceptions to that "fire-and-forget" simplicity called out below:
-
-- **Favorite/history/position pushes need an outbox, not pure fire-and-forget.** A push issued while the server is down must not be silently dropped — persist pending mutations (e.g. a small `pending_sync_ops` list alongside the profile-scoped prefs file) and drain them via a `SyncPushWorker`, same retry/backoff shape as `XtreamSyncWorker` (`Result.retry()` + `MAX_RETRIES`, `XtreamSyncWorker.kt:29-34`). Runs opportunistically (network-available `Constraints`) and on the existing periodic schedule.
-- **Presence heartbeat/kick stay pure fire-and-forget.** Ephemeral by nature — a failed heartbeat just means that device doesn't show up in "Now Playing" until connectivity returns. No queue, no retry needed, no data to lose.
-- **`SyncPullWorker`** already retry-friendly via `CoroutineWorker` — reuses the same pattern.
-- **Profile picker on first run with no connectivity:** cache the last-fetched `GET /profiles` list locally so the picker isn't hard-blocked by one bad fetch. If there's truly no cached list yet (very first launch, server unreachable), fall back to a local-only "offline" pseudo-profile so the app is usable immediately; real profile selection/creation happens next time the server is reachable, and `SyncPullWorker` reconciles once it comes back.
-- Surface reachability non-intrusively: the "Connected Devices" Settings screen shows "Sync server: unreachable" when the last request failed, so it's diagnosable — never a modal/blocking error.
+---
 
 ### Option B — Firebase (Firestore + Auth)
 
-Same data ownership model as Option A (profiles are the scoping boundary, devices are trust boundary, one shared Xtream panel) — only the shapes and mechanisms differ.
+#### Data Model (Firestore Document Collections)
+- `config/xtreamServerUrl` -> `{ value: string }`
+- `devices/{deviceId}` -> `{ deviceName: string, createdAt: timestamp }`
+- `profiles/{profileId}` -> `{ name: string, createdAt: timestamp }`
+- `profiles/{profileId}/favorites/{itemId_contentType}` -> `{ itemId, itemName, categoryId, contentType, updatedAt, deletedAt }`
+- `profiles/{profileId}/history/{itemId_contentType}` -> `{ itemId, itemName, categoryId, contentType, positionMs, durationMs, isCompleted, episodeId, episodeExtension, seriesId, seriesName, audioTrackIndex, subtitleTrackIndex, updatedAt, deviceId, deviceName }`
+- `presence/{deviceId}` -> `{ deviceName, profileId, profileName, contentType, streamId, streamName, seriesName, startedAt, lastHeartbeatAt, kickRequested }`
 
-**Data model (Firestore):**
-- `devices/{deviceId}` — `{deviceName, createdAt}`. No token hash to store — Firebase Auth itself is the credential; `deviceId` is the signed-in user's UID.
-- `config/xtreamServerUrl` — single doc, `{value}`. Same role as Option A's `server_config` row, but set once manually during setup rather than "first device to sync sets it" — Security Rules don't have Option A's easy "insert if not exists" transactional shortcut, so this becomes a one-time admin step alongside device provisioning.
-- `profiles/{profileId}` — `{name, createdAt}`.
-- `profiles/{profileId}/favorites/{streamId_contentType}` — same fields as Option A's `favorites` row (`streamName, categoryId, updatedAt, deletedAt`), as a subcollection.
-- `profiles/{profileId}/history/{streamId_contentType}` — same fields as Option A's `watch_history` row, `deviceId`/`deviceName` set by Security Rules from `request.auth.uid`, not trusted from the client.
-- `presence/{deviceId}` — one doc per device (not per session): `deviceName, profileId, profileName, contentType, streamId, streamName, seriesName, startedAt, lastHeartbeatAt, kickRequested`. Firestore's native per-collection TTL policy on `lastHeartbeatAt` auto-deletes stale docs — no cron needed.
-
-**Auth:** Firebase Auth custom tokens, minted per device via a one-off script using the Admin SDK (service account key never ships on-device) — same out-of-band provisioning spirit as Option A's CLI. Device signs in once with its token and stays signed in; `request.auth.uid` is the device identity every Security Rule checks against.
-
-**Cross-panel guard:** every favorites/history/presence write includes the normalized Xtream URL; a Security Rule compares it against `get(/databases/$(database)/documents/config/xtreamServerUrl)` and rejects the write (permission-denied) on mismatch — same intent as Option A's `409`, expressed declaratively instead of in a handler.
-
-**Presence/kick:** each device attaches a realtime listener to its *own* `presence/{deviceId}` doc for `kickRequested` — near-instant, no polling, no heartbeat-interval latency. The Now Playing panel listens to the whole `presence` collection the same way. Kicking = the Connected Devices screen writes `kickRequested: true` to the target doc; the target's own listener fires immediately and clears it back to `false` after stopping.
-
-**Offline behavior:** effectively free. Firestore's SDK queues writes made offline and replays them on reconnect, and serves reads from local cache — this replaces Option A's entire outbox/`SyncPushWorker` design. Profile-picker offline fallback is likewise mostly automatic (last-synced data is already cached locally by the SDK).
+---
 
 ### Option C — Supabase (Postgres + Realtime + Auth)
 
-Closest to Option A conceptually — same table shapes port over almost unchanged, since both are SQL.
+#### Data Model (Postgres Schema)
+Mirroring Option A's relational SQL tables directly in Postgres with Row-Level Security (RLS) policies checking `xtream_server_url` against `server_config` and filtering by device token claims.
 
-**Data model (Postgres):** identical tables to Option A (`devices`, `server_config`, `profiles`, `favorites`, `watch_history` incl. `device_id`/`device_name`, `presence` incl. `series_name`) — same columns, same `(profile_id, stream_id, content_type)` uniqueness. One difference: no native per-row TTL like Firestore, so stale `presence` rows need a scheduled cleanup (`pg_cron` or a small scheduled Edge Function), same manual-cleanup shape as Option A.
+---
 
-**Auth:** one Supabase Auth identity minted per device via the Admin API (service-role key stays server-side, same one-off provisioning step as A/B), custom claim tagging `device_id`.
+## Cross-Panel Safety Guard
 
-**API surface:** mostly no hand-written endpoints — Supabase's client SDK talks to Postgres tables directly via its auto-generated REST layer (PostgREST), so `PUT /profiles/{id}/favorites/{streamId}` becomes a client-side `.from('favorites').upsert(...)` call instead of a Go handler. `GET /history?profileId=&deviceId=` is a plain `SELECT ... WHERE` through the same layer — the one place Option A's endpoint had custom logic, this needs none. The cross-panel guard is the one place that needs real server-side logic: a Row-Level-Security `WITH CHECK` policy comparing the write's `xtream_server_url` column against `server_config`, same intent as Option A's check, expressed in SQL instead of a handler.
+Device stream IDs (`stream_id` / `item_id`) are unique only within a specific Xtream server's catalog. If two devices are configured with different Xtream providers, syncing favorites or progress between them would corrupt user data.
 
-**Presence/kick:** Supabase Realtime subscribes to Postgres row changes on `presence` — same near-instant delivery as Firebase's listeners. Kick = update `kick_requested = true` on the target device's row; its own subscription fires immediately.
+- Every `PUT`/`DELETE` favorite, history update, and presence heartbeat includes the normalized Xtream server URL (`scheme://host[:port]`, derived from `ProviderEntity.url`).
+- The backend compares the incoming URL against `server_config['xtream_server_url']`. The first device to sync sets the initial URL.
+- Subsequent calls with mismatching URLs are rejected with HTTP `409 Conflict` (`xtream_server_mismatch`).
+- The app handles `409 Conflict` gracefully by displaying a non-blocking warning ("Xtream panel URL mismatch — sync paused for this device") in Settings, preserving local functionality.
 
-**Offline behavior:** the one place Option C doesn't fully match Firebase's "free" story — Supabase's client SDK doesn't have Firestore-grade automatic offline mutation queuing, so this still needs a thinner version of Option A's outbox (`pending_sync_ops` + a push worker), just pointed at Supabase's REST/RPC layer instead of a custom API.
+---
 
-## Implementation phases
+## App Changes & Component Design
 
-**Note:** phases below are written against Option A's concrete endpoints/tables for specificity. The phase *boundaries and exit criteria* apply to all three options — only Phase 0's content and the specific mechanism behind "outbox" (Phase 2) and "heartbeat"/"kick" (Phases 3-4) differ per option, as described above.
+### 1. Active Profile Management (`ProfileManager`)
+- New singleton `ProfileManager` in `core/network`:
+  - Stores `activeProfileId` and `activeProfileName` in per-device `SharedPreferences` (`"fijerena_profile_prefs"`).
+  - Exposes `val activeProfile: StateFlow<Profile?>`.
+  - Provides `fun switchProfile(profile: Profile)` and `fun createProfile(name: String)`.
 
-Each phase ships something independently testable and doesn't require the next phase to be useful. Later phases build strictly on earlier ones (presence/kick needs profiles for attribution; sync needs profiles for scoping).
+### 2. Local Cache Re-Scoping in `MediaRepository`
+- `MediaRepository` currently uses `"media_cache_$providerId"`.
+- Under the multi-profile architecture, `MediaRepository` re-scopes its user data cache file to `"media_userdata_${providerId}_${profileId}"`.
+- When `ProfileManager.switchProfile` is called:
+  1. `AppContainer.evictMediaRepository(providerId)` clears the in-memory repository cache.
+  2. The next `getMediaRepository()` call instantiates `MediaRepository` bound to the new `profileId`.
+  3. `SyncPullWorker` immediately executes a one-shot pull to hydrate the local cache for the newly active profile.
 
-**Phase 0 — Server skeleton & device auth**
-`server/` scaffold (Go + SQLite + Dockerfile), `devices` table only, Bearer-token auth middleware, health-check endpoint. Device provisioning via a small CLI/admin command (insert row, print token). No app changes yet.
-*Exit criteria:* container builds and runs, curl with a provisioned token hits an authenticated endpoint, a bad/missing token gets 401.
+### 3. Outbox & Sync Execution (`SyncClient`, `SyncPushWorker`, `SyncPullWorker`)
+- **`SyncClient`** (Ktor API client in `core/network/xtream/sync/`):
+  - Encapsulates network operations to the sync backend (Option A, B, or C).
+  - Includes device token, active `profileId`, and normalized Xtream URL in headers/payloads.
+- **Outbox Queue (`pending_sync_ops`)**:
+  - `MediaRepository` maintains a small JSON outbox of pending mutations when offline or when a sync push fails.
+  - Operations: `ADD_FAVORITE`, `REMOVE_FAVORITE`, `SAVE_POSITION`, `CLEAR_HISTORY`.
+- **`SyncPushWorker`** (`CoroutineWorker`):
+  - Drains `pending_sync_ops` periodically or when network connectivity is restored (`Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)`).
+- **`SyncPullWorker`** (`CoroutineWorker`):
+  - Periodically (and on app foreground / profile switch) fetches `GET /profiles/{profileId}/state`.
+  - Merges remote favorites and history items into `MediaRepository`'s local SharedPreferences using `updated_at` timestamps (remote wins if newer, preserving local non-conflicting entries).
 
-**Phase 1 — Profiles**
-Server: `profiles` table, `GET/POST /profiles`. App: `ProfileManager` (active-profile persistence + `StateFlow`), profile picker screen ("Who's watching?", incl. "Add profile"), local cache re-scoping in `XtreamUserDataManager`/`XtreamRepository` (dedicated per-profile prefs file, `favoritesCacheMap` keyed by `Pair(providerId, profileId)`). No remote favorites/history sync yet — this phase is purely about profile *identity* existing end-to-end.
-*Exit criteria:* create Alice and Bob from one device, switch between them, confirm each gets an empty-but-isolated local favorites/history view; profile list appears on a second device after it fetches `GET /profiles`.
+### 4. Presence & Kick Wiring
+- **Playback Hooks**:
+  - `XtreamMediaProvider` overrides `onPlaybackStarted`, `onPlaybackProgress`, and `onPlaybackStopped`.
+  - `onPlaybackStarted`: Sends initial `POST /presence/heartbeat`.
+  - `onPlaybackProgress`: Sends throttled heartbeats (every ~20s). If the server responds with `{kick: true}`, `XtreamMediaProvider` emits a signal on `val kickEvents: Flow<Unit>`.
+  - `onPlaybackStopped`: Sends `POST /presence/stop`.
+- **Domain Method Enhancement (`core/player/domain/MediaProvider.kt`)**:
+  - Update `onPlaybackStarted` and `onPlaybackProgress` in `MediaProvider` to accept optional `seriesName`:
+    ```kotlin
+    suspend fun onPlaybackStarted(itemId: String, seriesName: String? = null) {}
+    suspend fun onPlaybackProgress(
+        itemId: String,
+        positionMs: Long,
+        durationMs: Long,
+        isPaused: Boolean = false,
+        seriesName: String? = null,
+    ) {}
+    ```
+  - Thread `seriesName` through `MediaRepository` and `StreamLoaderViewModel`. Default `null` parameter ensures zero breakage for Jellyfin or local providers.
+- **Kick Handling**:
+  - `MediaRepository` exposes `val kickEvents: SharedFlow<Unit> = provider?.kickEvents ?: emptyFlow()`.
+  - `StreamLoaderViewModel` collects `kickEvents` while active. When emitted, it invokes `stopPlayback()`, closes the player UI, and displays a user notification ("Playback stopped from another device").
 
-**Phase 2 — Favorites/history/position sync**
-Server: `favorites`/`watch_history` tables (`watch_history` incl. `device_id`/`device_name`, set from the authenticated token) + `PUT/DELETE /profiles/{id}/favorites/{streamId}`, `PUT /profiles/{id}/history/{streamId}`, `GET /profiles/{id}/state`, `GET /history?profileId=&deviceId=`, `server_config` table + the cross-panel URL check on every write. App: `SyncClient` (sends the normalized Xtream server URL alongside every call), push wiring at `XtreamUserDataManager`'s three mutation points, outbox (`pending_sync_ops`) + `SyncPushWorker`, `SyncPullWorker`, basic "Connected Devices" Settings screen (server URL/token entry, sync status, reachability + cross-panel-mismatch indicator). Outbox/retry ships *in* this phase, not deferred — this is the phase where write-loss is possible, so it's the phase that has to close it. `GET /history` is server-API-only — no app UI for it.
-*Exit criteria:* favorite a title as Alice on phone, it shows up as Alice on Shield 1 after next pull; kill the server mid-favorite, confirm the app doesn't lose the favorite locally and it lands once the server comes back; point a test device at a different URL, confirm its sync calls get rejected and the app shows the mismatch warning instead of corrupting data; watch something as Alice on Shield 1 then as Bob on the phone, confirm `GET /history?profileId=alice`, `GET /history?deviceId=shield1`, and `GET /history?profileId=alice&deviceId=shield1` each return the expected, distinct subset.
+### 5. Compose UI Screens
+- **Profile Picker Screen ("Who's Watching?")**:
+  - Displayed on initial setup or via Settings profile switch button.
+  - Lists synced profiles with avatar placeholders, plus an "Add Profile" button.
+  - D-pad navigable for Android TV (scale & glow focus tokens) and touch-optimized for mobile.
+- **Connected Devices & Active Presence Screen**:
+  - Located in Settings under "Connected Devices".
+  - Shows Server URL, Device Token setup, and reachability indicator.
+  - Live "Now Playing" list showing: Device Name, Profile Name, Content Title (with Series Name if applicable), and Start Time.
+  - Each active entry includes a "Kick Stream" button (triggers `POST /presence/{deviceId}/kick`).
 
-**Phase 3 — Presence visibility ("Now Playing")**
-Server: `presence` table (incl. `series_name`), `POST /presence/heartbeat` (no kick logic yet, always returns `{kick: false}`), `POST /presence/stop`, staleness TTL expiry, `GET /presence`. App: optional `seriesName` param added to `MediaProvider.onPlaybackStarted/onPlaybackProgress` (see Playback-code impact note), heartbeat/stop wiring in `XtreamMediaProvider`'s playback lifecycle overrides, read-only "Now Playing" panel in the Connected Devices screen.
-*Exit criteria:* play something as Alice on Shield 1, see "Alice — Shield 1 — <title>" on Shield 2's panel within one heartbeat interval; play a TV show episode, confirm the panel shows the series name + episode, not just the bare episode title; stop playback, confirm it disappears (immediately via explicit stop, or within TTL if the app is killed instead).
+---
 
-**Phase 4 — Kick / remote-stop**
-Server: `POST /presence/{deviceId}/kick`, `kick_requested` flag flows into the next heartbeat response. App: "Boot" button on each Now Playing row; `MediaRepository`'s new `Flow<KickEvent>` emits on a `{kick: true}` heartbeat response, `StreamLoaderViewModel` collects it → stops playback + shows "disconnected from another device" message (see Playback-code impact note above).
-*Exit criteria:* boot Shield 1 from Shield 2's panel while Shield 1 is mid-playback, confirm Shield 1 actually stops within ~20s and shows the message.
+## Implementation Phases
 
-**Phase 5 — Offline polish**
-Profile-picker offline fallback (cached list / local-only pseudo-profile on a connectivity-less first run), reachability indicator refinement, exercise the outbox and pull-retry paths under real intermittent connectivity (not just server-killed) to shake out edge cases the earlier phases' happy-path testing wouldn't catch.
+### Phase 0 — Server Skeleton & Device Auth
+- Implement initial server infrastructure (Option A Go service, Option B Firebase Auth/Rules, or Option C Supabase setup).
+- Define `devices` schema and Bearer token verification.
+- Provide device provisioning CLI / admin token generator.
+- **Exit Criteria**: Server responds to authenticated health check ping; invalid tokens receive 401 Unauthorized.
 
-## Verification
-- Server: unit-test the SQLite layer + a scripted curl smoke test (register device row manually, create two profiles, PUT/GET favorites per profile, heartbeat + kick round-trip) before touching the app.
-- App: manual end-to-end on real devices (matches this project's convention — TV D-pad/session testing isn't unit-testable):
-  - Favorite a title as Alice on phone, confirm it appears on Shield 1 (as Alice) after `SyncPullWorker` runs/app foreground, and does *not* appear under Bob's profile on Shield 2.
-  - Switch Shield 1 from Alice to Bob mid-session, confirm the local view swaps to Bob's favorites/history (not a merge of both), and Shield 1 remembers Bob on next launch.
-  - Start playback as Alice on Shield 1, confirm Shield 2's "Now Playing" panel shows "Alice — Shield 1 — <title>", and that "Boot" actually stops playback there within ~20s.
-- `./gradlew testDebugUnitTest` for any new Kotlin unit tests (`XtreamUserDataManager`/`SyncClient` merge logic).
+### Phase 1 — Profile System & Local Cache Re-Scoping
+- Server: Implement `profiles` table and `GET/POST /profiles` endpoints.
+- App: Create `ProfileManager` and Profile Picker Compose UI.
+- App: Re-scope `MediaRepository` user data storage to `"media_userdata_${providerId}_${profileId}"`.
+- App: Wire `AppContainer` cache eviction on profile switch.
+- **Exit Criteria**: Switching profiles in-app loads distinct local favorites and watch history for each profile; profile additions sync to server.
+
+### Phase 2 — Favorites, Watch History & Resume Position Sync
+- Server: Implement `favorites`, `watch_history`, and `server_config` tables + sync endpoints.
+- App: Create `SyncClient`, outbox persistence (`pending_sync_ops`), `SyncPushWorker`, and `SyncPullWorker`.
+- App: Integrate push triggers into `MediaRepository` mutation methods (`addFavorite`, `removeFavorite`, `savePlaybackPosition`).
+- App: Build "Connected Devices" Settings screen with cross-panel mismatch warning.
+- **Exit Criteria**: Favoriting a title on Mobile reflects on TV after pull; offline mutations queue in outbox and push successfully when network returns; mismatching server URLs display warning without crashing.
+
+### Phase 3 — Presence Visibility ("Now Playing")
+- Server: Implement `presence` table, `POST /presence/heartbeat`, `POST /presence/stop`, and TTL sweeper.
+- App: Update `MediaProvider` interface with optional `seriesName` parameter.
+- App: Wire presence heartbeats into `XtreamMediaProvider` (`onPlaybackStarted`, `onPlaybackProgress`, `onPlaybackStopped`).
+- App: Add live "Now Playing" section to Connected Devices screen.
+- **Exit Criteria**: Starting playback on one device displays active stream details (including series name for TV shows) on another device's Connected Devices screen; stopping playback removes the entry.
+
+### Phase 4 — Kick & Remote-Stop Execution
+- Server: Implement `POST /presence/{deviceId}/kick` and `{kick: true}` heartbeat response flag.
+- App: Add "Kick Stream" button to active presence items in Connected Devices UI.
+- App: Wire `kickEvents` flow from `XtreamMediaProvider` -> `MediaRepository` -> `StreamLoaderViewModel`.
+- **Exit Criteria**: Clicking "Kick Stream" on Device A causes Device B to stop playback within ~20 seconds and present a notification.
+
+### Phase 5 — Offline Polish & Intermittent Network Resilience
+- App: Implement profile picker offline fallback (cached profile list / local offline profile mode).
+- App: Exercise pull/push worker retries under simulated packet loss and server downtime.
+- **Exit Criteria**: App operates seamlessly offline; sync recovers cleanly upon reconnect without data duplication or loss.
+
+---
+
+## Verification & Testing Strategy
+
+1. **Unit & Integration Tests**:
+   - `MediaRepositorySyncTest`: Verify outbox queuing, push trigger invocation, and pull merge logic.
+   - `ProfileManagerTest`: Test profile switching, StateFlow emissions, and SharedPreferences persistence.
+   - `SyncClientTest`: Mock server responses (including 409 Conflict URL mismatch and 401 Unauthorized) and verify error handling.
+   - Run `./gradlew testDebugUnitTest` to validate test suite execution.
+
+2. **Manual Device Verification**:
+   - Install build on Mobile (`./gradlew :mobile:installDebug`) and Android TV (`./gradlew :tv:installDebug`).
+   - Confirm D-pad navigation on TV for Profile Picker and Connected Devices UI.
+   - Test cross-device sync: Favorite item on Mobile -> Verify arrival on TV.
+   - Test kick functionality: Play stream on TV -> Trigger kick from Mobile -> Verify TV stops playback cleanly.
