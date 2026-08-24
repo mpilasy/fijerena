@@ -9,7 +9,9 @@ The build environment is fully operational. All recent commits compile and deplo
 ## Open Investigation
 
 ### Cellular Streaming Buffering
-CDN throttles to ~1.5 Mbps per connection on cellular; stream is 1080p single-quality at ~1.3 Mbps. iMPlayer plays smoothly with same bandwidth — root cause still unknown.
+CDN throttles to ~1.5 Mbps per connection on cellular; stream is 1080p single-quality at ~1.3 Mbps. iMPlayer plays smoothly with same bandwidth — root cause still unknown; the packet-capture comparison below has not been done.
+
+Since this was opened, `StreamHealthMonitor` gained a degraded-tier backoff and `NetworkModule.evictConnectionPool()` to force fresh sockets past ISP/CDN shaping (`core/player/network/`), and playback health is now surfaced in the stats overlay ("stats for nerds") for live diagnosis. That's symptom-level recovery, not a root-cause fix — worth checking on real cellular before assuming this is still an open problem.
 
 **Next step:** Packet capture (PCAPdroid) comparison between our app and iMPlayer.
 
