@@ -55,7 +55,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -85,6 +84,7 @@ import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -186,8 +186,8 @@ fun MobileEpgBrowserScreen(
                     ) {
                         if (isRefreshing) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(MobileDimensions.progressIndicatorSmall),
+                                strokeWidth = MobileDimensions.strokeWidth,
                             )
                         } else {
                             Icon(
@@ -218,7 +218,7 @@ fun MobileEpgBrowserScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Spacing.md, vertical = 0.dp),
+                        .padding(horizontal = Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -235,7 +235,7 @@ fun MobileEpgBrowserScreen(
                             RadioButton(
                                 selected = searchMode == mode,
                                 onClick = { viewModel.setSearchMode(mode) },
-                                modifier = Modifier.size(32.dp),
+                                modifier = Modifier.size(MobileDimensions.iconLarge),
                             )
                             Text(
                                 text =
@@ -257,7 +257,7 @@ fun MobileEpgBrowserScreen(
                     Checkbox(
                         checked = matchedOnly,
                         onCheckedChange = { matchedOnly = it },
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier.size(MobileDimensions.iconLarge),
                     )
                     Text(
                         text = stringResource(R.string.epg_browser_matched_label),
@@ -284,7 +284,7 @@ fun MobileEpgBrowserScreen(
                     Icon(
                         imageVector = CinemaIcons.Search,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(MobileDimensions.iconSmall),
                     )
                 },
                 trailingIcon = {
@@ -297,7 +297,7 @@ fun MobileEpgBrowserScreen(
                             Icon(
                                 imageVector = CinemaIcons.Close,
                                 contentDescription = stringResource(R.string.provider_clear_button),
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(MobileDimensions.iconSmall),
                             )
                         }
                     }
@@ -354,8 +354,8 @@ fun MobileEpgBrowserScreen(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .height(2.dp)
-                                .padding(top = 2.dp),
+                                .height(MobileDimensions.strokeWidth)
+                                .padding(top = CinemaSpacing.xxxs),
                     )
                 }
             }
@@ -771,7 +771,7 @@ private fun MobileEpgSearchHistorySection(
                     imageVector = CinemaIcons.Delete,
                     contentDescription = stringResource(R.string.epg_browser_clear_all_description),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(MobileDimensions.iconSmall),
                 )
             }
         }

@@ -179,16 +179,11 @@ fun ContentTypeSelectionScreen(
     LaunchedEffect(mediaProviderRef) {
         val mp = mediaProviderRef ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            for (contentType in listOf(ContentType.MOVIES, ContentType.TV_SHOWS, ContentType.LIVE_TV)) {
-                val poster =
-                    mp.getRecentlyPlayed(contentType)
-                        ?.getOrNull()
-                        ?.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }
-                        ?.thumbnailUrl
-                if (poster != null) {
-                    backdropImageUrl = poster
-                    break
-                }
+            backdropImageUrl = listOf(ContentType.MOVIES, ContentType.TV_SHOWS, ContentType.LIVE_TV).firstNotNullOfOrNull { contentType ->
+                mp.getRecentlyPlayed(contentType)
+                    ?.getOrNull()
+                    ?.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }
+                    ?.thumbnailUrl
             }
         }
     }
