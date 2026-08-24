@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-24  
 **Scope:** Full codebase audit (~367 Kotlin files, ~80K LOC)  
-**Status:** 23/29 completed (T1, T3, T4 complete & verified ✅; T2 pending)
+**Status:** 29/29 completed (All T1, T2, T3, T4 issues resolved & verified ✅)
 
 ---
 
@@ -13,7 +13,7 @@ Findings are grouped into 4 tiers by crossing **risk** (data loss, crash, corrup
 | Tier | Risk | Complexity | Action | Status |
 |------|------|------------|--------|--------|
 | **T1** | High risk | Low complexity | Fix immediately — high ROI | **COMPLETED (7/7)** ✅ |
-| **T2** | High risk | Medium–High complexity | Fix this week — needs design | **PENDING (0/6)** ⏳ |
+| **T2** | High risk | Medium–High complexity | Fix this week — needs design | **COMPLETED (6/6)** ✅ |
 | **T3** | Medium risk | Low complexity | Fix next sprint | **COMPLETED (9/9)** ✅ |
 | **T4** | Low risk | Any | Backlog / Polish | **COMPLETED (7/7)** ✅ |
 
@@ -92,12 +92,11 @@ These require more design thought or touch multiple files.
 - **Files:** `tv/.../ui/player/components/overlays/TvStatsOverlay.kt` (L140–285)
 - **Resolution:** Consolidated ~15 distinct state variables into a single unified `StatsSnapshot` data class updated once per tick, avoiding individual state mutation tracking and reducing recomposition overhead.
 
-### T2-6. Position Save Listener Leaked from Docked Mini-Player
-- **Status:** Pending
+### T2-6. [COMPLETED] Position Save Listener Leaked from Docked Mini-Player
+- **Status:** COMPLETED ✅
 - **Risk:** Leaked `loaderViewModel` reference in singleton service after dock demotion
 - **Files:** `mobile/.../feature/player/MobilePlayerScreen.kt` (L312–315)
-- **Complexity:** Medium — listener lifecycle needs to move into `MobilePlayerContent` itself
-- **Approach:** Move listener registration + unregistration into a `DisposableEffect` inside `MobilePlayerContent`.
+- **Resolution:** Replaced `LaunchedEffect` with `DisposableEffect(loaderViewModel)` inside `MobilePlayerContent` so the listener is automatically cleared when the mini-player leaves composition.
 
 ---
 
@@ -190,7 +189,7 @@ These require more design thought or touch multiple files.
 | Tier | Total | Completed | Pending |
 |------|-------|-----------|---------|
 | T1 — High risk / Low complexity | 7 | 7 | 0 |
-| T2 — High risk / Medium+ complexity | 6 | 0 | 6 |
+| T2 — High risk / Medium+ complexity | 6 | 6 | 0 |
 | T3 — Medium risk / Low complexity | 9 | 9 | 0 |
 | T4 — Low risk / Polish | 7 | 7 | 0 |
-| **Total** | **29** | **23** | **6** |
+| **Total** | **29** | **29** | **0** |
