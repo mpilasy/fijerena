@@ -48,26 +48,6 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable
-fun IdleContent(onBack: () -> Unit) {
-    Column(
-        horizontalAlignment = CenterHorizontally,
-        modifier = Modifier.padding(Spacing.xl),
-    ) {
-        Text(
-            text = stringResource(R.string.player_ready_to_play),
-            color = CinemaTextPrimary,
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        Spacer(modifier = Modifier.height(Spacing.md))
-        CinemaSecondaryButton(
-            onClick = onBack,
-            text = stringResource(R.string.player_back),
-            modifier = Modifier.padding(Spacing.xs),
-        )
-    }
-}
-
-@Composable
 fun BufferingContent() {
     MitohanaLoading(
         style = MaterialTheme.typography.headlineSmall,

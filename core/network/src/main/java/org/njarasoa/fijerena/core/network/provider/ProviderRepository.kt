@@ -196,19 +196,6 @@ class ProviderRepository(
     }
 
     /**
-     * Get provider settings synchronously (for use in non-suspend contexts).
-     * Note: This performs a blocking database call on cache miss - use getProviderSettings() when possible.
-     */
-    fun getProviderSettingsSync(providerId: Long): ProviderSettings {
-        settingsCache[providerId]?.let { return it }
-        // ⚡ Bolt: Use synchronous DAO method instead of runBlocking to avoid coroutine overhead and thread blocking
-        val entity = dao.getProviderByIdSync(providerId) ?: return ProviderSettings.DEFAULT
-        val settings = parseProviderSettings(entity.providerSettings)
-        settingsCache[providerId] = settings
-        return settings
-    }
-
-    /**
      * Update the settings for a provider.
      */
     suspend fun updateProviderSettings(

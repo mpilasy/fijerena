@@ -21,9 +21,6 @@ interface ProviderDao {
     @Query("SELECT * FROM providers WHERE id = :id")
     suspend fun getProviderById(id: Long): ProviderEntity?
 
-    @Query("SELECT * FROM providers WHERE id = :id")
-    fun getProviderByIdSync(id: Long): ProviderEntity?
-
     @Query("SELECT COUNT(*) FROM providers")
     suspend fun getProviderCount(): Int
 

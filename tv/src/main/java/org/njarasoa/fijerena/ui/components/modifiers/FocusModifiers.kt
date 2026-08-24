@@ -49,24 +49,6 @@ fun Modifier.tvFocusable(
         .then(TvFocusableElement(focusScale, borderWidth, borderColor, cornerRadius))
 
 /**
- * Subtle Focus Modifier
- * For elements that need less dramatic focus feedback:
- * - 1.05x animated scale on focus
- * - 2dp border
- */
-@Composable
-fun Modifier.tvFocusableSubtle(
-    borderColor: Color = CinemaAccentLight,
-    cornerRadius: Dp = CornerRadius.medium,
-): Modifier =
-    tvFocusable(
-        focusScale = TvFocusTokens.focusedScaleSubtle,
-        borderWidth = TvFocusTokens.focusBorderWidth,
-        borderColor = borderColor,
-        cornerRadius = cornerRadius,
-    )
-
-/**
  * No Scale Focus Modifier
  * For elements that should only show border on focus without scaling:
  * - No scale

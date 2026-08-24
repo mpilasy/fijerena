@@ -45,14 +45,6 @@ data class PlayerMetadata(
     val headers: Map<String, String> = emptyMap(),
 )
 
-@Serializable
-data class StreamQuality(
-    val bitrate: Int = 0,
-    val width: Int = 0,
-    val height: Int = 0,
-    val frameRate: Int = 0,
-)
-
 data class AudioTrackInfo(
     val groupIndex: Int,
     val trackIndex: Int,

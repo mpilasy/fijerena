@@ -78,7 +78,6 @@
     <string name="common_refresh">Refresh</string>
     <string name="common_expand">Expand</string>
     <string name="common_collapse">Collapse</string>
-    <string name="common_now">Now</string>
 
     <!-- EPG indexing -->
     <string name="epg_indexing_failed">EPG indexing failed</string>
@@ -88,7 +87,6 @@
     <string name="epg_no_programs_found_matching">No programs found matching \"%1$s\"</string>
 
     <!-- EPG Guide UI -->
-    <string name="epg_guide_title">TV Guide</string>
     <string name="epg_guide_title_format">TV Guide - %1$s</string>
     <string name="epg_loading_guide">Loading TV Guide…</string>
     <string name="epg_no_data">No EPG data available</string>
@@ -113,7 +111,6 @@
     <string name="epg_status_finished">Finished run</string>
     <string name="epg_status_finalizing">Finalizing (%1$s)…</string>
     <string name="epg_status_clearing">Clearing data…</string>
-    <string name="epg_status_error">Error: %1$s</string>
     <string name="epg_last_run_stats">Last Run: Finished at %1$s • %2$d sources in %3$s%4$s</string>
     <string name="epg_last_run_errors"> (%1$d errors)</string>
     <string name="epg_maintenance_desc">Manage local database and temporary files.</string>
@@ -184,10 +181,8 @@
     <string name="provider_save_button">Save</string>
     <string name="provider_delete_button">Delete</string>
     <string name="provider_refresh_button">Refresh</string>
-    <string name="provider_connect_button">Connect</string>
     <string name="provider_quick_connect_title">Quick Connect</string>
     <string name="provider_data_management_title">Data Management</string>
-    <string name="provider_clear_cache_button">Clear Cache</string>
     <string name="provider_settings_title">Provider Settings</string>
     <string name="provider_name_placeholder_xtream">e.g. My IPTV</string>
     <string name="provider_name_placeholder_jellyfin">e.g. My Jellyfin Server</string>
@@ -317,7 +312,6 @@
     <string name="common_add">Add</string>
     <string name="common_update">Update</string>
     <string name="common_all">All</string>
-    <string name="common_none">None</string>
     <string name="common_back">Back</string>
     <string name="common_got_it">Got it!</string>
     <string name="common_dont_show_again">Don\'t show again</string>
@@ -326,7 +320,6 @@
     <string name="provider_manage_filters_button">Manage Filters</string>
 
     <string name="movie_details_title">Movie Details</string>
-    <string name="movie_error_load_failed">Failed to load movie info</string>
     <string name="movie_refresh_info">Refresh movie info</string>
     <string name="movie_ends_at_format">Ends at %1$s</string>
     <string name="movie_resume_from_format">▶ Resume from %1$s</string>
@@ -374,7 +367,6 @@
     <string name="audio_channel_custom">%1$dch</string>
 
     <!-- Player UI -->
-    <string name="player_ready_to_play">Ready to play</string>
     <string name="player_playback_ended">Playback ended</string>
     <string name="player_playback_error_prefix">⚠️ Playback Error</string>
     <string name="player_technical_details">Technical Details (Dev Mode):</string>
@@ -398,7 +390,6 @@
     <string name="player_pause">Pause</string>
     <string name="player_stats_hint">Double-tap OK to hide • BACK to exit stats</string>
     <string name="player_quality_auto_subtitle">Automatically adjust quality based on network</string>
-    <string name="player_select_chapter">Select Chapter</string>
     <string name="player_no_chapters">No chapters available</string>
     <string name="player_prev_episode">⏮ Previous</string>
     <string name="player_next_episode">Next ⏭</string>
@@ -706,7 +697,6 @@
     <string name="search_stream_name_placeholder">Enter stream name…</string>
     <string name="search_result_category_format">Category: %1$s</string>
     <string name="details_category_format">Category: %1$s</string>
-    <string name="details_browse_category">Browse this category</string>
     <string name="content_type_movies_subtitle_short">Browse on-demand</string>
     <string name="content_type_tv_shows_subtitle_short">Series &amp; episodes</string>
 

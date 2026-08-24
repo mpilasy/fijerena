@@ -96,61 +96,7 @@ interface EpgIndexDao {
         maxResults: Int = 500,
     ): List<EpgSearchResultRow>
 
-    @Query(
-        """
-        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
-        FROM (
-            SELECT p2.*
-            FROM epg_programme p2
-            WHERE p2.title_lowercase LIKE '%' || :queryLower || '%'
-              AND p2.source_id IN (:sourceIds)
-              AND p2.end_epoch > :windowStart AND p2.start_epoch <= :windowEnd
-            ORDER BY p2.start_epoch ASC
-            LIMIT :maxResults
-        ) p
-        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
-        ORDER BY p.start_epoch ASC
-        """,
-    )
-    suspend fun searchByTitleLike(
-        queryLower: String,
-        sourceIds: List<Long>,
-        windowStart: Long,
-        windowEnd: Long,
-        maxResults: Int = 500,
-    ): List<EpgSearchResultRow>
-
-    // --------------- Now Playing query (uses composite start_epoch + end_epoch index) ---------------
-
-    @Query(
-        """
-        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
-        FROM epg_programme p
-        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
-        WHERE p.source_id IN (:sourceIds)
-          AND p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
-        ORDER BY c.display_name ASC
-        """,
-    )
-    suspend fun getNowPlaying(nowEpoch: Long, sourceIds: List<Long>): List<EpgSearchResultRow>
-
     // --------------- Paged queries for large datasets (2M+ rows) ---------------
-
-    @Query(
-        """
-        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
-        FROM epg_programme p
-        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
-        WHERE p.source_id IN (:sourceIds)
-          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
-        ORDER BY p.start_epoch ASC
-        """,
-    )
-    fun getPagedProgrammes(
-        windowStart: Long,
-        windowEnd: Long,
-        sourceIds: List<Long>,
-    ): PagingSource<Int, EpgSearchResultRow>
 
     @Query(
         """
@@ -163,24 +109,6 @@ interface EpgIndexDao {
         """,
     )
     fun getPagedNowPlaying(nowEpoch: Long, sourceIds: List<Long>): PagingSource<Int, EpgSearchResultRow>
-
-    @Query(
-        """
-        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
-        FROM epg_programme p
-        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
-        WHERE p.channel_id = :channelId
-          AND p.source_id IN (:sourceIds)
-          AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
-        ORDER BY p.start_epoch ASC
-        """,
-    )
-    fun getPagedProgrammesForChannel(
-        channelId: String,
-        sourceIds: List<Long>,
-        windowStart: Long,
-        windowEnd: Long,
-    ): PagingSource<Int, EpgSearchResultRow>
 
     @Query(
         """
@@ -279,15 +207,6 @@ interface EpgIndexDao {
     @Query("SELECT * FROM epg_index_metadata WHERE id = 1")
     suspend fun getMetadata(): EpgIndexMetadata?
 
-    @Query("DELETE FROM epg_programme")
-    suspend fun deleteAllProgrammes()
-
-    @Query("DELETE FROM epg_channel")
-    suspend fun deleteAllChannels()
-
-    @Query("DELETE FROM epg_index_metadata")
-    suspend fun deleteAllMetadata()
-
     @Query("SELECT COUNT(*) FROM epg_programme")
     suspend fun getProgrammeCount(): Int
 
@@ -296,33 +215,4 @@ interface EpgIndexDao {
 
     @Query("SELECT MAX(end_epoch) FROM epg_programme WHERE source_id = :sourceId")
     suspend fun getLatestProgrammeEndTimeForSource(sourceId: Long): Long?
-
-    // --------------- Transactional ingestion ---------------
-
-    @Transaction
-    suspend fun replaceAllData(
-        channels: List<EpgChannelEntity>,
-        programmes: List<EpgProgrammeEntity>,
-        metadata: EpgIndexMetadata,
-    ) {
-        deleteAllProgrammes()
-        deleteAllChannels()
-        deleteAllMetadata()
-        insertChannels(channels)
-        insertProgrammes(programmes)
-        insertMetadata(metadata)
-    }
-
-    @Transaction
-    suspend fun clearAndLoadBatch(
-        channels: List<EpgChannelEntity>,
-        programmes: List<EpgProgrammeEntity>,
-        staleCutoffEpoch: Long,
-        metadata: EpgIndexMetadata,
-    ) {
-        deleteStaleProgrammes(staleCutoffEpoch)
-        insertChannels(channels)
-        insertProgrammes(programmes)
-        insertMetadata(metadata)
-    }
 }
