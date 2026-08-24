@@ -74,12 +74,11 @@ These require more design thought or touch multiple files.
 - **Files:** `core/network/.../xmltv/EpgFileManager.kt` (L542–626)
 - **Resolution:** Added `try-finally` around the producer-consumer `coroutineScope` that closes `ingestionQueue` and drains/deletes all remaining `tmpFile`s on completion or cancellation.
 
-### T2-3. `AppContainer.getMediaRepository()` Holds Global Lock During Network Call
-- **Status:** Pending
+### T2-3. [COMPLETED] `AppContainer.getMediaRepository()` Holds Global Lock During Network Call
+- **Status:** COMPLETED ✅
 - **Risk:** ANR / UI freeze — one slow provider blocks all repository access
 - **Files:** `core/ui/.../di/AppContainer.kt` (L78)
-- **Complexity:** Medium — needs per-provider locking or lock-free connect pattern
-- **Approach:** Per-provider `Mutex` map or release global lock before `connect()`.
+- **Resolution:** Released the global `mutex` before executing `repo.connect()` so that slow network calls for one provider never block other concurrent repository lookups or operations.
 
 ### T2-4. `CinemaColors` Not Compose-Reactive
 - **Status:** Pending
