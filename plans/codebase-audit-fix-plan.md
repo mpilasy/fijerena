@@ -184,6 +184,19 @@ These require more design thought or touch multiple files.
 
 ---
 
+## Platform Impact Breakdown
+
+| Target Platform Scope | Fix Count | Percentage | Key Focus Areas |
+|---|---|---|---|
+| **Shared Core** (`core:player`, `core:network`, `core:ui`) | **17** | **58.6%** | EPG ingestion & index DB integrity, async repository thread/scope lifecycle, thread-safe cache & preferences access, playback retry atomicity, reactive Compose theme holder |
+| **TV App Specific** (`tv/`) | **6** | **20.7%** | D-pad focus management (`withFrameMillis`), `BackHandler` integration, `TvStatsOverlay` recomposition isolation (`StatsSnapshot`), movie refresh spinner |
+| **Mobile App Specific** (`mobile/`) | **6** | **20.7%** | PointerInput touch gesture isolation, backstack cleanup on provider switch, `DisposableEffect` listener cleanup on dock demotion, lifecycle-aware toast flow |
+| **Total** | **29** | **100%** | |
+
+> **Net Effectiveness:** Because all 17 Core fixes directly power both apps, **23 fixes (79.3%)** benefit the TV experience and **23 fixes (79.3%)** benefit the Mobile experience.
+
+---
+
 ## Summary
 
 | Tier | Total | Completed | Pending |
