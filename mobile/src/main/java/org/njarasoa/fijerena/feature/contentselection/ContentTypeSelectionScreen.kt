@@ -398,6 +398,7 @@ private fun GradientContentCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val brush = remember(gradientColors) { Brush.horizontalGradient(colors = gradientColors) }
     Card(
         onClick = onClick,
         modifier =
@@ -411,7 +412,7 @@ private fun GradientContentCard(
                 Modifier
                     .fillMaxSize()
                     .background(
-                        Brush.horizontalGradient(colors = gradientColors),
+                        brush,
                         shape = RoundedCornerShape(CinemaCornerRadius.large),
                     ),
             contentAlignment = Alignment.CenterStart,

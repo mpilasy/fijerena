@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
+import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
@@ -249,7 +250,7 @@ fun MobileNavHost(
                             // The card stands for one episode — play it, whether or not it can
                             // name the show it belongs to.
                             is BrowseTarget.Episode ->
-                                navController.navigate(
+                                navController.navigateOnce(
                                     Screen.Player(
                                         streamId = target.episodeId.raw,
                                         streamName = itemName,
@@ -275,7 +276,7 @@ fun MobileNavHost(
                             // interception). Kept for the "not resolvable from the current list"
                             // case, same as TV.
                             is BrowseTarget.Channel ->
-                                navController.navigate(Screen.Player(target.streamId, itemName, categoryId, contentType))
+                                navController.navigateOnce(Screen.Player(target.streamId, itemName, categoryId, contentType))
                             // Browsed into by the list screen itself; it never reaches nav.
                             is BrowseTarget.CategoryRef -> Unit
                         }
@@ -482,7 +483,7 @@ fun MobileNavHost(
                     movieName = movieDetailsScreen.movieName,
                     categoryId = movieDetailsScreen.categoryId,
                     onPlayMovie = { movieId, movieName, extension, startFromBeginning ->
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.Player(
                                 streamId = movieId,
                                 streamName = movieName,
@@ -525,7 +526,7 @@ fun MobileNavHost(
                     categoryId = episodeSelectionScreen.categoryId,
                     initialEpisodeId = episodeSelectionScreen.initialEpisodeId,
                     onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning ->
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.Player(
                                 streamId = episodeId,
                                 streamName = episodeTitle,

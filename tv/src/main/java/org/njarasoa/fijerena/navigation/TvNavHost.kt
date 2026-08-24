@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.navigation.Screen
+import org.njarasoa.fijerena.core.navigation.navigateOnce
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
@@ -307,7 +308,7 @@ fun TvNavHost(
                                 // The card represents one episode — play it, whether or not it
                                 // can name the show it belongs to.
                                 is BrowseTarget.Episode ->
-                                    navController.navigate(
+                                    navController.navigateOnce(
                                         Screen.Player(
                                             streamId = target.episodeId.raw,
                                             streamName = streamName,
@@ -422,7 +423,7 @@ fun TvNavHost(
                         movieName = movieDetailsScreen.movieName,
                         categoryId = movieDetailsScreen.categoryId,
                         onPlayMovie = { movieId, movieName, extension, startFromBeginning ->
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.Player(
                                     streamId = movieId,
                                     streamName = movieName,
@@ -465,7 +466,7 @@ fun TvNavHost(
                         categoryId = episodeSelectionScreen.categoryId,
                         initialEpisodeId = episodeSelectionScreen.initialEpisodeId,
                         onEpisodeSelected = { episodeId, episodeTitle, extension, startFromBeginning ->
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.Player(
                                     streamId = episodeId,
                                     streamName = episodeTitle,

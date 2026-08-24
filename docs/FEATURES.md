@@ -12,7 +12,7 @@ A native Android media player supporting Xtream IPTV, Jellyfin, SMB shares, Loca
 | **Jellyfin** | No | Yes | Yes | Server-side | Yes | Username/password or Quick Connect |
 | **SMB** | No | Yes | No | Filename | No | Optional |
 | **Local** | M3U only | Yes | No | Filename | No | No |
-| **Remote M3U** | Yes | No | No | No | No | No |
+| **Remote M3U** | Yes | No | No | No | Yes | No |
 
 Multiple providers can be configured simultaneously. Switch active provider from Settings → Manage Providers.
 
@@ -60,8 +60,11 @@ Minimum 2 characters to trigger. Background pre-fetch warms cache on category sc
 ### Jellyfin (server-side)
 Native Jellyfin REST search. Returns movies and series matching the query.
 
-### Local / SMB / Remote M3U
+### Local / Remote M3U
 Direct provider-level search matching titles against loaded item list via `BaseM3uMediaProvider.search`.
+
+### SMB
+No provider-level search; falls back to `SearchViewModel`'s client-side cache scan (filename match against already-loaded items).
 
 ---
 

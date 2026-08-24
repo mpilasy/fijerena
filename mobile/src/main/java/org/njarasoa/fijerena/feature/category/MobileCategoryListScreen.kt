@@ -114,6 +114,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
@@ -744,7 +745,7 @@ fun MobileCategoryListScreen(
                                                 Icon(
                                                     CinemaIcons.Close,
                                                     contentDescription = stringResource(R.string.common_close),
-                                                    tint = Color.White,
+                                                    tint = CinemaTextPrimary,
                                                 )
                                             }
                                         }
@@ -826,20 +827,28 @@ fun MobileCategoryListScreen(
                                             Icon(
                                                 CinemaIcons.Close,
                                                 contentDescription = stringResource(R.string.common_close),
-                                                tint = Color.White,
+                                                tint = CinemaTextPrimary,
                                             )
                                         }
 
+                                        val palette = CinemaThemeHolder.current
+                                        // Memoize brush to avoid allocating new Brush + listOf on
+                                        // every recomposition — mirrors GradientOverlay.kt.
+                                        val scrimBrush =
+                                            remember(palette.background) {
+                                                Brush.verticalGradient(
+                                                    listOf(
+                                                        Color.Transparent,
+                                                        palette.background.copy(alpha = CinemaAlpha.imageOverlay),
+                                                    ),
+                                                )
+                                            }
                                         Column(
                                             modifier =
                                                 Modifier
                                                     .align(Alignment.BottomStart)
                                                     .fillMaxWidth()
-                                                    .background(
-                                                        Brush.verticalGradient(
-                                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)),
-                                                        ),
-                                                    )
+                                                    .background(scrimBrush)
                                                     .padding(CinemaSpacing.sm),
                                         ) {
                                             // Marks this as the docked preview, distinct from the
@@ -848,12 +857,12 @@ fun MobileCategoryListScreen(
                                             Text(
                                                 text = stringResource(R.string.category_live_preview_badge),
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = Color.White.copy(alpha = 0.75f),
+                                                color = CinemaTextSecondary,
                                             )
                                             Text(
                                                 text = dockSuccess?.streamName ?: target.name,
                                                 style = MaterialTheme.typography.titleLarge,
-                                                color = Color.White,
+                                                color = CinemaTextPrimary,
                                                 maxLines = 1,
                                             )
                                             val nowProg = dockSuccess?.currentEpgProgram
@@ -861,7 +870,7 @@ fun MobileCategoryListScreen(
                                                 Text(
                                                     text = stringResource(R.string.epg_now_prefix, nowProg.title),
                                                     style = MaterialTheme.typography.bodyMedium,
-                                                    color = Color.White.copy(alpha = 0.85f),
+                                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
                                                     maxLines = 1,
                                                 )
                                             }

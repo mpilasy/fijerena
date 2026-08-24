@@ -123,7 +123,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **Seeking / Navigation:** 
   - **VOD:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
   - **TV Shows:** D-pad Left/Right (TV) or Swipe (Mobile) to skip between episodes in-player.
-- **Channel Overlays (Live TV):** D-pad Left/Right (TV) or Swipe (Mobile) open channel overlays. Use `ChannelListOverlay(panelAlignment=…)` with `slideInHorizontally` and `GlassPanel(backgroundAlpha=0.5f)`.
+- **Channel Overlays (Live TV):** D-pad Left/Right (TV) or Swipe (Mobile) open channel overlays. TV: `TvChannelListOverlay(panelAlignment=…)` with `slideInHorizontally` and `GlassPanel(backgroundAlpha=0.5f)`. Mobile: `MobileChannelListSheet`.
 - **Preview Pane / Dock (Live TV browse):** Channel plays alongside the list while browsing — TV: focus-driven split (`LiveTvSplitLayout`); Mobile: tap-driven docked mini-player (`MobileCategoryListScreen`). Both promote to full-screen on the same engine connection (no restart). Each platform guarantees Back always has a real stopover before exiting Live TV — see `docs/NAVIGATION_GUIDE.md` → "Live TV Preview / Dock Back-Stack".
 - **Mobile Gestures:** `detectTapGestures` (tap=controls, double-tap=pause/resume VOD). Merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
 
@@ -183,7 +183,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 | **Jellyfin** | No | Yes | Yes | No | Server-side | Yes |
 | **SMB** | No | Yes | No | No | Filename | No |
 | **Local** | M3U only | Yes | No | No | Filename | No |
-| **Remote M3U** | Yes | No | No | No | No | No |
+| **Remote M3U** | Yes | No | No | No | Yes | No |
 
 ---
 
