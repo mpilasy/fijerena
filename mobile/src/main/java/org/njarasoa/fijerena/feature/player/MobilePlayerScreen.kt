@@ -127,6 +127,10 @@ fun MobilePlayerScreen(
             if (!activityScopedViewModel.isInPictureInPictureMode.value) {
                 finalizeSession(activityScopedViewModel.playbackState.value, loaderViewModel)
                 activityScopedViewModel.stop()
+                // Service outlives this screen — drop the listener so it doesn't keep
+                // this loaderViewModel (and everything it references) pinned in memory
+                // until the next player screen overwrites it.
+                StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
             }
         }
     }
@@ -138,6 +142,7 @@ fun MobilePlayerScreen(
         onBack = {
             finalizeSession(activityScopedViewModel.playbackState.value, loaderViewModel)
             activityScopedViewModel.stop()
+            StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
             onBack()
         },
     )

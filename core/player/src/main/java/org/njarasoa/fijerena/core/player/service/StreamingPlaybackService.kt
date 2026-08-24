@@ -436,7 +436,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     fun setPositionSaveListener(
-        listener: (position: Long, duration: Long, isPaused: Boolean, audioIndex: Int?, subtitleIndex: Int?) -> Unit,
+        listener: ((position: Long, duration: Long, isPaused: Boolean, audioIndex: Int?, subtitleIndex: Int?) -> Unit)?,
     ) {
         onPositionSaveListener = listener
     }

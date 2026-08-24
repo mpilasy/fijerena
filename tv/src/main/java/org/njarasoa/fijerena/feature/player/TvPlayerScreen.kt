@@ -126,6 +126,10 @@ fun TvPlayerScreen(
         onDispose {
             finalizeSession(playbackViewModel.playbackState.value, loaderViewModel)
             playbackViewModel.stop()
+            // Service outlives this screen — drop the listener so it doesn't keep
+            // this loaderViewModel (and everything it references) pinned in memory
+            // until the next player screen overwrites it.
+            StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
         }
     }
 
