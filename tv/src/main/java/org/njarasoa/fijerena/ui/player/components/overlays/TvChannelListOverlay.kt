@@ -62,11 +62,15 @@ fun TvChannelListOverlay(
                 }
             if (targetIndex > 0) listState.scrollToItem(targetIndex)
             // Small delay to ensure the target item is composed and FocusRequester is attached
-            delay(100)
+            androidx.compose.runtime.withFrameMillis {}
             try {
                 targetFocusRequester.requestFocus()
             } catch (_: IllegalStateException) {
-                // FocusRequester not initialized, ignore
+                // Retry after another frame
+                try {
+                    androidx.compose.runtime.withFrameMillis {}
+                    targetFocusRequester.requestFocus()
+                } catch (_: IllegalStateException) {}
             }
         }
     }
@@ -78,15 +82,9 @@ fun TvChannelListOverlay(
                 .background(
                     org.njarasoa.fijerena.core.ui.theme.CinemaBackground
                         .copy(alpha = CinemaAlpha.tint),
-                ).onKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Back) {
-                        onDismiss()
-                        true
-                    } else {
-                        false
-                    }
-                },
+                ),
     ) {
+        androidx.activity.compose.BackHandler(enabled = true) { onDismiss() }
         TvGlassPanel(
             modifier =
                 Modifier

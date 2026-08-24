@@ -24,6 +24,7 @@ class StreamingMediaSourceFactory(context: Context) {
 
     private val mediaSourceFactory = DefaultMediaSourceFactory(context)
 
+    @Synchronized
     fun createMediaSource(
         streamUrl: String,
         headers: Map<String, String> = emptyMap(),

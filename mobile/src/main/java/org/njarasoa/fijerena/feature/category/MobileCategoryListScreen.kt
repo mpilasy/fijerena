@@ -60,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -423,7 +424,7 @@ fun MobileCategoryListScreen(
         // LiveTvSplitLayout for the same reason.
         DisposableEffect(Unit) {
             onDispose {
-                composableScope.launch {
+                viewModel.viewModelScope.launch {
                     favoriteStreams = viewModel.getFavoritesSnapshot()
                 }
             }

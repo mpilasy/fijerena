@@ -31,25 +31,27 @@ class SmbClient(
 
     suspend fun connect(): Result<Unit> =
         withContext(Dispatchers.IO) {
-            try {
-                client = SMBClient()
-                connection = client!!.connect(host)
-                val authContext =
-                    if (username != null && password != null) {
-                        AuthenticationContext(username, password.toCharArray(), domain)
-                    } else {
-                        AuthenticationContext.anonymous()
-                    }
-                session = connection!!.authenticate(authContext)
-                share = session!!.connectShare(shareName) as DiskShare
-                Result.success(Unit)
-            } catch (e: Exception) {
-                disconnect()
-                Result.failure(e)
+            synchronized(this@SmbClient) {
+                try {
+                    client = SMBClient()
+                    connection = client!!.connect(host)
+                    val authContext =
+                        if (username != null && password != null) {
+                            AuthenticationContext(username, password.toCharArray(), domain)
+                        } else {
+                            AuthenticationContext.anonymous()
+                        }
+                    session = connection!!.authenticate(authContext)
+                    share = session!!.connectShare(shareName) as DiskShare
+                    Result.success(Unit)
+                } catch (e: Exception) {
+                    disconnect()
+                    Result.failure(e)
+                }
             }
         }
 
-    fun disconnect() {
+    fun disconnect() = synchronized(this) {
         try { share?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close share", e) }
         try { session?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close session", e) }
         try { connection?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close connection", e) }

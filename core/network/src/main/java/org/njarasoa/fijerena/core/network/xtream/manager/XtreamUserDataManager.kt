@@ -56,6 +56,8 @@ class XtreamUserDataManager(
     // O(1) lookup set for isFavorite — rebuilt when favorites list changes
     private var favoriteIdSet: Set<Pair<Int, String>>? = null
 
+    private val userDataLock = Any()
+
     companion object {
         private val favoritesCacheMap = ConcurrentHashMap<Long, List<FavoriteStream>>()
 
@@ -139,7 +141,7 @@ class XtreamUserDataManager(
         playbackPosition: Long = 0L,
         duration: Long = 0L,
         isCompleted: Boolean = false,
-    ) {
+    ) = synchronized(userDataLock) {
         val history = getWatchHistory().toMutableList()
 
         // Remove existing entry if present (to update timestamp/position)
@@ -209,7 +211,7 @@ class XtreamUserDataManager(
         streamName: String,
         categoryId: String,
         contentType: String,
-    ): Boolean {
+    ): Boolean = synchronized(userDataLock) {
         val favorites = getFavorites().toMutableList()
 
         // Check for duplicate
@@ -238,7 +240,7 @@ class XtreamUserDataManager(
     fun removeFavorite(
         streamId: Int,
         contentType: String,
-    ): Boolean {
+    ): Boolean = synchronized(userDataLock) {
         val favorites = getFavorites().toMutableList()
         val removed = favorites.removeAll { it.streamId == streamId && it.contentType == contentType }
 
@@ -248,7 +250,7 @@ class XtreamUserDataManager(
             favoriteIdSet = null
             commitAsync { putString(KEY_FAVORITES, json.encodeToString(favorites)) }
         }
-        return removed
+        removed
     }
 
     /**
@@ -365,7 +367,7 @@ class XtreamUserDataManager(
     fun clearPlaybackPosition(
         streamId: Int,
         contentType: String,
-    ) {
+    ) = synchronized(userDataLock) {
         val history = getWatchHistory().toMutableList()
         val index =
             history.indexOfFirst {

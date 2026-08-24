@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.njarasoa.fijerena.core.player.R
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -178,7 +179,7 @@ class StreamingPlaybackService : MediaSessionService() {
             streamUrl = metadata.streamUrl,
             headers = metadata.headers,
             isLive = metadata.isLive,
-            onRetry = { _streamRetryCount.value++ },
+            onRetry = { _streamRetryCount.update { it + 1 } },
             transferListener = bandwidthMeter,
         ) ?: run {
             Log.w(TAG, "performSeamlessRecycle: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
@@ -481,7 +482,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 streamUrl = metadata.streamUrl,
                 headers = metadata.headers,
                 isLive = metadata.isLive,
-                onRetry = { _streamRetryCount.value++ },
+                onRetry = { _streamRetryCount.update { it + 1 } },
                 transferListener = bandwidthMeter,
             ) ?: run {
                 Log.w(TAG, "playStream: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
@@ -525,7 +526,7 @@ class StreamingPlaybackService : MediaSessionService() {
         setRecycling(false)
 
         retryCount++
-        _streamRetryCount.value++
+        _streamRetryCount.update { it + 1 }
         val baseDelay = if (metadata.isLive) LIVE_RETRY_BASE_DELAY_MS else VOD_RETRY_BASE_DELAY_MS
         val delayMs = baseDelay * retryCount
         Log.i(TAG, "Stream retry $retryCount/$maxRetries in ${delayMs}ms (isLive=${metadata.isLive})")
@@ -550,7 +551,7 @@ class StreamingPlaybackService : MediaSessionService() {
                         streamUrl = metadata.streamUrl,
                         headers = metadata.headers,
                         isLive = metadata.isLive,
-                        onRetry = { _streamRetryCount.value++ },
+                        onRetry = { _streamRetryCount.update { it + 1 } },
                         transferListener = bandwidthMeter,
                     ) ?: return@Runnable
 

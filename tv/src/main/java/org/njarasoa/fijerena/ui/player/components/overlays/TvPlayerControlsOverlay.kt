@@ -165,11 +165,17 @@ fun TvPlayerControlsOverlay(
     LaunchedEffect(showFullControls, isLive) {
         if (showFullControls) {
             // Small delay to allow composition to complete
-            delay(100)
+            androidx.compose.runtime.withFrameMillis {}
             try {
                 if (isLive) iconRowFocusRequester.requestFocus() else controlsFocusRequester.requestFocus()
             } catch (e: Exception) {
-                android.util.Log.e("TvPlayerControlsOverlay", "Failed to request focus for controls", e)
+                // Retry after another frame
+                try {
+                    androidx.compose.runtime.withFrameMillis {}
+                    if (isLive) iconRowFocusRequester.requestFocus() else controlsFocusRequester.requestFocus()
+                } catch (e2: Exception) {
+                    android.util.Log.e("TvPlayerControlsOverlay", "Failed to request focus for controls", e2)
+                }
             }
         }
     }
