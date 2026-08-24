@@ -12,8 +12,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 
 /**
@@ -49,7 +49,7 @@ fun GlassPanel(
             modifier
                 .clip(shape)
                 .border(
-                    width = 1.dp,
+                    width = CinemaSpacing.xxxs / 2,
                     color = palette.glassBorder,
                     shape = shape,
                 ),

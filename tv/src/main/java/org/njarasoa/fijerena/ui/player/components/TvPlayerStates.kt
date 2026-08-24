@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -204,12 +203,12 @@ fun ErrorContent(
                 CinemaPrimaryButton(
                     onClick = onRetry,
                     text = stringResource(R.string.player_retry),
-                    modifier = Modifier.width(120.dp).height(TvDimensions.trackItemHeight),
+                    modifier = Modifier.width(TvDimensions.epgTimeSlotWidth).height(TvDimensions.trackItemHeight),
                 )
                 CinemaSecondaryButton(
                     onClick = onBack,
                     text = stringResource(R.string.player_back),
-                    modifier = Modifier.width(120.dp).height(TvDimensions.trackItemHeight),
+                    modifier = Modifier.width(TvDimensions.epgTimeSlotWidth).height(TvDimensions.trackItemHeight),
                 )
             }
         }

@@ -102,12 +102,17 @@ class AuthViewModel : ViewModel() {
      */
     fun isSessionExpired(): Boolean {
         val expDate = _authResponse.value?.userInfo?.expDate
-        if (expDate.isNullOrEmpty()) return true
-        if (expDate.equals("Unlimited", ignoreCase = true)) return false
-
-        val expirationTimestamp = expDate.toLongOrNull() ?: return true
-        val currentTimestamp = System.currentTimeMillis() / 1000
-        return currentTimestamp > expirationTimestamp
+        val isExpired =
+            when {
+                expDate.isNullOrEmpty() -> true
+                expDate.equals("Unlimited", ignoreCase = true) -> false
+                else -> {
+                    val expirationTimestamp = expDate.toLongOrNull()
+                    val currentTimestamp = System.currentTimeMillis() / 1000
+                    expirationTimestamp == null || currentTimestamp > expirationTimestamp
+                }
+            }
+        return isExpired
     }
 
     override fun onCleared() {

@@ -15,11 +15,11 @@ import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 /**
  * A marquee modifier that bounces text back and forth instead of scrolling infinitely.
@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
  * @param delayMillis pause at each end before reversing
  */
 fun Modifier.bounceMarquee(
-    velocity: Dp = 30.dp,
+    velocity: Dp = CinemaSpacing.xl - CinemaSpacing.xxxs,
     delayMillis: Int = 1200,
 ): Modifier = this then BounceMarqueeElement(velocity, delayMillis)
 

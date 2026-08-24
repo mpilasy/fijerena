@@ -35,7 +35,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
@@ -183,7 +182,7 @@ internal fun CategoryList(
             CinemaIconButton(
                 onClick = onRefreshCategories,
                 enabled = !categoriesRefreshing,
-                size = 40.dp,
+                size = TvDimensions.iconLarge,
                 icon = {
                     Icon(
                         imageVector = CinemaIcons.Refresh,
@@ -235,7 +234,7 @@ internal fun CategoryList(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .height(2.dp.scaled(scale))
+                                .height(TvDimensions.borderFocused.scaled(scale))
                                 .padding(horizontal = Spacing.md.scaled(scale))
                                 .background(CinemaAccent.copy(alpha = CinemaAlpha.tint)),
                     )

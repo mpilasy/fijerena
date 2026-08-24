@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 
 /**
@@ -28,7 +28,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 @Composable
 fun WatchedBadge(
     modifier: Modifier = Modifier,
-    size: Dp = 28.dp,
+    size: Dp = CinemaSpacing.lg + CinemaSpacing.xxs,
 ) {
     Box(
         modifier =
@@ -47,6 +47,6 @@ fun WatchedBadge(
     }
 }
 
-private val RING_WIDTH = 2.dp
+private val RING_WIDTH = CinemaSpacing.xxxs
 private const val RING_ALPHA = 0.55f
 private const val GLYPH_FRACTION = 0.68f

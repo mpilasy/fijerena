@@ -17,12 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
 fun AudioTrackSelectorDialog(
@@ -40,7 +40,7 @@ fun AudioTrackSelectorDialog(
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                 ) {
                     audioTracks.forEachIndexed { _, track ->
                         Surface(
@@ -57,7 +57,7 @@ fun AudioTrackSelectorDialog(
                                 },
                             shape = RoundedCornerShape(CinemaCornerRadius.small),
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
+                            Column(modifier = Modifier.padding(Spacing.sm)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -107,7 +107,7 @@ fun SubtitleSelectorDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
                 // "Off" option
                 Surface(
@@ -128,7 +128,7 @@ fun SubtitleSelectorDialog(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(Spacing.sm),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -162,7 +162,7 @@ fun SubtitleSelectorDialog(
                             },
                         shape = RoundedCornerShape(CinemaCornerRadius.small),
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
+                        Column(modifier = Modifier.padding(Spacing.sm)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -211,7 +211,7 @@ fun QualitySelectorDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
                 // "Auto" option
                 Surface(
@@ -228,7 +228,7 @@ fun QualitySelectorDialog(
                         },
                     shape = RoundedCornerShape(CinemaCornerRadius.small),
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Column(modifier = Modifier.padding(Spacing.sm)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -270,7 +270,7 @@ fun QualitySelectorDialog(
                             },
                         shape = RoundedCornerShape(CinemaCornerRadius.small),
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
+                        Column(modifier = Modifier.padding(Spacing.sm)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,

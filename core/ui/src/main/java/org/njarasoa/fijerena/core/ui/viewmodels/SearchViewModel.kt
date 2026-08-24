@@ -27,11 +27,8 @@ class SearchViewModel(
     private var repository: org.njarasoa.fijerena.core.network.MediaRepository? = null
 
     private suspend fun ensureRepo(): org.njarasoa.fijerena.core.network.MediaRepository {
-        if (repository == null) {
-            val container = AppContainer.getInstance(context)
-            repository = container.getMediaRepository()
-        }
-        return repository!!
+        val repo = repository ?: AppContainer.getInstance(context).getMediaRepository().also { repository = it }
+        return repo
     }
 
     sealed class UiState {

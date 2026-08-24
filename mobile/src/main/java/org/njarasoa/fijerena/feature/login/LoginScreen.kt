@@ -14,7 +14,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.data.AuthViewModel
@@ -25,6 +24,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * Mobile-optimized login screen for Xtream IPTV authentication.
@@ -79,8 +79,8 @@ fun LoginScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(24.dp)
-                    .padding(top = 48.dp),
+                    .padding(Spacing.lg)
+                    .padding(top = Spacing.xxl),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top,
         ) {
@@ -89,14 +89,14 @@ fun LoginScreen(
                 text = stringResource(R.string.login_app_name),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier.padding(bottom = Spacing.xs),
             )
 
             Text(
                 text = stringResource(R.string.login_sign_in_title),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 32.dp),
+                modifier = Modifier.padding(bottom = Spacing.xl),
             )
 
             // Server URL field
@@ -109,7 +109,7 @@ fun LoginScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
+                        .padding(bottom = Spacing.md),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         focusedTextColor = CinemaTextPrimary,
@@ -145,7 +145,7 @@ fun LoginScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
+                        .padding(bottom = Spacing.md),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         focusedTextColor = CinemaTextPrimary,
@@ -179,7 +179,7 @@ fun LoginScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp),
+                        .padding(bottom = Spacing.xs),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         focusedTextColor = CinemaTextPrimary,
@@ -213,7 +213,7 @@ fun LoginScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 24.dp),
+                        .padding(bottom = Spacing.lg),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(
@@ -225,7 +225,7 @@ fun LoginScreen(
                     text = stringResource(R.string.login_remember_me),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = Spacing.xs),
                 )
             }
 
@@ -235,7 +235,7 @@ fun LoginScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 16.dp),
+                            .padding(bottom = Spacing.md),
                     color = MaterialTheme.colorScheme.errorContainer,
                     shape = MaterialTheme.shapes.small,
                 ) {
@@ -243,7 +243,7 @@ fun LoginScreen(
                         text = (uiState as LoginViewModel.UiState.Error).message,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(Spacing.md),
                     )
                 }
             }
@@ -283,7 +283,7 @@ fun LoginScreen(
                     text = stringResource(R.string.login_success_toast),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(top = 16.dp),
+                    modifier = Modifier.padding(top = Spacing.md),
                 )
             }
 
@@ -294,7 +294,7 @@ fun LoginScreen(
                 text = stringResource(R.string.login_footer_text),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(bottom = Spacing.md),
             )
         }
     }

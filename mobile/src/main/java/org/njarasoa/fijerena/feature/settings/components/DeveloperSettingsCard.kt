@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -41,7 +40,7 @@ fun DeveloperSettingsCard(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(CinemaSpacing.md))
             Switch(
                 checked = uiState.isDevMode,
                 onCheckedChange = { enabled ->

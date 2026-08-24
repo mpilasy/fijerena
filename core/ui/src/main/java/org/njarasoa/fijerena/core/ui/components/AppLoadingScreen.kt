@@ -29,10 +29,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 /**
  * How long this screen stays up even once the app is ready.
@@ -43,15 +43,15 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
  * startup that moves, and since startup disk I/O moved off the main thread it renders fast enough
  * to be gone in a frame or two without a floor.
  *
- * Note this is a floor on *display* time, not on motion: a device with developer options'
- * animator duration scale at 0 (as darcy is set) collapses every animation below to its end
- * state, so the marble sits still there no matter how long this waits.
+ * One second is long enough for the breathing pulse and orbital arc to read as an intentional
+ * transition rather than a flicker, without making returning users wait on an app that is ready.
  */
-const val APP_LOADING_MIN_MS = 900L
+const val APP_LOADING_MIN_MS = 1000L
 
 /**
- * Startup screen shown while the app works out where to send you — provider lookup, credential
- * migration, session restore. Before this, both nav hosts rendered nothing at all during that
+ * Startup splash replacement displayed until provider configuration is resolved.
+ *
+ * The system splash is dismissed the moment Compose renders anything, which used to be inside this
  * window, so a cold start was a blank window of indeterminate length.
  *
  * The launcher art (blue marble in anaglyph glasses) breathes while an accent arc sweeps around
@@ -61,7 +61,7 @@ const val APP_LOADING_MIN_MS = 900L
 @Composable
 fun AppLoadingScreen(
     modifier: Modifier = Modifier,
-    logoSize: Dp = 180.dp,
+    logoSize: Dp = CinemaSpacing.xxl * 3.75f,
 ) {
     val transition = rememberInfiniteTransition(label = "app-loading")
 

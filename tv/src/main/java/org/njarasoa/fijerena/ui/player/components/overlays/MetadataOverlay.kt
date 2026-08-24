@@ -26,7 +26,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyRow
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
@@ -39,6 +38,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -75,14 +75,14 @@ fun MetadataOverlay(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 48.dp, vertical = 32.dp),
+                .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             // Channel name and title
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                 Text(
                     text = metadata.channelName,
                     style = MaterialTheme.typography.titleMedium,
@@ -101,7 +101,7 @@ fun MetadataOverlay(
                             color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
                             maxLines = 3,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 4.dp)
+                            modifier = Modifier.padding(top = Spacing.xxs)
                         )
                     }
                 }
@@ -109,7 +109,7 @@ fun MetadataOverlay(
 
             // Progress bar (for non-live streams)
             if (duration > 0 && !metadata.isLive) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     LinearProgressIndicator(
                         progress = { if (duration > 0) position.toFloat() / duration.toFloat() else 0f },
                         modifier =
@@ -140,13 +140,13 @@ fun MetadataOverlay(
                 // Live indicator
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     Box(
                         modifier =
                             Modifier
                                 .size(TvDimensions.statsDotSize)
-                                .background(org.njarasoa.fijerena.ui.theme.CinemaLive, shape = RoundedCornerShape(6.dp)),
+                                .background(org.njarasoa.fijerena.ui.theme.CinemaLive, shape = RoundedCornerShape(CornerRadius.small)),
                     )
                     Text(
                         text = stringResource(R.string.player_live),

@@ -49,7 +49,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -70,6 +69,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.ui.theme.Spacing
 import java.util.Date
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
@@ -180,7 +180,7 @@ fun MobileControlsOverlay(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 2.dp),
+                        modifier = Modifier.padding(top = Spacing.xxxs),
                     ) {
                         if (videoResolution != null) {
                             Text(
@@ -197,8 +197,8 @@ fun MobileControlsOverlay(
                                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                 modifier =
                                     Modifier
-                                        .background(CinemaSurface.copy(alpha = 0.3f), shape = RoundedCornerShape(4.dp))
-                                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                                        .background(CinemaSurface.copy(alpha = 0.3f), shape = RoundedCornerShape(CinemaSpacing.xxs))
+                                        .padding(horizontal = Spacing.xxs, vertical = Spacing.xxxs / 2),
                             )
                         }
                     }
@@ -214,11 +214,11 @@ fun MobileControlsOverlay(
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(bottom = 120.dp) // Push above play buttons
+                        .padding(bottom = Spacing.xxl * 2.5f) // Push above play buttons
                         .padding(horizontal = CinemaSpacing.xl)
                         .background(
                             color = CinemaSurface.copy(alpha = CinemaAlpha.scrim),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(Spacing.xs)
                         )
                         .padding(CinemaSpacing.md)
                 ) {
@@ -338,7 +338,7 @@ fun MobileControlsOverlay(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 4.dp),
+                                    .padding(top = Spacing.xxs),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
@@ -360,7 +360,7 @@ fun MobileControlsOverlay(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 2.dp),
+                                    .padding(top = Spacing.xxxs),
                             horizontalArrangement = Arrangement.End,
                         ) {
                             Text(
@@ -376,14 +376,14 @@ fun MobileControlsOverlay(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xs))
                     }
                 } else {
                     // Live indicator with EPG info
-                    Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                    Column(modifier = Modifier.padding(bottom = Spacing.xs)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
                             Box(
                                 modifier =
@@ -405,7 +405,7 @@ fun MobileControlsOverlay(
                                 text = stringResource(R.string.player_now_playing_format, currentEpgProgram.title, nowStart, nowEnd),
                                 style = typography.bodySmall,
                                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                                modifier = Modifier.padding(top = 4.dp),
+                                modifier = Modifier.padding(top = Spacing.xxs),
                             )
                             // Programme progress bar — keyed on livePosition to avoid untracked System.currentTimeMillis() reads
                             val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
@@ -423,8 +423,8 @@ fun MobileControlsOverlay(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 4.dp)
-                                        .height(2.dp),
+                                        .padding(top = Spacing.xxs)
+                                        .height(Spacing.xxxs),
                                 color = MaterialTheme.colorScheme.primary,
                                 trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                             )
@@ -437,7 +437,7 @@ fun MobileControlsOverlay(
                                     ),
                                     style = labelStyle,
                                     color = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
-                                    modifier = Modifier.padding(top = 2.dp),
+                                    modifier = Modifier.padding(top = Spacing.xxxs),
                                 )
                             }
                         }

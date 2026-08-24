@@ -14,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonColors
@@ -253,7 +252,7 @@ fun CinemaIconButton(
     icon: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    size: androidx.compose.ui.unit.Dp = 48.dp,
+    size: androidx.compose.ui.unit.Dp = Spacing.xxl,
 ) {
     val scale = LocalUiScale.current
     androidx.tv.material3.Surface(
@@ -304,7 +303,7 @@ fun CinemaDangerIconButton(
     icon: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    size: androidx.compose.ui.unit.Dp = 48.dp,
+    size: androidx.compose.ui.unit.Dp = Spacing.xxl,
 ) {
     val scale = LocalUiScale.current
     androidx.tv.material3.Surface(
@@ -325,8 +324,8 @@ fun CinemaDangerIconButton(
         shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
         border =
             androidx.tv.material3.ClickableSurfaceDefaults.border(
-                border = Border(BorderStroke(2.dp.scaled(scale), CinemaOrange.copy(alpha = 0.6f))),
-                focusedBorder = Border(BorderStroke(2.dp.scaled(scale), CinemaTextPrimary)),
+                border = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaOrange.copy(alpha = 0.6f))),
+                focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaTextPrimary)),
             ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(

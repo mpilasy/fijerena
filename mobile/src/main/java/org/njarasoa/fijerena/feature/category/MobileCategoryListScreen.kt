@@ -67,7 +67,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -883,8 +882,8 @@ fun MobileCategoryListScreen(
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.padding(32.dp),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                            modifier = Modifier.padding(Spacing.xl),
                         ) {
                             Text(
                                 text = stringResource(R.string.common_error),
@@ -1140,7 +1139,7 @@ private fun StreamsList(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Spacing.md))
                     Text(
                         text = stringResource(R.string.category_loading_streams),
                         style = MaterialTheme.typography.bodyMedium,
@@ -1166,7 +1165,7 @@ private fun StreamsList(
                 // Pinned, not a LazyColumn item — otherwise it scrolls away with the list, and on
                 // the docked preview panel that's the only thing telling Last Watched and
                 // Favorites apart (see panelTitle above).
-                Column(modifier = Modifier.padding(horizontal = 12.dp).padding(top = 8.dp, bottom = 4.dp)) {
+                Column(modifier = Modifier.padding(horizontal = Spacing.sm).padding(top = Spacing.xs, bottom = Spacing.xxs)) {
                     if (panelTitle != null) {
                         Text(
                             text = panelTitle,
@@ -1183,7 +1182,7 @@ private fun StreamsList(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
                     verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
                 ) {
                     itemsIndexed(items, key = { _, item -> item.id }, contentType = { _, _ -> "stream" }) { index, item ->
@@ -1279,7 +1278,7 @@ private fun StreamCard(
         colors = cardColors,
         border =
             if (isCurrentlyPlaying) {
-                androidx.compose.foundation.BorderStroke(2.dp, CinemaAccent)
+                androidx.compose.foundation.BorderStroke(MobileDimensions.strokeWidth, CinemaAccent)
             } else {
                 null
             },

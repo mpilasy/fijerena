@@ -144,23 +144,18 @@ fun TvEpgBrowserScreen(
             processingState is EpgFileManager.MultiSourceState.Finalizing
 
     val nowEpoch = rememberNowEpochSeconds()
+    val scale = LocalUiScale.current
 
-    val appSettings = remember { AppSettings(context.applicationContext) }
-    val uiScale by remember { mutableStateOf(appSettings.uiScale) }
-
-    CompositionLocalProvider(LocalUiScale provides uiScale) {
-        val scale = LocalUiScale.current
-
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(
-                            horizontal = Spacing.tvSafeMarginHorizontal,
-                            vertical = Spacing.tvSafeMarginVertical,
-                        ),
-            ) {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = Spacing.tvSafeMarginHorizontal,
+                        vertical = Spacing.tvSafeMarginVertical,
+                    ),
+        ) {
                 // Header
                 Row(
                     verticalAlignment = Alignment.Bottom,
@@ -295,9 +290,8 @@ fun TvEpgBrowserScreen(
                         )
                     }
                 }
-            }
         }
-    } // CompositionLocalProvider
+    }
 }
 
 @Composable

@@ -33,11 +33,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.ui.theme.TvDimensions
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -258,7 +258,7 @@ fun CategoryFilterDialog(
                                 text = matchTypeLabel(rule.matchType),
                                 style = scaledStyles.bodySmall,
                                 color = CinemaTextSecondary,
-                                modifier = Modifier.width(72.dp.scaled(scale)),
+                                modifier = Modifier.width(TvDimensions.iconButtonSize.scaled(scale)),
                             )
                             Text(
                                 text = rule.value,
@@ -276,13 +276,13 @@ fun CategoryFilterDialog(
                                     editingMatchType = rule.matchType
                                 },
                                 icon = { Icon(CinemaIcons.Edit, contentDescription = stringResource(R.string.provider_filter_edit_rule)) },
-                                size = 36.dp,
+                                size = TvDimensions.iconLarge * 0.75f,
                             )
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             CinemaDangerIconButton(
                                 onClick = { rules = rules.toMutableList().also { it.removeAt(index) } },
                                 icon = { Icon(CinemaIcons.Delete, contentDescription = stringResource(R.string.provider_filter_delete_rule)) },
-                                size = 36.dp,
+                                size = TvDimensions.iconLarge * 0.75f,
                             )
                         }
                     }

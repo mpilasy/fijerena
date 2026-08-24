@@ -29,7 +29,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Button
@@ -38,6 +37,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.data.AuthViewModel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.LoginViewModel
@@ -128,7 +128,7 @@ fun TvLoginScreen(
                 text = stringResource(R.string.login_xtream_title),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 48.dp),
+                modifier = Modifier.padding(bottom = Spacing.xxl),
             )
 
             // Server URL field
@@ -141,7 +141,7 @@ fun TvLoginScreen(
                 modifier =
                     Modifier
                         .width(TvDimensions.formFieldWidth) // Wide field for TV
-                        .padding(bottom = 20.dp)
+                        .padding(bottom = Spacing.md)
                         .tvDpadEscape()
                         .focusRequester(urlFocusRequester),
                 colors =
@@ -180,7 +180,7 @@ fun TvLoginScreen(
                 modifier =
                     Modifier
                         .width(TvDimensions.formFieldWidth)
-                        .padding(bottom = 20.dp)
+                        .padding(bottom = Spacing.md)
                         .tvDpadEscape()
                         .focusRequester(usernameFocusRequester),
                 colors =
@@ -218,7 +218,7 @@ fun TvLoginScreen(
                 modifier =
                     Modifier
                         .width(TvDimensions.formFieldWidth)
-                        .padding(bottom = 32.dp)
+                        .padding(bottom = Spacing.xl)
                         .tvDpadEscape()
                         .focusRequester(passwordFocusRequester),
                 colors =
@@ -252,7 +252,7 @@ fun TvLoginScreen(
                     text = (uiState as LoginViewModel.UiState.Error).message,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(bottom = 24.dp),
+                    modifier = Modifier.padding(bottom = Spacing.lg),
                 )
             }
 
@@ -303,7 +303,7 @@ fun TvLoginScreen(
                     text = stringResource(R.string.login_success_toast),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(top = 24.dp),
+                    modifier = Modifier.padding(top = Spacing.lg),
                 )
             }
         }

@@ -344,7 +344,7 @@ Updates every ~500ms via polling loop.
 | Screen | File | Description |
 |--------|------|-------------|
 | Content Type Selection | `contentselection/ContentTypeSelectionScreen.kt` | Live TV / Movies / TV Shows picker |
-| Category Grid | `category/CategoryGridScreen.kt` | Category sidebar + item grid |
+| Category Grid | `category/TvCategoryGridScreen.kt` | Category sidebar + item grid |
 | Movie Details | `movie/MovieDetailsScreen.kt` | Movie info, play/resume buttons |
 | Episode Selection | `episode/EpisodeSelectionScreen.kt` | Season accordion, episode list |
 | Player | `player/TvPlayerScreen.kt` + `ui/player/PlayerScreen.kt` | Video playback with D-pad controls |
@@ -353,12 +353,12 @@ Updates every ~500ms via polling loop.
 | Edit Provider | `settings/EditProviderScreen.kt` | Provider URL/settings editor |
 | Provider Selection | `provider/ProviderSelectionScreen.kt` | Provider list with CRUD |
 | Add Provider | `provider/TvAddProviderScreen.kt` | New provider form |
-| EPG Guide | `epg/EpgGuideScreen.kt` + `epg/EpgGridLayout.kt` | TV guide time grid |
+| EPG Guide | `epg/TvEpgGuideScreen.kt` + `epg/EpgGridLayout.kt` | TV guide time grid |
 | EPG Management | `epg/TvEpgManagementScreen.kt` | Multi-source EPG configuration |
-| EPG Browser | `epgbrowser/EpgBrowserScreen.kt` | Programme search |
+| EPG Search | `epgbrowser/TvEpgBrowserScreen.kt` | Programme search |
 | Stats Overlay (generic) | `common/StatsOverlay.kt` | Reusable stats component for non-player screens |
 
-`login/LoginScreenTv.kt` still exists on disk but `Screen.Login` is not wired into `TvNavHost.kt` — dead code left over from the login-screen removal (see RELEASE_NOTES.md, Phase 4).
+`login/TvLoginScreen.kt` still exists on disk but `Screen.Login` is not wired into `TvNavHost.kt` — dead code left over from the login-screen removal (see RELEASE_NOTES.md, Phase 4).
 
 ### Mobile Screens (`mobile/feature/`)
 

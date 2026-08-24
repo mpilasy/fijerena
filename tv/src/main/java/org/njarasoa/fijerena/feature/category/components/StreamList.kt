@@ -33,7 +33,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
@@ -234,7 +233,7 @@ internal fun StreamList(
                     CinemaIconButton(
                         onClick = { onRefreshStreams(categoryId) },
                         enabled = !streamsLoading,
-                        size = 40.dp,
+                        size = TvDimensions.iconLarge,
                         icon = {
                             Icon(
                                 imageVector = CinemaIcons.Refresh,

@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -68,7 +67,7 @@ fun ControlHintsOverlay(
 
                 // Control hints
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     ControlHint(stringResource(R.string.player_hint_ok_button), stringResource(R.string.player_hint_ok_description))
                     ControlHint(stringResource(R.string.player_hint_double_ok_button), stringResource(R.string.player_hint_double_ok_description))
@@ -81,12 +80,12 @@ fun ControlHintsOverlay(
                     ControlHint(stringResource(R.string.player_hint_favorite_button), stringResource(R.string.player_hint_favorite_description))
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.xs))
 
                 // Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CinemaButton(
@@ -127,7 +126,7 @@ private fun ControlHint(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
