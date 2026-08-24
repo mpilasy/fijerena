@@ -54,10 +54,6 @@ fun MobileSettingsScreen(
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Export/Import transient state
-    var pendingExportUri by remember { mutableStateOf<android.net.Uri?>(null) }
-    var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
-    var pendingImportPath by remember { mutableStateOf<String?>(null) }
     var pendingParsedImport by remember { mutableStateOf<SettingsExportManager.ParsedImport?>(null) }
     var showConflictDialog by remember { mutableStateOf(false) }
     var showImportOptionsDialog by remember { mutableStateOf(false) }
@@ -67,54 +63,37 @@ fun MobileSettingsScreen(
     val exportLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.CreateDocument("application/json"),
-        ) { uri -> pendingExportUri = uri }
+        ) { uri ->
+            if (uri != null) {
+                coroutineScope.launch {
+                    val success = exportManager.exportToUri(uri)
+                    viewModel.setExportImportMessage(
+                        if (success) context.getString(R.string.settings_export_success)
+                        else context.getString(R.string.settings_export_failed)
+                    )
+                }
+            }
+        }
 
     // SAF launcher for import (open file)
     val importLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
-        ) { uri -> pendingImportUri = uri }
-
-    // Process export in LaunchedEffect
-    LaunchedEffect(pendingExportUri) {
-        val uri = pendingExportUri ?: return@LaunchedEffect
-        val success = exportManager.exportToUri(uri)
-        viewModel.setExportImportMessage(
-            if (success) context.getString(R.string.settings_export_success)
-            else context.getString(R.string.settings_export_failed)
-        )
-        pendingExportUri = null
-    }
-
-    // Parse import file (URI)
-    LaunchedEffect(pendingImportUri) {
-        val uri = pendingImportUri ?: return@LaunchedEffect
-        val parseResult = exportManager.parseImportUri(uri)
-        parseResult
-            .onSuccess { parsed ->
-                pendingParsedImport = parsed
-                pendingImportOptions = SettingsExportManager.ImportOptions()
-                showImportOptionsDialog = true
-            }.onFailure { e ->
-                viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message ?: ""))
+        ) { uri ->
+            if (uri != null) {
+                coroutineScope.launch {
+                    val parseResult = exportManager.parseImportUri(uri)
+                    parseResult
+                        .onSuccess { parsed ->
+                            pendingParsedImport = parsed
+                            pendingImportOptions = SettingsExportManager.ImportOptions()
+                            showImportOptionsDialog = true
+                        }.onFailure { e ->
+                            viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message ?: ""))
+                        }
+                }
             }
-        pendingImportUri = null
-    }
-
-    // Parse import file (Path)
-    LaunchedEffect(pendingImportPath) {
-        val path = pendingImportPath ?: return@LaunchedEffect
-        val parseResult = exportManager.parseImportPath(path)
-        parseResult
-            .onSuccess { parsed ->
-                pendingParsedImport = parsed
-                pendingImportOptions = SettingsExportManager.ImportOptions()
-                showImportOptionsDialog = true
-            }.onFailure { e ->
-                viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message ?: ""))
-            }
-        pendingImportPath = null
-    }
+        }
 
     // Import options dialog
     if (showImportOptionsDialog && pendingParsedImport != null) {
@@ -277,7 +256,19 @@ fun MobileSettingsScreen(
                 exportManager = exportManager,
                 exportLauncher = exportLauncher,
                 importLauncher = importLauncher,
-                onPendingImportPathChange = { pendingImportPath = it },
+                onPendingImportPathChange = { path ->
+                    coroutineScope.launch {
+                        val parseResult = exportManager.parseImportPath(path)
+                        parseResult
+                            .onSuccess { parsed ->
+                                pendingParsedImport = parsed
+                                pendingImportOptions = SettingsExportManager.ImportOptions()
+                                showImportOptionsDialog = true
+                            }.onFailure { e ->
+                                viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message ?: ""))
+                            }
+                    }
+                },
             )
 
             // === About ===

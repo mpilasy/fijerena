@@ -197,7 +197,7 @@ fun PlayerScreen(
                             isActuallyMoving = true
                             break
                         }
-                        delay(1000)
+                        delay(500)
                     }
                 } else {
                     isActuallyMoving = false
