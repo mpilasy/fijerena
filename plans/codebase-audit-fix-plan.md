@@ -68,12 +68,11 @@ These require more design thought or touch multiple files.
 - **Files:** `core/network/.../MediaRepository.kt` (L141, L153) + `core/ui/.../di/AppContainer.kt`
 - **Resolution:** Implemented `Closeable` on `MediaRepository` to flush dirty history, safely quit `HandlerThread`, and cancel `writeScope`. Added cleanup calls in `AppContainer.clearAllCaches()` and `evictMediaRepository()`.
 
-### T2-2. EPG Temp Files Leaked on Pipeline Cancellation
-- **Status:** Pending
+### T2-2. [COMPLETED] EPG Temp Files Leaked on Pipeline Cancellation
+- **Status:** COMPLETED ✅
 - **Risk:** Disk space leak on every cancelled EPG sync
 - **Files:** `core/network/.../xmltv/EpgFileManager.kt` (L542–626)
-- **Complexity:** Medium — needs channel drain in finally block
-- **Approach:** Add a `finally` block that drains remaining items from the channel and deletes their temp files.
+- **Resolution:** Added `try-finally` around the producer-consumer `coroutineScope` that closes `ingestionQueue` and drains/deletes all remaining `tmpFile`s on completion or cancellation.
 
 ### T2-3. `AppContainer.getMediaRepository()` Holds Global Lock During Network Call
 - **Status:** Pending
