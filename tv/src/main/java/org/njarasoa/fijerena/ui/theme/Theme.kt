@@ -5,11 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Shapes
 import androidx.tv.material3.darkColorScheme
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 import org.njarasoa.fijerena.core.ui.theme.LocalCinemaTheme
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
@@ -74,19 +74,19 @@ private fun cinemaMaterialColorScheme(palette: org.njarasoa.fijerena.core.ui.the
 
 private fun cinemaMaterialShapes(tokens: UiShapeTokens) =
     androidx.compose.material3.Shapes(
-        extraSmall = RoundedCornerShape(4.dp),
+        extraSmall = RoundedCornerShape(CinemaSpacing.xxs),
         small = RoundedCornerShape(tokens.chip),
         medium = RoundedCornerShape(tokens.card),
-        large = RoundedCornerShape(tokens.card + 4.dp),
+        large = RoundedCornerShape(tokens.card + CinemaSpacing.xxs),
         extraLarge = RoundedCornerShape(tokens.dialog),
     )
 
 private fun cinemaShapes(tokens: UiShapeTokens) =
     Shapes(
-        extraSmall = RoundedCornerShape(4.dp),
+        extraSmall = RoundedCornerShape(CinemaSpacing.xxs),
         small = RoundedCornerShape(tokens.chip),
         medium = RoundedCornerShape(tokens.card),
-        large = RoundedCornerShape(tokens.card + 4.dp),
+        large = RoundedCornerShape(tokens.card + CinemaSpacing.xxs),
         extraLarge = RoundedCornerShape(tokens.dialog),
     )
 

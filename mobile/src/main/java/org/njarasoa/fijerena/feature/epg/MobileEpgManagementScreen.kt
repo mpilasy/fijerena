@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.EPG_REFRESH_INTERVAL_OPTIONS
@@ -494,7 +493,7 @@ private fun EpgSourceCard(
 
             if (activeProgress != null) {
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -512,7 +511,7 @@ private fun EpgSourceCard(
                     }
                     LinearProgressIndicator(
                         progress = { activeProgress.progressPercent / 100f },
-                        modifier = Modifier.fillMaxWidth().height(4.dp),
+                        modifier = Modifier.fillMaxWidth().height(CinemaSpacing.xxs),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                     )
@@ -629,7 +628,7 @@ private fun StatusIndicator(
             else -> CinemaSuccess
         }
 
-    androidx.compose.foundation.Canvas(modifier = Modifier.size(10.dp)) {
+    androidx.compose.foundation.Canvas(modifier = Modifier.size(CinemaSpacing.xs + CinemaSpacing.xxxs)) {
         drawCircle(color = color)
     }
 }

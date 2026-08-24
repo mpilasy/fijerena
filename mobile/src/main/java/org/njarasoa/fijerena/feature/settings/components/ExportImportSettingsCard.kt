@@ -11,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -19,6 +18,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
 fun ExportImportSettingsCard(
@@ -35,10 +35,10 @@ fun ExportImportSettingsCard(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.xs))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             CinemaButton(
                 onClick = { exportLauncher.launch("fijerena_settings.json") },
@@ -53,7 +53,7 @@ fun ExportImportSettingsCard(
                 Text(stringResource(R.string.common_import))
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.xs))
         val fileNotFoundText = stringResource(R.string.settings_quick_import_not_found)
         CinemaOutlinedButton(
             onClick = {
@@ -69,7 +69,7 @@ fun ExportImportSettingsCard(
             Text(stringResource(R.string.settings_quick_import_button))
         }
         if (uiState.exportImportMessage != null) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Spacing.xxs))
             Text(
                 text = uiState.exportImportMessage ?: "",
                 style = MaterialTheme.typography.bodySmall,

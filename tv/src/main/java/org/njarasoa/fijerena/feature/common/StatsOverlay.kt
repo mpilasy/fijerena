@@ -32,7 +32,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
@@ -83,8 +83,8 @@ fun StatsOverlay(
     val configuration = LocalConfiguration.current
 
     // Calculate overlay size (1/4 of screen)
-    val overlayWidth = (configuration.screenWidthDp * 0.25).dp
-    val overlayHeight = (configuration.screenHeightDp * 0.25).dp
+    val overlayWidth = Dp(configuration.screenWidthDp * 0.25f)
+    val overlayHeight = Dp(configuration.screenHeightDp * 0.25f)
 
     Box(
         modifier = modifier.fillMaxSize(),

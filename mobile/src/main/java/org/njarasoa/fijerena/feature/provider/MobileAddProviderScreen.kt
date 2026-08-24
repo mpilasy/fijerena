@@ -54,7 +54,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
@@ -839,14 +838,14 @@ fun MobileAddProviderScreen(
                                         }
                                     } else {
                                         Row(
-                                            modifier = Modifier.fillMaxWidth().heightIn(min = 36.dp),
+                                            modifier = Modifier.fillMaxWidth().heightIn(min = CinemaSpacing.xl + CinemaSpacing.xxs),
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Text(
                                                 text = matchTypeLabel(rule.matchType),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                                modifier = Modifier.width(56.dp),
+                                                modifier = Modifier.width(MobileDimensions.buttonHeight),
                                             )
                                             Text(
                                                 text = rule.value,
@@ -861,12 +860,12 @@ fun MobileAddProviderScreen(
                                                     editingValue = rule.value
                                                     editingMatchType = rule.matchType
                                                 },
-                                                modifier = Modifier.size(32.dp),
+                                                modifier = Modifier.size(MobileDimensions.iconLarge),
                                             ) {
                                                 Icon(
                                                     CinemaIcons.Edit,
                                                     contentDescription = stringResource(R.string.provider_filter_edit_rule),
-                                                    modifier = Modifier.size(18.dp),
+                                                    modifier = Modifier.size(MobileDimensions.iconSmall - Spacing.xxxs),
                                                 )
                                             }
                                             Spacer(modifier = Modifier.width(CinemaSpacing.xxs))
@@ -874,12 +873,12 @@ fun MobileAddProviderScreen(
                                                 onClick = {
                                                     rules = rules.toMutableList().also { it.removeAt(index) }
                                                 },
-                                                modifier = Modifier.size(32.dp),
+                                                modifier = Modifier.size(MobileDimensions.iconLarge),
                                             ) {
                                                 Icon(
                                                     CinemaIcons.Delete,
                                                     contentDescription = stringResource(R.string.provider_filter_delete_rule),
-                                                    modifier = Modifier.size(18.dp),
+                                                    modifier = Modifier.size(MobileDimensions.iconSmall - Spacing.xxxs),
                                                 )
                                             }
                                         }

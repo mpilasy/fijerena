@@ -32,7 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -43,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.performance.AppPerformanceMonitor
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.player.model.formatBitrate
 import org.njarasoa.fijerena.core.player.model.formatTime
@@ -469,7 +469,7 @@ fun MobileStatsOverlay(
                     text = stringResource(R.string.player_stats_build_format, org.njarasoa.fijerena.BuildConfig.BUILD_TIME, org.njarasoa.fijerena.BuildConfig.GIT_HASH),
                     style = typography.labelSmall,
                     color = CinemaTextPrimary.copy(alpha = 0.3f),
-                    modifier = Modifier.padding(top = 12.dp),
+                    modifier = Modifier.padding(top = Spacing.sm),
                 )
 
                 Text(
@@ -488,7 +488,7 @@ private fun SectionHeader(title: String) {
         text = title,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 6.dp),
+        modifier = Modifier.padding(top = Spacing.xxs + Spacing.xxxs),
     )
 }
 

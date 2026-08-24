@@ -17,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -27,6 +26,7 @@ import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
 fun LoadingScreen() {
@@ -53,8 +53,8 @@ fun ErrorScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            modifier = Modifier.padding(Spacing.xl),
         ) {
             Text(
                 text = stringResource(R.string.player_error),
@@ -66,7 +66,7 @@ fun ErrorScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 CinemaButton(onClick = onRetry) {
                     Text(stringResource(R.string.player_retry))
                 }
@@ -85,27 +85,27 @@ fun ErrorOverlay(
     onBack: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier.padding(32.dp),
+        modifier = Modifier.padding(Spacing.xl),
         color = CinemaBackground.copy(alpha = CinemaAlpha.overlayMedium),
         shape = MaterialTheme.shapes.medium,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier.padding(Spacing.lg),
         ) {
             Text(
                 text = stringResource(R.string.player_error),
                 style = MaterialTheme.typography.headlineSmall,
                 color = CinemaError,
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
             Text(
                 text = error.message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = CinemaTextPrimary,
             )
-            Spacer(modifier = Modifier.height(24.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 CinemaButton(onClick = onRetry) {
                     Text(stringResource(R.string.player_retry))
                 }

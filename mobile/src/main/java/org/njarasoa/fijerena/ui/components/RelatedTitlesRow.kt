@@ -15,13 +15,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
@@ -85,5 +85,5 @@ private fun RelatedTitleCard(
 
 // MobileDimensions.poster* sizes the thumbnail in a list row, which is far too small and the wrong
 // shape for a card meant to be looked at — these are a 2:3 poster.
-private val CARD_WIDTH = 120.dp
-private val POSTER_HEIGHT = 180.dp
+private val CARD_WIDTH = MobileDimensions.posterHeightLarge * 0.6f
+private val POSTER_HEIGHT = MobileDimensions.posterHeightLarge * 0.9f

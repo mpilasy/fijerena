@@ -47,7 +47,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 
@@ -771,7 +770,8 @@ private fun calculateProgramWidth(
     durationSeconds: Long,
     scale: Float = 1.0f,
 ): androidx.compose.ui.unit.Dp {
-    // 2dp per minute
+    // 2dp per minute; base 60 min slot = TvDimensions.epgTimeSlotWidth
     val minutes = durationSeconds / 60
-    return ((minutes * 2).coerceAtLeast(120).toInt().dp).scaled(scale)
+    val width = (TvDimensions.epgTimeSlotWidth * (minutes / 60f).coerceAtLeast(1f)).scaled(scale)
+    return width
 }

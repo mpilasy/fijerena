@@ -29,7 +29,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
@@ -77,7 +77,7 @@ fun TvSelectorDialog(
     onDismiss: () -> Unit,
     emptyText: String? = null,
 ) {
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val screenHeight = Dp(LocalConfiguration.current.screenHeightDp.toFloat())
     val initialFocusRequester = remember { FocusRequester() }
     val selectedIndex = options.indexOfFirst { it.selected }
 

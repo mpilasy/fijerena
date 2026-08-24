@@ -31,10 +31,10 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
 import org.njarasoa.fijerena.feature.contentselection.MobileContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.epg.MobileEpgGuideScreen
@@ -111,7 +111,7 @@ fun MobileNavHost(
 
     // Provider lookup / credential migration — used to render nothing at all until it finished.
     if (hasProvider == null || !minimumShownElapsed) {
-        AppLoadingScreen(logoSize = 140.dp)
+        AppLoadingScreen(logoSize = MobileDimensions.epgProgramMinWidth)
         return
     }
 

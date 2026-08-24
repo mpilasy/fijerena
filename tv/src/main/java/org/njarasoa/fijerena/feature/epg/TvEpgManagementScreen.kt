@@ -10,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
@@ -40,6 +39,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
@@ -322,13 +322,13 @@ fun TvEpgManagementScreen(
                                     shape = androidx.tv.material3.ToggleableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
                                 ) {
                                     Box(
-                                        modifier = Modifier.size(40.dp.scaled(scale)),
+                                        modifier = Modifier.size(TvDimensions.iconLarge.scaled(scale)),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Icon(
                                             imageVector = if (isSelected) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
                                             contentDescription = if (isSelected) stringResource(R.string.epg_source_selected_description) else stringResource(R.string.epg_source_not_selected_description),
-                                            modifier = Modifier.size(24.dp.scaled(scale)),
+                                            modifier = Modifier.size(Spacing.lg.scaled(scale)),
                                         )
                                     }
                                 }
@@ -369,7 +369,7 @@ fun TvEpgManagementScreen(
 
                             if (activeProgress != null) {
                                 Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp.scaled(scale))) {
+                                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale))) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -387,7 +387,7 @@ fun TvEpgManagementScreen(
                                     }
                                     LinearProgressIndicator(
                                         progress = { activeProgress.progressPercent / 100f },
-                                        modifier = Modifier.fillMaxWidth().height(4.dp.scaled(scale)),
+                                        modifier = Modifier.fillMaxWidth().height(Spacing.xxs.scaled(scale)),
                                         color = MaterialTheme.colorScheme.primary,
                                         trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                                     )
@@ -587,7 +587,7 @@ fun TvEpgManagementScreen(
                                 Icon(
                                     imageVector = if (isSelected) CinemaIcons.RadioButtonChecked else CinemaIcons.RadioButtonUnchecked,
                                     contentDescription = null,
-                                    modifier = Modifier.size(20.dp.scaled(scale)),
+                                    modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                                     tint = if (isSelected) org.njarasoa.fijerena.core.ui.theme.CinemaAccent else org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
                                 )
                                 Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
@@ -630,7 +630,7 @@ private fun StatusIndicator(
             else -> org.njarasoa.fijerena.ui.theme.CinemaSuccess
         }
 
-    androidx.compose.foundation.Canvas(modifier = Modifier.size(12.dp.scaled(scale))) {
+    androidx.compose.foundation.Canvas(modifier = Modifier.size(TvDimensions.liveDotSize.scaled(scale))) {
         drawCircle(color = color)
     }
 }
@@ -901,7 +901,7 @@ private fun TimeSpinnerColumn(
             Icon(
                 imageVector = CinemaIcons.KeyboardArrowUp,
                 contentDescription = stringResource(R.string.epg_increase_description_format, label),
-                modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(28.dp.scaled(scale)),
+                modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(TvDimensions.iconMedium.scaled(scale)),
             )
         }
         Text(
@@ -923,7 +923,7 @@ private fun TimeSpinnerColumn(
             Icon(
                 imageVector = CinemaIcons.KeyboardArrowDown,
                 contentDescription = stringResource(R.string.epg_decrease_description_format, label),
-                modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(28.dp.scaled(scale)),
+                modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(TvDimensions.iconMedium.scaled(scale)),
             )
         }
     }

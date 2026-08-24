@@ -544,9 +544,9 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 
 | File | Platform | Description |
 |------|----------|-------------|
-| `tv/.../feature/epg/EpgGuideScreen.kt` | TV | EPG Grid wrapper |
+| `tv/.../feature/epg/TvEpgGuideScreen.kt` | TV | EPG Grid wrapper |
 | `tv/.../feature/epg/EpgGridLayout.kt` | TV | Grid implementation (channels + time) |
-| `tv/.../feature/epgbrowser/EpgBrowserScreen.kt` | TV | EPG Browser with GlassPanel |
+| `tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt` | TV | EPG Search (Browser) with GlassPanel |
 | `mobile/.../feature/epg/MobileEpgGuideScreen.kt` | Mobile | EPG Grid with Scaffold |
 | `mobile/.../feature/epg/MobileEpgTimeline.kt` | Mobile | Horizontal timeline component |
 | `mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt` | Mobile | Expandable card browser |

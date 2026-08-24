@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
 import org.njarasoa.fijerena.core.ui.R
@@ -21,6 +20,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -80,7 +80,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                             imageVector = CinemaIcons.Info,
                             contentDescription = stringResource(R.string.common_warning),
                             tint = CinemaWarning,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(MobileDimensions.iconSmall),
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -88,7 +88,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                                 style = MaterialTheme.typography.labelMedium,
                                 color = CinemaWarning,
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                             Text(
                                 text = stringResource(R.string.settings_cellular_buffer_warning_desc),
                                 style = MaterialTheme.typography.bodySmall,
@@ -109,7 +109,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
                 // Slider
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                     Slider(
                         value = liveMultiplier,
                         onValueChange = { liveMultiplier = it },
@@ -150,7 +150,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
                 // Slider
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                     Slider(
                         value = vodMultiplier,
                         onValueChange = { vodMultiplier = it },
@@ -184,7 +184,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
             // Action buttons
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
             ) {
                 CinemaButton(
                     onClick = {
@@ -210,7 +210,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(CinemaSpacing.md))
         }
     }
 }
@@ -234,7 +234,7 @@ private fun CellularBufferPreview(
     ) {
         Column(
             modifier = Modifier.padding(CinemaSpacing.sm),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
         ) {
             Text(
                 text = stringResource(R.string.settings_buffer_preview_title),
@@ -243,7 +243,7 @@ private fun CellularBufferPreview(
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
             ) {
                 Column {
                     Text(

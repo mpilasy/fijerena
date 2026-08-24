@@ -9,6 +9,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
  * Re-exports shared spacing values and adds TV-specific safe margins.
  */
 object Spacing {
+    val none: Dp = CinemaSpacing.none
     val xxxs: Dp = CinemaSpacing.xxxs
     val xxs: Dp = CinemaSpacing.xxs
     val xs: Dp = CinemaSpacing.xs

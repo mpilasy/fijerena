@@ -7,12 +7,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
 fun LanguageSettingsCard(
@@ -26,7 +26,7 @@ fun LanguageSettingsCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { showLanguageDialog = true }
-                .padding(vertical = 8.dp),
+                .padding(vertical = Spacing.xs),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -84,14 +84,14 @@ private fun LanguageOption(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(vertical = 12.dp),
+            .padding(vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         RadioButton(
             selected = (code == selectedCode),
             onClick = null // handled by Row clickable
         )
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(Spacing.sm))
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
     }
 }

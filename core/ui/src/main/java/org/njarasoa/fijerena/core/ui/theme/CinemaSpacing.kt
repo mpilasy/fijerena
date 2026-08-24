@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
  * Shared spacing values used across TV and Mobile modules.
  */
 object CinemaSpacing {
+    val none: Dp = 0.dp
     val xxxs: Dp = 2.dp // Minimal gaps
     val xxs: Dp = 4.dp // Tight spacing
     val xs: Dp = 8.dp // Base unit (8dp grid)

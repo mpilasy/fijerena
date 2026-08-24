@@ -31,7 +31,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -285,7 +285,7 @@ fun PlayerScreen(
                     delay(1000L)
                 }
             }
-            val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+            val screenHeight = Dp(LocalConfiguration.current.screenHeightDp.toFloat())
             Box(
                 modifier =
                     Modifier

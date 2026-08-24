@@ -9,6 +9,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
  */
 object Spacing {
     // Base spacing (8dp grid) — delegated to shared core
+    val none: Dp = CinemaSpacing.none
+    val xxxs: Dp = CinemaSpacing.xxxs
     val xxs: Dp = CinemaSpacing.xxs
     val xs: Dp = CinemaSpacing.xs
     val sm: Dp = CinemaSpacing.sm

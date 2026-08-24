@@ -57,7 +57,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.media3.common.C
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
@@ -79,6 +78,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.core.player.model.formatEpochTime
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
+import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -241,8 +241,8 @@ fun TvPlayerControlsOverlay(
                                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                 modifier =
                                     Modifier
-                                        .background(CinemaSurface.copy(alpha = 0.3f), shape = RoundedCornerShape(4.dp))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                        .background(CinemaSurface.copy(alpha = 0.3f), shape = RoundedCornerShape(CornerRadius.small))
+                                        .padding(horizontal = Spacing.xxs + Spacing.xxxs, vertical = Spacing.xxxs),
                             )
                         }
                     }
@@ -362,21 +362,21 @@ fun TvPlayerControlsOverlay(
                                     }.then(
                                         if (isProgressBarFocused || isScrubbing) {
                                             Modifier.border(
-                                                width = 2.dp,
+                                                width = TvDimensions.borderFocused,
                                                 color = MaterialTheme.colorScheme.primary,
-                                                shape = RoundedCornerShape(4.dp),
+                                                shape = RoundedCornerShape(CornerRadius.small),
                                             )
                                         } else {
                                             Modifier
                                         },
-                                    ).padding(vertical = if (isProgressBarFocused || isScrubbing) Spacing.xs else 0.dp),
+                                    ).padding(vertical = if (isProgressBarFocused || isScrubbing) Spacing.xs else Spacing.none),
                         ) {
                             LinearProgressIndicator(
                                 progress = { displayPosition.toFloat() / duration.toFloat() },
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .height(if (isProgressBarFocused || isScrubbing) 8.dp else TvDimensions.progressBar),
+                                        .height(if (isProgressBarFocused || isScrubbing) Spacing.xs else TvDimensions.progressBar),
                                 color = MaterialTheme.colorScheme.primary,
                                 trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                             )

@@ -33,10 +33,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.DialogPosition
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
@@ -119,18 +119,18 @@ fun CinemaAlertDialog(
                         color = containerColor,
                         tonalElevation = AlertDialogDefaults.TonalElevation,
                     ) {
-                        Column(modifier = Modifier.padding(24.dp)) {
+                        Column(modifier = Modifier.padding(CinemaSpacing.lg)) {
                             icon?.let {
                                 CompositionLocalProvider(LocalContentColor provides iconContentColor) {
                                     Box(Modifier.align(Alignment.CenterHorizontally)) { it() }
                                 }
-                                Spacer(Modifier.height(16.dp))
+                                Spacer(Modifier.height(CinemaSpacing.md))
                             }
                             title?.let {
                                 CompositionLocalProvider(LocalContentColor provides titleContentColor) {
                                     ProvideTextStyle(MaterialTheme.typography.headlineSmall, it)
                                 }
-                                Spacer(Modifier.height(16.dp))
+                                Spacer(Modifier.height(CinemaSpacing.md))
                             }
                             text?.let {
                                 // fill = false so a short body stays short, but a long one yields
@@ -140,11 +140,11 @@ fun CinemaAlertDialog(
                                         ProvideTextStyle(MaterialTheme.typography.bodyMedium, it)
                                     }
                                 }
-                                Spacer(Modifier.height(24.dp))
+                                Spacer(Modifier.height(CinemaSpacing.lg))
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                                 focusedDismissButton?.invoke()
-                                if (dismissButton != null) Spacer(Modifier.width(8.dp))
+                                if (dismissButton != null) Spacer(Modifier.width(CinemaSpacing.xs))
                                 focusedConfirmButton()
                             }
                         }
@@ -173,19 +173,19 @@ fun CinemaAlertDialog(
                         color = containerColor,
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxSize().padding(24.dp),
+                            modifier = Modifier.fillMaxSize().padding(CinemaSpacing.lg),
                             verticalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Column {
                                 icon?.let {
                                     CompositionLocalProvider(LocalContentColor provides iconContentColor, content = it)
-                                    Spacer(Modifier.height(8.dp))
+                                    Spacer(Modifier.height(CinemaSpacing.xs))
                                 }
                                 title?.let {
                                     CompositionLocalProvider(LocalContentColor provides titleContentColor) {
                                         ProvideTextStyle(MaterialTheme.typography.headlineSmall, it)
                                     }
-                                    Spacer(Modifier.height(8.dp))
+                                    Spacer(Modifier.height(CinemaSpacing.xs))
                                 }
                                 text?.let {
                                     CompositionLocalProvider(LocalContentColor provides textContentColor) {
@@ -195,7 +195,7 @@ fun CinemaAlertDialog(
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                                 focusedDismissButton?.invoke()
-                                if (dismissButton != null) Spacer(Modifier.width(8.dp))
+                                if (dismissButton != null) Spacer(Modifier.width(CinemaSpacing.xs))
                                 focusedConfirmButton()
                             }
                         }
@@ -214,29 +214,29 @@ fun CinemaAlertDialog(
                 scrimColor = Color.Black.copy(alpha = tokens.scrimAlpha),
             ) {
                 ProvideUiScaledDensity {
-                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.xs)) {
                         icon?.let {
                             CompositionLocalProvider(LocalContentColor provides iconContentColor, content = it)
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(CinemaSpacing.xs))
                         }
                         title?.let {
                             CompositionLocalProvider(LocalContentColor provides titleContentColor) {
                                 ProvideTextStyle(MaterialTheme.typography.headlineSmall, it)
                             }
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(CinemaSpacing.xs))
                         }
                         text?.let {
                             CompositionLocalProvider(LocalContentColor provides textContentColor) {
                                 ProvideTextStyle(MaterialTheme.typography.bodyMedium, it)
                             }
-                            Spacer(Modifier.height(16.dp))
+                            Spacer(Modifier.height(CinemaSpacing.md))
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                             focusedDismissButton?.invoke()
-                            if (dismissButton != null) Spacer(Modifier.width(8.dp))
+                            if (dismissButton != null) Spacer(Modifier.width(CinemaSpacing.xs))
                             focusedConfirmButton()
                         }
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(CinemaSpacing.md))
                     }
                 }
             }

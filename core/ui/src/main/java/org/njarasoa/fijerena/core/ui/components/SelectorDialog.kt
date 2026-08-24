@@ -18,9 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 /**
  * Data class representing an item in the selector dialog.
@@ -53,7 +53,7 @@ fun SelectorDialog(
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
                 ) {
                     items.forEach { item ->
                         SelectorItemRow(item)
@@ -81,7 +81,7 @@ private fun SelectorItemRow(item: SelectorItem) {
             },
         shape = RoundedCornerShape(CinemaCornerRadius.small),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(CinemaSpacing.sm)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

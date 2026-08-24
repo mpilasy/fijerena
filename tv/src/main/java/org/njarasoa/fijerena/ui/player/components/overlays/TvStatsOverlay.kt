@@ -32,7 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
@@ -56,6 +56,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.player.model.formatBitrate
 import org.njarasoa.fijerena.core.player.model.formatTime
+import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 @Composable
@@ -284,7 +285,7 @@ fun TvStatsOverlay(
     }
 
     // Compact half-screen panel anchored to the bottom-right so the rest of the OSD stays visible.
-    val overlayWidth = (configuration.screenWidthDp * 0.5).dp
+    val overlayWidth = Dp(configuration.screenWidthDp * 0.5f)
 
     Box(
         modifier =
@@ -302,7 +303,7 @@ fun TvStatsOverlay(
                         CinemaGlassBackground,
                         shape = RoundedCornerShape(CinemaCornerRadius.medium),
                     ).border(
-                        width = 1.dp,
+                        width = TvDimensions.borderDefault,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(CinemaCornerRadius.medium),
                     ),
@@ -312,23 +313,23 @@ fun TvStatsOverlay(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(24.dp),
+                        .padding(Spacing.lg),
             ) {
                 Column(
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     // Header
                     Text(
                         text = "📊 " + stringResource(R.string.player_stats_title),
                         style =
-                            MaterialTheme.typography.titleMedium.copy(
-                                fontSize = 14.sp,
-                                fontFamily = FontFamily.Monospace,
-                            ),
+                             MaterialTheme.typography.titleMedium.copy(
+                                 fontSize = 14.sp,
+                                 fontFamily = FontFamily.Monospace,
+                             ),
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
@@ -350,12 +351,12 @@ fun TvStatsOverlay(
                     // Two-column layout
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         // Left Column
                         Column(
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                         ) {
                             // Video stats
                             SectionHeader(stringResource(R.string.player_stats_video))
@@ -403,7 +404,7 @@ fun TvStatsOverlay(
                         // Right Column
                         Column(
                             modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                         ) {
                             // Playback stats
                             SectionHeader(stringResource(R.string.player_stats_playback))
@@ -548,7 +549,7 @@ fun TvStatsOverlay(
                             text = stringResource(R.string.player_stats_build_format, org.njarasoa.fijerena.BuildConfig.BUILD_TIME, org.njarasoa.fijerena.BuildConfig.GIT_HASH),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = CinemaTextSecondary.copy(alpha = 0.3f),
-                            modifier = Modifier.padding(top = 4.dp),
+                            modifier = Modifier.padding(top = Spacing.xxs),
                         )
 
                         Text(
@@ -570,7 +571,7 @@ private fun CompactStatRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             text = label,
@@ -603,7 +604,7 @@ private fun CompactStatRowColored(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             text = label,
@@ -639,6 +640,6 @@ private fun SectionHeader(title: String) {
             ),
         color = MaterialTheme.colorScheme.primary,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 8.dp),
+        modifier = Modifier.padding(top = Spacing.xs),
     )
 }

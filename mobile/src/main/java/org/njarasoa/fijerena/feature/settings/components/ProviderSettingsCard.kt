@@ -10,11 +10,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
 fun ProviderSettingsCard(
@@ -32,7 +32,7 @@ fun ProviderSettingsCard(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )
         if (uiState.subscriptionExpiry != null) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.xs))
             val isExpired = uiState.subscriptionStatus?.equals("Expired", ignoreCase = true) == true
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -66,7 +66,7 @@ fun ProviderSettingsCard(
                 Text(stringResource(R.string.settings_provider_trial_account_label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.xs))
         CinemaButton(
             onClick = onManageProviders,
             modifier = Modifier.fillMaxWidth(),

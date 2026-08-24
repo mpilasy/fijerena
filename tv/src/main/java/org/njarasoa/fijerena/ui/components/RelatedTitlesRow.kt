@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -134,7 +133,7 @@ private fun RelatedTitleCard(
 }
 
 /** Room for two lines of bodySmall, so a one-line title does not make its card shorter than the rest. */
-private val TITLE_BLOCK_HEIGHT = 44.dp
+private val TITLE_BLOCK_HEIGHT = Spacing.xl + Spacing.sm
 
 /** Slack around the row so a focused card's border, scale and glow are not clipped away. */
-private val FOCUS_BLEED = 12.dp
+private val FOCUS_BLEED = Spacing.sm

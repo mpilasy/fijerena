@@ -23,7 +23,7 @@ Refer to `gradle/libs.versions.toml` for authoritative versions.
 | Language | Kotlin | 2.3.0 |
 | Build System | Gradle | 9.4.1 |
 | Build System | Android Gradle Plugin (AGP) | 9.2.1 |
-| UI Framework | Jetpack Compose | 2024.12.01 BOM |
+| UI Framework | Jetpack Compose | 2025.06.01 BOM |
 | Material Design | Material 3 | 1.4.0 |
 | TV Components | androidx.tv.material3 | 1.0.0-alpha10 |
 | Video Player | Media3 (ExoPlayer) | 1.7.1 |

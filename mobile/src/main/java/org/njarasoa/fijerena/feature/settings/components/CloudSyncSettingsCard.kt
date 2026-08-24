@@ -13,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
@@ -22,6 +21,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.CinemaError
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
 fun CloudSyncSettingsCard(
@@ -39,15 +39,15 @@ fun CloudSyncSettingsCard(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.xs))
 
         if (signedInEmail != null) {
             // Signed in: show account + sync controls
             Text(
-                text = signedInEmail ?: "",
+                text = signedInEmail,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Spacing.xxs))
             val syncingText = stringResource(R.string.provider_syncing)
             val syncedText = stringResource(R.string.sync_status_synced)
             val errorFormat = stringResource(R.string.epg_database_error)
@@ -57,7 +57,7 @@ fun CloudSyncSettingsCard(
                     is DriveSettingsSyncManager.SyncStatus.Syncing -> syncingText
                     is DriveSettingsSyncManager.SyncStatus.Synced -> syncedText
                     is DriveSettingsSyncManager.SyncStatus.Error ->
-                        String.format(errorFormat, (syncStatus as DriveSettingsSyncManager.SyncStatus.Error).message)
+                        String.format(errorFormat, syncStatus.message)
                     else -> readyText
                 }
             Text(
@@ -70,10 +70,10 @@ fun CloudSyncSettingsCard(
                         else -> MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
                     },
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.xs))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 CinemaButton(
                     onClick = { coroutineScope.launch { syncManager.syncNow() } },
@@ -100,9 +100,9 @@ fun CloudSyncSettingsCard(
                 Text(stringResource(R.string.settings_sign_in_google_button))
             }
             if (signInError != null) {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(Spacing.xxs))
                 Text(
-                    text = signInError ?: "",
+                    text = signInError,
                     style = MaterialTheme.typography.bodySmall,
                     color = CinemaError,
                 )

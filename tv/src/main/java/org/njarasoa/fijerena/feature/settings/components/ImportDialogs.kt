@@ -32,7 +32,6 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.ClickableSurfaceDefaults
@@ -95,7 +94,7 @@ fun ImportOptionsDialog(
                     modifier =
                         Modifier
                             .width(TvDimensions.dialogWidth)
-                            .height(600.dp)
+                            .height(TvDimensions.dialogWidth)
                             .padding(Spacing.xxl),
                     color = CinemaSurface,
                     shape = RoundedCornerShape(CornerRadius.large),
@@ -213,7 +212,7 @@ private fun OptionRow(
             ClickableSurfaceDefaults.border(
                 focusedBorder =
                     androidx.tv.material3.Border(
-                        border = androidx.compose.foundation.BorderStroke(2.dp, CinemaAccentLight),
+                        border = androidx.compose.foundation.BorderStroke(TvDimensions.borderFocused, CinemaAccentLight),
                         shape = RoundedCornerShape(CornerRadius.small),
                     ),
             ),
@@ -272,7 +271,7 @@ fun ConflictResolutionDialog(
                     modifier =
                         Modifier
                             .width(TvDimensions.dialogWidth)
-                            .height(600.dp)
+                            .height(TvDimensions.dialogWidth)
                             .padding(Spacing.xxl),
                     color = CinemaSurface,
                     shape = RoundedCornerShape(CornerRadius.large),

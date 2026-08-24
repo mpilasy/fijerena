@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -77,12 +78,15 @@ class EpgBrowserViewModel(
         }
 
         override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other !is ProgramGroupKey) return false
-            if (this.hash != other.hash) return false
-
-            if (!this.trimmedTitle.equals(other.trimmedTitle, ignoreCase = true)) return false
-            return this.trimmedDescription.equals(other.trimmedDescription, ignoreCase = true)
+            val isEqual =
+                when {
+                    this === other -> true
+                    other !is ProgramGroupKey -> false
+                    this.hash != other.hash -> false
+                    !this.trimmedTitle.equals(other.trimmedTitle, ignoreCase = true) -> false
+                    else -> this.trimmedDescription.equals(other.trimmedDescription, ignoreCase = true)
+                }
+            return isEqual
         }
 
         override fun hashCode(): Int = hash
@@ -189,7 +193,7 @@ class EpgBrowserViewModel(
                 }
             val dao = SettingsDatabase.getInstance(context).epgSourceDao()
             emitAll(if (providerId == null) flowOf(emptyList()) else dao.getSourcesForProvider(providerId))
-        }
+        }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
     /**
      * Oldest `lastIngestedAtMs` among enabled sources that have actually run — the data is only as
