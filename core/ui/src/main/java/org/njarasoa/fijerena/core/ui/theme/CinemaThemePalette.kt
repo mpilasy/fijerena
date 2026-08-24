@@ -1,6 +1,9 @@
 package org.njarasoa.fijerena.core.ui.theme
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
@@ -126,11 +129,10 @@ val AllPalettes: List<CinemaThemePalette> =
 
 fun paletteById(id: String): CinemaThemePalette = AllPalettes.firstOrNull { it.id == id } ?: DeepNightPalette
 
-// --- Global holder for non-composable access ---
+// --- Global holder for non-composable and composable access ---
 
 object CinemaThemeHolder {
-    @Volatile
-    var current: CinemaThemePalette = DeepNightPalette
+    var current: CinemaThemePalette by mutableStateOf(DeepNightPalette)
 }
 
 // --- CompositionLocal for composable access ---
