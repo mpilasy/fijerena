@@ -289,7 +289,7 @@ The EPG Grid is a 24-hour channel schedule view accessible from the Category Gri
 
 ### Grid Layout
 
-**TV** (`tv/.../feature/epg/EpgGuideScreen.kt` + `EpgGridLayout.kt`): Two-pane (20% channels + 80% time grid), 48 x 30-min slots, current time highlighted, auto-scroll, synchronized scrolling, D-pad navigable, date navigation + "Jump to Now".
+**TV** (`tv/.../feature/epg/TvEpgGuideScreen.kt` + `EpgGridLayout.kt`): Two-pane (20% channels + 80% time grid), 48 x 30-min slots, current time highlighted, auto-scroll, synchronized scrolling, D-pad navigable, date navigation + "Jump to Now".
 
 **Mobile** (`mobile/.../feature/epg/MobileEpgGuideScreen.kt` + `MobileEpgTimeline.kt`): Scaffold with TopAppBar, LazyColumn + horizontal timeline, swipe date navigation, pull-to-refresh.
 
@@ -321,7 +321,7 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 
 ### Search UI
 
-**TV** (`tv/.../feature/epgbrowser/EpgBrowserScreen.kt`): GlassPanel search, TvLazyColumn with date group headers, D-pad navigable, search source indicator, indexing progress banner.
+**TV** (`tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt`): GlassPanel search, TvLazyColumn with date group headers, D-pad navigable, search source indicator, indexing progress banner.
 
 **Mobile** (`mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt`): Scaffold, LazyColumn with sticky date headers and expandable programme cards, linear progress during indexing.
 
