@@ -59,6 +59,24 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
+data class StatsSnapshot(
+    val videoCodec: String,
+    val videoResolution: String,
+    val videoFrameRate: String,
+    val videoBitrate: String,
+    val audioCodec: String,
+    val audioSampleRate: String,
+    val audioChannels: String,
+    val audioBitrate: String,
+    val bufferedPosition: Long,
+    val droppedFrames: Long,
+    val networkSpeed: String,
+    val bufferHealth: Int,
+    val streamElapsed: String,
+    val heap: AppPerformanceMonitor.HeapSnapshot,
+    val uiFramesSkipped: Long,
+)
+
 @Composable
 fun TvStatsOverlay(
     playbackState: PlaybackState,
@@ -80,21 +98,27 @@ fun TvStatsOverlay(
     val degradedFormat = stringResource(R.string.player_stats_health_degraded_format)
     val unstableFormat = stringResource(R.string.player_stats_health_unstable_format)
 
-    // Get current track info
-    var videoCodec by remember { mutableStateOf(naText) }
-    var videoResolution by remember { mutableStateOf(naText) }
-    var videoFrameRate by remember { mutableStateOf(naText) }
-    var videoBitrate by remember { mutableStateOf(naText) }
-
-    var audioCodec by remember { mutableStateOf(naText) }
-    var audioSampleRate by remember { mutableStateOf(naText) }
-    var audioChannels by remember { mutableStateOf(naText) }
-    var audioBitrate by remember { mutableStateOf(naText) }
-
-    var bufferedPosition by remember { mutableStateOf(0L) }
-    var droppedFrames by remember { mutableStateOf(0L) }
-    var networkSpeed by remember { mutableStateOf(naText) }
-    var bufferHealth by remember { mutableStateOf(0) }
+    var stats by remember {
+        mutableStateOf(
+            StatsSnapshot(
+                videoCodec = naText,
+                videoResolution = naText,
+                videoFrameRate = naText,
+                videoBitrate = naText,
+                audioCodec = naText,
+                audioSampleRate = naText,
+                audioChannels = naText,
+                audioBitrate = naText,
+                bufferedPosition = 0L,
+                droppedFrames = 0L,
+                networkSpeed = naText,
+                bufferHealth = 0,
+                streamElapsed = "0:00",
+                heap = AppPerformanceMonitor.heapSnapshot(),
+                uiFramesSkipped = 0L,
+            )
+        )
+    }
 
     // Collect dropped frames from service
     val serviceDroppedFrames by StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsStateWithLifecycle(0L)
@@ -123,12 +147,7 @@ fun TvStatsOverlay(
         ?: remember { mutableStateOf(org.njarasoa.fijerena.core.player.network.StreamHealthState()) }
     val serviceRecentDropRate by StreamingPlaybackService.getInstance()?.recentDropRate?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
-    var streamElapsed by remember { mutableStateOf("0:00") }
 
-    // Process-side health. ExoPlayer's counters cannot see the app starving itself, which is
-    // exactly what a GC storm or a heavy background job looks like from the sofa.
-    var heap by remember { mutableStateOf(AppPerformanceMonitor.heapSnapshot()) }
-    var uiFramesSkipped by remember { mutableLongStateOf(0L) }
     val jankMonitor = remember { AppPerformanceMonitor.JankMonitor() }
     DisposableEffect(Unit) {
         jankMonitor.start()
@@ -144,31 +163,42 @@ fun TvStatsOverlay(
         var currentVideoBitrate = 0
         var currentAudioBitrate = 0
 
+        var curVideoCodec = naText
+        var curVideoResolution = naText
+        var curVideoFrameRate = naText
+        var curVideoBitrate = naText
+
+        var curAudioCodec = naText
+        var curAudioSampleRate = naText
+        var curAudioChannels = naText
+        var curAudioBitrate = naText
+
+        var curBufferedPosition = 0L
+        var curDroppedFrames = 0L
+        var curNetworkSpeed = naText
+        var curBufferHealth = 0
+        var curStreamElapsed = "0:00"
+
         while (true) {
             StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
-                // Update buffered position
-                bufferedPosition = p.bufferedPosition
+                curBufferedPosition = p.bufferedPosition
 
-                // Get dropped frames from analytics
                 val newDroppedFrames = serviceDroppedFrames
-                if (newDroppedFrames != droppedFrames) droppedFrames = newDroppedFrames
+                curDroppedFrames = newDroppedFrames
 
-                // Calculate buffer health (percentage of buffer vs target)
                 val currentPos = p.currentPosition
                 val buffered = p.bufferedPosition
-                val newBufferHealth =
+                curBufferHealth =
                     if (buffered > currentPos) {
                         ((buffered - currentPos) / 1000).toInt().coerceIn(0, 100)
                     } else {
                         0
                     }
-                if (newBufferHealth != bufferHealth) bufferHealth = newBufferHealth
 
-                // Fallback resolution from videoSize
-                if (videoResolution == naText || videoResolution == "0 × 0") {
+                if (curVideoResolution == naText || curVideoResolution == "0 × 0") {
                     val size = p.videoSize
                     if (size.width > 0 && size.height > 0) {
-                        videoResolution = "${size.width} × ${size.height}"
+                        curVideoResolution = "${size.width} × ${size.height}"
                     }
                 }
 
@@ -187,21 +217,16 @@ fun TvStatsOverlay(
                                     val format = group.getTrackFormat(j)
                                     if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
                                         selectedVideoFormat = format
-                                        val newCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: unknownText
-                                        if (newCodec != videoCodec) videoCodec = newCodec
-                                        val newResolution = "${format.width} × ${format.height}"
-                                        if (newResolution != videoResolution) videoResolution = newResolution
+                                        curVideoCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: unknownText
+                                        curVideoResolution = "${format.width} × ${format.height}"
 
                                         currentVideoBitrate = format.bitrate
-                                        val newVideoBitrate = if (currentVideoBitrate > 0) formatBitrate(currentVideoBitrate) else unknownText
-                                        if (newVideoBitrate != videoBitrate) videoBitrate = newVideoBitrate
+                                        curVideoBitrate = if (currentVideoBitrate > 0) formatBitrate(currentVideoBitrate) else unknownText
                                     }
                                     if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
-                                        val newAudioCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: unknownText
-                                        if (newAudioCodec != audioCodec) audioCodec = newAudioCodec
-                                        val newSampleRate = if (format.sampleRate > 0) "${format.sampleRate / 1000}kHz" else naText
-                                        if (newSampleRate != audioSampleRate) audioSampleRate = newSampleRate
-                                        val newChannels =
+                                        curAudioCodec = format.sampleMimeType?.substringAfter("/")?.uppercase() ?: unknownText
+                                        curAudioSampleRate = if (format.sampleRate > 0) "${format.sampleRate / 1000}kHz" else naText
+                                        curAudioChannels =
                                             if (format.channelCount > 0) {
                                                 when (format.channelCount) {
                                                     1 -> context.getString(R.string.audio_channel_mono)
@@ -213,25 +238,20 @@ fun TvStatsOverlay(
                                             } else {
                                                 naText
                                             }
-                                        if (newChannels != audioChannels) audioChannels = newChannels
 
                                         currentAudioBitrate = format.bitrate
-                                        val newAudioBitrate = if (currentAudioBitrate > 0) formatBitrate(currentAudioBitrate) else unknownText
-                                        if (newAudioBitrate != audioBitrate) audioBitrate = newAudioBitrate
+                                        curAudioBitrate = if (currentAudioBitrate > 0) formatBitrate(currentAudioBitrate) else unknownText
                                     }
-                                    break // Found the selected track in this group
+                                    break
                                 }
                             }
                         }
                     }
                 }
 
-                // Frame rate depends on the live measured-fps signal too (common fallback for
-                // streams whose container doesn't report a static rate), so it's recomputed
-                // every tick rather than gated behind the tracks-changed check above.
                 val fmt = selectedVideoFormat
                 val mFps = serviceMeasuredFps
-                val newFrameRate =
+                curVideoFrameRate =
                     if (fmt != null && fmt.frameRate > 0) {
                         context.getString(R.string.player_stats_fps_unit, fmt.frameRate.toInt())
                     } else if (mFps > 0) {
@@ -239,18 +259,14 @@ fun TvStatsOverlay(
                     } else {
                         naText
                     }
-                if (newFrameRate != videoFrameRate) videoFrameRate = newFrameRate
 
-                // If bitrate is still unknown for video but we have a bandwidth estimate, use a portion of it as a guess
                 val bw = serviceBandwidth
                 if (currentVideoBitrate <= 0 && bw > 0) {
                     val estimatedBitrate = (bw * 0.9).toInt()
-                    val newVideoBitrate = "~" + formatBitrate(estimatedBitrate)
-                    if (newVideoBitrate != videoBitrate) videoBitrate = newVideoBitrate
+                    curVideoBitrate = "~" + formatBitrate(estimatedBitrate)
                 }
 
-                // Use bandwidth estimate for network speed
-                val newNetworkSpeed =
+                curNetworkSpeed =
                     if (bw > 0) {
                         formatBitrate(bw.toInt())
                     } else {
@@ -259,26 +275,43 @@ fun TvStatsOverlay(
                                 (if (currentAudioBitrate > 0) currentAudioBitrate else 0)
                         if (totalBitrate > 0) formatBitrate(totalBitrate) else naText
                     }
-                if (newNetworkSpeed != networkSpeed) networkSpeed = newNetworkSpeed
             }
 
-            heap = AppPerformanceMonitor.heapSnapshot()
-            uiFramesSkipped = jankMonitor.skippedFrames
+            val curHeap = AppPerformanceMonitor.heapSnapshot()
+            val curUiFramesSkipped = jankMonitor.skippedFrames
 
-            // Update stream elapsed time
             val startTime = serviceStartTimeMs
             if (startTime > 0L) {
                 val elapsedSec = (android.os.SystemClock.elapsedRealtime() - startTime) / 1000
                 val hours = elapsedSec / 3600
                 val minutes = (elapsedSec % 3600) / 60
                 val seconds = elapsedSec % 60
-                streamElapsed =
+                curStreamElapsed =
                     if (hours > 0) {
                         String.format("%d:%02d:%02d", hours, minutes, seconds)
                     } else {
                         String.format("%d:%02d", minutes, seconds)
                     }
             }
+
+            stats =
+                StatsSnapshot(
+                    videoCodec = curVideoCodec,
+                    videoResolution = curVideoResolution,
+                    videoFrameRate = curVideoFrameRate,
+                    videoBitrate = curVideoBitrate,
+                    audioCodec = curAudioCodec,
+                    audioSampleRate = curAudioSampleRate,
+                    audioChannels = curAudioChannels,
+                    audioBitrate = curAudioBitrate,
+                    bufferedPosition = curBufferedPosition,
+                    droppedFrames = curDroppedFrames,
+                    networkSpeed = curNetworkSpeed,
+                    bufferHealth = curBufferHealth,
+                    streamElapsed = curStreamElapsed,
+                    heap = curHeap,
+                    uiFramesSkipped = curUiFramesSkipped,
+                )
 
             delay(CinemaAnimation.statsUpdateMs)
         }
@@ -360,25 +393,25 @@ fun TvStatsOverlay(
                         ) {
                             // Video stats
                             SectionHeader(stringResource(R.string.player_stats_video))
-                            CompactStatRow(stringResource(R.string.player_stats_codec), videoCodec)
-                            CompactStatRow(stringResource(R.string.player_stats_res), videoResolution)
-                            CompactStatRow(stringResource(R.string.player_stats_fps), videoFrameRate)
-                            CompactStatRow(stringResource(R.string.player_stats_bitrate), videoBitrate)
+                            CompactStatRow(stringResource(R.string.player_stats_codec), stats.videoCodec)
+                            CompactStatRow(stringResource(R.string.player_stats_res), stats.videoResolution)
+                            CompactStatRow(stringResource(R.string.player_stats_fps), stats.videoFrameRate)
+                            CompactStatRow(stringResource(R.string.player_stats_bitrate), stats.videoBitrate)
 
                             // Audio stats
                             SectionHeader(stringResource(R.string.player_stats_audio))
-                            CompactStatRow(stringResource(R.string.player_stats_codec), audioCodec)
-                            CompactStatRow(stringResource(R.string.player_stats_rate), audioSampleRate)
-                            CompactStatRow(stringResource(R.string.player_stats_ch), audioChannels)
-                            CompactStatRow(stringResource(R.string.player_stats_bitrate), audioBitrate)
+                            CompactStatRow(stringResource(R.string.player_stats_codec), stats.audioCodec)
+                            CompactStatRow(stringResource(R.string.player_stats_rate), stats.audioSampleRate)
+                            CompactStatRow(stringResource(R.string.player_stats_ch), stats.audioChannels)
+                            CompactStatRow(stringResource(R.string.player_stats_bitrate), stats.audioBitrate)
 
                             // Network stats
                             SectionHeader(stringResource(R.string.player_stats_network))
-                            CompactStatRow(stringResource(R.string.player_stats_speed), networkSpeed)
+                            CompactStatRow(stringResource(R.string.player_stats_speed), stats.networkSpeed)
                             val bwEstimate = serviceBandwidth
                             CompactStatRow(stringResource(R.string.player_stats_bandwidth), if (bwEstimate > 0) formatBitrate(bwEstimate.toInt()) else naText)
-                            CompactStatRow(stringResource(R.string.player_stats_buffer), stringResource(R.string.player_stats_seconds_unit, bufferHealth))
-                            CompactStatRow(stringResource(R.string.player_stats_buffered), formatTime(bufferedPosition))
+                            CompactStatRow(stringResource(R.string.player_stats_buffer), stringResource(R.string.player_stats_seconds_unit, stats.bufferHealth))
+                            CompactStatRow(stringResource(R.string.player_stats_buffered), formatTime(stats.bufferedPosition))
                             val rebuffers = serviceRebufferCount
                             val rebufferTimeMs = serviceRebufferTimeMs
                             val rebufferColor =
@@ -419,7 +452,7 @@ fun TvStatsOverlay(
                             val totalFrames = serviceTotalFrames
                             val dropRate =
                                 if (totalFrames > 0) {
-                                    (droppedFrames.toFloat() / totalFrames * 100)
+                                    (stats.droppedFrames.toFloat() / totalFrames * 100)
                                 } else {
                                     0f
                                 }
@@ -433,7 +466,7 @@ fun TvStatsOverlay(
 
                             CompactStatRowColored(
                                 stringResource(R.string.player_stats_dropped),
-                                stringResource(R.string.player_stats_dropped_format, droppedFrames, totalFrames),
+                                stringResource(R.string.player_stats_dropped_format, stats.droppedFrames, totalFrames),
                                 dropColor,
                             )
                             if (totalFrames > 0) {
@@ -476,23 +509,23 @@ fun TvStatsOverlay(
                             SectionHeader(stringResource(R.string.player_stats_app))
                             val heapColor =
                                 when {
-                                    heap.usedPercent < 60 -> CinemaSuccess
-                                    heap.usedPercent < 85 -> CinemaWarning
+                                    stats.heap.usedPercent < 60 -> CinemaSuccess
+                                    stats.heap.usedPercent < 85 -> CinemaWarning
                                     else -> CinemaError
                                 }
                             CompactStatRowColored(
                                 stringResource(R.string.player_stats_heap),
-                                stringResource(R.string.player_stats_heap_format, heap.usedMb, heap.maxMb, heap.usedPercent),
+                                stringResource(R.string.player_stats_heap_format, stats.heap.usedMb, stats.heap.maxMb, stats.heap.usedPercent),
                                 heapColor,
                             )
                             CompactStatRow(
                                 stringResource(R.string.player_stats_gc),
-                                stringResource(R.string.player_stats_gc_format, heap.gcCount, heap.gcTimeMs),
+                                stringResource(R.string.player_stats_gc_format, stats.heap.gcCount, stats.heap.gcTimeMs),
                             )
                             CompactStatRowColored(
                                 stringResource(R.string.player_stats_ui_skipped),
-                                "$uiFramesSkipped",
-                                if (uiFramesSkipped == 0L) CinemaSuccess else CinemaWarning,
+                                "${stats.uiFramesSkipped}",
+                                if (stats.uiFramesSkipped == 0L) CinemaSuccess else CinemaWarning,
                             )
 
                             // Stream info
@@ -518,7 +551,7 @@ fun TvStatsOverlay(
                                 CompactStatRowColored(stringResource(R.string.player_stats_stream_health), healthText, healthColor)
                             }
                             
-                            CompactStatRow(stringResource(R.string.player_stats_uptime), streamElapsed)
+                            CompactStatRow(stringResource(R.string.player_stats_uptime), stats.streamElapsed)
                             CompactStatRow(stringResource(R.string.player_stats_url), metadata.streamUrl.substringAfterLast("/").take(20))
 
                             SectionHeader(stringResource(R.string.player_stats_device))

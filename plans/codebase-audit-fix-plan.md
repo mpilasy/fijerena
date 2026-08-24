@@ -86,12 +86,11 @@ These require more design thought or touch multiple files.
 - **Files:** `core/ui/.../theme/CinemaColors.kt`, `CinemaThemeHolder.kt`
 - **Resolution:** Backed `CinemaThemeHolder.current` with `mutableStateOf` so all callers of `CinemaColors` properties participate in Compose snapshot tracking and automatically recompose on dynamic theme changes.
 
-### T2-5. Stats Overlay Full Recomposition Every Second
-- **Status:** Pending
+### T2-5. [COMPLETED] Stats Overlay Full Recomposition Every Second
+- **Status:** COMPLETED ✅
 - **Risk:** Dropped frames on mid-range TV chipsets (Sony Bravia) when stats overlay is active
 - **Files:** `tv/.../ui/player/components/overlays/TvStatsOverlay.kt` (L140–285)
-- **Complexity:** Medium — needs state scoping refactor
-- **Approach:** Group stats into smaller sub-composables to isolate recomposition scopes.
+- **Resolution:** Consolidated ~15 distinct state variables into a single unified `StatsSnapshot` data class updated once per tick, avoiding individual state mutation tracking and reducing recomposition overhead.
 
 ### T2-6. Position Save Listener Leaked from Docked Mini-Player
 - **Status:** Pending
