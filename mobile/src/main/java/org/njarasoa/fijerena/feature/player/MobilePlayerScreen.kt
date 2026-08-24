@@ -310,9 +310,13 @@ fun MobilePlayerContent(
     }
 
     // Set up auto-save listener for playback position and track settings
-    LaunchedEffect(Unit) {
-        StreamingPlaybackService.awaitInstance().setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
+    DisposableEffect(loaderViewModel) {
+        val service = StreamingPlaybackService.getInstance()
+        service?.setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
             loaderViewModel.recordHistory(position, duration, isPaused, audioIndex, subtitleIndex)
+        }
+        onDispose {
+            StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
         }
     }
 
