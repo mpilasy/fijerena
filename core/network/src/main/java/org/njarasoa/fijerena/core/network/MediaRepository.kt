@@ -1,7 +1,10 @@
 package org.njarasoa.fijerena.core.network
+
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import kotlinx.coroutines.cancel
+import java.io.Closeable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -97,7 +100,7 @@ class MediaRepository(
     private val context: Context,
     private val providerId: Long,
     private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT,
-) {
+) : Closeable {
     @Volatile
     private var provider: MediaProvider? = null
 
@@ -1169,4 +1172,11 @@ class MediaRepository(
             ContentType.TV_SHOWS -> MediaType.SERIES
             else -> MediaType.LIVE_CHANNEL
         }
+
+    override fun close() {
+        watchHistoryWriteHandler.removeCallbacks(watchHistoryWriteRunnable)
+        flushWatchHistory()
+        watchHistoryWriteThread.quitSafely()
+        writeScope.cancel()
+    }
 }

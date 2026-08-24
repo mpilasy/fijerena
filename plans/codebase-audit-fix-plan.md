@@ -62,14 +62,11 @@ Findings are grouped into 4 tiers by crossing **risk** (data loss, crash, corrup
 
 These require more design thought or touch multiple files.
 
-### T2-1. MediaRepository Leaks OS Threads on Provider Switch
-- **Status:** Pending
+### T2-1. [COMPLETED] MediaRepository Leaks OS Threads on Provider Switch
+- **Status:** COMPLETED ✅
 - **Risk:** Orphaned `HandlerThread` + `CoroutineScope` per provider switch — unbounded thread growth
 - **Files:** `core/network/.../MediaRepository.kt` (L141, L153) + `core/ui/.../di/AppContainer.kt`
-- **Complexity:** Medium — add `Closeable` interface, call from AppContainer eviction path
-- **Approach:**
-  1. Add `fun close()` to `MediaRepository` that calls `watchHistoryWriteThread.quitSafely()` and `writeScope.cancel()`
-  2. Call `close()` from `AppContainer` before evicting a cached repository
+- **Resolution:** Implemented `Closeable` on `MediaRepository` to flush dirty history, safely quit `HandlerThread`, and cancel `writeScope`. Added cleanup calls in `AppContainer.clearAllCaches()` and `evictMediaRepository()`.
 
 ### T2-2. EPG Temp Files Leaked on Pipeline Cancellation
 - **Status:** Pending
