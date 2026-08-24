@@ -96,6 +96,13 @@ class AppContainer(
      */
     suspend fun clearAllCaches() {
         mutex.withLock {
+            mediaRepositories.values.forEach { repo ->
+                try {
+                    repo.close()
+                } catch (e: Exception) {
+                    android.util.Log.w("AppContainer", "Error closing MediaRepository during clearAllCaches", e)
+                }
+            }
             mediaRepositories.clear()
             MediaProviderFactory.clearAllCaches()
         }
@@ -108,7 +115,12 @@ class AppContainer(
      */
     suspend fun evictMediaRepository(providerId: Long) {
         mutex.withLock {
-            mediaRepositories.remove(providerId)
+            val repo = mediaRepositories.remove(providerId)
+            try {
+                repo?.close()
+            } catch (e: Exception) {
+                android.util.Log.w("AppContainer", "Error closing MediaRepository during eviction for provider $providerId", e)
+            }
         }
     }
 
