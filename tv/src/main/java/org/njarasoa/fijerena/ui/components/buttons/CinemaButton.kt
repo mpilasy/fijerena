@@ -12,13 +12,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonColors
 import androidx.tv.material3.ButtonDefaults
-import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -142,78 +140,6 @@ fun CinemaSecondaryButton(
                 focusedBorder =
                     Border(
                         border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight),
-                    ),
-            ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
-        contentPadding =
-            PaddingValues(
-                horizontal = Spacing.md.scaled(scale),
-                vertical = Spacing.sm.scaled(scale),
-            ),
-    ) {
-        Text(
-            text = text,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-/**
- * Tertiary Button - Minimal emphasis
- * Transparent background with cyan outline.
- * Use for tertiary actions like "Skip", "Don't show again", etc.
- *
- * @param onClick Callback when button is clicked
- * @param text Button label text
- * @param modifier Optional modifier
- * @param enabled Whether button is enabled (default true)
- */
-@Composable
-fun CinemaTertiaryButton(
-    onClick: () -> Unit,
-    text: String,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    val scale = LocalUiScale.current
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        colors =
-            ButtonDefaults.colors(
-                containerColor = Color.Transparent,
-                contentColor = CinemaAccent,
-                focusedContainerColor = CinemaSurface.copy(alpha = CinemaAlpha.scrim),
-                focusedContentColor = CinemaAccentLight,
-                pressedContainerColor = CinemaSurface.copy(alpha = CinemaAlpha.tint),
-                disabledContainerColor = Color.Transparent,
-                disabledContentColor = CinemaAccent.copy(alpha = CinemaAlpha.textFaint),
-            ),
-        scale =
-            ButtonDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScale,
-                pressedScale = TvFocusTokens.pressedScale,
-                disabledScale = TvFocusTokens.defaultScale,
-            ),
-        border =
-            ButtonDefaults.border(
-                border =
-                    Border(
-                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccent),
-                    ),
-                focusedBorder =
-                    Border(
-                        border = BorderStroke(width = TvFocusTokens.focusBorderWidth.scaled(scale), color = CinemaAccentLight),
-                    ),
-                disabledBorder =
-                    Border(
-                        border =
-                            BorderStroke(
-                                width = TvFocusTokens.focusBorderWidth.scaled(scale),
-                                color = CinemaAccent.copy(alpha = CinemaAlpha.focusedGlow),
-                            ),
                     ),
             ),
         shape = ButtonDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.small.scaled(scale))),
