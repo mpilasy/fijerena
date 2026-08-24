@@ -533,103 +533,116 @@ class EpgFileManager private constructor(
                 )
 
             val allStats =
-                coroutineScope {
-                    // Start bulk setup in parallel with downloads — downloads write to cache files
-                    // and never touch the DB, so there is no ordering constraint here.
-                    // Consumers await this before touching the DB.
-                    val bulkReady = async(Dispatchers.IO) { indexer.beginBulkIngestion() }
+                try {
+                    coroutineScope {
+                        // Start bulk setup in parallel with downloads — downloads write to cache files
+                        // and never touch the DB, so there is no ordering constraint here.
+                        // Consumers await this before touching the DB.
+                        val bulkReady = async(Dispatchers.IO) { indexer.beginBulkIngestion() }
 
-                    // Consumer: ingest downloaded files in parallel (SQLite handles locking)
-                    val ingestionJobs =
-                        (1..maxIngestionConcurrency).map {
-                            launch {
-                                bulkReady.await() // Ensure indexes are dropped before first ingest
-                                for (downloaded in ingestionQueue) {
-                                    activeProgress[downloaded.source.id] =
-                                        ActiveSourceProgress(
-                                            sourceId = downloaded.source.id,
-                                            label = downloaded.label,
-                                            phase = "Ingesting",
-                                            downloadedBytes = downloaded.downloadedBytes,
-                                            downloadTotalBytes = downloaded.downloadedBytes,
-                                        )
-                                    updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-
-                                    val stats =
-                                        ingestDownloadedSource(
-                                            downloaded,
-                                            sourceDao,
-                                            indexer,
-                                            activeProgress,
-                                            batchSize = batchSize,
-                                            useStaging = useStaging,
-                                            isPlaybackActive = ::isPlaybackActive,
-                                        ) {
-                                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-                                        }
-
-                                    val sourceId = downloaded.source.id
-                                    val sourceDuration = sourceStartTimeMap[sourceId]?.let { System.currentTimeMillis() - it } ?: 0
-                                    val finalStats = stats.copy(durationMs = sourceDuration)
-
-                                    activeLabels.remove(downloaded.label)
-                                    activeProgress.remove(sourceId)
-                                    completedStats.add(finalStats)
-                                    updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-                                }
-                            }
-                        }
-
-                    // Producers: download sources concurrently
-                    val downloadJobs =
-                        sources.map { source ->
-                            async {
-                                sourceStartTimeMap[source.id] = System.currentTimeMillis()
-                                val label = source.label.ifBlank { extractLabel(source.url) }
-                                downloadSemaphore.withPermit {
-                                    activeLabels.add(label)
-                                    activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
-                                    updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-
-                                    val result =
-                                        downloadSource(source, label, sourceDao, activeProgress) {
-                                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-                                        }
-
-                                    if (result != null) {
-                                        // Success — send to ingestion pipeline
-                                        activeProgress[source.id] =
+                        // Consumer: ingest downloaded files in parallel (SQLite handles locking)
+                        val ingestionJobs =
+                            (1..maxIngestionConcurrency).map {
+                                launch {
+                                    bulkReady.await() // Ensure indexes are dropped before first ingest
+                                    for (downloaded in ingestionQueue) {
+                                        activeProgress[downloaded.source.id] =
                                             ActiveSourceProgress(
-                                                sourceId = source.id,
-                                                label = label,
-                                                phase = "Awaiting Ingestion",
-                                                downloadedBytes = result.downloadedBytes,
-                                                downloadTotalBytes = result.downloadedBytes,
+                                                sourceId = downloaded.source.id,
+                                                label = downloaded.label,
+                                                phase = "Ingesting",
+                                                downloadedBytes = downloaded.downloadedBytes,
+                                                downloadTotalBytes = downloaded.downloadedBytes,
                                             )
                                         updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-                                        ingestionQueue.send(result)
-                                    } else {
-                                        // Download failed — record and clean up
-                                        val sourceDuration = sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
-                                        activeLabels.remove(label)
-                                        activeProgress.remove(source.id)
-                                        completedStats.add(
-                                            SourceStats(source.id, label, durationMs = sourceDuration, error = context.getString(R.string.sync_error_download_failed)),
-                                        )
+
+                                        val stats =
+                                            ingestDownloadedSource(
+                                                downloaded,
+                                                sourceDao,
+                                                indexer,
+                                                activeProgress,
+                                                batchSize = batchSize,
+                                                useStaging = useStaging,
+                                                isPlaybackActive = ::isPlaybackActive,
+                                            ) {
+                                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                            }
+
+                                        val sourceId = downloaded.source.id
+                                        val sourceDuration = sourceStartTimeMap[sourceId]?.let { System.currentTimeMillis() - it } ?: 0
+                                        val finalStats = stats.copy(durationMs = sourceDuration)
+
+                                        activeLabels.remove(downloaded.label)
+                                        activeProgress.remove(sourceId)
+                                        completedStats.add(finalStats)
                                         updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                                     }
                                 }
                             }
-                        }
 
-                    // Wait for all downloads, then close the ingestion queue
-                    downloadJobs.forEach { it.await() }
+                        // Producers: download sources concurrently
+                        val downloadJobs =
+                            sources.map { source ->
+                                async {
+                                    sourceStartTimeMap[source.id] = System.currentTimeMillis()
+                                    val label = source.label.ifBlank { extractLabel(source.url) }
+                                    downloadSemaphore.withPermit {
+                                        activeLabels.add(label)
+                                        activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
+                                        updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+
+                                        val result =
+                                            downloadSource(source, label, sourceDao, activeProgress) {
+                                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                            }
+
+                                        if (result != null) {
+                                            // Success — send to ingestion pipeline
+                                            activeProgress[source.id] =
+                                                ActiveSourceProgress(
+                                                    sourceId = source.id,
+                                                    label = label,
+                                                    phase = "Awaiting Ingestion",
+                                                    downloadedBytes = result.downloadedBytes,
+                                                    downloadTotalBytes = result.downloadedBytes,
+                                                )
+                                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                            ingestionQueue.send(result)
+                                        } else {
+                                            // Download failed — record and clean up
+                                            val sourceDuration = sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
+                                            activeLabels.remove(label)
+                                            activeProgress.remove(source.id)
+                                            completedStats.add(
+                                                SourceStats(source.id, label, durationMs = sourceDuration, error = context.getString(R.string.sync_error_download_failed)),
+                                            )
+                                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                        }
+                                    }
+                                }
+                            }
+
+                        // Wait for all downloads, then close the ingestion queue
+                        downloadJobs.forEach { it.await() }
+                        ingestionQueue.close()
+
+                        // Wait for ingestion to drain
+                        ingestionJobs.forEach { it.join() }
+
+                        completedStats.toList()
+                    }
+                } finally {
                     ingestionQueue.close()
-
-                    // Wait for ingestion to drain
-                    ingestionJobs.forEach { it.join() }
-
-                    completedStats.toList()
+                    var remaining = ingestionQueue.tryReceive().getOrNull()
+                    while (remaining != null) {
+                        try {
+                            remaining.tmpFile.delete()
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Error cleaning up temporary file for ${remaining.label}", e)
+                        }
+                        remaining = ingestionQueue.tryReceive().getOrNull()
+                    }
                 }
 
             val totalChannels = allStats.sumOf { it.channelsIngested }
