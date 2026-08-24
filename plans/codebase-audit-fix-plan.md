@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-24
 **Scope:** Full codebase audit (~367 Kotlin files, ~80K LOC)
-**Status:** T1 (7 fixes) and T3 (9 fixes) applied and build-verified ✅ — T2 and T4 remain
+**Status:** T1 (7 fixes), T3 (9 fixes), and T4 (7 items) applied and build-verified ✅ — T2 remains
 
 ---
 

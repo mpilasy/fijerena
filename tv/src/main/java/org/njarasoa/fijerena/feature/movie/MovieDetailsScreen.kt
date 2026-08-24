@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +52,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.channelLabel
@@ -197,6 +199,8 @@ private fun MovieDetailsContent(
         }
     }
 
+    val refreshScope = rememberCoroutineScope()
+
     // Track refresh state for animation
     var isRefreshing by remember { mutableStateOf(false) }
     var targetRotation by remember { mutableStateOf(0f) }
@@ -264,9 +268,12 @@ private fun MovieDetailsContent(
                     // Refresh button
                     CinemaIconButton(
                         onClick = {
-                            isRefreshing = true
-                            onRefresh()
-                            isRefreshing = false
+                            refreshScope.launch {
+                                isRefreshing = true
+                                onRefresh()
+                                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
+                                isRefreshing = false
+                            }
                         },
                         enabled = !isRefreshing,
                         icon = {

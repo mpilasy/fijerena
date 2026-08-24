@@ -864,6 +864,7 @@ class StreamingPlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         cancelPendingRetry()
+        mainHandler.removeCallbacks(recycleHandler)
         mediaSession?.player?.let {
             if (it.isPlaying || it.playbackState == Player.STATE_READY) {
                 onPositionSaveListener?.invoke(it.currentPosition, it.duration, !it.isPlaying, null, null)

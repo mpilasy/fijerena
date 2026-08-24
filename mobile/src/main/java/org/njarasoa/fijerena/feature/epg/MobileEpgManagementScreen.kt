@@ -12,7 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.EPG_REFRESH_INTERVAL_OPTIONS
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
@@ -62,11 +65,14 @@ fun MobileEpgManagementScreen(
 
     val nowMs = remember { System.currentTimeMillis() }
 
-    LaunchedEffect(Unit) {
-        viewModel.toastMessage.collect { message ->
-            android.widget.Toast
-                .makeText(context, message.asString(context), android.widget.Toast.LENGTH_SHORT)
-                .show()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.toastMessage.collect { message ->
+                android.widget.Toast
+                    .makeText(context, message.asString(context), android.widget.Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
     }
 
