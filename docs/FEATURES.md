@@ -65,11 +65,11 @@ Direct provider-level search matching titles against loaded item list via `BaseM
 
 ---
 
-## EPG Browser
+## EPG Search (EPG Browser)
 
 Standalone programme title search across all indexed XMLTV data.
 
-- Access: Content Type Selection → book icon (visible when EPG index is ready)
+- Access: Content Type Selection → calendar / date range icon (visible when EPG index is ready)
 - **Freshness Tracking:** Displays last index update time in the header.
 - **Customizable Refresh:** Configurable refresh interval (4h, 8h, 12h, 24h, 48h) or "Never".
 - **Robust Retries:** Automatic retry mechanism (5 attempts with exponential backoff: 1m to 16m) for failed updates.

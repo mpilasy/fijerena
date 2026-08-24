@@ -56,7 +56,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.foundation.lazy.list.TvLazyColumn
@@ -225,7 +224,7 @@ fun TvEpgBrowserScreen(
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
                                         color = CinemaAccent,
-                                        strokeWidth = 2.dp,
+                                        strokeWidth = TvDimensions.borderFocused,
                                     )
                                 } else {
                                     Icon(

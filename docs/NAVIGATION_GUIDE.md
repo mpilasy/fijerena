@@ -74,7 +74,7 @@ App Startup
 └─ Provider configured → last content type → CategoryList (or ContentTypeSelection)
 
 ContentTypeSelection
-├─→ EpgBrowser (book icon, visible when EPG indexed)
+├─→ EpgBrowser (calendar/date range icon, visible when EPG indexed)
 ├─→ Search("ALL") [Global Search]
 │     ├─→ Player (if result is LIVE_TV)
 │     ├─→ MovieDetails → Player (if result is MOVIES)
