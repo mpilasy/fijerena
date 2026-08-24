@@ -97,6 +97,33 @@ fun AmbientBackdrop(
 
     val crossfadeTarget = imageUrl.takeIf { !it.isNullOrBlank() && supportsBlur }
 
+    // Hoisted so the blur/saturation RenderEffect isn't rebuilt on every redraw of the layer
+    // (recomposition, Crossfade animation ticks) — only when blurRadius actually changes.
+    // supportsBlur never changes for the life of the process (it's Build.VERSION.SDK_INT), so
+    // gating the remember() call on it is stable across this composable instance's recompositions.
+    // Must stay gated: RenderEffect is API 31+, so calling it below that level would crash exactly
+    // the older devices (e.g. Shield TVs on Android 11) this branch exists to avoid.
+    val ambientRenderEffect =
+        if (supportsBlur) {
+            remember(blurRadius) {
+                val saturationMatrix = ColorMatrix().apply { setSaturation(1.35f) }
+                val blurEffect =
+                    android.graphics.RenderEffect
+                        .createBlurEffect(
+                            blurRadius,
+                            blurRadius,
+                            android.graphics.Shader.TileMode.CLAMP,
+                        )
+                android.graphics.RenderEffect
+                    .createColorFilterEffect(
+                        ColorMatrixColorFilter(saturationMatrix),
+                        blurEffect,
+                    ).asComposeRenderEffect()
+            }
+        } else {
+            null
+        }
+
     Box(modifier = modifier.fillMaxSize().background(fallbackBrush)) {
         Crossfade(
             targetState = crossfadeTarget,
@@ -114,20 +141,7 @@ fun AmbientBackdrop(
                         Modifier
                             .fillMaxSize()
                             .graphicsLayer {
-                                val saturationMatrix = ColorMatrix().apply { setSaturation(1.35f) }
-                                val blurEffect =
-                                    android.graphics.RenderEffect
-                                        .createBlurEffect(
-                                            blurRadius,
-                                            blurRadius,
-                                            android.graphics.Shader.TileMode.CLAMP,
-                                        )
-                                renderEffect =
-                                    android.graphics.RenderEffect
-                                        .createColorFilterEffect(
-                                            ColorMatrixColorFilter(saturationMatrix),
-                                            blurEffect,
-                                        ).asComposeRenderEffect()
+                                renderEffect = ambientRenderEffect
                             },
                 )
             }
