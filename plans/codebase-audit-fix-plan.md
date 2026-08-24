@@ -80,12 +80,11 @@ These require more design thought or touch multiple files.
 - **Files:** `core/ui/.../di/AppContainer.kt` (L78)
 - **Resolution:** Released the global `mutex` before executing `repo.connect()` so that slow network calls for one provider never block other concurrent repository lookups or operations.
 
-### T2-4. `CinemaColors` Not Compose-Reactive
-- **Status:** Pending
+### T2-4. [COMPLETED] `CinemaColors` Not Compose-Reactive
+- **Status:** COMPLETED ✅
 - **Risk:** Stale UI colors after dynamic theme change — gradient brushes, default modifiers show old theme
-- **Files:** `core/ui/.../theme/CinemaColors.kt`, `CinemaThemeHolder.kt` + callsites
-- **Complexity:** Medium-High — introduce `CompositionLocal` or `State<CinemaThemePalette>`
-- **Approach:** Migrate theme palette access to Compose state or `LocalCinemaColors`.
+- **Files:** `core/ui/.../theme/CinemaColors.kt`, `CinemaThemeHolder.kt`
+- **Resolution:** Backed `CinemaThemeHolder.current` with `mutableStateOf` so all callers of `CinemaColors` properties participate in Compose snapshot tracking and automatically recompose on dynamic theme changes.
 
 ### T2-5. Stats Overlay Full Recomposition Every Second
 - **Status:** Pending
