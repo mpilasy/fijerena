@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -230,6 +231,7 @@ fun MobilePlayerContent(
     val recentStreams = rememberStableRecentOrder(publishedRecentStreams)
 
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
+    val currentPlaybackState by rememberUpdatedState(playbackState)
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
     val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
 
@@ -374,17 +376,19 @@ fun MobilePlayerContent(
                     // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it
                     // in snapshotFlow{} never registers an observable read, so it emits once and
                     // never again, leaving this stuck waiting forever instead of restoring tracks.
-                    viewModel.playbackState
-                        .filter { it is PlaybackState.Playing || it is PlaybackState.Paused }
+                    val readyState = viewModel.playbackState
+                        .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
                         .first() // Wait for first ready state
 
-                    val service = StreamingPlaybackService.getInstance()
-                    if (service != null) {
-                        state.savedAudioTrackIndex?.let { audioIdx ->
-                            service.selectAudioTrack(audioIdx)
-                        }
-                        state.savedSubtitleTrackIndex?.let { subIdx ->
-                            service.selectSubtitleTrack(subIdx)
+                    if (readyState !is PlaybackState.Error) {
+                        val service = StreamingPlaybackService.getInstance()
+                        if (service != null) {
+                            state.savedAudioTrackIndex?.let { audioIdx ->
+                                service.selectAudioTrack(audioIdx)
+                            }
+                            state.savedSubtitleTrackIndex?.let { subIdx ->
+                                service.selectSubtitleTrack(subIdx)
+                            }
                         }
                     }
                 }
@@ -412,14 +416,14 @@ fun MobilePlayerContent(
                         .background(org.njarasoa.fijerena.core.ui.theme.CinemaBackground)
                         .then(
                             if (isInPipMode) Modifier else
-                            Modifier.pointerInput(showStats, isLiveContent, playbackState::class) {
+                            Modifier.pointerInput(showStats, isLiveContent) {
                                 detectTapGestures(
                                     onTap = {
                                         if (!showStats) showControls = !showControls
                                     },
                                     onDoubleTap = {
                                         if (!showStats && !isLiveContent) {
-                                            when (viewModel.playbackState.value) {
+                                            when (currentPlaybackState) {
                                                 is PlaybackState.Playing -> viewModel.pause()
                                                 is PlaybackState.Paused -> viewModel.resume()
                                                 else -> {}

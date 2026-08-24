@@ -358,7 +358,8 @@ fun MobileNavHost(
 
                             // Navigate to content selection for all provider types
                             navController.navigate(Screen.ContentTypeSelection) {
-                                popUpTo(Screen.ProviderSelection) { inclusive = true }
+                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                                launchSingleTop = true
                             }
                         }
                     },
@@ -412,7 +413,8 @@ fun MobileNavHost(
                             }
 
                             navController.navigate(Screen.ContentTypeSelection) {
-                                popUpTo(Screen.Settings) { inclusive = false }
+                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                                launchSingleTop = true
                             }
                         }
                     },

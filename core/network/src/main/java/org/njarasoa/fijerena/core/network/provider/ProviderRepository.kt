@@ -319,7 +319,7 @@ class ProviderRepository(
     }
 
     private fun getProviderPrefs(providerId: Long): android.content.SharedPreferences =
-        encryptedPrefsCache.getOrPut(providerId) {
+        encryptedPrefsCache.computeIfAbsent(providerId) {
             EncryptedSharedPreferences.create(
                 context,
                 "provider_creds_$providerId",

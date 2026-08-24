@@ -17,6 +17,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
@@ -692,8 +693,11 @@ class EpgFileManager private constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "processAllSources failed: ${e.message}", e)
-            EpgIndexer.getInstance(context).endBulkIngestion()
+            withContext(NonCancellable) {
+                EpgIndexer.getInstance(context).endBulkIngestion()
+            }
             _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
+            if (e is CancellationException) throw e
         }
     }
 
@@ -878,8 +882,11 @@ class EpgFileManager private constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "processSingleSource failed: ${e.message}", e)
-            EpgIndexer.getInstance(context).endBulkIngestion()
+            withContext(NonCancellable) {
+                EpgIndexer.getInstance(context).endBulkIngestion()
+            }
             _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
+            if (e is CancellationException) throw e
         }
     }
 

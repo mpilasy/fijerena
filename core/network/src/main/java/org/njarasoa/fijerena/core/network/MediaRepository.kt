@@ -136,6 +136,7 @@ class MediaRepository(
     // O(1) lookup sets for isFavorite/isFavoriteCategory — rebuilt when lists change
     private var favoriteIdSet: Set<Pair<String, String>>? = null
     private var favoriteCategoryIdSet: Set<Pair<String, String>>? = null
+    private val favoriteLock = Any()
     private val watchHistoryLock = Any()
     private var watchHistoryDirty = false
     private val watchHistoryWriteThread = android.os.HandlerThread("WatchHistoryWriter").apply { start() }
@@ -594,7 +595,7 @@ class MediaRepository(
         itemName: String,
         categoryId: String,
         contentType: String,
-    ): Boolean {
+    ): Boolean = synchronized(favoriteLock) {
         val favorites = getFavoriteItems().toMutableList()
         if (favorites.any { it.itemId == itemId && it.contentType == contentType }) {
             return false
@@ -610,7 +611,7 @@ class MediaRepository(
     fun removeFavorite(
         itemId: String,
         contentType: String,
-    ): Boolean {
+    ): Boolean = synchronized(favoriteLock) {
         val favorites = getFavoriteItems().toMutableList()
         val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
         if (!removed) return false
@@ -620,7 +621,7 @@ class MediaRepository(
         return true
     }
 
-    private fun getFavoriteItems(): List<FavoriteItem> {
+    private fun getFavoriteItems(): List<FavoriteItem> = synchronized(favoriteLock) {
         cachedFavorites?.let { return it }
         val favJson = cache.getString(KEY_FAVORITES, null) ?: return emptyList<FavoriteItem>().also { cachedFavorites = it }
         return try {
@@ -630,7 +631,7 @@ class MediaRepository(
         }
     }
 
-    fun getFavoritesForContentType(contentType: String): List<MediaItem> {
+    fun getFavoritesForContentType(contentType: String): List<MediaItem> = synchronized(favoriteLock) {
         val mediaType = contentTypeToMediaType(contentType)
         return getFavoriteItems()
             .asSequence()
@@ -648,7 +649,7 @@ class MediaRepository(
     fun isFavorite(
         itemId: String,
         contentType: String,
-    ): Boolean {
+    ): Boolean = synchronized(favoriteLock) {
         val set =
             favoriteIdSet ?: getFavoriteItems()
                 .mapTo(HashSet()) { it.itemId to it.contentType }
@@ -656,7 +657,7 @@ class MediaRepository(
         return (itemId to contentType) in set
     }
 
-    fun clearFavorites() {
+    fun clearFavorites() = synchronized(favoriteLock) {
         cachedFavorites = emptyList()
         favoriteIdSet = null
         cache.commitAsync { remove(KEY_FAVORITES) }
@@ -668,7 +669,7 @@ class MediaRepository(
         categoryId: String,
         categoryName: String,
         contentType: String,
-    ): Boolean {
+    ): Boolean = synchronized(favoriteLock) {
         val favorites = getFavoriteCategoryItems().toMutableList()
         if (favorites.any { it.categoryId == categoryId && it.contentType == contentType }) {
             return false
@@ -684,7 +685,7 @@ class MediaRepository(
     fun removeFavoriteCategory(
         categoryId: String,
         contentType: String,
-    ): Boolean {
+    ): Boolean = synchronized(favoriteLock) {
         val favorites = getFavoriteCategoryItems().toMutableList()
         val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
         if (!removed) return false
@@ -694,7 +695,7 @@ class MediaRepository(
         return true
     }
 
-    fun getFavoriteCategoryItems(): List<FavoriteCategoryItem> {
+    fun getFavoriteCategoryItems(): List<FavoriteCategoryItem> = synchronized(favoriteLock) {
         cachedFavoriteCategories?.let { return it }
         val raw =
             cache.getString(KEY_FAVORITE_CATEGORIES, null)
@@ -706,8 +707,8 @@ class MediaRepository(
         }
     }
 
-    fun getFavoriteCategoriesForContentType(contentType: String): List<MediaCategory> =
-        getFavoriteCategoryItems()
+    fun getFavoriteCategoriesForContentType(contentType: String): List<MediaCategory> = synchronized(favoriteLock) {
+        return@synchronized getFavoriteCategoryItems()
             .asSequence()
             .filter { it.contentType == contentType }
             .map { fav ->
@@ -717,11 +718,12 @@ class MediaRepository(
                     isVirtual = false,
                 )
             }.toList()
+    }
 
     fun isFavoriteCategory(
         categoryId: String,
         contentType: String,
-    ): Boolean {
+    ): Boolean = synchronized(favoriteLock) {
         val set =
             favoriteCategoryIdSet ?: getFavoriteCategoryItems()
                 .mapTo(HashSet()) { it.categoryId to it.contentType }
@@ -729,7 +731,7 @@ class MediaRepository(
         return (categoryId to contentType) in set
     }
 
-    fun clearFavoriteCategories() {
+    fun clearFavoriteCategories() = synchronized(favoriteLock) {
         cachedFavoriteCategories = emptyList()
         favoriteCategoryIdSet = null
         cache.commitAsync { remove(KEY_FAVORITE_CATEGORIES) }

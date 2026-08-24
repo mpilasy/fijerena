@@ -97,9 +97,12 @@ object RefreshQueue {
         while (true) {
             val queuedTask =
                 queueMutex.withLock {
-                    queue.poll()?.also {
+                    val task = queue.poll()
+                    if (task != null) {
                         _queuedTaskIds.value = queue.map { it.task.id }.toSet()
+                        activeTasks[task.task.id] = ActiveTask(Job(), task.deferred)
                     }
+                    task
                 } ?: break
 
             // Launch each task in its own coroutine, governed by the semaphore

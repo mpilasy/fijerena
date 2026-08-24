@@ -449,6 +449,7 @@ class PlaybackViewModel(
         }
         StreamingPlaybackService.getInstance()?.stop()
         serviceConnection.disconnect()
+        serviceStartRequested.set(false)
     }
 
     companion object {
