@@ -22,7 +22,7 @@ if [ -z "$SERIAL" ]; then
     SERIAL="${CANDIDATES[0]}"
 fi
 
-./gradlew :mobile:assembleDebug
+./gradlew clean :mobile:assembleDebug
 
 adb -s "$SERIAL" install -r mobile/build/outputs/apk/debug/mobile-debug.apk
 

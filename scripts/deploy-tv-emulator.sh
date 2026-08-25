@@ -23,7 +23,7 @@ if [ -z "$SERIAL" ]; then
     exit 1
 fi
 
-./gradlew :tv:assembleDebug
+./gradlew clean :tv:assembleDebug
 
 adb -s "$SERIAL" install -r tv/build/outputs/apk/debug/tv-debug.apk
 

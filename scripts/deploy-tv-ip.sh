@@ -16,7 +16,7 @@ fi
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-./gradlew :tv:assembleDebug
+./gradlew clean :tv:assembleDebug
 
 adb connect "$TARGET"
 adb -s "$TARGET" install -r tv/build/outputs/apk/debug/tv-debug.apk
