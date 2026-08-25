@@ -363,7 +363,7 @@ internal fun LiveTvSplitLayout(
                 // actually started. first{} on the StateFlow directly works correctly.
                 playback.playbackState.first { it is PlaybackState.Playing }
             }
-        if (reachedPlaying == null && success?.streamId == s.streamId && !fullScreen) {
+        if (reachedPlaying == null && success.streamId == s.streamId && !fullScreen) {
             playback.stop()
         }
     }
