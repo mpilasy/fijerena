@@ -1,7 +1,4 @@
-@file:OptIn(
-    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
-    androidx.media3.common.util.UnstableApi::class,
-)
+@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
 
 package org.njarasoa.fijerena.ui.player.components.overlays
 

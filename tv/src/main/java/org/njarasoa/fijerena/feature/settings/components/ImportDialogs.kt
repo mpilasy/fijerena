@@ -115,7 +115,7 @@ fun ImportOptionsDialog(
                                 Modifier
                                     .weight(1f)
                                     .verticalScroll(rememberScrollState())
-                                    .focusRestorer { firstOptionFocusRequester },
+                                    .focusRestorer(firstOptionFocusRequester),
                             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
                             OptionRow(
@@ -280,8 +280,8 @@ fun ConflictResolutionDialog(
                         modifier =
                             Modifier
                                 .padding(Spacing.xxl)
-                                .focusRestorer { conflictDialogFocusRequester }
-                                .focusProperties { exit = { FocusRequester.Cancel } },
+                                .focusRestorer(conflictDialogFocusRequester)
+                                .focusProperties { onExit = { FocusRequester.Cancel } },
                     ) {
                         Text(
                             text = stringResource(R.string.settings_import_provider_conflict_title),
