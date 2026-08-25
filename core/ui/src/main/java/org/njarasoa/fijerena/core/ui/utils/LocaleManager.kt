@@ -14,7 +14,7 @@ object LocaleManager {
      * configuration and the UI falls back to the phone language.
      */
     fun wrap(base: Context): Context {
-        val locale = Locale(AppSettings(base).language)
+        val locale = Locale.forLanguageTag(AppSettings(base).language)
         Locale.setDefault(locale)
 
         // Locale-only delta, NOT a copy of the current configuration: createConfigurationContext

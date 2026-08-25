@@ -376,7 +376,7 @@ fun MobileCategoryListScreen(
                     // playback actually started. first{} on the StateFlow directly works correctly.
                     dockPlayback.playbackState.first { it is PlaybackState.Playing }
                 }
-            if (reachedPlaying == null && dockSuccess?.streamId == s.streamId && !fullScreen) {
+            if (reachedPlaying == null && dockSuccess.streamId == s.streamId && !fullScreen) {
                 dockPlayback.stop()
             }
         }
