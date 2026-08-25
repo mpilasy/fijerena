@@ -208,13 +208,17 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ### APK Outputs
 
-All generated APKs are automatically collected into the root `build/outputs/apk/` directory with a `fijerena-` prefix:
-- `build/outputs/apk/fijerena-mobile-debug.apk`
-- `build/outputs/apk/fijerena-tv-debug.apk`
+Standard AGP outputs generated per module:
+- `tv/build/outputs/apk/debug/tv-debug.apk`
+- `mobile/build/outputs/apk/debug/mobile-debug.apk`
 
 ### Deployment
 
 TV and Mobile share the same `applicationId` (`org.njarasoa.fijerena`). Use `adb -s <device_id>` when multiple devices are connected.
+
+**Strict Deployment Rules:**
+- **Pre-Deployment Clean Build:** Whenever changes span multiple modules (e.g. modifying `core:*` libraries consumed by `:tv` or `:mobile`), never deploy from an incremental build. Always build via `./gradlew clean assembleDebug` to prevent stale intermediate DEX shards (`NoClassDefFoundError`).
+- **No Auto-Launch on Install:** Never automatically launch the app or inject monkey/activity launch intents after installing via `adb install -r` unless explicitly instructed by the user. Let the user launch the app manually when ready.
 
 ### Device-Specific Tips
 
