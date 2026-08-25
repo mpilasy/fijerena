@@ -138,8 +138,6 @@ class ProviderViewModel(
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
-    private var syncingProviderId: Long? = null
-
     fun resetSaveState() {
         _saveState.value = SaveState.Idle
     }
@@ -156,25 +154,6 @@ class ProviderViewModel(
             providerRepository.getAllProviders().collect { providersList ->
                 _providers.value = providersList
                 _activeProvider.value = providersList.find { it.isActive }
-                
-                // If we are currently in "Syncing" state, check if OUR provider just finished syncing
-                if (_syncState.value == SyncState.Syncing && syncingProviderId != null) {
-                    val syncedProvider = providersList.find { it.id == syncingProviderId }
-                    if (syncedProvider != null) {
-                        // Check if sync completed very recently (within last 30 seconds)
-                        val now = System.currentTimeMillis()
-                        val completionTime = syncedProvider.lastSyncedAtMs
-                        if (completionTime > 0 && (now - completionTime) < 30_000) {
-                            if (syncedProvider.lastSyncError != null) {
-                                _syncState.value = SyncState.Error(syncedProvider.lastSyncError!!)
-                            } else {
-                                _syncState.value = SyncState.Success
-                            }
-                            // Reset tracking once we've signaled success
-                            syncingProviderId = null
-                        }
-                    }
-                }
 
                 _uiState.value =
                     when {
@@ -348,13 +327,21 @@ class ProviderViewModel(
     }
 
     fun syncProvider(providerId: Long) {
-        // Track which provider we are waiting for
-        syncingProviderId = providerId
-        // Delegate to ProviderSyncManager so it persists outside the ViewModel scope
-        org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.getInstance(context).startManualSync(providerId)
-        
-        // UI feedback - it will transition back to Success/Error when the stats update in DB
         _syncState.value = SyncState.Syncing
+        // Delegate to ProviderSyncManager so the sync itself persists outside the ViewModel
+        // scope — only the await below is scoped to this ViewModel, which is fine: if this
+        // screen closes mid-sync the sync keeps running, this just stops watching it.
+        val deferred =
+            org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.getInstance(context).startManualSync(providerId)
+        viewModelScope.launch {
+            _syncState.value =
+                when (val result = deferred.await()) {
+                    is org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.SyncResult.Success -> SyncState.Success
+                    is org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.SyncResult.Failed -> SyncState.Error(result.message)
+                }
+            // No explicit reload needed: updateSyncStats() already wrote to the providers table,
+            // and the Flow collector from loadProviders() at init picks that up on its own.
+        }
     }
 
     private suspend fun performSave(
