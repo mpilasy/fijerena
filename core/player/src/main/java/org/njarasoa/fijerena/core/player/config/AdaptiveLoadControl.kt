@@ -149,16 +149,19 @@ class AdaptiveLoadControl(
     // ── LoadControl implementation (FULL DELEGATION TO SATISFY 1.5.1 / 1.7.1 RUNTIME) ──
 
     // Basic lifecycle methods (required by 1.5.1 interface)
+    @Suppress("DEPRECATION")
     @Deprecated("Use onPrepared(PlayerId) instead")
     override fun onPrepared() {
         delegate.onPrepared()
     }
 
+    @Suppress("DEPRECATION")
     @Deprecated("Use onStopped(PlayerId) instead")
     override fun onStopped() {
         delegate.onStopped()
     }
 
+    @Suppress("DEPRECATION")
     @Deprecated("Use onReleased(PlayerId) instead")
     override fun onReleased() {
         delegate.onReleased()
@@ -182,11 +185,13 @@ class AdaptiveLoadControl(
     // Allocator (signature varies, implemented both via override where possible)
     override fun getAllocator(): Allocator = delegate.allocator
 
+    @Suppress("DEPRECATION")
     @Deprecated("Use getBackBufferDurationUs(PlayerId) instead")
     override fun getBackBufferDurationUs(): Long = delegate.backBufferDurationUs
 
     override fun getBackBufferDurationUs(playerId: PlayerId): Long = delegate.getBackBufferDurationUs(playerId)
 
+    @Suppress("DEPRECATION")
     @Deprecated("Use retainBackBufferFromKeyframe(PlayerId) instead")
     override fun retainBackBufferFromKeyframe(): Boolean = delegate.retainBackBufferFromKeyframe()
 

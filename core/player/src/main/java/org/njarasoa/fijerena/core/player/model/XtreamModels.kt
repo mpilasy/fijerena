@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+
 package org.njarasoa.fijerena.core.player.model
 
 import kotlinx.serialization.KSerializer
