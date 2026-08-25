@@ -18,8 +18,9 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 
 class SeriesDetailsViewModel(
     private val context: android.content.Context,
-    private val seriesId: String,
-    private val categoryId: String,
+    private var seriesId: String,
+    private var categoryId: String,
+    private var seriesName: String,
 ) : ViewModel() {
     private var repository: MediaRepository? = null
 
@@ -44,6 +45,10 @@ class SeriesDetailsViewModel(
             val isFavorite: Boolean,
             /** Null when the category can't be resolved (unknown id, or hidden by category filters). */
             val categoryName: String? = null,
+            /** Id of the category button above — tracks [switchToAlternateStream]. */
+            val categoryId: String,
+            /** The catalogue's raw name for the stream on screen — tracks [switchToAlternateStream]. */
+            val streamName: String,
         ) : UiState()
 
         data class Error(
@@ -92,67 +97,98 @@ class SeriesDetailsViewModel(
             runCatching { ensureRepo().invalidateCachedDetail(seriesId) }
             // Deliberately not from the cache: an explicit refresh that redraws the stored copy
             // first is the "refresh appears to do nothing" bug 6f031cf6 fixed.
-            loadSeriesInfo(useCache = false)
+            loadSeriesDetail(useCache = false, isSwitch = false)
         }
     }
 
     fun loadSeriesInfo(useCache: Boolean = true) {
         viewModelScope.launch(Dispatchers.IO) {
-            // A load already in flight belongs to the previous series or provider — drop it.
-            relatedTitlesJob?.cancel()
-            relatedTitlesJob = null
-            _relatedTitles.value = RelatedTitles()
-            tmdbTitleJob?.cancel()
-            tmdbTitleJob = null
-            _tmdbTitle.value = null
-            alternateStreamsJob?.cancel()
-            alternateStreamsJob = null
-            _alternateStreams.value = emptyList()
-            try {
-                val repo = ensureRepo()
+            loadSeriesDetail(useCache = useCache, isSwitch = false)
+        }
+    }
 
-                // Draw what was stored last time before asking the provider. Xtream re-sends the
-                // whole episode list on every visit and never caches it server-side, so a show the
-                // size of Law & Order left the screen on a spinner for twenty seconds after a
-                // restart — showing episodes it already had on disk the whole time. The fetch below
-                // still runs: only it can notice episodes added since.
-                val cached =
-                    if (useCache) runCatching { repo.getCachedSeriesDetail(SeriesId(seriesId)) }.getOrNull() else null
-                if (cached != null) {
+    /**
+     * Switches this screen to a different local catalogue entry for the same TMDB title —
+     * called from the alternate-stream picker. Reuses the screen already on the backstack: no
+     * navigation, and [uiState] never passes through [UiState.Loading], so the current content
+     * stays on screen until the new stream's detail is ready and swaps in place.
+     */
+    fun switchToAlternateStream(alternate: MediaItem) {
+        if (alternate.id == seriesId) return
+        seriesId = alternate.id
+        categoryId = alternate.categoryId
+        seriesName = alternate.name
+        viewModelScope.launch(Dispatchers.IO) {
+            loadSeriesDetail(useCache = true, isSwitch = true)
+        }
+    }
+
+    private suspend fun loadSeriesDetail(
+        useCache: Boolean,
+        isSwitch: Boolean,
+    ) {
+        // A load already in flight belongs to the previous series or provider — drop it.
+        relatedTitlesJob?.cancel()
+        relatedTitlesJob = null
+        _relatedTitles.value = RelatedTitles()
+        tmdbTitleJob?.cancel()
+        tmdbTitleJob = null
+        _tmdbTitle.value = null
+        alternateStreamsJob?.cancel()
+        alternateStreamsJob = null
+        _alternateStreams.value = emptyList()
+        try {
+            val repo = ensureRepo()
+
+            // Draw what was stored last time before asking the provider. Xtream re-sends the
+            // whole episode list on every visit and never caches it server-side, so a show the
+            // size of Law & Order left the screen on a spinner for twenty seconds after a
+            // restart — showing episodes it already had on disk the whole time. The fetch below
+            // still runs: only it can notice episodes added since.
+            val cached =
+                if (useCache) runCatching { repo.getCachedSeriesDetail(SeriesId(seriesId)) }.getOrNull() else null
+            if (cached != null) {
+                _uiState.value =
+                    UiState.Success(
+                        seriesDetail = cached,
+                        isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
+                        categoryName = categoryNameOrNull(repo),
+                        categoryId = categoryId,
+                        streamName = seriesName,
+                    )
+                loadRelatedTitles(cached)
+                loadTmdbTitle(cached)
+                loadAlternateStreams(cached)
+            } else if (!isSwitch) {
+                // A stream switch never flashes Loading — the previous stream's content stays on
+                // screen until this fetch lands (or fails, see below).
+                _uiState.value = UiState.Loading
+            }
+
+            val result = repo.getSeriesDetail(SeriesId(seriesId))
+            result.fold(
+                onSuccess = { detail ->
                     _uiState.value =
                         UiState.Success(
-                            seriesDetail = cached,
+                            seriesDetail = detail,
                             isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
                             categoryName = categoryNameOrNull(repo),
+                            categoryId = categoryId,
+                            streamName = seriesName,
                         )
-                    loadRelatedTitles(cached)
-                    loadTmdbTitle(cached)
-                    loadAlternateStreams(cached)
-                } else {
-                    _uiState.value = UiState.Loading
-                }
 
-                val result = repo.getSeriesDetail(SeriesId(seriesId))
-                result.fold(
-                    onSuccess = { detail ->
-                        _uiState.value =
-                            UiState.Success(
-                                seriesDetail = detail,
-                                isFavorite = repo.isFavorite(seriesId, "TV_SHOWS"),
-                                categoryName = categoryNameOrNull(repo),
-                            )
-
-                        loadRelatedTitles(detail)
-                        loadTmdbTitle(detail)
-                        loadAlternateStreams(detail)
-                    },
-                    // A failed refresh must not blank a screen already drawn from the cache — the
-                    // episodes on it are still playable.
-                    onFailure = { e -> reportFailure(e) },
-                )
-            } catch (e: Exception) {
-                reportFailure(e)
-            }
+                    loadRelatedTitles(detail)
+                    loadTmdbTitle(detail)
+                    loadAlternateStreams(detail)
+                },
+                // A failed refresh must not blank a screen already drawn from the cache — the
+                // episodes on it are still playable. A failed switch is different: uiState may
+                // still be showing the *previous* stream under the id this just switched to, so
+                // it must surface the error rather than silently leave that mismatch on screen.
+                onFailure = { e -> if (isSwitch) reportSwitchFailure(e) else reportFailure(e) },
+            )
+        } catch (e: Exception) {
+            if (isSwitch) reportSwitchFailure(e) else reportFailure(e)
         }
     }
 
@@ -223,6 +259,11 @@ class SeriesDetailsViewModel(
             UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.series_error_load_failed))
     }
 
+    private fun reportSwitchFailure(e: Throwable) {
+        _uiState.value =
+            UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.series_error_load_failed))
+    }
+
     fun toggleFavorite(seriesName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentState = _uiState.value as? UiState.Success ?: return@launch
@@ -243,8 +284,9 @@ class SeriesDetailsViewModelFactory(
     private val context: Context,
     private val seriesId: String,
     private val categoryId: String,
+    private val seriesName: String,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SeriesDetailsViewModel(context.applicationContext, seriesId, categoryId) as T
+        SeriesDetailsViewModel(context.applicationContext, seriesId, categoryId, seriesName) as T
 }

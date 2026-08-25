@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.episode
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -63,7 +64,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
-import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -89,7 +89,7 @@ fun MobileEpisodeSelectionScreen(
         viewModel(
             factory =
                 remember(seriesId, categoryId) {
-                    SeriesDetailsViewModelFactory(context.applicationContext, seriesId, categoryId)
+                    SeriesDetailsViewModelFactory(context.applicationContext, seriesId, categoryId, seriesName)
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -126,7 +126,7 @@ fun MobileEpisodeSelectionScreen(
         topBar = {
             TopAppBar(
                 // TMDB's clean title once it resolves, the provider's raw stream name until then
-                title = { Text(tmdbTitle ?: seriesName) },
+                title = { Text(tmdbTitle ?: (lastSuccess?.streamName ?: seriesName)) },
                 navigationIcon = {
                     CinemaIconButton(onClick = {
                         if (selectedEpisode != null) {
@@ -141,7 +141,7 @@ fun MobileEpisodeSelectionScreen(
                     )
                 },
                 actions = {
-                    CinemaIconButton(onClick = { viewModel.toggleFavorite(seriesName) },
+                    CinemaIconButton(onClick = { viewModel.toggleFavorite(lastSuccess?.streamName ?: seriesName) },
                         icon = {
                             Icon(
                                 imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
@@ -158,12 +158,9 @@ fun MobileEpisodeSelectionScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(paddingValues),
         ) {
-            AmbientBackdrop(
-                modifier = Modifier.fillMaxSize(),
-                imageUrl = selectedEpisode?.thumbnailUrl ?: displaySeriesDetail?.coverUrl,
-            )
             val errorState = uiState as? SeriesDetailsViewModel.UiState.Error
             when {
                 displaySeriesDetail == null && errorState == null -> {
@@ -212,7 +209,7 @@ fun MobileEpisodeSelectionScreen(
                             seriesDetail = displaySeriesDetail,
                             relatedTitles = relatedTitles,
                             alternateStreams = alternateStreams,
-                            seriesName = seriesName,
+                            seriesName = lastSuccess?.streamName ?: seriesName,
                             mediaRepository = viewModel.mediaRepository!!,
                             resumeEpisodeId = resumeEpisodeId,
                             onResumeEpisodeDerived = { resumeEpisodeId = it },
@@ -220,8 +217,9 @@ fun MobileEpisodeSelectionScreen(
                             onEpisodeSelected = { episode ->
                                 selectedEpisode = episode
                             },
-                            onCategorySelected = { onCategorySelected(categoryId) },
+                            onCategorySelected = { onCategorySelected(lastSuccess?.categoryId ?: categoryId) },
                             onRelatedTitleSelected = onRelatedTitleSelected,
+                            onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
                         )
                     }
                 }
@@ -243,6 +241,7 @@ private fun EpisodeListContent(
     onEpisodeSelected: (DomainEpisodeItem) -> Unit,
     onCategorySelected: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
+    onAlternateStreamSelected: (MediaItem) -> Unit,
 ) {
     val context = LocalContext.current
     val sortedSeasons =
@@ -369,7 +368,10 @@ private fun EpisodeListContent(
                     seriesDetail.metadata.genre,
                     seriesDetail.metadata.rating?.let { context.getString(R.string.series_rating_format, formatRating(it)) },
                     seriesDetail.metadata.contentRating,
-                    seriesDetail.metadata.tmdbId?.let { context.getString(R.string.details_tmdb_format, it) },
+                    context.getString(
+                        R.string.details_tmdb_format,
+                        seriesDetail.metadata.tmdbId ?: context.getString(R.string.details_tmdb_none),
+                    ),
                 )
             }
         if (hasPlot || metadataParts.isNotEmpty()) {
@@ -424,7 +426,7 @@ private fun EpisodeListContent(
             // under, so use the same source as alternates to keep the picker consistent.
             currentName = seriesName,
             alternates = alternateStreams,
-            onSelect = onRelatedTitleSelected,
+            onSelect = onAlternateStreamSelected,
             modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
         )
 
@@ -806,14 +808,16 @@ private fun EpisodeDetailContent(
         }
 
         // TMDB id: the episode's own when it has one, else the show's
-        (episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId)?.let {
-            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-            Text(
-                text = stringResource(R.string.details_tmdb_format, it),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-            )
-        }
+        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+        Text(
+            text =
+                stringResource(
+                    R.string.details_tmdb_format,
+                    episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
+                ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+        )
 
         // Air date
         episode.metadata.airDate?.takeIf { it.isNotBlank() }?.let {

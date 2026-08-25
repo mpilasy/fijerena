@@ -46,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -80,7 +79,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
-import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -120,7 +118,7 @@ fun MovieDetailsScreen(
         viewModel(
             factory =
                 remember(movieId, categoryId) {
-                    MovieDetailsViewModelFactory(context.applicationContext, movieId, categoryId)
+                    MovieDetailsViewModelFactory(context.applicationContext, movieId, categoryId, movieName)
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -146,18 +144,19 @@ fun MovieDetailsScreen(
                     relatedTitles = relatedTitles,
                     tmdbTitle = tmdbTitle,
                     alternateStreams = alternateStreams,
-                    movieId = movieId,
-                    movieName = movieName,
+                    movieId = state.movieDetail.id,
+                    movieName = state.streamName,
                     isFavorite = state.isFavorite,
                     resumePositionMs = state.resumePositionMs,
                     resumeDurationMs = state.resumeDurationMs,
                     categoryName = state.categoryName,
                     onPlayMovie = onPlayMovie,
-                    onCategorySelected = { onCategorySelected(categoryId) },
-                    onToggleFavorite = { viewModel.toggleFavorite(state.movieDetail.name.ifEmpty { movieName }) },
+                    onCategorySelected = { onCategorySelected(state.categoryId) },
+                    onToggleFavorite = { viewModel.toggleFavorite(state.streamName) },
                     onRefresh = { viewModel.refreshMovieInfo() },
                     onBack = onBack,
                     onRelatedTitleSelected = onRelatedTitleSelected,
+                    onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
                 )
             }
         }
@@ -182,6 +181,7 @@ private fun MovieDetailsContent(
     onRefresh: () -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
+    onAlternateStreamSelected: (MediaItem) -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -234,14 +234,7 @@ private fun MovieDetailsContent(
     }
 
     val scrollState = rememberScrollState()
-    Box(modifier = Modifier.fillMaxSize()) {
-    AmbientBackdrop(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer { translationY = scrollState.value * 0.3f },
-        imageUrl = movieDetail.coverUrl,
-    )
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
     Column(
         modifier =
             Modifier
@@ -567,17 +560,15 @@ private fun MovieDetailsContent(
                         // alternates are listed under, so use the same source as alternates.
                         currentName = movieName,
                         alternates = alternateStreams,
-                        onSelect = onRelatedTitleSelected,
+                        onSelect = onAlternateStreamSelected,
                         textStyle = scaledStyles.bodySmall,
                     )
-                    movieDetail.metadata.tmdbId?.let { tmdbId ->
-                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                        Text(
-                            text = stringResource(R.string.details_tmdb_format, tmdbId),
-                            style = scaledStyles.bodySmall,
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    Text(
+                        text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
+                        style = scaledStyles.bodySmall,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
 
                     // Category this movie belongs to — OK opens its stream list
                     if (categoryName != null) {

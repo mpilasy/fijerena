@@ -18,8 +18,9 @@ import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 
 class MovieDetailsViewModel(
     private val context: Context,
-    private val movieId: String,
-    private val categoryId: String,
+    private var movieId: String,
+    private var categoryId: String,
+    private var streamName: String,
 ) : ViewModel() {
     sealed class UiState {
         data object Loading : UiState()
@@ -31,6 +32,10 @@ class MovieDetailsViewModel(
             val isFavorite: Boolean,
             /** Null when the category can't be resolved (unknown id, or hidden by category filters). */
             val categoryName: String? = null,
+            /** Id of the category button above, and of [onCategorySelected][MovieDetailsViewModel] target — tracks [switchToAlternateStream]. */
+            val categoryId: String,
+            /** The catalogue's raw name for the stream on screen — tracks [switchToAlternateStream]. */
+            val streamName: String,
         ) : UiState()
 
         data class Error(
@@ -76,62 +81,82 @@ class MovieDetailsViewModel(
     fun loadMovieInfo() {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = UiState.Loading
-            // A load already in flight belongs to the previous movie or provider — drop it.
-            relatedTitlesJob?.cancel()
-            _relatedTitles.value = RelatedTitles()
-            _tmdbTitle.value = null
-            _alternateStreams.value = emptyList()
-            try {
-                val repo = getRepository()
-                mediaRepository = repo
+            loadMovieDetail()
+        }
+    }
 
-                val movieResult = repo.getMovieDetail(movieId)
-                movieResult.fold(
-                    onSuccess = { detail ->
-                        // Load resume position
-                        var resumePos = 0L
-                        var resumeDur = 0L
-                        val watched = repo.getPlaybackPositionSuspend(movieId, "MOVIES")
-                        if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
-                            val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
-                            if (progress in 2.0..95.0) {
-                                resumePos = watched.playbackPosition
-                                resumeDur = watched.duration
-                            }
+    /**
+     * Switches this screen to a different local catalogue entry for the same TMDB title —
+     * called from the alternate-stream picker. Reuses the screen already on the backstack: no
+     * navigation, and [uiState] never passes through [UiState.Loading], so the current content
+     * stays on screen until the new stream's detail is ready and swaps in place.
+     */
+    fun switchToAlternateStream(alternate: MediaItem) {
+        if (alternate.id == movieId) return
+        movieId = alternate.id
+        categoryId = alternate.categoryId
+        streamName = alternate.name
+        viewModelScope.launch(Dispatchers.IO) { loadMovieDetail() }
+    }
+
+    private suspend fun loadMovieDetail() {
+        // A load already in flight belongs to the previous movie or provider — drop it.
+        relatedTitlesJob?.cancel()
+        _relatedTitles.value = RelatedTitles()
+        _tmdbTitle.value = null
+        _alternateStreams.value = emptyList()
+        try {
+            val repo = getRepository()
+            mediaRepository = repo
+
+            val movieResult = repo.getMovieDetail(movieId)
+            movieResult.fold(
+                onSuccess = { detail ->
+                    // Load resume position
+                    var resumePos = 0L
+                    var resumeDur = 0L
+                    val watched = repo.getPlaybackPositionSuspend(movieId, "MOVIES")
+                    if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
+                        val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
+                        if (progress in 2.0..95.0) {
+                            resumePos = watched.playbackPosition
+                            resumeDur = watched.duration
                         }
+                    }
 
-                        // Check favorite
-                        val isFav = repo.isFavorite(movieId, "MOVIES")
+                    // Check favorite
+                    val isFav = repo.isFavorite(movieId, "MOVIES")
 
-                        val categoryName =
-                            repo
-                                .getFilteredCategories("MOVIES")
-                                .getOrNull()
-                                ?.firstOrNull { it.id == categoryId }
-                                ?.name
+                    val categoryName =
+                        repo
+                            .getFilteredCategories("MOVIES")
+                            .getOrNull()
+                            ?.firstOrNull { it.id == categoryId }
+                            ?.name
 
-                        _uiState.value =
-                            UiState.Success(
-                                movieDetail = detail,
-                                resumePositionMs = resumePos,
-                                resumeDurationMs = resumeDur,
-                                isFavorite = isFav,
-                                categoryName = categoryName,
-                            )
+                    _uiState.value =
+                        UiState.Success(
+                            movieDetail = detail,
+                            resumePositionMs = resumePos,
+                            resumeDurationMs = resumeDur,
+                            isFavorite = isFav,
+                            categoryName = categoryName,
+                            categoryId = categoryId,
+                            streamName = streamName,
+                        )
 
-                        loadRelatedTitles(detail)
-                        loadTmdbTitle(detail)
-                        loadAlternateStreams(detail)
-                    },
-                    onFailure = { e ->
-                        _uiState.value =
-                            UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.movie_error_loading))
-                    },
-                )
-            } catch (e: Exception) {
-                _uiState.value =
-                    UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.movie_error_loading))
-            }
+                    loadRelatedTitles(detail)
+                    loadTmdbTitle(detail)
+                    loadAlternateStreams(detail)
+                },
+                onFailure = { e ->
+                    _uiState.value =
+                        UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.movie_error_loading))
+                },
+            )
+        } catch (e: Exception) {
+            _uiState.value =
+                UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.movie_error_loading))
         }
     }
 
@@ -190,8 +215,9 @@ class MovieDetailsViewModelFactory(
     private val context: Context,
     private val movieId: String,
     private val categoryId: String,
+    private val movieName: String,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        MovieDetailsViewModel(context.applicationContext, movieId, categoryId) as T
+        MovieDetailsViewModel(context.applicationContext, movieId, categoryId, movieName) as T
 }
