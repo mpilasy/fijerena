@@ -306,6 +306,7 @@ data class EpisodeInfo(
     val bitrate: Int? = null,
     @SerialName("rating")
     val rating: kotlinx.serialization.json.JsonElement? = null,
+    @JsonNames("tmdb_id", "tmdb")
     @SerialName("tmdb_id")
     val tmdbId: String? = null,
 )
@@ -353,6 +354,7 @@ data class MovieInfo(
     @SerialName("audio")
     @Serializable(with = AudioInfoSerializer::class)
     val audio: AudioInfo? = null,
+    @JsonNames("tmdb_id", "tmdb")
     @SerialName("tmdb_id")
     val tmdbId: String? = null,
     @SerialName("youtube_trailer")
