@@ -562,11 +562,22 @@ private fun MovieDetailsContent(
                     // TMDB title.
                     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
                     StreamNamePicker(
-                        currentName = movieDetail.name.ifEmpty { movieName },
+                        // The catalogue's raw name, not movieDetail.name — some providers'
+                        // detail API returns a cleaned-up name inconsistent with the raw name
+                        // alternates are listed under, so use the same source as alternates.
+                        currentName = movieName,
                         alternates = alternateStreams,
                         onSelect = onRelatedTitleSelected,
                         textStyle = scaledStyles.bodySmall,
                     )
+                    movieDetail.metadata.tmdbId?.let { tmdbId ->
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        Text(
+                            text = stringResource(R.string.details_tmdb_format, tmdbId),
+                            style = scaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                    }
 
                     // Category this movie belongs to — OK opens its stream list
                     if (categoryName != null) {

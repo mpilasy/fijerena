@@ -552,7 +552,10 @@ private fun EpisodeListContent(
                 // TMDB title.
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 StreamNamePicker(
-                    currentName = seriesDetail.name.ifEmpty { seriesName },
+                    // The catalogue's raw name, not seriesDetail.name — some providers' detail
+                    // API returns a cleaned-up name inconsistent with the raw name alternates
+                    // are listed under, so use the same source as alternates.
+                    currentName = seriesName,
                     alternates = alternateStreams,
                     onSelect = onRelatedTitleSelected,
                     textStyle = scaledStyles.labelSmall,

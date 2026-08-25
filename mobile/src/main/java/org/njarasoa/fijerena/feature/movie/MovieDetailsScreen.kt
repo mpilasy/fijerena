@@ -432,10 +432,23 @@ private fun MovieDetailsContent(
         // A dropdown when the local catalogue holds other instances of the same TMDB title.
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
         StreamNamePicker(
-            currentName = movieDetail.name,
+            // The catalogue's raw name, not movieDetail.name — some providers' detail API
+            // returns a cleaned-up name inconsistent with the raw name alternates are listed
+            // under, so use the same source as alternates to keep the picker consistent.
+            currentName = movieName,
             alternates = alternateStreams,
             onSelect = onRelatedTitleSelected,
         )
+
+        // TMDB ID
+        movieDetail.metadata.tmdbId?.let { tmdbId ->
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+            Text(
+                text = stringResource(R.string.details_tmdb_format, tmdbId),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+            )
+        }
 
         // Category this movie belongs to — tap to browse it
         if (categoryName != null) {

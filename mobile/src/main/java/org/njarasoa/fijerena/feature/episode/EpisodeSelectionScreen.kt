@@ -212,6 +212,7 @@ fun MobileEpisodeSelectionScreen(
                             seriesDetail = displaySeriesDetail,
                             relatedTitles = relatedTitles,
                             alternateStreams = alternateStreams,
+                            seriesName = seriesName,
                             mediaRepository = viewModel.mediaRepository!!,
                             resumeEpisodeId = resumeEpisodeId,
                             onResumeEpisodeDerived = { resumeEpisodeId = it },
@@ -234,6 +235,7 @@ private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     relatedTitles: RelatedTitles,
     alternateStreams: List<MediaItem>,
+    seriesName: String,
     mediaRepository: MediaRepository,
     resumeEpisodeId: String? = null,
     onResumeEpisodeDerived: (String) -> Unit,
@@ -417,7 +419,10 @@ private fun EpisodeListContent(
         // The provider's own (often raw) stream name, now that the top bar shows TMDB's title. A
         // dropdown when the local catalogue holds other instances of the same TMDB title.
         StreamNamePicker(
-            currentName = seriesDetail.name,
+            // The catalogue's raw name, not seriesDetail.name — some providers' detail API
+            // returns a cleaned-up name inconsistent with the raw name alternates are listed
+            // under, so use the same source as alternates to keep the picker consistent.
+            currentName = seriesName,
             alternates = alternateStreams,
             onSelect = onRelatedTitleSelected,
             modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
