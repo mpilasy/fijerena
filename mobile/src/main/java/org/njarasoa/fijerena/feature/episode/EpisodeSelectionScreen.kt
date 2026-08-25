@@ -91,6 +91,7 @@ fun MobileEpisodeSelectionScreen(
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
+    val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? SeriesDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
     // Retained across a background refresh so the list stays visible with just a pull-spinner
@@ -120,7 +121,8 @@ fun MobileEpisodeSelectionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(seriesName) },
+                // TMDB's clean title once it resolves, the provider's raw stream name until then
+                title = { Text(tmdbTitle ?: seriesName) },
                 navigationIcon = {
                     CinemaIconButton(onClick = {
                         if (selectedEpisode != null) {
@@ -405,6 +407,14 @@ private fun EpisodeListContent(
                 }
             }
         }
+
+        // The provider's own (often raw) stream name, now that the top bar shows TMDB's title
+        Text(
+            text = stringResource(R.string.details_stream_name_format, seriesDetail.name),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+            modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
+        )
 
         // Category this series belongs to — tap to browse it
         if (categoryName != null) {

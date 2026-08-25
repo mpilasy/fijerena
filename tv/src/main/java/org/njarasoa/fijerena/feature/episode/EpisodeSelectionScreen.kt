@@ -160,6 +160,7 @@ fun EpisodeSelectionScreen(
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
+    val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
 
     // Retained across a background refresh so the episode list stays on screen with just a
     // spinning refresh icon, instead of the whole thing dropping to a full-screen loading state
@@ -184,6 +185,7 @@ fun EpisodeSelectionScreen(
                 EpisodeListContent(
                     seriesDetail = shown.seriesDetail,
                     relatedTitles = relatedTitles,
+                    tmdbTitle = tmdbTitle,
                     seriesName = seriesName,
                     categoryId = categoryId,
                     mediaRepository = viewModel.mediaRepository!!,
@@ -210,6 +212,7 @@ fun EpisodeSelectionScreen(
 private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     relatedTitles: RelatedTitles,
+    tmdbTitle: String?,
     seriesName: String,
     categoryId: String,
     mediaRepository: MediaRepository,
@@ -454,8 +457,9 @@ private fun EpisodeListContent(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                         ) {
+                            // TMDB's clean title once it resolves, the provider's raw stream name until then
                             Text(
-                                text = seriesName,
+                                text = tmdbTitle ?: seriesName,
                                 style = scaledStyles.displaySmall,
                                 color = CinemaTextPrimary,
                             )
@@ -531,6 +535,14 @@ private fun EpisodeListContent(
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                     )
                 }
+
+                // The provider's own (often raw) stream name, now that the header shows TMDB's title
+                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                Text(
+                    text = stringResource(R.string.details_stream_name_format, seriesDetail.name.ifEmpty { seriesName }),
+                    style = scaledStyles.labelSmall,
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                )
 
                 // Category this series belongs to — OK opens its series list — and the trailer
                 val trailer = seriesDetail.metadata.trailerUrl

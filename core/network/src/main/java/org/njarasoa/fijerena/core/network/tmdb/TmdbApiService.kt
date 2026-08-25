@@ -104,6 +104,25 @@ class TmdbApiService(
                 parameter("language", "en-US")
             }.body()
 
+    /**
+     * The movie's own TMDB record. Reuses [TmdbRecommendation]'s shape — `id`, `title`,
+     * `release_date` and the rest line up with `/movie/{id}` too — for just the title.
+     */
+    suspend fun getMovieDetails(movieId: Int): TmdbRecommendation =
+        client
+            .get("movie/$movieId") {
+                authenticate()
+                parameter("language", "en-US")
+            }.body()
+
+    /** As [getMovieDetails], for a TV series. */
+    suspend fun getTvDetails(tvId: Int): TmdbRecommendation =
+        client
+            .get("tv/$tvId") {
+                authenticate()
+                parameter("language", "en-US")
+            }.body()
+
     private fun io.ktor.client.request.HttpRequestBuilder.authenticate() {
         if (isV4Token) {
             header(HttpHeaders.Authorization, "Bearer $apiKey")

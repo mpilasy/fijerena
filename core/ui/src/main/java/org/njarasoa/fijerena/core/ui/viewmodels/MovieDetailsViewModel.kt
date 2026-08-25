@@ -48,6 +48,10 @@ class MovieDetailsViewModel(
     private val _relatedTitles = MutableStateFlow(RelatedTitles())
     val relatedTitles: StateFlow<RelatedTitles> = _relatedTitles.asStateFlow()
 
+    /** TMDB's own title for the movie, shown next to the provider's (often raw) stream name. */
+    private val _tmdbTitle = MutableStateFlow<String?>(null)
+    val tmdbTitle: StateFlow<String?> = _tmdbTitle.asStateFlow()
+
     private var relatedTitlesJob: Job? = null
     private var mediaRepository: MediaRepository? = null
     private val appSettings = AppSettings(context)
@@ -70,6 +74,7 @@ class MovieDetailsViewModel(
             // A load already in flight belongs to the previous movie or provider — drop it.
             relatedTitlesJob?.cancel()
             _relatedTitles.value = RelatedTitles()
+            _tmdbTitle.value = null
             try {
                 val repo = getRepository()
                 mediaRepository = repo
@@ -109,6 +114,7 @@ class MovieDetailsViewModel(
                             )
 
                         loadRelatedTitles(detail)
+                        loadTmdbTitle(detail)
                     },
                     onFailure = { e ->
                         _uiState.value =
@@ -130,6 +136,15 @@ class MovieDetailsViewModel(
                         getRepository().getRelatedTitles(movieId, detail.metadata.tmdbId, "MOVIES")
                     }.getOrDefault(RelatedTitles())
             }
+    }
+
+    private fun loadTmdbTitle(detail: MovieDetail) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _tmdbTitle.value =
+                runCatching {
+                    getRepository().getTmdbTitle(detail.metadata.tmdbId, "MOVIES")
+                }.getOrNull()
+        }
     }
 
     private suspend fun getRepository(): MediaRepository {

@@ -61,8 +61,14 @@ class SeriesDetailsViewModel(
     private val _relatedTitles = MutableStateFlow(RelatedTitles())
     val relatedTitles: StateFlow<RelatedTitles> = _relatedTitles.asStateFlow()
 
+    /** TMDB's own title for the series, shown next to the provider's (often raw) stream name. */
+    private val _tmdbTitle = MutableStateFlow<String?>(null)
+    val tmdbTitle: StateFlow<String?> = _tmdbTitle.asStateFlow()
+
     private var relatedTitlesJob: Job? = null
     private var relatedTitlesTmdbId: String? = null
+    private var tmdbTitleJob: Job? = null
+    private var tmdbTitleTmdbId: String? = null
 
     init {
         loadSeriesInfo()
@@ -88,6 +94,9 @@ class SeriesDetailsViewModel(
             relatedTitlesJob?.cancel()
             relatedTitlesJob = null
             _relatedTitles.value = RelatedTitles()
+            tmdbTitleJob?.cancel()
+            tmdbTitleJob = null
+            _tmdbTitle.value = null
             try {
                 val repo = ensureRepo()
 
@@ -106,6 +115,7 @@ class SeriesDetailsViewModel(
                             categoryName = categoryNameOrNull(repo),
                         )
                     loadRelatedTitles(cached)
+                    loadTmdbTitle(cached)
                 } else {
                     _uiState.value = UiState.Loading
                 }
@@ -121,6 +131,7 @@ class SeriesDetailsViewModel(
                             )
 
                         loadRelatedTitles(detail)
+                        loadTmdbTitle(detail)
                     },
                     // A failed refresh must not blank a screen already drawn from the cache — the
                     // episodes on it are still playable.
@@ -147,6 +158,24 @@ class SeriesDetailsViewModel(
                     runCatching {
                         ensureRepo().getRelatedTitles(seriesId, tmdbId, "TV_SHOWS")
                     }.getOrDefault(RelatedTitles())
+            }
+    }
+
+    /**
+     * As [loadRelatedTitles]: the cached detail draws first and the fetched one follows with the
+     * same TMDB id, so fetch only for the first of them.
+     */
+    private fun loadTmdbTitle(detail: SeriesDetail) {
+        val tmdbId = detail.metadata.tmdbId
+        if (tmdbTitleJob != null && tmdbId == tmdbTitleTmdbId) return
+        tmdbTitleJob?.cancel()
+        tmdbTitleTmdbId = tmdbId
+        tmdbTitleJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                _tmdbTitle.value =
+                    runCatching {
+                        ensureRepo().getTmdbTitle(tmdbId, "TV_SHOWS")
+                    }.getOrNull()
             }
     }
 

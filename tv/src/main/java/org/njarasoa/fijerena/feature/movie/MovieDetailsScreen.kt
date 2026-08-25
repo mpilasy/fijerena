@@ -118,6 +118,7 @@ fun MovieDetailsScreen(
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
+    val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
 
     // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
@@ -135,6 +136,7 @@ fun MovieDetailsScreen(
                 MovieDetailsContent(
                     movieDetail = state.movieDetail,
                     relatedTitles = relatedTitles,
+                    tmdbTitle = tmdbTitle,
                     movieId = movieId,
                     movieName = movieName,
                     isFavorite = state.isFavorite,
@@ -157,6 +159,7 @@ fun MovieDetailsScreen(
 private fun MovieDetailsContent(
     movieDetail: MovieDetail,
     relatedTitles: RelatedTitles,
+    tmdbTitle: String?,
     movieId: String,
     movieName: String,
     isFavorite: Boolean,
@@ -248,8 +251,9 @@ private fun MovieDetailsContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                 ) {
+                    // TMDB's clean title once it resolves, the provider's raw stream name until then
                     Text(
-                        text = movieDetail.name.ifEmpty { movieName },
+                        text = tmdbTitle ?: movieDetail.name.ifEmpty { movieName },
                         style = scaledStyles.displaySmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -460,15 +464,6 @@ private fun MovieDetailsContent(
                         )
                         Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     }
-                    movieDetail.metadata.tmdbId?.let { tmdbId ->
-                        Text(
-                            text = stringResource(R.string.details_tmdb_format, tmdbId),
-                            style = scaledStyles.bodySmall,
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                    }
-
                     // Technical stream info (Jellyfin-style labeled rows)
                     val hasVideoInfo =
                         movieDetail.videoInfo != null &&
@@ -551,6 +546,14 @@ private fun MovieDetailsContent(
                             TechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
                         }
                     }
+
+                    // The provider's own (often raw) stream name, now that the headline is TMDB's title
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                    Text(
+                        text = stringResource(R.string.details_stream_name_format, movieDetail.name.ifEmpty { movieName }),
+                        style = scaledStyles.bodySmall,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
 
                     // Category this movie belongs to — OK opens its stream list
                     if (categoryName != null) {

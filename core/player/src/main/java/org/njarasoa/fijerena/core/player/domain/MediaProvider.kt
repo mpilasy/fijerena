@@ -75,6 +75,17 @@ interface MediaProvider {
     ): RelatedTitles = RelatedTitles()
 
     /**
+     * TMDB's own title for [tmdbId], for showing next to a provider's stream name — Xtream stream
+     * names are often raw release-file names rather than clean titles. Null for every reason it
+     * should simply not show: no TMDB id, no API key, a failed call, or a provider (like Jellyfin)
+     * whose own name is already clean.
+     */
+    suspend fun getTmdbTitle(
+        tmdbId: String?,
+        contentType: String,
+    ): String? = null
+
+    /**
      * Number of items matching [query] that search skipped because their category is hidden
      * by the provider's category filters. 0 for providers with no exclusion concept.
      */
