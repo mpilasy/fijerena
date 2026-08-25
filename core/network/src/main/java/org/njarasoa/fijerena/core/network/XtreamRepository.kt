@@ -179,6 +179,14 @@ class XtreamRepository(
             else -> emptyList()
         }
 
+    /** Other local catalogue entries sharing [tmdbId] — see [XtreamContentManager.getAlternateVodStreams]. */
+    suspend fun getAlternateStreams(contentType: String, tmdbId: String, excludeId: Int): List<XtreamStream> =
+        when (contentType) {
+            ContentType.MOVIES -> contentManager.getAlternateVodStreams(tmdbId, excludeId)
+            ContentType.TV_SHOWS -> contentManager.getAlternateSeries(tmdbId, excludeId)
+            else -> emptyList()
+        }
+
     suspend fun countExcludedByFts(contentType: String, ftsQuery: String): Int =
         when (contentType) {
             ContentType.LIVE_TV -> contentManager.countExcludedStreams(XtreamStreamEntity.TYPE_LIVE, ftsQuery)

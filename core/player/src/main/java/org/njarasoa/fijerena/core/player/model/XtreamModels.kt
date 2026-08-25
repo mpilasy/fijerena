@@ -76,6 +76,8 @@ data class XtreamStream(
     val duration: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("youtube_trailer")
     val youtubeTrailer: String? = null,
+    @SerialName("tmdb")
+    val tmdb: kotlinx.serialization.json.JsonElement? = null,
 )
 
 /**
@@ -118,6 +120,8 @@ data class XtreamSeries(
     val episodeRunTime: kotlinx.serialization.json.JsonElement? = null,
     @SerialName("category_id")
     val categoryId: String,
+    @SerialName("tmdb")
+    val tmdb: kotlinx.serialization.json.JsonElement? = null,
 )
 
 /**

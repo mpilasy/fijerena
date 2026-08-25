@@ -56,6 +56,7 @@ data class XtreamSeriesEntity(
             episodeRunTime: String?,
             categoryId: String,
             backdropPath: String?,
+            tmdbId: String?,
         ): Int {
             var result = seriesId
             result = 31 * result + providerId.hashCode()
@@ -74,6 +75,7 @@ data class XtreamSeriesEntity(
             result = 31 * result + (episodeRunTime?.hashCode() ?: 0)
             result = 31 * result + categoryId.hashCode()
             result = 31 * result + (backdropPath?.hashCode() ?: 0)
+            result = 31 * result + (tmdbId?.hashCode() ?: 0)
             return result
         }
     }

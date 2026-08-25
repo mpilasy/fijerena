@@ -6,7 +6,10 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +29,8 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -44,6 +49,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -86,6 +92,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 
 /**
  * Movie details screen for VOD content.
@@ -119,6 +126,7 @@ fun MovieDetailsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
 
     // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
@@ -137,6 +145,7 @@ fun MovieDetailsScreen(
                     movieDetail = state.movieDetail,
                     relatedTitles = relatedTitles,
                     tmdbTitle = tmdbTitle,
+                    alternateStreams = alternateStreams,
                     movieId = movieId,
                     movieName = movieName,
                     isFavorite = state.isFavorite,
@@ -160,6 +169,7 @@ private fun MovieDetailsContent(
     movieDetail: MovieDetail,
     relatedTitles: RelatedTitles,
     tmdbTitle: String?,
+    alternateStreams: List<MediaItem>,
     movieId: String,
     movieName: String,
     isFavorite: Boolean,
@@ -547,12 +557,15 @@ private fun MovieDetailsContent(
                         }
                     }
 
-                    // The provider's own (often raw) stream name, now that the headline is TMDB's title
+                    // The provider's own (often raw) stream name, now that the headline is TMDB's
+                    // title. A dropdown when the local catalogue holds other instances of the same
+                    // TMDB title.
                     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                    Text(
-                        text = stringResource(R.string.details_stream_name_format, movieDetail.name.ifEmpty { movieName }),
-                        style = scaledStyles.bodySmall,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    StreamNamePicker(
+                        currentName = movieDetail.name.ifEmpty { movieName },
+                        alternates = alternateStreams,
+                        onSelect = onRelatedTitleSelected,
+                        textStyle = scaledStyles.bodySmall,
                     )
 
                     // Category this movie belongs to — OK opens its stream list
@@ -654,6 +667,79 @@ private fun ErrorScreen(
                 onClick = onBack,
                 text = stringResource(R.string.movie_back_to_movies),
             )
+        }
+    }
+}
+
+/**
+ * The "Stream name: X" row. Plain text when [alternates] is empty — most titles have no other
+ * cached instance. Becomes a tappable dropdown once there is at least one other local catalogue
+ * entry sharing the same TMDB id, letting the user switch to that instance's detail screen.
+ */
+@Composable
+private fun StreamNamePicker(
+    currentName: String,
+    alternates: List<MediaItem>,
+    onSelect: (MediaItem) -> Unit,
+    textStyle: TextStyle,
+) {
+    val textColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+
+    if (alternates.isEmpty()) {
+        Text(
+            text = stringResource(R.string.details_stream_name_format, currentName),
+            style = textStyle,
+            color = textColor,
+        )
+        return
+    }
+
+    var expanded by remember { mutableStateOf(false) }
+    // The row often sits near the bottom of the visible screen; a Popup can't render below the
+    // screen edge, so without this the menu flips far above the row to find room instead of
+    // opening flush beneath it.
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
+    Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier.clickable {
+                    coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
+                    expanded = true
+                },
+        ) {
+            Text(
+                text = stringResource(R.string.details_stream_name_format, currentName),
+                style = textStyle,
+                color = textColor,
+            )
+            Icon(
+                imageVector = CinemaIcons.ArrowDropDown,
+                contentDescription = stringResource(R.string.details_other_instances),
+                tint = textColor,
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            // The menu is a Popup, so it gets its own window and loses the scaled density.
+            ProvideUiScaledDensity {
+                Column {
+                    DropdownMenuItem(
+                        text = { Text(currentName, color = CinemaAccent) },
+                        leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaAccent) },
+                        onClick = { expanded = false },
+                    )
+                    alternates.forEach { alternate ->
+                        DropdownMenuItem(
+                            text = { Text(alternate.name, color = CinemaTextPrimary) },
+                            onClick = {
+                                expanded = false
+                                onSelect(alternate)
+                            },
+                        )
+                    }
+                }
+            }
         }
     }
 }

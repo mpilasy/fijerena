@@ -73,6 +73,7 @@ data class XtreamStreamEntity(
             rating: String? = null,
             duration: String? = null,
             youtubeTrailer: String? = null,
+            tmdbId: String? = null,
         ): Int {
             var result = streamId
             result = 31 * result + providerId.hashCode()
@@ -96,6 +97,7 @@ data class XtreamStreamEntity(
             result = 31 * result + (rating?.hashCode() ?: 0)
             result = 31 * result + (duration?.hashCode() ?: 0)
             result = 31 * result + (youtubeTrailer?.hashCode() ?: 0)
+            result = 31 * result + (tmdbId?.hashCode() ?: 0)
             return result
         }
     }

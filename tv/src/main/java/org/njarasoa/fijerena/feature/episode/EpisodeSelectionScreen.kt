@@ -10,6 +10,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +38,8 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
@@ -46,6 +50,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,6 +68,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -78,6 +84,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.resumeProgress
@@ -126,6 +133,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 
 /**
  * Episode selection screen for TV shows.
@@ -161,6 +169,7 @@ fun EpisodeSelectionScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
 
     // Retained across a background refresh so the episode list stays on screen with just a
     // spinning refresh icon, instead of the whole thing dropping to a full-screen loading state
@@ -186,6 +195,7 @@ fun EpisodeSelectionScreen(
                     seriesDetail = shown.seriesDetail,
                     relatedTitles = relatedTitles,
                     tmdbTitle = tmdbTitle,
+                    alternateStreams = alternateStreams,
                     seriesName = seriesName,
                     categoryId = categoryId,
                     mediaRepository = viewModel.mediaRepository!!,
@@ -213,6 +223,7 @@ private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     relatedTitles: RelatedTitles,
     tmdbTitle: String?,
+    alternateStreams: List<MediaItem>,
     seriesName: String,
     categoryId: String,
     mediaRepository: MediaRepository,
@@ -536,12 +547,15 @@ private fun EpisodeListContent(
                     )
                 }
 
-                // The provider's own (often raw) stream name, now that the header shows TMDB's title
+                // The provider's own (often raw) stream name, now that the header shows TMDB's
+                // title. A dropdown when the local catalogue holds other instances of the same
+                // TMDB title.
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                Text(
-                    text = stringResource(R.string.details_stream_name_format, seriesDetail.name.ifEmpty { seriesName }),
-                    style = scaledStyles.labelSmall,
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                StreamNamePicker(
+                    currentName = seriesDetail.name.ifEmpty { seriesName },
+                    alternates = alternateStreams,
+                    onSelect = onRelatedTitleSelected,
+                    textStyle = scaledStyles.labelSmall,
                 )
 
                 // Category this series belongs to — OK opens its series list — and the trailer
@@ -649,6 +663,79 @@ private fun EpisodeListContent(
 
 /** Direction the viewer stepped through episodes in, so focus can stay on that button. */
 private enum class EpisodeStep { PREVIOUS, NEXT }
+
+/**
+ * The "Stream name: X" row. Plain text when [alternates] is empty — most titles have no other
+ * cached instance. Becomes a tappable dropdown once there is at least one other local catalogue
+ * entry sharing the same TMDB id, letting the user switch to that instance's detail screen.
+ */
+@Composable
+private fun StreamNamePicker(
+    currentName: String,
+    alternates: List<MediaItem>,
+    onSelect: (MediaItem) -> Unit,
+    textStyle: TextStyle,
+) {
+    val textColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
+
+    if (alternates.isEmpty()) {
+        Text(
+            text = stringResource(R.string.details_stream_name_format, currentName),
+            style = textStyle,
+            color = textColor,
+        )
+        return
+    }
+
+    var expanded by remember { mutableStateOf(false) }
+    // The row often sits near the bottom of the visible screen; a Popup can't render below the
+    // screen edge, so without this the menu flips far above the row to find room instead of
+    // opening flush beneath it.
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
+    Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier.clickable {
+                    coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
+                    expanded = true
+                },
+        ) {
+            Text(
+                text = stringResource(R.string.details_stream_name_format, currentName),
+                style = textStyle,
+                color = textColor,
+            )
+            Icon(
+                imageVector = CinemaIcons.ArrowDropDown,
+                contentDescription = stringResource(R.string.details_other_instances),
+                tint = textColor,
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            // The menu is a Popup, so it gets its own window and loses the scaled density.
+            ProvideUiScaledDensity {
+                Column {
+                    DropdownMenuItem(
+                        text = { Text(currentName, color = CinemaAccent) },
+                        leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = CinemaAccent) },
+                        onClick = { expanded = false },
+                    )
+                    alternates.forEach { alternate ->
+                        DropdownMenuItem(
+                            text = { Text(alternate.name, color = CinemaTextPrimary) },
+                            onClick = {
+                                expanded = false
+                                onSelect(alternate)
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun EpisodeDetailPanel(

@@ -39,6 +39,23 @@ interface XtreamStreamDao {
         streamId: Int,
     ): XtreamStreamEntity?
 
+    /**
+     * Other VOD entries sharing [tmdbId], for the "other instances of this title" picker on the
+     * detail screen. Only ever finds what's already in the local catalogue with tmdbId cached —
+     * tmdbId is populated per row from its own detail fetch, so this misses instances the user
+     * hasn't opened yet. That's fine: the picker simply doesn't show when nothing turns up.
+     */
+    @Query(
+        "SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type " +
+            "AND tmdbId = :tmdbId AND streamId != :excludeStreamId AND excluded = 0 ORDER BY name ASC",
+    )
+    fun getByTmdbId(
+        providerId: Long,
+        type: String,
+        tmdbId: String,
+        excludeStreamId: Int,
+    ): List<XtreamStreamEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(streams: List<XtreamStreamEntity>)
 

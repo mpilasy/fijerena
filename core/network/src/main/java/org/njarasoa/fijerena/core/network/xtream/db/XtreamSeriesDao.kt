@@ -26,6 +26,17 @@ interface XtreamSeriesDao {
         seriesId: Int,
     ): XtreamSeriesEntity?
 
+    /** As [XtreamStreamDao.getByTmdbId], for series. */
+    @Query(
+        "SELECT * FROM xtream_series WHERE providerId = :providerId " +
+            "AND tmdbId = :tmdbId AND seriesId != :excludeSeriesId AND excluded = 0 ORDER BY name ASC",
+    )
+    fun getByTmdbId(
+        providerId: Long,
+        tmdbId: String,
+        excludeSeriesId: Int,
+    ): List<XtreamSeriesEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(series: List<XtreamSeriesEntity>)
 

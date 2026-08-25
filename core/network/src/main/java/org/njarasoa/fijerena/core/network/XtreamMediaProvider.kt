@@ -553,6 +553,23 @@ class XtreamMediaProvider(
         }
     }
 
+    override suspend fun getAlternateStreams(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): List<MediaItem> {
+        if (tmdbId.isNullOrBlank()) return emptyList()
+        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return emptyList()
+        val excludeId = itemId.toIntOrNull() ?: return emptyList()
+
+        return try {
+            repository.getAlternateStreams(contentType, tmdbId, excludeId).map { it.toDomain(getMediaType(contentType)) }
+        } catch (e: Exception) {
+            Log.w("XtreamMediaProvider", "Alternate streams for $contentType tmdb $tmdbId: ${e.message}")
+            emptyList()
+        }
+    }
+
     private suspend fun fetchRelated(
         tmdbId: Int,
         contentType: String,

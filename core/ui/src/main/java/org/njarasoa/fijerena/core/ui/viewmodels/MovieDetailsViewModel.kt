@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 
@@ -52,6 +53,10 @@ class MovieDetailsViewModel(
     private val _tmdbTitle = MutableStateFlow<String?>(null)
     val tmdbTitle: StateFlow<String?> = _tmdbTitle.asStateFlow()
 
+    /** Other local catalogue entries for the same TMDB id — empty when there are none. */
+    private val _alternateStreams = MutableStateFlow<List<MediaItem>>(emptyList())
+    val alternateStreams: StateFlow<List<MediaItem>> = _alternateStreams.asStateFlow()
+
     private var relatedTitlesJob: Job? = null
     private var mediaRepository: MediaRepository? = null
     private val appSettings = AppSettings(context)
@@ -75,6 +80,7 @@ class MovieDetailsViewModel(
             relatedTitlesJob?.cancel()
             _relatedTitles.value = RelatedTitles()
             _tmdbTitle.value = null
+            _alternateStreams.value = emptyList()
             try {
                 val repo = getRepository()
                 mediaRepository = repo
@@ -115,6 +121,7 @@ class MovieDetailsViewModel(
 
                         loadRelatedTitles(detail)
                         loadTmdbTitle(detail)
+                        loadAlternateStreams(detail)
                     },
                     onFailure = { e ->
                         _uiState.value =
@@ -144,6 +151,15 @@ class MovieDetailsViewModel(
                 runCatching {
                     getRepository().getTmdbTitle(detail.metadata.tmdbId, "MOVIES")
                 }.getOrNull()
+        }
+    }
+
+    private fun loadAlternateStreams(detail: MovieDetail) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _alternateStreams.value =
+                runCatching {
+                    getRepository().getAlternateStreams(movieId, detail.metadata.tmdbId, "MOVIES")
+                }.getOrDefault(emptyList())
         }
     }
 
