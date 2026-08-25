@@ -297,6 +297,12 @@ class MediaRepository(
         contentType: String,
     ): RelatedTitles = provider?.getRelatedTitles(itemId, tmdbId, contentType) ?: RelatedTitles()
 
+    /** See [MediaProvider.getTmdbTitle]. */
+    suspend fun getTmdbTitle(
+        tmdbId: String?,
+        contentType: String,
+    ): String? = provider?.getTmdbTitle(tmdbId, contentType)
+
     /** Matches for [query] that search skipped because their category is hidden by category filters. */
     suspend fun countExcludedSearchMatches(
         query: String,

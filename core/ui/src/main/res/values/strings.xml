@@ -330,6 +330,7 @@
     <string name="movie_director_format">Director: %1$s</string>
     <string name="details_watch_trailer">▶ Trailer</string>
     <string name="details_tmdb_format">TMDB: %1$s</string>
+    <string name="details_stream_name_format">Stream name: %1$s</string>
     <string name="details_more_like_this">More Like This</string>
     <string name="details_similar_titles">Similar Titles</string>
     <string name="details_no_link_handler">No app on this device can open that link</string>

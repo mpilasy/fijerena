@@ -68,6 +68,7 @@ fun MobileMovieDetailsScreen(
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
+    val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
     // Retained across a refresh so pulling down leaves the details on screen under the spinner,
@@ -125,6 +126,7 @@ fun MobileMovieDetailsScreen(
                         MovieDetailsContent(
                             movieDetail = shown.movieDetail,
                             relatedTitles = relatedTitles,
+                            tmdbTitle = tmdbTitle,
                             movieId = movieId,
                             movieName = movieName,
                             resumePositionMs = shown.resumePositionMs,
@@ -148,6 +150,7 @@ fun MobileMovieDetailsScreen(
 private fun MovieDetailsContent(
     movieDetail: MovieDetail,
     relatedTitles: RelatedTitles,
+    tmdbTitle: String?,
     movieId: String,
     movieName: String,
     resumePositionMs: Long,
@@ -188,9 +191,9 @@ private fun MovieDetailsContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-        // Title
+        // Title — TMDB's clean title once it resolves, the provider's raw stream name until then
         Text(
-            text = movieDetail.name,
+            text = tmdbTitle ?: movieDetail.name,
             style = MaterialTheme.typography.headlineLarge,
         )
 
@@ -346,15 +349,6 @@ private fun MovieDetailsContent(
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
         }
 
-        // TMDB id
-        movieDetail.metadata.tmdbId?.let { tmdbId ->
-            Text(
-                text = stringResource(R.string.details_tmdb_format, tmdbId),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-            )
-        }
-
         // Technical stream info (labeled rows)
         val hasVideoInfo =
             movieDetail.videoInfo != null &&
@@ -426,6 +420,14 @@ private fun MovieDetailsContent(
                 MobileTechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
             }
         }
+
+        // The provider's own (often raw) stream name, now that the headline above is TMDB's title
+        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+        Text(
+            text = stringResource(R.string.details_stream_name_format, movieDetail.name),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+        )
 
         // Category this movie belongs to — tap to browse it
         if (categoryName != null) {

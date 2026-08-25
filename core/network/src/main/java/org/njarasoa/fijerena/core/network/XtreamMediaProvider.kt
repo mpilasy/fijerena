@@ -536,6 +536,23 @@ class XtreamMediaProvider(
         )
     }
 
+    override suspend fun getTmdbTitle(
+        tmdbId: String?,
+        contentType: String,
+    ): String? {
+        if (!tmdb.hasApiKey()) return null
+        val id = tmdbId?.toIntOrNull() ?: return null
+        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return null
+
+        return try {
+            val details = if (contentType == ContentType.MOVIES) tmdb.getMovieDetails(id) else tmdb.getTvDetails(id)
+            details.displayTitle
+        } catch (e: Exception) {
+            Log.w("XtreamMediaProvider", "TMDB title for $contentType $id: ${e.message}")
+            null
+        }
+    }
+
     private suspend fun fetchRelated(
         tmdbId: Int,
         contentType: String,
