@@ -61,6 +61,13 @@ android {
         resources {
             excludes += setOf("META-INF/INDEX.LIST", "META-INF/DEPENDENCIES")
         }
+        jniLibs {
+            keepDebugSymbols += setOf(
+                "**/libandroidx.graphics.path.so",
+                "**/libffmpegJNI.so",
+                "**/libsqlite3x.so",
+            )
+        }
     }
 }
 
