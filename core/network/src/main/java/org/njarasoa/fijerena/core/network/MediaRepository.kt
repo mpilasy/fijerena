@@ -303,6 +303,13 @@ class MediaRepository(
         contentType: String,
     ): String? = provider?.getTmdbTitle(tmdbId, contentType)
 
+    /** See [MediaProvider.getAlternateStreams]. */
+    suspend fun getAlternateStreams(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): List<MediaItem> = provider?.getAlternateStreams(itemId, tmdbId, contentType) ?: emptyList()
+
     /** Matches for [query] that search skipped because their category is hidden by category filters. */
     suspend fun countExcludedSearchMatches(
         query: String,

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
@@ -70,6 +71,13 @@ class SeriesDetailsViewModel(
     private var tmdbTitleJob: Job? = null
     private var tmdbTitleTmdbId: String? = null
 
+    /** Other local catalogue entries for the same TMDB id — empty when there are none. */
+    private val _alternateStreams = MutableStateFlow<List<MediaItem>>(emptyList())
+    val alternateStreams: StateFlow<List<MediaItem>> = _alternateStreams.asStateFlow()
+
+    private var alternateStreamsJob: Job? = null
+    private var alternateStreamsTmdbId: String? = null
+
     init {
         loadSeriesInfo()
     }
@@ -97,6 +105,9 @@ class SeriesDetailsViewModel(
             tmdbTitleJob?.cancel()
             tmdbTitleJob = null
             _tmdbTitle.value = null
+            alternateStreamsJob?.cancel()
+            alternateStreamsJob = null
+            _alternateStreams.value = emptyList()
             try {
                 val repo = ensureRepo()
 
@@ -116,6 +127,7 @@ class SeriesDetailsViewModel(
                         )
                     loadRelatedTitles(cached)
                     loadTmdbTitle(cached)
+                    loadAlternateStreams(cached)
                 } else {
                     _uiState.value = UiState.Loading
                 }
@@ -132,6 +144,7 @@ class SeriesDetailsViewModel(
 
                         loadRelatedTitles(detail)
                         loadTmdbTitle(detail)
+                        loadAlternateStreams(detail)
                     },
                     // A failed refresh must not blank a screen already drawn from the cache — the
                     // episodes on it are still playable.
@@ -176,6 +189,24 @@ class SeriesDetailsViewModel(
                     runCatching {
                         ensureRepo().getTmdbTitle(tmdbId, "TV_SHOWS")
                     }.getOrNull()
+            }
+    }
+
+    /**
+     * As [loadRelatedTitles]: the cached detail draws first and the fetched one follows with the
+     * same TMDB id, so fetch only for the first of them.
+     */
+    private fun loadAlternateStreams(detail: SeriesDetail) {
+        val tmdbId = detail.metadata.tmdbId
+        if (alternateStreamsJob != null && tmdbId == alternateStreamsTmdbId) return
+        alternateStreamsJob?.cancel()
+        alternateStreamsTmdbId = tmdbId
+        alternateStreamsJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                _alternateStreams.value =
+                    runCatching {
+                        ensureRepo().getAlternateStreams(seriesId, tmdbId, "TV_SHOWS")
+                    }.getOrDefault(emptyList())
             }
     }
 

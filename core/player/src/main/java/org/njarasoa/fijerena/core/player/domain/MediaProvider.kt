@@ -86,6 +86,18 @@ interface MediaProvider {
     ): String? = null
 
     /**
+     * Other entries in this provider's local catalogue carrying the same TMDB id as [itemId] —
+     * different rips/languages of the same movie or show, for the "other instances" picker next
+     * to the stream name. Empty for every reason it should simply not show: no TMDB id, or
+     * nothing else in the catalogue happens to carry that id yet.
+     */
+    suspend fun getAlternateStreams(
+        itemId: String,
+        tmdbId: String?,
+        contentType: String,
+    ): List<MediaItem> = emptyList()
+
+    /**
      * Number of items matching [query] that search skipped because their category is hidden
      * by the provider's category filters. 0 for providers with no exclusion concept.
      */

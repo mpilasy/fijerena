@@ -336,6 +336,7 @@ class XtreamContentManager(
                             duration = it.duration.asString(),
                             youtubeTrailer = it.youtubeTrailer,
                             excluded = categoryExcluded,
+                            tmdbId = it.tmdb.asString(),
                         )
                     },
                 )
@@ -395,6 +396,7 @@ class XtreamContentManager(
                             episodeRunTime = it.episodeRunTime.asString(),
                             categoryId = it.categoryId,
                             excluded = categoryExcluded,
+                            tmdbId = it.tmdb.asString(),
                         )
                     },
                 )
@@ -532,6 +534,7 @@ class XtreamContentManager(
 
                             val onStreamItem: suspend (XtreamStream) -> Unit = { it ->
                                 val itemExcluded = allowedCategoryIds != null && it.categoryId !in allowedCategoryIds
+                                val tmdbId = it.tmdb.asString()
                                 val contentHash =
                                     XtreamStreamEntity.computeHash(
                                         streamId = it.streamId,
@@ -556,6 +559,7 @@ class XtreamContentManager(
                                         rating = it.rating.asString(),
                                         duration = it.duration.asString(),
                                         youtubeTrailer = it.youtubeTrailer,
+                                        tmdbId = tmdbId,
                                     )
 
                                 seenIds.add(it.streamId)
@@ -587,6 +591,7 @@ class XtreamContentManager(
                                             youtubeTrailer = it.youtubeTrailer,
                                             contentHash = contentHash,
                                             excluded = itemExcluded,
+                                            tmdbId = tmdbId,
                                         ),
                                     )
                                     if (batch.size >= BATCH_SIZE) {
@@ -664,6 +669,7 @@ class XtreamContentManager(
 
                             service.getSeriesStreaming(null) { it ->
                                 val itemExcluded = allowedCategoryIds != null && it.categoryId !in allowedCategoryIds
+                                val tmdbId = it.tmdb.asString()
                                 val contentHash =
                                     XtreamSeriesEntity.computeHash(
                                         seriesId = it.seriesId,
@@ -683,6 +689,7 @@ class XtreamContentManager(
                                         episodeRunTime = it.episodeRunTime.asString(),
                                         categoryId = it.categoryId,
                                         backdropPath = it.backdropPath?.joinToString(","),
+                                        tmdbId = tmdbId,
                                     )
                                 seenIds.add(it.seriesId)
                                 val oldHash = currentHashes[it.seriesId]
@@ -708,6 +715,7 @@ class XtreamContentManager(
                                             backdropPath = it.backdropPath?.joinToString(","),
                                             contentHash = contentHash,
                                             excluded = itemExcluded,
+                                            tmdbId = tmdbId,
                                         ),
                                     )
                                     if (batch.size >= BATCH_SIZE) {
@@ -1010,6 +1018,25 @@ class XtreamContentManager(
         val dbEntities = seriesDao.getSeriesByCategory(providerId, categoryId)
         return if (dbEntities.isEmpty()) null else dbEntities.map { mapSeriesEntityToStream(it) }
     }
+
+    /** Other VOD entries carrying the same TMDB id, local catalogue only — see [XtreamStreamDao.getByTmdbId]. */
+    suspend fun getAlternateVodStreams(
+        tmdbId: String,
+        excludeStreamId: Int,
+    ): List<XtreamStream> =
+        withContext(Dispatchers.IO) {
+            streamDao.getByTmdbId(providerId, XtreamStreamEntity.TYPE_VOD, tmdbId, excludeStreamId)
+                .map { mapStreamEntityToModel(it) }
+        }
+
+    /** As [getAlternateVodStreams], for series. */
+    suspend fun getAlternateSeries(
+        tmdbId: String,
+        excludeSeriesId: Int,
+    ): List<XtreamStream> =
+        withContext(Dispatchers.IO) {
+            seriesDao.getByTmdbId(providerId, tmdbId, excludeSeriesId).map { mapSeriesEntityToStream(it) }
+        }
 
     private fun isCacheFresh(key: String): Boolean {
         val ts = sharedPreferences.getLong(key, 0L)

@@ -1,7 +1,10 @@
 package org.njarasoa.fijerena.feature.movie
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
@@ -69,6 +73,7 @@ fun MobileMovieDetailsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
     // Retained across a refresh so pulling down leaves the details on screen under the spinner,
@@ -127,6 +132,7 @@ fun MobileMovieDetailsScreen(
                             movieDetail = shown.movieDetail,
                             relatedTitles = relatedTitles,
                             tmdbTitle = tmdbTitle,
+                            alternateStreams = alternateStreams,
                             movieId = movieId,
                             movieName = movieName,
                             resumePositionMs = shown.resumePositionMs,
@@ -151,6 +157,7 @@ private fun MovieDetailsContent(
     movieDetail: MovieDetail,
     relatedTitles: RelatedTitles,
     tmdbTitle: String?,
+    alternateStreams: List<MediaItem>,
     movieId: String,
     movieName: String,
     resumePositionMs: Long,
@@ -421,12 +428,13 @@ private fun MovieDetailsContent(
             }
         }
 
-        // The provider's own (often raw) stream name, now that the headline above is TMDB's title
+        // The provider's own (often raw) stream name, now that the headline above is TMDB's title.
+        // A dropdown when the local catalogue holds other instances of the same TMDB title.
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
-        Text(
-            text = stringResource(R.string.details_stream_name_format, movieDetail.name),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+        StreamNamePicker(
+            currentName = movieDetail.name,
+            alternates = alternateStreams,
+            onSelect = onRelatedTitleSelected,
         )
 
         // Category this movie belongs to — tap to browse it
@@ -499,6 +507,74 @@ private fun ErrorScreen(
             )
             CinemaButton(onClick = onBack) {
                 Text(stringResource(R.string.common_back))
+            }
+        }
+    }
+}
+
+/**
+ * The "Stream name: X" row. Plain text when [alternates] is empty — most titles have no other
+ * cached instance. Becomes a tappable dropdown once there is at least one other local catalogue
+ * entry sharing the same TMDB id, letting the user switch to that instance's detail screen.
+ */
+@Composable
+private fun StreamNamePicker(
+    currentName: String,
+    alternates: List<MediaItem>,
+    onSelect: (MediaItem) -> Unit,
+) {
+    val textStyle = MaterialTheme.typography.bodySmall
+    val textColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium)
+
+    if (alternates.isEmpty()) {
+        Text(
+            text = stringResource(R.string.details_stream_name_format, currentName),
+            style = textStyle,
+            color = textColor,
+        )
+        return
+    }
+
+    var expanded by remember { mutableStateOf(false) }
+    // The row often sits near the bottom of the visible screen, past the last text before the
+    // category button; a Popup can't render below the screen edge, so without this the menu
+    // flips far above the row to find room instead of opening flush beneath it.
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
+    Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier.clickable {
+                    coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
+                    expanded = true
+                },
+        ) {
+            Text(
+                text = stringResource(R.string.details_stream_name_format, currentName),
+                style = textStyle,
+                color = textColor,
+            )
+            Icon(
+                imageVector = CinemaIcons.ArrowDropDown,
+                contentDescription = stringResource(R.string.details_other_instances),
+                tint = textColor,
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(currentName, color = MaterialTheme.colorScheme.primary) },
+                leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                onClick = { expanded = false },
+            )
+            alternates.forEach { alternate ->
+                DropdownMenuItem(
+                    text = { Text(alternate.name) },
+                    onClick = {
+                        expanded = false
+                        onSelect(alternate)
+                    },
+                )
             }
         }
     }

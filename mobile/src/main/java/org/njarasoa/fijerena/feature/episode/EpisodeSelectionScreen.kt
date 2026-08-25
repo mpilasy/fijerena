@@ -3,6 +3,8 @@ package org.njarasoa.fijerena.feature.episode
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -92,6 +95,7 @@ fun MobileEpisodeSelectionScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? SeriesDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
     // Retained across a background refresh so the list stays visible with just a pull-spinner
@@ -207,6 +211,7 @@ fun MobileEpisodeSelectionScreen(
                         EpisodeListContent(
                             seriesDetail = displaySeriesDetail,
                             relatedTitles = relatedTitles,
+                            alternateStreams = alternateStreams,
                             mediaRepository = viewModel.mediaRepository!!,
                             resumeEpisodeId = resumeEpisodeId,
                             onResumeEpisodeDerived = { resumeEpisodeId = it },
@@ -228,6 +233,7 @@ fun MobileEpisodeSelectionScreen(
 private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     relatedTitles: RelatedTitles,
+    alternateStreams: List<MediaItem>,
     mediaRepository: MediaRepository,
     resumeEpisodeId: String? = null,
     onResumeEpisodeDerived: (String) -> Unit,
@@ -408,11 +414,12 @@ private fun EpisodeListContent(
             }
         }
 
-        // The provider's own (often raw) stream name, now that the top bar shows TMDB's title
-        Text(
-            text = stringResource(R.string.details_stream_name_format, seriesDetail.name),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+        // The provider's own (often raw) stream name, now that the top bar shows TMDB's title. A
+        // dropdown when the local catalogue holds other instances of the same TMDB title.
+        StreamNamePicker(
+            currentName = seriesDetail.name,
+            alternates = alternateStreams,
+            onSelect = onRelatedTitleSelected,
             modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
         )
 
@@ -505,6 +512,76 @@ private fun EpisodeListContent(
                         modifier = Modifier.padding(top = CinemaSpacing.md),
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * The "Stream name: X" row. Plain text when [alternates] is empty — most titles have no other
+ * cached instance. Becomes a tappable dropdown once there is at least one other local catalogue
+ * entry sharing the same TMDB id, letting the user switch to that instance's detail screen.
+ */
+@Composable
+private fun StreamNamePicker(
+    currentName: String,
+    alternates: List<MediaItem>,
+    onSelect: (MediaItem) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val textStyle = MaterialTheme.typography.bodySmall
+    val textColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium)
+
+    if (alternates.isEmpty()) {
+        Text(
+            text = stringResource(R.string.details_stream_name_format, currentName),
+            style = textStyle,
+            color = textColor,
+            modifier = modifier,
+        )
+        return
+    }
+
+    var expanded by remember { mutableStateOf(false) }
+    // The row often sits near the bottom of the visible screen; a Popup can't render below the
+    // screen edge, so without this the menu flips far above the row to find room instead of
+    // opening flush beneath it.
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
+    Box(modifier = modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier.clickable {
+                    coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
+                    expanded = true
+                },
+        ) {
+            Text(
+                text = stringResource(R.string.details_stream_name_format, currentName),
+                style = textStyle,
+                color = textColor,
+            )
+            Icon(
+                imageVector = CinemaIcons.ArrowDropDown,
+                contentDescription = stringResource(R.string.details_other_instances),
+                tint = textColor,
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(currentName, color = MaterialTheme.colorScheme.primary) },
+                leadingIcon = { Icon(CinemaIcons.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                onClick = { expanded = false },
+            )
+            alternates.forEach { alternate ->
+                DropdownMenuItem(
+                    text = { Text(alternate.name) },
+                    onClick = {
+                        expanded = false
+                        onSelect(alternate)
+                    },
+                )
             }
         }
     }
