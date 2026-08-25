@@ -120,7 +120,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
-import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
@@ -163,7 +162,7 @@ fun EpisodeSelectionScreen(
         viewModel(
             factory =
                 remember(seriesId, categoryId) {
-                    SeriesDetailsViewModelFactory(context.applicationContext, seriesId, categoryId)
+                    SeriesDetailsViewModelFactory(context.applicationContext, seriesId, categoryId, seriesName)
                 },
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -196,19 +195,20 @@ fun EpisodeSelectionScreen(
                     relatedTitles = relatedTitles,
                     tmdbTitle = tmdbTitle,
                     alternateStreams = alternateStreams,
-                    seriesName = seriesName,
-                    categoryId = categoryId,
+                    seriesName = shown.streamName,
+                    categoryId = shown.categoryId,
                     mediaRepository = viewModel.mediaRepository!!,
                     initialEpisodeId = initialEpisodeId,
                     isFavorite = shown.isFavorite,
                     categoryName = shown.categoryName,
                     isRefreshing = isRefreshing,
-                    onToggleFavorite = { viewModel.toggleFavorite(seriesName) },
+                    onToggleFavorite = { viewModel.toggleFavorite(shown.streamName) },
                     onEpisodeSelected = onEpisodeSelected,
-                    onCategorySelected = { onCategorySelected(categoryId) },
+                    onCategorySelected = { onCategorySelected(shown.categoryId) },
                     onRefresh = { viewModel.refreshSeriesInfo() },
                     onBack = onBack,
                     onRelatedTitleSelected = onRelatedTitleSelected,
+                    onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
                 )
             }
             else -> {
@@ -237,6 +237,7 @@ private fun EpisodeListContent(
     onRefresh: () -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
+    onAlternateStreamSelected: (MediaItem) -> Unit,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -419,11 +420,7 @@ private fun EpisodeListContent(
             seriesDetail.flattenedEpisodes(sortedSeasons)
         }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AmbientBackdrop(
-            modifier = Modifier.fillMaxSize(),
-            imageUrl = selectedEpisode?.thumbnailUrl ?: seriesDetail.coverUrl,
-        )
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (selectedEpisode != null) {
             val current = selectedEpisode!!
             val currentIdx =
@@ -525,7 +522,10 @@ private fun EpisodeListContent(
                                     seriesDetail.metadata.rating?.let { context.getString(R.string.series_rating_format, formatRating(it)) },
                                     seriesDetail.metadata.contentRating,
                                     seriesDetail.metadata.cast?.let { context.getString(R.string.movie_cast_format, it) },
-                                    seriesDetail.metadata.tmdbId?.let { context.getString(R.string.details_tmdb_format, it) },
+                                    context.getString(
+                                        R.string.details_tmdb_format,
+                                        seriesDetail.metadata.tmdbId ?: context.getString(R.string.details_tmdb_none),
+                                    ),
                                 )
                             }
                         if (metadataParts.isNotEmpty()) {
@@ -557,7 +557,7 @@ private fun EpisodeListContent(
                     // are listed under, so use the same source as alternates.
                     currentName = seriesName,
                     alternates = alternateStreams,
-                    onSelect = onRelatedTitleSelected,
+                    onSelect = onAlternateStreamSelected,
                     textStyle = scaledStyles.labelSmall,
                 )
 
@@ -944,14 +944,16 @@ private fun EpisodeDetailPanel(
                     }
 
                     // TMDB id: the episode's own when it has one, else the show's
-                    (episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId)?.let { tmdbId ->
-                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                        Text(
-                            text = stringResource(R.string.details_tmdb_format, tmdbId),
-                            style = detailScaledStyles.bodySmall,
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.details_tmdb_format,
+                                episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none),
+                            ),
+                        style = detailScaledStyles.bodySmall,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
 
                     Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
 
