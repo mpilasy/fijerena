@@ -100,7 +100,10 @@ fun TvAddProviderScreen(
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val providers by viewModel.providers.collectAsStateWithLifecycle()
-    val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving || syncState is SyncState.Syncing
+    // A background data sync must never block saving or leaving this screen — it runs
+    // independently of the form (ProviderSyncManager's own scope), so it isn't disturbed by
+    // either.
+    val isBusy = saveState is SaveState.Validating || saveState is SaveState.Saving
 
     // Quick Connect state (Jellyfin only)
     var showQuickConnectDialog by remember { mutableStateOf(false) }

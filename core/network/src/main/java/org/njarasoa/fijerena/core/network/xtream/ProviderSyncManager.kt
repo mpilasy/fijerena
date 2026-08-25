@@ -19,6 +19,13 @@ class ProviderSyncManager private constructor(private val context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var autoRefreshJob: Job? = null
 
+    /** Outcome of a manual sync — see [startManualSync]. */
+    sealed interface SyncResult {
+        data object Success : SyncResult
+
+        data class Failed(val message: String) : SyncResult
+    }
+
     companion object {
         private const val TAG = "ProviderSyncManager"
         private const val WORK_NAME = "provider_content_sync"
@@ -155,20 +162,42 @@ class ProviderSyncManager private constructor(private val context: Context) {
      * Start a manual sync for a specific provider.
      * This runs in the manager's scope, so it persists even if the calling ViewModel is cleared.
      */
-    fun startManualSync(providerId: Long) {
-        scope.launch {
+    /**
+     * Runs in [scope] — a singleton scope outside any ViewModel — so the sync itself keeps going
+     * even if the screen that requested it is closed. The returned [Deferred] is just a handle a
+     * caller can await to know when *this* attempt is over; it resolves exactly once on every
+     * path (success, a provider-side error, or bailing out early because the provider or its
+     * password vanished) via `try`/`finally`, so nothing awaiting it is ever left hanging — unlike
+     * the previous approach of a ViewModel polling for `lastSyncedAtMs` to have moved in the last
+     * 30 seconds, which never noticed a sync that bailed out before reaching that DB write.
+     */
+    fun startManualSync(providerId: Long): Deferred<SyncResult> =
+        scope.async {
             Log.i(TAG, "Starting manual sync for provider: $providerId")
-            val providerRepo = ProviderRepository(context)
-            val provider = providerRepo.getProviderById(providerId) ?: return@launch
-            val password = providerRepo.getPassword(providerId) ?: return@launch
+            try {
+                val providerRepo = ProviderRepository(context)
+                val provider =
+                    providerRepo.getProviderById(providerId)
+                        ?: return@async SyncResult.Failed("Provider no longer exists")
+                val password =
+                    providerRepo.getPassword(providerId)
+                        ?: return@async SyncResult.Failed("Stored credentials could not be read")
 
-            val startTime = System.currentTimeMillis()
-            val outcome = ProviderSyncRunner.syncProvider(context, provider, password)
-            if (outcome is ProviderSyncRunner.Outcome.Success) {
-                Log.d(TAG, "Manual sync completed for provider: ${provider.name}")
+                val startTime = System.currentTimeMillis()
+                val outcome = ProviderSyncRunner.syncProvider(context, provider, password)
+                if (outcome is ProviderSyncRunner.Outcome.Success) {
+                    Log.d(TAG, "Manual sync completed for provider: ${provider.name}")
+                }
+                val endTime = System.currentTimeMillis()
+                providerRepo.updateSyncStats(providerId, endTime, endTime - startTime, outcome.errorOrNull())
+                if (outcome is ProviderSyncRunner.Outcome.Success) {
+                    SyncResult.Success
+                } else {
+                    SyncResult.Failed(outcome.errorOrNull() ?: "Sync failed")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Manual sync threw for provider: $providerId", e)
+                SyncResult.Failed(e.message ?: "Sync failed")
             }
-            val endTime = System.currentTimeMillis()
-            providerRepo.updateSyncStats(providerId, endTime, endTime - startTime, outcome.errorOrNull())
         }
-    }
 }
