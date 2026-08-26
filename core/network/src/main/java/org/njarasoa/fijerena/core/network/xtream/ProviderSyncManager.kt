@@ -65,26 +65,33 @@ class ProviderSyncManager private constructor(private val context: Context) {
      */
     private fun scheduleAutoRefresh() {
         autoRefreshJob?.cancel()
+        val appSettings = AppSettings(context)
+
+        // Enqueued once per call rather than on every loop pass. Re-enqueuing with UPDATE rewrote
+        // initialDelay every 15 minutes, and WorkManager only reads that field before the job's
+        // first ever run — where a shrinking delay against a preserved lastEnqueueTime walked the
+        // first run one tick earlier each pass. Settings changes come back in via updateSchedule().
+        if (appSettings.contentAutoRefreshEnabled) {
+            updateWorkManagerSchedule(appSettings)
+        } else {
+            cancelWorkManager()
+        }
+
+        // TV/fixed devices additionally refresh in-process whenever the app happens to be running.
+        if (!isFixedDevice()) return
         autoRefreshJob = scope.launch {
-            val appSettings = AppSettings(context)
             while (true) {
-                if (appSettings.contentAutoRefreshEnabled) {
-                    val delayMs = calculateDelayUntilNextSlot(appSettings.contentRefreshTime)
-                    
-                    // On TV/Fixed devices, we can perform the refresh directly if the app is running
-                    if (isFixedDevice() && delayMs < AUTO_REFRESH_CHECK_INTERVAL_MS) {
-                        delay(delayMs)
-                        performFullSync()
-                        delay(AUTO_REFRESH_CHECK_INTERVAL_MS) // Avoid immediate re-trigger
+                val delayMs =
+                    if (appSettings.contentAutoRefreshEnabled) {
+                        calculateDelayUntilNextSlot(appSettings.contentRefreshTime)
                     } else {
-                        // For background execution, ensure WorkManager is scheduled
-                        updateWorkManagerSchedule(appSettings)
-                        delay(AUTO_REFRESH_CHECK_INTERVAL_MS)
+                        Long.MAX_VALUE
                     }
-                } else {
-                    cancelWorkManager()
-                    delay(AUTO_REFRESH_CHECK_INTERVAL_MS)
+                if (delayMs < AUTO_REFRESH_CHECK_INTERVAL_MS) {
+                    delay(delayMs)
+                    performFullSync()
                 }
+                delay(AUTO_REFRESH_CHECK_INTERVAL_MS) // Avoid immediate re-trigger
             }
         }
     }
