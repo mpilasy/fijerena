@@ -14,6 +14,7 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,9 +23,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
@@ -270,17 +270,21 @@ private fun MovieDetailsContent(
         }
     }
 
-    val scrollState = rememberScrollState()
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .focusable()
-                .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
+    // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the Similar
+    // Titles row paid its full layout cost while sitting entirely off-screen — 85ms of a 215ms
+    // measure pass on every rebuild of this screen, which is why backing out of the player was
+    // slow. EpisodeSelectionScreen already builds these same rows as LazyColumn items.
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().focusable(),
+        contentPadding =
+            PaddingValues(
+                horizontal = Spacing.tvSafeMarginHorizontal,
+                vertical = Spacing.tvSafeMarginVertical,
+            ),
     ) {
         // Header with back button
+        item(key = "header") {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -340,10 +344,14 @@ private fun MovieDetailsContent(
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
         }
+        }
 
+        item(key = "content") {
         Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
+        }
 
         // Movie content: poster + metadata
+        item(key = "detail") {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
@@ -621,33 +629,33 @@ private fun MovieDetailsContent(
                         )
                     }
 
-                    // Last thing on the screen, below the technical rows and the category: the
-                    // rows are a place to go next, so they sit after everything about this title.
-                    //
-                    // Laying these two rows out costs ~200ms of the ~240ms measure pass when this
-                    // screen is rebuilt from cache (measured on a Shield: 115ms + 85ms of a 215ms
-                    // AndroidOwner:measureAndLayout) — a dozen poster cards, each with an image and
-                    // a two-line title to text-lay-out. The Similar Titles row is fully off-screen
-                    // and still pays, because the container here is Column(verticalScroll), which
-                    // measures every child. EpisodeSelectionScreen puts these same rows in a
-                    // LazyColumn and so never pays for the off-screen one; matching that here means
-                    // hoisting them out of the GlassPanel they currently sit inside, which changes
-                    // the visual design. See plans/tv-ui-performance-plan.md task 6.
-                    RelatedTitlesRow(
-                        title = stringResource(R.string.details_more_like_this),
-                        items = relatedTitles.recommended,
-                        onItemClick = onRelatedTitleSelected,
-                        modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
-                    )
-                    RelatedTitlesRow(
-                        title = stringResource(R.string.details_similar_titles),
-                        items = relatedTitles.similar,
-                        onItemClick = onRelatedTitleSelected,
-                        modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
-                    )
                 } // GlassPanel Column
             } // GlassPanel
         } // Outer Row (poster + metadata)
+        }
+
+        // Hoisted out of the GlassPanel above so they can be items in their own right, and so the
+        // one that is off-screen is never composed or measured until it is scrolled to.
+        if (relatedTitles.recommended.isNotEmpty()) {
+            item(key = "related-recommended") {
+                RelatedTitlesRow(
+                    title = stringResource(R.string.details_more_like_this),
+                    items = relatedTitles.recommended,
+                    onItemClick = onRelatedTitleSelected,
+                    modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
+                )
+            }
+        }
+        if (relatedTitles.similar.isNotEmpty()) {
+            item(key = "related-similar") {
+                RelatedTitlesRow(
+                    title = stringResource(R.string.details_similar_titles),
+                    items = relatedTitles.similar,
+                    onItemClick = onRelatedTitleSelected,
+                    modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
+                )
+            }
+        }
     }
     }
 }
