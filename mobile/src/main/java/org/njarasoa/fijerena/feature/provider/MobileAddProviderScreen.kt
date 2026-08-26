@@ -191,6 +191,11 @@ fun MobileAddProviderScreen(
         }
     }
 
+    // A sync started here outlives this screen, so pick it back up when we come back to it
+    LaunchedEffect(editId) {
+        if (isEditMode) viewModel.observeRunningSync(editId)
+    }
+
     // Refresh UI data when sync completes
     LaunchedEffect(syncState) {
         if (syncState is SyncState.Success || syncState is SyncState.Error) {

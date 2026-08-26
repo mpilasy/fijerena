@@ -57,7 +57,9 @@ class XtreamContentManager(
         private const val KEY_VOD_CATEGORIES_TIMESTAMP = "vod_categories_ts"
         private const val KEY_SERIES_CATEGORIES_TIMESTAMP = "series_categories_ts"
         private const val KEY_STREAMS_TIMESTAMP_PREFIX = "streams_ts_"
-        private const val CACHE_EXPIRATION_MS = 24 * 3600 * 1000L // 24 hours
+        // Matches the scheduled sync cadence in ProviderSyncManager, so a screen opened between
+        // scheduled runs still tops the catalogue up rather than sitting on day-old data.
+        private const val CACHE_EXPIRATION_MS = 4 * 3600 * 1000L // 4 hours
         // Episode synopses are written once and essentially never revised, so they get a much
         // longer life than the catalogue itself — long enough to make refetching rare, short
         // enough that a correction upstream still lands eventually.
