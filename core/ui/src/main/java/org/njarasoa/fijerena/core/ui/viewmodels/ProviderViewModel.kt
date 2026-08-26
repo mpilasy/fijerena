@@ -327,12 +327,32 @@ class ProviderViewModel(
     }
 
     fun syncProvider(providerId: Long) {
-        _syncState.value = SyncState.Syncing
         // Delegate to ProviderSyncManager so the sync itself persists outside the ViewModel
         // scope — only the await below is scoped to this ViewModel, which is fine: if this
         // screen closes mid-sync the sync keeps running, this just stops watching it.
+        awaitSync(
+            org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
+                .getInstance(context)
+                .startManualSync(providerId),
+        )
+    }
+
+    /**
+     * Re-attach to a sync already running for [providerId]. A ViewModel is recreated whenever the
+     * provider screen is reopened, so without this the button would look idle — and start a second
+     * sync — while the first one is still running.
+     */
+    fun observeRunningSync(providerId: Long) {
+        if (_syncState.value is SyncState.Syncing) return
         val deferred =
-            org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.getInstance(context).startManualSync(providerId)
+            org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
+                .getInstance(context)
+                .inFlightSync(providerId) ?: return
+        awaitSync(deferred)
+    }
+
+    private fun awaitSync(deferred: kotlinx.coroutines.Deferred<org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.SyncResult>) {
+        _syncState.value = SyncState.Syncing
         viewModelScope.launch {
             _syncState.value =
                 when (val result = deferred.await()) {

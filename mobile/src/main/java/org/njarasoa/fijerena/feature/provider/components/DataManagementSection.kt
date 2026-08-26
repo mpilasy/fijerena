@@ -69,7 +69,7 @@ fun ColumnScope.DataManagementSection(
                     if (selectedType == ProviderType.XTREAM) {
                         CinemaButton(
                             onClick = { viewModel.syncProvider(editId) },
-                            enabled = !isBusy,
+                            enabled = !isBusy && syncState !is SyncState.Syncing,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(if (syncState is SyncState.Syncing) stringResource(R.string.provider_syncing) else stringResource(R.string.provider_sync_now_button))

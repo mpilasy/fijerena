@@ -19,6 +19,10 @@ class ProviderSyncManager private constructor(private val context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var autoRefreshJob: Job? = null
 
+    /** Manual syncs currently running, keyed by provider id. Guarded by [inFlightLock]. */
+    private val inFlightLock = Any()
+    private val inFlight = mutableMapOf<Long, Deferred<SyncResult>>()
+
     /** Outcome of a manual sync — see [startManualSync]. */
     sealed interface SyncResult {
         data object Success : SyncResult
@@ -30,6 +34,9 @@ class ProviderSyncManager private constructor(private val context: Context) {
         private const val TAG = "ProviderSyncManager"
         private const val WORK_NAME = "provider_content_sync"
         private const val AUTO_REFRESH_CHECK_INTERVAL_MS = 15 * 60 * 1000L // 15 minutes
+
+        /** Content syncs run on this cadence, anchored on `AppSettings.contentRefreshTime`. */
+        private const val REFRESH_INTERVAL_HOURS = 4
 
         @Volatile
         private var instance: ProviderSyncManager? = null
@@ -62,7 +69,7 @@ class ProviderSyncManager private constructor(private val context: Context) {
             val appSettings = AppSettings(context)
             while (true) {
                 if (appSettings.contentAutoRefreshEnabled) {
-                    val delayMs = calculateDelayUntil(appSettings.contentRefreshTime)
+                    val delayMs = calculateDelayUntilNextSlot(appSettings.contentRefreshTime)
                     
                     // On TV/Fixed devices, we can perform the refresh directly if the app is running
                     if (isFixedDevice() && delayMs < AUTO_REFRESH_CHECK_INTERVAL_MS) {
@@ -109,9 +116,9 @@ class ProviderSyncManager private constructor(private val context: Context) {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val initialDelay = calculateDelayUntil(appSettings.contentRefreshTime)
-        
-        val request = PeriodicWorkRequestBuilder<XtreamSyncWorker>(24, TimeUnit.HOURS)
+        val initialDelay = calculateDelayUntilNextSlot(appSettings.contentRefreshTime)
+
+        val request = PeriodicWorkRequestBuilder<XtreamSyncWorker>(REFRESH_INTERVAL_HOURS.toLong(), TimeUnit.HOURS)
             .setConstraints(constraints)
             .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
             .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
@@ -128,11 +135,15 @@ class ProviderSyncManager private constructor(private val context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
     }
 
-    private fun calculateDelayUntil(time: String): Long {
+    /**
+     * Delay until the next sync slot. Slots repeat every [REFRESH_INTERVAL_HOURS] hours anchored
+     * on [time], so an anchor of 04:00 gives 04:00, 08:00, 12:00, 16:00, 20:00, 00:00.
+     */
+    private fun calculateDelayUntilNextSlot(time: String): Long {
         try {
             val parts = time.split(":")
             if (parts.size != 2) return 0
-            
+
             val hour = parts[0].toInt()
             val minute = parts[1].toInt()
 
@@ -142,10 +153,13 @@ class ProviderSyncManager private constructor(private val context: Context) {
                 set(Calendar.MINUTE, minute)
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
+                // The anchor may be later today; step back a full day so the loop below always
+                // walks forward from a slot that is in the past.
+                add(Calendar.DAY_OF_YEAR, -1)
             }
 
-            if (target.before(now)) {
-                target.add(Calendar.DAY_OF_YEAR, 1)
+            while (!target.after(now)) {
+                target.add(Calendar.HOUR_OF_DAY, REFRESH_INTERVAL_HOURS)
             }
             return (target.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
         } catch (e: Exception) {
@@ -170,8 +184,28 @@ class ProviderSyncManager private constructor(private val context: Context) {
      * password vanished) via `try`/`finally`, so nothing awaiting it is ever left hanging — unlike
      * the previous approach of a ViewModel polling for `lastSyncedAtMs` to have moved in the last
      * 30 seconds, which never noticed a sync that bailed out before reaching that DB write.
+     *
+     * Calls for a provider that is already syncing return that sync's handle instead of starting
+     * a second one.
      */
     fun startManualSync(providerId: Long): Deferred<SyncResult> =
+        synchronized(inFlightLock) {
+            inFlight[providerId] ?: newManualSync(providerId).also { deferred ->
+                inFlight[providerId] = deferred
+                deferred.invokeOnCompletion {
+                    synchronized(inFlightLock) { inFlight.remove(providerId) }
+                }
+            }
+        }
+
+    /**
+     * The manual sync currently running for [providerId], or null if none is. Lets a screen that
+     * was closed and reopened mid-sync re-attach to the sync it started instead of showing an
+     * idle button while the sync is still running.
+     */
+    fun inFlightSync(providerId: Long): Deferred<SyncResult>? = synchronized(inFlightLock) { inFlight[providerId] }
+
+    private fun newManualSync(providerId: Long): Deferred<SyncResult> =
         scope.async {
             Log.i(TAG, "Starting manual sync for provider: $providerId")
             try {
