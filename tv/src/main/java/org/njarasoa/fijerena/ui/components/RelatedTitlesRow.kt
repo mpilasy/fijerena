@@ -13,12 +13,18 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
+import androidx.tv.material3.CardBorder
+import androidx.tv.material3.CardColors
 import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.CardGlow
+import androidx.tv.material3.CardScale
+import androidx.tv.material3.CardShape
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -47,6 +53,8 @@ fun RelatedTitlesRow(
 ) {
     if (items.isEmpty()) return
 
+    val cardStyle = relatedTitleCardStyle()
+
     Column(modifier = modifier) {
         Text(
             text = title,
@@ -63,21 +71,33 @@ fun RelatedTitlesRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             items(items, key = { it.id }) { item ->
-                RelatedTitleCard(item = item, onClick = { onItemClick(item) })
+                RelatedTitleCard(item = item, cardStyle = cardStyle, onClick = { onItemClick(item) })
             }
         }
     }
 }
 
+/**
+ * Card styling for one row, built once per row composition rather than once per card.
+ *
+ * `CardDefaults.*` are `@Composable`, so they cannot be wrapped in `remember` — hoisting the calls
+ * out of the item body is what stops a `CardColors`/`CardScale`/`Border`/`CardGlow`/`CardShape` set
+ * being allocated per card per recomposition. Same pattern, and same reason, as `StreamList`'s
+ * `StreamCardStyle`.
+ */
+@Immutable
+private data class RelatedCardStyle(
+    val colors: CardColors,
+    val cardScale: CardScale,
+    val border: CardBorder,
+    val glow: CardGlow,
+    val shape: CardShape,
+)
+
 @Composable
-private fun RelatedTitleCard(
-    item: MediaItem,
-    onClick: () -> Unit,
-) {
+private fun relatedTitleCardStyle(): RelatedCardStyle {
     val shape = RoundedCornerShape(CornerRadius.medium)
-    Card(
-        onClick = onClick,
-        modifier = Modifier.width(TvDimensions.posterWidth),
+    return RelatedCardStyle(
         // The poster covers the card face, so the container tint alone cannot carry focus here —
         // the border and the lift are what actually read from the sofa.
         colors =
@@ -85,7 +105,7 @@ private fun RelatedTitleCard(
                 containerColor = CinemaSurface,
                 focusedContainerColor = TvFocusTokens.focusedContainer,
             ),
-        scale =
+        cardScale =
             CardDefaults.scale(
                 scale = TvFocusTokens.defaultScale,
                 focusedScale = TvFocusTokens.focusedScale,
@@ -101,6 +121,23 @@ private fun RelatedTitleCard(
             ),
         glow = CardDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
         shape = CardDefaults.shape(shape = shape),
+    )
+}
+
+@Composable
+private fun RelatedTitleCard(
+    item: MediaItem,
+    cardStyle: RelatedCardStyle,
+    onClick: () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.width(TvDimensions.posterWidth),
+        colors = cardStyle.colors,
+        scale = cardStyle.cardScale,
+        border = cardStyle.border,
+        glow = cardStyle.glow,
+        shape = cardStyle.shape,
     ) {
         CinemaThumbnail(
             url = item.thumbnailUrl,
