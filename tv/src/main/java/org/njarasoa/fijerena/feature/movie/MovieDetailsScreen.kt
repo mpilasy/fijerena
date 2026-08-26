@@ -623,6 +623,16 @@ private fun MovieDetailsContent(
 
                     // Last thing on the screen, below the technical rows and the category: the
                     // rows are a place to go next, so they sit after everything about this title.
+                    //
+                    // Laying these two rows out costs ~200ms of the ~240ms measure pass when this
+                    // screen is rebuilt from cache (measured on a Shield: 115ms + 85ms of a 215ms
+                    // AndroidOwner:measureAndLayout) — a dozen poster cards, each with an image and
+                    // a two-line title to text-lay-out. The Similar Titles row is fully off-screen
+                    // and still pays, because the container here is Column(verticalScroll), which
+                    // measures every child. EpisodeSelectionScreen puts these same rows in a
+                    // LazyColumn and so never pays for the off-screen one; matching that here means
+                    // hoisting them out of the GlassPanel they currently sit inside, which changes
+                    // the visual design. See plans/tv-ui-performance-plan.md task 6.
                     RelatedTitlesRow(
                         title = stringResource(R.string.details_more_like_this),
                         items = relatedTitles.recommended,

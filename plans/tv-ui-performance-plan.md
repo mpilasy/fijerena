@@ -33,6 +33,51 @@ much smaller and differently-shaped sample (the p50 drop from 16ms to 5ms is the
 and the player-exit row played different content than the before run, so treat it as
 order-of-magnitude.
 
+### Live TV (measured 2026-08-26, after tasks 1 and the related-card hoist landed)
+
+Everything above is the Movies path. Live TV measured separately — same device and provider, 280
+Live TV categories.
+
+| Flow | Frames | Janky | p50 | p95 | p99 |
+|---|---|---|---|---|---|
+| Home → Live TV entry | 597 | 10.7% | 5ms | 18ms | 150ms |
+| Preview channel-list focus churn (video playing) | 832 | 8.5% | 5ms | 28ms | 48ms |
+| Idle on preview, video playing | 300 in 6s | **0.0%** | 5ms | 5ms | 6ms |
+| **Back out of preview** | 46 | 15.2% | 6ms | **400ms** | **500ms** |
+| Bare browse screen, 20 × DPAD_DOWN (280 categories) | 637 | 3.9% | 5ms | 15ms | 21ms |
+| **Select a Live TV category** | 47 | **87–94%** | 19ms | 44ms | 150–200ms |
+| Back → Home | 425 | 2.4% | 5ms | 9ms | 48ms |
+
+**Selecting a Live TV category is the worst flow in the app** — and the category measured had only
+**12 streams**, so this is not list size. `atrace` during it:
+
+```
+section                            thread            max_ms    n    total
+Background concurrent copying GC   HeapTaskDaemon     466.8    1    466.8
+MarkingPhase                       HeapTaskDaemon     272.1    1    272.1
+Choreographer#doFrame              main               115.2   64    519.6
+traversal                          main                96.8   47    332.6
+AndroidOwner:measureAndLayout      main                90.4   48    161.7
+allocateHardwareBitmap             DefaultDispatcher   41.8    4    125.7
+```
+
+A **467ms concurrent GC** lands inside the flow, and the main thread spends up to 90ms per layout
+pass. Process total is ~400MB against the 512MB ceiling, which fits the GC pressure.
+
+**Task 8 confirmed on device.** Pressing Back once from the Live TV preview does not leave Live TV —
+it lands on a *second*, fully-populated Live TV `CategoryList` (280 categories, its own Recent
+stream list) that was built and loaded but never shown. Exactly the double-push in
+`TvNavHost.kt:196-218`.
+
+**Coil disk-cache contention (new, not previously in this plan).** 922ms of blocked
+`DefaultDispatcher` worker time on `coil3.disk.DiskLruCache$Snapshot`, spread over 12+ worker
+threads, to load ~12 channel logos — single events up to 168ms. This does **not** block the UI
+thread (main thread total blocked: 0.5ms), so it is a throughput problem in image loading, not a
+jank source. It is why logos trickle in rather than appearing together.
+
+**The video preview itself is cheap** — idling on the split layout with a channel playing is 0.00%
+janky at 5ms per frame. That independently confirms dropping the `TextureView` item was right.
+
 Idle frame counts (zero input, screen settled):
 
 | Screen | Before | After |
@@ -201,7 +246,64 @@ key repeats. Delete or gate on `AppSettings.isDevMode`.
 
 ## P2 — Screen rebuild cost
 
-### 6. Entrance animations replay on every back-navigation
+### 6. Player exit — **misattributed in the first draft; measured 2026-08-26**
+
+The draft blamed `staggeredEntrance` replaying on back-navigation. That is wrong for this flow:
+**`MovieDetailsScreen` does not use `staggeredEntrance` at all**, and `finalizeSession` is cheap
+(it reads a position and hands off to `Dispatchers.IO`).
+
+Instrumented with a temporary `LayoutModifierNode` that wraps each subtree's measure in an atrace
+section — Compose emits no per-composable layout markers, so `AndroidOwner:measureAndLayout` is
+otherwise one opaque number. Result, exiting the player:
+
+```
+   t(s)   dur_ms  section
+  2.789     13.2  ViewPostImeInputStage          <- Back keypress
+  2.848     92.2  Choreographer#doFrame
+  2.891     41.7    AndroidOwner:measureAndLayout
+  2.891     33.8      LAYOUT:rootScrollColumn
+  2.975    243.6  Choreographer#doFrame
+  2.993    215.0    AndroidOwner:measureAndLayout
+  2.994    114.9      LAYOUT:relatedRecommended
+  3.109     85.0      LAYOUT:relatedSimilar
+```
+
+The cost is the two `RelatedTitlesRow` LazyRows — **200ms of layout for ~14 poster cards**, each a
+`tv.material3.Card` with an image and a two-line title that has to be text-laid-out. On first entry
+this is invisible: `relatedTitles` arrives from the provider *after* the screen is laid out, so the
+rows land in a later frame by themselves. Coming back from the player everything is cached, so it
+all collided with the frame answering the Back keypress.
+
+**Tried and reverted:** holding the rows out of the first frame (`withFrameNanos`, then compose
+them). Measured:
+
+| | before | with deferral |
+|---|---|---|
+| Back keypress → first painted frame | ~300ms | ~92ms |
+| layout in that frame | ~240ms | 34–42ms |
+| frames rendered during exit | 17–20 | 6–7 |
+| janky frames | 25% | **100%** |
+| p50 / p90 | 7ms / 200–300ms | 81–125ms / 200–250ms |
+
+It improved input latency 3.3x but moved the 200ms rather than removing it — the hitch just landed
+one frame later, and jank percentage went to 100% because the frame *count* collapsed and only the
+heavy frames were left. Reverted on that basis: not worth a deferral mechanism for a metric that
+trades one number against another. **Do not re-propose it** — the measurement above is the reason.
+
+**Kept:** `RelatedTitleCard`'s per-card `CardDefaults.colors/scale/border/glow/shape` hoisted into a
+per-row `@Immutable RelatedCardStyle`, matching `StreamList`'s `StreamCardStyle`. Independent of the
+deferral, and the same allocation-churn fix as task 2.
+
+**The real fix, still to do — needs a design decision.** `EpisodeSelectionScreen` already puts these
+same rows inside a `LazyColumn` as `item {}` blocks (`:847-866`), so its off-screen row is never
+composed or laid out. `MovieDetailsScreen` scrolls with `Column(Modifier.verticalScroll(...))`,
+which measures every child including the fully off-screen `Similar Titles` row — 85ms for content
+nobody has scrolled to. Matching the sibling screen would delete that 85ms outright rather than
+deferring it. The obstacle is not the scrolling container: the rows sit *inside* the `GlassPanel`
+next to the metadata (`:626-637`), so hoisting them to top-level lazy items moves them out of the
+glass panel visually. That is a design change, so it is not mine to make.
+
+### 6b. Entrance animations replay on every back-navigation (still open, different screens)
 `StreamList.kt:186,346` · `CategoryList.kt:156,267`
 
 `enteredStreamIds` / `enteredCategoryIds` are plain `remember`, not `rememberSaveable`. Navigation
@@ -225,8 +327,14 @@ of double-composition is ~18 frames that all miss.
 **Fix:** try 150–200ms, and consider `EnterTransition.None` for `Screen.CategoryList`. Cheap to try,
 trivial to revert.
 
-### 8. Live TV entry loads the category screen twice
+### 8. Live TV entry loads the category screen twice — **CONFIRMED on device 2026-08-26**
 `tv/.../navigation/TvNavHost.kt:196-218`
+
+Verified by pressing Back once from the preview: it lands on a second, fully-populated Live TV
+`CategoryList` (280 categories, its own Recent list) that was never displayed. Both entries run a
+full `loadCategoriesInternal()` → `getFilteredCategories()` → `loadStreams()` → `loadNowPlaying()`.
+This is now a measured defect, not a code-reading suspicion, and it sits directly upstream of the
+two worst Live TV numbers (select-a-category at 87–94% janky, Back-out-of-preview at p99 500ms).
 
 Selecting Live TV pushes `CategoryList(showPreviewPane = false)` and then immediately pushes
 `CategoryList(showPreviewPane = true)` on top. Two back-stack entries, two `CategoryViewModel`s,
@@ -272,9 +380,11 @@ release — this is here only so the numbers above are read as debug-build frame
 |---|---|---|
 | 1 | **1** | **Done** — `Compose:recompose` on idle Home 242 → 0 |
 | 2 | re-measure all six flows | **Done** — see the after column above |
-| 3 | **6, 7** | **Next.** Player exit is now the worst row: ~198ms frame, 152ms of it rebuilding the screen |
-| 4 | 2, 3, 5 | Allocation churn feeding the 522ms GC; safe, no behaviour change |
-| 5 | 4, 8 | Load-time cleanup |
+| 3 | **6** | **Diagnosed, not fixed.** Cause measured precisely (200ms of related-row layout); the deferral was tried and reverted. Real fix blocked on a design call — see task 6 |
+| 3b | **8** | **Promoted.** Confirmed on device; upstream of the two worst Live TV flows |
+| 4 | 2, 3, 5 | Allocation churn feeding the 467–522ms GCs; safe, no behaviour change |
+| 5 | 7 | Nav transition still holds two screens live for 300ms |
+| 6 | 4 | Favorite lock per item — measured as *not* a UI-thread blocker (0.5ms), so lowest priority |
 
 ## Verification
 
