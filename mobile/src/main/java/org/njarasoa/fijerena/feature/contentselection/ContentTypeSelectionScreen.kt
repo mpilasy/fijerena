@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -448,12 +449,17 @@ private fun GradientContentCard(
                                     ),
                                 label = "live_pulse_alpha",
                             )
+                            // Read inside graphicsLayer's lambda, never in the composable body —
+                            // see the TV copy of this card for the measurement. From the body this
+                            // invalidates composition on every frame of an animation that never
+                            // ends, so the whole screen recomposes at 60fps while idle.
                             Box(
                                 modifier =
                                     Modifier
                                         .size(MobileDimensions.liveDotSize)
-                                        .border(MobileDimensions.dividerThin, CinemaTextPrimary.copy(alpha = pulseAlpha), CircleShape)
-                                        .background(CinemaLive.copy(alpha = pulseAlpha), shape = CircleShape),
+                                        .graphicsLayer { alpha = pulseAlpha }
+                                        .border(MobileDimensions.dividerThin, CinemaTextPrimary, CircleShape)
+                                        .background(CinemaLive, shape = CircleShape),
                             )
                         }
                     }
