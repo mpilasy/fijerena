@@ -194,23 +194,36 @@ fun TvNavHost(
                     BackHandler {}
                     val navigateToContentType: (org.njarasoa.fijerena.core.navigation.ContentType) -> Unit = { contentType ->
                         if (contentType.name == ContentType.LIVE_TV) {
-                            // Live TV never lands full-screen or bare — silently push the
-                            // classic categories/streams browse screen first (so Back from the
-                            // preview below lands on a real screen, same as Movies/TV Shows),
-                            // then push the preview on top of it.
-                            navController.navigate(
-                                Screen.CategoryList(contentType.name, showPreviewPane = false),
-                            ) {
-                                popUpTo(Screen.ContentTypeSelection) { inclusive = false }
-                            }
-                            // ...but only when there is a channel to preview. With no watch
-                            // history the preview screen has nothing to seed itself with and
-                            // renders an empty pane with no way to reach the categories, so a
-                            // first-run user would be stuck there. Browsing is the useful screen
-                            // then, and picking a channel from it pushes the preview anyway.
+                            // Live TV never lands full-screen or bare — the classic
+                            // categories/streams browse screen goes underneath (so Back from the
+                            // preview lands on a real screen, same as Movies/TV Shows), then the
+                            // preview on top of it.
+                            //
+                            // Both pushes happen here, after the lookup, with no suspend point
+                            // between them — that ordering is the whole point. Pushing the browse
+                            // screen first and *then* awaiting the repository put a suspend point
+                            // between the two navigations, so the browse screen became the current
+                            // destination for real: it composed, built its own CategoryViewModel,
+                            // and ran a full categories → streams → now-playing-EPG load for a
+                            // screen the user never saw. Confirmed on a Shield — Back from the
+                            // preview landed on a fully-populated 280-category list that had
+                            // loaded itself in the background. Navigating twice in one frame
+                            // leaves the entry on the back stack without ever composing it, so it
+                            // costs nothing until Back actually reveals it.
+                            //
+                            // The preview is skipped entirely when there is no channel to seed it
+                            // with: it would render an empty pane with no way to reach the
+                            // categories, stranding a first-run user. Browsing is the useful
+                            // screen then, and picking a channel from it pushes the preview anyway.
                             coroutineScope.launch {
                                 val repository = AppContainer.getInstance(context).getMediaRepository()
-                                if (repository.getLastItemId(ContentType.LIVE_TV) != null) {
+                                val hasChannelToPreview = repository.getLastItemId(ContentType.LIVE_TV) != null
+                                navController.navigate(
+                                    Screen.CategoryList(contentType.name, showPreviewPane = false),
+                                ) {
+                                    popUpTo(Screen.ContentTypeSelection) { inclusive = false }
+                                }
+                                if (hasChannelToPreview) {
                                     navController.navigate(
                                         Screen.CategoryList(contentType.name, showPreviewPane = true),
                                     )

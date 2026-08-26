@@ -327,14 +327,47 @@ of double-composition is ~18 frames that all miss.
 **Fix:** try 150–200ms, and consider `EnterTransition.None` for `Screen.CategoryList`. Cheap to try,
 trivial to revert.
 
-### 8. Live TV entry loads the category screen twice — **CONFIRMED on device 2026-08-26**
-`tv/.../navigation/TvNavHost.kt:196-218`
+### 8. Live TV entry loaded the category screen twice — **FIXED 2026-08-26**
+`tv/.../navigation/TvNavHost.kt:196-224`
 
-Verified by pressing Back once from the preview: it lands on a second, fully-populated Live TV
-`CategoryList` (280 categories, its own Recent list) that was never displayed. Both entries run a
-full `loadCategoriesInternal()` → `getFilteredCategories()` → `loadStreams()` → `loadNowPlaying()`.
-This is now a measured defect, not a code-reading suspicion, and it sits directly upstream of the
-two worst Live TV numbers (select-a-category at 87–94% janky, Back-out-of-preview at p99 500ms).
+The browse screen was pushed first, and the `getLastItemId` check that decides whether to push the
+preview on top of it ran *after*, in a coroutine. That suspend point was the bug: it let the browse
+screen become the real current destination, so it composed, built its own `CategoryViewModel`, and
+ran a full `loadCategoriesInternal()` → `getFilteredCategories()` → `loadStreams()` →
+`loadNowPlaying()` for a screen the user never saw.
+
+**Fix:** resolve the repository and the last-played channel first, then issue both `navigate()`
+calls back to back with no suspend point between them. The browse entry still sits on the back stack
+so Back behaves exactly as before, but it is never composed until Back actually reveals it. Also
+removes a visible flash of the browse screen on the way into Live TV.
+
+**Verified by counting ViewModel constructions** (temporary log in `CategoryViewModel.init`, since
+frame counts cannot distinguish this):
+
+| Live TV entry | `CategoryViewModel` created |
+|---|---|
+| before | **2** |
+| after | **1** (the second is built lazily when Back reveals the browse screen) |
+
+**Effect, same device, three runs each, on categories whose logos were not yet cached:**
+
+| | before | after |
+|---|---|---|
+| Select a Live TV category, janky frames | 100% / 18.7% / 13.9% | **0.35% / 0.17% / 0.00%** |
+| p50 | 5–18ms | **5ms** |
+| Back out of preview, p95 | 400ms | **101–133ms** |
+| Back out of preview, p90 | 105ms | **38–53ms** |
+| Live TV entry, janky frames | 10.7% | 10.1% (unchanged) |
+
+Two caveats on reading this. Back-out-of-preview's *jank percentage* rose (15% → ~19%) even as its
+tail improved 3–4x: the browse screen now does its one real load at that moment instead of having
+done it in the background, and the frame count is small, so a few busy frames dominate the
+percentage. And the first run after any install reads far worse than steady state (100% vs 0.35% on
+the same flow) — it is JIT-cold; discard it.
+
+The mechanism behind the category-select improvement is that one `CategoryViewModel` instead of two
+halves the concurrent stream/EPG/logo loading, which is what produced the 467ms GC and the 922ms of
+Coil disk-cache contention across 12+ worker threads recorded above.
 
 Selecting Live TV pushes `CategoryList(showPreviewPane = false)` and then immediately pushes
 `CategoryList(showPreviewPane = true)` on top. Two back-stack entries, two `CategoryViewModel`s,
@@ -381,7 +414,7 @@ release — this is here only so the numbers above are read as debug-build frame
 | 1 | **1** | **Done** — `Compose:recompose` on idle Home 242 → 0 |
 | 2 | re-measure all six flows | **Done** — see the after column above |
 | 3 | **6** | **Diagnosed, not fixed.** Cause measured precisely (200ms of related-row layout); the deferral was tried and reverted. Real fix blocked on a design call — see task 6 |
-| 3b | **8** | **Promoted.** Confirmed on device; upstream of the two worst Live TV flows |
+| 3b | **8** | **Done** — one `CategoryViewModel` on Live TV entry instead of two; category select went from 14–100% janky to under 0.4% |
 | 4 | 2, 3, 5 | Allocation churn feeding the 467–522ms GCs; safe, no behaviour change |
 | 5 | 7 | Nav transition still holds two screens live for 300ms |
 | 6 | 4 | Favorite lock per item — measured as *not* a UI-thread blocker (0.5ms), so lowest priority |
