@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -59,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -208,12 +210,17 @@ fun MobileEpisodeSelectionScreen(
                         EpisodeListContent(
                             seriesDetail = displaySeriesDetail,
                             relatedTitles = relatedTitles,
+                            tmdbTitle = tmdbTitle,
                             alternateStreams = alternateStreams,
                             seriesName = lastSuccess?.streamName ?: seriesName,
                             mediaRepository = viewModel.mediaRepository!!,
                             resumeEpisodeId = resumeEpisodeId,
                             onResumeEpisodeDerived = { resumeEpisodeId = it },
                             categoryName = lastSuccess?.categoryName,
+                            onPlayEpisode = { episodeId, episodeTitle, extension, startFromBeginning ->
+                                resumeEpisodeId = episodeId
+                                onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
+                            },
                             onEpisodeSelected = { episode ->
                                 selectedEpisode = episode
                             },
@@ -222,6 +229,9 @@ fun MobileEpisodeSelectionScreen(
                             onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
                         )
                     }
+                }
+                else -> {
+                    LoadingScreen()
                 }
             }
         }
@@ -232,12 +242,14 @@ fun MobileEpisodeSelectionScreen(
 private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     relatedTitles: RelatedTitles,
+    tmdbTitle: String?,
     alternateStreams: List<MediaItem>,
     seriesName: String,
     mediaRepository: MediaRepository,
     resumeEpisodeId: String? = null,
     onResumeEpisodeDerived: (String) -> Unit,
     categoryName: String?,
+    onPlayEpisode: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onEpisodeSelected: (DomainEpisodeItem) -> Unit,
     onCategorySelected: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
@@ -248,7 +260,6 @@ private fun EpisodeListContent(
         remember(seriesDetail) {
             seriesDetail.sortedSeasons { num -> context.getString(R.string.series_season_name_format, num) }
         }
-    // Pre-sort episodes by season — avoids re-sorting on every recomposition of the LazyColumn
     val sortedEpisodesBySeason =
         remember(seriesDetail) {
             seriesDetail.episodes.mapValues { (_, eps) -> eps.sortedBy { it.episodeNumber } }
@@ -259,28 +270,18 @@ private fun EpisodeListContent(
         }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
-    // Season containing the Continue Watching resume episode, if any — takes priority over
-    // both the "first season" and "next unwatched" defaults below, so backing out of its
-    // detail panel lands on that season expanded, everything else collapsed.
     val resumeSeasonNumber =
         remember(seriesDetail, resumeEpisodeId) {
             resumeEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
         }
 
-    // Accordion: only one season expanded at a time (first season by default)
     var expandedSeasons by remember(seriesDetail) {
         mutableStateOf(defaultExpandedSeason(resumeSeasonNumber, sortedSeasons))
     }
-    // Set by the manual season-header toggle below, so the auto-expand effect doesn't
-    // clobber a choice the user already made while the playback-position lookups were in flight.
-    // Also seeded true when a resume season is already known, so the "next unwatched" guess
-    // below never overrides the season the user actually asked to resume.
     var hasManuallyToggledSeasons by remember(seriesDetail) { mutableStateOf(resumeSeasonNumber != null) }
 
     val listState = rememberLazyListState()
 
-    // Scroll the resume episode into view once its season is expanded, so "highlighted" also
-    // means visible without the user having to scroll to find it.
     LaunchedEffect(resumeEpisodeId, resumeSeasonNumber, expandedSeasons) {
         val targetId = resumeEpisodeId ?: return@LaunchedEffect
         val index =
@@ -296,16 +297,11 @@ private fun EpisodeListContent(
         }
     }
 
-    // Per-episode resume fraction, drives the progress bar on each card. Re-read on every
-    // entry into this screen — including coming back from the player — so a just-watched
-    // episode's bar is current.
     var episodeProgress by remember(seriesDetail) { mutableStateOf<Map<String, Float>>(emptyMap()) }
+    var episodePlaybackPositions by remember(seriesDetail) { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var watchedEpisodeIds by remember(seriesDetail) { mutableStateOf<Set<String>>(emptySet()) }
 
-    // Playback positions for every episode: the progress bars and watched checks above, plus
-    // auto-expanding the season holding the next unwatched/in-progress episode.
     LaunchedEffect(seriesDetail) {
-        // ⚡ Bolt: Avoid flatten().map to prevent intermediate list allocations
         val allEpisodeIds = mutableListOf<String>()
         for (episodes in seriesDetail.episodes.values) {
             for (ep in episodes) {
@@ -321,6 +317,12 @@ private fun EpisodeListContent(
                     watched.resumeProgress()?.let { put(id, it) }
                 }
             }
+        episodePlaybackPositions =
+            buildMap {
+                for ((id, watched) in allWatched) {
+                    watched.resumeProgress()?.let { put(id, watched.playbackPosition) }
+                }
+            }
         watchedEpisodeIds =
             buildSet {
                 for ((id, watched) in allWatched) {
@@ -328,11 +330,6 @@ private fun EpisodeListContent(
                 }
             }
 
-        // Anchor on the episode worth watching next. The route (or a play from this screen)
-        // names the episode last played; entering from the series list names none, so fall back
-        // to the newest playback timestamp. Either way the anchor moves on when that episode is
-        // already finished — re-evaluated on every entry, so backing out of an episode the user
-        // just completed lands on the following one.
         val derivedAnchor =
             seriesDetail
                 .resumeAnchorEpisodeId(
@@ -343,8 +340,6 @@ private fun EpisodeListContent(
 
         if (!hasMultipleSeasons) return@LaunchedEffect
 
-        // The derived anchor's season beats the "first season with anything unwatched" guess:
-        // a viewer mid-season 13 doesn't want season 1 opened because they skipped an episode.
         val targetSeason =
             derivedAnchor?.let { seriesDetail.seasonNumberContaining(it) }
                 ?: firstSeasonWithUnwatchedEpisode(
@@ -357,168 +352,323 @@ private fun EpisodeListContent(
         }
     }
 
-    Column(
+    val flatEpisodes =
+        remember(seriesDetail, sortedSeasons) {
+            seriesDetail.flattenedEpisodes(sortedSeasons)
+        }
+
+    val anchorEpisode =
+        remember(flatEpisodes, resumeEpisodeId) {
+            flatEpisodes.firstOrNull { it.id == resumeEpisodeId } ?: flatEpisodes.firstOrNull()
+        }
+    val anchorResumePosMs = anchorEpisode?.id?.let { episodePlaybackPositions[it] } ?: 0L
+    val hasResume = anchorResumePosMs > 0L
+
+    LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(CinemaSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         modifier = Modifier.fillMaxSize(),
     ) {
-        // Series info header
-        val hasPlot = seriesDetail.metadata.plot != null
-        val metadataParts =
-            remember(seriesDetail) {
-                listOfNotNull(
-                    seriesDetail.metadata.genre,
-                    seriesDetail.metadata.rating?.let { context.getString(R.string.series_rating_format, formatRating(it)) },
-                    seriesDetail.metadata.contentRating,
-                    context.getString(
-                        R.string.details_tmdb_format,
-                        seriesDetail.metadata.tmdbId ?: context.getString(R.string.details_tmdb_none),
-                    ),
+        item(key = "series_hero_header") {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Cover image
+                CinemaThumbnail(
+                    url = seriesDetail.coverUrl,
+                    fallbackLetter = seriesName.firstOrNull(),
+                    contentType = ThumbnailContentType.TV_SHOW,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(MobileDimensions.posterHeightLarge),
+                )
+
+                Spacer(modifier = Modifier.height(CinemaSpacing.md))
+
+                // Title
+                Text(
+                    text = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
+                    style = MaterialTheme.typography.headlineLarge,
+                )
+
+                // Genre
+                seriesDetail.metadata.genre?.let { genre ->
+                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                    Text(
+                        text = genre,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                // Metadata row: content rating | rating | year | season count | ends at
+                val year = seriesDetail.metadata.year ?: seriesDetail.metadata.releaseDate?.take(4)?.toIntOrNull()
+                val anchorDuration = anchorEpisode?.metadata?.duration ?: seriesDetail.metadata.duration
+                val endsAtText =
+                    remember(anchorDuration, anchorResumePosMs) {
+                        computeEndsAt(context, anchorDuration, anchorResumePosMs)
+                    }
+
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    seriesDetail.metadata.contentRating?.let { contentRating ->
+                        Text(
+                            text = contentRating,
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier =
+                                Modifier
+                                    .background(
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                        RoundedCornerShape(CinemaCornerRadius.small),
+                                    ).padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xs),
+                        )
+                    }
+                    seriesDetail.metadata.rating?.let { rating ->
+                        Text(
+                            text = "★ ${formatRating(rating)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                    year?.let {
+                        Text(
+                            text = "$it",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                    val countText =
+                        if (sortedSeasons.size > 1) {
+                            stringResource(R.string.series_seasons_and_episodes_format, sortedSeasons.size, totalEpisodes)
+                        } else {
+                            stringResource(R.string.series_total_episodes_format, totalEpisodes)
+                        }
+                    Text(
+                        text = countText,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    if (endsAtText != null) {
+                        Text(
+                            text = stringResource(R.string.movie_ends_at_format, endsAtText),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                            maxLines = 1,
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(CinemaSpacing.lg))
+
+                // Play / Resume / Trailer Action buttons
+                if (hasResume) {
+                    val resumeButtonText =
+                        if (anchorEpisode != null) {
+                            stringResource(
+                                R.string.series_resume_episode_time_format,
+                                anchorEpisode.seasonNumber ?: 1,
+                                anchorEpisode.episodeNumber,
+                                formatTime(anchorResumePosMs),
+                            )
+                        } else {
+                            stringResource(R.string.movie_resume_from_format, formatTime(anchorResumePosMs))
+                        }
+                    CinemaButton(
+                        onClick = {
+                            anchorEpisode?.let { ep ->
+                                onPlayEpisode(ep.id, ep.title, ep.extension ?: "mp4", false)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(resumeButtonText)
+                    }
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                    CinemaOutlinedButton(
+                        onClick = {
+                            anchorEpisode?.let { ep ->
+                                onPlayEpisode(ep.id, ep.title, ep.extension ?: "mp4", true)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.movie_start_beginning))
+                    }
+                } else {
+                    val playButtonText =
+                        if (anchorEpisode != null) {
+                            stringResource(
+                                R.string.series_play_episode_format,
+                                anchorEpisode.seasonNumber ?: 1,
+                                anchorEpisode.episodeNumber,
+                            )
+                        } else {
+                            stringResource(R.string.series_play_episode_action)
+                        }
+                    CinemaButton(
+                        onClick = {
+                            anchorEpisode?.let { ep ->
+                                onPlayEpisode(ep.id, ep.title, ep.extension ?: "mp4", false)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(playButtonText)
+                    }
+                }
+
+                seriesDetail.metadata.trailerUrl?.let { trailer ->
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                    CinemaOutlinedButton(
+                        onClick = { openExternalUrl(context, trailer) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.details_watch_trailer))
+                    }
+                }
+
+                // Plot description
+                seriesDetail.metadata.plot?.let { plot ->
+                    Spacer(modifier = Modifier.height(CinemaSpacing.lg))
+                    var plotExpanded by rememberSaveable(plot) { mutableStateOf(false) }
+                    var plotOverflows by remember(plot) { mutableStateOf(false) }
+                    Text(
+                        text = plot,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = if (plotExpanded) Int.MAX_VALUE else 3,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { result ->
+                            if (!plotExpanded) plotOverflows = result.hasVisualOverflow
+                        },
+                        modifier =
+                            if (plotOverflows || plotExpanded) {
+                                Modifier.clickable { plotExpanded = !plotExpanded }
+                            } else {
+                                Modifier
+                            },
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(CinemaSpacing.md))
+
+                // Cast
+                seriesDetail.metadata.cast?.let { cast ->
+                    Text(
+                        text = stringResource(R.string.movie_cast_format, cast),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                }
+
+                // Director
+                seriesDetail.metadata.director?.let { director ->
+                    Text(
+                        text = stringResource(R.string.movie_director_format, director),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+                    )
+                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                }
+
+                // StreamNamePicker
+                StreamNamePicker(
+                    currentName = seriesName,
+                    alternates = alternateStreams,
+                    onSelect = onAlternateStreamSelected,
+                    modifier = Modifier.padding(vertical = CinemaSpacing.xs),
+                )
+
+                // TMDB ID
+                Text(
+                    text = stringResource(R.string.details_tmdb_format, seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+                )
+
+                // Category button
+                if (categoryName != null) {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                    CinemaOutlinedButton(
+                        onClick = onCategorySelected,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.details_category_format, categoryName))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(CinemaSpacing.lg))
+                Text(
+                    text = stringResource(R.string.series_episodes_header),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                 )
             }
-        if (hasPlot || metadataParts.isNotEmpty()) {
-            GlassPanel(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(CinemaSpacing.md),
-            ) {
-                Column(modifier = Modifier.padding(CinemaSpacing.md)) {
-                    seriesDetail.metadata.plot?.let { plot ->
-                        // Long synopses are clipped to three lines. Tap to read the rest, tap
-                        // again to collapse — but only once we know it actually overflows, so a
-                        // short plot has no invisible tap target that appears to do nothing.
-                        var plotExpanded by rememberSaveable(plot) { mutableStateOf(false) }
-                        var plotOverflows by remember(plot) { mutableStateOf(false) }
-                        Text(
-                            text = plot,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = if (plotExpanded) Int.MAX_VALUE else 3,
-                            overflow = TextOverflow.Ellipsis,
-                            onTextLayout = { result ->
-                                if (!plotExpanded) plotOverflows = result.hasVisualOverflow
-                            },
-                            modifier =
-                                if (plotOverflows || plotExpanded) {
-                                    Modifier.clickable { plotExpanded = !plotExpanded }
-                                } else {
-                                    Modifier
-                                },
-                        )
-                    }
-                    if (metadataParts.isNotEmpty()) {
-                        if (hasPlot) Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                        Text(
-                            text = metadataParts.joinToString(" · "),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
         }
-
-        // The provider's own (often raw) stream name, now that the top bar shows TMDB's title. A
-        // dropdown when the local catalogue holds other instances of the same TMDB title.
-        StreamNamePicker(
-            // The catalogue's raw name, not seriesDetail.name — some providers' detail API
-            // returns a cleaned-up name inconsistent with the raw name alternates are listed
-            // under, so use the same source as alternates to keep the picker consistent.
-            currentName = seriesName,
-            alternates = alternateStreams,
-            onSelect = onAlternateStreamSelected,
-            modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs),
-        )
-
-        // Category this series belongs to — tap to browse it
-        if (categoryName != null) {
-            CinemaOutlinedButton(
-                onClick = onCategorySelected,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = CinemaSpacing.md),
-            ) {
-                Text(stringResource(R.string.details_category_format, categoryName))
-            }
-        }
-
-        // Episode count
-        Text(
-            text = stringResource(R.string.series_total_episodes_format, totalEpisodes),
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-        )
 
         // Season-grouped episodes list
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
-            verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            sortedSeasons.forEach { season ->
-                val seasonKey = season.seasonNumber.toString()
-                val seasonEpisodes = sortedEpisodesBySeason[seasonKey] ?: emptyList()
-                val isExpanded = !hasMultipleSeasons || season.seasonNumber in expandedSeasons
+        sortedSeasons.forEach { season ->
+            val seasonKey = season.seasonNumber.toString()
+            val seasonEpisodes = sortedEpisodesBySeason[seasonKey] ?: emptyList()
+            val isExpanded = !hasMultipleSeasons || season.seasonNumber in expandedSeasons
 
-                // Season header (skip if only 1 season)
-                if (hasMultipleSeasons) {
-                    item(key = "season_header_$seasonKey", contentType = "header") {
-                        SeasonHeader(
-                            season = season,
-                            episodeCount = seasonEpisodes.size,
-                            isExpanded = isExpanded,
-                            onToggle = {
-                                hasManuallyToggledSeasons = true
-                                expandedSeasons =
-                                    if (isExpanded) {
-                                        emptySet()
-                                    } else {
-                                        setOf(season.seasonNumber)
-                                    }
-                            },
-                        )
-                    }
-                }
-
-                if (isExpanded) {
-                    items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
-                        EpisodeCard(
-                            episode = episode,
-                            isContinueWatching = episode.id == resumeEpisodeId,
-                            watchProgress = episodeProgress[episode.id] ?: 0f,
-                            isWatched = episode.id in watchedEpisodeIds,
-                            onClick = {
-                                onEpisodeSelected(episode)
-                            },
-                        )
-                    }
-                }
-            }
-
-            // Last rows of the list rather than below it: the list fills the screen, so anything
-            // placed after it would sit off screen.
-            if (relatedTitles.recommended.isNotEmpty()) {
-                item(key = "recommended", contentType = "related") {
-                    RelatedTitlesRow(
-                        title = stringResource(R.string.details_more_like_this),
-                        items = relatedTitles.recommended,
-                        onItemClick = onRelatedTitleSelected,
-                        modifier = Modifier.padding(top = CinemaSpacing.md),
+            // Season header (skip if only 1 season)
+            if (hasMultipleSeasons) {
+                item(key = "season_header_$seasonKey", contentType = "header") {
+                    SeasonHeader(
+                        season = season,
+                        episodeCount = seasonEpisodes.size,
+                        isExpanded = isExpanded,
+                        onToggle = {
+                            hasManuallyToggledSeasons = true
+                            expandedSeasons =
+                                if (isExpanded) {
+                                    emptySet()
+                                } else {
+                                    setOf(season.seasonNumber)
+                                }
+                        },
                     )
                 }
             }
-            if (relatedTitles.similar.isNotEmpty()) {
-                item(key = "similar", contentType = "related") {
-                    RelatedTitlesRow(
-                        title = stringResource(R.string.details_similar_titles),
-                        items = relatedTitles.similar,
-                        onItemClick = onRelatedTitleSelected,
-                        modifier = Modifier.padding(top = CinemaSpacing.md),
+
+            if (isExpanded) {
+                items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
+                    EpisodeCard(
+                        episode = episode,
+                        isContinueWatching = episode.id == resumeEpisodeId,
+                        watchProgress = episodeProgress[episode.id] ?: 0f,
+                        isWatched = episode.id in watchedEpisodeIds,
+                        onClick = {
+                            onEpisodeSelected(episode)
+                        },
                     )
                 }
+            }
+        }
+
+        // Last rows of the list
+        if (relatedTitles.recommended.isNotEmpty()) {
+            item(key = "recommended", contentType = "related") {
+                RelatedTitlesRow(
+                    title = stringResource(R.string.details_more_like_this),
+                    items = relatedTitles.recommended,
+                    onItemClick = onRelatedTitleSelected,
+                    modifier = Modifier.padding(top = CinemaSpacing.md),
+                )
+            }
+        }
+        if (relatedTitles.similar.isNotEmpty()) {
+            item(key = "similar", contentType = "related") {
+                RelatedTitlesRow(
+                    title = stringResource(R.string.details_similar_titles),
+                    items = relatedTitles.similar,
+                    onItemClick = onRelatedTitleSelected,
+                    modifier = Modifier.padding(top = CinemaSpacing.md),
+                )
             }
         }
     }
@@ -686,20 +836,40 @@ private fun EpisodeDetailContent(
             )
         }
 
-        // Rating and duration on same row
+        // Rating, year and duration on same row
+        val contentRating = episode.metadata.contentRating ?: seriesDetail.metadata.contentRating
         val rating = episode.metadata.rating ?: seriesDetail.metadata.rating
+        val year = episode.metadata.year ?: episode.metadata.airDate?.take(4)?.toIntOrNull() ?: seriesDetail.metadata.year
         val hasDuration = episode.metadata.duration != null
-        if (rating != null || hasDuration) {
+        if (contentRating != null || rating != null || year != null || hasDuration) {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                contentRating?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier =
+                            Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                    RoundedCornerShape(CinemaCornerRadius.small),
+                                ).padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xs),
+                    )
+                }
                 rating?.let {
                     Text(
                         text = "★ ${formatRating(it)}",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+                year?.let {
+                    Text(
+                        text = "$it",
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 }
                 episode.metadata.duration?.let { duration ->

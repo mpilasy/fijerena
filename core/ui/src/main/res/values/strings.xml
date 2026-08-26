@@ -340,12 +340,18 @@
     <string name="movie_error_loading">Error Loading Movie</string>
     <string name="movie_back_to_movies">Back to Movies</string>
 
+    <string name="series_details_title">TV Show Details</string>
     <string name="series_error_load_failed">Failed to load series info</string>
     <string name="series_refresh_info">Refresh series info</string>
     <string name="series_season_name_format">Season %1$s</string>
     <string name="series_episode_number_short">E%1$02d</string>
     <string name="series_total_episodes_format">%1$d episodes</string>
+    <string name="series_seasons_and_episodes_format">%1$d seasons · %2$d episodes</string>
     <string name="series_play_episode_action">▶ Play Episode</string>
+    <string name="series_resume_episode_format">▶ Resume S%1$d:E%2$d</string>
+    <string name="series_resume_episode_time_format">▶ Resume S%1$d:E%2$d (%3$s)</string>
+    <string name="series_play_episode_format">▶ Play S%1$d:E%2$d</string>
+    <string name="series_episodes_header">Episodes</string>
     <string name="series_aired_format">Aired: %1$s</string>
     <string name="series_bitrate_format">Bitrate: %1$s kbps</string>
     <string name="series_loading_episodes">Loading episodes…</string>
