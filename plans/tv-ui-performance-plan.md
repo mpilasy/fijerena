@@ -579,6 +579,61 @@ share one ViewModel across both entries.
 
 ---
 
+## Storage — the EPG cache expires but never evicts (open, first fix attempt failed)
+
+Not a UI performance item, found while looking at why the app holds 1.7 GB on a Shield.
+
+**The defect is real and confirmed.** `xtream_epg_cache` is **1206 MiB of a 1.41 GiB
+`xtream_v2.db`** — 83% of the file. Streams and series together are 167 MiB. Per provider:
+
+| provider | rows | payload | streams | series |
+|---|---|---|---|---|
+| 1 | 53,968 | 567 MiB | 231,646 | 46,307 |
+| 5 | 56,884 | 627 MiB | 234,466 | 47,506 |
+
+~88% of rows are the empty literal `{"epg_listings":[]}` (19 bytes, under 2 MiB in total). All
+1.19 GiB sits in **13,369 rows averaging ~90 KB**, the largest a single 1.7 MB JSON blob for one
+channel — cached identically under both providers, which appear to be the same upstream service.
+
+`EPG_CACHE_EXPIRY_MS` is 6 hours, but it is enforced **read-side only**: every read filters
+`updatedAt >= cutoff`, so stale rows stop being returned and are never deleted.
+`XtreamEpgCacheDao` has only `deleteStream(providerId, streamId)` and `deleteAll(providerId)` — no
+age sweep, no size cap, no LRU. Browsing one Live TV category caches EPG for up to 50 channels
+(`CategoryViewModel.loadNowPlaying`), so roughly 4.5 MB per category browsed, retained forever. The
+only thing that ever clears it is the EPG guide's manual refresh button
+(`EpgViewModel.forceRefresh`). Much of this duplicates `epg_index.db` (186 MiB of XMLTV), which
+`loadNowPlaying` already queries first.
+
+**Attempted and reverted: `DELETE FROM xtream_epg_cache WHERE updatedAt < :cutoff`**, swept once per
+process from `XtreamEpgManager.init` on its write scope. On the Shield this **did not work and made
+things worse**:
+
+- The WAL grew to **1218 MiB** over ~160s and stopped there.
+- The delete never committed — row count unchanged at 110,852, freelist 0, `quick_check` ok.
+- The WAL was not truncated by force-stop or by relaunch, leaving the `databases/` directory at
+  **2.87 GB, up from 1.65 GB**.
+- The failure reason was lost: the call was wrapped in `runCatching` with no logging. That was the
+  mistake that made this hard to diagnose — **log the exception on any retry.**
+
+This is the same trap already recorded in AGENTS.md for the EPG index ("Clear All EPG Data takes
+10+ minutes with DELETE FROM ... 4M+ rows on NVIDIA Shield with low-IOPS flash storage"), whose fix
+was DB `destroy()` + `getInstance()` rather than row-level deletion. A bulk `DELETE` against this
+table on this hardware is not viable.
+
+**For a retry, in rough order of promise:**
+
+1. **Recreate rather than delete.** The table is a disposable cache with a 6-hour expiry; dropping
+   and recreating it is close to free next to a 1.2 GB WAL. Matches the existing EPG-index
+   precedent. Costs one refetch of genuinely fresh rows, which is a small minority.
+2. **Bound it at write time** — cap payload size, or skip caching responses over some threshold.
+   Six rows exceed 1 MB and 634 exceed 250 KB; refusing to cache those alone removes ~236 MiB.
+3. **Stop storing empty payloads.** 97,483 rows encode "no EPG" in 19 bytes each. Cheap in space
+   but they dominate row count and so every sweep's cost.
+4. **Delete in bounded batches** with a checkpoint between, if a delete is used at all.
+
+Whatever the approach, it needs a WAL strategy: an unbounded transaction against this table
+produces a WAL the size of the data.
+
 ## Reprioritised down — measured as not the problem
 
 - **`AmbientBackdrop` / `GlassPanel` blur.** Both gated on API 31+; the Shields are API 30, so
