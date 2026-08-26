@@ -7,7 +7,7 @@ import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
-import androidx.compose.ui.node.invalidateMeasurement
+import androidx.compose.ui.node.invalidatePlacement
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Constraints
 import kotlinx.coroutines.Job
@@ -65,11 +65,20 @@ private class StaggeredEntranceNode(
                     val eased = 1f - (1f - progress) * (1f - progress)
                     alpha = eased
                     translationY = (1f - eased) * ENTRANCE_TRANSLATION_PX
-                    invalidateMeasurement()
+                    // Placement, not measurement: alpha and translationY are applied by the
+                    // graphics layer in placeWithLayer below and cannot change the measured size,
+                    // so invalidateMeasurement() was dragging this item *and its parent lazy list*
+                    // through a full measure pass on every frame of the animation.
+                    //
+                    // Correctness, not a measured win: this was tried as the fix for the ~1s stall
+                    // after a Live TV back-out and made no difference to it (see
+                    // plans/tv-ui-performance-plan.md task 6b). Kept because invalidating
+                    // measurement for a placement-only animation is simply wrong.
+                    invalidatePlacement()
                 }
                 alpha = 1f
                 translationY = 0f
-                invalidateMeasurement()
+                invalidatePlacement()
             }
     }
 

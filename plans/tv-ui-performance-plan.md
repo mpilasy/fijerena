@@ -347,10 +347,41 @@ Also contributing, not previously listed: `CinemaThumbnail` starts a `rememberIn
 shimmer per unloaded image, so 25 rows means 25 concurrent infinite animations until the logos
 resolve.
 
-**Fix:** task 3 (`invalidatePlacement()`), plus dropping `staggeredEntrance` from list rows, plus
-capping or removing the per-row shimmer. Verify by re-running the table above with 25 rows injected —
-see `reference_history_row_injection` for the injection procedure; back up
-`shared_prefs/media_cache_<providerId>.xml` and restore it afterwards.
+**Attempted and did not work.** The entrance-replay theory above was wrong. Both fixes were built and
+measured on the same 25-row harness:
+
+| 25-row Live TV back-out | slow frames | total slow time | summed `unknownDelay` |
+|---|---|---|---|
+| baseline | 9–15 | 846–1120ms | 418–540ms |
+| task 3 + `staggeredEntrance` removed from all list rows | 10–14 | 1014–1315ms | 483–629ms |
+| 25 rows carrying **no logos at all** | 11–13 | 795–967ms | 303–388ms |
+
+Removing the entrance animation entirely changed nothing, so it was never the driver. Stripping
+every logo barely moved it either, so image loading is a minor contributor at most. Both theories
+are dead; do not re-propose either.
+
+The frame shape is unchanged by any of it: one heavy rebuild frame (`draw` 160–200ms) followed by
+~12 frames of `anim` 4–58ms with `unknownDelay` 0–64ms. `anim` is where Compose runs recomposition,
+and `unknownDelay` is main-thread Looper work *outside* the frame pipeline. So the tail is repeated
+recomposition plus main-thread work, and it scales with row count — but which state change is
+driving the repeats is still unknown.
+
+**What was kept:** the `invalidatePlacement()` change in `StaggeredEntrance.kt`. It produced no
+measurable improvement here, but invalidating measurement for an animation applied via
+`placeWithLayer` is wrong regardless. The row-level removals were reverted — a visual change with no
+measured benefit should not ship.
+
+**Next diagnostic, not yet done.** This needs recomposition attribution, which `atrace` cannot give:
+add `androidx.tracing:tracing-perfetto` as a `debugImplementation` so Compose emits per-composable
+recomposition markers, then trace the back-out and find what recomposes ~12 times. Candidates worth
+checking first, all of which emit into the list after it is already on screen: `loadNowPlaying`'s two
+`_nowPlaying` emissions, `refreshPerItemData`'s three separate StateFlow updates
+(`_favoriteIds`, `_watchProgress`, `_watchedIds`), and the preview's `loadStreamLight` EPG fetch.
+Guessing further without that attribution has already cost two wrong theories.
+
+Harness for any retry: inject N rows into `watch_history_v3` per `reference_history_row_injection`,
+back up `shared_prefs/media_cache_<providerId>.xml` first and restore it after; measure with a
+temporary `FrameMetrics` listener, since `dumpsys gfxinfo framestats` cannot see this flow.
 
 `enteredStreamIds` / `enteredCategoryIds` are plain `remember`, not `rememberSaveable`. Navigation
 Compose disposes a destination's composition on navigate-away, so popping back loses the set and
