@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.core.content.edit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -7,6 +8,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -44,6 +46,46 @@ class XtreamEpgManager(
 
     init {
         purgeLegacyPrefsCache()
+        evictStaleCache()
+    }
+
+    /**
+     * Sweep EPG rows that are already past the expiry.
+     *
+     * The cache expired but never evicted: reads filter `updatedAt >= cutoff`, so stale rows went
+     * unread while still occupying disk. Measured on a Shield, the table reached 1.2 GB — 83% of
+     * `xtream_v2.db` — of which *none* was inside the 6-hour window, so it held no usable EPG at
+     * all. See plans/tv-ui-performance-plan.md.
+     *
+     * Batched, with a pause between batches, for the reason in [XtreamEpgCacheDao.deleteStaleBatch]:
+     * this database is `auto_vacuum = FULL`, so one unbounded delete tries to reshuffle the whole
+     * file in a single transaction. Runs once per process — the sweep is not provider-scoped, so a
+     * second manager would only re-scan a table it just swept — and off the caller's thread.
+     *
+     * Failures are logged, not swallowed. An earlier attempt wrapped this in a bare `runCatching`
+     * and the reason it never committed was lost.
+     */
+    private fun evictStaleCache() {
+        if (!staleEvictionDone.compareAndSet(false, true)) return
+        writeScope.launch {
+            val started = System.currentTimeMillis()
+            var removed = 0
+            try {
+                while (true) {
+                    val n = epgCacheDao.deleteStaleBatch(freshnessCutoff(), STALE_SWEEP_BATCH)
+                    if (n <= 0) break
+                    removed += n
+                    // Yield the database between commits so browsing stays responsive while a
+                    // long-neglected cache is worked through.
+                    delay(STALE_SWEEP_PAUSE_MS)
+                }
+                if (removed > 0) {
+                    Log.i(TAG, "EPG cache sweep removed $removed stale rows in ${System.currentTimeMillis() - started}ms")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "EPG cache sweep failed after $removed rows", e)
+            }
+        }
     }
 
     /**
@@ -210,16 +252,27 @@ class XtreamEpgManager(
     private fun cacheEpgBatch(entries: Map<Int, EpgResponse>) {
         if (!cachingEnabled || entries.isEmpty()) return
         val now = System.currentTimeMillis()
-        epgCacheDao.upsertAll(
-            entries.map { (streamId, epg) ->
-                XtreamEpgCacheEntity(
-                    providerId = providerId,
-                    streamId = streamId,
-                    payload = json.encodeToString(epg),
-                    updatedAt = now,
-                )
-            },
-        )
+        val rows =
+            entries.mapNotNull { (streamId, epg) ->
+                val payload = json.encodeToString(epg)
+                // A handful of channels carry enormous listings — the largest measured was a single
+                // 1.7 MB blob, and the 634 rows above this threshold accounted for ~236 MiB on their
+                // own. They are the least worth caching too: a channel with that many programmes is
+                // no cheaper to re-parse from disk than to refetch. Over the cap, skip the write and
+                // let the next read go to the network.
+                if (payload.length > MAX_CACHED_PAYLOAD_CHARS) {
+                    null
+                } else {
+                    XtreamEpgCacheEntity(
+                        providerId = providerId,
+                        streamId = streamId,
+                        payload = payload,
+                        updatedAt = now,
+                    )
+                }
+            }
+        if (rows.isEmpty()) return
+        epgCacheDao.upsertAll(rows)
     }
 
     /**
@@ -237,6 +290,20 @@ class XtreamEpgManager(
     }
 
     private companion object {
+        const val TAG = "XtreamEpgManager"
+
+        /** Guards [evictStaleCache]; the sweep is process-wide, not per provider. */
+        val staleEvictionDone = java.util.concurrent.atomic.AtomicBoolean(false)
+
+        /** Rows per sweep commit — small enough that `auto_vacuum = FULL` page movement stays bounded. */
+        const val STALE_SWEEP_BATCH = 400
+
+        /** Breather between sweep commits so a large backlog does not monopolise the database. */
+        const val STALE_SWEEP_PAUSE_MS = 50L
+
+        /** Cache ceiling for one channel's listings; see [cacheEpgBatch]. */
+        const val MAX_CACHED_PAYLOAD_CHARS = 64 * 1024
+
         /** Requests in flight per chunk — matches the concurrency the old Semaphore allowed. */
         const val CHUNK_SIZE = 10
     }
