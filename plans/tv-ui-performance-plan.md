@@ -579,60 +579,88 @@ share one ViewModel across both entries.
 
 ---
 
-## Storage — the EPG cache expires but never evicts (open, first fix attempt failed)
+## Storage — the Xtream EPG cache is 1.2 GB of mostly-stale data (open, first fix attempt failed)
 
 Not a UI performance item, found while looking at why the app holds 1.7 GB on a Shield.
 
-**The defect is real and confirmed.** `xtream_epg_cache` is **1206 MiB of a 1.41 GiB
-`xtream_v2.db`** — 83% of the file. Streams and series together are 167 MiB. Per provider:
+**`xtream_epg_cache` is 1206 MiB of a 1.41 GiB `xtream_v2.db`** — 83% of the file; streams and
+series together are 167 MiB. ~88% of its rows are the empty literal `{"epg_listings":[]}` (19 bytes,
+under 2 MiB in total). All 1.19 GiB sits in **13,369 rows averaging ~90 KB**, the largest a single
+1.7 MB JSON blob for one channel, cached identically under both providers — which appear to be the
+same upstream service, so roughly half of the total is duplicated.
 
-| provider | rows | payload | streams | series |
+**It is bounded, and it is already full.** The primary key is `(providerId, streamId)` and writes
+use `REPLACE`, so there is at most one row per channel per provider. Coverage is already saturated:
+
+| provider | cache rows | live channels | coverage | orphaned rows |
 |---|---|---|---|---|
-| 1 | 53,968 | 567 MiB | 231,646 | 46,307 |
-| 5 | 56,884 | 627 MiB | 234,466 | 47,506 |
+| 1 | 53,968 | 54,031 | 99.9% | 78 |
+| 5 | 56,884 | 56,904 | 100.0% | 14 |
 
-~88% of rows are the empty literal `{"epg_listings":[]}` (19 bytes, under 2 MiB in total). All
-1.19 GiB sits in **13,369 rows averaging ~90 KB**, the largest a single 1.7 MB JSON blob for one
-channel — cached identically under both providers, which appear to be the same upstream service.
+An earlier draft of this section said the table is "retained forever… roughly 4.5 MB per category
+browsed". That described how it *filled*; it is not how it behaves now. Re-fetching a channel
+overwrites in place. Remaining growth comes only from new channels entering a lineup, a third
+provider being added (~600 MiB each, on this evidence), or upstream listings getting fatter.
 
-`EPG_CACHE_EXPIRY_MS` is 6 hours, but it is enforced **read-side only**: every read filters
-`updatedAt >= cutoff`, so stale rows stop being returned and are never deleted.
-`XtreamEpgCacheDao` has only `deleteStream(providerId, streamId)` and `deleteAll(providerId)` — no
-age sweep, no size cap, no LRU. Browsing one Live TV category caches EPG for up to 50 channels
-(`CategoryViewModel.loadNowPlaying`), so roughly 4.5 MB per category browsed, retained forever. The
-only thing that ever clears it is the EPG guide's manual refresh button
-(`EpgViewModel.forceRefresh`). Much of this duplicates `epg_index.db` (186 MiB of XMLTV), which
-`loadNowPlaying` already queries first.
+**So the problem is the plateau height, not runaway growth.** `EPG_CACHE_EXPIRY_MS` is 6 hours and
+is enforced **read-side only** — every read filters `updatedAt >= cutoff`, so stale rows stop being
+returned and nothing ever deletes them. `XtreamEpgCacheDao` has only
+`deleteStream(providerId, streamId)` and `deleteAll(providerId)`: no age sweep, no size cap, no LRU.
+At any given moment nearly all of that 1.2 GB is unreadable by the app and re-fetched from the
+network instead. The only thing that clears it is the EPG guide's manual refresh button
+(`EpgViewModel.forceRefresh`).
 
-**Attempted and reverted: `DELETE FROM xtream_epg_cache WHERE updatedAt < :cutoff`**, swept once per
-process from `XtreamEpgManager.init` on its write scope. On the Shield this **did not work and made
-things worse**:
+### The XMLTV index next door does this correctly
+
+`epg_index.db` holds much of the same information and `CategoryViewModel.loadNowPlaying` queries it
+*first*, falling back to the Xtream cache only for unmatched channels. Measured on the same device:
+
+| | `epg_index.db` | `xtream_epg_cache` |
+|---|---|---|
+| size | **184 MiB** | **1,206 MiB** |
+| contents | 318,712 programmes, 8,880 channels | 110,852 rows, ~13k of them fat |
+| bounded by | rolling **2.0-day** window | channel count (~57k per provider) |
+| age sweep | **yes** — `DELETE FROM epg_programme WHERE end_epoch < :cutoffEpoch` (`EpgIndexDao.kt:66`) | **no** |
+| refresh behaviour | atomic staging swap: `deleteBySourceIds` → copy staging → clear staging | in-place `REPLACE`, per channel |
+| dead space | 0%, `auto_vacuum=2` (incremental) | compact, but nearly all stale |
+
+The index spans only 2 days despite weeks of use, because each sync *replaces* its source's rows
+rather than appending. The pattern this table needs already exists in this codebase, two files over.
+
+### Attempted and reverted: bulk `DELETE`
+
+`DELETE FROM xtream_epg_cache WHERE updatedAt < :cutoff`, swept once per process from
+`XtreamEpgManager.init` on its write scope. On the Shield this **did not work and made things
+worse**:
 
 - The WAL grew to **1218 MiB** over ~160s and stopped there.
 - The delete never committed — row count unchanged at 110,852, freelist 0, `quick_check` ok.
-- The WAL was not truncated by force-stop or by relaunch, leaving the `databases/` directory at
-  **2.87 GB, up from 1.65 GB**.
+- The WAL survived force-stop and relaunch, leaving `databases/` at **2.87 GB, up from 1.65 GB**.
+  Reclaimed afterwards by deleting the `-wal`/`-shm` with the app stopped, once the database was
+  verified to open clean and complete without them.
 - The failure reason was lost: the call was wrapped in `runCatching` with no logging. That was the
   mistake that made this hard to diagnose — **log the exception on any retry.**
 
-This is the same trap already recorded in AGENTS.md for the EPG index ("Clear All EPG Data takes
-10+ minutes with DELETE FROM ... 4M+ rows on NVIDIA Shield with low-IOPS flash storage"), whose fix
-was DB `destroy()` + `getInstance()` rather than row-level deletion. A bulk `DELETE` against this
-table on this hardware is not viable.
+This is the same trap AGENTS.md already records for the EPG index ("Clear All EPG Data takes 10+
+minutes with DELETE FROM … 4M+ rows on NVIDIA Shield with low-IOPS flash storage"), whose fix was DB
+`destroy()` + `getInstance()` rather than row-level deletion. A bulk `DELETE` against this table on
+this hardware is not viable.
 
-**For a retry, in rough order of promise:**
+### For a retry, in rough order of promise
 
-1. **Recreate rather than delete.** The table is a disposable cache with a 6-hour expiry; dropping
-   and recreating it is close to free next to a 1.2 GB WAL. Matches the existing EPG-index
-   precedent. Costs one refetch of genuinely fresh rows, which is a small minority.
-2. **Bound it at write time** — cap payload size, or skip caching responses over some threshold.
-   Six rows exceed 1 MB and 634 exceed 250 KB; refusing to cache those alone removes ~236 MiB.
-3. **Stop storing empty payloads.** 97,483 rows encode "no EPG" in 19 bytes each. Cheap in space
-   but they dominate row count and so every sweep's cost.
-4. **Delete in bounded batches** with a checkpoint between, if a delete is used at all.
+1. **Cap payload size at write time.** Cheapest lever and no deletion needed: refusing to cache the
+   634 rows over 250 KB drops ~236 MiB, and the 6 rows over 1 MB alone are 7.6 MiB. A channel whose
+   listing does not fit simply is not cached and is fetched live.
+2. **Recreate rather than delete.** `DROP TABLE` + recreate is a schema operation, near-free in WAL
+   terms, against a disposable cache with a 6-hour expiry. Matches the EPG-index precedent. Costs a
+   refetch of the genuinely fresh minority.
+3. **Ask whether this cache should exist at all** at this size, given `epg_index.db` covers much of
+   it and is consulted first.
+4. **Stop storing empty payloads.** 97,483 rows encode "no EPG" in 19 bytes each — negligible space,
+   but they dominate row count and therefore the cost of any sweep.
 
-Whatever the approach, it needs a WAL strategy: an unbounded transaction against this table
-produces a WAL the size of the data.
+Whatever the approach, it needs a WAL strategy: an unbounded transaction against this table produces
+a WAL the size of the data.
 
 ## Reprioritised down — measured as not the problem
 
