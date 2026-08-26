@@ -722,7 +722,7 @@ private fun StreamNamePicker(
             Icon(
                 imageVector = CinemaIcons.ArrowDropDown,
                 contentDescription = stringResource(R.string.details_other_instances),
-                tint = textColor,
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
