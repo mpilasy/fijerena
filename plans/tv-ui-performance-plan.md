@@ -646,18 +646,50 @@ minutes with DELETE FROM … 4M+ rows on NVIDIA Shield with low-IOPS flash stora
 `destroy()` + `getInstance()` rather than row-level deletion. A bulk `DELETE` against this table on
 this hardware is not viable.
 
+### How much of it is ever usable: none, at rest
+
+Measured on the pulled database. "Fresh" means inside the 6-hour expiry, i.e. what a read could
+actually return:
+
+| window | rows | MiB | % of bytes |
+|---|---|---|---|
+| fresh (<6h, usable) | 270 | 0 | **0.0%** |
+| **stale (unreadable)** | **110,582** | **1194** | **100.0%** |
+| fresh **and** non-empty | **0** | **0** | **0.0%** |
+
+Not "nearly all stale" — entirely stale. The 270 rows still inside the window are all the empty
+`{"epg_listings":[]}` literal, so at that moment the table held **zero bytes of usable EPG in
+1.2 GB**.
+
+Caveat: that snapshot was taken after the device had been idle, so nothing had been fetched
+recently; during active use some rows would be fresh. But the ceiling is what matters. Browsing one
+category caches up to 50 channels and a heavy session might touch a few hundred, all of which
+expire 6 hours later — so **the most that is ever usable is hundreds of rows out of 110,852**. The
+table is sized by *channel count* while its working set is sized by *what was viewed recently*.
+Those differ by three orders of magnitude.
+
+**That makes this a design problem, not a missing sweep.** Adding eviction to a table that holds
+nothing useful treats the symptom. Any fix should start from "what working set does this need to
+hold", which is thousands of rows at most, not 110,852.
+
 ### For a retry, in rough order of promise
 
-1. **Cap payload size at write time.** Cheapest lever and no deletion needed: refusing to cache the
-   634 rows over 250 KB drops ~236 MiB, and the 6 rows over 1 MB alone are 7.6 MiB. A channel whose
-   listing does not fit simply is not cached and is fetched live.
-2. **Recreate rather than delete.** `DROP TABLE` + recreate is a schema operation, near-free in WAL
-   terms, against a disposable cache with a 6-hour expiry. Matches the EPG-index precedent. Costs a
-   refetch of the genuinely fresh minority.
-3. **Ask whether this cache should exist at all** at this size, given `epg_index.db` covers much of
-   it and is consulted first.
-4. **Stop storing empty payloads.** 97,483 rows encode "no EPG" in 19 bytes each — negligible space,
+1. **Measure the hit rate first.** A counter on the read path (`getCachedEpgBatch` hits vs misses)
+   during real use is the number that decides between shrinking this cache and deleting it. Cheap,
+   and everything below is guesswork without it.
+2. **Bound it by recency, not by channel count.** An LRU capped at a few thousand rows covers any
+   realistic working set in tens of MB. This is the fix that matches how the cache is actually used.
+3. **Cap payload size at write time.** Independent of the above and trivially safe: refusing the 634
+   rows over 250 KB drops ~236 MiB, and no single channel can contribute 1.7 MB again. A listing
+   that does not fit is simply fetched live.
+4. **Consider dropping the table entirely.** `epg_index.db` is consulted first and covers 8,880
+   channels; this cache only serves the fallback for the rest, and only within 6 hours of a fetch.
+   Whether that fallback earns 1.2 GB is exactly what step 1 answers.
+5. **Stop storing empty payloads.** 97,483 rows encode "no EPG" in 19 bytes each — negligible space,
    but they dominate row count and therefore the cost of any sweep.
+
+Note that a bulk `DELETE` is not the way to shrink it (see above); if a one-off reclaim is wanted,
+`DROP TABLE` + recreate is the near-free schema operation, matching the EPG-index precedent.
 
 Whatever the approach, it needs a WAL strategy: an unbounded transaction against this table produces
 a WAL the size of the data.
