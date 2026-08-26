@@ -3,11 +3,10 @@ package org.njarasoa.fijerena.feature.movie
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Star
@@ -168,16 +167,22 @@ private fun MovieDetailsContent(
     onAlternateStreamSelected: (MediaItem) -> Unit,
 ) {
     val extension = movieDetail.extension ?: "mp4"
-    val scrollState = rememberScrollState()
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(CinemaSpacing.md),
+    // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the related
+    // rows below paid their full layout cost while sitting off-screen — on the TV copy of this
+    // screen that was 200ms of a 215ms measure pass, and this screen's player exit shows the same
+    // ~167ms rebuild frame. Unlike the TV version, nothing moves visually here: the rows were
+    // already top-level siblings rather than nested inside a panel.
+    //
+    // Everything above the related rows stays in one item: it is a single flowing block that is
+    // largely on screen anyway, so splitting it would add churn without saving measurement.
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(CinemaSpacing.md),
     ) {
+        item(key = "detail") {
+        Column {
         // Cover image
         CinemaThumbnail(
             url = movieDetail.coverUrl,
@@ -452,20 +457,32 @@ private fun MovieDetailsContent(
             }
         }
 
+        }
+        }
+
         // Last thing on the screen, below the technical rows and the category: the rows are a
-        // place to go next, so they sit after everything about this title.
-        RelatedTitlesRow(
-            title = stringResource(R.string.details_more_like_this),
-            items = relatedTitles.recommended,
-            onItemClick = onRelatedTitleSelected,
-            modifier = Modifier.padding(top = CinemaSpacing.lg),
-        )
-        RelatedTitlesRow(
-            title = stringResource(R.string.details_similar_titles),
-            items = relatedTitles.similar,
-            onItemClick = onRelatedTitleSelected,
-            modifier = Modifier.padding(top = CinemaSpacing.lg),
-        )
+        // place to go next, so they sit after everything about this title. Items in their own
+        // right so the one that is off-screen is never composed or measured until scrolled to.
+        if (relatedTitles.recommended.isNotEmpty()) {
+            item(key = "related-recommended") {
+                RelatedTitlesRow(
+                    title = stringResource(R.string.details_more_like_this),
+                    items = relatedTitles.recommended,
+                    onItemClick = onRelatedTitleSelected,
+                    modifier = Modifier.padding(top = CinemaSpacing.lg),
+                )
+            }
+        }
+        if (relatedTitles.similar.isNotEmpty()) {
+            item(key = "related-similar") {
+                RelatedTitlesRow(
+                    title = stringResource(R.string.details_similar_titles),
+                    items = relatedTitles.similar,
+                    onItemClick = onRelatedTitleSelected,
+                    modifier = Modifier.padding(top = CinemaSpacing.lg),
+                )
+            }
+        }
     }
     }
 }

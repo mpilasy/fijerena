@@ -111,12 +111,25 @@ TV one):
 8        183.7      1.2         2.0    194.6     <- pure recomposition
 ```
 
-- The 167ms rebuild is the same defect just fixed on TV: `mobile/.../MovieDetailsScreen.kt:178`
-  still scrolls with `Column(verticalScroll)` and holds both `RelatedTitlesRow`s inside it
-  (`:457`, `:463`), so the off-screen row is measured every time. The TV fix (LazyColumn + hoisting
-  the rows) applies directly.
+- The 167ms rebuild was the same defect fixed on TV, and has now been fixed here too. Mobile
+  needed no design call: its rows were already top-level siblings in a flat `Column`, not nested in
+  a `GlassPanel`, so converting the container to `LazyColumn` changes nothing visually. Measured
+  after, same device and flow:
+
+  | | before | after |
+  |---|---|---|
+  | rebuild frame, draw + sync | 166.9ms | **85.4ms** |
+  | rebuild frame TOTAL | 215.2ms | **128.0ms** |
+  | flow janky / legacy | 50.0% / 91.7% | **19–31% / 33–100%** |
+  | p50 | 53ms | **16–32ms** |
+  | p90–p99 | 200ms | **150ms** |
+
+  The legacy counter stays noisy across runs; the p50 drop and the halved rebuild frame are the
+  trustworthy parts.
 - The **183.7ms recomposition frame has no TV equivalent** — nothing measured on the Shield came
-  close. Unexplained; needs its own investigation.
+  close. Unaffected by the fix above (153.8ms after), as expected: it is a recomposition frame, not
+  a layout one. Still unexplained and still needs its own investigation — likely the same
+  recomposition-attribution tooling task 6b needs.
 
 Also unported to mobile: the related-card style hoist. Mobile has its own
 `mobile/.../ui/components/RelatedTitlesRow.kt`, which still allocates `CardDefaults.*` per card.
@@ -557,7 +570,7 @@ release — this is here only so the numbers above are read as debug-build frame
 | 3 | **6** | **Done** — details screen made lazy and the rows hoisted out of the GlassPanel; worst rebuild frame 239ms → 166ms. The exit overall is still ~26% janky |
 | 3b | **8** | **Done** — one `CategoryViewModel` on Live TV entry instead of two; category select went from 14–100% janky to under 0.4% |
 | 4 | **6b** | **Open, two theories dead.** The reported "cursor dead then replays" symptom: ~1s of animation-phase tail on Live TV back-out, scaling with Recent list size. Entrance animations and image loading both ruled out by measurement. Needs recomposition attribution — see task 6b |
-| 4b | mobile port of 6 + 2 | Mobile has the same details-screen and card-allocation defects, plus an unexplained 183ms recomposition frame with no TV equivalent |
+| 4b | mobile port of 2 | **Port of 6 done** — mobile rebuild frame 215ms → 128ms. Mobile's `RelatedTitlesRow.kt` still allocates per card, and its unexplained ~154ms recomposition frame is untouched |
 | 5 | 2, 5 | Allocation churn feeding the 467–522ms GCs; safe, no behaviour change |
 | 6 | 7 | Nav transition still holds two screens live for 300ms |
 | 7 | 4 | Favorite lock per item — measured as *not* a UI-thread blocker (0.5ms), so lowest priority |
