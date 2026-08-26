@@ -250,10 +250,14 @@ private fun EpisodeListContent(
         remember(scale, typography) {
             object {
                 val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
-                val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
-                val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-                val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
                 val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
+                val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+                val headlineSmall = typography.headlineSmall.copy(fontSize = typography.headlineSmall.fontSize.scaled(scale))
+                val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
+                val bodyLarge = typography.bodyLarge.copy(fontSize = typography.bodyLarge.fontSize.scaled(scale))
+                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+                val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
+                val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
             }
         }
 
@@ -326,13 +330,15 @@ private fun EpisodeListContent(
     // below never overrides the season the user actually asked to resume.
     var hasManuallyToggledSeasons by remember(seriesDetail) { mutableStateOf(resumeSeasonNumber != null) }
 
+    // Focus requester for primary Play / Resume button
+    val playButtonFocusRequester = remember { FocusRequester() }
+
     // D-pad focus target for the resume episode card — requested below once it's on screen, so
     // OK is immediately playable without the user having to navigate to it first.
     val resumeCardFocusRequester = remember { FocusRequester() }
 
     // Scroll the resume episode into view once its season is expanded, so "highlighted" also
-    // means visible without the user having to scroll to find it — then move D-pad focus onto
-    // it directly.
+    // means visible without the user having to scroll to find it.
     LaunchedEffect(resumeEpisodeId, resumeSeasonNumber, expandedSeasons) {
         val targetId = resumeEpisodeId ?: return@LaunchedEffect
         val index =
@@ -345,12 +351,6 @@ private fun EpisodeListContent(
             )
         if (index != null) {
             listState.animateScrollToItem(index)
-            try {
-                resumeCardFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-                // Card not yet composed this frame — falls back to default D-pad
-                // focus, which still lands on the season containing it.
-            }
         }
     }
 
@@ -358,6 +358,7 @@ private fun EpisodeListContent(
     // entry into this screen — including coming back from the player — so a just-watched
     // episode's bar is current.
     var episodeProgress by remember(seriesDetail) { mutableStateOf<Map<String, Float>>(emptyMap()) }
+    var episodePlaybackPositions by remember(seriesDetail) { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var watchedEpisodeIds by remember(seriesDetail) { mutableStateOf<Set<String>>(emptySet()) }
 
     // Playback positions for every episode: the progress bars and watched checks above, plus
@@ -377,6 +378,12 @@ private fun EpisodeListContent(
             buildMap {
                 for ((id, watched) in allWatched) {
                     watched.resumeProgress()?.let { put(id, it) }
+                }
+            }
+        episodePlaybackPositions =
+            buildMap {
+                for ((id, watched) in allWatched) {
+                    watched.resumeProgress()?.let { put(id, watched.playbackPosition) }
                 }
             }
         watchedEpisodeIds =
@@ -420,6 +427,21 @@ private fun EpisodeListContent(
             seriesDetail.flattenedEpisodes(sortedSeasons)
         }
 
+    val anchorEpisode =
+        remember(flatEpisodes, resumeEpisodeId) {
+            flatEpisodes.firstOrNull { it.id == resumeEpisodeId } ?: flatEpisodes.firstOrNull()
+        }
+    val anchorResumePosMs = anchorEpisode?.id?.let { episodePlaybackPositions[it] } ?: 0L
+    val hasResume = anchorResumePosMs > 0L
+
+    // Request focus on Play/Resume button when screen loads or anchor arrives
+    LaunchedEffect(resumeEpisodeId) {
+        try {
+            playButtonFocusRequester.requestFocus()
+        } catch (_: IllegalStateException) {
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (selectedEpisode != null) {
             val current = selectedEpisode!!
@@ -447,216 +469,362 @@ private fun EpisodeListContent(
                 onBack = { selectedEpisode = null },
             )
         } else {
-            // Show episode list
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
+            // Show series details & episode list
+            LazyColumn(
+                state = listState,
+                contentPadding =
+                    PaddingValues(
+                        horizontal = Spacing.tvSafeMarginHorizontal,
+                        vertical = Spacing.tvSafeMarginVertical,
+                    ),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                modifier = Modifier.fillMaxSize(),
             ) {
-                // Header with series info and back button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                // Hero Section: Header + Poster + GlassPanel Metadata
+                item(key = "series_hero", contentType = "hero") {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // Header with back button, title, favorite, refresh, provider name
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top,
                         ) {
-                            // TMDB's clean title once it resolves, the provider's raw stream name until then
-                            Text(
-                                text = tmdbTitle ?: seriesName,
-                                style = scaledStyles.displaySmall,
-                                color = CinemaTextPrimary,
-                            )
-                            // Favorite button
-                            CinemaIconButton(
-                                onClick = onToggleFavorite,
-                                icon = {
-                                    Icon(
-                                        imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                        contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
-                                        tint = if (isFavorite) CinemaAccent else CinemaTextPrimary
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                                ) {
+                                    // TMDB's clean title once it resolves, the provider's raw stream name until then
+                                    Text(
+                                        text = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
+                                        style = scaledStyles.displaySmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    // Favorite button
+                                    CinemaIconButton(
+                                        onClick = onToggleFavorite,
+                                        icon = {
+                                            Icon(
+                                                imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                                contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
+                                                tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                            )
+                                        },
+                                    )
+                                    // Refresh button
+                                    CinemaIconButton(
+                                        onClick = { onRefresh() },
+                                        enabled = !isRefreshing,
+                                        icon = {
+                                            Icon(
+                                                imageVector = CinemaIcons.Refresh,
+                                                contentDescription = stringResource(R.string.series_refresh_info),
+                                                modifier =
+                                                    Modifier
+                                                        .size(TvDimensions.iconSmall.scaled(scale))
+                                                        .rotate(rotation),
+                                            )
+                                        },
                                     )
                                 }
+                            }
+                            Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
+                            Text(
+                                text = providerName,
+                                style = scaledStyles.titleSmall,
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             )
-                            // Refresh button
-                            CinemaIconButton(
-                                onClick = { onRefresh() },
-                                enabled = !isRefreshing,
-                                icon = {
-                                    Icon(
-                                        imageVector = CinemaIcons.Refresh,
-                                        contentDescription = stringResource(R.string.series_refresh_info),
-                                        modifier =
-                                            Modifier
-                                                .size(TvDimensions.iconSmall.scaled(scale))
-                                                .rotate(rotation),
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
+
+                        // Series content: poster + metadata
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
+                        ) {
+                            // Cover image
+                            CinemaThumbnail(
+                                url = seriesDetail.coverUrl,
+                                fallbackLetter = seriesName.firstOrNull(),
+                                contentType = ThumbnailContentType.TV_SHOW,
+                                modifier =
+                                    Modifier
+                                        .width(TvDimensions.posterWidth.scaled(scale))
+                                        .height(TvDimensions.posterHeightLarge.scaled(scale)),
+                            )
+
+                            // Metadata in glass panel
+                            GlassPanel(modifier = Modifier.weight(1f)) {
+                                Column(modifier = Modifier.padding(Spacing.lg.scaled(scale))) {
+                                    // Metadata header row: Content rating | Star rating | Year | Seasons/Episodes count | Ends at
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        seriesDetail.metadata.contentRating?.let { contentRating ->
+                                            Text(
+                                                text = contentRating,
+                                                style = scaledStyles.titleMedium,
+                                                color = CinemaTextSecondary,
+                                                modifier =
+                                                    Modifier
+                                                        .background(
+                                                            CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
+                                                            RoundedCornerShape(CornerRadius.small),
+                                                        ).padding(horizontal = Spacing.sm.scaled(scale), vertical = Spacing.xs.scaled(scale)),
+                                            )
+                                        }
+                                        seriesDetail.metadata.rating?.let { rating ->
+                                            Text(
+                                                text = "★ ${formatRating(rating)}",
+                                                style = scaledStyles.titleMedium,
+                                                color = CinemaAccent,
+                                            )
+                                        }
+                                        val year = seriesDetail.metadata.year ?: seriesDetail.metadata.releaseDate?.take(4)?.toIntOrNull()
+                                        year?.let {
+                                            Text(
+                                                text = "$it",
+                                                style = scaledStyles.titleMedium,
+                                                color = CinemaTextSecondary,
+                                            )
+                                        }
+                                        val countText =
+                                            if (sortedSeasons.size > 1) {
+                                                stringResource(R.string.series_seasons_and_episodes_format, sortedSeasons.size, totalEpisodes)
+                                            } else {
+                                                stringResource(R.string.series_total_episodes_format, totalEpisodes)
+                                            }
+                                        Text(
+                                            text = countText,
+                                            style = scaledStyles.titleMedium,
+                                            color = CinemaTextSecondary,
+                                        )
+                                        val anchorDuration = anchorEpisode?.metadata?.duration ?: seriesDetail.metadata.duration
+                                        val endsAtText =
+                                            remember(anchorDuration, anchorResumePosMs) {
+                                                computeEndsAt(context, anchorDuration, anchorResumePosMs)
+                                            }
+                                        if (endsAtText != null) {
+                                            Text(
+                                                text = stringResource(R.string.movie_ends_at_format, endsAtText),
+                                                style = scaledStyles.titleMedium,
+                                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
+                                            )
+                                        }
+                                    }
+
+                                    // Genre tags
+                                    seriesDetail.metadata.genre?.let { genre ->
+                                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                                        Text(
+                                            text = genre,
+                                            style = scaledStyles.bodyMedium,
+                                            color = CinemaAccent,
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+
+                                    // Play / Resume / Trailer buttons
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        if (hasResume) {
+                                            val resumeButtonText =
+                                                if (anchorEpisode != null) {
+                                                    stringResource(
+                                                        R.string.series_resume_episode_time_format,
+                                                        anchorEpisode.seasonNumber ?: 1,
+                                                        anchorEpisode.episodeNumber,
+                                                        formatTime(anchorResumePosMs),
+                                                    )
+                                                } else {
+                                                    stringResource(R.string.movie_resume_from_format, formatTime(anchorResumePosMs))
+                                                }
+                                            CinemaPrimaryButton(
+                                                onClick = {
+                                                    anchorEpisode?.let { ep ->
+                                                        onEpisodeSelected(ep.id, ep.title, ep.extension ?: "mp4", false)
+                                                    }
+                                                },
+                                                text = resumeButtonText,
+                                                modifier = Modifier.focusRequester(playButtonFocusRequester),
+                                            )
+                                            CinemaSecondaryButton(
+                                                onClick = {
+                                                    anchorEpisode?.let { ep ->
+                                                        onEpisodeSelected(ep.id, ep.title, ep.extension ?: "mp4", true)
+                                                    }
+                                                },
+                                                text = stringResource(R.string.movie_start_beginning),
+                                            )
+                                        } else {
+                                            val playButtonText =
+                                                if (anchorEpisode != null) {
+                                                    stringResource(
+                                                        R.string.series_play_episode_format,
+                                                        anchorEpisode.seasonNumber ?: 1,
+                                                        anchorEpisode.episodeNumber,
+                                                    )
+                                                } else {
+                                                    stringResource(R.string.series_play_episode_action)
+                                                }
+                                            CinemaPrimaryButton(
+                                                onClick = {
+                                                    anchorEpisode?.let { ep ->
+                                                        onEpisodeSelected(ep.id, ep.title, ep.extension ?: "mp4", false)
+                                                    }
+                                                },
+                                                text = playButtonText,
+                                                modifier = Modifier.focusRequester(playButtonFocusRequester),
+                                            )
+                                        }
+                                        seriesDetail.metadata.trailerUrl?.let { trailer ->
+                                            CinemaSecondaryButton(
+                                                onClick = { openExternalUrl(context, trailer) },
+                                                text = stringResource(R.string.details_watch_trailer),
+                                            )
+                                        }
+                                    }
+
+                                    // Plot/Description
+                                    seriesDetail.metadata.plot?.let { plot ->
+                                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+                                        Text(
+                                            text = plot,
+                                            style = scaledStyles.bodyLarge,
+                                            color = CinemaTextPrimary,
+                                            maxLines = 6,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+
+                                    // Cast, Director
+                                    seriesDetail.metadata.cast?.let { cast ->
+                                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                                        Text(
+                                            text = stringResource(R.string.movie_cast_format, cast),
+                                            style = scaledStyles.bodySmall,
+                                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                    seriesDetail.metadata.director?.let { director ->
+                                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                                        Text(
+                                            text = stringResource(R.string.movie_director_format, director),
+                                            style = scaledStyles.bodySmall,
+                                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                        )
+                                    }
+
+                                    // StreamNamePicker dropdown
+                                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                                    StreamNamePicker(
+                                        currentName = seriesName,
+                                        alternates = alternateStreams,
+                                        onSelect = onAlternateStreamSelected,
+                                        textStyle = scaledStyles.bodySmall,
                                     )
+
+                                    // TMDB ID
+                                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                                    Text(
+                                        text = stringResource(R.string.details_tmdb_format, seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
+                                        style = scaledStyles.bodySmall,
+                                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                                    )
+
+                                    // Category button
+                                    if (categoryName != null) {
+                                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+                                        CinemaSecondaryButton(
+                                            onClick = onCategorySelected,
+                                            text = stringResource(R.string.details_category_format, categoryName),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
+                        Text(
+                            text = stringResource(R.string.series_episodes_header),
+                            style = scaledStyles.headlineSmall,
+                            color = CinemaTextPrimary,
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    }
+                }
+
+                // Season-grouped episodes list
+                sortedSeasons.forEach { season ->
+                    val seasonKey = season.seasonNumber.toString()
+                    val seasonEpisodes = sortedEpisodesBySeason[seasonKey] ?: emptyList()
+                    val isExpanded = !hasMultipleSeasons || season.seasonNumber in expandedSeasons
+
+                    // Season header (skip if only 1 season)
+                    if (hasMultipleSeasons) {
+                        item(key = "season_header_$seasonKey", contentType = "header") {
+                            SeasonHeader(
+                                season = season,
+                                episodeCount = seasonEpisodes.size,
+                                isExpanded = isExpanded,
+                                onToggle = {
+                                    hasManuallyToggledSeasons = true
+                                    expandedSeasons =
+                                        if (isExpanded) {
+                                            emptySet()
+                                        } else {
+                                            setOf(season.seasonNumber)
+                                        }
                                 },
                             )
                         }
-                        // Show episode count
-                        Text(
-                            text = stringResource(R.string.series_total_episodes_format, totalEpisodes),
-                            style = scaledStyles.labelSmall,
-                            color = CinemaTextSecondary,
+                    }
+
+                    if (isExpanded) {
+                        items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
+                            val isContinueWatching = episode.id == resumeEpisodeId
+                            EpisodeCard(
+                                episode = episode,
+                                cardStyle = episodeCardStyle,
+                                isContinueWatching = isContinueWatching,
+                                watchProgress = episodeProgress[episode.id] ?: 0f,
+                                isWatched = episode.id in watchedEpisodeIds,
+                                focusRequester = if (isContinueWatching) resumeCardFocusRequester else null,
+                                onClick = {
+                                    selectedEpisode = episode
+                                },
+                            )
+                        }
+                    }
+                }
+
+                // Last rows of the list: Related titles
+                if (relatedTitles.recommended.isNotEmpty()) {
+                    item(key = "recommended", contentType = "related") {
+                        RelatedTitlesRow(
+                            title = stringResource(R.string.details_more_like_this),
+                            items = relatedTitles.recommended,
+                            onItemClick = onRelatedTitleSelected,
+                            modifier = Modifier.padding(top = Spacing.md.scaled(scale)),
                         )
-                        seriesDetail.metadata.plot?.let { plot ->
-                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                            Text(
-                                text = plot,
-                                style = scaledStyles.bodyMedium,
-                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        // Series metadata: genre, rating, cast
-                        val metadataParts =
-                            remember(seriesDetail) {
-                                listOfNotNull(
-                                    seriesDetail.metadata.genre,
-                                    seriesDetail.metadata.rating?.let { context.getString(R.string.series_rating_format, formatRating(it)) },
-                                    seriesDetail.metadata.contentRating,
-                                    seriesDetail.metadata.cast?.let { context.getString(R.string.movie_cast_format, it) },
-                                    context.getString(
-                                        R.string.details_tmdb_format,
-                                        seriesDetail.metadata.tmdbId ?: context.getString(R.string.details_tmdb_none),
-                                    ),
-                                )
-                            }
-                        if (metadataParts.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                            Text(
-                                text = metadataParts.joinToString(" · "),
-                                style = scaledStyles.labelMedium,
-                                color = CinemaAccentLight,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-                    Text(
-                        text = providerName,
-                        style = scaledStyles.titleSmall,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    )
-                }
-
-                // The provider's own (often raw) stream name, now that the header shows TMDB's
-                // title. A dropdown when the local catalogue holds other instances of the same
-                // TMDB title.
-                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                StreamNamePicker(
-                    // The catalogue's raw name, not seriesDetail.name — some providers' detail
-                    // API returns a cleaned-up name inconsistent with the raw name alternates
-                    // are listed under, so use the same source as alternates.
-                    currentName = seriesName,
-                    alternates = alternateStreams,
-                    onSelect = onAlternateStreamSelected,
-                    textStyle = scaledStyles.labelSmall,
-                )
-
-                // Category this series belongs to — OK opens its series list — and the trailer
-                val trailer = seriesDetail.metadata.trailerUrl
-                if (categoryName != null || trailer != null) {
-                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (categoryName != null) {
-                            CinemaSecondaryButton(
-                                onClick = onCategorySelected,
-                                text = stringResource(R.string.details_category_format, categoryName),
-                            )
-                        }
-                        trailer?.let {
-                            CinemaSecondaryButton(
-                                onClick = { openExternalUrl(context, it) },
-                                text = stringResource(R.string.details_watch_trailer),
-                            )
-                        }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
-
-                // Season-grouped episodes list
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    sortedSeasons.forEach { season ->
-                        val seasonKey = season.seasonNumber.toString()
-                        val seasonEpisodes = sortedEpisodesBySeason[seasonKey] ?: emptyList()
-                        val isExpanded = !hasMultipleSeasons || season.seasonNumber in expandedSeasons
-
-                        // Season header (skip if only 1 season)
-                        if (hasMultipleSeasons) {
-                            item(key = "season_header_$seasonKey", contentType = "header") {
-                                SeasonHeader(
-                                    season = season,
-                                    episodeCount = seasonEpisodes.size,
-                                    isExpanded = isExpanded,
-                                    onToggle = {
-                                        hasManuallyToggledSeasons = true
-                                        expandedSeasons =
-                                            if (isExpanded) {
-                                                emptySet()
-                                            } else {
-                                                setOf(season.seasonNumber)
-                                            }
-                                    },
-                                )
-                            }
-                        }
-
-                        if (isExpanded) {
-                            items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
-                                val isContinueWatching = episode.id == resumeEpisodeId
-                                EpisodeCard(
-                                    episode = episode,
-                                    cardStyle = episodeCardStyle,
-                                    isContinueWatching = isContinueWatching,
-                                    watchProgress = episodeProgress[episode.id] ?: 0f,
-                                    isWatched = episode.id in watchedEpisodeIds,
-                                    focusRequester = if (isContinueWatching) resumeCardFocusRequester else null,
-                                    onClick = {
-                                        selectedEpisode = episode
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    // Last rows of the list rather than below it: the list fills the pane, so
-                    // anything placed after it would sit off screen.
-                    if (relatedTitles.recommended.isNotEmpty()) {
-                        item(key = "recommended", contentType = "related") {
-                            RelatedTitlesRow(
-                                title = stringResource(R.string.details_more_like_this),
-                                items = relatedTitles.recommended,
-                                onItemClick = onRelatedTitleSelected,
-                                modifier = Modifier.padding(top = Spacing.md.scaled(scale)),
-                            )
-                        }
-                    }
-                    if (relatedTitles.similar.isNotEmpty()) {
-                        item(key = "similar", contentType = "related") {
-                            RelatedTitlesRow(
-                                title = stringResource(R.string.details_similar_titles),
-                                items = relatedTitles.similar,
-                                onItemClick = onRelatedTitleSelected,
-                                modifier = Modifier.padding(top = Spacing.md.scaled(scale)),
-                            )
-                        }
+                if (relatedTitles.similar.isNotEmpty()) {
+                    item(key = "similar", contentType = "related") {
+                        RelatedTitlesRow(
+                            title = stringResource(R.string.details_similar_titles),
+                            items = relatedTitles.similar,
+                            onItemClick = onRelatedTitleSelected,
+                            modifier = Modifier.padding(top = Spacing.md.scaled(scale)),
+                        )
                     }
                 }
             }
@@ -897,11 +1065,25 @@ private fun EpisodeDetailPanel(
 
                     Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-                    // Metadata row: rating | duration | ends at
+                    // Metadata row: content rating | rating | year | duration | ends at
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        val contentRating = episode.metadata.contentRating ?: seriesDetail.metadata.contentRating
+                        contentRating?.let {
+                            Text(
+                                text = it,
+                                style = detailScaledStyles.titleMedium,
+                                color = CinemaTextSecondary,
+                                modifier =
+                                    Modifier
+                                        .background(
+                                            CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
+                                            RoundedCornerShape(CornerRadius.small),
+                                        ).padding(horizontal = Spacing.sm.scaled(scale), vertical = Spacing.xs.scaled(scale)),
+                            )
+                        }
                         // Prefer episode rating, fallback to series rating
                         val rating = episode.metadata.rating ?: seriesDetail.metadata.rating
                         rating?.let {
@@ -909,6 +1091,14 @@ private fun EpisodeDetailPanel(
                                 text = "★ ${formatRating(it)}",
                                 style = detailScaledStyles.titleMedium,
                                 color = CinemaAccent,
+                            )
+                        }
+                        val year = episode.metadata.year ?: episode.metadata.airDate?.take(4)?.toIntOrNull() ?: seriesDetail.metadata.year
+                        year?.let {
+                            Text(
+                                text = "$it",
+                                style = detailScaledStyles.titleMedium,
+                                color = CinemaTextSecondary,
                             )
                         }
                         episode.metadata.duration?.let { duration ->
