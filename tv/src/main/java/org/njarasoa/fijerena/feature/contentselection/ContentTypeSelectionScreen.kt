@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -562,12 +563,22 @@ private fun ContentTypeHeroCard(
                                 ),
                             label = "live_pulse_alpha",
                         )
+                        // pulseAlpha is read inside graphicsLayer's lambda, never in the composable
+                        // body. Read from the body (as `color.copy(alpha = pulseAlpha)` did) it
+                        // invalidates *composition* every animation frame — and since this runs
+                        // forever, Home recomposed at 60fps with nothing on screen changing:
+                        // 242 recompositions per 4 idle seconds, measured on a Shield, versus 0 on
+                        // every other screen. Every navigation out of Home therefore started with
+                        // the main thread already saturated. In the lambda the read is deferred to
+                        // draw, so the animation costs a layer redraw and no recomposition, and the
+                        // colors stay constant instead of allocating two Color objects per frame.
                         Box(
                             modifier =
                                 Modifier
                                     .size(TvDimensions.liveDotSize.scaled(scale))
-                                    .border(TvDimensions.borderThin, CinemaTextPrimary.copy(alpha = pulseAlpha), CircleShape)
-                                    .background(CinemaLive.copy(alpha = pulseAlpha), shape = CircleShape),
+                                    .graphicsLayer { alpha = pulseAlpha }
+                                    .border(TvDimensions.borderThin, CinemaTextPrimary, CircleShape)
+                                    .background(CinemaLive, shape = CircleShape),
                         )
                     }
                 }
