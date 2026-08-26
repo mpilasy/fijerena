@@ -493,15 +493,36 @@ This is the measured 239ms player-exit frame: 38ms recompose + 193ms rebuilding 
 elements. Rows enter and leave constantly on a D-pad UI. The alternative — tracking entered ids in
 `rememberSaveable` — still pays full price on first entry into every list.
 
-### 7. Nav transition holds two screens live for 300ms
-`tv/.../navigation/TvNavHost.kt:186-189`
+### 7. Nav transition holds two screens live for 300ms — **MEASURED, NOT CHANGED 2026-08-26**
+`tv/.../navigation/TvNavHost.kt:186-189` · `core/ui/.../CinemaAnimation.kt:10`
 
-`CinemaAnimation.navTransitionMs = 300`, during which both screens are composed and drawn. Already
-cut down from navigation-compose's 700ms default. With Home → Movies at p50 19ms per frame, 300ms
-of double-composition is ~18 frames that all miss.
+`CinemaAnimation.navTransitionMs = 300`, during which both screens are composed and drawn. All four
+variants measured on a Shield, Home → Movies, steady-state runs only (each condition's first run
+after install is JIT-cold — 42% / 63% / 56% / 30% — and discarded):
 
-**Fix:** try 150–200ms, and consider `EnterTransition.None` for `Screen.CategoryList`. Cheap to try,
-trivial to revert.
+| | janky | p50 | p90 | p95 |
+|---|---|---|---|---|
+| **A — 300ms (current, kept)** | 14.8 / 14.3% | 5ms | 24–28ms | 46–48ms |
+| B — 150ms | 14.6 / 10.9% | 5ms | 23–24ms | 44–46ms |
+| C — `EnterTransition.None` globally | 13.1 / 9.8% | 6ms | 14–21ms | **23–24ms** |
+| D — `None` for `Screen.CategoryList` only | 15.5 / 15.3% | 6ms | 26–27ms | **101–109ms** |
+
+Three conclusions, all of which close off a suggestion this document previously made:
+
+- **Halving the duration does nothing.** B sits inside A's noise. Do not re-propose "try 150–200ms".
+- **Only removing the animation entirely helps** — C halves p95. But ~23ms is small against the
+  200–500ms stalls that actually matter, and it costs the app's motion design on every navigation,
+  on both platforms (the constant is shared with `MobileNavHost`). Judged not worth it; **300ms
+  kept**.
+- **The targeted version is actively worse than doing nothing.** D roughly doubles p95. Navigation
+  Compose takes the *exit* transition from the outgoing destination, so overriding only
+  `CategoryList` leaves its neighbour still running the 300ms `fadeOut`: the heavy screen composes
+  and draws immediately while the other is mid-fade, so both are live anyway — the cost of the
+  transition without the benefit. Making it work would mean overriding the exit transition of every
+  destination that can reach `CategoryList`, which converges on C. **Do not re-propose per-destination
+  transitions here.**
+
+No code change. Recorded so the three dead ends are not retried.
 
 ### 8. Live TV entry loaded the category screen twice — **FIXED 2026-08-26**
 `tv/.../navigation/TvNavHost.kt:196-224`
@@ -594,7 +615,7 @@ release — this is here only so the numbers above are read as debug-build frame
 | 4 | **6b** | **Open, two theories dead.** The reported "cursor dead then replays" symptom: ~1s of animation-phase tail on Live TV back-out, scaling with Recent list size. Entrance animations and image loading both ruled out by measurement. Needs recomposition attribution — see task 6b |
 | 4b | mobile port of 2 | **Port of 6 done** — mobile rebuild frame 215ms → 128ms. Mobile's `RelatedTitlesRow.kt` still allocates per card, and its unexplained ~154ms recomposition frame is untouched |
 | 5 | 2, 5 | **Done** — both landed; task 2's direct effect is within noise, as expected |
-| 6 | 7 | Nav transition still holds two screens live for 300ms |
+| 6 | 7 | **Closed as a negative result** — all four variants measured, 300ms kept |
 | 7 | 4 | Favorite lock per item — measured as *not* a UI-thread blocker (0.5ms), so lowest priority |
 
 ## Verification
