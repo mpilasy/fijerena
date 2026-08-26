@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +40,12 @@ import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.Card
+import androidx.tv.material3.CardColors
 import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.CardGlow
+import androidx.tv.material3.CardScale
+import androidx.tv.material3.CardShape
+import androidx.tv.material3.Glow
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
@@ -142,6 +148,7 @@ internal fun CategoryList(
     )
 
     val scale = LocalUiScale.current
+    val cardStyle = categoryCardStyle(scale)
     val typography = MaterialTheme.typography
     val scaledTitleLarge =
         remember(scale, typography) {
@@ -221,6 +228,7 @@ internal fun CategoryList(
                             CategoryItem(
                                 category = category,
                                 isSelected = category.id == selectedCategoryId,
+                                cardStyle = cardStyle,
                                 isFavorite = false,
                                 onClick = { onCategorySelected(category.id) },
                                 onLongPress = {},
@@ -257,6 +265,7 @@ internal fun CategoryList(
                         CategoryItem(
                             category = category,
                             isSelected = category.id == selectedCategoryId,
+                            cardStyle = cardStyle,
                             isFavorite = category.id in favoriteCategoryIds,
                             onClick = { onCategorySelected(category.id) },
                             onLongPress = { onCategoryLongPress(category) },
@@ -277,11 +286,65 @@ internal fun CategoryList(
     }
 }
 
+/**
+ * Row card styling, built once per list composition instead of once per row.
+ *
+ * `CardDefaults.*` are `@Composable` and so cannot be wrapped in `remember`; hoisting the calls out
+ * of the item body is what stops a full `CardColors`/`CardScale`/`CardGlow`/`CardShape` set being
+ * allocated per visible row per recomposition. Selection is the only thing that varies, so both
+ * colour sets are built up front and the row picks one. Same pattern, and same reason, as
+ * `StreamList`'s `StreamCardStyle`.
+ */
+@Immutable
+private data class CategoryCardStyle(
+    val colors: CardColors,
+    val selectedColors: CardColors,
+    val cardScale: CardScale,
+    val glow: CardGlow,
+    val shape: CardShape,
+)
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun categoryCardStyle(scale: Float): CategoryCardStyle =
+    CategoryCardStyle(
+        colors =
+            CardDefaults.colors(
+                containerColor = CinemaSurface,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                focusedContentColor = CinemaTextPrimary,
+            ),
+        selectedColors =
+            CardDefaults.colors(
+                containerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
+                contentColor = CinemaAccent,
+                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                focusedContentColor = CinemaTextPrimary,
+            ),
+        cardScale =
+            CardDefaults.scale(
+                scale = TvFocusTokens.defaultScale,
+                focusedScale = TvFocusTokens.focusedScaleContent,
+                pressedScale = TvFocusTokens.pressedScaleSubtle,
+            ),
+        glow =
+            CardDefaults.glow(
+                focusedGlow =
+                    Glow(
+                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
+                        elevation = TvFocusTokens.focusShadowElevation,
+                    ),
+            ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
+    )
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun CategoryItem(
     category: MediaCategory,
     isSelected: Boolean,
+    cardStyle: CategoryCardStyle,
     isFavorite: Boolean = false,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
@@ -317,38 +380,10 @@ private fun CategoryItem(
                         Modifier
                     },
                 ),
-        colors =
-            CardDefaults.colors(
-                containerColor =
-                    if (isSelected) {
-                        CinemaAccent.copy(alpha = CinemaAlpha.glassBorder)
-                    } else {
-                        CinemaSurface
-                    },
-                contentColor =
-                    if (isSelected) {
-                        CinemaAccent
-                    } else {
-                        CinemaTextPrimary
-                    },
-                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleContent,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        glow =
-            CardDefaults.glow(
-                focusedGlow =
-                    androidx.tv.material3.Glow(
-                        elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
-                        elevation = TvFocusTokens.focusShadowElevation,
-                    ),
-            ),
+        colors = if (isSelected) cardStyle.selectedColors else cardStyle.colors,
+        shape = cardStyle.shape,
+        scale = cardStyle.cardScale,
+        glow = cardStyle.glow,
     ) {
         Row(
             modifier =
