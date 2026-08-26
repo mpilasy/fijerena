@@ -15,7 +15,9 @@ Device: `192.168.68.21` — NVIDIA Shield (darcy), **Android 11 / API 30**, app 
 Provider: stream4ktv (Xtream), 915 Live / 441 Movies / 374 TV Shows categories.
 Build: debug. Tool: `dumpsys gfxinfo` + `atrace`.
 
-The **after** column was measured 2026-08-26 on the same device, same provider, after task 1 landed.
+The **after** column was measured 2026-08-26 on the same device and provider. Rows other than the
+player exit reflect task 1 only; the player-exit row also includes task 6 (see below), which landed
+later.
 
 | Flow | Janky (before) | Janky (after) | p50 before → after | p95 before → after |
 |---|---|---|---|---|
@@ -24,14 +26,15 @@ The **after** column was measured 2026-08-26 on the same device, same provider, 
 | Select category → load stream list | 20.3% | **1.19%** | 5 → 5ms | 20 → 11ms |
 | **Home → Movies category screen** | **89.9%** | **12.7%** | 19 → 5ms | 89 → 39ms |
 | **Stream list → Movie Details** | **53.3%** | **26.0%** | 16 → 5ms | 20 → 101ms |
-| **Back out of player → Details** | 25.0% | 26.3% | 7 → 7ms | 250 → 200ms |
+| **Back out of player → Details** | 25.0% | ~26% | 7 → 6-8ms | 250 → 150-250ms |
 
 Home → Movies is the mean of three consecutive runs (12.96 / 12.73 / 12.50%) — a single run of any
 of these covers only ~60 frames, so one GC dominates a lone sample. Two caveats on the after column:
 Stream list → Movie Details rendered 347 frames before and 100 after, so its p95 is computed over a
 much smaller and differently-shaped sample (the p50 drop from 16ms to 5ms is the trustworthy half);
 and the player-exit row played different content than the before run, so treat it as
-order-of-magnitude.
+order-of-magnitude. That row's aggregate barely moved even after task 6; its real improvement shows
+in the per-frame breakdown (worst rebuild frame 239ms → 166ms), not in the percentiles.
 
 ### Live TV (measured 2026-08-26, after tasks 1 and the related-card hoist landed)
 
@@ -288,7 +291,7 @@ key repeats. Delete or gate on `AppSettings.isDevMode`.
 
 ## P2 — Screen rebuild cost
 
-### 6. Player exit — **misattributed in the first draft; measured 2026-08-26**
+### 6. Player exit — **misattributed in the first draft; measured, then FIXED 2026-08-26**
 
 The draft blamed `staggeredEntrance` replaying on back-navigation. That is wrong for this flow:
 **`MovieDetailsScreen` does not use `staggeredEntrance` at all**, and `finalizeSession` is cheap
@@ -336,14 +339,33 @@ trades one number against another. **Do not re-propose it** — the measurement 
 per-row `@Immutable RelatedCardStyle`, matching `StreamList`'s `StreamCardStyle`. Independent of the
 deferral, and the same allocation-churn fix as task 2.
 
-**The real fix, still to do — needs a design decision.** `EpisodeSelectionScreen` already puts these
-same rows inside a `LazyColumn` as `item {}` blocks (`:847-866`), so its off-screen row is never
-composed or laid out. `MovieDetailsScreen` scrolls with `Column(Modifier.verticalScroll(...))`,
-which measures every child including the fully off-screen `Similar Titles` row — 85ms for content
-nobody has scrolled to. Matching the sibling screen would delete that 85ms outright rather than
-deferring it. The obstacle is not the scrolling container: the rows sit *inside* the `GlassPanel`
-next to the metadata (`:626-637`), so hoisting them to top-level lazy items moves them out of the
-glass panel visually. That is a design change, so it is not mine to make.
+**The real fix — done.** `EpisodeSelectionScreen` already puts these same rows inside a
+`LazyColumn` as `item {}` blocks (`:847-866`), so its off-screen row is never composed or laid out.
+`MovieDetailsScreen` scrolled with `Column(Modifier.verticalScroll(...))`, which measures every
+child including the fully off-screen `Similar Titles` row — 85ms for content nobody had scrolled to.
+
+The obstacle was never the container: the rows sat *inside* the `GlassPanel` next to the metadata,
+so hoisting them to top-level lazy items moves them out of the panel visually. That was a design
+call, not a technical one. Both layouts were screenshotted on the TV emulator and the hoisted one
+was chosen: the panel now closes with a bottom border under the category chip, and the rows sit at
+the page's left margin spanning the full width instead of being inset beside the poster.
+
+Result on the Shield, backing out of the player:
+
+| | before any fix | after |
+|---|---|---|
+| worst frame TOTAL | 239ms | **166ms** |
+| of which layout + draw | 193ms | **146ms** |
+| recompose | 38ms | **17ms** |
+| flow overall | 25% janky, p90 200–300ms | ~26% janky, p90 150–250ms |
+
+So the rebuild frame is a third cheaper, but the exit as a whole is not fixed — the aggregate jank
+barely moved. D-pad navigation was verified on the emulator (focus reaches both rows and the list
+scrolls them into view), which was the real risk in making a TV screen's container lazy.
+
+**Not ported to mobile.** `mobile/.../MovieDetailsScreen.kt:178` has the identical
+`Column(verticalScroll)` with both rows inside (`:457`, `:463`), and its player exit shows the same
+~167ms rebuild frame — see the mobile baseline above.
 
 ### 6b. Entrance animations replay on every back-navigation — **now the top item, measured 2026-08-26**
 `StreamList.kt:186,346` · `CategoryList.kt:156,267`
@@ -532,9 +554,10 @@ release — this is here only so the numbers above are read as debug-build frame
 |---|---|---|
 | 1 | **1** | **Done** — `Compose:recompose` on idle Home 242 → 0 |
 | 2 | re-measure all six flows | **Done** — see the after column above |
-| 3 | **6** | **Diagnosed, not fixed.** Cause measured precisely (200ms of related-row layout); the deferral was tried and reverted. Real fix blocked on a design call — see task 6 |
+| 3 | **6** | **Done** — details screen made lazy and the rows hoisted out of the GlassPanel; worst rebuild frame 239ms → 166ms. The exit overall is still ~26% janky |
 | 3b | **8** | **Done** — one `CategoryViewModel` on Live TV entry instead of two; category select went from 14–100% janky to under 0.4% |
-| 4 | **3 + 6b** | **Next.** The reported "cursor dead then replays" symptom: ~1s of animation-phase tail on Live TV back-out, scaling with Recent list size |
+| 4 | **6b** | **Open, two theories dead.** The reported "cursor dead then replays" symptom: ~1s of animation-phase tail on Live TV back-out, scaling with Recent list size. Entrance animations and image loading both ruled out by measurement. Needs recomposition attribution — see task 6b |
+| 4b | mobile port of 6 + 2 | Mobile has the same details-screen and card-allocation defects, plus an unexplained 183ms recomposition frame with no TV equivalent |
 | 5 | 2, 5 | Allocation churn feeding the 467–522ms GCs; safe, no behaviour change |
 | 6 | 7 | Nav transition still holds two screens live for 300ms |
 | 7 | 4 | Favorite lock per item — measured as *not* a UI-thread blocker (0.5ms), so lowest priority |
