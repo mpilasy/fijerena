@@ -78,6 +78,48 @@ jank source. It is why logos trickle in rather than appearing together.
 **The video preview itself is cheap** — idling on the split layout with a channel playing is 0.00%
 janky at 5ms per frame. That independently confirms dropping the `TextureView` item was right.
 
+### Mobile (measured 2026-08-26)
+
+Device: Xperia XZ2 Compact, **Android 15 / API 35**, 1080x2160 @ 480dpi. Provider stream4k.
+First mobile measurements of this investigation — everything above is TV.
+
+| Flow | Janky | Janky (legacy) | p50 | p95 | p99 |
+|---|---|---|---|---|---|
+| Idle on Home | 0.83% | 1.94% | 18ms | — | — |
+| Home → Movies | 10.4% | 27.3% | 17ms | 150ms | 350ms |
+| Select category → 25 streams | 5.2% | 39.2% | 18ms | 48ms | 200ms |
+| Fling-scroll the 25-stream list | 9.0% | 51.8% | 19ms | 53ms | 81ms |
+| Stream list → Movie Details | 2.1% | 6.3% | 15ms | 20ms | 150ms |
+| **Back out of player → Details** | **50.0%** | 91.7% | 53ms | 200ms | 200ms |
+
+Android 15 reports two jank counters; the legacy one is consistently harsher. Both are given rather
+than picking the flattering one.
+
+**The Home pulse fix works here too** — 0 `Compose:recompose` during a 4s idle on Home, same as the
+Shield after the fix. Mobile was fixed blind (identical code shape), so this is the confirmation.
+
+**Player exit is the worst mobile flow too**, and its frame breakdown shows *two* separate problems
+(Android 15 framestats has a different column layout — parse against the `Flags,...` header, not the
+TV one):
+
+```
+#    recompose   layout   draw+sync    TOTAL
+0         32.1      0.9       166.9    215.2     <- screen rebuild
+8        183.7      1.2         2.0    194.6     <- pure recomposition
+```
+
+- The 167ms rebuild is the same defect just fixed on TV: `mobile/.../MovieDetailsScreen.kt:178`
+  still scrolls with `Column(verticalScroll)` and holds both `RelatedTitlesRow`s inside it
+  (`:457`, `:463`), so the off-screen row is measured every time. The TV fix (LazyColumn + hoisting
+  the rows) applies directly.
+- The **183.7ms recomposition frame has no TV equivalent** — nothing measured on the Shield came
+  close. Unexplained; needs its own investigation.
+
+Also unported to mobile: the related-card style hoist. Mobile has its own
+`mobile/.../ui/components/RelatedTitlesRow.kt`, which still allocates `CardDefaults.*` per card.
+
+The Live TV double-load (task 8) is TV-only — mobile's nav has no preview-pane double push.
+
 Idle frame counts (zero input, screen settled):
 
 | Screen | Before | After |
