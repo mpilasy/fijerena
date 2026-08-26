@@ -19,6 +19,9 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 
 class MainActivity : ComponentActivity() {
+    /** Read once — a SharedPreferences hit per key event would be its own problem. */
+    private val logKeyEvents by lazy { AppSettings(applicationContext).isDevMode }
+
     override fun attachBaseContext(newBase: android.content.Context) {
         super.attachBaseContext(LocaleManager.wrap(newBase))
     }
@@ -93,8 +96,17 @@ class MainActivity : ComponentActivity() {
         const val SPLASH_EXIT_MS = 350L
     }
 
+    /**
+     * Every D-pad press, including the repeat stream from a held key, used to log unconditionally —
+     * with string interpolation — on the one path where latency is most visible. Kept behind dev
+     * mode because the timestamps are genuinely useful: comparing them against injected key events
+     * is how the "cursor dead then replays" stall was shown to be a rendering backlog rather than
+     * lost input.
+     */
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
-        android.util.Log.i("MainActivity", "dispatchKeyEvent: action=${event.action}, code=${event.keyCode}")
+        if (logKeyEvents) {
+            android.util.Log.i("MainActivity", "dispatchKeyEvent: action=${event.action}, code=${event.keyCode}")
+        }
         return super.dispatchKeyEvent(event)
     }
 }

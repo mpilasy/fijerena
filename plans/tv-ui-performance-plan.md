@@ -264,15 +264,32 @@ remaining number in the table.
 Each is a few lines, no behaviour change, and the codebase already established the right pattern
 elsewhere in every case.
 
-### 2. `CategoryItem` allocates four card-style objects per row per recomposition
+### 2. `CategoryItem` allocates four card-style objects per row per recomposition — **DONE 2026-08-26**
 `tv/.../feature/category/components/CategoryList.kt:321,337,339,345`
 
 `CardDefaults.colors/shape/scale/glow` inside the item body. `StreamList` hoists the identical set
 into an `@Immutable StreamCardStyle` built once per list composition (`StreamList.kt:91-125`)
 precisely to stop this; `CategoryList` was never migrated.
 
-**Fix:** mirror `streamCardStyle`. `containerColor`/`contentColor` depend on `isSelected`, so build
-*two* instances at list level (selected + unselected) and pick per row.
+**Fix:** mirror `streamCardStyle`. `containerColor`/`contentColor` depend on `isSelected`, so both
+colour sets are built once at list level and the row picks one.
+
+**Landed, and the direct effect is within noise**, as predicted — category focus churn on the Shield
+(20 × DPAD_DOWN), steady-state runs after discarding the JIT-cold first:
+
+| | before | after |
+|---|---|---|
+| janky frames | 2.36% | 1.65% / 0.75% / 0.30% |
+| p50 | 5ms | 5–6ms |
+| p90 / p95 | 12 / 14ms | 12 / 13ms |
+
+That flow was never slow, so there was nothing to win there. The justification is GC pressure — the
+467–522ms collections traced during navigation — not this number.
+
+**Not ported to mobile.** Mobile's `RelatedTitlesRow` uses the project's `CinemaCard`, not
+`CardDefaults.*` directly. Its default arguments do allocate per call, but Material3 caches
+`cardColors()` on the colour scheme, and there is no measurement showing it costs anything here.
+Left alone rather than changed on a guess.
 
 ### 3. `staggeredEntrance` re-measures every frame for a pure layer animation
 `core/ui/.../components/StaggeredEntrance.kt:68,72`
@@ -296,9 +313,14 @@ cached; only the lock round-trip is wasted, thousands of times per list load.
 
 **Note:** runs on `Dispatchers.Default`, so it delays badges appearing rather than blocking frames.
 
-### 5. Per-key logging in `dispatchKeyEvent`
-`tv/.../MainActivity.kt:96-99` — `Log.i` with string interpolation on every D-pad event including
-key repeats. Delete or gate on `AppSettings.isDevMode`.
+### 5. Per-key logging in `dispatchKeyEvent` — **DONE 2026-08-26**
+`tv/.../MainActivity.kt` — `Log.i` with string interpolation fired on every D-pad event including
+key repeats. Now gated on `AppSettings.isDevMode`, read once via `by lazy` rather than per event.
+
+Gated rather than deleted because the timestamps are a genuinely useful instrument: comparing them
+against injected key events is how the "cursor dead then replays" stall was shown to be a rendering
+backlog rather than lost input (task 6b). Verified on the emulator — dev mode on: 12 lines for 6
+presses; dev mode off: 0.
 
 ---
 
@@ -571,7 +593,7 @@ release — this is here only so the numbers above are read as debug-build frame
 | 3b | **8** | **Done** — one `CategoryViewModel` on Live TV entry instead of two; category select went from 14–100% janky to under 0.4% |
 | 4 | **6b** | **Open, two theories dead.** The reported "cursor dead then replays" symptom: ~1s of animation-phase tail on Live TV back-out, scaling with Recent list size. Entrance animations and image loading both ruled out by measurement. Needs recomposition attribution — see task 6b |
 | 4b | mobile port of 2 | **Port of 6 done** — mobile rebuild frame 215ms → 128ms. Mobile's `RelatedTitlesRow.kt` still allocates per card, and its unexplained ~154ms recomposition frame is untouched |
-| 5 | 2, 5 | Allocation churn feeding the 467–522ms GCs; safe, no behaviour change |
+| 5 | 2, 5 | **Done** — both landed; task 2's direct effect is within noise, as expected |
 | 6 | 7 | Nav transition still holds two screens live for 300ms |
 | 7 | 4 | Favorite lock per item — measured as *not* a UI-thread blocker (0.5ms), so lowest priority |
 
