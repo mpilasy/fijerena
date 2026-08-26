@@ -303,8 +303,54 @@ deferring it. The obstacle is not the scrolling container: the rows sit *inside*
 next to the metadata (`:626-637`), so hoisting them to top-level lazy items moves them out of the
 glass panel visually. That is a design change, so it is not mine to make.
 
-### 6b. Entrance animations replay on every back-navigation (still open, different screens)
+### 6b. Entrance animations replay on every back-navigation — **now the top item, measured 2026-08-26**
 `StreamList.kt:186,346` · `CategoryList.kt:156,267`
+
+This is the cause of the reported symptom: *back out of a stream, the new screen paints, the cursor
+is dead for a second or more, then every queued keypress replays at once.*
+
+Input is **not** being lost or blocked. Firing BACK plus 8 D-pad presses in one injection, all nine
+reached `dispatchKeyEvent` within 653ms (largest gap 272ms). The events arrive; what fails is
+presenting the result, so focus jumps several rows at once when a frame finally lands.
+
+Measured with a temporary `FrameMetrics` listener (needed because `dumpsys gfxinfo framestats`
+holds only 120 frames, which 60fps video flushes before a Live TV transition can be read back).
+`UNKNOWN_DELAY` is the metric that matters — time between a frame being due and the app starting
+work on it, i.e. main-thread backlog.
+
+**The cost scales with the Live TV preview's Recent list, which grows with use** — that is why it
+gets worse the longer the app is used. `ProviderSettings.watchHistorySize` defaults to 25 and is
+configurable to 100. Same device, same flow (Live TV full-screen → Back), only the row count
+changed (25 real channels injected into `watch_history_v3`):
+
+| Recent rows | slow frames | total slow time | summed `unknownDelay` |
+|---|---|---|---|
+| 3 | 2 | ~235ms | 99ms |
+| **25** | **9–15** | **846–1120ms** | 418–540ms |
+
+Per-frame breakdown of one 25-row back-out:
+
+```
+slow=181  anim=32  draw=145      <- screen rebuild
+slow=44   anim=17  unknownDelay=15
+slow=69   anim=16  unknownDelay=42
+slow=58   anim=9   unknownDelay=40
+...9 more frames, anim=4-32ms each, unknownDelay=10-42ms
+```
+
+One heavy rebuild frame, then a **~750ms tail dominated by the animation phase**. Back-navigation
+disposes the composition, so all 25 rows replay `staggeredEntrance` — and via task 3 each replaying
+row forces a re-measure of the whole list every frame. Cost is per-row, which is why this looked
+minor when measured on a list whose entrance had already played.
+
+Also contributing, not previously listed: `CinemaThumbnail` starts a `rememberInfiniteTransition`
+shimmer per unloaded image, so 25 rows means 25 concurrent infinite animations until the logos
+resolve.
+
+**Fix:** task 3 (`invalidatePlacement()`), plus dropping `staggeredEntrance` from list rows, plus
+capping or removing the per-row shimmer. Verify by re-running the table above with 25 rows injected —
+see `reference_history_row_injection` for the injection procedure; back up
+`shared_prefs/media_cache_<providerId>.xml` and restore it afterwards.
 
 `enteredStreamIds` / `enteredCategoryIds` are plain `remember`, not `rememberSaveable`. Navigation
 Compose disposes a destination's composition on navigate-away, so popping back loses the set and
@@ -415,9 +461,10 @@ release — this is here only so the numbers above are read as debug-build frame
 | 2 | re-measure all six flows | **Done** — see the after column above |
 | 3 | **6** | **Diagnosed, not fixed.** Cause measured precisely (200ms of related-row layout); the deferral was tried and reverted. Real fix blocked on a design call — see task 6 |
 | 3b | **8** | **Done** — one `CategoryViewModel` on Live TV entry instead of two; category select went from 14–100% janky to under 0.4% |
-| 4 | 2, 3, 5 | Allocation churn feeding the 467–522ms GCs; safe, no behaviour change |
-| 5 | 7 | Nav transition still holds two screens live for 300ms |
-| 6 | 4 | Favorite lock per item — measured as *not* a UI-thread blocker (0.5ms), so lowest priority |
+| 4 | **3 + 6b** | **Next.** The reported "cursor dead then replays" symptom: ~1s of animation-phase tail on Live TV back-out, scaling with Recent list size |
+| 5 | 2, 5 | Allocation churn feeding the 467–522ms GCs; safe, no behaviour change |
+| 6 | 7 | Nav transition still holds two screens live for 300ms |
+| 7 | 4 | Favorite lock per item — measured as *not* a UI-thread blocker (0.5ms), so lowest priority |
 
 ## Verification
 
