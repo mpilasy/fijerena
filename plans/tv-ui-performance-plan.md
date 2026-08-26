@@ -579,7 +579,7 @@ share one ViewModel across both entries.
 
 ---
 
-## Storage — the Xtream EPG cache is 1.2 GB of mostly-stale data (open, first fix attempt failed)
+## Storage — the Xtream EPG cache is 1.2 GB of mostly-stale data — **FIXED 2026-08-26**
 
 Not a UI performance item, found while looking at why the app holds 1.7 GB on a Shield.
 
@@ -672,24 +672,56 @@ Those differ by three orders of magnitude.
 nothing useful treats the symptom. Any fix should start from "what working set does this need to
 hold", which is thousands of rows at most, not 110,852.
 
-### For a retry, in rough order of promise
+### Fixed: batched sweep + payload cap
 
-1. **Measure the hit rate first.** A counter on the read path (`getCachedEpgBatch` hits vs misses)
-   during real use is the number that decides between shrinking this cache and deleting it. Cheap,
-   and everything below is guesswork without it.
-2. **Bound it by recency, not by channel count.** An LRU capped at a few thousand rows covers any
-   realistic working set in tens of MB. This is the fix that matches how the cache is actually used.
-3. **Cap payload size at write time.** Independent of the above and trivially safe: refusing the 634
-   rows over 250 KB drops ~236 MiB, and no single channel can contribute 1.7 MB again. A listing
-   that does not fit is simply fetched live.
-4. **Consider dropping the table entirely.** `epg_index.db` is consulted first and covers 8,880
-   channels; this cache only serves the fallback for the rest, and only within 6 hours of a fetch.
-   Whether that fallback earns 1.2 GB is exactly what step 1 answers.
-5. **Stop storing empty payloads.** 97,483 rows encode "no EPG" in 19 bytes each — negligible space,
-   but they dominate row count and therefore the cost of any sweep.
+The reason the first attempt failed turned out to be `PRAGMA auto_vacuum` on this database:
+**`xtream_v2.db` runs `auto_vacuum = FULL`**, so every commit that frees pages moves and truncates
+them immediately. One unbounded `DELETE` therefore tried to reshuffle ~300k pages inside a single
+transaction — hence the 1218 MiB WAL that never committed. That same property makes the fix easy
+once the work is split up: small commits shrink the file incrementally, with no `VACUUM` needed.
 
-Note that a bulk `DELETE` is not the way to shrink it (see above); if a one-off reclaim is wanted,
-`DROP TABLE` + recreate is the near-free schema operation, matching the EPG-index precedent.
+Two changes:
+
+- **`XtreamEpgCacheDao.deleteStaleBatch(cutoff, limit)`** — deletes at most `limit` expired rows and
+  returns the count. `XtreamEpgManager.evictStaleCache()` loops it in batches of 400 with a 50ms
+  pause, once per process, on the write scope, and **logs the outcome or the exception**. The bare
+  `runCatching` of the first attempt is what made the failure undiagnosable.
+- **`MAX_CACHED_PAYLOAD_CHARS = 64 KB`** in `cacheEpgBatch` — a channel whose listings exceed it is
+  not cached at all and is fetched live. The 634 rows over 250 KB were ~236 MiB on their own, and
+  the largest single row was 1.7 MB.
+
+Measured on the Shield, from app launch:
+
+| | before | after |
+|---|---|---|
+| `xtream_v2.db` | 1447 MiB | **243 MiB** |
+| `databases/` total | 1645 MiB | **441 MiB** |
+| `xtream_epg_cache` rows | 110,852 | 270 |
+| peak WAL during sweep | 1218 MiB (failed) | **73 MiB** |
+
+```
+XtreamEpgManager: EPG cache sweep removed 110582 stale rows in 656594ms
+```
+
+The sweep takes ~11 minutes on this hardware for a fully neglected cache, entirely in the
+background; later runs have nothing to do. Verified after: `quick_check` ok, catalogue untouched
+(466,132 streams / 93,821 series / 3,376 categories), Live TV plays with "Now:" and "Up next:"
+populated, no SQLite errors.
+
+**Still open:** the cache is bounded now but still sized by channel count rather than by working
+set. The items below remain worth doing.
+
+### Remaining, in rough order of promise
+
+1. **Measure the hit rate.** A counter on `getCachedEpgBatch` (hits vs misses) during real use
+   decides whether this cache earns its remaining size at all.
+2. **Bound it by recency, not channel count.** An LRU capped at a few thousand rows matches the
+   actual working set — hundreds of rows — instead of the ~57k channels per provider it is sized
+   for today. The sweep keeps the table honest but only after rows go stale.
+3. **Consider dropping the table entirely.** `epg_index.db` is consulted first and covers 8,880
+   channels; this cache only serves the fallback, and only within 6 hours of a fetch.
+4. **Stop storing empty payloads.** 97,483 rows encoded "no EPG" in 19 bytes each — negligible
+   space, but they dominate row count and so the cost of every sweep.
 
 Whatever the approach, it needs a WAL strategy: an unbounded transaction against this table produces
 a WAL the size of the data.
