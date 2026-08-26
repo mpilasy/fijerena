@@ -6,6 +6,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -36,6 +37,7 @@ import androidx.tv.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -71,6 +75,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -88,6 +93,7 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
@@ -203,12 +209,43 @@ private fun MovieDetailsContent(
 
     // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
+    // Focus requester for the stream name row, so switching to an alternate stream can keep
+    // focus there instead of it falling back to the window root (see streamSwitchSignal below).
+    val streamNameFocusRequester = remember { FocusRequester() }
+    // Set right before an alternate-stream switch so the resume-data-arrived effect below skips
+    // re-focusing Play — two unwatched alternates share resumePositionMs == 0L, so that effect
+    // wouldn't even re-fire on its own to steal focus back.
+    var justSwitchedStream by remember { mutableStateOf(false) }
+    // Bumped in onSelect, independent of resumePositionMs: selecting a dropdown item destroys
+    // that focused node, and Compose has nothing left to restore to, so focus falls to the
+    // window root and D-pad input goes nowhere until this claims it back for the row.
+    var streamSwitchSignal by remember { mutableStateOf(0) }
 
-    // Request focus on Play/Resume button when screen loads or resume data arrives
+    // Request focus on Play/Resume button when screen loads or resume data arrives — unless
+    // this update is the result of switching to an alternate stream, in which case focus stays
+    // on the stream name row so the D-pad doesn't silently land on Play.
     LaunchedEffect(resumePositionMs) {
-        try {
-            playButtonFocusRequester.requestFocus()
-        } catch (_: IllegalStateException) {
+        if (justSwitchedStream) {
+            justSwitchedStream = false
+        } else {
+            try {
+                playButtonFocusRequester.requestFocus()
+            } catch (_: IllegalStateException) {
+            }
+        }
+    }
+
+    LaunchedEffect(streamSwitchSignal) {
+        if (streamSwitchSignal == 0) return@LaunchedEffect
+        // The dropdown's own dismissal falls back to focusing the window root, asynchronously,
+        // on its own timeline — a single requestFocus() here can lose that race. Re-assert for a
+        // few frames so our claim is the last one standing.
+        repeat(10) {
+            try {
+                streamNameFocusRequester.requestFocus()
+            } catch (_: IllegalStateException) {
+            }
+            withFrameNanos { }
         }
     }
 
@@ -560,8 +597,13 @@ private fun MovieDetailsContent(
                         // alternates are listed under, so use the same source as alternates.
                         currentName = movieName,
                         alternates = alternateStreams,
-                        onSelect = onAlternateStreamSelected,
+                        onSelect = {
+                            justSwitchedStream = true
+                            streamSwitchSignal++
+                            onAlternateStreamSelected(it)
+                        },
                         textStyle = scaledStyles.bodySmall,
+                        focusRequester = streamNameFocusRequester,
                     )
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                     Text(
@@ -684,6 +726,7 @@ private fun StreamNamePicker(
     alternates: List<MediaItem>,
     onSelect: (MediaItem) -> Unit,
     textStyle: TextStyle,
+    focusRequester: FocusRequester,
 ) {
     val textColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
 
@@ -697,6 +740,7 @@ private fun StreamNamePicker(
     }
 
     var expanded by remember { mutableStateOf(false) }
+    var isFocused by remember { mutableStateOf(false) }
     // The row often sits near the bottom of the visible screen; a Popup can't render below the
     // screen edge, so without this the menu flips far above the row to find room instead of
     // opening flush beneath it.
@@ -706,10 +750,29 @@ private fun StreamNamePicker(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
-                Modifier.clickable {
-                    coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
-                    expanded = true
-                },
+                Modifier
+                    .background(
+                        color = if (isFocused) CinemaAccent.copy(alpha = CinemaAlpha.tint) else Color.Transparent,
+                        shape = RoundedCornerShape(CornerRadius.medium),
+                    )
+                    .then(
+                        if (isFocused) {
+                            Modifier.border(
+                                width = TvFocusTokens.focusBorderWidth,
+                                color = CinemaAccentLight,
+                                shape = RoundedCornerShape(CornerRadius.medium),
+                            )
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { isFocused = it.isFocused }
+                    .clickable {
+                        coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
+                        expanded = true
+                    }
+                    .padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
         ) {
             Text(
                 text = stringResource(R.string.details_stream_name_format, currentName),
