@@ -85,6 +85,26 @@ fun ColumnScope.DataManagementSection(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                             )
+
+                            // Only shown next to a clean sync: on error the columns hold the last
+                            // *successful* sync's delta (ProviderDao.updateSyncStats COALESCEs
+                            // rather than zeroing on failure), so showing it next to an error
+                            // would misleadingly read as "this failed run found 5 changes".
+                            if (currentProvider?.lastSyncError == null) {
+                                val inserted = currentProvider?.lastSyncInserted ?: 0
+                                val updated = currentProvider?.lastSyncUpdated ?: 0
+                                val deleted = currentProvider?.lastSyncDeleted ?: 0
+                                Text(
+                                    text =
+                                        if (inserted == 0 && updated == 0 && deleted == 0) {
+                                            stringResource(R.string.provider_sync_no_changes)
+                                        } else {
+                                            stringResource(R.string.provider_sync_delta, inserted, updated, deleted)
+                                        },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                                )
+                            }
                         }
 
                         if (syncState is SyncState.Error || (syncState is SyncState.Idle && currentProvider?.lastSyncError != null)) {

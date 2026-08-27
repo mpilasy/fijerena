@@ -285,11 +285,17 @@ fun MobileEpgManagementScreen(
                             null
                         }
 
+                    // Whether the run that just finished confirmed this source's data hadn't
+                    // changed (304, or a matching content hash) — true only right after that run.
+                    val wasUnchanged =
+                        (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
+
                     EpgSourceCard(
                         source = source,
                         isSelected = isSelected,
                         latestProgrammeTime = latestTime,
                         activeProgress = activeProgress,
+                        wasUnchanged = wasUnchanged,
                         nowMs = nowMs,
                         staleThresholdMs = viewModel.staleThresholdMs,
                         onRefresh = { viewModel.refreshSource(source.id) },
@@ -449,6 +455,7 @@ private fun EpgSourceCard(
     isSelected: Boolean,
     latestProgrammeTime: Long,
     activeProgress: org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.ActiveSourceProgress?,
+    wasUnchanged: Boolean,
     nowMs: Long,
     staleThresholdMs: Long,
     onRefresh: () -> Unit,
@@ -544,11 +551,21 @@ private fun EpgSourceCard(
                             stringResource(R.string.epg_source_none)
                         }
 
+                    // When the last run confirmed no change, the stored download/ingest
+                    // durations are from whenever it last actually ran — showing them here would
+                    // read as work that didn't happen this time, so a single status pair
+                    // replaces them instead.
                     val stats =
                         listOf(
                             stringResource(R.string.epg_source_stat_label) to lastIngested,
-                            stringResource(R.string.epg_source_stat_download) to NumberUtils.formatDuration(source.lastDownloadDurationMs),
-                            stringResource(R.string.epg_source_stat_ingest) to NumberUtils.formatDuration(source.lastIngestionDurationMs),
+                        ) + if (wasUnchanged) {
+                            listOf("" to stringResource(R.string.epg_source_stat_unchanged))
+                        } else {
+                            listOf(
+                                stringResource(R.string.epg_source_stat_download) to NumberUtils.formatDuration(source.lastDownloadDurationMs),
+                                stringResource(R.string.epg_source_stat_ingest) to NumberUtils.formatDuration(source.lastIngestionDurationMs),
+                            )
+                        } + listOf(
                             stringResource(R.string.epg_source_stat_latest) to latestProgStr,
                             stringResource(R.string.epg_source_stat_channels) to NumberUtils.formatCount(source.lastChannels),
                             stringResource(R.string.epg_source_stat_programmes) to NumberUtils.formatCount(source.lastProgrammes),
