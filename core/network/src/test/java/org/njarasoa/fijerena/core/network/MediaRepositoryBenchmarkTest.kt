@@ -69,11 +69,11 @@ class MediaRepositoryBenchmarkTest {
 
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns historyJson
 
-        repository = MediaRepository(context, 1L)
+        repository = MediaRepository(context, 1L, watchStateDao = mockk(relaxed = true))
 
         // Warm up
         repeat(100) {
-            repository.getWatchHistory()
+            repository.getWatchHistoryLocked()
         }
 
         // Measure
@@ -81,7 +81,7 @@ class MediaRepositoryBenchmarkTest {
         val time =
             measureNanoTime {
                 repeat(iterations) {
-                    repository.getWatchHistory()
+                    repository.getWatchHistoryLocked()
                 }
             }
 

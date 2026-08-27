@@ -256,7 +256,7 @@
     <string name="provider_auto_resume_label">Reprise automatique</string>
     <string name="provider_auto_resume_desc">Reprendre le contenu VOD là où vous vous êtes arrêté</string>
     <string name="provider_watch_history_size_label">Taille de l\'historique</string>
-    <string name="provider_watch_history_size_desc">Nombre d\'éléments à conserver dans l\'historique (1-100)</string>
+    <string name="provider_watch_history_size_desc">Nombre de fiches affichées dans la ligne Récents (1-100)</string>
     <string name="provider_edit_button">Modifier</string>
     <string name="provider_queue_size_label">Taille de la file</string>
     <string name="provider_favorites_max_size_label">Max Favoris</string>
