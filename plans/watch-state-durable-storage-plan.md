@@ -407,6 +407,13 @@ to catch but worth writing down:
 that provider's prefs. Guarded exactly like `purgeLegacyPrefsCache` (`XtreamEpgManager.kt:99`). Backfill only —
 the blob is left intact until Phase 4 so a rollback loses nothing.
 
+**Backfill must be replay-safe.** The flag write is not atomic with the row inserts — a process
+death between "rows written" and "flag set" is ordinary, not an edge case, on a background app.
+Backfill therefore inserts through the same progress upsert (`ON CONFLICT DO UPDATE`) defined
+under Write path above, never a raw `INSERT`. Re-running the whole decode-and-insert loop after a
+partial crash then just overwrites the same rows with the same values instead of failing on a
+primary-key collision.
+
 ---
 
 ## Phases
@@ -420,7 +427,10 @@ easy mistake — it is what carries Live TV, and what puts a Movies or TV Shows 
 any progress tick fires. Backfill runs on first use per provider. Reads still come from the blob.
 Reversible, and where parity gets verified: for a provider with history, table and blob should agree
 on `(itemId, contentType)` presence and on `isCompleted`, with the position caveat in Write path
-above.
+above. Also compare `seriesId`/`episodeId` null-ness against the blob's `seriesId`/`episodeId`
+fields — a value-class-boundary bug (`SeriesId`/`EpisodeId` raw-`String` conversion, see Table)
+would not trip the presence/`isCompleted` checks and would otherwise surface only later, in Phase 3's
+series rollup or Phase 5's dedup, far from where it was introduced.
 
 **3 — Flip reads.** `getRecentItems`, `getSeriesWatchProgress`, `getWatchHistory` and
 `getPlaybackPositions` (with both `Suspend` variants) move to `WatchStateDao`; the synchronous
@@ -461,6 +471,12 @@ Two details in that update, both of which produce a silently empty restore rathe
   `watch_state_migrated_v1` set, in which case the lazy backfill will never look at it again.
   Restore has to run the blob-to-table import directly for any `watch_history_v3` it writes, rather
   than relying on the migration flag.
+- **The export side needs its own format version, not just importer logic for the old shape.** A
+  backup taken *after* Phase 4 has no `watch_history_v3` blob left to nest — `watch_state` rows must
+  be serialized as their own structure under the provider's JSON block. That makes two backup
+  shapes: pre-Phase-4 (blob inside `media_cache_$providerId`) and post-Phase-4 (table rows of their
+  own). `SettingsExportManager` needs an explicit schema/version field on the export so restore can
+  tell which shape it is reading, rather than inferring it from which keys happen to be present.
 
 **5 — TMDB dedup.** The feature that motivated the work; see below.
 
