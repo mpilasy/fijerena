@@ -212,13 +212,15 @@ repeatedly refreshed reached 84 MB. Watch state has no such multiplier. For scal
 `XtreamStreamEntity` carries ~25 columns including `description`, `cast`, `genre` and icon URLs, so
 a large VOD catalogue already occupies tens of MB in `xtream_streams`.
 
-**Provider deletion must delete the rows.** `deleteProvider` (`ProviderRepository.kt:116-121`)
+**Provider deletion must delete the rows across all provider types.** `deleteProvider` (`ProviderRepository.kt:116-121`)
 clears EPG sources, the stored password, and `xtream_cache_$providerId` — but not
 `media_cache_$providerId` and not the provider's Room rows. Deleting a provider therefore already
 orphans its watch history and favorites today. That is a bounded leak while history is capped at 25
 entries; with unbounded retention it becomes permanent, so `deleteProvider` needs a
-`DELETE FROM watch_state WHERE providerId = :id` alongside the existing cleanup. Worth clearing
-`media_cache_$providerId` in the same change.
+`DELETE FROM watch_state WHERE providerId = :id` alongside the existing cleanup.
+Because `watch_state` resides in `XtreamDatabase` while `SettingsDatabase` holds provider definitions,
+`ProviderRepository` must inject `XtreamDatabase` (or `WatchStateDao`) to execute this delete for **all**
+provider types (Xtream, Jellyfin, SMB, Local, Remote M3U). Worth clearing `media_cache_$providerId` in the same change.
 
 ### The cap becomes a query — on one read path only
 
@@ -438,8 +440,8 @@ Two details in that update, both of which produce a silently empty restore rathe
 - **Remap `providerId` on import.** Restore matches providers by identity and writes under
   `matchingProvider.id` (`:558`, `:604`), which is not necessarily the id the backup was taken
   under — `ProviderEntity.id` is `autoGenerate = true`. Exported `watch_state` rows must be
-  rewritten to the matched provider's id, not inserted verbatim. The prefs path never had this
-  problem because the id was in the file name.
+  nested inside the provider's JSON block in the backup rather than top-level unkeyed entries, so
+  import naturally rewrites `watch_state.providerId` to the matched provider's id before inserting.
 - **Restoring an old backup must still import its history.** A backup taken before Phase 4 carries
   watch state inside `media_cache_$providerId`, but the restored device may already have
   `watch_state_migrated_v1` set, in which case the lazy backfill will never look at it again.
@@ -480,7 +482,7 @@ JOIN (
     FROM watch_state w
     JOIN xtream_streams c
       ON c.providerId = w.providerId
-     AND c.type       = :type
+     AND c.type       = :streamType
      AND CAST(c.streamId AS TEXT) = w.itemId
     WHERE w.providerId  = :providerId
       AND w.contentType = :contentType
@@ -488,14 +490,17 @@ JOIN (
       AND c.tmdbId IS NOT NULL
     GROUP BY c.tmdbId
 ) done ON s.tmdbId = done.tmdbId
-WHERE s.providerId = :providerId AND s.type = :type AND s.excluded = 0
+WHERE s.providerId = :providerId AND s.type = :streamType AND s.excluded = 0
 ```
 
-The `c.type = :type` predicate is load-bearing: `xtream_streams` is keyed
-`(streamId, providerId, type)`, so a VOD id and a live id can collide, and without it a watched
-movie could mark an unrelated channel. `GROUP BY c.tmdbId` collapses the sibling set before the
-outer join, which is what stops one stream matching several watched variants and multiplying rows.
-`index_xtream_streams_providerId_tmdbId` (added in `MIGRATION_14_15`) serves both ends.
+The `c.type = :streamType` predicate is load-bearing: `xtream_streams` is keyed
+`(streamId, providerId, type)`, where `type` is the catalogue string (`"movie"`, `"live"`, etc.)
+while `w.contentType` uses domain constants (`ContentType.MOVIES = "movies"`). The query maps
+`:contentType` to `w.contentType` and `:streamType` to `s.type` so a VOD id and a live id never
+collide, and without it a watched movie could mark an unrelated channel. `GROUP BY c.tmdbId`
+collapses the sibling set before the outer join, which is what stops one stream matching several
+watched variants and multiplying rows. `index_xtream_streams_providerId_tmdbId` (added in
+`MIGRATION_14_15`) serves both ends.
 
 The episode form is the same statement against `xtream_episodes`, joining `w.itemId = e.id` and
 scoped to the series being displayed.
@@ -690,15 +695,19 @@ needs a decision rather than a spot check. The full list:
 
 **The two writers stay fire-and-forget**, because their callers
 (`StreamLoaderViewModel.kt:235,462,477,517,532`) treat them as such and there is nothing to await.
-The Room upsert goes on the existing `writeScope` — `CoroutineScope(SupervisorJob() +
+The Room upsert runs on `writeScope` — `CoroutineScope(SupervisorJob() +
 Dispatchers.IO.limitedParallelism(1))` at `MediaRepository.kt:157` — which is already the
 repository's serialized write lane. `limitedParallelism(1)` is what keeps a start write and a
 progress write from racing on the same row, so the two upserts land in call order without any
 locking of their own.
 
-The 500 ms debounce (`:537`) stays on the progress path. Its job was never the blob specifically: it
-coalesces a tick stream into one write, and that is worth as much for a row upsert as for a file
-rewrite.
+**Write batching / debounce:** The 500 ms debounce replaces the `HandlerThread("WatchHistoryWriter")`
+with a coroutine pipeline on `writeScope` (e.g. via a conflated `Channel` or debounced `MutableSharedFlow`)
+to avoid writing to SQLite every 500ms during fast progress ticks while still persisting reliably on stop.
+
+**Code style constraints:** All modified and newly introduced functions in `MediaRepository` and DAOs
+must adhere to project rules: single return statement per function, with early returns eliminated via
+structured `if/when` control flow.
 
 Only `getRecentItemsSuspend` runs Room and Compose-facing work in the same call, and it is already
 suspend and already fetches icons from `db.streamDao()` (`:1050-1052`), so it needs no change beyond
