@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.resultOf
 import org.njarasoa.fijerena.core.network.suspendResultOf
+import org.njarasoa.fijerena.core.network.xtream.SyncDelta
 import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.network.xtream.db.*
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -50,6 +51,20 @@ class XtreamContentManager(
     private fun commitAsync(action: SharedPreferences.Editor.() -> Unit) {
         writeScope.launch { sharedPreferences.edit(commit = true, action = action) }
     }
+
+    // Accumulates the row-level delta each sync task already computes for its own diff, so
+    // syncAll() can report one combined total instead of throwing the counts away. Diagnostic
+    // only — a sync triggered outside syncAll() (e.g. a lazy-load cache-miss refresh) adds into
+    // the same counter, so a reading taken while such a sync overlaps a syncAll() run can include
+    // a few rows that aren't actually syncAll()'s. Acceptable for "did anything change" reporting.
+    private val pendingDelta = java.util.concurrent.atomic.AtomicReference(SyncDelta())
+
+    private fun addDelta(delta: SyncDelta) {
+        pendingDelta.updateAndGet { it + delta }
+    }
+
+    /** The combined delta from every sync task completed since the last call, then resets it. */
+    fun consumeSyncDelta(): SyncDelta = pendingDelta.getAndSet(SyncDelta())
 
     companion object {
         private const val TAG = "XtreamContentManager"
@@ -471,10 +486,16 @@ class XtreamContentManager(
                         }
 
                         val toDeleteIds = currentHashes.keys.filter { it !in seenIds }
+                        var inserted = 0
+                        var updated = 0
                         val toInsert =
                             entities.filter { newEntity ->
                                 val oldHash = currentHashes[newEntity.categoryId]
-                                oldHash == null || oldHash != newEntity.contentHash
+                                val changed = oldHash == null || oldHash != newEntity.contentHash
+                                if (changed) {
+                                    if (oldHash == null) inserted++ else updated++
+                                }
+                                changed
                             }
 
                         if (toDeleteIds.isNotEmpty()) {
@@ -485,6 +506,7 @@ class XtreamContentManager(
                         if (toInsert.isNotEmpty()) {
                             categoryDao.insertAll(toInsert)
                         }
+                        addDelta(SyncDelta(inserted = inserted, updated = updated, deleted = toDeleteIds.size))
 
                         val key =
                             when (type) {
@@ -519,6 +541,8 @@ class XtreamContentManager(
 
                             val currentHashes = streamDao.getStreamHashes(providerId, type)
                             val seenIds = mutableSetOf<Int>()
+                            var inserted = 0
+                            var updated = 0
 
                             val filters = providerSettings.categoryFilters
                             val allowedCategoryIds: Set<String>? =
@@ -567,6 +591,7 @@ class XtreamContentManager(
                                 seenIds.add(it.streamId)
                                 val oldHash = currentHashes[it.streamId]
                                 if (oldHash == null || oldHash != contentHash) {
+                                    if (oldHash == null) inserted++ else updated++
                                     batch.add(
                                         XtreamStreamEntity(
                                             streamId = it.streamId,
@@ -630,6 +655,7 @@ class XtreamContentManager(
                                     streamDao.deleteByIds(providerId, type, chunk)
                                 }
                             }
+                            addDelta(SyncDelta(inserted = inserted, updated = updated, deleted = toDelete.size))
 
                             streamDao.rebuildFts()
 
@@ -657,6 +683,8 @@ class XtreamContentManager(
                             val BATCH_SIZE = 1000
                             val currentHashes = seriesDao.getSeriesHashes(providerId)
                             val seenIds = mutableSetOf<Int>()
+                            var inserted = 0
+                            var updated = 0
 
                             val filters = providerSettings.categoryFilters
                             val allowedCategoryIds: Set<String>? =
@@ -696,6 +724,7 @@ class XtreamContentManager(
                                 seenIds.add(it.seriesId)
                                 val oldHash = currentHashes[it.seriesId]
                                 if (oldHash == null || oldHash != contentHash) {
+                                    if (oldHash == null) inserted++ else updated++
                                     batch.add(
                                         XtreamSeriesEntity(
                                             seriesId = it.seriesId,
@@ -747,6 +776,7 @@ class XtreamContentManager(
                                     seriesDao.deleteByIds(providerId, chunk)
                                 }
                             }
+                            addDelta(SyncDelta(inserted = inserted, updated = updated, deleted = toDelete.size))
 
                             seriesDao.rebuildFts()
 

@@ -155,8 +155,11 @@ class ProviderRepository(
         timestamp: Long,
         durationMs: Long,
         error: String?,
+        inserted: Int? = null,
+        updated: Int? = null,
+        deleted: Int? = null,
     ) {
-        dao.updateSyncStats(id, timestamp, durationMs, error)
+        dao.updateSyncStats(id, timestamp, durationMs, error, inserted, updated, deleted)
     }
 
     /**

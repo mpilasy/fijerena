@@ -113,7 +113,11 @@ class ProviderSyncManager private constructor(private val context: Context) {
                     Log.d(TAG, "Sync completed for provider: ${provider.name}")
                 }
                 val endTime = System.currentTimeMillis()
-                providerRepo.updateSyncStats(provider.id, endTime, endTime - startTime, outcome.errorOrNull())
+                val delta = (outcome as? ProviderSyncRunner.Outcome.Success)?.delta
+                providerRepo.updateSyncStats(
+                    provider.id, endTime, endTime - startTime, outcome.errorOrNull(),
+                    inserted = delta?.inserted, updated = delta?.updated, deleted = delta?.deleted,
+                )
             }
         }
     }
@@ -230,7 +234,11 @@ class ProviderSyncManager private constructor(private val context: Context) {
                     Log.d(TAG, "Manual sync completed for provider: ${provider.name}")
                 }
                 val endTime = System.currentTimeMillis()
-                providerRepo.updateSyncStats(providerId, endTime, endTime - startTime, outcome.errorOrNull())
+                val delta = (outcome as? ProviderSyncRunner.Outcome.Success)?.delta
+                providerRepo.updateSyncStats(
+                    providerId, endTime, endTime - startTime, outcome.errorOrNull(),
+                    inserted = delta?.inserted, updated = delta?.updated, deleted = delta?.deleted,
+                )
                 if (outcome is ProviderSyncRunner.Outcome.Success) {
                     SyncResult.Success
                 } else {

@@ -12,6 +12,7 @@ import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
 import org.njarasoa.fijerena.core.network.tmdb.TitleMatcher
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.xtream.SyncDelta
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
@@ -677,9 +678,10 @@ class XtreamMediaProvider(
 
     /**
      * Triggers a full sync of categories and streams/series.
-     * Used by background worker.
+     * Used by background worker. Returns how many rows actually changed, summed across all six
+     * sync tasks — all-zero means the provider's catalog didn't change since the last sync.
      */
-    suspend fun syncAll() {
+    suspend fun syncAll(): SyncDelta {
         val jobs =
             listOf(
                 repository.syncCategories(XtreamCategoryEntity.TYPE_LIVE),
@@ -691,6 +693,7 @@ class XtreamMediaProvider(
             )
         jobs.forEach { it.await() }
         repository.recomputeExclusions()
+        return repository.consumeSyncDelta()
     }
 
     /** Total category count for [contentType], including any excluded by category filters — for "X of Y" UI counts. */

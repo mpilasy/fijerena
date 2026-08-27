@@ -30,8 +30,11 @@ object ProviderSyncRunner {
     private const val MAX_ATTEMPTS = 3
 
     sealed interface Outcome {
-        /** Sync completed. */
-        object Success : Outcome
+        /**
+         * Sync completed. [delta] is the row-level change count for an Xtream provider, null for
+         * any other provider type (they have no equivalent diff).
+         */
+        data class Success(val delta: SyncDelta? = null) : Outcome
 
         /** Retrying won't help (bad credentials, unsupported provider). Error is user-facing. */
         data class Permanent(val error: String) : Outcome
@@ -54,7 +57,7 @@ object ProviderSyncRunner {
         while (true) {
             try {
                 val mediaProvider = MediaProviderFactory.create(provider, context, password)
-                if (mediaProvider !is XtreamMediaProvider) return Outcome.Success
+                if (mediaProvider !is XtreamMediaProvider) return Outcome.Success()
 
                 if (!mediaProvider.isConnected()) {
                     mediaProvider.connect()
@@ -66,7 +69,7 @@ object ProviderSyncRunner {
                     return Outcome.Permanent(context.getString(R.string.error_unauthorized) + devSuffix)
                 }
 
-                mediaProvider.syncAll()
+                val delta = mediaProvider.syncAll()
 
                 // Proactively warm the EPG-match cache for the provider just synced.
                 val streams =
@@ -78,7 +81,7 @@ object ProviderSyncRunner {
                     }
                 EpgChannelMatcher.warmCache(provider.id, streams)
 
-                return Outcome.Success
+                return Outcome.Success(delta)
             } catch (e: Exception) {
                 val transient = isTransient(e)
                 if (transient && attempt < MAX_ATTEMPTS) {
