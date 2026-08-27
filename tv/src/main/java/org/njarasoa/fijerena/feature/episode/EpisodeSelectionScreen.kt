@@ -86,6 +86,7 @@ import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.feature.category.components.tvLongPress
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.resumeProgress
@@ -246,6 +247,7 @@ private fun EpisodeListContent(
     val listState = rememberLazyListState()
     val scale = LocalUiScale.current
     val episodeCardStyle = episodeCardStyle()
+    val watchedToggleScope = rememberCoroutineScope()
     val typography = MaterialTheme.typography
     val scaledStyles =
         remember(scale, typography) {
@@ -842,6 +844,17 @@ private fun EpisodeListContent(
                                 focusRequester = if (isContinueWatching) resumeCardFocusRequester else null,
                                 onClick = {
                                     selectedEpisode = episode
+                                },
+                                onLongPress = {
+                                    // Manual watched/unwatched mark (Phase 6,
+                                    // plans/watch-state-durable-storage-plan.md). Optimistic:
+                                    // flips the badge immediately rather than waiting on the write.
+                                    val nowWatched = episode.id !in watchedEpisodeIds
+                                    watchedEpisodeIds =
+                                        if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
+                                    watchedToggleScope.launch {
+                                        mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
+                                    }
                                 },
                             )
                         }
@@ -1478,6 +1491,7 @@ private fun EpisodeCard(
     isWatched: Boolean = false,
     focusRequester: FocusRequester? = null,
     onClick: () -> Unit,
+    onLongPress: () -> Unit = {},
 ) {
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
@@ -1496,7 +1510,8 @@ private fun EpisodeCard(
             Modifier
                 .fillMaxWidth()
                 .height(TvDimensions.episodeCardHeight.scaled(scale))
-                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                .tvLongPress(onLongPress),
         colors = cardStyle.colors,
         shape = cardStyle.shape,
         scale = cardStyle.cardScale,

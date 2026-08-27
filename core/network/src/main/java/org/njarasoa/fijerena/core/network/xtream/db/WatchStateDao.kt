@@ -14,6 +14,11 @@ interface WatchStateDao {
     /**
      * Playback progress upsert. Owns position, duration, completion and `lastPlayedAt`; leaves
      * metadata columns alone when this call doesn't carry them via `COALESCE`.
+     *
+     * `isCompleted` is sticky since Phase 6: `MAX` can only raise it, never lower it, so playing
+     * two minutes of a film already marked watched can't silently clear the check — only
+     * `setWatched(false)` does that. Safe because Phase 6 also adds the manual escape hatch; before
+     * it existed a title that crossed 95% by accident could never be un-marked.
      */
     @Query(
         "INSERT INTO watch_state (providerId, itemId, contentType, itemName, categoryId, positionMs, " +
@@ -25,7 +30,7 @@ interface WatchStateDao {
             "ON CONFLICT(providerId, itemId, contentType) DO UPDATE SET " +
             "positionMs = excluded.positionMs, " +
             "durationMs = excluded.durationMs, " +
-            "isCompleted = excluded.isCompleted, " +
+            "isCompleted = MAX(watch_state.isCompleted, excluded.isCompleted), " +
             "updatedAt = excluded.updatedAt, " +
             "lastPlayedAt = excluded.lastPlayedAt, " +
             "itemName = COALESCE(excluded.itemName, watch_state.itemName), " +
@@ -88,6 +93,44 @@ interface WatchStateDao {
         episodeExtension: String?,
         audioTrackIndex: Int?,
         subtitleTrackIndex: Int?,
+    )
+
+    /**
+     * Manual mark watched (Phase 6). Insert path supplies `positionMs`/`durationMs` = 0 and
+     * `lastPlayedAt` = NULL, same discipline as [upsertRecency] — a manual mark is not a play, so
+     * it must not enter the Recent row (filtered on `lastPlayedAt IS NOT NULL`). Update path
+     * touches only `isCompleted`/`updatedAt`, leaving position, duration, `lastPlayedAt` and
+     * metadata exactly as playback left them, so a later `setWatched(false)` brings the resume bar
+     * back where it was rather than erasing it.
+     */
+    @Query(
+        "INSERT INTO watch_state (providerId, itemId, contentType, itemName, categoryId, positionMs, " +
+            "durationMs, isCompleted, updatedAt, lastPlayedAt) " +
+            "VALUES (:providerId, :itemId, :contentType, '', '', 0, 0, 1, :now, NULL) " +
+            "ON CONFLICT(providerId, itemId, contentType) DO UPDATE SET " +
+            "isCompleted = 1, updatedAt = excluded.updatedAt",
+    )
+    suspend fun markWatched(
+        providerId: Long,
+        itemId: String,
+        contentType: String,
+        now: Long,
+    )
+
+    /**
+     * Manual mark unwatched for this one row (Phase 6). A no-op if the row doesn't exist — nothing
+     * to unmark. Spreading this across a completed TMDB sibling group (Phase 5) is a separate,
+     * Xtream-specific call from [MediaRepository.setWatched]; this DAO has no catalogue to join.
+     */
+    @Query(
+        "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +
+            "WHERE providerId = :providerId AND itemId = :itemId AND contentType = :contentType",
+    )
+    suspend fun markUnwatched(
+        providerId: Long,
+        itemId: String,
+        contentType: String,
+        now: Long,
     )
 
     /** Tier 2: every row for the content type, uncapped. Position/completion are stream attributes, not history. */

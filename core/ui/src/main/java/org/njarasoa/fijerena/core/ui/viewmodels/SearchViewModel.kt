@@ -443,6 +443,27 @@ class SearchViewModel(
             }
         }
     }
+
+    /**
+     * Manual watched/unwatched mark (Phase 6, plans/watch-state-durable-storage-plan.md). Unlike
+     * [isFavorite], this has no synchronous in-memory cache to read — `watch_state` reads are
+     * suspend since Phase 3 — so building the long-press menu target for a search result means an
+     * explicit fetch rather than an inline call.
+     */
+    suspend fun isWatchedSuspend(
+        itemId: String,
+        contentType: String,
+    ): Boolean = ensureRepo().getPlaybackPositionSuspend(itemId, contentType)?.isCompleted == true
+
+    fun toggleWatched(
+        itemId: String,
+        contentType: String,
+        isWatched: Boolean,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            ensureRepo().setWatched(itemId, contentType, !isWatched)
+        }
+    }
 }
 
 /**

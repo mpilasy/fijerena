@@ -153,12 +153,14 @@ fun MovieDetailsScreen(
                     movieId = state.movieDetail.id,
                     movieName = state.streamName,
                     isFavorite = state.isFavorite,
+                    isWatched = state.isWatched,
                     resumePositionMs = state.resumePositionMs,
                     resumeDurationMs = state.resumeDurationMs,
                     categoryName = state.categoryName,
                     onPlayMovie = onPlayMovie,
                     onCategorySelected = { onCategorySelected(state.categoryId) },
                     onToggleFavorite = { viewModel.toggleFavorite(state.streamName) },
+                    onToggleWatched = { viewModel.toggleWatched() },
                     onRefresh = { viewModel.refreshMovieInfo() },
                     onBack = onBack,
                     onRelatedTitleSelected = onRelatedTitleSelected,
@@ -178,12 +180,14 @@ private fun MovieDetailsContent(
     movieId: String,
     movieName: String,
     isFavorite: Boolean,
+    isWatched: Boolean,
     resumePositionMs: Long,
     resumeDurationMs: Long,
     categoryName: String?,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onToggleWatched: () -> Unit,
     onRefresh: () -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
@@ -309,6 +313,18 @@ private fun MovieDetailsContent(
                                 imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                 contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
                                 tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        }
+                    )
+                    // Watched button (Phase 6, plans/watch-state-durable-storage-plan.md)
+                    CinemaIconButton(
+                        onClick = onToggleWatched,
+                        icon = {
+                            Icon(
+                                imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                                contentDescription = if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
+                                tint = if (isWatched) CinemaAccent else CinemaTextPrimary,
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             )
                         }

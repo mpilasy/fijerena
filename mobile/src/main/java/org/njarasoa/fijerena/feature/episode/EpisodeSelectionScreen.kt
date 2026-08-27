@@ -256,6 +256,7 @@ private fun EpisodeListContent(
     onAlternateStreamSelected: (MediaItem) -> Unit,
 ) {
     val context = LocalContext.current
+    val watchedToggleScope = rememberCoroutineScope()
     val sortedSeasons =
         remember(seriesDetail) {
             seriesDetail.sortedSeasons { num -> context.getString(R.string.series_season_name_format, num) }
@@ -648,6 +649,17 @@ private fun EpisodeListContent(
                         isWatched = episode.id in watchedEpisodeIds,
                         onClick = {
                             onEpisodeSelected(episode)
+                        },
+                        onToggleWatched = {
+                            // Manual watched/unwatched mark (Phase 6,
+                            // plans/watch-state-durable-storage-plan.md). Optimistic: flips the
+                            // badge immediately rather than waiting on the write.
+                            val nowWatched = episode.id !in watchedEpisodeIds
+                            watchedEpisodeIds =
+                                if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
+                            watchedToggleScope.launch {
+                                mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
+                            }
                         },
                     )
                 }
@@ -1057,6 +1069,7 @@ private fun EpisodeCard(
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
     onClick: () -> Unit,
+    onToggleWatched: () -> Unit = {},
 ) {
     CinemaCard(
         onClick = onClick,
@@ -1107,14 +1120,21 @@ private fun EpisodeCard(
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    if (isWatched) {
-                        Icon(
-                            imageVector = CinemaIcons.CheckCircle,
-                            contentDescription = stringResource(R.string.content_watched_badge),
-                            tint = CinemaSuccess,
-                            modifier = Modifier.size(MobileDimensions.iconSmall),
-                        )
-                    }
+                    // Watched toggle (Phase 6, plans/watch-state-durable-storage-plan.md): the
+                    // badge itself is the tap target, since CinemaCard's onClick already owns the
+                    // rest of the row for playing the episode.
+                    CinemaIconButton(
+                        onClick = onToggleWatched,
+                        icon = {
+                            Icon(
+                                imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                                contentDescription =
+                                    if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
+                                tint = if (isWatched) CinemaSuccess else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(MobileDimensions.iconSmall),
+                            )
+                        },
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.xxs))

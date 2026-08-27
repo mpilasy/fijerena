@@ -531,6 +531,24 @@ class CategoryViewModel(
         refreshCategoriesLocal()
     }
 
+    /**
+     * Manual watched/unwatched mark (Phase 6, plans/watch-state-durable-storage-plan.md), same
+     * refresh discipline as [toggleFavoriteStream]: [setWatched][org.njarasoa.fijerena.core.network
+     * .MediaRepository.setWatched] then [refreshPerItemData] republishes [watchedIds], costing
+     * nothing extra since watch state is looked up separately from the catalogue rather than
+     * joined into it — no catalogue re-query, no list invalidation.
+     */
+    fun toggleWatchedStream(
+        itemId: String,
+        contentType: String,
+    ) {
+        val nowWatched = itemId !in _watchedIds.value
+        viewModelScope.launch {
+            repository.setWatched(itemId, contentType, nowWatched)
+            refreshPerItemData()
+        }
+    }
+
     fun retry() {
         loadCategories()
     }

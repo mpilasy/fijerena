@@ -133,6 +133,10 @@ internal fun TwoColumnLayout(
                 }
             },
             onDismiss = { favoriteMenuTarget = null },
+            onToggleWatched =
+                (target as? FavoriteMenuTarget.Stream)?.let { stream ->
+                    { categoryViewModel.toggleWatchedStream(stream.itemId, stream.contentType) }
+                },
         )
     }
 
@@ -285,6 +289,7 @@ internal fun TwoColumnLayout(
                             contentType = contentType,
                             isFavorite = { categoryViewModel.isFavorite(it, contentType) },
                             isFavoriteCategory = { categoryViewModel.isFavoriteCategory(it, contentType) },
+                            isWatched = { watchedIds.contains(it) },
                         )
                 },
                 onRefreshStreams = onRefreshStreams,
