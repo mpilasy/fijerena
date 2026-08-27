@@ -119,6 +119,24 @@ last real sync recorded 8307 channels / 79951 programmes.
   not as a prerequisite that blocks starting it — the mechanism (Phase 1a header check first,
   Phase 1 hash as fallback) is unaffected by which sources it's verified against.
 
+**Second, independent provider — `cf.stream4ktv.cc` (also live on a device per
+[[reference_emulator_providers]]), same pattern:**
+
+- `player_api.php?...&action=get_live_streams` answers normally from external `curl`, real
+  ~20MB JSON payload, same headers as `bearsclub.online` — `Cache-Control: public,
+  must-revalidate, proxy-revalidate`, no `ETag`, no `Last-Modified`. Two panels now agree: Phase
+  3's row-diff is the mechanism for Xtream catalog data, not conditional GET or a response hash.
+- `get.php?...&type=m3u_plus&output=ts` (the bulk M3U-playlist export — not an endpoint this
+  codebase calls; `XtreamApiService` uses `player_api.php` JSON, not M3U) returned a custom
+  Cloudflare status (`HTTP 884`, empty body) on every attempt, while `player_api.php` on the same
+  host kept answering normally around it. Not the same CDN as bearsclub's (`cloudflare` here vs.
+  `CDN PROXY SERVICE` there), so this is two unrelated panels independently choosing to gate their
+  bulk-export endpoint while leaving the per-request JSON API open — reinforcing that "the
+  full-catalog/full-guide export gets treated as scraping traffic" is a pattern to expect from
+  Xtream-style panels generally, not an artifact of one provider's specific CDN. Strengthens the
+  case for verifying EPG byte-stability from inside the app as the default assumption for any new
+  provider, not a one-off workaround for `bearsclub.online`.
+
 ---
 
 ## Phase 1a — conditional GET (only if Phase 0 finds validators)
