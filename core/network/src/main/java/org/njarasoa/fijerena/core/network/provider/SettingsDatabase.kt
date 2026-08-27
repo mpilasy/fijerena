@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ProviderEntity::class, EpgSourceEntity::class, EpgPipelineStatsEntity::class],
-    version = 9,
+    version = 10,
     exportSchema = false,
 )
 abstract class SettingsDatabase : RoomDatabase() {
@@ -166,6 +166,15 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        val MIGRATION_9_10 =
+            object : Migration(9, 10) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE epg_source ADD COLUMN last_content_sha256 TEXT")
+                    db.execSQL("ALTER TABLE epg_source ADD COLUMN etag TEXT")
+                    db.execSQL("ALTER TABLE epg_source ADD COLUMN last_modified_header TEXT")
+                }
+            }
+
         fun getInstance(context: Context): SettingsDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -182,6 +191,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_6_7,
                         MIGRATION_7_8,
                         MIGRATION_8_9,
+                        MIGRATION_9_10,
                     ).build()
                     .also { INSTANCE = it }
             }

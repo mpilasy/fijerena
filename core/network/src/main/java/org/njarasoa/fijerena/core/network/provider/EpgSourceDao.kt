@@ -55,7 +55,13 @@ interface EpgSourceDao {
     suspend fun deleteAllSources()
 
     @Query(
-        "UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL, last_channels = :channels, last_programmes = :programmes, last_download_bytes = :downloadBytes, ingest_method = :ingestMethod, last_ingestion_duration_ms = :ingestionDurationMs, last_download_duration_ms = :downloadDurationMs WHERE id = :id",
+        """
+        UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL, last_channels = :channels,
+            last_programmes = :programmes, last_download_bytes = :downloadBytes, ingest_method = :ingestMethod,
+            last_ingestion_duration_ms = :ingestionDurationMs, last_download_duration_ms = :downloadDurationMs,
+            last_content_sha256 = :contentSha256, etag = :etag, last_modified_header = :lastModifiedHeader
+        WHERE id = :id
+        """,
     )
     suspend fun markIngested(
         id: Long,
@@ -66,6 +72,21 @@ interface EpgSourceDao {
         ingestMethod: String = "DOWNLOADED",
         ingestionDurationMs: Long = 0,
         downloadDurationMs: Long = 0,
+        contentSha256: String? = null,
+        etag: String? = null,
+        lastModifiedHeader: String? = null,
+    )
+
+    /**
+     * A refresh confirmed the source is unchanged (304, or a matching content hash) — bump the
+     * timestamp and clear any prior error, but leave the channel/programme counts and validators
+     * as they were. Reusing [markIngested] here would zero the counts, making a genuinely
+     * unchanged source look like one that suddenly lost its whole guide.
+     */
+    @Query("UPDATE epg_source SET last_ingested_at_ms = :timestamp, last_error = NULL WHERE id = :id")
+    suspend fun markUnchanged(
+        id: Long,
+        timestamp: Long,
     )
 
     @Query("UPDATE epg_source SET last_error = :error WHERE id = :id")
@@ -86,7 +107,11 @@ interface EpgSourceDao {
     suspend fun getSourceCount(): Int
 
     @Query(
-        "UPDATE epg_source SET last_ingested_at_ms = 0, last_channels = 0, last_programmes = 0, last_download_bytes = 0, last_error = NULL, last_ingestion_duration_ms = 0, last_download_duration_ms = 0",
+        """
+        UPDATE epg_source SET last_ingested_at_ms = 0, last_channels = 0, last_programmes = 0, last_download_bytes = 0,
+            last_error = NULL, last_ingestion_duration_ms = 0, last_download_duration_ms = 0,
+            last_content_sha256 = NULL, etag = NULL, last_modified_header = NULL
+        """,
     )
     suspend fun resetAllIngestionState()
 }

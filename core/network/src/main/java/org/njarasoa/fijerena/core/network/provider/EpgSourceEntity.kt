@@ -35,4 +35,12 @@ data class EpgSourceEntity(
     val lastDownloadDurationMs: Long = 0,
     @ColumnInfo(name = "provider_id")
     val providerId: Long,
+    /** SHA-256 of the last ingested payload (decompressed for `.gz` sources). Null = never hashed. */
+    @ColumnInfo(name = "last_content_sha256")
+    val lastContentSha256: String? = null,
+    /** Response validators from the last download, sent back as `If-None-Match`/`If-Modified-Since`. */
+    @ColumnInfo(name = "etag")
+    val etag: String? = null,
+    @ColumnInfo(name = "last_modified_header")
+    val lastModifiedHeader: String? = null,
 )
