@@ -42,13 +42,25 @@ interface ProviderDao {
         timestamp: Long = System.currentTimeMillis(),
     )
 
+    // inserted/updated/deleted are nullable and COALESCE onto the existing value when null: a
+    // failed sync (delta unknown) must leave the last real delta in place rather than overwrite
+    // it with zeros, which would read identically to a sync that genuinely found no changes.
     @Query(
-        "UPDATE providers SET lastSyncedAtMs = :timestamp, lastSyncDurationMs = :durationMs, lastSyncError = :error WHERE id = :id",
+        """
+        UPDATE providers SET lastSyncedAtMs = :timestamp, lastSyncDurationMs = :durationMs, lastSyncError = :error,
+            lastSyncInserted = COALESCE(:inserted, lastSyncInserted),
+            lastSyncUpdated = COALESCE(:updated, lastSyncUpdated),
+            lastSyncDeleted = COALESCE(:deleted, lastSyncDeleted)
+        WHERE id = :id
+        """,
     )
     suspend fun updateSyncStats(
         id: Long,
         timestamp: Long,
         durationMs: Long,
         error: String?,
+        inserted: Int? = null,
+        updated: Int? = null,
+        deleted: Int? = null,
     )
 }

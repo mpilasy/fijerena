@@ -23,7 +23,11 @@ class XtreamSyncWorker(
                     anyTransientFailure = true
                 }
                 val endTime = System.currentTimeMillis()
-                providerRepo.updateSyncStats(provider.id, endTime, endTime - startTime, outcome.errorOrNull())
+                val delta = (outcome as? ProviderSyncRunner.Outcome.Success)?.delta
+                providerRepo.updateSyncStats(
+                    provider.id, endTime, endTime - startTime, outcome.errorOrNull(),
+                    inserted = delta?.inserted, updated = delta?.updated, deleted = delta?.deleted,
+                )
             }
         }
 

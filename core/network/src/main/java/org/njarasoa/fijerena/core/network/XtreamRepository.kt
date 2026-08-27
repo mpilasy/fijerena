@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.Deferred
 import kotlinx.serialization.Serializable
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.xtream.SyncDelta
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
@@ -156,6 +157,9 @@ class XtreamRepository(
     suspend fun syncSeries(): Deferred<Unit> = contentManager.syncSeries()
 
     suspend fun recomputeExclusions() = contentManager.recomputeExclusions()
+
+    /** The combined insert/update/delete delta from every sync task run since the last call. */
+    fun consumeSyncDelta(): SyncDelta = contentManager.consumeSyncDelta()
 
     suspend fun getCategoryTotalCount(contentType: String): Int =
         when (contentType) {

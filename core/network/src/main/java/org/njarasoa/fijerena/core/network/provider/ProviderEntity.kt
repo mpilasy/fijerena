@@ -32,4 +32,8 @@ data class ProviderEntity(
     val lastSyncedAtMs: Long = 0,
     val lastSyncDurationMs: Long = 0,
     val lastSyncError: String? = null,
+    /** Rows inserted/updated/deleted by the last sync. All zero means the catalog didn't change. */
+    val lastSyncInserted: Int = 0,
+    val lastSyncUpdated: Int = 0,
+    val lastSyncDeleted: Int = 0,
 )
