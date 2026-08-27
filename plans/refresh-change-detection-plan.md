@@ -86,51 +86,38 @@ Record the outcome in this file before starting Phase 1. Three cases:
 If `ETag` or `Last-Modified` is present, Phase 1a is worth far more than Phase 1 — it is the only
 option that avoids the download itself.
 
-### Results (measured 2026-08-26)
+### Results (measured 2026-08-26/27, against the actual live provider)
 
-**Headers**, five public XMLTV sources (representative of what this codebase's EPG sources look
-like — generic `.gz` XMLTV endpoints):
+Tested against the provider actually configured on a running device rather than generic public
+XMLTV mirrors — those don't represent what this app's users are pointed at and are not repeated
+here. Exported settings supplied with the original request were stale (per user correction);
+pulled the real `providers.db` off the TV emulator (`emulator-5554`, `run-as org.njarasoa.fijerena
+cat databases/providers.db` — see [[reference_backup_restore_app_data]]) to find the live one.
+Active provider is `bears 2` on `bearsclub.online`; its EPG source row carries
+`xmltv.php?username=...&password=...` (the EPG URL embeds live credentials directly), and its
+last real sync recorded 8307 channels / 79951 programmes.
 
-| source | Last-Modified | ETag |
-|---|---|---|
-| epg.pw/xmltv/epg_lite.xml.gz | yes | yes |
-| epgshare01.online epg_ripper_US2 | yes | yes |
-| iptv-epg.org (behind a 302) | yes | no |
-| EPGTalk (GitHub raw) | no | yes |
-| open-epg.com sports1 (behind a 302) | yes | yes |
-
-4 of 5 carry a validator. **Phase 1a is not hypothetical for this class of source — build it
-first.**
-
-**Byte stability**, real double-fetch 5 minutes apart on 3 of the above (`epg.pw`, `epgshare01`,
-`EPGTalk`): raw `.gz` bytes were **identical**, not just the decompressed content — these
-generators serve a pre-built static file rather than re-stamping it per request. Best case in the
-table above: no header-stripping needed, plain `sha256sum` on the wire bytes is sufficient for
-these three.
-
-**Live provider check.** Exported settings supplied with the original request were stale (per
-user correction); pulled the real `providers.db` off the TV emulator (`emulator-5554`,
-`run-as org.njarasoa.fijerena cat databases/providers.db` — see
-[[reference_backup_restore_app_data]]) instead. Active provider is `bears 2` on
-`bearsclub.online`, with its EPG source row carrying `xmltv.php?username=...&password=...` —
-confirming, incidentally, that this provider's EPG URL embeds live credentials directly (not a
-generic public source), and that its last real sync recorded 8307 channels / 79951 programmes.
-
-- **Xtream `player_api.php`** (`get_live_streams`/`get_vod_streams`/`get_series`): a `HEAD`
-  request that got through before the panel's CDN started rate-limiting returned
+- **Xtream `player_api.php`** (`get_live_streams`/`get_vod_streams`/`get_series`): responds
+  normally (`200`) from plain external `curl`, no CDN interference. Headers carry
   `Cache-Control: public, must-revalidate, proxy-revalidate` with **no `ETag` and no
   `Last-Modified`**. No conditional-GET path for this panel's catalog JSON — Phase 3's row-level
   diff (already implemented, just not surfaced) is the right and only mechanism here, not Phase 4.
-- **This panel's `xmltv.php`** could not be double-fetched for a byte-stability check: repeat
-  requests from this sandbox's egress IP were rejected by the panel's anti-bot CDN (`HTTP 513`,
-  `Server: CDN PROXY SERVICE`) regardless of `User-Agent`. This is specific to the sandbox's
-  network path, not the panel — the on-device app synced this exact source successfully (per the
-  timestamp above) — and raw `nc` from the emulator's own shell also failed (outbound TCP hung;
-  toybox's `nc` on this AVD image is not a reliable substitute for a proper HTTP client). **Open
-  item:** before enabling the Phase 1 skip logic for *this* provider specifically, confirm byte
-  stability by adding temporary logging to `downloadSource` and triggering
-  `EpgSyncDebugReceiver` twice a few minutes apart on a real device — cheaper than fighting the
-  CDN block from outside the app.
+- **This panel's `xmltv.php` actively blocks external fetches.** Every attempt — different
+  `User-Agent` values including OkHttp's own default, different times, a clean retry after the
+  first block appeared to have cooled off — returned `HTTP 513`, `Server: CDN PROXY SERVICE`,
+  empty body. `player_api.php` on the same host answered normally in between, so this isn't a
+  blanket IP block or general rate-limit: the CDN specifically gates the bulk XMLTV export,
+  presumably to stop exactly the kind of scripted fetching this probe is. The running app clearly
+  gets through (it has real ingested data), so something about a first-party client request
+  passes that a bare `curl` does not — most likely a session/cookie or referer check the app's
+  OkHttp stack incidentally satisfies and a one-shot external request doesn't.
+- **Consequence:** this source's byte-stability cannot be verified from outside the app. Before
+  enabling the Phase 1 skip logic for a provider whose EPG endpoint behaves like this one,
+  verify stability from *inside* the app instead — add temporary logging (or a temporary hash
+  field) to `downloadSource`, trigger `EpgSyncDebugReceiver` twice a few minutes apart on a real
+  device, and compare. Do this as the first step of Phase 1 implementation for this provider,
+  not as a prerequisite that blocks starting it — the mechanism (Phase 1a header check first,
+  Phase 1 hash as fallback) is unaffected by which sources it's verified against.
 
 ---
 
