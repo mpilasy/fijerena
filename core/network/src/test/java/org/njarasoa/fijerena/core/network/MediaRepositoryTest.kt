@@ -17,6 +17,7 @@ import org.junit.Assert.assertEquals
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -25,6 +26,7 @@ class MediaRepositoryTest {
     private lateinit var context: Context
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var editor: SharedPreferences.Editor
+    private lateinit var watchStateDao: WatchStateDao
     private lateinit var repository: MediaRepository
 
     private val json =
@@ -52,6 +54,7 @@ class MediaRepositoryTest {
         context = mockk(relaxed = true)
         sharedPreferences = mockk(relaxed = true)
         editor = mockk(relaxed = true)
+        watchStateDao = mockk(relaxed = true)
 
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
         every { sharedPreferences.edit() } returns editor
@@ -71,7 +74,7 @@ class MediaRepositoryTest {
     @Test
     fun savePlaybackPosition_marksCompletedPastThreshold() {
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
-        repository = MediaRepository(context, 1L)
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
 
         // Played to the end: finalizeSession reports position == duration for PlaybackState.Ended.
         repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 2_500_000L, 2_500_000L)
@@ -96,7 +99,7 @@ class MediaRepositoryTest {
                 ),
             )
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns json.encodeToString(existing)
-        repository = MediaRepository(context, 1L)
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
 
         // Leaving while idle/buffering reports 0/0 — it must not overwrite what is already there.
         repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 0L, 0L)
@@ -109,7 +112,7 @@ class MediaRepositoryTest {
     @Test
     fun savePlaybackPosition_shortSessionStillRecordsWhichEpisodePlayed() {
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
-        repository = MediaRepository(context, 1L)
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
 
         // 1.3% watched — below the threshold that records the last-played item, so this write is
         // the one creating the row. It must still say which episode of which show it was.
@@ -134,7 +137,7 @@ class MediaRepositoryTest {
     @Test
     fun getWatchHistory_empty() {
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
-        repository = MediaRepository(context, 1L)
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
         assert(repository.getWatchHistory().isEmpty())
     }
 
@@ -146,7 +149,7 @@ class MediaRepositoryTest {
         // Return JSON on first call
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns historyJson
 
-        repository = MediaRepository(context, 1L)
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
 
         // First call should hit SharedPreferences
         val result1 = repository.getWatchHistory()
@@ -163,7 +166,7 @@ class MediaRepositoryTest {
     fun saveLastPlayedItem_updatesCache() {
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
 
-        repository = MediaRepository(context, 1L)
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
 
         // Initially empty
         assert(repository.getWatchHistory().isEmpty())
@@ -189,7 +192,7 @@ class MediaRepositoryTest {
         val historyJson = json.encodeToString(history)
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns historyJson
 
-        repository = MediaRepository(context, 1L)
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
         assert(repository.getWatchHistory().isNotEmpty())
 
         repository.clearWatchHistory()
@@ -205,7 +208,7 @@ class MediaRepositoryTest {
         every { sharedPreferences.getString("watch_history_v3", null) } returns null
         every { sharedPreferences.getString("watch_history_v2", null) } returns v2Json
 
-        repository = MediaRepository(context, 1L)
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
         val history = repository.getWatchHistory()
 
         assertEquals(1, history.size)

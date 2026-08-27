@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
@@ -100,6 +101,7 @@ class MediaRepository(
     private val context: Context,
     private val providerId: Long,
     private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT,
+    private val watchStateDao: WatchStateDao = XtreamDatabase.getInstance(context).watchStateDao(),
 ) : Closeable {
     @Volatile
     private var provider: MediaProvider? = null
@@ -164,6 +166,7 @@ class MediaRepository(
     companion object {
         private const val KEY_WATCH_HISTORY = "watch_history_v3"
         private const val KEY_WATCH_HISTORY_V2 = "watch_history_v2"
+        private const val KEY_WATCH_STATE_MIGRATED = "watch_state_migrated_v1"
         private const val KEY_FAVORITES = "favorites_v2"
         private const val KEY_FAVORITE_CATEGORIES = "favorite_categories"
         private const val KEY_RECENT_CATEGORIES = "recent_categories"
@@ -183,6 +186,48 @@ class MediaRepository(
 
     fun setProvider(mediaProvider: MediaProvider) {
         provider = mediaProvider
+        backfillWatchState()
+    }
+
+    /**
+     * One-time per-provider copy of `watch_history_v3` into `watch_state`, so Phase 3 reads have
+     * something to read once the blob is retired. Guarded exactly like
+     * [org.njarasoa.fijerena.core.network.xtream.manager.XtreamEpgManager]'s
+     * `purgeLegacyPrefsCache`. Hooked off [setProvider] rather than the constructor — a
+     * provider-less repository (a unit test, or the brief window in [org.njarasoa.fijerena.core
+     * .network.provider] wiring before a provider is attached) is not a real "use" yet.
+     *
+     * Replay-safe: a crash between "rows written" and the flag commit just re-runs this and
+     * re-upserts the same values, because every row goes through the same progress upsert
+     * [savePlaybackPosition] uses rather than a raw insert — see Migration in
+     * plans/watch-state-durable-storage-plan.md.
+     */
+    private fun backfillWatchState() {
+        val alreadyMigrated = cache.getBoolean(KEY_WATCH_STATE_MIGRATED, false)
+        if (!alreadyMigrated) {
+            writeScope.launch {
+                for (item in getWatchHistory()) {
+                    watchStateDao.upsertProgress(
+                        providerId = providerId,
+                        itemId = item.itemId,
+                        contentType = item.contentType,
+                        itemName = item.itemName,
+                        categoryId = item.categoryId,
+                        positionMs = item.playbackPosition,
+                        durationMs = item.duration,
+                        isCompleted = item.isCompleted,
+                        now = item.timestamp,
+                        seriesId = item.seriesId?.raw,
+                        episodeId = item.episodeId?.raw,
+                        seriesName = item.seriesName,
+                        episodeExtension = item.episodeExtension,
+                        audioTrackIndex = item.audioTrackIndex,
+                        subtitleTrackIndex = item.subtitleTrackIndex,
+                    )
+                }
+                cache.commitAsync { putBoolean(KEY_WATCH_STATE_MIGRATED, true) }
+            }
+        }
     }
 
     fun getProvider(): MediaProvider? = provider
@@ -432,6 +477,27 @@ class MediaRepository(
             seriesId = seriesId,
             seriesName = seriesName,
         )
+
+        // Dual write (Phase 2, plans/watch-state-durable-storage-plan.md): owns recency and
+        // metadata only. Must not name positionMs/durationMs/isCompleted, so a start write can
+        // never erase progress a later progress write already stored.
+        val recencyNow = System.currentTimeMillis()
+        writeScope.launch {
+            watchStateDao.upsertRecency(
+                providerId = providerId,
+                itemId = itemId,
+                contentType = contentType,
+                itemName = itemName,
+                categoryId = categoryId,
+                now = recencyNow,
+                seriesId = seriesId?.raw,
+                episodeId = episodeId?.raw,
+                seriesName = seriesName,
+                episodeExtension = episodeExtension,
+                audioTrackIndex = null,
+                subtitleTrackIndex = null,
+            )
+        }
     }
 
     fun getLastCategoryId(contentType: String): String? =
@@ -777,38 +843,70 @@ class MediaRepository(
         seriesId: SeriesId? = null,
         seriesName: String? = null,
     ) {
-        if (contentType == ContentType.LIVE_TV) return
-        if (usesServerUserData) return
-        // An empty session (left while idle or still buffering) carries no information, and
-        // writing it would overwrite a real resume point — and any completed mark — with zeroes.
-        if (position <= 0L && duration <= 0L) return
-        val progressPercent =
-            if (duration > 0) {
-                (position.toFloat() / duration.toFloat()) * 100f
-            } else {
-                0f
+        // Live TV never gets a resume point, server-backed providers own this state themselves,
+        // and an empty session (left while idle or still buffering) carries no information —
+        // writing it would overwrite a real resume point, and any completed mark, with zeroes.
+        val shouldRecord =
+            contentType != ContentType.LIVE_TV && !usesServerUserData && !(position <= 0L && duration <= 0L)
+        if (shouldRecord) {
+            val progressPercent =
+                if (duration > 0) {
+                    (position.toFloat() / duration.toFloat()) * 100f
+                } else {
+                    0f
+                }
+            val isCompleted = progressPercent > 95.0f
+            // Preserve metadata from existing entry
+            val existing =
+                synchronized(watchHistoryLock) {
+                    getWatchHistoryLocked().firstOrNull { it.itemId == itemId && it.contentType == contentType }
+                }
+            val resolvedEpisodeId = episodeId ?: existing?.episodeId
+            val resolvedEpisodeExtension = episodeExtension ?: existing?.episodeExtension
+            val resolvedSeriesId = seriesId ?: existing?.seriesId
+            val resolvedSeriesName = seriesName ?: existing?.seriesName
+            val resolvedAudioTrackIndex = audioTrackIndex ?: existing?.audioTrackIndex
+            val resolvedSubtitleTrackIndex = subtitleTrackIndex ?: existing?.subtitleTrackIndex
+            addToWatchHistory(
+                itemId,
+                itemName,
+                categoryId,
+                contentType,
+                position,
+                duration,
+                isCompleted,
+                episodeId = resolvedEpisodeId,
+                episodeExtension = resolvedEpisodeExtension,
+                seriesId = resolvedSeriesId,
+                seriesName = resolvedSeriesName,
+                audioTrackIndex = resolvedAudioTrackIndex,
+                subtitleTrackIndex = resolvedSubtitleTrackIndex,
+            )
+
+            // Dual write (Phase 2, plans/watch-state-durable-storage-plan.md): owns position,
+            // duration, completion and lastPlayedAt. COALESCE in the upsert keeps metadata this
+            // call doesn't carry, same as the read-modify-write above achieves for the blob.
+            val progressNow = System.currentTimeMillis()
+            writeScope.launch {
+                watchStateDao.upsertProgress(
+                    providerId = providerId,
+                    itemId = itemId,
+                    contentType = contentType,
+                    itemName = itemName,
+                    categoryId = categoryId,
+                    positionMs = position,
+                    durationMs = duration,
+                    isCompleted = isCompleted,
+                    now = progressNow,
+                    seriesId = resolvedSeriesId?.raw,
+                    episodeId = resolvedEpisodeId?.raw,
+                    seriesName = resolvedSeriesName,
+                    episodeExtension = resolvedEpisodeExtension,
+                    audioTrackIndex = resolvedAudioTrackIndex,
+                    subtitleTrackIndex = resolvedSubtitleTrackIndex,
+                )
             }
-        val isCompleted = progressPercent > 95.0f
-        // Preserve metadata from existing entry
-        val existing =
-            synchronized(watchHistoryLock) {
-                getWatchHistoryLocked().firstOrNull { it.itemId == itemId && it.contentType == contentType }
-            }
-        addToWatchHistory(
-            itemId,
-            itemName,
-            categoryId,
-            contentType,
-            position,
-            duration,
-            isCompleted,
-            episodeId = episodeId ?: existing?.episodeId,
-            episodeExtension = episodeExtension ?: existing?.episodeExtension,
-            seriesId = seriesId ?: existing?.seriesId,
-            seriesName = seriesName ?: existing?.seriesName,
-            audioTrackIndex = audioTrackIndex ?: existing?.audioTrackIndex,
-            subtitleTrackIndex = subtitleTrackIndex ?: existing?.subtitleTrackIndex,
-        )
+        }
     }
 
     fun getPlaybackPosition(
