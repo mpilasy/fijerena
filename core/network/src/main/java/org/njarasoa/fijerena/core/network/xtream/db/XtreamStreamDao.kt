@@ -56,6 +56,39 @@ interface XtreamStreamDao {
         excludeStreamId: Int,
     ): List<XtreamStreamEntity>
 
+    /**
+     * Phase 5 dedup (plans/watch-state-durable-storage-plan.md): item ids in this content type
+     * completed by a TMDB sibling — a different catalogue entry for the same title (five language
+     * variants, a 4K re-rip) whose own `watch_state` row is completed. `watch_state` never stores
+     * a `tmdbId` itself (see "No tmdbId column" in the plan), so this reaches it by joining back
+     * to the catalogue. `c.type = :streamType` keeps a completed movie from ever matching a live
+     * channel — `xtream_streams` is keyed `(streamId, providerId, type)` with a panel's own type
+     * string, while `w.contentType` uses this app's domain constants, so the two must be passed
+     * and compared separately. `GROUP BY c.tmdbId` collapses the sibling set before the outer
+     * join, so one watched variant can't multiply-match and duplicate a row in the result.
+     * The caller unions the result into the `watched` set it already builds from
+     * [getPlaybackPositions][org.njarasoa.fijerena.core.network.MediaRepository.getPlaybackPositions].
+     */
+    @Query(
+        "SELECT CAST(s.streamId AS TEXT) AS itemId " +
+            "FROM xtream_streams s " +
+            "JOIN (" +
+            "SELECT c.tmdbId AS tmdbId " +
+            "FROM watch_state w " +
+            "JOIN xtream_streams c " +
+            "ON c.providerId = w.providerId AND c.type = :streamType AND CAST(c.streamId AS TEXT) = w.itemId " +
+            "WHERE w.providerId = :providerId AND w.contentType = :contentType AND w.isCompleted = 1 " +
+            "AND c.tmdbId IS NOT NULL " +
+            "GROUP BY c.tmdbId" +
+            ") done ON s.tmdbId = done.tmdbId " +
+            "WHERE s.providerId = :providerId AND s.type = :streamType AND s.excluded = 0",
+    )
+    suspend fun getSiblingCompletedStreamIds(
+        providerId: Long,
+        contentType: String,
+        streamType: String,
+    ): List<String>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(streams: List<XtreamStreamEntity>)
 

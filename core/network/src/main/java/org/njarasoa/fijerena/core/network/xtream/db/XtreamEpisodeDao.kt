@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.MapColumn
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import org.njarasoa.fijerena.core.player.domain.ContentType
 
 @Dao
 interface XtreamEpisodeDao {
@@ -50,6 +51,33 @@ interface XtreamEpisodeDao {
         @MapColumn(columnName = "episodeCount")
         Int,
     >
+
+    /**
+     * Phase 5 dedup (plans/watch-state-durable-storage-plan.md): episode ids of this series
+     * completed by a TMDB sibling. Scoped to [seriesId] on both sides — the completed lookup and
+     * the candidate set — since dedup only ever needs to run for the series currently on screen.
+     * The `tmdbId` guard against a series-level id copied onto every episode
+     * ([org.njarasoa.fijerena.core.network.xtream.manager.XtreamContentManager.getSeriesInfo])
+     * is applied at write time, not here: an unguarded repeat would otherwise complete this whole
+     * series the moment one episode did.
+     */
+    @Query(
+        "SELECT e2.id AS itemId " +
+            "FROM xtream_episodes e2 " +
+            "JOIN (" +
+            "SELECT e.tmdbId AS tmdbId " +
+            "FROM watch_state w " +
+            "JOIN xtream_episodes e ON e.providerId = w.providerId AND w.itemId = e.id " +
+            "WHERE w.providerId = :providerId AND w.contentType = '${ContentType.TV_SHOWS}' AND w.isCompleted = 1 " +
+            "AND e.tmdbId IS NOT NULL AND e.seriesId = :seriesId " +
+            "GROUP BY e.tmdbId" +
+            ") done ON e2.tmdbId = done.tmdbId " +
+            "WHERE e2.providerId = :providerId AND e2.seriesId = :seriesId",
+    )
+    suspend fun getSiblingCompletedEpisodeIds(
+        providerId: Long,
+        seriesId: Int,
+    ): List<String>
 
     // Only fills a missing plot (Xtream doesn't provide episode synopses) — never overwrites an existing one.
     @Query(

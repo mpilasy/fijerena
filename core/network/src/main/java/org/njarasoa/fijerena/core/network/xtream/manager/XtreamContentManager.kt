@@ -26,6 +26,21 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.*
 
 /**
+ * Mandatory guard for Phase 5 dedup (plans/watch-state-durable-storage-plan.md): panels frequently
+ * copy the *series* `tmdb_id` into every episode's info block. A `tmdbId` that repeats across more
+ * than one episode of the same series is a series-level value, not episode identity — nulling it
+ * here (at write time, once per sync) means the sibling query never sees it, rather than every
+ * read needing its own special case. [episodes] is expected to already be scoped to one series
+ * (as [XtreamContentManager.getSeriesInfo]'s call site is), so no `seriesId` grouping is needed.
+ */
+internal fun guardSeriesLevelEpisodeTmdbIds(episodes: List<XtreamEpisodeEntity>): List<XtreamEpisodeEntity> {
+    val tmdbIdCounts = episodes.mapNotNull { it.tmdbId }.groupingBy { it }.eachCount()
+    return episodes.map { ep ->
+        if (ep.tmdbId != null && (tmdbIdCounts[ep.tmdbId] ?: 0) > 1) ep.copy(tmdbId = null) else ep
+    }
+}
+
+/**
  * Manages Xtream content (categories, streams, series) including database caching and sync logic.
  */
 class XtreamContentManager(
@@ -860,7 +875,7 @@ class XtreamContentManager(
                     }
                 }
                 if (episodesToInsert.isNotEmpty()) {
-                    episodeDao.insertAll(episodesToInsert)
+                    episodeDao.insertAll(guardSeriesLevelEpisodeTmdbIds(episodesToInsert))
                 }
 
                 response

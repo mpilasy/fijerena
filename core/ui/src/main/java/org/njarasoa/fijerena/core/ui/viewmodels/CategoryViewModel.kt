@@ -487,6 +487,13 @@ class CategoryViewModel(
                     }
                 }
             }
+            // TMDB dedup (Phase 5): a different catalogue entry for the same title — a second
+            // language track, a 4K re-rip — completed under its own id. Movies only for now; a
+            // sibling only ever adds a check, never a resume bar, so it can't undo a progress
+            // entry this item already has above.
+            if (ct == ContentType.MOVIES) {
+                watched.addAll(repository.getSiblingCompletedMovieIds())
+            }
 
             _watchProgress.value = progressMap
             _watchedIds.value = watched
