@@ -16,8 +16,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         XtreamStreamFts::class,
         XtreamSeriesFts::class,
         XtreamEpgCacheEntity::class,
+        WatchStateEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -30,6 +31,8 @@ abstract class XtreamDatabase : RoomDatabase() {
     abstract fun episodeDao(): XtreamEpisodeDao
 
     abstract fun epgCacheDao(): XtreamEpgCacheDao
+
+    abstract fun watchStateDao(): WatchStateDao
 
     companion object {
         @Volatile
@@ -117,6 +120,39 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 14→15: durable watch state (position + completion), replacing the
+         * `watch_history_v3` SharedPreferences blob that truncated on every write.
+         * See `plans/watch-state-durable-storage-plan.md`. Nothing reads or writes this table
+         * yet — it ships dark until Phase 2.
+         */
+        private val MIGRATION_14_15 =
+            object : Migration(14, 15) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `watch_state` (" +
+                            "`providerId` INTEGER NOT NULL, `itemId` TEXT NOT NULL, `contentType` TEXT NOT NULL, " +
+                            "`itemName` TEXT NOT NULL, `categoryId` TEXT NOT NULL, `positionMs` INTEGER NOT NULL, " +
+                            "`durationMs` INTEGER NOT NULL, `isCompleted` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                            "`lastPlayedAt` INTEGER, `seriesId` TEXT, `episodeId` TEXT, `seriesName` TEXT, " +
+                            "`episodeExtension` TEXT, `audioTrackIndex` INTEGER, `subtitleTrackIndex` INTEGER, " +
+                            "PRIMARY KEY(`providerId`, `itemId`, `contentType`))",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_watch_state_providerId_contentType_lastPlayedAt` " +
+                            "ON `watch_state` (`providerId`, `contentType`, `lastPlayedAt`)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_watch_state_providerId_seriesId` " +
+                            "ON `watch_state` (`providerId`, `seriesId`)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_xtream_streams_providerId_tmdbId` " +
+                            "ON `xtream_streams` (`providerId`, `tmdbId`)",
+                    )
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -124,7 +160,10 @@ abstract class XtreamDatabase : RoomDatabase() {
                         context.applicationContext,
                         XtreamDatabase::class.java,
                         "xtream_v2.db",
-                    ).addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+                    ).addMigrations(
+                        MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
+                        MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15,
+                    )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { INSTANCE = it }
