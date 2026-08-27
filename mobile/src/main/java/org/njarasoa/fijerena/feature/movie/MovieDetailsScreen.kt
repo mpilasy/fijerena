@@ -72,6 +72,7 @@ fun MobileMovieDetailsScreen(
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
+    val isWatched = (uiState as? MovieDetailsViewModel.UiState.Success)?.isWatched ?: false
 
     // Retained across a refresh so pulling down leaves the details on screen under the spinner,
     // instead of blanking to a full-screen loading state. Mirrors the episode screen.
@@ -97,6 +98,16 @@ fun MobileMovieDetailsScreen(
                                 imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
                                 contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
                                 tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                            )
+                        }
+                    )
+                    // Watched button (Phase 6, plans/watch-state-durable-storage-plan.md)
+                    CinemaIconButton(onClick = { viewModel.toggleWatched() },
+                        icon = {
+                            Icon(
+                                imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                                contentDescription = if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
+                                tint = if (isWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                             )
                         }
                     )

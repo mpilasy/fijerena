@@ -79,6 +79,29 @@ interface XtreamEpisodeDao {
         seriesId: Int,
     ): List<String>
 
+    /**
+     * Phase 6 unwatched, episode form of [org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao.clearGroupCompletion]:
+     * clears completion on every `watch_state` row sharing [itemId]'s `tmdbId`. No `seriesId` scope
+     * is needed here — [guardSeriesLevelEpisodeTmdbIds][org.njarasoa.fijerena.core.network.xtream.manager.guardSeriesLevelEpisodeTmdbIds]
+     * already nulls a `tmdbId` that repeats within a series before it ever reaches this table, so a
+     * surviving non-null episode `tmdbId` is presumed genuinely episode-specific.
+     */
+    @Query(
+        "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +
+            "WHERE providerId = :providerId AND contentType = '${ContentType.TV_SHOWS}' " +
+            "AND itemId IN (" +
+            "SELECT e2.id FROM xtream_episodes e2 " +
+            "WHERE e2.providerId = :providerId AND e2.tmdbId IS NOT NULL AND e2.tmdbId = (" +
+            "SELECT tmdbId FROM xtream_episodes WHERE providerId = :providerId AND id = :itemId" +
+            ")" +
+            ")",
+    )
+    suspend fun clearGroupCompletion(
+        providerId: Long,
+        itemId: String,
+        now: Long,
+    )
+
     // Only fills a missing plot (Xtream doesn't provide episode synopses) — never overwrites an existing one.
     @Query(
         "UPDATE xtream_episodes SET plot = :plot, plotFetchedAt = :fetchedAt " +

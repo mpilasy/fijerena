@@ -89,6 +89,33 @@ interface XtreamStreamDao {
         streamType: String,
     ): List<String>
 
+    /**
+     * Phase 6 unwatched: clears completion on every `watch_state` row sharing [itemId]'s `tmdbId`
+     * within this content type — the other half of Phase 5's dedup, since marking one variant
+     * unwatched must not leave a sibling's completion still driving the checkmark. `tmdbId IS NOT
+     * NULL` is explicit and load-bearing even though SQL's `= NULL` semantics already prevent a
+     * null-tmdb item from matching: an item with no tmdbId at all must clear only itself.
+     */
+    @Query(
+        "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +
+            "WHERE providerId = :providerId AND contentType = :contentType " +
+            "AND itemId IN (" +
+            "SELECT CAST(c.streamId AS TEXT) FROM xtream_streams c " +
+            "WHERE c.providerId = :providerId AND c.type = :streamType AND c.tmdbId IS NOT NULL " +
+            "AND c.tmdbId = (" +
+            "SELECT tmdbId FROM xtream_streams " +
+            "WHERE providerId = :providerId AND type = :streamType AND streamId = CAST(:itemId AS INTEGER)" +
+            ")" +
+            ")",
+    )
+    suspend fun clearGroupCompletion(
+        providerId: Long,
+        contentType: String,
+        streamType: String,
+        itemId: String,
+        now: Long,
+    )
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(streams: List<XtreamStreamEntity>)
 

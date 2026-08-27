@@ -30,6 +30,7 @@ class MovieDetailsViewModel(
             val resumePositionMs: Long,
             val resumeDurationMs: Long,
             val isFavorite: Boolean,
+            val isWatched: Boolean,
             /** Null when the category can't be resolved (unknown id, or hidden by category filters). */
             val categoryName: String? = null,
             /** Id of the category button above, and of [onCategorySelected][MovieDetailsViewModel] target — tracks [switchToAlternateStream]. */
@@ -112,17 +113,7 @@ class MovieDetailsViewModel(
             val movieResult = repo.getMovieDetail(movieId)
             movieResult.fold(
                 onSuccess = { detail ->
-                    // Load resume position
-                    var resumePos = 0L
-                    var resumeDur = 0L
-                    val watched = repo.getPlaybackPositionSuspend(movieId, "MOVIES")
-                    if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
-                        val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
-                        if (progress in 2.0..95.0) {
-                            resumePos = watched.playbackPosition
-                            resumeDur = watched.duration
-                        }
-                    }
+                    val resume = resolveResumeState(repo)
 
                     // Check favorite
                     val isFav = repo.isFavorite(movieId, "MOVIES")
@@ -137,9 +128,10 @@ class MovieDetailsViewModel(
                     _uiState.value =
                         UiState.Success(
                             movieDetail = detail,
-                            resumePositionMs = resumePos,
-                            resumeDurationMs = resumeDur,
+                            resumePositionMs = resume.positionMs,
+                            resumeDurationMs = resume.durationMs,
                             isFavorite = isFav,
+                            isWatched = resume.isWatched,
                             categoryName = categoryName,
                             categoryId = categoryId,
                             streamName = streamName,
@@ -188,6 +180,27 @@ class MovieDetailsViewModel(
         }
     }
 
+    /** Resume-bar state and watched flag, both derived from the same `watch_state` lookup. */
+    private data class ResumeState(
+        val positionMs: Long,
+        val durationMs: Long,
+        val isWatched: Boolean,
+    )
+
+    private suspend fun resolveResumeState(repo: MediaRepository): ResumeState {
+        val watched = repo.getPlaybackPositionSuspend(movieId, "MOVIES")
+        var positionMs = 0L
+        var durationMs = 0L
+        if (watched != null && !watched.isCompleted && watched.playbackPosition > 0 && watched.duration > 0) {
+            val progress = (watched.playbackPosition.toFloat() / watched.duration.toFloat()) * 100f
+            if (progress in 2.0..95.0) {
+                positionMs = watched.playbackPosition
+                durationMs = watched.duration
+            }
+        }
+        return ResumeState(positionMs, durationMs, isWatched = watched?.isCompleted == true)
+    }
+
     private suspend fun getRepository(): MediaRepository {
         val container =
             org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -207,6 +220,30 @@ class MovieDetailsViewModel(
                 repo.addFavorite(movieId, movieName, categoryId, "MOVIES")
                 _uiState.value = currentState.copy(isFavorite = true)
             }
+        }
+    }
+
+    /**
+     * Manual watched/unwatched mark (Phase 6, plans/watch-state-durable-storage-plan.md). Marking
+     * watched leaves the stored position in `watch_state` alone — a rewatch still resumes — but
+     * hides this screen's own resume bar immediately rather than waiting for a reload, matching
+     * `WatchedItem.resumeProgress()`'s rule that a completed item never offers one. Marking
+     * unwatched re-derives the bar from a fresh lookup instead: the UI state doesn't cache the
+     * pre-mark position anywhere once the bar is hidden, so restoring it means asking again.
+     */
+    fun toggleWatched() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentState = _uiState.value as? UiState.Success ?: return@launch
+            val repo = mediaRepository ?: return@launch
+            val newWatched = !currentState.isWatched
+            repo.setWatched(movieId, "MOVIES", newWatched)
+            _uiState.value =
+                if (newWatched) {
+                    currentState.copy(isWatched = true, resumePositionMs = 0L, resumeDurationMs = 0L)
+                } else {
+                    val resume = resolveResumeState(repo)
+                    currentState.copy(isWatched = false, resumePositionMs = resume.positionMs, resumeDurationMs = resume.durationMs)
+                }
         }
     }
 }

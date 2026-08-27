@@ -157,6 +157,8 @@
     <!-- Favorites -->
     <string name="favorite_add">Ajouter aux favoris</string>
     <string name="favorite_remove">Retirer des favoris</string>
+    <string name="watched_mark">Marquer comme vu</string>
+    <string name="watched_unmark">Marquer comme non vu</string>
 
     <!-- Login -->
     <string name="login_app_name">fijerena</string>

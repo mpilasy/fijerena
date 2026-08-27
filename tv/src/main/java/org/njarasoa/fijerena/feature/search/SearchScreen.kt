@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Search
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.tv.material3.Icon
@@ -37,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -155,6 +157,7 @@ fun SearchScreen(
 
     // Favorite long-press state
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
+    val longPressScope = rememberCoroutineScope()
 
     favoriteMenuTarget?.let { target ->
         SearchFavoriteDialog(
@@ -181,6 +184,10 @@ fun SearchScreen(
                 }
             },
             onDismiss = { favoriteMenuTarget = null },
+            onToggleWatched =
+                (target as? FavoriteMenuTarget.Stream)?.isWatched?.let { isWatched ->
+                    { viewModel.toggleWatched(target.itemId, target.contentType, isWatched) }
+                },
         )
     }
 
@@ -238,14 +245,24 @@ fun SearchScreen(
                                 onStreamSelected(result.itemId, result.streamName, result.categoryId, result.contentType)
                             },
                             onResultLongPress = { result ->
-                                favoriteMenuTarget =
-                                    FavoriteMenuTarget.Stream(
-                                        itemId = result.itemId,
-                                        itemName = result.streamName,
-                                        categoryId = result.categoryId,
-                                        contentType = result.contentType,
-                                        isFavorite = viewModel.isFavorite(result.itemId, result.contentType),
-                                    )
+                                // Manual watched/unwatched mark (Phase 6,
+                                // plans/watch-state-durable-storage-plan.md). Unlike isFavorite,
+                                // there is no synchronous in-memory cache for watch_state — the
+                                // menu target has to wait on one suspend fetch before it opens.
+                                val isWatchable =
+                                    result.contentType == ContentType.MOVIES || result.contentType == ContentType.TV_SHOWS
+                                longPressScope.launch {
+                                    val isWatched = if (isWatchable) viewModel.isWatchedSuspend(result.itemId, result.contentType) else null
+                                    favoriteMenuTarget =
+                                        FavoriteMenuTarget.Stream(
+                                            itemId = result.itemId,
+                                            itemName = result.streamName,
+                                            categoryId = result.categoryId,
+                                            contentType = result.contentType,
+                                            isFavorite = viewModel.isFavorite(result.itemId, result.contentType),
+                                            isWatched = isWatched,
+                                        )
+                                }
                             },
                             onCategoryClick = { catResult ->
                                 onCategorySelected(catResult.categoryId, catResult.contentType)
@@ -1019,9 +1036,13 @@ private fun SearchFavoriteDialog(
     target: FavoriteMenuTarget,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    onToggleWatched: (() -> Unit)? = null,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()
+    val isWatched = (target as? FavoriteMenuTarget.Stream)?.isWatched
     val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
+    val watchedActionText =
+        if (isWatched == true) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark)
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
@@ -1033,7 +1054,25 @@ private fun SearchFavoriteDialog(
                 maxLines = 2,
             )
         },
-        text = null,
+        // Watched toggle (Phase 6, plans/watch-state-durable-storage-plan.md), beside the
+        // favorite action below — null onToggleWatched/isWatched (Live TV) omits the row.
+        text =
+            if (onToggleWatched != null && isWatched != null) {
+                {
+                    Column {
+                        CinemaPrimaryButton(
+                            onClick = {
+                                onToggleWatched()
+                                onDismiss()
+                            },
+                            text = watchedActionText,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            } else {
+                null
+            },
         confirmButton = {
             CinemaPrimaryButton(
                 onClick = {

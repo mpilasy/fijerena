@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.ui.model
 
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 
@@ -21,6 +22,12 @@ sealed class FavoriteMenuTarget {
         val categoryId: String,
         val contentType: String,
         val isFavorite: Boolean,
+        /**
+         * Null for a content type manual marking doesn't apply to (Live TV has no "watched"
+         * concept), which is also what keeps the watched entry off the menu for it — see
+         * plans/watch-state-durable-storage-plan.md Phase 6.
+         */
+        val isWatched: Boolean? = null,
     ) : FavoriteMenuTarget()
 }
 
@@ -41,6 +48,10 @@ fun MediaItem.toFavoriteMenuTarget(
         categoryId = categoryId,
         contentType = contentType,
         isFavorite = favoriteIds.contains(id),
+        // This overload's only caller is Live TV, which has no watched concept — see
+        // isWatchableContentType. A caller that needs a real watched lookup should use the other
+        // overload below.
+        isWatched = null,
     )
 
 /**
@@ -52,6 +63,7 @@ fun MediaItem.toFavoriteMenuTarget(
     contentType: String,
     isFavorite: (itemId: String) -> Boolean,
     isFavoriteCategory: (categoryId: String) -> Boolean,
+    isWatched: (itemId: String) -> Boolean = { false },
 ): FavoriteMenuTarget {
     val categoryRef = target as? BrowseTarget.CategoryRef
     return if (categoryRef != null) {
@@ -68,6 +80,11 @@ fun MediaItem.toFavoriteMenuTarget(
             categoryId = categoryId,
             contentType = contentType,
             isFavorite = isFavorite(id),
+            isWatched = if (isWatchableContentType(contentType)) isWatched(id) else null,
         )
     }
 }
+
+/** Manual watched/unwatched only makes sense for something you actually watch. */
+private fun isWatchableContentType(contentType: String): Boolean =
+    contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS

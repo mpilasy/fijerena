@@ -1205,24 +1205,34 @@ class MediaRepository(
         return getPlaybackPositions(itemIds, contentType)
     }
 
-    fun clearPlaybackPosition(
+    /**
+     * Manual watched/unwatched mark (Phase 6, plans/watch-state-durable-storage-plan.md), replacing
+     * `clearPlaybackPosition` — which only ever cleared the blob and had no UI caller anywhere in
+     * `tv/` or `mobile/`. Not routed through [savePlaybackPosition]: that method early-returns on
+     * `position <= 0 && duration <= 0`, exactly what a manual mark looks like, so it needs its own
+     * path rather than being mistaken for an empty session.
+     *
+     * `watched = true` writes one row; the sibling read query (Phase 5) spreads it across the
+     * TMDB group on its own. `watched = false` has to clear the group itself here — a sibling's
+     * completion would otherwise keep driving the check right back on, making the toggle look
+     * like it did nothing. Xtream-only for the group clear, same as Phase 5: SMB, Local and Remote
+     * M3U have no catalogue to find a group in, so only this one row changes for them.
+     */
+    suspend fun setWatched(
         itemId: String,
         contentType: String,
+        watched: Boolean,
     ) {
-        synchronized(watchHistoryLock) {
-            val history = getWatchHistoryLocked().toMutableList()
-            val index =
-                history.indexOfFirst {
-                    it.itemId == itemId && it.contentType == contentType
-                }
-            if (index != -1) {
-                val item = history[index]
-                history[index] = item.copy(playbackPosition = 0L, isCompleted = false)
-
-                // Update cache
-                cachedWatchHistory = history
-
-                cache.commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
+        val now = System.currentTimeMillis()
+        if (watched) {
+            watchStateDao.markWatched(providerId, itemId, contentType, now)
+        } else {
+            watchStateDao.markUnwatched(providerId, itemId, contentType, now)
+            val db = XtreamDatabase.getInstance(context)
+            when (contentType) {
+                ContentType.MOVIES ->
+                    db.streamDao().clearGroupCompletion(providerId, contentType, XtreamStreamEntity.TYPE_VOD, itemId, now)
+                ContentType.TV_SHOWS -> db.episodeDao().clearGroupCompletion(providerId, itemId, now)
             }
         }
     }

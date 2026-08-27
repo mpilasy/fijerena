@@ -54,7 +54,8 @@ class FakeWatchStateDao : WatchStateDao {
                 categoryId = categoryId ?: existing?.categoryId ?: "",
                 positionMs = positionMs,
                 durationMs = durationMs,
-                isCompleted = isCompleted,
+                // Sticky since Phase 6: can only raise isCompleted, never lower it.
+                isCompleted = isCompleted || existing?.isCompleted == true,
                 updatedAt = now,
                 lastPlayedAt = now,
                 seriesId = seriesId ?: existing?.seriesId,
@@ -64,6 +65,41 @@ class FakeWatchStateDao : WatchStateDao {
                 audioTrackIndex = audioTrackIndex ?: existing?.audioTrackIndex,
                 subtitleTrackIndex = subtitleTrackIndex ?: existing?.subtitleTrackIndex,
             )
+    }
+
+    override suspend fun markWatched(
+        providerId: Long,
+        itemId: String,
+        contentType: String,
+        now: Long,
+    ) {
+        val k = key(providerId, itemId, contentType)
+        val existing = rows[k]
+        rows[k] =
+            existing?.copy(isCompleted = true, updatedAt = now)
+                ?: WatchStateEntity(
+                    providerId = providerId,
+                    itemId = itemId,
+                    contentType = contentType,
+                    itemName = "",
+                    categoryId = "",
+                    positionMs = 0L,
+                    durationMs = 0L,
+                    isCompleted = true,
+                    updatedAt = now,
+                    lastPlayedAt = null,
+                )
+    }
+
+    override suspend fun markUnwatched(
+        providerId: Long,
+        itemId: String,
+        contentType: String,
+        now: Long,
+    ) {
+        val k = key(providerId, itemId, contentType)
+        val existing = rows[k] ?: return
+        rows[k] = existing.copy(isCompleted = false, updatedAt = now)
     }
 
     override fun upsertRecency(
