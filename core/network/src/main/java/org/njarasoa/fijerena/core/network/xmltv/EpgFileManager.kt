@@ -1127,6 +1127,7 @@ class EpgFileManager private constructor(
             }
 
             if (notModified) {
+                Log.i(TAG, "EPG source $label unchanged (304 Not Modified) — skipping ingest")
                 sourceDao.markUnchanged(source.id, System.currentTimeMillis())
                 tmpFile.delete()
                 return DownloadedSource(
@@ -1137,6 +1138,7 @@ class EpgFileManager private constructor(
             }
 
             if (!isGzip && canSkipIngest(source, computedSha256)) {
+                Log.i(TAG, "EPG source $label unchanged (content hash ${computedSha256?.take(12)} matches) — skipping ingest")
                 sourceDao.markUnchanged(source.id, System.currentTimeMillis())
                 tmpFile.delete()
                 return DownloadedSource(
@@ -1226,6 +1228,7 @@ class EpgFileManager private constructor(
             if (isGzip) {
                 contentSha256 = withContext(Dispatchers.IO) { hashDecompressedGzip(downloaded.tmpFile) }
                 if (canSkipIngest(source, contentSha256)) {
+                    Log.i(TAG, "EPG source $label unchanged (decompressed hash ${contentSha256?.take(12)} matches) — skipping ingest")
                     sourceDao.markUnchanged(source.id, System.currentTimeMillis())
                     return SourceStats(
                         sourceId = source.id,
@@ -1270,6 +1273,7 @@ class EpgFileManager private constructor(
                     }
                 }
 
+            Log.i(TAG, "EPG source $label fully ingested, content hash ${contentSha256?.take(12)}")
             sourceDao.markIngested(
                 id = source.id,
                 timestamp = System.currentTimeMillis(),
