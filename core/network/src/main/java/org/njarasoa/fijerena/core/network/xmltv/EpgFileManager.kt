@@ -1057,11 +1057,11 @@ class EpgFileManager private constructor(
                             val body = response.body
                             val contentLength = body.contentLength()
                             val digest = if (!isGzip) java.security.MessageDigest.getInstance("SHA-256") else null
+                            var totalRead = 0L
 
                             tmpFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { output ->
                                 val input = body.byteStream()
                                 val buffer = ByteArray(STREAM_BUFFER_SIZE)
-                                var totalRead = 0L
                                 var lastReportedBytes = 0L
                                 var read: Int
                                 while (input.read(buffer).also { read = it } != -1) {
@@ -1085,9 +1085,21 @@ class EpgFileManager private constructor(
                                 }
                                 output.flush()
                             }
-                            downloadedBytes = tmpFile.length()
-                            computedSha256 = digest?.digest()?.joinToString("") { "%02x".format(it) }
-                            lastError = null
+
+                            // input.read() returning -1 just means the connection closed — on its
+                            // own that's indistinguishable from a clean end of body. A connection
+                            // cut short by a flaky CDN reads as "success" here and previously
+                            // wasn't caught until the XML parser choked on it, expensively, well
+                            // into ingestion. Content-Length (when the server sends one) gives an
+                            // exact expected size to check the read against.
+                            if (contentLength > 0 && totalRead != contentLength) {
+                                lastError = "truncated download: got $totalRead of $contentLength bytes"
+                                Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
+                            } else {
+                                downloadedBytes = tmpFile.length()
+                                computedSha256 = digest?.digest()?.joinToString("") { "%02x".format(it) }
+                                lastError = null
+                            }
                         }
                     }
 
@@ -1399,7 +1411,7 @@ class EpgFileManager private constructor(
             val request =
                 PeriodicWorkRequestBuilder<EpgSyncWorker>(intervalHours.toLong(), TimeUnit.HOURS)
                     .setConstraints(constraints)
-                    .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
+                    .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
                     .apply { if (forceReschedule) setInitialDelay(calculateDelayUntil(appSettings.epgRefreshTime), TimeUnit.MILLISECONDS) }
                     .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
