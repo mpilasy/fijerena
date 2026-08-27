@@ -80,6 +80,10 @@ class EpgFileManager private constructor(
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 5000L
         private const val SCHEDULED_REFRESH_AGE_MS = 3_600_000L // scheduled runs refresh if data is older than 1 hour
+        // A content-hash match skips ingestion (see canSkipIngest) unless the last real ingest is
+        // older than this — ingestFromStream's programme window is wall-clock relative, so a
+        // static file left un-ingested longer than this would fall behind regardless of content.
+        private const val STALENESS_FORCE_INGEST_MS = 24 * 3600 * 1000L // 24 hours
 
         @Volatile
         private var instance: EpgFileManager? = null
@@ -122,6 +126,10 @@ class EpgFileManager private constructor(
         val programmesIngested: Int = 0,
         val durationMs: Long = 0,
         val error: String? = null,
+        /** True when the refresh confirmed the source is unchanged (304, or matching content
+         * hash) and skipped parsing/ingest entirely. [channelsIngested]/[programmesIngested] are
+         * the counts carried forward from the last real ingest, not new work done this run. */
+        val unchanged: Boolean = false,
     )
 
     data class ActiveSourceProgress(
@@ -493,6 +501,14 @@ class EpgFileManager private constructor(
         val tmpFile: File,
         val downloadedBytes: Long,
         val downloadDurationMs: Long = 0,
+        /** True when a `304 Not Modified` or a matching content hash means the download is known
+         * to be unchanged — the caller skips ingestion entirely rather than enqueueing this. */
+        val unchanged: Boolean = false,
+        /** SHA-256 of the payload as ingested (decompressed for `.gz`). Null for a `.gz` source
+         * whose hash isn't known yet — [ingestDownloadedSource] computes it there instead. */
+        val contentSha256: String? = null,
+        val etag: String? = null,
+        val lastModifiedHeader: String? = null,
     )
 
     private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) {
@@ -597,27 +613,49 @@ class EpgFileManager private constructor(
                                                 updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
                                             }
 
-                                        if (result != null) {
-                                            // Success — send to ingestion pipeline
-                                            activeProgress[source.id] =
-                                                ActiveSourceProgress(
-                                                    sourceId = source.id,
-                                                    label = label,
-                                                    phase = "Awaiting Ingestion",
-                                                    downloadedBytes = result.downloadedBytes,
-                                                    downloadTotalBytes = result.downloadedBytes,
+                                        when {
+                                            result != null && result.unchanged -> {
+                                                // Confirmed unchanged (304 or matching content hash) — skip
+                                                // ingestion entirely, carry forward the last known counts.
+                                                val sourceDuration = sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
+                                                activeLabels.remove(label)
+                                                activeProgress.remove(source.id)
+                                                completedStats.add(
+                                                    SourceStats(
+                                                        sourceId = source.id,
+                                                        label = label,
+                                                        downloadBytes = result.downloadedBytes,
+                                                        channelsIngested = source.lastChannels,
+                                                        programmesIngested = source.lastProgrammes,
+                                                        durationMs = sourceDuration,
+                                                        unchanged = true,
+                                                    ),
                                                 )
-                                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-                                            ingestionQueue.send(result)
-                                        } else {
-                                            // Download failed — record and clean up
-                                            val sourceDuration = sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
-                                            activeLabels.remove(label)
-                                            activeProgress.remove(source.id)
-                                            completedStats.add(
-                                                SourceStats(source.id, label, durationMs = sourceDuration, error = context.getString(R.string.sync_error_download_failed)),
-                                            )
-                                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                            }
+                                            result != null -> {
+                                                // Success — send to ingestion pipeline
+                                                activeProgress[source.id] =
+                                                    ActiveSourceProgress(
+                                                        sourceId = source.id,
+                                                        label = label,
+                                                        phase = "Awaiting Ingestion",
+                                                        downloadedBytes = result.downloadedBytes,
+                                                        downloadTotalBytes = result.downloadedBytes,
+                                                    )
+                                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                                ingestionQueue.send(result)
+                                            }
+                                            else -> {
+                                                // Download failed — record and clean up
+                                                val sourceDuration = sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
+                                                activeLabels.remove(label)
+                                                activeProgress.remove(source.id)
+                                                completedStats.add(
+                                                    SourceStats(source.id, label, durationMs = sourceDuration, error = context.getString(R.string.sync_error_download_failed)),
+                                                )
+                                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                            }
                                         }
                                     }
                                 }
@@ -660,7 +698,10 @@ class EpgFileManager private constructor(
                 )
             indexer.endBulkIngestion()
 
-            val anyIngested = allStats.any { it.error == null && (it.channelsIngested > 0 || it.programmesIngested > 0) }
+            // `unchanged` stats carry forward the last known counts (so UI totals don't collapse
+            // to zero) \u2014 they must not count as "ingested" here, or a run where every source was
+            // confirmed unchanged would still trigger a swap and an FTS rebuild for nothing.
+            val anyIngested = allStats.any { it.error == null && !it.unchanged && (it.channelsIngested > 0 || it.programmesIngested > 0) }
 
             // Perform Atomic Swap before FTS rebuild
             if (anyIngested && useStaging) {
@@ -670,7 +711,10 @@ class EpgFileManager private constructor(
                     totalProgrammes = totalProgrammes,
                     totalDownloadBytes = totalBytes,
                 )
-                val syncedIds = allStats.filter { it.error == null }.map { it.sourceId }
+                // A skipped (unchanged) source must never appear here: executeSwapToMain deletes
+                // that source's primary rows before transferring staging, and staging has nothing
+                // for it \u2014 including it would wipe its guide instead of leaving it alone.
+                val syncedIds = allStats.filter { it.error == null && !it.unchanged }.map { it.sourceId }
                 indexer.executeSwapToMain(syncedIds)
             }
 
@@ -804,7 +848,18 @@ class EpgFileManager private constructor(
             bulkReady.await() // Ensure indexes are dropped before ingesting
 
             val stats =
-                if (downloaded != null) {
+                if (downloaded != null && downloaded.unchanged) {
+                    // Confirmed unchanged (304 or matching content hash) — downloadSource already
+                    // recorded this via markUnchanged; skip ingestion entirely.
+                    SourceStats(
+                        sourceId = source.id,
+                        label = label,
+                        downloadBytes = downloaded.downloadedBytes,
+                        channelsIngested = source.lastChannels,
+                        programmesIngested = source.lastProgrammes,
+                        unchanged = true,
+                    )
+                } else if (downloaded != null) {
                     // Buffer state between phases
                     activeProgress[source.id] =
                         ActiveSourceProgress(
@@ -851,8 +906,10 @@ class EpgFileManager private constructor(
                 )
             indexer.endBulkIngestion()
 
-            // Perform Atomic Swap before FTS rebuild (only if staging was used)
-            if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0) && useStaging) {
+            // Perform Atomic Swap before FTS rebuild (only if staging was used). `unchanged` must
+            // be excluded here \u2014 staging has nothing for a skipped source, so swapping it would
+            // delete its primary rows and transfer nothing back (see processAllSourcesInternal).
+            if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0) && useStaging) {
                 _state.value = MultiSourceState.Finalizing(
                     phase = "Swapping to primary guide\u2026",
                     totalChannels = stats.channelsIngested,
@@ -862,7 +919,7 @@ class EpgFileManager private constructor(
                 indexer.executeSwapToMain(listOf(sourceId))
             }
 
-            if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
+            if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
                 invalidateXmltvCache(listOf(source), listOf(stats))
             }
 
@@ -885,7 +942,7 @@ class EpgFileManager private constructor(
             updateLastPipelineStats(finalState)
 
             // Inline — same reasoning as processAllSourcesInternal.
-            if (stats.error == null && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
+            if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
                 try {
                     indexer.rebuildFtsAndUpdateState()
                     indexer.incrementalVacuum()
@@ -942,6 +999,15 @@ class EpgFileManager private constructor(
     /**
      * Download a source to a cache file with progress tracking.
      * Returns [DownloadedSource] on success, null on failure (error recorded in sourceDao).
+     *
+     * Sends `If-None-Match`/`If-Modified-Since` when the source has validators from a previous
+     * download; a `304` short-circuits to an unchanged result with no body read. Otherwise, for
+     * non-`.gz` sources, a SHA-256 of the payload is computed in the same read pass — if it
+     * matches [EpgSourceEntity.lastContentSha256] (and the source isn't stale enough to force a
+     * refresh regardless, see [canSkipIngest]), this also short-circuits to unchanged. `.gz`
+     * sources can't be hashed meaningfully here (gzip's mtime header taints the raw bytes even
+     * when the decompressed content is identical) — that check happens in
+     * [ingestDownloadedSource] instead, after decompression.
      */
     private suspend fun downloadSource(
         source: EpgSourceEntity,
@@ -956,22 +1022,41 @@ class EpgFileManager private constructor(
         // Raw throwable retained so we can persist a friendly message while keeping the raw
         // `lastError` string for the HTTP-4xx retry-classification check below.
         var lastException: Throwable? = null
+        var notModified = false
+        var responseEtag: String? = null
+        var responseLastModified: String? = null
+        var computedSha256: String? = null
+        val isGzip = source.url.endsWith(".gz", ignoreCase = true)
         val downloadStartMs = System.currentTimeMillis()
 
         try {
             for (attempt in 1..5) {
                 try {
-                    val request = Request.Builder().url(source.url).build()
+                    val requestBuilder = Request.Builder().url(source.url)
+                    source.etag?.let { requestBuilder.header("If-None-Match", it) }
+                    source.lastModifiedHeader?.let { requestBuilder.header("If-Modified-Since", it) }
+                    val request = requestBuilder.build()
                     withContext(Dispatchers.IO) {
                         okHttpClient.newCall(request).await().use { response ->
+                            if (response.code == 304) {
+                                notModified = true
+                                lastError = null
+                                return@use
+                            }
                             if (!response.isSuccessful) {
                                 lastError = "server returned HTTP ${response.code}"
                                 Log.w(TAG, "EPG download: $lastError (attempt $attempt)")
                                 return@use
                             }
 
+                            // Keep the previous validators if this response doesn't repeat them —
+                            // some servers only send ETag/Last-Modified on the first response.
+                            responseEtag = response.header("ETag") ?: source.etag
+                            responseLastModified = response.header("Last-Modified") ?: source.lastModifiedHeader
+
                             val body = response.body
                             val contentLength = body.contentLength()
+                            val digest = if (!isGzip) java.security.MessageDigest.getInstance("SHA-256") else null
 
                             tmpFile.outputStream().buffered(STREAM_BUFFER_SIZE).use { output ->
                                 val input = body.byteStream()
@@ -981,6 +1066,7 @@ class EpgFileManager private constructor(
                                 var read: Int
                                 while (input.read(buffer).also { read = it } != -1) {
                                     output.write(buffer, 0, read)
+                                    digest?.update(buffer, 0, read)
                                     totalRead += read
                                     // Throttle UI updates to every 512KB
                                     if (totalRead - lastReportedBytes >= 524288) {
@@ -1000,6 +1086,7 @@ class EpgFileManager private constructor(
                                 output.flush()
                             }
                             downloadedBytes = tmpFile.length()
+                            computedSha256 = digest?.digest()?.joinToString("") { "%02x".format(it) }
                             lastError = null
                         }
                     }
@@ -1039,7 +1126,32 @@ class EpgFileManager private constructor(
                 return null
             }
 
-            return DownloadedSource(source, label, tmpFile, downloadedBytes, System.currentTimeMillis() - downloadStartMs)
+            if (notModified) {
+                sourceDao.markUnchanged(source.id, System.currentTimeMillis())
+                tmpFile.delete()
+                return DownloadedSource(
+                    source, label, tmpFile, downloadedBytes = 0,
+                    downloadDurationMs = System.currentTimeMillis() - downloadStartMs,
+                    unchanged = true,
+                )
+            }
+
+            if (!isGzip && canSkipIngest(source, computedSha256)) {
+                sourceDao.markUnchanged(source.id, System.currentTimeMillis())
+                tmpFile.delete()
+                return DownloadedSource(
+                    source, label, tmpFile, downloadedBytes,
+                    downloadDurationMs = System.currentTimeMillis() - downloadStartMs,
+                    unchanged = true, contentSha256 = computedSha256,
+                    etag = responseEtag, lastModifiedHeader = responseLastModified,
+                )
+            }
+
+            return DownloadedSource(
+                source, label, tmpFile, downloadedBytes,
+                System.currentTimeMillis() - downloadStartMs,
+                contentSha256 = computedSha256, etag = responseEtag, lastModifiedHeader = responseLastModified,
+            )
         } catch (e: Exception) {
             Log.e(TAG, "Error downloading source: $label", e)
             sourceDao.markError(source.id, friendlyErrorMessage(e, context, appSettings.isDevMode))
@@ -1047,6 +1159,46 @@ class EpgFileManager private constructor(
             return null
         }
     }
+
+    /**
+     * Whether a matching content hash is trustworthy enough to skip re-ingesting. A hash match
+     * alone isn't sufficient: [org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer]
+     * windows programmes against wall-clock time on ingest (see its `cutoffEpoch`/
+     * `futureLimitEpoch`), so a byte-identical static file re-ingested days later would still
+     * extend the guide further into the future — skipping that ingest would silently freeze the
+     * guide window while the source keeps reporting healthy refreshes. Forcing a real ingest once
+     * a day bounds how stale that window can get.
+     */
+    private fun canSkipIngest(
+        source: EpgSourceEntity,
+        newHash: String?,
+    ): Boolean {
+        if (newHash == null || source.lastContentSha256 == null) return false
+        if (newHash != source.lastContentSha256) return false
+        val age = System.currentTimeMillis() - source.lastIngestedAtMs
+        return age < STALENESS_FORCE_INGEST_MS
+    }
+
+    /**
+     * SHA-256 of a `.gz` file's decompressed content — a local read-and-discard pass, not a full
+     * parse. Returns null (never skip) on any failure, including a corrupt/truncated download;
+     * the real ingest right after this will hit and report the same problem properly.
+     */
+    private fun hashDecompressedGzip(file: File): String? =
+        try {
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            GZIPInputStream(file.inputStream().buffered(STREAM_BUFFER_SIZE), STREAM_BUFFER_SIZE).use { stream ->
+                val buffer = ByteArray(STREAM_BUFFER_SIZE)
+                var read: Int
+                while (stream.read(buffer).also { read = it } != -1) {
+                    digest.update(buffer, 0, read)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            Log.w(TAG, "Decompressed-content hash failed, proceeding with full ingest", e)
+            null
+        }
 
     /**
      * Ingest a previously downloaded source file into the index.
@@ -1067,6 +1219,25 @@ class EpgFileManager private constructor(
         val isGzip = source.url.endsWith(".gz", ignoreCase = true)
 
         try {
+            // `.gz` sources never get a hash from downloadSource (the raw bytes carry gzip's
+            // mtime, which taints them even when the decompressed content is identical) — hash
+            // the decompressed content here instead, before spending a real parse on it.
+            var contentSha256 = downloaded.contentSha256
+            if (isGzip) {
+                contentSha256 = withContext(Dispatchers.IO) { hashDecompressedGzip(downloaded.tmpFile) }
+                if (canSkipIngest(source, contentSha256)) {
+                    sourceDao.markUnchanged(source.id, System.currentTimeMillis())
+                    return SourceStats(
+                        sourceId = source.id,
+                        label = label,
+                        downloadBytes = downloaded.downloadedBytes,
+                        channelsIngested = source.lastChannels,
+                        programmesIngested = source.lastProgrammes,
+                        unchanged = true,
+                    )
+                }
+            }
+
             val ingestStartMs = System.currentTimeMillis()
             val fileSize = downloaded.tmpFile.length()
             val countingStream = CountingInputStream(downloaded.tmpFile.inputStream())
@@ -1108,6 +1279,9 @@ class EpgFileManager private constructor(
                 ingestMethod = "DOWNLOADED",
                 ingestionDurationMs = System.currentTimeMillis() - ingestStartMs,
                 downloadDurationMs = downloaded.downloadDurationMs,
+                contentSha256 = contentSha256,
+                etag = downloaded.etag,
+                lastModifiedHeader = downloaded.lastModifiedHeader,
             )
 
             return SourceStats(
