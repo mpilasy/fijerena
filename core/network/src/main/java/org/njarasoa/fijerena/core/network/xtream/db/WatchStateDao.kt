@@ -1,12 +1,13 @@
 package org.njarasoa.fijerena.core.network.xtream.db
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 /**
- * Not wired to any caller yet — see Phase 1 in `plans/watch-state-durable-storage-plan.md`.
- * Statements mirror the plan's Write path / read-query sections exactly so later phases wire
- * without re-deriving SQL.
+ * See `plans/watch-state-durable-storage-plan.md`. Statements mirror the plan's Write path /
+ * read-query sections exactly rather than re-deriving SQL at each call site.
  */
 @Dao
 interface WatchStateDao {
@@ -145,7 +146,15 @@ interface WatchStateDao {
     suspend fun getAll(providerId: Long): List<WatchStateEntity>
 
     @Query("DELETE FROM watch_state WHERE providerId = :providerId")
-    fun deleteAll(providerId: Long)
+    suspend fun deleteAll(providerId: Long)
+
+    /**
+     * Bulk restore from a settings-export import: the whole row is known and authoritative, so a
+     * straight replace is correct here — unlike the production writers, which only ever know part
+     * of a row and use the field-targeted upserts above instead.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun restoreAll(entities: List<WatchStateEntity>)
 }
 
 data class SeriesCompletedCount(

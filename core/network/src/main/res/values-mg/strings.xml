@@ -26,6 +26,7 @@
     <string name="settings_export_item_skipped_format">%1$d nihoarana</string>
     <string name="settings_export_summary_epg_sources_format">Fantsakana EPG: %1$s</string>
     <string name="settings_export_summary_favorites_format">%1$d tiana indrindra naverina</string>
+    <string name="settings_export_summary_watch_state_format">%1$d tantara fijerena naverina</string>
     <string name="settings_export_summary_updated">Voavaozina ny fandrindrana</string>
     <string name="settings_export_summary_passwords_reentry_format">%1$s (tsy maintsy asiana indray ny tenimiafina)</string>
 

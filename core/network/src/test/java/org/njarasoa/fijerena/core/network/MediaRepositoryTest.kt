@@ -11,13 +11,14 @@ import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
+import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -26,7 +27,7 @@ class MediaRepositoryTest {
     private lateinit var context: Context
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var editor: SharedPreferences.Editor
-    private lateinit var watchStateDao: WatchStateDao
+    private lateinit var watchStateDao: FakeWatchStateDao
     private lateinit var repository: MediaRepository
 
     private val json =
@@ -54,7 +55,7 @@ class MediaRepositoryTest {
         context = mockk(relaxed = true)
         sharedPreferences = mockk(relaxed = true)
         editor = mockk(relaxed = true)
-        watchStateDao = mockk(relaxed = true)
+        watchStateDao = FakeWatchStateDao()
 
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
         every { sharedPreferences.edit() } returns editor
@@ -72,17 +73,18 @@ class MediaRepositoryTest {
     }
 
     @Test
-    fun savePlaybackPosition_marksCompletedPastThreshold() {
-        every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+    fun savePlaybackPosition_marksCompletedPastThreshold() =
+        runBlocking {
+            every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
+            repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
 
-        // Played to the end: finalizeSession reports position == duration for PlaybackState.Ended.
-        repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 2_500_000L, 2_500_000L)
+            // Played to the end: finalizeSession reports position == duration for PlaybackState.Ended.
+            repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 2_500_000L, 2_500_000L)
+            repository.awaitPendingWrites()
 
-        val saved = repository.getWatchHistoryLocked().single { it.itemId == "ep1" }
-        assert(saved.isCompleted) { "an item watched to the end must be marked completed" }
-        assert(saved.resumeProgress() == null) { "a completed item must not offer a resume point" }
-    }
+            val saved = watchStateDao.getItem(1L, "ep1", ContentType.TV_SHOWS)!!
+            assert(saved.isCompleted) { "an item watched to the end must be marked completed" }
+        }
 
     @Test
     fun savePlaybackPosition_emptySessionDoesNotEraseExistingEntry() {
@@ -110,29 +112,30 @@ class MediaRepositoryTest {
     }
 
     @Test
-    fun savePlaybackPosition_shortSessionStillRecordsWhichEpisodePlayed() {
-        every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+    fun savePlaybackPosition_shortSessionStillRecordsWhichEpisodePlayed() =
+        runBlocking {
+            repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
 
-        // 1.3% watched — below the threshold that records the last-played item, so this write is
-        // the one creating the row. It must still say which episode of which show it was.
-        repository.savePlaybackPosition(
-            "242136",
-            "EN - Law & Order - S06E18",
-            "156",
-            ContentType.TV_SHOWS,
-            37_365L,
-            2_811_558L,
-            episodeId = EpisodeId("242136"),
-            episodeExtension = "mkv",
-            seriesId = SeriesId("4080"),
-            seriesName = "EN - Law & Order (1990) (US)",
-        )
+            // 1.3% watched — below the threshold that records the last-played item, so this write is
+            // the one creating the row. It must still say which episode of which show it was.
+            repository.savePlaybackPosition(
+                "242136",
+                "EN - Law & Order - S06E18",
+                "156",
+                ContentType.TV_SHOWS,
+                37_365L,
+                2_811_558L,
+                episodeId = EpisodeId("242136"),
+                episodeExtension = "mkv",
+                seriesId = SeriesId("4080"),
+                seriesName = "EN - Law & Order (1990) (US)",
+            )
+            repository.awaitPendingWrites()
 
-        val saved = repository.getWatchHistoryLocked().single { it.itemId == "242136" }
-        assert(saved.seriesId == SeriesId("4080")) { "a row created by a short session must carry its series id" }
-        assert(saved.episodeId == EpisodeId("242136")) { "a row created by a short session must carry its episode id" }
-    }
+            val saved = watchStateDao.getItem(1L, "242136", ContentType.TV_SHOWS)!!
+            assertEquals("4080", saved.seriesId) // "a row created by a short session must carry its series id"
+            assertEquals("242136", saved.episodeId) // "a row created by a short session must carry its episode id"
+        }
 
     @Test
     fun getWatchHistory_empty() {
@@ -163,28 +166,24 @@ class MediaRepositoryTest {
     }
 
     @Test
-    fun saveLastPlayedItem_updatesCache() {
-        every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
+    fun saveLastPlayedItem_updatesCache() =
+        runBlocking {
+            repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
 
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+            // Add item
+            repository.saveLastPlayedItem("cat1", "1", "Test", ContentType.LIVE_TV)
 
-        // Initially empty
-        assert(repository.getWatchHistoryLocked().isEmpty())
+            // Verify SharedPreferences updates for last played state
+            verify { editor.putString(KEY_LAST_LIVE_CATEGORY, "cat1") }
+            verify { editor.putString(KEY_LAST_LIVE_ITEM, "1") }
+            verify { editor.putString(KEY_LAST_CONTENT_TYPE, ContentType.LIVE_TV) }
 
-        // Add item
-        repository.saveLastPlayedItem("cat1", "1", "Test", ContentType.LIVE_TV)
-
-        // Verify SharedPreferences updates for last played state
-        verify { editor.putString(KEY_LAST_LIVE_CATEGORY, "cat1") }
-        verify { editor.putString(KEY_LAST_LIVE_ITEM, "1") }
-        verify { editor.putString(KEY_LAST_CONTENT_TYPE, ContentType.LIVE_TV) }
-
-        // Verify cache updated without reading prefs again
-        val history = repository.getWatchHistoryLocked()
-        assert(history.size == 1)
-        assert(history[0].itemId == "1")
-        verify(exactly = 1) { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } // Only initial check
-    }
+            // Verify watch_state was written
+            repository.awaitPendingWrites()
+            val rows = watchStateDao.all()
+            assert(rows.size == 1)
+            assert(rows[0].itemId == "1")
+        }
 
     @Test
     fun clearWatchHistory_clearsCache() {
