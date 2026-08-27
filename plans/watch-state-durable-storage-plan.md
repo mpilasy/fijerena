@@ -431,9 +431,23 @@ the `LIMIT` in place of `take(watchHistorySize)`; the content-list path keeps th
 the phase that satisfies the requirement.
 
 **4 — Retire the blob.** Stop writing `watch_history_v3`. One-time purge of `watch_history_v3` and
-`watch_history_v2`, guarded flag, same shape as the EPG purge. **`SettingsExportManager` must be
-updated in this phase** — it reads and writes `media_cache_$providerId` by key name (`:229`,
-`:260`, `:558`, `:604`), so without this, backup and restore silently stop carrying watch state.
+`watch_history_v2`, guarded flag, same shape as the EPG purge.
+
+**The purge must check *that provider's* `watch_state_migrated_v1` before deleting its blob — not
+a single global flag.** Phases 2, 3 and 4 are separate releases, so a provider can exist through
+all three without ever being opened: backfill (Phase 2) only runs on first `MediaRepository` use,
+so a provider nobody has selected since the Phase 2 release still has an un-migrated blob sitting
+in its prefs when the Phase 4 release lands. A purge that fires unconditionally per install, rather
+than per provider gated on that provider's own flag, deletes that history before it was ever
+copied anywhere — silent and unrecoverable, on a provider the user simply hasn't gotten around to
+opening. Concretely: the purge must run the same per-provider loop the backfill does, and where
+the flag is unset it **runs the backfill first**, not skip-and-purge — skipping would just leave
+the blob (and the un-migrated history) forever, since nothing revisits it after Phase 4 ships and
+the blob-writing path is gone.
+
+**`SettingsExportManager` must be updated in this phase** — it reads and writes
+`media_cache_$providerId` by key name (`:229`, `:260`, `:558`, `:604`), so without this, backup and
+restore silently stop carrying watch state.
 
 Two details in that update, both of which produce a silently empty restore rather than an error:
 
