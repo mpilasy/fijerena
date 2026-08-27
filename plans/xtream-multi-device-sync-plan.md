@@ -79,6 +79,23 @@ Three options for hosting the backend sync and presence services. Data models, a
 | **Vendor Lock-in** | None (100% open, self-contained) | High (proprietary Firestore client/rules) | Low (standard Postgres SQL and open REST APIs) |
 | **Development Burden** | Server code + App sync outbox | Minimal server code; Security rules configuration | SQL schema/RLS setup + App sync outbox |
 
+### Rejected Alternative — Trakt.tv
+
+Trakt was evaluated as a zero-infrastructure, fully-hosted substitute for the backend (free API, OAuth device-code flow that suits Android TV, native scrobble/watchlist/playback-progress endpoints). **Rejected as the sync backbone**; it fails all three problems this plan solves.
+
+1. **Data sync — partial and lossy.**
+   - Trakt models only movies, shows, and episodes. `contentType = LIVE_TV` has no representation, so live favorites and live watch history — a large share of an Xtream catalog — cannot sync at all.
+   - `WatchedItem` fields `audioTrackIndex`, `subtitleTrackIndex`, `episodeExtension`, `categoryId`, and exact millisecond `playbackPosition`/`duration` have no Trakt equivalent. `/sync/playback` stores progress as a **percentage** and expires paused rows over time. This violates the audit requirement that episode and series metadata sync losslessly.
+   - **Identity mismatch is decisive.** Trakt keys every record on a Trakt/IMDb/TMDb ID. This plan keys on Xtream `stream_id` as a `String` (Rule #3 in `AGENTS.md`). Bridging the two requires a per-item TMDb title-matching layer; Xtream panels expose `tmdb_id` inconsistently or not at all, so unmatched content would silently disappear from sync with no way to reconcile it.
+
+2. **Presence & kick — not supported.** `/users/{id}/watching` reports a single "currently watching" state per *account*, with no device identity and no device list; a newer scrobble overwrites the previous one. There is no endpoint to enumerate active devices and no mechanism to signal a remote stop. Problem 2 is unimplementable on Trakt.
+
+3. **Profiles — not supported.** One Trakt account equals one profile. Household profiles on a shared TV device would require a separate Trakt account and OAuth token per person, plus an app-side picker layered on top — meaning the profile system in this plan gets built regardless.
+
+**The infrastructure argument also fails.** Because presence, kick, and profiles still require a backend, adopting Trakt does not remove Option A/B/C — it adds a second sync target plus a TMDb matching layer on top of it. Net effect is more moving parts, not fewer. Secondary friction: Trakt's `1 POST/sec` write limit throttles outbox drain, and scrobbles appear as public activity on trakt.tv unless the account is set to private.
+
+**Where Trakt could fit later.** As an *optional, user-facing* integration well after core sync ships (Phase 6+): a "Connect Trakt account" toggle that additionally pushes movie and episode watches to the user's Trakt profile for stats and recommendations. One-way, best-effort, unmatched items skipped silently. A nice-to-have downstream consumer — never the source of truth.
+
 ---
 
 ## Architecture Details
