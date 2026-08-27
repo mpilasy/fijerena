@@ -11,11 +11,20 @@ complete.
 **Secondary goal (Phase 6):** let the user mark a movie or episode watched or unwatched directly
 from the UI, rather than only earning completion through playback.
 
-**Scope:** Xtream and the other local-blob providers (SMB, Local, Remote M3U). Live TV is
-untouched: `savePlaybackPosition` already returns early on `ContentType.LIVE_TV`
-(`MediaRepository.kt:783`). Jellyfin is untouched: it short-circuits on `usesServerUserData` and
-owns this state server-side. Per-provider isolation is preserved throughout — every new row is
-keyed by `providerId`, exactly like the seven existing tables.
+**Scope:** Xtream and the other local-blob providers (SMB, Local, Remote M3U). Jellyfin is
+untouched: it short-circuits on `usesServerUserData` and owns this state server-side. Per-provider
+isolation is preserved throughout — every new row is keyed by `providerId`, exactly like the seven
+existing tables.
+
+**Live TV is in scope, for recency only.** `savePlaybackPosition` does return early on
+`ContentType.LIVE_TV` (`MediaRepository.kt:780`), so no live row ever carries a position or a
+completion flag. But that is not the only writer: `saveLastPlayedItem`
+(`MediaRepository.kt:395-432`) calls `addToWatchHistory` for **every** content type, live included,
+and `getRecentItems(ContentType.LIVE_TV)` reads those rows — the repository says so itself at
+`:904`, "LIVE_TV degenerates to plain recency". Live rows must therefore move to the new table
+along with the rest, or the Live TV Recent row goes empty the moment reads flip. The same writer is
+how a Movies or TV Shows session that started and never ticked progress gets into the list at all,
+so it is not a live-only concern.
 
 ---
 
@@ -47,18 +56,25 @@ a way that a short Recent row never was.
 ## What is wrong today
 
 1. **Eviction is silent and destructive.** `addToWatchHistory` inserts at index 0 then
-   `history.take(providerSettings.watchHistorySize)` (`MediaRepository.kt:530`). Default 25, max
+   `history.take(providerSettings.watchHistorySize)` (`MediaRepository.kt:528`). Default 25, max
    100 (`ProviderSettings.kt:17`). Finish S01E01–E25 and by E26 the E01 row is gone: the episode
    renders unwatched in both `EpisodeSelectionScreen`s and drops out of the
    `getSeriesWatchProgress` rollup.
 2. **A bad decode wipes everything.** `getWatchHistoryLocked` (`MediaRepository.kt:546`) wraps both
    decodes in `catch { emptyList() }`. One malformed blob returns empty and the next write persists
    that empty list. No error surfaces.
-3. **No query surface.** `getSeriesWatchProgress` (`:857`) hand-rolls a GROUP BY over a linear
-   scan; `getPlaybackPositions` (`:826`) carries a comment explaining it iterates history rather
+3. **No query surface.** `getSeriesWatchProgress` (`:859`) hand-rolls a GROUP BY over a linear
+   scan; `getPlaybackPositions` (`:827`) carries a comment explaining it iterates history rather
    than `itemIds` to keep the manual join at `O(HistorySize)`. Both are one SQL statement.
 4. **Position and completion share one fate.** They have different durability needs — a stale
    resume point aging out is arguably correct; a watched flag reverting is not.
+5. **Every write is a whole-row replace, so starting playback erases progress.**
+   `addToWatchHistory` (`:491`) does `removeAll { itemId && contentType }` then inserts a fresh
+   `WatchedItem`, and its `playbackPosition`, `duration` and `isCompleted` parameters all default to
+   `0L, 0L, false`. `saveLastPlayedItem` passes none of them, so pressing play on a half-watched
+   movie zeroes its stored position and drops its completed flag; only the next progress tick puts a
+   position back, and nothing puts the flag back. Start-then-quit loses both. The new write path has
+   to be field-targeted rather than reproducing this (see Write path below).
 
 ---
 
@@ -75,7 +91,6 @@ seven entities.
     primaryKeys = ["providerId", "itemId", "contentType"],
     indices = [
         Index(value = ["providerId", "contentType", "lastPlayedAt"]),
-        Index(value = ["providerId", "contentType", "tmdbId"]),
         Index(value = ["providerId", "seriesId"]),
     ],
 )
@@ -91,7 +106,6 @@ data class WatchStateEntity(
     val updatedAt: Long,
     /** Set by playback only; null when completion came from a manual mark. See Phase 6. */
     val lastPlayedAt: Long? = null,
-    val tmdbId: String? = null,
     val seriesId: String? = null,
     val episodeId: String? = null,
     val seriesName: String? = null,
@@ -101,11 +115,19 @@ data class WatchStateEntity(
 )
 ```
 
-Column set is `WatchedItem` (`MediaRepository.kt:45`) plus `providerId`, `tmdbId`, `updatedAt` and
+Column set is `WatchedItem` (`MediaRepository.kt:45`) plus `providerId`, `updatedAt` and
 `lastPlayedAt`. `WatchedItem.timestamp` splits into two: `updatedAt` is the row's last-modified
 stamp, `lastPlayedAt` records actual playback and drives the Recent row. They are the same value
 until Phase 6 introduces a way to set completion without playing anything — but the column belongs
 in `MIGRATION_14_15` from the start rather than costing a second migration later.
+
+**No `tmdbId` column.** An earlier draft carried one for Phase 5 dedup. It cannot work: nothing
+writes it. `savePlaybackPosition`'s callers (`StreamLoaderViewModel.kt:477,532`) have no TMDB id to
+pass, `WatchedItem` has no such field so the backfill cannot supply one either, and the column would
+sit null forever — making the Phase 5 sibling lookup match nothing while looking correct. TMDB ids
+already live on the catalogue rows (`XtreamStreamEntity.kt:45`, `XtreamEpisodeEntity.kt:31`), which
+is the only place they are ever populated, so Phase 5 reaches them by joining watch state to the
+catalogue instead of denormalizing a copy that no writer maintains.
 
 **Naming.** The table is deliberately *not* `xtream_`-prefixed. `MediaRepository` backs SMB, Local
 and Remote M3U as well as Xtream, so those rows are not Xtream rows. This breaks with the
@@ -116,6 +138,58 @@ itself is by now a misnomer — renaming it is out of scope here.
 (`MediaIds.kt:17,22`). Store raw `String?` columns and convert at the mapper boundary rather than
 registering a `TypeConverter` — it keeps the DAO signatures plain and matches how `XtreamEpisodeEntity`
 already stores ids.
+
+### Write path
+
+**No `@Upsert`, no `OnConflictStrategy.REPLACE`.** Both write the whole row, which is defect 5
+above: the two writers know about different halves of it, and whichever fires last would erase the
+other's. Each writer gets a targeted `INSERT … ON CONFLICT DO UPDATE` naming only the columns it
+owns. SQLite has supported upsert since 3.24 and minSdk is 30 (SQLite 3.28), so this needs no
+compatibility hedge.
+
+**Playback progress** — from `savePlaybackPosition`. Owns position, duration, completion and
+`lastPlayedAt`; `COALESCE` keeps metadata that this call happens not to carry:
+
+```sql
+INSERT INTO watch_state (providerId, itemId, contentType, itemName, categoryId, positionMs,
+                         durationMs, isCompleted, updatedAt, lastPlayedAt, seriesId, episodeId,
+                         seriesName, episodeExtension, audioTrackIndex, subtitleTrackIndex)
+VALUES (:providerId, :itemId, :contentType, :itemName, :categoryId, :positionMs, :durationMs,
+        :isCompleted, :now, :now, :seriesId, :episodeId, :seriesName, :episodeExtension,
+        :audioTrackIndex, :subtitleTrackIndex)
+ON CONFLICT(providerId, itemId, contentType) DO UPDATE SET
+    positionMs         = excluded.positionMs,
+    durationMs         = excluded.durationMs,
+    isCompleted        = excluded.isCompleted,
+    updatedAt          = excluded.updatedAt,
+    lastPlayedAt       = excluded.lastPlayedAt,
+    itemName           = COALESCE(excluded.itemName, watch_state.itemName),
+    seriesId           = COALESCE(excluded.seriesId, watch_state.seriesId),
+    episodeId          = COALESCE(excluded.episodeId, watch_state.episodeId),
+    seriesName         = COALESCE(excluded.seriesName, watch_state.seriesName),
+    episodeExtension   = COALESCE(excluded.episodeExtension, watch_state.episodeExtension),
+    audioTrackIndex    = COALESCE(excluded.audioTrackIndex, watch_state.audioTrackIndex),
+    subtitleTrackIndex = COALESCE(excluded.subtitleTrackIndex, watch_state.subtitleTrackIndex)
+```
+
+That `COALESCE` block replaces the read-modify-write `savePlaybackPosition` does today at
+`MediaRepository.kt:793-796`, where it loads the existing entry purely to carry its metadata
+forward. One statement instead of a read plus a write.
+
+`isCompleted = excluded.isCompleted` becomes `MAX(watch_state.isCompleted, excluded.isCompleted)` in
+Phase 6, once there is a UI way to undo a completion — see "Playback must not silently undo a manual
+mark" there. Until then it stays a plain assignment, matching today's behaviour exactly.
+
+**Playback start** — from `saveLastPlayedItem`. Owns recency and metadata, and must **not** name
+`positionMs`, `durationMs` or `isCompleted` in its `DO UPDATE` list. Inserting supplies the 0/0/false
+defaults for a genuinely new row; updating leaves whatever is stored alone. This is what fixes
+defect 5 rather than porting it.
+
+**Deliberate divergence from the blob.** Under dual write (Phase 2) the table will therefore hold a
+position the blob has just zeroed. Phase 2's parity check has to account for that: compare
+`(itemId, contentType)` presence and `isCompleted`, and treat a table position that is non-zero
+where the blob's is zero as the fix landing, not as drift. Comparing positions blindly would report
+a failure on every session that started and stopped without a progress tick.
 
 ### Retention
 
@@ -157,7 +231,7 @@ The critical distinction is that the two read paths take the cap differently. Ap
 would reintroduce the exact bug this plan exists to fix.
 
 **Tier 1 — the Recent row. Capped.** Hundreds of rows on disk, `watchHistorySize` cards on screen.
-`getWatchHistory()` has exactly one caller, `getRecentItems` at `MediaRepository.kt:912`, and no UI
+`getWatchHistory()` has exactly one caller, `getRecentItems` at `MediaRepository.kt:910`, and no UI
 callers at all, so this is a contained change.
 
 **Tier 2 — watched checks and resume bars on content lists. Not history at all.** Position and
@@ -166,44 +240,65 @@ watched. They are not entries in a recency list and the cap is meaningless for t
 them by recency puts back the disappearing check mark from `1b3105e4` — episode 1 of a long series
 would render unwatched the moment 25 newer items exist.
 
-So they should not be looked up separately at all. **`LEFT JOIN` them into the query that already
-loads the list**, with `COALESCE` supplying the defaults:
+So `getPlaybackPositions` keeps its shape and only changes where it reads from. It stops decoding a
+capped blob and becomes one uncapped statement:
 
 ```sql
-SELECT s.*,
-       COALESCE(w.positionMs, 0)  AS positionMs,
-       COALESCE(w.durationMs, 0)  AS durationMs,
-       COALESCE(w.isCompleted, 0) AS isCompleted
-FROM xtream_streams s
-LEFT JOIN watch_state w
-  ON w.providerId  = s.providerId
- AND w.contentType = :contentType
- AND w.itemId      = CAST(s.streamId AS TEXT)
-WHERE s.providerId = :providerId AND s.type = :type
-  AND s.categoryId = :categoryId AND s.excluded = 0
-ORDER BY s.num ASC
+SELECT * FROM watch_state WHERE providerId = :providerId AND contentType = :contentType
 ```
 
-Room maps this to a POJO of `XtreamStreamEntity` plus the three watch columns. The equivalent join
-goes on the episode query (`XtreamEpisodeDao.kt:11`), joining on `xtream_episodes.id`.
+Mapped to `Map<String, WatchedItem>` keyed by `itemId`, exactly what the method returns today.
 
-This deletes work rather than adding it: `CategoryViewModel.kt:471-480` loses the
-`getPlaybackPositions` call, the `progressMap`/`watched` HashMap construction, and the merge loop.
-No lookup map, no cache layer, one round trip. The primary key `(providerId, itemId, contentType)`
-serves the join; no extra index is needed for it.
+**Why not `LEFT JOIN` the watch columns into the catalogue query.** It was the first design here and
+it does not survive contact with the call sites.
 
-`getPlaybackPositions` survives only for callers that genuinely have a loose id list rather than a
-catalogue query behind them, and for the non-Xtream providers (SMB, Local, Remote M3U), which have
-no catalogue tables to join against and query `watch_state` directly.
+- *The values would have nowhere to go.* `refreshPerItemData` (`CategoryViewModel.kt:450-498`)
+  publishes `_watchProgress` and `_watchedIds`, two `StateFlow`s that
+  `TvCategoryGridScreen.kt:83-84` collects. Joined values arrive on catalogue rows instead, so
+  either `MediaItem` grows watch fields — it is a `core/player` domain model, and Jellyfin, SMB and
+  the M3U providers would all have to populate them — or the flows get derived from the list anyway,
+  which is the lookup map again with extra steps.
+- *It would make refreshes more expensive, not less.* `refreshPerItemData` re-runs when the stream
+  list identity changes or a favorite is toggled (`:165-174`, `:511`, `:527`), and it is cheap
+  because watch state is fetched independently of the catalogue. With the values baked into the
+  rows, moving one progress bar after playback — or after a Phase 6 toggle — means re-running the
+  whole category query.
+- *It would only cover two of the list paths.* `getStreamsByCategory` (`XtreamStreamDao.kt:11`) and
+  `getEpisodes` are joinable, but `getAllStreams` (`:18`), `searchByFts` (`:104`) and
+  `getItemsIfCached` all produce lists too, and SMB, Local and Remote M3U have no catalogue tables
+  to join against at all. Every one of those still needs the lookup, so the join buys a second
+  mechanism rather than replacing the first.
 
-**Why not columns on `xtream_streams` / `xtream_episodes` instead.** It would give the same
-single-query read, but it puts permanent data in ephemeral rows. `insertAll` is
+The separation is load-bearing, in other words, and the eviction bug never came from it. Keeping it
+also means Phase 3 touches one method body rather than the provider interface, the domain model and
+four DAOs.
+
+**Fetching the whole content type rather than filtering by id list is deliberate.** It matches what
+the blob path does today — the comment at `MediaRepository.kt:827` explains it iterates history
+instead of `itemIds` for the same reason — it avoids an `IN (…)` clause with a category's worth of
+bind variables, and the row count is bounded by what the user has watched, not by catalogue size:
+the Retention table above puts a decade of heavy use at ~10k rows across all content types. The
+`(providerId, contentType, lastPlayedAt)` index serves the prefix.
+
+`getPlaybackPositions` and `getPlaybackPositionsSuspend` keep their signatures, so
+`CategoryViewModel.kt:471` and both `EpisodeSelectionScreen`s need no change beyond suspending
+(see Threading). The non-Xtream providers are covered by the same query, with no special case.
+
+**The TV Shows rollup stays exactly where it is.** A row in the TV Shows list is a series, and
+series live in `xtream_series` while watch state is keyed by episode — no per-item lookup of any
+kind can resolve a series id. So `refreshPerItemData` keeps the `getSeriesWatchProgress` +
+`getEpisodeCountsBySeries` pass at `CategoryViewModel.kt:481-495` and the `progressMap`/`watched`
+maps it fills, unchanged. Only the storage under `getSeriesWatchProgress` changes, from a linear
+scan of the blob to the aggregate below.
+
+**Why not columns on `xtream_streams` / `xtream_episodes` instead.** It would give a single-query
+read, but it puts permanent data in ephemeral rows. `insertAll` is
 `OnConflictStrategy.REPLACE` (`XtreamStreamDao.kt:59`), and REPLACE in SQLite is DELETE + INSERT —
 every catalogue sync touching a row would zero the watch columns. `deleteAll(providerId, type)`
 (`:62`), `XtreamEpisodeDao.deleteAll` (`:20`) and `deleteBySeriesId` (`:23`) do it wholesale. A
 title the provider drops would take its watch state with it and come back unwatched. And the
 non-Xtream providers have no rows in those tables, so a second mechanism would be needed anyway.
-The join keeps the read model while leaving watch state outside the catalogue's lifecycle.
+A table of its own keeps watch state outside the catalogue's lifecycle entirely.
 
 #### The Recent query
 
@@ -222,30 +317,42 @@ Two details a naive version of this would get wrong.
 
 **Series collapse before the limit, not after.** `getRecentItems` does
 `distinctBy { seriesId?.raw ?: itemId }` for TV Shows so a show appears once rather than once per
-episode (`:918`). Limiting first and collapsing second would yield fewer cards than asked for —
-25 episodes of one show collapse to a single card. Group in SQL and take each series' most recently
-played row:
+episode (`:919`). Limiting first and collapsing second would yield fewer cards than asked for —
+25 episodes of one show collapse to a single card. Collapse in SQL, with a window function:
 
 ```sql
-SELECT * FROM watch_state ws
-WHERE providerId = :providerId AND contentType = 'TV_SHOWS' AND lastPlayedAt IS NOT NULL
-  AND lastPlayedAt = (
-    SELECT MAX(lastPlayedAt) FROM watch_state
-    WHERE providerId = ws.providerId AND contentType = ws.contentType
-      AND lastPlayedAt IS NOT NULL
-      AND COALESCE(seriesId, itemId) = COALESCE(ws.seriesId, ws.itemId)
-  )
+SELECT * FROM (
+    SELECT *, ROW_NUMBER() OVER (
+        PARTITION BY COALESCE(seriesId, itemId)
+        ORDER BY lastPlayedAt DESC, itemId DESC
+    ) AS rn
+    FROM watch_state
+    WHERE providerId = :providerId AND contentType = 'TV_SHOWS' AND lastPlayedAt IS NOT NULL
+)
+WHERE rn = 1
 ORDER BY lastPlayedAt DESC LIMIT :limit
 ```
 
-Movies and the rest keep the plain query. In-progress-first partitioning stays in memory, as today
-(`:924`) — it reorders the fetched page rather than selecting it.
+**Not a correlated subquery**, which is the obvious way to write this and is quadratic.
+`COALESCE(seriesId, itemId)` is not sargable, so no index can serve the correlation and each outer
+row rescans the provider's whole TV history — at the row counts this plan is explicitly designed to
+reach, that is millions of comparisons on a TV box for one browse row. The window function sorts
+once. Window functions need SQLite 3.25; minSdk is 30, which ships 3.28.
+
+The `itemId DESC` tiebreak matters because `lastPlayedAt` is a millisecond clock and two episodes
+can share a value — a bare `MAX` would emit both rows for one series and put the same show on screen
+twice.
+
+Movies and Live TV keep the plain query. In-progress-first partitioning stays in memory, as today
+(`:923`) — it reorders the fetched page rather than selecting it. Live TV never has a resumable row
+(`savePlaybackPosition` returns early for it), so that partition is a no-op there and the row stays
+plain recency, exactly as the current doc comment describes.
 
 **The cap stops being shared across content types.** Today the 25 rows are global and then filtered
-per type, which the code documents as a known wart at `:908`: "an in-progress movie pushed out by
+per type, which the code documents as a known wart at `:907-908`: "an in-progress movie pushed out by
 heavy channel surfing disappears from here too." A per-`contentType` `LIMIT` gives each type its own
 allowance and that wart goes away. This is an intentional improvement, not an accident — but it is a
-visible behaviour change and the doc comment at `:905-909` should be rewritten rather than left
+visible behaviour change and the doc comment at `:900-909` should be rewritten rather than left
 describing storage that no longer exists.
 
 `getSeriesWatchProgress` becomes a real aggregate:
@@ -273,15 +380,29 @@ private val MIGRATION_14_15 = object : Migration(14, 15) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `watch_state` (...)")
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_watch_state_providerId_contentType_lastPlayedAt` ...")
-        // + the tmdbId and seriesId indices
+        // + the seriesId index
+        // + index_xtream_streams_providerId_tmdbId — see below
     }
 }
 ```
 
+Two things that are easy to leave out and both fail loudly rather than silently, so they are cheap
+to catch but worth writing down:
+
+- **Register it.** `version = 14` at `XtreamDatabase.kt:20` becomes 15 and `MIGRATION_14_15` joins
+  the `addMigrations(...)` chain at `:127`. Room throws on a missing migration path, so this cannot
+  ship half-done.
+- **Index `xtream_streams` on `(providerId, tmdbId)` in the same migration.** Phase 5 groups the
+  catalogue by `tmdbId` and `XtreamStreamEntity` has no index covering it (`:9-15`) — `getByTmdbId`
+  (`XtreamStreamDao.kt:52`) scans today. Adding it here rather than in Phase 5 follows the same
+  reasoning as `lastPlayedAt`: an index costs nothing while unused and a second migration costs a
+  release. `xtream_episodes` needs no equivalent — episode dedup is scoped to one series' rows and
+  the table is small.
+
 **Data, app-side.** Lazily, per provider, on first `MediaRepository` use: decode
 `watch_history_v3`, insert the rows with `WatchedItem.timestamp` populating both `updatedAt` and
 `lastPlayedAt` (every existing row came from playback), set a `watch_state_migrated_v1` boolean in
-that provider's prefs. Guarded exactly like `purgeLegacyPrefsCache` (`XtreamEpgManager.kt:98`). Backfill only —
+that provider's prefs. Guarded exactly like `purgeLegacyPrefsCache` (`XtreamEpgManager.kt:99`). Backfill only —
 the blob is left intact until Phase 4 so a rollback loses nothing.
 
 ---
@@ -291,22 +412,39 @@ the blob is left intact until Phase 4 so a rollback loses nothing.
 **1 — Schema.** `WatchStateEntity`, `WatchStateDao`, `MIGRATION_14_15`, bump to version 15. Nothing
 reads or writes the table yet. Ships dark.
 
-**2 — Dual write + backfill.** `savePlaybackPosition` writes both blob and table. Backfill runs on
-first use per provider. Reads still come from the blob. This phase is reversible and is where
-parity gets verified — for a provider with history, table rows and blob rows should agree on
-`(itemId, contentType, positionMs, isCompleted)`.
+**2 — Dual write + backfill.** **Both** writers dual-write: `savePlaybackPosition` through the
+progress upsert and `saveLastPlayedItem` through the recency upsert. Missing the second one is the
+easy mistake — it is what carries Live TV, and what puts a Movies or TV Shows row in the list before
+any progress tick fires. Backfill runs on first use per provider. Reads still come from the blob.
+Reversible, and where parity gets verified: for a provider with history, table and blob should agree
+on `(itemId, contentType)` presence and on `isCompleted`, with the position caveat in Write path
+above.
 
-**3 — Flip reads.** Two distinct pieces. `getRecentItems`, `getSeriesWatchProgress` and
-`getWatchHistory` move to `WatchStateDao`, with the `LIMIT` replacing `take(watchHistorySize)`. The
-content-list reads instead gain the `LEFT JOIN` on the catalogue queries
-(`XtreamStreamDao.getStreamsByCategory`, `XtreamEpisodeDao.getEpisodes`) and `CategoryViewModel`
-drops its `getPlaybackPositions` call and merge loop. Eviction stops here — this is the phase that
-satisfies the requirement.
+**3 — Flip reads.** `getRecentItems`, `getSeriesWatchProgress`, `getWatchHistory` and
+`getPlaybackPositions` (with both `Suspend` variants) move to `WatchStateDao`; the synchronous
+`getPlaybackPosition` and its ViewModel passthrough are deleted as dead. The Recent path takes
+the `LIMIT` in place of `take(watchHistorySize)`; the content-list path keeps the exact same
+`Map<String, WatchedItem>` contract, so `CategoryViewModel.refreshPerItemData` and both
+`EpisodeSelectionScreen`s change only in that the call now suspends. Eviction stops here — this is
+the phase that satisfies the requirement.
 
 **4 — Retire the blob.** Stop writing `watch_history_v3`. One-time purge of `watch_history_v3` and
 `watch_history_v2`, guarded flag, same shape as the EPG purge. **`SettingsExportManager` must be
 updated in this phase** — it reads and writes `media_cache_$providerId` by key name (`:229`,
 `:260`, `:558`, `:604`), so without this, backup and restore silently stop carrying watch state.
+
+Two details in that update, both of which produce a silently empty restore rather than an error:
+
+- **Remap `providerId` on import.** Restore matches providers by identity and writes under
+  `matchingProvider.id` (`:558`, `:604`), which is not necessarily the id the backup was taken
+  under — `ProviderEntity.id` is `autoGenerate = true`. Exported `watch_state` rows must be
+  rewritten to the matched provider's id, not inserted verbatim. The prefs path never had this
+  problem because the id was in the file name.
+- **Restoring an old backup must still import its history.** A backup taken before Phase 4 carries
+  watch state inside `media_cache_$providerId`, but the restored device may already have
+  `watch_state_migrated_v1` set, in which case the lazy backfill will never look at it again.
+  Restore has to run the blob-to-table import directly for any `watch_history_v3` it writes, rather
+  than relying on the migration flag.
 
 **5 — TMDB dedup.** The feature that motivated the work; see below.
 
@@ -324,41 +462,49 @@ hand-rolled joins regardless of whether 5 and 6 ever ship.
 equivalence at read time. Writing five rows per play would multiply storage against the catalogue
 and require a catalogue scan on every save.
 
-**It is an extra join, not new lookup code.** Because the list query already carries watch state
-(see "The cap becomes a query"), dedup is a second `LEFT JOIN` on the same statement — position
-still coming from the stream's own row, completion from its own row *or* any sibling sharing a
-`tmdbId`:
+**TMDB ids come from the catalogue, not from `watch_state`.** They are only ever populated on
+`XtreamStreamEntity.tmdbId` / `XtreamEpisodeEntity.tmdbId` during sync; no watch-state writer has one
+to record (see "No `tmdbId` column" under Table). So dedup joins watch state back to the catalogue
+to reach them. That also means dedup is Xtream-only by construction — SMB, Local and Remote M3U have
+no catalogue and no TMDB ids, and degrade to no dedup rather than to an empty result.
+
+**One extra query, not a change to the existing read.** It returns the item ids that are completed
+*by a sibling* — the caller unions them into the `watched` set it already builds in
+`refreshPerItemData`:
 
 ```sql
-SELECT s.*,
-       COALESCE(own.positionMs, 0) AS positionMs,
-       COALESCE(own.durationMs, 0) AS durationMs,
-       MAX(COALESCE(own.isCompleted, 0), COALESCE(sib.anyCompleted, 0)) AS isCompleted
+SELECT CAST(s.streamId AS TEXT) AS itemId
 FROM xtream_streams s
-LEFT JOIN watch_state own
-       ON own.providerId = s.providerId
-      AND own.contentType = :contentType
-      AND own.itemId = CAST(s.streamId AS TEXT)
-LEFT JOIN (
-      SELECT tmdbId, MAX(isCompleted) AS anyCompleted
-      FROM watch_state
-      WHERE providerId = :providerId AND contentType = :contentType AND tmdbId IS NOT NULL
-      GROUP BY tmdbId
-) sib ON s.tmdbId IS NOT NULL AND sib.tmdbId = s.tmdbId
-WHERE s.providerId = :providerId AND s.type = :type
-  AND s.categoryId = :categoryId AND s.excluded = 0
-ORDER BY s.num ASC
+JOIN (
+    SELECT c.tmdbId AS tmdbId
+    FROM watch_state w
+    JOIN xtream_streams c
+      ON c.providerId = w.providerId
+     AND c.type       = :type
+     AND CAST(c.streamId AS TEXT) = w.itemId
+    WHERE w.providerId  = :providerId
+      AND w.contentType = :contentType
+      AND w.isCompleted = 1
+      AND c.tmdbId IS NOT NULL
+    GROUP BY c.tmdbId
+) done ON s.tmdbId = done.tmdbId
+WHERE s.providerId = :providerId AND s.type = :type AND s.excluded = 0
 ```
 
-The `index_watch_state_providerId_contentType_tmdbId` index exists for the subquery. Grouping in
-the subquery rather than joining `watch_state` directly is what stops one stream matching several
-sibling rows and multiplying the result set.
+The `c.type = :type` predicate is load-bearing: `xtream_streams` is keyed
+`(streamId, providerId, type)`, so a VOD id and a live id can collide, and without it a watched
+movie could mark an unrelated channel. `GROUP BY c.tmdbId` collapses the sibling set before the
+outer join, which is what stops one stream matching several watched variants and multiplying rows.
+`index_xtream_streams_providerId_tmdbId` (added in `MIGRATION_14_15`) serves both ends.
+
+The episode form is the same statement against `xtream_episodes`, joining `w.itemId = e.id` and
+scoped to the series being displayed.
 
 **Dedup `isCompleted` only. Never `playbackPosition`.** Completion is a boolean and transfers
 safely. A millisecond offset does not: a different variant has different intros, ads and runtime,
-so 40 minutes into the EN rip is not 40 minutes into the FR one. Resume stays per-variant. The
-query above enforces this structurally — position can only come from `own`, and there is no path
-by which a sibling's position reaches the row.
+so 40 minutes into the EN rip is not 40 minutes into the FR one. Resume stays per-variant. Keeping
+dedup in a query that returns nothing but item ids enforces this structurally — there is no column
+in the result a sibling's position could travel through.
 
 **Mandatory guard on episodes, applied at write time.** Panels frequently copy the *series*
 `tmdb_id` into every episode's info block. Unguarded, completing S01E01 would mark the entire
@@ -402,7 +548,7 @@ suspend fun setWatched(itemId: String, contentType: String, watched: Boolean)
 folded into `setWatched(..., false)` rather than kept alongside it.
 
 Marking watched must **not** route through `savePlaybackPosition`. That method early-returns when
-`position <= 0 && duration <= 0` (`:786`), deliberately, so an empty session cannot overwrite a real
+`position <= 0 && duration <= 0` (`:784`), deliberately, so an empty session cannot overwrite a real
 resume point — and a manual mark looks exactly like an empty session. It needs its own upsert path.
 
 A manual mark on an item with no existing row inserts one with `isCompleted = 1`, `positionMs = 0`,
@@ -411,15 +557,46 @@ A manual mark on an item with no existing row inserts one with `isCompleted = 1`
 progress bar, and the null `lastPlayedAt` keeps it out of the Recent row — the reason that column
 exists (see Table above).
 
-### Two behaviours to get right
+On an item that *does* have a row, `setWatched` names `isCompleted` and `updatedAt` only — it leaves
+`positionMs`, `durationMs` and `lastPlayedAt` as they are, same discipline as the two playback
+writers. Marking a half-watched movie watched hides its bar (`resumeProgress()` returns null once
+`isCompleted`) without discarding the position, so unmarking it brings the bar back where it was.
 
-**Unwatched must clear the whole TMDB group, not just one row — once Phase 5 exists.** With the
-sibling join, the displayed flag is `MAX(own, anyCompleted)`. Clearing one variant while a sibling
-still holds `isCompleted = 1` means the check comes straight back and the action appears to do
-nothing. So `setWatched(false)` clears completion on every row sharing that `tmdbId` (within the
-provider and content type), while `setWatched(true)` writes the single row and lets the join spread
-it. Asymmetric, and necessarily so. Without Phase 5 both directions touch one row and the asymmetry
-does not arise — but writing it in from the start costs nothing and avoids a confusing bug later.
+### Three behaviours to get right
+
+**Playback must not silently undo a manual mark.** `savePlaybackPosition` derives completion from
+the position every time — `isCompleted = progressPercent > 95f` (`:791`) — so under the current rule,
+marking a film watched and then opening it for two minutes writes `isCompleted = false` and the check
+disappears with no user action that means "unwatch". From Phase 6 onward completion is **sticky**:
+the progress upsert may raise `isCompleted` from false to true but never lowers it, and only
+`setWatched(false)` clears it. Position keeps updating either way, so a rewatch still resumes.
+
+The rule lands *with* Phase 6 rather than before it, deliberately — sticky completion needs the
+manual escape hatch to exist, otherwise a title that crossed 95% by accident could never be
+un-marked. In the upsert this is `isCompleted = MAX(watch_state.isCompleted, excluded.isCompleted)`.
+
+**Unwatched must clear the whole TMDB group, not just one row — once Phase 5 exists.** Phase 5 adds
+a sibling's completion to the displayed set. Clearing one variant while a sibling still holds
+`isCompleted = 1` means the check comes straight back and the action appears to do nothing. So
+`setWatched(false)` clears completion on every row whose catalogue entry shares that `tmdbId`, while
+`setWatched(true)` writes the single row and lets the sibling query spread it:
+
+```sql
+UPDATE watch_state SET isCompleted = 0, updatedAt = :now
+WHERE providerId = :providerId AND contentType = :contentType
+  AND itemId IN (
+      SELECT CAST(c.streamId AS TEXT) FROM xtream_streams c
+      WHERE c.providerId = :providerId AND c.type = :type AND c.tmdbId = (
+          SELECT tmdbId FROM xtream_streams
+          WHERE providerId = :providerId AND type = :type AND streamId = CAST(:itemId AS INTEGER)
+      )
+  )
+```
+
+with a `tmdbId IS NOT NULL` guard so a null-TMDB title clears only itself rather than every other
+null-TMDB title. Asymmetric, and necessarily so. Without Phase 5 both directions touch one row and
+the asymmetry does not arise — but writing it in from the start costs nothing and avoids a confusing
+bug later.
 
 **Manual marks stay out of the Recent row.** Handled by the schema: `lastPlayedAt` is set by
 playback only, and the Recent query filters on `lastPlayedAt IS NOT NULL`. Marking a five-year-old
@@ -442,6 +619,12 @@ Follow the affordances already in place rather than inventing new ones.
 Label follows current state — "Mark as watched" / "Mark as unwatched" — rather than a checkbox, so
 the outcome is unambiguous on a 10-foot UI.
 
+**Refreshing after a toggle costs nothing extra**, because watch state is looked up separately from
+the catalogue rather than joined into it. `toggleFavoriteStream` already ends in
+`viewModelScope.launch { refreshPerItemData() }` (`CategoryViewModel.kt:527`); a watched toggle ends
+the same way, re-reads `watch_state`, and republishes `_watchedIds`. No catalogue re-query, no list
+invalidation. This is the second reason the join was rejected — see "Why not `LEFT JOIN` …" above.
+
 **Optional, not scoped here:** mark a whole season or series watched. It falls out of the same call
 applied over an episode set, and `getSeriesWatchProgress` picks it up with no further change, but it
 needs its own confirmation affordance and is easy to trigger by accident on a D-pad.
@@ -452,23 +635,26 @@ needs its own confirmation affordance and is easy to trigger by accident on a D-
 
 The blob is not fast because it is a blob. It is fast because it is cached: decoded once into
 `cachedWatchHistory` with a lazily built `watchHistoryLookup` map keyed `(itemId, contentType)`
-(`MediaRepository.kt:818`). Steady-state reads are HashMap hits.
+(`MediaRepository.kt:818-821`). Steady-state reads are HashMap hits.
 
-With the join above, most of that cache stops being needed rather than being ported. The list query
-already reads from disk; carrying three more columns on rows it is already returning costs an
-indexed lookup per row and removes a second round trip plus a HashMap build. There is no separate
-watch-state working set to hold in RAM, because nothing looks watch state up on its own.
+The read side is close to a wash, and that is the honest claim. `getPlaybackPositions` is called
+once per `refreshPerItemData`, not once per item, so today's list load already costs one blob decode
+(cached) plus one map build; afterwards it costs one indexed query over the provider's watched rows
+plus the same map build. What disappears is the decode of a JSON array on cold start and the
+permanent residency of that array; what appears is a query per list load. Neither is the bottleneck,
+and neither was ever the reason for this plan — the read side is being changed because the blob
+cannot store the rows, not because it reads them slowly.
 
 What is worth keeping is on the **write** side: the existing 500 ms debounce
 (`MediaRepository.kt:536`) still earns its place, coalescing a progress tick stream into one row
 write.
 
-| | blob today (25 rows) | blob at "forever" | Room + join |
+| | blob today (25 rows) | blob at "forever" | Room table |
 |---|---|---|---|
-| List read | decode + HashMap merge | decode + HashMap merge | joined into the query already running |
-| Cold start | decode whole list | decode whole list | no watch-state read of its own |
+| List read | decode (cached) + HashMap merge | decode (cached) + HashMap merge | indexed query over watched rows + HashMap merge |
+| Cold start | decode whole list | decode **whole list** | no read until something asks |
 | Write one position | re-serialize whole list, rewrite whole XML file | re-serialize **whole list**, rewrite whole XML file | one row upsert |
-| RAM | whole list resident | whole list resident | nothing resident |
+| RAM | whole list resident | **whole list resident** | one content type's rows, transient |
 
 Writes are where it matters, and the middle column is the point. Every `savePlaybackPosition`
 re-serializes the entire list and `commit()`s the whole prefs file. At 25 rows that is roughly
@@ -481,17 +667,42 @@ So the honest framing is the inverse of the question. Moving to Room does not co
 get durability would be the bad outcome; Room is flat in the row count. This codebase has already
 run the experiment: `MIGRATION_12_13` moved the EPG payload cache out of SharedPreferences for
 exactly this reason, where a 53k-channel provider reached an 84 MB prefs file parsed into RAM by
-every process that opened it (`XtreamEpgManager.kt:90`).
+every process that opened it (`XtreamEpgManager.kt:95`).
 
 One genuine hazard, and it is not SQLite: a Room query on the main thread. See Threading below.
 
 ## Threading
 
-Checked; smaller than it looks. The content-list joins run inside the catalogue queries, which are
-already off the main thread. `CategoryViewModel.kt:471` already runs inside
-`withContext(Dispatchers.Default)`, and both `EpisodeSelectionScreen`s already call the `Suspend`
-variants. Only `CategoryViewModel.kt:434` — a synchronous passthrough to
-`repository.getPlaybackPosition` — needs converting to suspend.
+Every watch-state entry point that is synchronous today becomes a disk read or write, so each one
+needs a decision rather than a spot check. The full list:
+
+| today | line | disposition |
+|---|---|---|
+| `getPlaybackPositions` | `:827` | becomes suspend; sole caller `CategoryViewModel.kt:471` is already inside a suspend `refreshPerItemData` |
+| `getPlaybackPositionsSuspend` | `:1084` | already suspend; both `EpisodeSelectionScreen`s already call it |
+| `getPlaybackPosition` | `:814` | **delete.** Its only caller is the `CategoryViewModel.kt:431-434` passthrough, which has no callers of its own anywhere in `tv/` or `mobile/`. Delete both. |
+| `getPlaybackPositionSuspend` | `:1065` | already suspend; used by `MovieDetailsViewModel:118`, `StreamLoaderViewModel:182` and both episode screens |
+| `getWatchHistory` | `:540` | becomes suspend; one production caller |
+| `getRecentItems` | `:910` | folds into `getRecentItemsSuspend` (`:1010`), its only production caller |
+| `getSeriesWatchProgress` | `:859` | already suspend |
+| `savePlaybackPosition` | `:766` | stays non-suspend — see below |
+| `saveLastPlayedItem` | `:395` | stays non-suspend — see below |
+
+**The two writers stay fire-and-forget**, because their callers
+(`StreamLoaderViewModel.kt:235,462,477,517,532`) treat them as such and there is nothing to await.
+The Room upsert goes on the existing `writeScope` — `CoroutineScope(SupervisorJob() +
+Dispatchers.IO.limitedParallelism(1))` at `MediaRepository.kt:157` — which is already the
+repository's serialized write lane. `limitedParallelism(1)` is what keeps a start write and a
+progress write from racing on the same row, so the two upserts land in call order without any
+locking of their own.
+
+The 500 ms debounce (`:537`) stays on the progress path. Its job was never the blob specifically: it
+coalesces a tick stream into one write, and that is worth as much for a row upsert as for a file
+rewrite.
+
+Only `getRecentItemsSuspend` runs Room and Compose-facing work in the same call, and it is already
+suspend and already fetches icons from `db.streamDao()` (`:1050-1052`), so it needs no change beyond
+its new data source.
 
 ## Known adjacent problems, deliberately out of scope
 
@@ -512,6 +723,9 @@ variants. Only `CategoryViewModel.kt:434` — a synchronous passthrough to
 `watch_history(profile_id, item_id, content_type, position_ms, duration_ms, is_completed, ...)`
 table with `PRIMARY KEY (profile_id, item_id, content_type)`. The local schema above is that shape
 with `providerId` in place of `profile_id`, which makes the eventual outbox a column mapping rather
-than a reshape. `tmdbId` riding along as a column is also what would let rows from different panels
-be joined later, if that is ever wanted — without it crossing providers locally, which this plan
-does not do.
+than a reshape.
+
+Cross-panel matching — the same film watched on two different providers — would need a TMDB id on
+the synced row, which `watch_state` deliberately does not store (see Table). Resolving it through
+the catalogue at outbox time is the same join Phase 5 already uses, so nothing here forecloses it;
+it just is not a column carried for a use case that does not exist yet.
