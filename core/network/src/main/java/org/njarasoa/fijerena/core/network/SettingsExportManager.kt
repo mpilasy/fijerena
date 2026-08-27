@@ -12,6 +12,8 @@ import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
  * Manages export and import of all application settings to/from a JSON file.
@@ -33,7 +35,12 @@ class SettingsExportManager(
 ) {
     companion object {
         private const val TAG = "SettingsExportManager"
-        private const val EXPORT_VERSION = 3
+
+        // 4: added providerWatchState (plans/watch-state-durable-storage-plan.md, Phase 4). A
+        // backup taken before version 4 has no watch state in it at all — SettingsExportManager
+        // never exported watch_history_v3 — so there is no older shape to migrate on import;
+        // providerWatchState simply decodes to its empty default on an old file.
+        private const val EXPORT_VERSION = 4
         private const val KEY_FAVORITES = "favorites_v2"
         private const val KEY_FAVORITE_CATEGORIES = "favorite_categories"
     }
@@ -54,6 +61,7 @@ class SettingsExportManager(
         val epgSources: List<ExportedEpgSource> = emptyList(),
         val providerFavorites: List<ProviderFavorites> = emptyList(),
         val providerFavoriteCategories: List<ProviderFavoriteCategories> = emptyList(),
+        val providerWatchState: List<ProviderWatchState> = emptyList(),
     )
 
     @Serializable
@@ -119,6 +127,38 @@ class SettingsExportManager(
     )
 
     /**
+     * A provider's `watch_state` rows, identified by provider name+URL rather than the raw
+     * `providerId` a row carries on the source device — that id is `autoGenerate`d and is not
+     * necessarily what the matched provider is called on the target device, so it is remapped at
+     * import time rather than trusted from the file. Same shape [ProviderFavorites] already uses.
+     */
+    @Serializable
+    data class ProviderWatchState(
+        val providerName: String,
+        val providerUrl: String,
+        val rows: List<ExportedWatchState> = emptyList(),
+    )
+
+    @Serializable
+    data class ExportedWatchState(
+        val itemId: String,
+        val contentType: String,
+        val itemName: String,
+        val categoryId: String,
+        val positionMs: Long,
+        val durationMs: Long,
+        val isCompleted: Boolean,
+        val updatedAt: Long,
+        val lastPlayedAt: Long? = null,
+        val seriesId: String? = null,
+        val episodeId: String? = null,
+        val seriesName: String? = null,
+        val episodeExtension: String? = null,
+        val audioTrackIndex: Int? = null,
+        val subtitleTrackIndex: Int? = null,
+    )
+
+    /**
      * Export all application settings to a JSON string.
      */
     data class ImportOptions(
@@ -168,9 +208,12 @@ class SettingsExportManager(
         val hasConflicts: Boolean get() = conflictingProviders.isNotEmpty()
         val hasProviders: Boolean get() = settings.providers.isNotEmpty()
         val hasEpgSources: Boolean get() = settings.epgSources.isNotEmpty()
+        // Watch state rides the favorites checkbox (see importFromJson), so its presence counts
+        // toward whether that checkbox is worth showing at all.
         val hasFavorites: Boolean get() =
             settings.providerFavorites.isNotEmpty() ||
-                settings.providerFavoriteCategories.isNotEmpty()
+                settings.providerFavoriteCategories.isNotEmpty() ||
+                settings.providerWatchState.isNotEmpty()
     }
 
     /**
@@ -282,12 +325,46 @@ class SettingsExportManager(
                     )
                 }
 
+            // Export watch state per provider (Phase 4, plans/watch-state-durable-storage-plan.md).
+            // Not Xtream-specific: watch_state also carries SMB/Local/Remote M3U rows.
+            val watchStateDao = XtreamDatabase.getInstance(context).watchStateDao()
+            val providerWatchState =
+                allProviders.mapNotNull { entity ->
+                    val rows = watchStateDao.getAll(entity.id)
+                    if (rows.isEmpty()) return@mapNotNull null
+                    ProviderWatchState(
+                        providerName = entity.name,
+                        providerUrl = entity.url,
+                        rows =
+                            rows.map { row ->
+                                ExportedWatchState(
+                                    itemId = row.itemId,
+                                    contentType = row.contentType,
+                                    itemName = row.itemName,
+                                    categoryId = row.categoryId,
+                                    positionMs = row.positionMs,
+                                    durationMs = row.durationMs,
+                                    isCompleted = row.isCompleted,
+                                    updatedAt = row.updatedAt,
+                                    lastPlayedAt = row.lastPlayedAt,
+                                    seriesId = row.seriesId,
+                                    episodeId = row.episodeId,
+                                    seriesName = row.seriesName,
+                                    episodeExtension = row.episodeExtension,
+                                    audioTrackIndex = row.audioTrackIndex,
+                                    subtitleTrackIndex = row.subtitleTrackIndex,
+                                )
+                            },
+                    )
+                }
+
             val exported =
                 ExportedSettings(
                     global = global,
                     providers = providers,
                     epgSources = epgSources,
                     providerFavorites = providerFavorites,
+                    providerWatchState = providerWatchState,
                     providerFavoriteCategories = providerFavoriteCategories,
                 )
 
@@ -634,6 +711,50 @@ class SettingsExportManager(
                     }
                 }
 
+                // Import watch state per provider (Phase 4, plans/watch-state-durable-storage-plan.md).
+                // Rides the same toggle as favorites rather than a checkbox of its own — both are
+                // per-provider local state restored the same way. providerId is never read from
+                // the file: each row is rebuilt under matchingProvider.id, since ProviderEntity.id
+                // is autoGenerate and the id the backup was taken under means nothing here.
+                // restoreAll REPLACEs by primary key, so importing the same backup twice is
+                // harmless — no existing-row merge needed like favorites, which append.
+                var watchStateRestored = 0
+
+                if (options.importFavorites && exported.providerWatchState.isNotEmpty()) {
+                    val watchStateDao = XtreamDatabase.getInstance(context).watchStateDao()
+                    for (pws in exported.providerWatchState) {
+                        val matchingProvider =
+                            providersByNameUrl["${pws.providerName}\u0000${pws.providerUrl}"]
+                                ?: providersByName[pws.providerName]
+                                ?: continue
+                        val entities =
+                            pws.rows.map { row ->
+                                WatchStateEntity(
+                                    providerId = matchingProvider.id,
+                                    itemId = row.itemId,
+                                    contentType = row.contentType,
+                                    itemName = row.itemName,
+                                    categoryId = row.categoryId,
+                                    positionMs = row.positionMs,
+                                    durationMs = row.durationMs,
+                                    isCompleted = row.isCompleted,
+                                    updatedAt = row.updatedAt,
+                                    lastPlayedAt = row.lastPlayedAt,
+                                    seriesId = row.seriesId,
+                                    episodeId = row.episodeId,
+                                    seriesName = row.seriesName,
+                                    episodeExtension = row.episodeExtension,
+                                    audioTrackIndex = row.audioTrackIndex,
+                                    subtitleTrackIndex = row.subtitleTrackIndex,
+                                )
+                            }
+                        if (entities.isNotEmpty()) {
+                            watchStateDao.restoreAll(entities)
+                            watchStateRestored += entities.size
+                        }
+                    }
+                }
+
                 // No-op (Log.d removed)
                 ImportResult(
                     providersAdded = providersAdded,
@@ -643,6 +764,7 @@ class SettingsExportManager(
                     epgSourcesSkipped = sourcesSkipped,
                     favoritesRestored = favoritesRestored,
                     favoriteCategoriesRestored = favoriteCategoriesRestored,
+                    watchStateRestored = watchStateRestored,
                 )
             } catch (e: kotlinx.serialization.SerializationException) {
                 Log.e(TAG, "Invalid settings file format", e)
@@ -684,6 +806,7 @@ class SettingsExportManager(
         val epgSourcesSkipped: Int = 0,
         val favoritesRestored: Int = 0,
         val favoriteCategoriesRestored: Int = 0,
+        val watchStateRestored: Int = 0,
         val error: String? = null,
     ) {
         val isSuccess: Boolean get() = error == null
@@ -713,6 +836,12 @@ class SettingsExportManager(
             val favTotal = favoritesRestored + favoriteCategoriesRestored
             if (favTotal > 0) {
                 parts.add(context.getString(R.string.settings_export_summary_favorites_format, favTotal))
+            }
+
+            // Watch state — counted separately from favorites even though it rides the same
+            // import toggle, so the summary doesn't claim more "favorites" than were actually favorited.
+            if (watchStateRestored > 0) {
+                parts.add(context.getString(R.string.settings_export_summary_watch_state_format, watchStateRestored))
             }
 
             if (parts.isEmpty()) parts.add(context.getString(R.string.settings_export_summary_updated))

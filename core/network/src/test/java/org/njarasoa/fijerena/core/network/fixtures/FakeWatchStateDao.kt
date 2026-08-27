@@ -164,8 +164,12 @@ class FakeWatchStateDao : WatchStateDao {
 
     override suspend fun getAll(providerId: Long): List<WatchStateEntity> = rows.values.filter { it.providerId == providerId }
 
-    override fun deleteAll(providerId: Long) {
+    override suspend fun deleteAll(providerId: Long) {
         rows.keys.filter { it.first == providerId }.forEach { rows.remove(it) }
+    }
+
+    override suspend fun restoreAll(entities: List<WatchStateEntity>) {
+        entities.forEach { seed(it) }
     }
 }
 

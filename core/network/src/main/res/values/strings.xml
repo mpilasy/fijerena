@@ -26,6 +26,7 @@
     <string name="settings_export_item_skipped_format">%1$d skipped</string>
     <string name="settings_export_summary_epg_sources_format">EPG Sources: %1$s</string>
     <string name="settings_export_summary_favorites_format">%1$d favorite(s) restored</string>
+    <string name="settings_export_summary_watch_state_format">%1$d watch history item(s) restored</string>
     <string name="settings_export_summary_updated">Settings updated</string>
     <string name="settings_export_summary_passwords_reentry_format">%1$s (Passwords must be re-entered)</string>
 

@@ -166,10 +166,6 @@ class MediaRepository(
     private var favoriteCategoryIdSet: Set<Pair<String, String>>? = null
     private val favoriteLock = Any()
     private val watchHistoryLock = Any()
-    private var watchHistoryDirty = false
-    private val watchHistoryWriteThread = android.os.HandlerThread("WatchHistoryWriter").apply { start() }
-    private val watchHistoryWriteHandler = android.os.Handler(watchHistoryWriteThread.looper)
-    private val watchHistoryWriteRunnable = Runnable { flushWatchHistory() }
 
     // Dedicated single-thread dispatcher for prefs writes below. commit() (not apply()) blocks
     // only this background thread until its own write finishes, so it never leaves anything
@@ -179,11 +175,30 @@ class MediaRepository(
     // running — a well-known ANR trap when writes pile up faster than they drain. In-memory
     // caches are updated synchronously on the caller's thread before the write is dispatched,
     // so reads stay consistent regardless of when the background commit actually lands.
-    private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+    //
+    // watch_state is the one exception: savePlaybackPosition/saveLastPlayedItem have no
+    // synchronous in-memory mirror of their own (Phase 4 removed the blob they used to update
+    // synchronously alongside the table), so a read immediately following a write on another
+    // thread can race the upsert. Neither writer is debounced, so the window is however long one
+    // Room upsert takes, not the blob's old 500 ms — narrow, but real. Named as its own property
+    // (rather than inlined into writeScope's constructor) so [awaitPendingWrites] can queue onto
+    // the exact same serialized dispatcher without going through writeScope's Job.
+    private val writeDispatcher = Dispatchers.IO.limitedParallelism(1)
+    private val writeScope = CoroutineScope(SupervisorJob() + writeDispatcher)
 
     private fun SharedPreferences.commitAsync(action: SharedPreferences.Editor.() -> Unit) {
         val prefs = this
         writeScope.launch { prefs.edit(commit = true, action = action) }
+    }
+
+    /**
+     * Test-only synchronization point: suspends until every write already queued on
+     * [writeScope] — specifically the fire-and-forget `watch_state` upserts from
+     * [savePlaybackPosition]/[saveLastPlayedItem] — has finished. [writeDispatcher] runs at most
+     * one task at a time, so an empty task queued here can only run once every earlier one has.
+     */
+    internal suspend fun awaitPendingWrites() {
+        withContext(writeDispatcher) {}
     }
 
     companion object {
@@ -209,29 +224,35 @@ class MediaRepository(
 
     fun setProvider(mediaProvider: MediaProvider) {
         provider = mediaProvider
-        backfillWatchState()
+        backfillAndPurgeWatchState()
     }
 
     /**
-     * One-time per-provider copy of `watch_history_v3` into `watch_state`, so Phase 3 reads have
-     * something to read once the blob is retired. Guarded exactly like
+     * One-time per-provider copy of `watch_history_v3` into `watch_state`, followed by purging
+     * the blob — Phase 2 and Phase 4 of plans/watch-state-durable-storage-plan.md, combined into
+     * one hook because Phase 4 depends on Phase 2 having actually run for *this* provider.
+     *
+     * Phases 2 and 4 are separate releases, so a provider nobody has opened since Phase 2 shipped
+     * can reach a Phase 4 install still carrying an un-migrated blob — the flag gates on a
+     * per-provider basis (never a single global flag) for exactly that reason. Guarded like
      * [org.njarasoa.fijerena.core.network.xtream.manager.XtreamEpgManager]'s
-     * `purgeLegacyPrefsCache`. Hooked off [setProvider] rather than the constructor — a
+     * `purgeLegacyPrefsCache`, and hooked off [setProvider] rather than the constructor — a
      * provider-less repository (a unit test, or the brief window in [org.njarasoa.fijerena.core
      * .network.provider] wiring before a provider is attached) is not a real "use" yet.
      *
-     * Replay-safe: a crash between "rows written" and the flag commit just re-runs this and
-     * re-upserts the same values, because every row goes through the same progress upsert
-     * [savePlaybackPosition] uses rather than a raw insert — see Migration in
-     * plans/watch-state-durable-storage-plan.md.
+     * Backfill runs first when the flag is unset, purge always runs after: skipping straight to
+     * purge on an unset flag would delete history that was never copied anywhere, silently and
+     * unrecoverably, on a provider the user simply hasn't gotten around to opening. Backfill
+     * itself is replay-safe — a crash between "rows written" and the flag commit just re-runs
+     * this and re-upserts the same values, because every row goes through the same progress
+     * upsert [savePlaybackPosition] uses rather than a raw insert.
      */
-    private fun backfillWatchState() {
+    private fun backfillAndPurgeWatchState() {
         val alreadyMigrated = cache.getBoolean(KEY_WATCH_STATE_MIGRATED, false)
-        if (!alreadyMigrated) {
-            writeScope.launch {
-                // Reads the blob directly, not the public getWatchHistory() — that flips to
-                // reading watch_state in Phase 3, and would make this loop copy the table into
-                // itself.
+        writeScope.launch {
+            if (!alreadyMigrated) {
+                // Reads the blob directly, not the public getWatchHistory() — that reads
+                // watch_state since Phase 3, and would make this loop copy the table into itself.
                 val blobHistory = synchronized(watchHistoryLock) { getWatchHistoryLocked() }
                 for (item in blobHistory) {
                     watchStateDao.upsertProgress(
@@ -252,7 +273,16 @@ class MediaRepository(
                         subtitleTrackIndex = item.subtitleTrackIndex,
                     )
                 }
-                cache.commitAsync { putBoolean(KEY_WATCH_STATE_MIGRATED, true) }
+                cache.edit(commit = true) { putBoolean(KEY_WATCH_STATE_MIGRATED, true) }
+            }
+            // The blob is guaranteed copied by this point — either just now, or on an earlier
+            // release that already set the flag — so purging it here is always safe.
+            cache.edit(commit = true) {
+                remove(KEY_WATCH_HISTORY)
+                remove(KEY_WATCH_HISTORY_V2)
+            }
+            synchronized(watchHistoryLock) {
+                cachedWatchHistory = emptyList()
             }
         }
     }
@@ -493,21 +523,10 @@ class MediaRepository(
             putString(KEY_LAST_CONTENT_TYPE, contentType)
         }
 
-        // ALWAYS save to local watch history as a robust fallback
-        addToWatchHistory(
-            itemId,
-            itemName,
-            categoryId,
-            contentType,
-            episodeId = episodeId,
-            episodeExtension = episodeExtension,
-            seriesId = seriesId,
-            seriesName = seriesName,
-        )
-
-        // Dual write (Phase 2, plans/watch-state-durable-storage-plan.md): owns recency and
-        // metadata only. Must not name positionMs/durationMs/isCompleted, so a start write can
-        // never erase progress a later progress write already stored.
+        // Owns recency and metadata only (Phase 4, plans/watch-state-durable-storage-plan.md).
+        // Must not name positionMs/durationMs/isCompleted, so a start write can never erase
+        // progress a later progress write already stored. The blob write this used to fall back
+        // to (`addToWatchHistory`) is gone — watch_history_v3 is retired.
         val recencyNow = System.currentTimeMillis()
         writeScope.launch {
             watchStateDao.upsertRecency(
@@ -581,54 +600,6 @@ class MediaRepository(
         }
     }
 
-    private fun addToWatchHistory(
-        itemId: String,
-        itemName: String,
-        categoryId: String,
-        contentType: String,
-        playbackPosition: Long = 0L,
-        duration: Long = 0L,
-        isCompleted: Boolean = false,
-        episodeId: EpisodeId? = null,
-        episodeExtension: String? = null,
-        seriesId: SeriesId? = null,
-        seriesName: String? = null,
-        audioTrackIndex: Int? = null,
-        subtitleTrackIndex: Int? = null,
-    ) {
-        synchronized(watchHistoryLock) {
-            val history = getWatchHistoryLocked().toMutableList()
-            history.removeAll { it.itemId == itemId && it.contentType == contentType }
-            history.add(
-                0,
-                WatchedItem(
-                    itemId,
-                    itemName,
-                    categoryId,
-                    contentType,
-                    System.currentTimeMillis(),
-                    playbackPosition,
-                    duration,
-                    isCompleted,
-                    episodeId = episodeId,
-                    episodeExtension = episodeExtension,
-                    seriesId = seriesId,
-                    seriesName = seriesName,
-                    audioTrackIndex = audioTrackIndex,
-                    subtitleTrackIndex = subtitleTrackIndex,
-                ),
-            )
-            val trimmed = history.take(providerSettings.watchHistorySize)
-
-            // Update in-memory cache immediately (reads always see latest data)
-            cachedWatchHistory = trimmed
-            watchHistoryDirty = true
-        }
-        // Debounce disk write — coalesces rapid updates (e.g. playback progress) into one write
-        watchHistoryWriteHandler.removeCallbacks(watchHistoryWriteRunnable)
-        watchHistoryWriteHandler.postDelayed(watchHistoryWriteRunnable, 500L)
-    }
-
     /**
      * Every watch-state row for this provider, across every content type, unbounded —
      * `watch_state`-backed since Phase 3 of plans/watch-state-durable-storage-plan.md. No
@@ -639,8 +610,11 @@ class MediaRepository(
     suspend fun getWatchHistory(): List<WatchedItem> = watchStateDao.getAll(providerId).map { it.toWatchedItem() }
 
     /**
-     * The `watch_history_v3`/`v2` blob, decoded and cached. Still what every writer reads its
-     * "existing entry" from and what [backfillWatchState] copies out of — Phase 4 retires this.
+     * The `watch_history_v3`/`v2` blob, decoded and cached. No writer reads this for an "existing
+     * entry" any more — the table's own `COALESCE` upserts do that now — and nothing writes the
+     * blob either (Phase 4). What's left: [backfillAndPurgeWatchState] copies whatever a
+     * pre-Phase-4 install already wrote here into `watch_state` before purging it, and
+     * [clearWatchHistory]/[clearPlaybackPosition] can still touch the same keys directly.
      * `internal` rather than `private` only so tests can assert against the blob directly, now
      * that [getWatchHistory] no longer does; callers outside a `synchronized(watchHistoryLock)`
      * block (as every production caller already is) get an unsynchronized read.
@@ -684,21 +658,20 @@ class MediaRepository(
         return history
     }
 
+    /**
+     * No-op since Phase 4 (plans/watch-state-durable-storage-plan.md): there is no longer a
+     * debounced blob write to force out early, and the table upserts were never debounced in the
+     * first place — each dispatches to [writeScope] immediately. Kept, rather than deleted, so
+     * its callers (a pause/stop hook expecting "make sure the last position landed") don't need
+     * their own change; there is nothing left for it to flush.
+     */
     fun flushWatchHistory() {
-        synchronized(watchHistoryLock) {
-            if (!watchHistoryDirty) return
-            cachedWatchHistory?.let { history ->
-                cache.commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
-            }
-            watchHistoryDirty = false
-        }
+        // Intentionally empty.
     }
 
     fun clearWatchHistory() {
-        watchHistoryWriteHandler.removeCallbacks(watchHistoryWriteRunnable)
         synchronized(watchHistoryLock) {
             cachedWatchHistory = emptyList()
-            watchHistoryDirty = false
             cache.commitAsync {
                 remove(KEY_WATCH_HISTORY)
                 remove(KEY_WATCH_HISTORY_V2)
@@ -890,36 +863,11 @@ class MediaRepository(
                     0f
                 }
             val isCompleted = progressPercent > 95.0f
-            // Preserve metadata from existing entry
-            val existing =
-                synchronized(watchHistoryLock) {
-                    getWatchHistoryLocked().firstOrNull { it.itemId == itemId && it.contentType == contentType }
-                }
-            val resolvedEpisodeId = episodeId ?: existing?.episodeId
-            val resolvedEpisodeExtension = episodeExtension ?: existing?.episodeExtension
-            val resolvedSeriesId = seriesId ?: existing?.seriesId
-            val resolvedSeriesName = seriesName ?: existing?.seriesName
-            val resolvedAudioTrackIndex = audioTrackIndex ?: existing?.audioTrackIndex
-            val resolvedSubtitleTrackIndex = subtitleTrackIndex ?: existing?.subtitleTrackIndex
-            addToWatchHistory(
-                itemId,
-                itemName,
-                categoryId,
-                contentType,
-                position,
-                duration,
-                isCompleted,
-                episodeId = resolvedEpisodeId,
-                episodeExtension = resolvedEpisodeExtension,
-                seriesId = resolvedSeriesId,
-                seriesName = resolvedSeriesName,
-                audioTrackIndex = resolvedAudioTrackIndex,
-                subtitleTrackIndex = resolvedSubtitleTrackIndex,
-            )
-
-            // Dual write (Phase 2, plans/watch-state-durable-storage-plan.md): owns position,
-            // duration, completion and lastPlayedAt. COALESCE in the upsert keeps metadata this
-            // call doesn't carry, same as the read-modify-write above achieves for the blob.
+            // Owns position, duration, completion and lastPlayedAt (Phase 4,
+            // plans/watch-state-durable-storage-plan.md). No blob read-modify-write to preserve
+            // metadata this call doesn't carry any more — the upsert's own `COALESCE` against
+            // `watch_state`'s existing row does that for real, in SQL, instead of the app fetching
+            // an "existing" entry first to pass back in.
             val progressNow = System.currentTimeMillis()
             writeScope.launch {
                 watchStateDao.upsertProgress(
@@ -932,12 +880,12 @@ class MediaRepository(
                     durationMs = duration,
                     isCompleted = isCompleted,
                     now = progressNow,
-                    seriesId = resolvedSeriesId?.raw,
-                    episodeId = resolvedEpisodeId?.raw,
-                    seriesName = resolvedSeriesName,
-                    episodeExtension = resolvedEpisodeExtension,
-                    audioTrackIndex = resolvedAudioTrackIndex,
-                    subtitleTrackIndex = resolvedSubtitleTrackIndex,
+                    seriesId = seriesId?.raw,
+                    episodeId = episodeId?.raw,
+                    seriesName = seriesName,
+                    episodeExtension = episodeExtension,
+                    audioTrackIndex = audioTrackIndex,
+                    subtitleTrackIndex = subtitleTrackIndex,
                 )
             }
         }
@@ -1302,9 +1250,6 @@ class MediaRepository(
         }
 
     override fun close() {
-        watchHistoryWriteHandler.removeCallbacks(watchHistoryWriteRunnable)
-        flushWatchHistory()
-        watchHistoryWriteThread.quitSafely()
         writeScope.cancel()
     }
 }

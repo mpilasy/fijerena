@@ -11,6 +11,7 @@ import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
  * Manages provider CRUD and per-provider encrypted password storage.
@@ -119,6 +120,7 @@ class ProviderRepository(
         deleteProviderEpgSources(id)
         clearProviderPassword(id)
         clearProviderCache(id)
+        clearProviderWatchState(id)
         settingsCache.remove(id)
         // Clear cached provider instance
         MediaProviderFactory.clearCache(id)
@@ -315,6 +317,26 @@ class ProviderRepository(
             val cacheName = "xtream_cache_$providerId"
             context
                 .getSharedPreferences(cacheName, Context.MODE_PRIVATE)
+                .edit { clear() }
+        } catch (_: Exception) {
+            // Ignore errors clearing cache for deleted provider
+        }
+    }
+
+    /**
+     * `watch_state` lives in `XtreamDatabase` (one app-wide file) while provider definitions live
+     * in `SettingsDatabase`, so no SQL cascade reaches it — delete by hand. Not Xtream-specific:
+     * `MediaRepository` backs SMB, Local and Remote M3U too, and all of them write rows keyed by
+     * this `providerId`. `media_cache_$providerId` (favorites, favorite categories) is cleared in
+     * the same pass — `deleteProvider` never touched it before, leaking that prefs file on every
+     * deletion; bounded while history was capped at 25 rows, no longer bounded once storage is.
+     * See plans/watch-state-durable-storage-plan.md.
+     */
+    private suspend fun clearProviderWatchState(providerId: Long) {
+        XtreamDatabase.getInstance(context).watchStateDao().deleteAll(providerId)
+        try {
+            context
+                .getSharedPreferences("media_cache_$providerId", Context.MODE_PRIVATE)
                 .edit { clear() }
         } catch (_: Exception) {
             // Ignore errors clearing cache for deleted provider
