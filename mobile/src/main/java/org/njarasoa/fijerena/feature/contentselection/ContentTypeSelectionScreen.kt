@@ -422,11 +422,12 @@ private fun GradientContentCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(CinemaSpacing.lg),
+                        .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
+                    modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -463,20 +464,26 @@ private fun GradientContentCard(
                             )
                         }
                     }
-                    Column {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
                         Text(
                             text = title,
                             style = MaterialTheme.typography.titleLarge,
                             color = CinemaTextPrimary,
                             fontWeight = FontWeight.Bold,
+                            maxLines = 1,
                         )
                         Text(
                             text = description,
                             style = MaterialTheme.typography.bodyMedium,
                             color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                            maxLines = 2,
                         )
                     }
                 }
+                Spacer(modifier = Modifier.width(CinemaSpacing.sm))
                 if (categoryCounts == null) {
                     ShimmerPlaceholder(
                         modifier =
@@ -486,18 +493,23 @@ private fun GradientContentCard(
                     )
                 } else {
                     val (filtered, total) = categoryCounts
-                    Column(horizontalAlignment = Alignment.End) {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
                         Text(
                             text = "$filtered",
                             style = MaterialTheme.typography.headlineMedium,
                             color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                             fontWeight = FontWeight.Bold,
+                            maxLines = 1,
                         )
                         if (showTotal && filtered < total) {
                             Text(
                                 text = stringResource(R.string.category_of_total_format, total),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
+                                maxLines = 1,
                             )
                         }
                     }
