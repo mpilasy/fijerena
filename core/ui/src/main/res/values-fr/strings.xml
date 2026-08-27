@@ -128,6 +128,7 @@
     <string name="epg_source_stat_latest">Dernier programme</string>
     <string name="epg_source_stat_channels">Chaînes</string>
     <string name="epg_source_stat_programmes">Programmes</string>
+    <string name="epg_source_stat_unchanged">Inchangé</string>
     <string name="epg_source_never">Jamais</string>
     <string name="epg_source_none">Aucun</string>
     <string name="epg_add_source_title">Ajouter une source EPG</string>
@@ -281,6 +282,8 @@
     <string name="provider_sync_now_button">Synchroniser maintenant</string>
     <string name="provider_last_sync_status">Dernière synchro : Finie à %1$s • Durée %2$s</string>
     <string name="provider_sync_success">Synchronisation réussie</string>
+    <string name="provider_sync_no_changes">Aucun changement depuis la dernière synchro</string>
+    <string name="provider_sync_delta">%1$d ajoutés • %2$d mis à jour • %3$d supprimés</string>
     <string name="provider_total_db_items_label">Total des éléments en base</string>
     <string name="provider_total_items_value">%1$s Éléments</string>
     <string name="provider_live_tv_label">TV en direct</string>

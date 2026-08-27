@@ -37,6 +37,9 @@ fun CacheManagementSection(
     lastSyncedAtMs: Long = 0L,
     lastSyncDurationMs: Long = 0L,
     lastSyncError: String? = null,
+    lastSyncInserted: Int = 0,
+    lastSyncUpdated: Int = 0,
+    lastSyncDeleted: Int = 0,
     onSyncClick: () -> Unit = {},
     onClearAllClick: () -> Unit,
     onClearLiveTvClick: () -> Unit,
@@ -97,6 +100,25 @@ fun CacheManagementSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                 )
+
+                // Delta only means something for Xtream — every other provider type has no
+                // equivalent row-level diff, and its columns just hold whatever they defaulted
+                // to. Only shown next to a clean sync: on error the columns hold the last
+                // *successful* sync's delta (ProviderDao.updateSyncStats COALESCEs rather than
+                // zeroing on failure), so showing it next to an error would misleadingly read as
+                // "this failed run found 5 changes".
+                if (isXtream && lastSyncError == null) {
+                    Text(
+                        text =
+                            if (lastSyncInserted == 0 && lastSyncUpdated == 0 && lastSyncDeleted == 0) {
+                                stringResource(R.string.provider_sync_no_changes)
+                            } else {
+                                stringResource(R.string.provider_sync_delta, lastSyncInserted, lastSyncUpdated, lastSyncDeleted)
+                            },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                    )
+                }
             }
 
             if (syncState is SyncState.Error || (syncState is SyncState.Idle && lastSyncError != null)) {

@@ -294,6 +294,12 @@ fun TvEpgManagementScreen(
                             null
                         }
 
+                    // Whether the run that just finished confirmed this source's data hadn't
+                    // changed (304, or a matching content hash) — true only right after that run,
+                    // resets once the next processing state replaces this one.
+                    val wasUnchanged =
+                        (processingState as? MultiSourceState.Completed)?.sourceStats?.get(source.id)?.unchanged == true
+
                     GlassPanel(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -419,8 +425,20 @@ fun TvEpgManagementScreen(
                                         }
 
                                     SourceStat(stringResource(R.string.epg_source_stat_label), lastIngested, scale)
-                                    SourceStat(stringResource(R.string.epg_source_stat_download), NumberUtils.formatDuration(source.lastDownloadDurationMs), scale)
-                                    SourceStat(stringResource(R.string.epg_source_stat_ingest), NumberUtils.formatDuration(source.lastIngestionDurationMs), scale)
+                                    if (wasUnchanged) {
+                                        // The last run confirmed no change and skipped parsing —
+                                        // the stored download/ingest durations are from whenever
+                                        // it last actually ran, so showing them here would read
+                                        // as work that didn't happen this time.
+                                        Text(
+                                            text = stringResource(R.string.epg_source_stat_unchanged),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = org.njarasoa.fijerena.ui.theme.CinemaWarning,
+                                        )
+                                    } else {
+                                        SourceStat(stringResource(R.string.epg_source_stat_download), NumberUtils.formatDuration(source.lastDownloadDurationMs), scale)
+                                        SourceStat(stringResource(R.string.epg_source_stat_ingest), NumberUtils.formatDuration(source.lastIngestionDurationMs), scale)
+                                    }
                                     SourceStat(stringResource(R.string.epg_source_stat_latest), latestProgStr, scale)
                                     SourceStat(stringResource(R.string.epg_source_stat_channels), NumberUtils.formatCount(source.lastChannels), scale)
                                     SourceStat(stringResource(R.string.epg_source_stat_programmes), NumberUtils.formatCount(source.lastProgrammes), scale)

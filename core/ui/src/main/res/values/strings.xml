@@ -128,6 +128,7 @@
     <string name="epg_source_stat_latest">Latest Prog</string>
     <string name="epg_source_stat_channels">Channels</string>
     <string name="epg_source_stat_programmes">Programmes</string>
+    <string name="epg_source_stat_unchanged">Unchanged</string>
     <string name="epg_source_never">Never</string>
     <string name="epg_source_none">None</string>
     <string name="epg_add_source_title">Add EPG Source</string>
@@ -281,6 +282,8 @@
     <string name="provider_sync_now_button">Sync Data Now</string>
     <string name="provider_last_sync_status">Last Sync: Finished at %1$s • Took %2$s</string>
     <string name="provider_sync_success">Sync completed successfully</string>
+    <string name="provider_sync_no_changes">No changes since last sync</string>
+    <string name="provider_sync_delta">%1$d added • %2$d updated • %3$d removed</string>
     <string name="provider_total_db_items_label">Total Database Items</string>
     <string name="provider_total_items_value">%1$s Items</string>
     <string name="provider_live_tv_label">Live TV</string>
