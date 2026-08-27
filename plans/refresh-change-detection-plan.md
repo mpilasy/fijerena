@@ -15,6 +15,13 @@ skip the expensive local work and say so.
 (`EpgFileManager` + `EpgIndexer`). Jellyfin, SMB, Local and Remote M3U are untouched — they have
 no equivalent bulk refresh path in this codebase.
 
+**Status (2026-08-27): Phases 0–3 implemented and pushed to `main`** (`18cf8c48` catalog delta,
+`9ac39512`/`0349e8d0` EPG conditional-GET + hash + skip). Phases 4 and 5 remain open — Phase 4 is
+explicitly marked lower-value in its own section below; Phase 5 (UI surfacing) hasn't been asked
+for yet. The mechanism fails safe by construction: a source whose `304`/hash signal turns out
+untrustworthy simply never skips and always does a full ingest — today's exact behavior, not a
+regression — so nothing here needed the open verification item resolved before shipping.
+
 ---
 
 ## What happens today
@@ -107,17 +114,21 @@ last real sync recorded 8307 channels / 79951 programmes.
   first block appeared to have cooled off — returned `HTTP 513`, `Server: CDN PROXY SERVICE`,
   empty body. `player_api.php` on the same host answered normally in between, so this isn't a
   blanket IP block or general rate-limit: the CDN specifically gates the bulk XMLTV export,
-  presumably to stop exactly the kind of scripted fetching this probe is. The running app clearly
-  gets through (it has real ingested data), so something about a first-party client request
-  passes that a bare `curl` does not — most likely a session/cookie or referer check the app's
-  OkHttp stack incidentally satisfies and a one-shot external request doesn't.
-- **Consequence:** this source's byte-stability cannot be verified from outside the app. Before
-  enabling the Phase 1 skip logic for a provider whose EPG endpoint behaves like this one,
-  verify stability from *inside* the app instead — add temporary logging (or a temporary hash
-  field) to `downloadSource`, trigger `EpgSyncDebugReceiver` twice a few minutes apart on a real
-  device, and compare. Do this as the first step of Phase 1 implementation for this provider,
-  not as a prerequisite that blocks starting it — the mechanism (Phase 1a header check first,
-  Phase 1 hash as fallback) is unaffected by which sources it's verified against.
+  presumably to stop exactly the kind of scripted fetching this probe is. The stored
+  `last_ingested_at_ms`/counts show the app got through at some point in the past, so something
+  about a first-party client request was passing that a bare `curl` didn't.
+- **Update, 2026-08-27, verified from inside the app:** Phases 1a/1/2 were implemented (see
+  below) and deployed to the same TV emulator (`emulator-5554`) to check this specifically —
+  `EpgSyncDebugReceiver` triggered for real, no probing tool involved. Result: `bearsclub.online`
+  is *currently* blocked from the on-device app too — `epg_source.last_error` reads
+  `server returned HTTP 513` after all 5 retry attempts, the identical signature the external
+  `curl` probe hit. This isn't a sandbox-egress quirk after all; whatever let the app through
+  before either isn't happening now or was a difference in *when*, not *how*, the two clients
+  asked. Byte-stability for this source remains unverified — it can't be checked while the
+  endpoint refuses every fetch, from anything — but the negative result is now confirmed
+  first-party, not an artifact of testing from outside the app. Revisit once this provider's EPG
+  endpoint is reachable again; the mechanism itself needs no further validation to be trustworthy
+  in the meantime (see "fails safe" note below).
 
 **Second, independent provider — `cf.stream4ktv.cc` (also live on a device per
 [[reference_emulator_providers]]), same pattern:**
@@ -320,6 +331,14 @@ between two sync passes.
 On device, the existing procedure applies — trigger a sync via `EpgSyncDebugReceiver`, refresh
 twice in succession, confirm the second run finishes in a fraction of the time and the guide is
 still complete afterwards. Emulators first.
+
+**Unrelated bug noticed while verifying on device, not fixed here:** two `epg_source` rows both
+labeled `cf.stream4ktv.cc (Bulk)` failed ingestion with `XmlPullParserException` (`Dangling <`,
+`Unexpected EOF`) — a truncated download. `downloadSource`'s read loop treats any `input.read()`
+returning `-1` as a clean finish; it never compares `totalRead` against the response's
+`Content-Length`, so a connection cut short reads as success and the truncation is only caught
+later, expensively, by the XML parser. Pre-existing, not introduced by this change (the loop
+structure is unchanged) — flagged here rather than fixed, since it's outside this plan's scope.
 
 ---
 
