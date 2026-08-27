@@ -12,7 +12,7 @@ Manages media provider configurations, authentication metadata, and persistent E
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
 |--------|------|-------------|
-| `id` | INTEGER (PK) | Auto-generated ID (Always 1) |
+| `id` | INTEGER (PK) | Fixed singleton row ID (always 1, not auto-generated) |
 | `updated_at_ms` | INTEGER | Timestamp of last pipeline run |
 | `duration_ms` | INTEGER | Total duration of the run |
 | `sources_processed` | INTEGER | Number of sources processed |
@@ -55,6 +55,8 @@ Manages media provider configurations, authentication metadata, and persistent E
 | `ingest_method` | TEXT | Ingestion strategy: `DOWNLOADED`, `STREAMED`, or `XTREAM_API` |
 | `last_ingestion_duration_ms` | INTEGER | Time spent parsing/inserting |
 | `last_download_duration_ms` | INTEGER | Time spent fetching XML file |
+
+**Index:** `index_epg_source_provider_id` on `(provider_id)`
 
 ---
 
@@ -129,20 +131,26 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing. (v10 
 | `contentHash` | INTEGER | For stale data detection |
 | `excluded` | INTEGER | Category exclusion toggle flag (added v11) |
 
+**Indices:** `(providerId, type)`, `(providerId, type, excluded)`
+
 ### Table: `xtream_streams`
 | Column | Type | Description |
 |--------|------|-------------|
 | `streamId` | INTEGER (PK)| Provider stream ID |
 | `providerId` | INTEGER (PK)| Foreign key to `providers.id` |
 | `type` | TEXT (PK) | `LIVE` or `VOD` |
+| `num` | INTEGER | Provider-supplied ordering number |
 | `name` | TEXT | Stream name |
 | `categoryId` | TEXT | Foreign key to `xtream_categories` |
 | `streamIcon` | TEXT | Thumbnail URL |
 | `epgChannelId` | TEXT | External EPG reference |
 | `streamType` | TEXT | Protocol hint |
 | `added` | TEXT | Timestamp from provider |
+| `customSid` | TEXT | Provider custom SID passthrough |
+| `directSource` | TEXT | Direct source URL override from provider |
 | `tvArchive` | INTEGER | Boolean (0/1) for catch-up support |
 | `tvArchiveDuration` | INTEGER | Catch-up window in days |
+| `contentHash` | INTEGER | For stale data detection |
 | `description` | TEXT | Enriched VOD plot/summary |
 | `cast` | TEXT | Comma-separated cast members |
 | `director` | TEXT | Director name |
@@ -157,11 +165,14 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing. (v10 
 | `containerExtension` | TEXT | Extension (e.g. `mp4`, `mkv`) (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 
+**Indices:** `(providerId, type)`, `(categoryId, providerId)`, `(providerId, type, categoryId)`, `(providerId, type, categoryId, excluded)`
+
 ### Table: `xtream_series`
 | Column | Type | Description |
 |--------|------|-------------|
 | `seriesId` | INTEGER (PK)| Provider series ID |
 | `providerId` | INTEGER (PK)| Foreign key to `providers.id` |
+| `num` | INTEGER | Provider-supplied ordering number |
 | `name` | TEXT | Series title |
 | `categoryId` | TEXT | Foreign key to `xtream_categories` |
 | `cover` | TEXT | Poster URL |
@@ -170,13 +181,19 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing. (v10 
 | `director` | TEXT | Director info |
 | `genre` | TEXT | Genre string |
 | `releaseDate` | TEXT | Launch date |
+| `lastModified` | TEXT | Provider last-modified stamp |
 | `rating` | TEXT | Content rating |
 | `rating5based` | REAL | Numerical score |
 | `youtubeTrailer` | TEXT | YouTube video ID |
+| `episodeRunTime` | TEXT | Nominal episode runtime |
+| `backdropPath` | TEXT | Comma-separated backdrop URLs |
+| `contentHash` | INTEGER | For stale data detection |
 | `excluded` | INTEGER | Exclusion toggle flag (added v11) |
 | `contentRating` | TEXT | Age/content classification rating (added v12) |
 | `tmdbId` | TEXT | Sourced TMDB ID (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
+
+**Indices:** `(providerId)`, `(categoryId, providerId)`, `(providerId, categoryId, excluded)`
 
 ### Table: `xtream_episodes`
 | Column | Type | Description |
@@ -187,13 +204,20 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing. (v10 
 | `season` | INTEGER | Season number |
 | `episodeNum` | INTEGER | Episode number |
 | `title` | TEXT | Episode title |
+| `containerExtension` | TEXT | Extension (e.g. `mp4`, `mkv`) |
 | `overview` | TEXT | Episode plot summary |
 | `plot` | TEXT | Extended plot summary (added v9) |
 | `airDate` | TEXT | Original air date (added v9) |
+| `duration` | TEXT | Runtime as reported by provider (`HH:MM:SS`) |
 | `durationSecs` | INTEGER | Runtime in seconds (added v9) |
 | `bitrate` | INTEGER | Encoded bitrate (added v9) |
+| `rating` | TEXT | Episode rating |
+| `movieImage` | TEXT | Episode still/thumbnail URL |
 | `tmdbId` | TEXT | TMDB identifier, used for synopsis enrichment (added v9) |
 | `plotFetchedAt` | INTEGER | Timestamp of TMDB synopsis fetch (added v14) |
+| `contentHash` | INTEGER | For stale data detection |
+
+**Indices:** `(seriesId, providerId)`, `(providerId)`
 
 ### Table: `xtream_epg_cache` (added v13)
 Per-stream EPG payload cache table.
@@ -222,25 +246,54 @@ Data is stored as serialized JSON strings of Kotlin Data Classes.
 
 | Key | Data Class | Description |
 |-----|------------|-------------|
-| `watch_history_v3` | `List<WatchedItem>` | Playback positions and completion status (auto-migrated from `v2`). |
-| `favorites_v2` | `List<FavoriteItem>` | User-starred streams. |
+| `watch_history_v3` | `List<WatchedItem>` | Playback positions and completion status (auto-migrated from `watch_history_v2`). |
+| `favorites_v2` | `List<FavoriteItem>` | User-starred streams (series are stored here too, with `contentType`). |
 | `favorite_categories`| `List<FavoriteCategoryItem>`| User-starred categories. |
-| `favorite_shows` | `List<FavoriteShowItem>` | User-starred TV series. |
-| `recent_categories` | `List<RecentCategory>` | Last 20 browsed categories. |
+| `recent_categories_{contentType}` | `List<RecentCategory>` | Last 20 browsed categories, one key per content type (`LIVE_TV`, `MOVIES`, `TV_SHOWS`). |
+
+### Scalar Keys (last-browsed position restore)
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `last_content_type` | TEXT | Content type last browsed |
+| `last_live_category` / `last_live_item` | TEXT | Last Live TV category and item |
+| `last_movies_category` / `last_movies_item` | TEXT | Last Movies category and item |
+| `last_tvshows_category` / `last_tvshows_item` | TEXT | Last TV Shows category and item |
 
 ---
 
 ## 5. App Global Settings (SharedPreferences)
 
-Located in `app_settings.xml`.
+Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSettings.kt`).
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `theme_id` | TEXT | Current dark theme variant |
+| `dev_mode` | BOOLEAN | Toggles developer features |
+| `theme_id` | TEXT | Current dark theme variant (default `deep_night`) |
+| `ui_style_id` | TEXT | Look-and-feel preset, independent of color (default `material`) |
 | `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0) |
-| `is_dev_mode` | BOOLEAN | Toggles developer features |
-| `epg_auto_refresh` | BOOLEAN | Background sync toggle |
-| `active_provider_id`| LONG | Current global provider selection |
+| `app_language` | TEXT | ISO 639-1 code (`en`, `mg`) |
+| `provider_name` | TEXT | Display name shown for the provider |
+| `has_provider_cache` | BOOLEAN | Cached "at least one provider exists" flag for fast cold start |
+| `watch_history_size` | INT | Max watch-history entries (1-100, default 25) |
+| `favorites_max_size` | INT | Max favorites (10-500, default 100) |
+| `watch_delay_seconds`| INT | Delay before a live channel counts as watched (5-120) |
+| `auto_resume_enabled`| BOOLEAN | Resume playback from stored position |
+| `cache_expiry_hours` | INT | Content cache lifetime (1-168) |
+| `epg_url` | TEXT | Legacy global XMLTV URL |
+| `epg_timezone_offset`| INT | Global XMLTV timezone override (-12..14) |
+| `epg_auto_refresh` | BOOLEAN | Background EPG sync toggle |
+| `epg_refresh_time` | TEXT | EPG refresh start time `HH:mm` (default `02:00`) |
+| `epg_refresh_interval`| INT | EPG refresh interval hours: 4/8/12/24/48, or -1 (Never) |
+| `content_auto_refresh`| BOOLEAN | Background provider content sync toggle |
+| `content_refresh_time`| TEXT | Content refresh start time `HH:mm` (default `04:00`) |
+| `cellular_live_multiplier` | FLOAT | Live buffer multiplier on cellular (0.5-3.0) |
+| `cellular_vod_multiplier` | FLOAT | VOD buffer multiplier on cellular (0.5-3.0) |
+| `search_history` | TEXT | Last 20 search terms, U+001F-separated |
+| `epg_search_history` | TEXT | Last 20 EPG search terms, U+001F-separated |
+| `has_seen_favorite_hint` | BOOLEAN | One-time long-press-to-favorite hint dismissed |
+
+The active provider is **not** stored here — it is the `providers.isActive` column in `providers.db`.
 
 ---
 
@@ -248,9 +301,11 @@ Located in `app_settings.xml`.
 
 The application uses several specialized SharedPreferences files for internal state management.
 
-| Filename | Purpose |
-|----------|---------|
-| `epg_file_manager_prefs` | Tracks ingest status, last refresh timestamps, and file counts for EPG sources. |
-| `drive_settings_sync_prefs`| Stores Google Drive sync metadata, including last sync time and folder IDs. |
-| `player_prefs` | Stores in-player state, such as whether control discoverability hints have been shown. |
-| `provider_creds_{id}` | (Encrypted) Stores passwords and sensitive tokens for individual providers using `EncryptedSharedPreferences`. |
+| Filename | Keys | Purpose |
+|----------|------|---------|
+| `epg_file_manager` | `migrated_to_sources_v1` | One-time flag: legacy single-EPG-file state has been migrated to `epg_source` rows. |
+| `epg_indexer_state` | `fts_stale` | Survives process death so an interrupted FTS rebuild is retried on next indexer run. |
+| `drive_sync_prefs` | `sync_enabled`, `last_sync` | Google Drive settings-sync toggle and last successful sync timestamp. |
+| `player_prefs` | `hints_dismissed` | Whether the player control discoverability hints have been dismissed (TV only). |
+| `provider_creds_{id}` | per-provider | (Encrypted) Passwords and sensitive tokens per provider, via `EncryptedSharedPreferences`. |
+| `xtream_secure_credentials` | `url`, `username`, `password`, `auth_response`, `remember_me` | (Encrypted) Xtream login credentials and cached auth response, held by `AccountManager`. |
