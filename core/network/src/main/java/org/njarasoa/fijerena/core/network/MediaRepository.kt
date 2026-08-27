@@ -937,6 +937,44 @@ class MediaRepository(
     }
 
     /**
+     * TMDB dedup (Phase 5, plans/watch-state-durable-storage-plan.md): movie ids completed by a
+     * different catalogue entry for the same title — a second language track, a 4K re-rip — under
+     * its own id rather than this one. Xtream-only by construction: SMB, Local and Remote M3U have
+     * no catalogue rows to join `watch_state` against, so the query simply returns nothing for
+     * their `providerId` rather than needing a provider-type branch here. Movies only for now —
+     * episode dedup needs its own call scoped to one series, from wherever an episode list reads
+     * watched state, not this whole-content-type one.
+     */
+    suspend fun getSiblingCompletedMovieIds(): Set<String> =
+        XtreamDatabase
+            .getInstance(context)
+            .streamDao()
+            .getSiblingCompletedStreamIds(providerId, ContentType.MOVIES, XtreamStreamEntity.TYPE_VOD)
+            .toSet()
+
+    /**
+     * TMDB dedup (Phase 5, plans/watch-state-durable-storage-plan.md), episode form: episode ids
+     * of [seriesId] completed by a TMDB sibling. Scoped to one series — call from wherever an
+     * episode list reads watched state for that series, not per content-type like
+     * [getSiblingCompletedMovieIds]. `seriesId` is a raw Xtream series id everywhere except a
+     * non-Xtream provider, which has none — degrades to no dedup rather than a crash.
+     */
+    suspend fun getSiblingCompletedEpisodeIds(seriesId: String): Set<String> {
+        val numericSeriesId = seriesId.toIntOrNull()
+        val result =
+            if (numericSeriesId != null) {
+                XtreamDatabase
+                    .getInstance(context)
+                    .episodeDao()
+                    .getSiblingCompletedEpisodeIds(providerId, numericSeriesId)
+                    .toSet()
+            } else {
+                emptySet()
+            }
+        return result
+    }
+
+    /**
      * Shared per-content-type Recent list. One list feeding every surface that shows it — the
      * browse row, the Live TV preview panel and the player's channel flyout — so they cannot
      * disagree after a write. null means "not loaded yet", which is what callers render a

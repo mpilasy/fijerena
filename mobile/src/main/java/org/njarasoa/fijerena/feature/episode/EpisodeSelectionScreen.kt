@@ -328,6 +328,10 @@ private fun EpisodeListContent(
                 for ((id, watched) in allWatched) {
                     if (watched.isCompleted) add(id)
                 }
+                // TMDB dedup (Phase 5): completing one language/quality variant of an episode
+                // completes them all. Checks only — never adds a resume bar or moves the anchor
+                // below, same as the movies side of this.
+                addAll(mediaRepository.getSiblingCompletedEpisodeIds(seriesDetail.id))
             }
 
         val derivedAnchor =
