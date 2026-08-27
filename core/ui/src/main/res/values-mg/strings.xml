@@ -256,7 +256,7 @@
     <string name="provider_auto_resume_label">Auto-Resume</string>
     <string name="provider_auto_resume_desc">Resume VOD content from where you left off</string>
     <string name="provider_watch_history_size_label">Last Watched Queue Size</string>
-    <string name="provider_watch_history_size_desc">Items to keep in Last Watched category (1-100)</string>
+    <string name="provider_watch_history_size_desc">Cards to show in the Recent row (1-100)</string>
     <string name="provider_edit_button">Edit</string>
     <string name="provider_queue_size_label">Queue Size</string>
     <string name="provider_favorites_max_size_label">Favorites Max Size</string>

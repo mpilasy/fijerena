@@ -22,6 +22,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
+import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
@@ -71,6 +72,30 @@ fun WatchedItem.resumeProgress(): Float? {
     val fraction = playbackPosition.toFloat() / duration.toFloat()
     return if (fraction * 100f in 2.0..95.0) fraction else null
 }
+
+/**
+ * `watch_state` row as a [WatchedItem], for callers that still speak the blob-era shape.
+ * `timestamp` becomes `lastPlayedAt` — the value [EpisodeSelectionScreen]'s "most recently played"
+ * lookup and the Recent row both actually mean — falling back to `updatedAt` for a Phase 6 row
+ * whose completion was set without ever playing anything.
+ */
+private fun WatchStateEntity.toWatchedItem(): WatchedItem =
+    WatchedItem(
+        itemId = itemId,
+        itemName = itemName,
+        categoryId = categoryId,
+        contentType = contentType,
+        timestamp = lastPlayedAt ?: updatedAt,
+        playbackPosition = positionMs,
+        duration = durationMs,
+        isCompleted = isCompleted,
+        episodeId = episodeId?.let { EpisodeId(it) },
+        episodeExtension = episodeExtension,
+        seriesId = seriesId?.let { SeriesId(it) },
+        seriesName = seriesName,
+        audioTrackIndex = audioTrackIndex,
+        subtitleTrackIndex = subtitleTrackIndex,
+    )
 
 @Serializable
 data class FavoriteItem(
@@ -133,8 +158,6 @@ class MediaRepository(
     // In-memory caches to avoid repeated JSON deserialization from SharedPreferences
     private var cachedWatchHistory: List<WatchedItem>? = null
 
-    // O(1) lookup map for getPlaybackPosition — keyed by (itemId, contentType)
-    private var watchHistoryLookup: Map<Pair<String, String>, WatchedItem>? = null
     private var cachedFavorites: List<FavoriteItem>? = null
     private var cachedFavoriteCategories: List<FavoriteCategoryItem>? = null
 
@@ -206,7 +229,11 @@ class MediaRepository(
         val alreadyMigrated = cache.getBoolean(KEY_WATCH_STATE_MIGRATED, false)
         if (!alreadyMigrated) {
             writeScope.launch {
-                for (item in getWatchHistory()) {
+                // Reads the blob directly, not the public getWatchHistory() — that flips to
+                // reading watch_state in Phase 3, and would make this loop copy the table into
+                // itself.
+                val blobHistory = synchronized(watchHistoryLock) { getWatchHistoryLocked() }
+                for (item in blobHistory) {
                     watchStateDao.upsertProgress(
                         providerId = providerId,
                         itemId = item.itemId,
@@ -595,7 +622,6 @@ class MediaRepository(
 
             // Update in-memory cache immediately (reads always see latest data)
             cachedWatchHistory = trimmed
-            watchHistoryLookup = null
             watchHistoryDirty = true
         }
         // Debounce disk write — coalesces rapid updates (e.g. playback progress) into one write
@@ -603,13 +629,23 @@ class MediaRepository(
         watchHistoryWriteHandler.postDelayed(watchHistoryWriteRunnable, 500L)
     }
 
-    fun getWatchHistory(): List<WatchedItem> {
-        synchronized(watchHistoryLock) {
-            return getWatchHistoryLocked()
-        }
-    }
+    /**
+     * Every watch-state row for this provider, across every content type, unbounded —
+     * `watch_state`-backed since Phase 3 of plans/watch-state-durable-storage-plan.md. No
+     * production caller as of Phase 3 (the old sync `getRecentItems` was the one caller, and it
+     * folded into [getRecentItemsFromWatchState], which reads the capped/collapsed queries
+     * directly instead); kept for callers that want the whole history, such as a future export.
+     */
+    suspend fun getWatchHistory(): List<WatchedItem> = watchStateDao.getAll(providerId).map { it.toWatchedItem() }
 
-    private fun getWatchHistoryLocked(): List<WatchedItem> {
+    /**
+     * The `watch_history_v3`/`v2` blob, decoded and cached. Still what every writer reads its
+     * "existing entry" from and what [backfillWatchState] copies out of — Phase 4 retires this.
+     * `internal` rather than `private` only so tests can assert against the blob directly, now
+     * that [getWatchHistory] no longer does; callers outside a `synchronized(watchHistoryLock)`
+     * block (as every production caller already is) get an unsynchronized read.
+     */
+    internal fun getWatchHistoryLocked(): List<WatchedItem> {
         val currentCache = cachedWatchHistory
         val history = if (currentCache != null) {
             currentCache
@@ -643,7 +679,6 @@ class MediaRepository(
                 }
             }
             cachedWatchHistory = loaded
-            watchHistoryLookup = null
             loaded
         }
         return history
@@ -663,7 +698,6 @@ class MediaRepository(
         watchHistoryWriteHandler.removeCallbacks(watchHistoryWriteRunnable)
         synchronized(watchHistoryLock) {
             cachedWatchHistory = emptyList()
-            watchHistoryLookup = null
             watchHistoryDirty = false
             cache.commitAsync {
                 remove(KEY_WATCH_HISTORY)
@@ -909,40 +943,25 @@ class MediaRepository(
         }
     }
 
-    fun getPlaybackPosition(
-        itemId: String,
+    /**
+     * Bulk lookup for a category page: every stored position/completion for [contentType],
+     * filtered down to [itemIds]. Fetches the whole content type rather than an `IN (…)` query —
+     * deliberate, see "Fetching the whole content type…" in the plan — so this is one indexed
+     * query plus an in-memory filter instead of a bind-variable list sized to the category.
+     */
+    suspend fun getPlaybackPositions(
+        itemIds: List<String>,
         contentType: String,
-    ): WatchedItem? {
-        synchronized(watchHistoryLock) {
-            val map =
-                watchHistoryLookup ?: getWatchHistoryLocked()
-                    .associateBy { it.itemId to it.contentType }
-                    .also { watchHistoryLookup = it }
-            return map[itemId to contentType]
-        }
-    }
-
-    fun getPlaybackPositions(itemIds: List<String>, contentType: String): Map<String, WatchedItem> {
-        // Build a HashSet outside the synchronized block to minimize lock contention and time.
-        // This is O(N) where N is the number of items in the category (can be large).
+    ): Map<String, WatchedItem> {
         val idSet = itemIds.toHashSet()
-
-        synchronized(watchHistoryLock) {
-            val history = getWatchHistoryLocked()
-
-            // Optimization: Iterate over the watch history list (capped at 100 items) instead of
-            // iterating over the potentially large itemIds list. This makes the complexity
-            // inside the synchronized block O(HistorySize) instead of O(ItemIdsSize).
-            val result = HashMap<String, WatchedItem>()
-            for (i in history.indices) {
-                val item = history[i]
-                // Avoid Pair allocations by comparing fields directly and using the HashSet.
-                if (item.contentType == contentType && item.itemId in idSet) {
-                    result[item.itemId] = item
-                }
+        val rows = watchStateDao.getByContentType(providerId, contentType)
+        val result = HashMap<String, WatchedItem>()
+        for (row in rows) {
+            if (row.itemId in idSet) {
+                result[row.itemId] = row.toWatchedItem()
             }
-            return result
         }
+        return result
     }
 
     /**
@@ -950,29 +969,21 @@ class MediaRepository(
      * completed, keyed by series id.
      *
      * Series rows can't use [getPlaybackPositions] directly — watch history is keyed by episode
-     * id, with the series id only carried alongside — so this counts completed episodes per
-     * series and divides by the provider's cached episode count. Series the provider can't count
-     * locally are absent, and show no progress rather than a wrong one.
+     * id, with the series id only carried alongside — so this is a real aggregate over
+     * `watch_state`, divided by the provider's cached episode count. Series the provider can't
+     * count locally are absent, and show no progress rather than a wrong one.
      */
     suspend fun getSeriesWatchProgress(): Map<String, Float> {
-        val totals = provider?.getEpisodeCountsBySeries() ?: return emptyMap()
-        if (totals.isEmpty()) return emptyMap()
-
-        val completedPerSeries = HashMap<String, MutableSet<String>>()
-        synchronized(watchHistoryLock) {
-            for (item in getWatchHistoryLocked()) {
-                if (item.contentType != ContentType.TV_SHOWS || !item.isCompleted) continue
-                val seriesId = item.seriesId?.raw ?: continue
-                // Distinct episode ids: history can hold several entries per episode over time.
-                completedPerSeries.getOrPut(seriesId) { HashSet() }.add(item.episodeId?.raw ?: item.itemId)
+        val totals = provider?.getEpisodeCountsBySeries()
+        val result = HashMap<String, Float>()
+        if (totals != null && totals.isNotEmpty()) {
+            val completedPerSeries = watchStateDao.getSeriesCompletedCounts(providerId, ContentType.TV_SHOWS)
+            for (row in completedPerSeries) {
+                val total = totals[row.seriesId]
+                if (total != null && total > 0) {
+                    result[row.seriesId] = (row.completed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                }
             }
-        }
-
-        val result = HashMap<String, Float>(completedPerSeries.size)
-        for ((seriesId, completed) in completedPerSeries) {
-            val total = totals[seriesId] ?: continue
-            if (total <= 0) continue
-            result[seriesId] = (completed.size.toFloat() / total.toFloat()).coerceIn(0f, 1f)
         }
         return result
     }
@@ -997,27 +1008,31 @@ class MediaRepository(
 
     /**
      * The single "Recent" list: everything watched for [contentType], resumable items first and
-     * the rest of the history after, each half newest-first.
+     * the rest of the history after, each half newest-first. Storage in `watch_state` is
+     * unbounded (see plans/watch-state-durable-storage-plan.md); `watchHistorySize` is now a
+     * display cap taken by the query itself, not a retention policy — [getPlaybackPositions] and
+     * [getSeriesWatchProgress] are unaffected by it, since a watched check or a resume bar is an
+     * attribute of a stream, not a history entry.
      *
      * LIVE_TV degenerates to plain recency — [savePlaybackPosition] never records a position for
      * live streams, so no live entry can fall in the resumable band.
      *
-     * Bounded by the watch-history cap, which is shared across content types: an in-progress
-     * movie pushed out by heavy channel surfing disappears from here too.
+     * The cap is per content type, not shared like the old blob's was: an in-progress movie can
+     * no longer be pushed out of its own Recent row by heavy channel surfing on Live TV.
      */
-    fun getRecentItems(contentType: String): List<MediaItem> {
+    internal suspend fun getRecentItemsFromWatchState(contentType: String): List<MediaItem> {
         val mediaType = contentTypeToMediaType(contentType)
-        val history = getWatchHistory().filter { it.contentType == contentType }
-        // TV Shows: one card per series rather than one per episode. Collapsing before the
-        // partition below is what keeps a series from appearing twice — once as a resume card
-        // and again as plain history. History is newest-first, so this keeps each series' most
-        // recently watched episode.
-        val entries =
+        val limit = providerSettings.watchHistorySize
+        // TV Shows: one card per series rather than one per episode, collapsed in SQL before the
+        // LIMIT — collapsing after would yield fewer cards than asked for. See "Series collapse
+        // before the limit, not after" in the plan.
+        val rows =
             if (contentType == ContentType.TV_SHOWS) {
-                history.distinctBy { it.seriesId?.raw ?: it.itemId }
+                watchStateDao.getRecentSeriesCollapsed(providerId, contentType, limit)
             } else {
-                history
+                watchStateDao.getRecent(providerId, contentType, limit)
             }
+        val entries = rows.map { it.toWatchedItem() }
         val (inProgress, rest) = entries.partition { it.resumeProgress() != null }
         return (inProgress + rest).map { it.toRecentMediaItem(mediaType) }
     }
@@ -1121,7 +1136,7 @@ class MediaRepository(
                     }
                 }
             } else {
-                rehydrateThumbnails(getRecentItems(contentType), contentType)
+                rehydrateThumbnails(getRecentItemsFromWatchState(contentType), contentType)
             }
         return items
     }
@@ -1164,19 +1179,23 @@ class MediaRepository(
         itemId: String,
         contentType: String,
     ): WatchedItem? {
-        if (usesServerUserData) {
-            val status = provider?.getPlaybackPosition(itemId) ?: return null
-            return WatchedItem(
-                itemId = itemId,
-                itemName = status.itemName ?: "",
-                categoryId = status.categoryId ?: "",
-                contentType = contentType,
-                playbackPosition = status.positionMs,
-                duration = status.durationMs,
-                isCompleted = status.isCompleted,
-            )
-        }
-        return getPlaybackPosition(itemId, contentType)
+        val result =
+            if (usesServerUserData) {
+                provider?.getPlaybackPosition(itemId)?.let { status ->
+                    WatchedItem(
+                        itemId = itemId,
+                        itemName = status.itemName ?: "",
+                        categoryId = status.categoryId ?: "",
+                        contentType = contentType,
+                        playbackPosition = status.positionMs,
+                        duration = status.durationMs,
+                        isCompleted = status.isCompleted,
+                    )
+                }
+            } else {
+                watchStateDao.getItem(providerId, itemId, contentType)?.toWatchedItem()
+            }
+        return result
     }
 
     suspend fun getPlaybackPositionsSuspend(
@@ -1216,7 +1235,6 @@ class MediaRepository(
 
                 // Update cache
                 cachedWatchHistory = history
-                watchHistoryLookup = null
 
                 cache.commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(history)) }
             }
@@ -1250,7 +1268,6 @@ class MediaRepository(
         cachedRecentCategories.clear()
         synchronized(watchHistoryLock) {
             cachedWatchHistory = null
-            watchHistoryLookup = null
         }
     }
 

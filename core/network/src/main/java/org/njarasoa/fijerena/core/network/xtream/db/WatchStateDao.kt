@@ -132,6 +132,18 @@ interface WatchStateDao {
         contentType: String,
     ): List<SeriesCompletedCount>
 
+    /** Single-item lookup, replacing the blob's O(1) `(itemId, contentType)` map hit. */
+    @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND itemId = :itemId AND contentType = :contentType")
+    suspend fun getItem(
+        providerId: Long,
+        itemId: String,
+        contentType: String,
+    ): WatchStateEntity?
+
+    /** Every row for this provider, all content types, unbounded. See `getWatchHistory` in MediaRepository. */
+    @Query("SELECT * FROM watch_state WHERE providerId = :providerId")
+    suspend fun getAll(providerId: Long): List<WatchStateEntity>
+
     @Query("DELETE FROM watch_state WHERE providerId = :providerId")
     fun deleteAll(providerId: Long)
 }

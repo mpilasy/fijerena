@@ -428,11 +428,6 @@ class CategoryViewModel(
         }
     }
 
-    fun getPlaybackPosition(
-        itemId: String,
-        contentType: String,
-    ) = repository.getPlaybackPosition(itemId, contentType)
-
     fun isFavorite(
         itemId: String,
         contentType: String,

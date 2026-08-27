@@ -79,7 +79,7 @@ class MediaRepositoryTest {
         // Played to the end: finalizeSession reports position == duration for PlaybackState.Ended.
         repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 2_500_000L, 2_500_000L)
 
-        val saved = repository.getWatchHistory().single { it.itemId == "ep1" }
+        val saved = repository.getWatchHistoryLocked().single { it.itemId == "ep1" }
         assert(saved.isCompleted) { "an item watched to the end must be marked completed" }
         assert(saved.resumeProgress() == null) { "a completed item must not offer a resume point" }
     }
@@ -104,7 +104,7 @@ class MediaRepositoryTest {
         // Leaving while idle/buffering reports 0/0 — it must not overwrite what is already there.
         repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 0L, 0L)
 
-        val saved = repository.getWatchHistory().single { it.itemId == "ep1" }
+        val saved = repository.getWatchHistoryLocked().single { it.itemId == "ep1" }
         assert(saved.isCompleted) { "an empty write must not clear the completed mark" }
         assert(saved.playbackPosition == 2_400_000L) { "an empty write must not zero the position" }
     }
@@ -129,7 +129,7 @@ class MediaRepositoryTest {
             seriesName = "EN - Law & Order (1990) (US)",
         )
 
-        val saved = repository.getWatchHistory().single { it.itemId == "242136" }
+        val saved = repository.getWatchHistoryLocked().single { it.itemId == "242136" }
         assert(saved.seriesId == SeriesId("4080")) { "a row created by a short session must carry its series id" }
         assert(saved.episodeId == EpisodeId("242136")) { "a row created by a short session must carry its episode id" }
     }
@@ -138,7 +138,7 @@ class MediaRepositoryTest {
     fun getWatchHistory_empty() {
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
         repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
-        assert(repository.getWatchHistory().isEmpty())
+        assert(repository.getWatchHistoryLocked().isEmpty())
     }
 
     @Test
@@ -152,12 +152,12 @@ class MediaRepositoryTest {
         repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
 
         // First call should hit SharedPreferences
-        val result1 = repository.getWatchHistory()
+        val result1 = repository.getWatchHistoryLocked()
         assert(result1 == history)
         verify(exactly = 1) { sharedPreferences.getString(KEY_WATCH_HISTORY, null) }
 
         // Second call should hit memory cache
-        val result2 = repository.getWatchHistory()
+        val result2 = repository.getWatchHistoryLocked()
         assert(result2 == history)
         verify(exactly = 1) { sharedPreferences.getString(KEY_WATCH_HISTORY, null) }
     }
@@ -169,7 +169,7 @@ class MediaRepositoryTest {
         repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
 
         // Initially empty
-        assert(repository.getWatchHistory().isEmpty())
+        assert(repository.getWatchHistoryLocked().isEmpty())
 
         // Add item
         repository.saveLastPlayedItem("cat1", "1", "Test", ContentType.LIVE_TV)
@@ -180,7 +180,7 @@ class MediaRepositoryTest {
         verify { editor.putString(KEY_LAST_CONTENT_TYPE, ContentType.LIVE_TV) }
 
         // Verify cache updated without reading prefs again
-        val history = repository.getWatchHistory()
+        val history = repository.getWatchHistoryLocked()
         assert(history.size == 1)
         assert(history[0].itemId == "1")
         verify(exactly = 1) { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } // Only initial check
@@ -193,11 +193,11 @@ class MediaRepositoryTest {
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns historyJson
 
         repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
-        assert(repository.getWatchHistory().isNotEmpty())
+        assert(repository.getWatchHistoryLocked().isNotEmpty())
 
         repository.clearWatchHistory()
 
-        assert(repository.getWatchHistory().isEmpty())
+        assert(repository.getWatchHistoryLocked().isEmpty())
         verify(exactly = 1) { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } // Only initial check
     }
 
@@ -209,7 +209,7 @@ class MediaRepositoryTest {
         every { sharedPreferences.getString("watch_history_v2", null) } returns v2Json
 
         repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
-        val history = repository.getWatchHistory()
+        val history = repository.getWatchHistoryLocked()
 
         assertEquals(1, history.size)
         assertEquals(org.njarasoa.fijerena.core.player.domain.EpisodeId("101"), history[0].episodeId)
