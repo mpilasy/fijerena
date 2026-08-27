@@ -15,10 +15,16 @@ skip the expensive local work and say so.
 (`EpgFileManager` + `EpgIndexer`). Jellyfin, SMB, Local and Remote M3U are untouched — they have
 no equivalent bulk refresh path in this codebase.
 
-**Status (2026-08-27): Phases 0–3 implemented and pushed to `main`** (`18cf8c48` catalog delta,
-`9ac39512`/`0349e8d0` EPG conditional-GET + hash + skip). Phases 4 and 5 remain open — Phase 4 is
-explicitly marked lower-value in its own section below; Phase 5 (UI surfacing) hasn't been asked
-for yet. The mechanism fails safe by construction: a source whose `304`/hash signal turns out
+**Status (2026-08-27): Phases 0–3 and 5 implemented and pushed to `main`** (`18cf8c48` catalog
+delta, `9ac39512`/`0349e8d0` EPG conditional-GET + hash + skip, `5ba7078a`/`8b099c4a` truncated-
+download detection and retry backoff found while verifying on device, `ff00ac9c` UI surfacing).
+Verified end-to-end on the TV emulator against a live panel: two syncs a few minutes apart on the
+same source produced an identical content hash, a logged "unchanged … skipping ingest", carried-
+forward channel/programme counts, and an advancing timestamp — no re-download, no re-parse.
+
+Only Phase 4 remains open, and it's explicitly marked lower-value in its own section below (it
+can't skip the fetch or the parse either way — Phase 3's counters already answer the same
+question). The mechanism fails safe by construction: a source whose `304`/hash signal turns out
 untrustworthy simply never skips and always does a full ingest — today's exact behavior, not a
 regression — so nothing here needed the open verification item resolved before shipping.
 
