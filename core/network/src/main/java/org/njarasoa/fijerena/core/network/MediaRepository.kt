@@ -1203,6 +1203,22 @@ class MediaRepository(
         return result
     }
 
+    /**
+     * Track-setting fallback for an episode with no saved audio/subtitle choice of its own — the
+     * series' most recently touched choice, if any. Callers only use this when the episode's own
+     * row has neither index set; an episode that already has one sticks with it, no fallback.
+     * Xtream-only by construction, like the sibling dedup queries: server-backed providers own
+     * this state themselves (see [getPlaybackPositionSuspend]).
+     */
+    suspend fun getSeriesTrackPrefs(
+        seriesId: SeriesId,
+        contentType: String,
+    ): Pair<Int?, Int?>? {
+        if (usesServerUserData) return null
+        val row = watchStateDao.getLatestSeriesTrackPrefs(providerId, seriesId.raw, contentType) ?: return null
+        return row.audioTrackIndex to row.subtitleTrackIndex
+    }
+
     suspend fun getPlaybackPositionsSuspend(
         itemIds: List<String>,
         contentType: String,

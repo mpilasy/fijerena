@@ -17,7 +17,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -171,17 +170,25 @@ fun TvPlayerScreen(
 
             // Restore saved track settings when player is ready
             if (state.savedAudioTrackIndex != null || state.savedSubtitleTrackIndex != null) {
-                snapshotFlow { playbackViewModel.playbackState.value }
-                    .filter { it is PlaybackState.Playing || it is PlaybackState.Paused }
-                    .first() // Wait for first ready state
+                // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it in
+                // snapshotFlow{} never registers an observable read, so it emits once and never
+                // again, leaving this stuck waiting forever instead of restoring tracks (this is
+                // the bug behind "track choice doesn't stick": it silently never ran). Collect the
+                // flow directly instead, same fix already applied on MobilePlayerScreen.
+                val readyState =
+                    playbackViewModel.playbackState
+                        .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
+                        .first() // Wait for first ready state (or bail on Error, so a failed stream doesn't hang this forever)
 
-                val service = StreamingPlaybackService.getInstance()
-                if (service != null) {
-                    state.savedAudioTrackIndex?.let { audioIdx ->
-                        service.selectAudioTrack(audioIdx)
-                    }
-                    state.savedSubtitleTrackIndex?.let { subIdx ->
-                        service.selectSubtitleTrack(subIdx)
+                if (readyState !is PlaybackState.Error) {
+                    val service = StreamingPlaybackService.getInstance()
+                    if (service != null) {
+                        state.savedAudioTrackIndex?.let { audioIdx ->
+                            service.selectAudioTrack(audioIdx)
+                        }
+                        state.savedSubtitleTrackIndex?.let { subIdx ->
+                            service.selectSubtitleTrack(subIdx)
+                        }
                     }
                 }
             }

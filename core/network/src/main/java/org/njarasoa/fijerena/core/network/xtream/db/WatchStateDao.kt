@@ -193,6 +193,23 @@ interface WatchStateDao {
         contentType: String,
     ): WatchStateEntity?
 
+    /**
+     * Track-setting fallback for an episode with no saved choice of its own: the series' most
+     * recently touched row that actually carries a track choice. Uses the `(providerId, seriesId)`
+     * index. Excludes rows with both indices null so a series where nobody has ever picked a
+     * track doesn't return an arbitrary row that has nothing to offer.
+     */
+    @Query(
+        "SELECT * FROM watch_state WHERE providerId = :providerId AND seriesId = :seriesId AND " +
+            "contentType = :contentType AND (audioTrackIndex IS NOT NULL OR subtitleTrackIndex IS NOT NULL) " +
+            "ORDER BY updatedAt DESC LIMIT 1",
+    )
+    suspend fun getLatestSeriesTrackPrefs(
+        providerId: Long,
+        seriesId: String,
+        contentType: String,
+    ): WatchStateEntity?
+
     /** Every row for this provider, all content types, unbounded. See `getWatchHistory` in MediaRepository. */
     @Query("SELECT * FROM watch_state WHERE providerId = :providerId")
     suspend fun getAll(providerId: Long): List<WatchStateEntity>
