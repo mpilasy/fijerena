@@ -755,6 +755,16 @@ its new data source.
   its own change.
 - **The `last_*` navigation keys are duplicated across both prefs files** and disagree on type
   (String item id vs int stream id). Unrelated to retention.
+- **`getSeriesWatchProgress()` (the % on a TV Shows row in the grid) does not apply Phase 5's TMDB
+  dedup.** It counts only rows actually `isCompleted = 1` in `watch_state`; the sibling union lives
+  in the read path for the per-item watched *check* (`getPlaybackPositions` and the episode-list
+  screens), not in this aggregate. Concretely: mark episode A watched, its language-variant sibling
+  B correctly shows checked in the episode list, but the series row's percentage was computed
+  without that spread and can under-report relative to what the episode list shows. Extending dedup
+  here means redesigning the count's numerator and possibly the denominator from
+  `getEpisodeCountsBySeries()` too, if that also treats language variants as separate episodes —
+  unverified, and a real design decision rather than a two-line fix. Found during the Phase 6
+  adversarial pass (2026-08-27); left as-is by explicit user decision.
 
 ## Interaction with the sync plan
 
