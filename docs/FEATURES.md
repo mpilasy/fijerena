@@ -12,7 +12,7 @@ A native Android media player supporting Xtream IPTV, Jellyfin, SMB shares, Loca
 | **Jellyfin** | No | Yes | Yes | Server-side | Yes | Username/password or Quick Connect |
 | **SMB** | No | Yes | No | Filename | No | Optional |
 | **Local** | M3U only | Yes | No | Filename | No | No |
-| **Remote M3U** | Yes | No | No | No | Yes | No |
+| **Remote M3U** | Yes | No | No | Title match | No | No |
 
 Multiple providers can be configured simultaneously. Switch active provider from Settings → Manage Providers.
 
@@ -259,11 +259,11 @@ Appear alongside provider categories in the category list:
 | Category | Content Types | Description |
 |----------|---------------|-------------|
 | **Continue Watching** | Movies, TV Shows | Items with 2–95% progress, most recent first |
-| **Favorites** | All | Starred items, configurable max size (10–500) |
-| **Last Watched** | All | Chronological history (Live: 10s delay; VOD: 2% threshold), configurable size (1–100) |
+| **Favorites** | All | Starred items, configurable max display (10–500) |
+| **Last Watched** | All | Chronological history (Live: 10s delay; VOD: 2% threshold), configurable display size (1–100) |
 | **Recent Categories** | All | Recently browsed categories (max 20, deduplicated) |
 
-Favorites and Last Watched are per-provider. Continue Watching is derived from saved progress.
+Favorites and Last Watched/Continue Watching persist durably in SQLite via Room (`favorite_state` and `watch_state` tables in `xtream_v2.db` v16). Configurable size settings bound only the rendered category row, never what is stored. Recent Categories is stored as a capped convenience list in per-provider SharedPreferences.
 
 ---
 

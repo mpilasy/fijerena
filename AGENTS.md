@@ -269,10 +269,8 @@ For deep-dives, see the `docs/` directory:
 | [docs/epg_guide.md](docs/epg_guide.md) | EPG pipeline implementation guide with data models and file inventory |
 | [docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md) | Type-safe navigation system, screen definitions, and flow diagrams |
 | [docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md) | Why the EPG index grew to 87% dead space, the PRAGMA/Requery traps behind it, and how to read DB state from a file header |
-| [docs/ui-theme-options.md](docs/ui-theme-options.md) | Theme system design decisions and options |
-| [docs/MOBILE_RUN_GUIDE.md](docs/MOBILE_RUN_GUIDE.md) | Mobile build, install, and run guide |
+| [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) | Unified build, install, and deployment guide for TV and mobile |
 | [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) | Version history and changelog |
-| [TODO.md](TODO.md) | Known issues, open investigations, and optimization status |
 
 ### Schema changes
 

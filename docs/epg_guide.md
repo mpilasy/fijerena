@@ -237,8 +237,10 @@ epg_source (in providers.db)
 
 **Database configuration:**
 - `PRAGMA synchronous = NORMAL` for performance
-- `PRAGMA cache_size = -8000` (8MB cache)
+- `PRAGMA cache_size = -64000` (64MB default cache)
 - `PRAGMA auto_vacuum = INCREMENTAL` for reclaimable space after deletes
+
+For deep-dive technical details on SQLite freelist reclaim, lazy execution of PRAGMAs in Android's `SQLiteCursor`, WAL checkpointing, and Requery's 1024 page size workaround, see [EPG_INDEX_STORAGE.md](EPG_INDEX_STORAGE.md).
 
 The FTS4 virtual table with `unicode61` tokenizer enables sub-100ms full-text search across millions of programmes.
 

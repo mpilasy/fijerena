@@ -46,7 +46,7 @@ core:network ── core:player (domain models only)
 | Jellyfin | No | Yes | Yes | No | Yes | Yes | Yes |
 | SMB | No | Yes | No | No | Yes | Optional | No |
 | Local | M3U only | Yes | No | No | Yes | No | No |
-| Remote M3U | Yes | No | No | No | No | No | No |
+| Remote M3U | Yes | No | No | No | Yes | No | No |
 
 ### Domain Model Layer (`core:player/domain/`)
 
@@ -90,15 +90,16 @@ RemoteM3uMediaProvider           -- remote M3U URL fetching + parsing
 | Store | Purpose | Location |
 |-------|---------|----------|
 | `providers.db` (Room v10) | Provider configurations (name, URL, type, config JSON, active flag, sync stats + last-sync delta), EPG sources (incl. change-detection validators), pipeline stats | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity` |
-| `xtream_v2.db` (Room v15) | Xtream catalog cache (categories, streams, series, episodes, per-stream EPG payloads, FTS4) **and** the provider-agnostic `watch_state` table | `Xtream*Entity`, `WatchStateEntity` |
+| `xtream_v2.db` (Room v16) | Xtream catalog cache (categories, streams, series, episodes, per-stream EPG payloads, FTS4), the provider-agnostic `watch_state` table, and the provider-agnostic `favorite_state` table | `Xtream*Entity`, `WatchStateEntity`, `FavoriteStateEntity` |
 | `epg_index.db` (Room v16) | EPG programme index with FTS4 search | See EPG section |
 | EncryptedSharedPreferences | Per-provider passwords (keyed by provider ID) | `provider_creds_{id}`, `xtream_secure_credentials` |
 | `xtream_cache_{id}` SharedPreferences | Per-provider Xtream category/item cache | JSON blobs |
-| `media_cache_{id}` SharedPreferences | Per-provider favorites, favorite categories, recent categories, last-browsed position | JSON blobs + scalars |
+| `media_cache_{id}` SharedPreferences | Per-provider recent categories (max 20 per content type), last-browsed position | JSON blobs + scalars |
 | `app_settings` SharedPreferences | Global settings (theme, dev mode, buffer multipliers) | `AppSettings` |
 
-Watch position and completion are **not** in SharedPreferences — the `watch_history_v3` blob was
-retired in favour of `watch_state`, which is never truncated. See `docs/DATABASE_SCHEMA.md` §3.
+Watch position, completion, and favorites are **not** stored as capped blobs in SharedPreferences —
+the legacy `watch_history_v3` and `favorites` blobs were retired in favour of the durable `watch_state`
+and `favorite_state` Room tables, which never truncate. See `docs/DATABASE_SCHEMA.md` §3 and §4.
 
 ---
 
@@ -212,6 +213,14 @@ Channel-based producer-consumer ingestion: downloads run concurrently (`Semaphor
 ---
 
 ## Theme & Design System
+
+### Design Philosophy & Style Direction
+
+Fijerena adopts a **Content-First with Glassmorphism accents** hybrid style:
+- **Content-First Cards:** Category grids prioritize poster thumbnails with gradient text overlays fading from the bottom rather than heavy card borders or elevation.
+- **Glassmorphism Panels:** Frosted translucent surfaces (`GlassPanel` with `CinemaAlpha.glassPanel` background alpha) are used for player controls, channel overlays, and dialogs.
+- **Fallback Handling:** For providers or items lacking poster artwork, solid dark cards with accent-colored category icons and initials ensure a clean layout.
+- **D-Pad Focus:** TV navigation emphasizes animated scale-up (1.0 -> 1.1 with 200ms tween), subtle accent border, and 8dp glow rather than boxy borders.
 
 ### Theme Architecture
 
@@ -392,14 +401,14 @@ Updates every ~500ms via polling loop.
 
 Virtual categories appear alongside provider categories in the category list:
 
-| Category | Content Types | Description |
-|----------|--------------|-------------|
-| Continue Watching | Movies, TV Shows | In-progress VOD items (2-95% watched) |
-| Favorites | All | User-curated via star button in player |
-| Last Watched | All | Chronological history, auto-updated on play |
-| Recent Categories | All | Recently browsed categories (max 20, per content type) |
+| Category | Content Types | Retention / Limit | Storage |
+|----------|--------------|-------------------|---------|
+| Continue Watching | Movies, TV Shows | In-progress VOD items (2-95% watched) | Derived from Room `watch_state` table (`xtream_v2.db` v16) |
+| Favorites | All | User-curated via star button in player; configurable display size (10–500) | Room `favorite_state` table (`xtream_v2.db` v16) |
+| Last Watched | All | Chronological history, auto-updated on play; configurable display size (1–100) | Derived from Room `watch_state` table (`xtream_v2.db` v16) |
+| Recent Categories | All | Recently browsed categories (max 20, per content type) | Per-provider SharedPreferences |
 
-Favorites and Recent Categories are stored in per-provider SharedPreferences, with configurable max sizes per provider settings. Continue Watching and Last Watched are derived from the `watch_state` table — the size setting bounds the rendered row, not what is stored.
+Watch state and Favorites are durable across all non-Jellyfin providers. Configurable history and favorite size settings bound only the rendered row, never what is stored in SQLite. Recent Categories remains the only bounded convenience blob.
 
 ---
 
@@ -474,6 +483,8 @@ Client-side filename matching against scanned file list.
 ---
 
 ## Build & Deployment
+
+For the complete build, installation, device discovery, and ADB deployment guide, see [RUN_GUIDE.md](RUN_GUIDE.md).
 
 ### Build Commands
 
