@@ -1066,10 +1066,13 @@ class MediaRepository(
         itemId: String,
         contentType: String,
     ): Boolean {
-        if (usesServerUserData) {
-            return provider?.isFavorite(itemId) ?: false
-        }
-        return isFavorite(itemId, contentType)
+        val result =
+            if (usesServerUserData) {
+                provider?.isFavorite(itemId) ?: false
+            } else {
+                isFavorite(itemId, contentType)
+            }
+        return result
     }
 
     suspend fun addFavoriteSuspend(
@@ -1078,27 +1081,36 @@ class MediaRepository(
         categoryId: String,
         contentType: String,
     ): Boolean {
-        if (usesServerUserData) {
-            return provider?.setFavorite(itemId, true)?.isSuccess ?: false
-        }
-        return addFavorite(itemId, itemName, categoryId, contentType)
+        val result =
+            if (usesServerUserData) {
+                provider?.setFavorite(itemId, true)?.isSuccess ?: false
+            } else {
+                addFavorite(itemId, itemName, categoryId, contentType)
+            }
+        return result
     }
 
     suspend fun removeFavoriteSuspend(
         itemId: String,
         contentType: String,
     ): Boolean {
-        if (usesServerUserData) {
-            return provider?.setFavorite(itemId, false)?.isSuccess ?: false
-        }
-        return removeFavorite(itemId, contentType)
+        val result =
+            if (usesServerUserData) {
+                provider?.setFavorite(itemId, false)?.isSuccess ?: false
+            } else {
+                removeFavorite(itemId, contentType)
+            }
+        return result
     }
 
     suspend fun getFavoritesForContentTypeSuspend(contentType: String): List<MediaItem> {
-        if (usesServerUserData) {
-            return provider?.getFavoriteItems(contentType)?.getOrNull() ?: emptyList()
-        }
-        return rehydrateThumbnails(getFavoritesForContentType(contentType), contentType)
+        val result =
+            if (usesServerUserData) {
+                provider?.getFavoriteItems(contentType)?.getOrNull() ?: emptyList()
+            } else {
+                rehydrateThumbnails(getFavoritesForContentType(contentType), contentType)
+            }
+        return result
     }
 
     /**
@@ -1138,27 +1150,31 @@ class MediaRepository(
         contentType: String,
     ): List<MediaItem> {
         val missing = items.filter { it.thumbnailUrl.isNullOrBlank() }
-        if (missing.isEmpty()) return items
         val ids = missing.mapNotNull { it.id.toIntOrNull() }
-        if (ids.isEmpty()) return items
-
-        val icons: Map<Int, String?> =
-            withContext(Dispatchers.IO) {
-                val db = XtreamDatabase.getInstance(context)
-                when (contentType) {
-                    ContentType.MOVIES -> db.streamDao().getIconsByIds(providerId, XtreamStreamEntity.TYPE_VOD, ids)
-                    ContentType.LIVE_TV -> db.streamDao().getIconsByIds(providerId, XtreamStreamEntity.TYPE_LIVE, ids)
-                    ContentType.TV_SHOWS -> db.seriesDao().getCoversByIds(providerId, ids)
-                    else -> emptyMap()
+        val result =
+            if (missing.isEmpty() || ids.isEmpty()) {
+                items
+            } else {
+                val icons: Map<Int, String?> =
+                    withContext(Dispatchers.IO) {
+                        val db = XtreamDatabase.getInstance(context)
+                        when (contentType) {
+                            ContentType.MOVIES -> db.streamDao().getIconsByIds(providerId, XtreamStreamEntity.TYPE_VOD, ids)
+                            ContentType.LIVE_TV -> db.streamDao().getIconsByIds(providerId, XtreamStreamEntity.TYPE_LIVE, ids)
+                            ContentType.TV_SHOWS -> db.seriesDao().getCoversByIds(providerId, ids)
+                            else -> emptyMap()
+                        }
+                    }
+                if (icons.isEmpty()) {
+                    items
+                } else {
+                    items.map { item ->
+                        val url = if (item.thumbnailUrl.isNullOrBlank()) item.id.toIntOrNull()?.let { icons[it] } else null
+                        if (url.isNullOrBlank()) item else item.copy(thumbnailUrl = url)
+                    }
                 }
             }
-        if (icons.isEmpty()) return items
-
-        return items.map { item ->
-            if (!item.thumbnailUrl.isNullOrBlank()) return@map item
-            val url = item.id.toIntOrNull()?.let { icons[it] }
-            if (url.isNullOrBlank()) item else item.copy(thumbnailUrl = url)
-        }
+        return result
     }
 
     suspend fun getPlaybackPositionSuspend(
@@ -1188,21 +1204,28 @@ class MediaRepository(
         itemIds: List<String>,
         contentType: String,
     ): Map<String, WatchedItem> {
-        if (usesServerUserData) {
-            val positions = provider?.getPlaybackPositions(itemIds)?.getOrNull() ?: return emptyMap()
-            return positions.mapValues { (id, status) ->
-                WatchedItem(
-                    itemId = id,
-                    itemName = status.itemName ?: "",
-                    categoryId = status.categoryId ?: "",
-                    contentType = contentType,
-                    playbackPosition = status.positionMs,
-                    duration = status.durationMs,
-                    isCompleted = status.isCompleted,
-                )
+        val result =
+            if (usesServerUserData) {
+                val positions = provider?.getPlaybackPositions(itemIds)?.getOrNull()
+                if (positions != null) {
+                    positions.mapValues { (id, status) ->
+                        WatchedItem(
+                            itemId = id,
+                            itemName = status.itemName ?: "",
+                            categoryId = status.categoryId ?: "",
+                            contentType = contentType,
+                            playbackPosition = status.positionMs,
+                            duration = status.durationMs,
+                            isCompleted = status.isCompleted,
+                        )
+                    }
+                } else {
+                    emptyMap()
+                }
+            } else {
+                getPlaybackPositions(itemIds, contentType)
             }
-        }
-        return getPlaybackPositions(itemIds, contentType)
+        return result
     }
 
     /**
