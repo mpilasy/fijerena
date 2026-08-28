@@ -815,16 +815,29 @@ its new data source.
   its own change.
 - **The `last_*` navigation keys are duplicated across both prefs files** and disagree on type
   (String item id vs int stream id). Unrelated to retention.
-- **`getSeriesWatchProgress()` (the % on a TV Shows row in the grid) does not apply Phase 5's TMDB
-  dedup.** It counts only rows actually `isCompleted = 1` in `watch_state`; the sibling union lives
-  in the read path for the per-item watched *check* (`getPlaybackPositions` and the episode-list
-  screens), not in this aggregate. Concretely: mark episode A watched, its language-variant sibling
-  B correctly shows checked in the episode list, but the series row's percentage was computed
-  without that spread and can under-report relative to what the episode list shows. Extending dedup
-  here means redesigning the count's numerator and possibly the denominator from
-  `getEpisodeCountsBySeries()` too, if that also treats language variants as separate episodes —
-  unverified, and a real design decision rather than a two-line fix. Found during the Phase 6
-  adversarial pass (2026-08-27); left as-is by explicit user decision.
+- ~~**`getSeriesWatchProgress()` (the % on a TV Shows row in the grid) does not apply Phase 5's TMDB
+  dedup.**~~ **Fixed 2026-08-28.** It counted only rows actually `isCompleted = 1` in `watch_state`
+  under *that* `seriesId`, while the sibling union lived in the read path for the per-item watched
+  *check* (`getPlaybackPositions` and the episode-list screens). So marking episode A watched left
+  its language-variant sibling B correctly checked in the episode list while the series row above
+  it read 0%. Found during the Phase 6 adversarial pass (2026-08-27) and initially left as-is.
+
+  The denominator question raised here — whether `getEpisodeCountsBySeries()` also treats language
+  variants as separate episodes — was settled by measurement rather than reasoning: pulled the
+  catalogue off a device (47,552 series, 303 cached episodes) and found **zero** duplicate
+  `(seriesId, season, episodeNum)` rows, so `COUNT(*)` already equals the distinct count and the
+  denominator needed no change. Each variant is its own `xtream_series` row with its own episode
+  list, so per-series counts never inflate.
+
+  Only the numerator changed: `XtreamEpisodeDao.getSiblingCompletedCountsBySeries()`, the aggregate
+  form of `getSiblingCompletedEpisodeIds()`. Shaped as a CTE driven from `watch_state` outwards
+  rather than the per-series `EXISTS` form, which re-derived each series' `tmdbId` per candidate
+  episode — 223ms versus 0.1ms on that catalogue, fully index-driven. `MediaRepository` takes the
+  **max** of the direct and deduplicated counts, never the sum: they overlap rather than add, the
+  dedup query cannot see series with a NULL `tmdbId`, and the direct count cannot see siblings, so
+  each covers what the other misses. Verified on the real catalogue: completing S1E1 under series
+  `6548` credits all six cached variants of `tmdbId 124364`, matching what the episode list already
+  showed.
 
 ## Interaction with the sync plan
 
