@@ -180,6 +180,9 @@ fun MobileCategoryListScreen(
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             viewModel.refreshLastPlayedItem()
+            // A watched/favorite mark made on a screen this ViewModel doesn't own (movie details,
+            // an episode list, search) has no way back to this instance's cache otherwise.
+            viewModel.refreshWatchStateOnResume()
         }
     }
 

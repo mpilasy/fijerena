@@ -568,6 +568,20 @@ class CategoryViewModel(
         }
     }
 
+    /**
+     * Re-reads favorites/watch progress/watched checks for whatever's currently on screen. Call
+     * on resume alongside [refreshLastPlayedItem] — same reason: a favorite or watched mark made
+     * on a screen this ViewModel doesn't own (movie details, an episode list, search) writes
+     * straight to the repository with no way to reach this instance's cached [watchedIds]/
+     * [favoriteIds]/[watchProgress], so without an explicit re-read on return they'd sit stale
+     * until something *else* changes the stream list identity and trips [refreshPerItemData]'s
+     * own guard.
+     */
+    fun refreshWatchStateOnResume() {
+        // refreshPerItemData no-ops on its own until repository is initialized.
+        viewModelScope.launch { refreshPerItemData() }
+    }
+
     private fun rebuildVirtualCategories(regularCategories: List<MediaCategory>): List<MediaCategory> {
         val virtualCats = mutableListOf<MediaCategory>()
         virtualCats.add(

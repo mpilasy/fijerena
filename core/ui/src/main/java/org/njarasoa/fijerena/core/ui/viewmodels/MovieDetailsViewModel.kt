@@ -198,7 +198,12 @@ class MovieDetailsViewModel(
                 durationMs = watched.duration
             }
         }
-        return ResumeState(positionMs, durationMs, isWatched = watched?.isCompleted == true)
+        // TMDB dedup (Phase 5, plans/watch-state-durable-storage-plan.md): a different catalogue
+        // entry for the same title (a second language track, a 4K re-rip) completed under its own
+        // id still has to show this one watched — otherwise the grid checks it (CategoryViewModel
+        // does this same union) while its own details page contradicts that.
+        val isWatched = watched?.isCompleted == true || movieId in repo.getSiblingCompletedMovieIds()
+        return ResumeState(positionMs, durationMs, isWatched = isWatched)
     }
 
     private suspend fun getRepository(): MediaRepository {
