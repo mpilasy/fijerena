@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -576,6 +578,7 @@ class StreamLoaderViewModel(
  * leaves a stream (back, switching to a new stream, or the composable leaving
  * composition) rather than each call site re-deriving it slightly differently.
  */
+@OptIn(UnstableApi::class)
 fun finalizeSession(
     playbackState: PlaybackState,
     loaderViewModel: StreamLoaderViewModel,

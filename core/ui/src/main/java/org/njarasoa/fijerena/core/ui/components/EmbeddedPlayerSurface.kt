@@ -9,6 +9,8 @@ import androidx.compose.runtime.setValue
 import android.view.LayoutInflater
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import org.njarasoa.fijerena.core.ui.R
@@ -24,6 +26,7 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
  * one surface implementation. The surface always shows whatever the shared engine is currently
  * playing; the caller decides what that is.
  */
+@OptIn(UnstableApi::class)
 @Composable
 fun EmbeddedPlayerSurface(
     modifier: Modifier = Modifier,
