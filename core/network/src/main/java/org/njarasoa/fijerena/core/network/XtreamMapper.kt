@@ -179,20 +179,4 @@ object XtreamMapper {
             coverUrl = streamIcon,
             extension = containerExtension,
         )
-
-    fun WatchedStream.toDomain(mediaType: MediaType): MediaItem =
-        MediaItem(
-            id = streamId.toString(),
-            name = streamName,
-            mediaType = mediaType,
-            categoryId = categoryId,
-        )
-
-    fun FavoriteStream.toDomain(mediaType: MediaType): MediaItem =
-        MediaItem(
-            id = streamId.toString(),
-            name = streamName,
-            mediaType = mediaType,
-            categoryId = categoryId,
-        )
 }

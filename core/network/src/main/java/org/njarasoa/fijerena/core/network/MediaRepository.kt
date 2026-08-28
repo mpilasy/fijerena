@@ -676,7 +676,17 @@ class MediaRepository(
         // Intentionally empty.
     }
 
-    fun clearWatchHistory() {
+    /**
+     * Wipes this provider's watch progress: the `watch_state` rows, the retired blob keys a
+     * pre-Phase-4 install may still carry, and the in-memory views of both.
+     *
+     * Suspending because the rows are the real storage now — before Phase 4 this only removed the
+     * blob keys, which after Phase 4 meant "Clear Progress" cleared nothing a user could see.
+     * Published Recent lists are emptied too, or every surface showing one keeps rendering entries
+     * whose rows are gone.
+     */
+    suspend fun clearWatchHistory() {
+        watchStateDao.deleteAll(providerId)
         synchronized(watchHistoryLock) {
             cachedWatchHistory = emptyList()
             cache.commitAsync {
@@ -684,6 +694,7 @@ class MediaRepository(
                 remove(KEY_WATCH_HISTORY_V2)
             }
         }
+        recentItemsFlows.values.forEach { it.value = emptyList() }
     }
 
     fun addFavorite(

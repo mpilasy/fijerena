@@ -10,21 +10,6 @@ object XtreamCacheKeys {
     // Legacy keys (kept for backwards compatibility but not used)
     const val KEY_LAST_CATEGORY_ID = "last_category_id"
     const val KEY_LAST_STREAM_ID = "last_stream_id"
-    const val KEY_LAST_CONTENT_TYPE = "last_content_type"
-
-    // Content-type specific last played tracking
-    const val KEY_LAST_LIVE_CATEGORY = "last_live_category"
-    const val KEY_LAST_LIVE_STREAM = "last_live_stream"
-    const val KEY_LAST_MOVIES_CATEGORY = "last_movies_category"
-    const val KEY_LAST_MOVIES_STREAM = "last_movies_stream"
-    const val KEY_LAST_TVSHOWS_CATEGORY = "last_tvshows_category"
-    const val KEY_LAST_TVSHOWS_STREAM = "last_tvshows_stream"
-
-    // Watch history tracking
-    const val KEY_WATCH_HISTORY = "watch_history"
-
-    // Favorites tracking
-    const val KEY_FAVORITES = "favorites"
 
     // EPG caching — payloads live in the xtream_epg_cache table; the KEY_EPG_* prefixes are
     // retained only so the one-time purge can find the blobs older builds wrote here.
