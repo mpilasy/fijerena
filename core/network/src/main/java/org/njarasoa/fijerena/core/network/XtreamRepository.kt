@@ -14,7 +14,6 @@ import org.njarasoa.fijerena.core.network.xtream.manager.XtreamEpgManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamMetricsManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamSessionManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamStatsManager
-import org.njarasoa.fijerena.core.network.xtream.manager.XtreamUserDataManager
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.EpgResponse
@@ -24,33 +23,6 @@ import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamStream
-
-/**
- * Represents a watched stream in the history
- */
-@Serializable
-data class WatchedStream(
-    val streamId: Int,
-    val streamName: String,
-    val categoryId: String,
-    val contentType: String,
-    val timestamp: Long = System.currentTimeMillis(),
-    val playbackPosition: Long = 0L, // Current position in ms
-    val duration: Long = 0L, // Total duration in ms
-    val isCompleted: Boolean = false, // True if watched > 95%
-)
-
-/**
- * Represents a favorite stream
- */
-@Serializable
-data class FavoriteStream(
-    val streamId: Int, // streamId for Live/Movies, seriesId for TV Shows
-    val streamName: String, // Display name
-    val categoryId: String, // Original category reference
-    val contentType: String, // ContentType.LIVE_TV, ContentType.MOVIES, or ContentType.TV_SHOWS
-    val timestamp: Long = System.currentTimeMillis(), // For ordering
-)
 
 class XtreamRepository(
     private val accountManager: AccountManager,
@@ -92,7 +64,6 @@ class XtreamRepository(
             providerId,
         )
 
-    private val userDataManager = XtreamUserDataManager(cache, providerSettings, providerId)
 
     private val epgManager = XtreamEpgManager(sessionManager, cache, providerSettings, database.epgCacheDao(), providerId)
 
@@ -255,64 +226,6 @@ class XtreamRepository(
 
     fun clearAllEpgCache() = epgManager.clearAllEpgCache()
 
-    fun saveLastPlayedStream(
-        categoryId: String,
-        streamId: Int,
-        streamName: String,
-        contentType: String,
-    ) = userDataManager.saveLastPlayedStream(categoryId, streamId, streamName, contentType)
-
-    fun getLastCategoryId(contentType: String): String? = userDataManager.getLastCategoryId(contentType)
-
-    fun getLastStreamId(contentType: String): Int? = userDataManager.getLastStreamId(contentType)
-
-    fun getLastContentType(): String? = userDataManager.getLastContentType()
-
-    fun getWatchHistory(): List<WatchedStream> = userDataManager.getWatchHistory()
-
-    fun clearWatchHistory() = userDataManager.clearWatchHistory()
-
-    fun addFavorite(
-        streamId: Int,
-        streamName: String,
-        categoryId: String,
-        contentType: String,
-    ): Boolean = userDataManager.addFavorite(streamId, streamName, categoryId, contentType)
-
-    fun removeFavorite(
-        streamId: Int,
-        contentType: String,
-    ): Boolean = userDataManager.removeFavorite(streamId, contentType)
-
-    fun getFavorites(): List<FavoriteStream> = userDataManager.getFavorites()
-
-    fun isFavorite(
-        streamId: Int,
-        contentType: String,
-    ): Boolean = userDataManager.isFavorite(streamId, contentType)
-
-    fun clearFavorites() = userDataManager.clearFavorites()
-
-    fun savePlaybackPosition(
-        streamId: Int,
-        streamName: String,
-        categoryId: String,
-        contentType: String,
-        position: Long,
-        duration: Long,
-    ) = userDataManager.savePlaybackPosition(streamId, streamName, categoryId, contentType, position, duration)
-
-    fun getPlaybackPosition(
-        streamId: Int,
-        contentType: String,
-    ): WatchedStream? = userDataManager.getPlaybackPosition(streamId, contentType)
-
-    fun getInProgressStreams(contentType: String): List<WatchedStream> = userDataManager.getInProgressStreams(contentType)
-
-    fun clearPlaybackPosition(
-        streamId: Int,
-        contentType: String,
-    ) = userDataManager.clearPlaybackPosition(streamId, contentType)
 
     suspend fun clearCache() = statsManager.clearCache()
 

@@ -186,19 +186,38 @@ class MediaRepositoryTest {
         }
 
     @Test
-    fun clearWatchHistory_clearsCache() {
-        val history = listOf(WatchedItem("1", "Test", "cat1", "LIVE_TV"))
-        val historyJson = json.encodeToString(history)
-        every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns historyJson
+    fun clearWatchHistory_clearsCache() =
+        runBlocking {
+            val history = listOf(WatchedItem("1", "Test", "cat1", "LIVE_TV"))
+            val historyJson = json.encodeToString(history)
+            every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns historyJson
 
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
-        assert(repository.getWatchHistoryLocked().isNotEmpty())
+            repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+            assert(repository.getWatchHistoryLocked().isNotEmpty())
 
-        repository.clearWatchHistory()
+            repository.clearWatchHistory()
 
-        assert(repository.getWatchHistoryLocked().isEmpty())
-        verify(exactly = 1) { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } // Only initial check
-    }
+            assert(repository.getWatchHistoryLocked().isEmpty())
+            verify(exactly = 1) { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } // Only initial check
+        }
+
+    /**
+     * The blob keys are no longer where progress lives, so clearing only those left "Clear
+     * Progress" wiping nothing a user could see. Rows are the storage now.
+     */
+    @Test
+    fun clearWatchHistory_deletesWatchStateRows() =
+        runBlocking {
+            every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
+            repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+            repository.savePlaybackPosition("1", "Test", "cat1", ContentType.MOVIES, 5_000L, 100_000L)
+            repository.awaitPendingWrites()
+            assert(watchStateDao.getAll(1L).isNotEmpty())
+
+            repository.clearWatchHistory()
+
+            assert(watchStateDao.getAll(1L).isEmpty())
+        }
 
     @Test
     fun v2ToV3Migration_populatesEpisodeIdForTvShows() {

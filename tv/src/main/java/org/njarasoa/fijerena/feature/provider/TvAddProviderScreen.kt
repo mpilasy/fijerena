@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -583,7 +584,12 @@ fun TvAddProviderScreen(
                                 text = stringResource(R.string.provider_clear_favorites_message),
                                 confirmText = stringResource(R.string.provider_clear_all_button),
                                 onConfirm = {
-                                    repository.clearFavorites()
+                                    coroutineScope.launch {
+                                        // The live per-provider store, not a fresh XtreamRepository on provider 0:
+                                        // going through AppContainer keeps the cached instance's in-memory
+                                        // favorites view consistent with what was just removed from disk.
+                                        AppContainer.getInstance(context).getMediaRepository(editId).clearFavorites()
+                                    }
                                     showClearFavoritesDialog = false
                                 },
                                 onDismiss = { showClearFavoritesDialog = false },
@@ -597,7 +603,9 @@ fun TvAddProviderScreen(
                                 text = stringResource(R.string.provider_clear_progress_message),
                                 confirmText = stringResource(R.string.provider_clear_all_button),
                                 onConfirm = {
-                                    repository.clearWatchHistory()
+                                    coroutineScope.launch {
+                                        AppContainer.getInstance(context).getMediaRepository(editId).clearWatchHistory()
+                                    }
                                     showClearProgressDialog = false
                                 },
                                 onDismiss = { showClearProgressDialog = false },

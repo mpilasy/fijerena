@@ -59,6 +59,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
@@ -635,7 +636,12 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         CinemaDialogActionButton(
                             onClick = {
-                                repository.clearFavorites()
+                                coroutineScope.launch {
+                                    // The live per-provider store, not a fresh XtreamRepository on provider 0:
+                                    // going through AppContainer keeps the cached instance's in-memory
+                                    // favorites view consistent with what was just removed from disk.
+                                    AppContainer.getInstance(context).getMediaRepository(editId).clearFavorites()
+                                }
                                 showClearFavoritesDialog = false
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
@@ -658,7 +664,9 @@ fun MobileAddProviderScreen(
                     confirmButton = {
                         CinemaDialogActionButton(
                             onClick = {
-                                repository.clearWatchHistory()
+                                coroutineScope.launch {
+                                    AppContainer.getInstance(context).getMediaRepository(editId).clearWatchHistory()
+                                }
                                 showClearProgressDialog = false
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),

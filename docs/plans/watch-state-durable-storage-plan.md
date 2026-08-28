@@ -808,13 +808,29 @@ its new data source.
 - **Favorites have the identical defect.** Same prefs file, same whole-blob rewrite, same
   `catch { emptyList() }` wipe path, capped at 100. Same fix applies; not required by this
   requirement.
-- **`XtreamUserDataManager` keeps its own parallel blob** in `xtream_cache_$providerId` — its own
-  unversioned `watch_history` of `List<WatchedStream>` keyed on **int** stream ids, against
-  `MediaRepository`'s String ids. It will hold a stale copy of the same flags after this lands. The
-  sync plan's audit already concluded hooks attach to `MediaRepository`; retiring the duplicate is
-  its own change.
-- **The `last_*` navigation keys are duplicated across both prefs files** and disagree on type
-  (String item id vs int stream id). Unrelated to retention.
+- ~~**`XtreamUserDataManager` keeps its own parallel blob** in `xtream_cache_$providerId`.~~
+  **Deleted 2026-08-28.** Its unversioned `watch_history` of `List<WatchedStream>` was keyed on
+  **int** stream ids against `MediaRepository`'s String ids, and held a stale copy of the same flags
+  once Phase 4 landed. The whole class went, along with `XtreamRepository`'s fifteen passthroughs,
+  the `WatchedStream`/`FavoriteStream` types, their two `XtreamMapper` extensions and the
+  `XtreamCacheKeys` entries only it used — 385 lines plus a benchmark test that existed solely to
+  exercise it.
+
+  It was not quite dead. Two live buttons called it: **Clear Favorites** and **Clear Progress** on
+  the Add/Edit Provider screens, in both `:tv` and `:mobile`. All three of their defects were
+  pre-existing and mutually compounding — they cleared the dead `xtream_cache` blobs instead of the
+  live `favorites_v2` / `watch_state`; the screens construct `XtreamRepository(...)` with the
+  default `providerId = 0L`, so they never addressed the provider being edited; and
+  `MediaRepository.clearWatchHistory()` still removed only the retired blob keys, so after Phase 4
+  it cleared nothing a user could see. Both now route through
+  `AppContainer.getInstance(context).getMediaRepository(editId)`, which keeps the cached instance's
+  in-memory views consistent, and `clearWatchHistory()` is suspending, deletes the `watch_state`
+  rows, and empties the published Recent lists.
+
+- ~~**The `last_*` navigation keys are duplicated across both prefs files** and disagree on type
+  (String item id vs int stream id).~~ **Resolved 2026-08-28** as a consequence of the above — the
+  `xtream_cache_$providerId` half lived in `XtreamUserDataManager` and went with it. Only
+  `MediaRepository`'s String-keyed set remains.
 - ~~**`getSeriesWatchProgress()` (the % on a TV Shows row in the grid) does not apply Phase 5's TMDB
   dedup.**~~ **Fixed 2026-08-28.** It counted only rows actually `isCompleted = 1` in `watch_state`
   under *that* `seriesId`, while the sibling union lived in the read path for the per-item watched
