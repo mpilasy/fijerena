@@ -30,7 +30,7 @@ Once JDK is installed:
 ./gradlew :mobile:assembleDebug
 ```
 
-**Output**: `build/outputs/apk/fijerena-mobile-debug.apk` (and `mobile/build/outputs/apk/debug/mobile-debug.apk`)
+**Output**: `mobile/build/outputs/apk/debug/mobile-debug.apk` (the root-level `fijerena-*.apk` copy hook was removed — the canonical AGP path is the only output)
 
 ### Release Build (for production)
 ```bash

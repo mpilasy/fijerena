@@ -67,7 +67,12 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ### 🔧 Advanced Features
 - **Virtual Categories**:
   - Favorites - User-curated collection (configurable size: 10-500 items)
-  - Last Watched - Recent viewing history (added after 10s of viewing, configurable size: 1-100 items)- **Playback Resume** - Automatic position restore for VOD content (2-95% range)
+  - Last Watched - Recent viewing history (added after 10s of viewing, configurable size: 1-100 items)
+- **Playback Resume** - Automatic position restore for VOD content (2-95% range)
+- **Durable Watch State** - Position and watched status stored in SQLite and kept forever; the history-size setting only bounds the Recent row, never what is remembered
+- **Mark Watched / Unwatched** - Manual toggle from movie details, episode lists, content lists, and search
+- **Cross-Variant Dedup** - A title watched under one language/quality variant reads as watched under all of them (matched via TMDB ID)
+- **Track Memory** - Audio and subtitle selections persist per item, falling back to the last choice made in the same series
 - **Stats for Nerds** - Comprehensive playback metrics overlay including:
   - **Video/Audio**: Codecs, bitrates, resolution, frame rate
   - **Network**: Speed, bandwidth, buffer health, rebuffer stats
@@ -81,6 +86,8 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Developer Mode** - Payload size tracking and debug information
 - **Cache Management** - Per-content-type cache with statistics
 - **Robust EPG Retries** - Automatic 5-attempt retry loop with exponential backoff for EPG updates
+- **EPG Change Detection** - Conditional requests (`If-None-Match` / `If-Modified-Since`) plus a content hash; an unchanged source skips download and ingestion entirely and is shown as "Unchanged"
+- **Sync Delta Reporting** - Provider screens show what the last catalog sync actually changed ("No changes since last sync", or added/updated/removed counts)
 - **UI Scale Adjustment** - 70%-100% sizing options
 - **Cellular Buffer Tuning** - Adjustable cellular buffer multipliers (0.5x-3.0x) in dev mode
 
@@ -106,7 +113,8 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 
 ### 🎯 Target Platform
 - **Minimum SDK**: 30 (Android 11)
-- **Target SDK**: 36 (Android 16)
+- **Target SDK**: 35 (Android 15)
+- **Compile SDK**: 36 (Android 16)
 - **Architectures**: ARM64, ARMv7, x86_64, x86
 
 ## 🛠️ Tech Stack
@@ -117,17 +125,25 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 | Language | Kotlin | 2.3.0 |
 | Build System | Gradle | 9.4.1 |
 | Build System | Android Gradle Plugin (AGP) | 9.2.1 |
-| UI Framework | Jetpack Compose | 2024.12.01 BOM |
-| Material Design | Material 3 | 1.4.0 |
-| TV Components | androidx.tv.material3 | 1.0.0-alpha10 |
+| UI Framework | Jetpack Compose | 2025.06.01 BOM |
+| Material Design | Material 3 | 1.4.0 (`strictly`) |
+| TV Components | androidx.tv.material3 / tv-foundation | 1.0.0-alpha10 |
 | Video Player | Media3 (ExoPlayer) | 1.7.1 |
-| Networking | Ktor | 3.4.0 |
+| Networking | Ktor (OkHttp engine) | 3.4.0 |
 | Serialization | kotlinx.serialization | 1.8.0 |
-| Database | Room | 2.8.4 |
+| Database | Room (FTS4) | 2.8.4 |
+| SQLite | Bundled requery build (FTS5 capable) | 3.49.0 |
+| Background Work | WorkManager | 2.10.1 |
+| Paging | androidx.paging | 3.3.6 |
 | Image Loading | Coil | 3.1.0 |
 | Navigation | Navigation Compose | 2.8.5 |
 | Coroutines | kotlinx.coroutines | 1.7.3 |
 | SMB Client | smbj (Hierynomus) | 0.13.0 |
+| Settings Sync | Google Drive API + Play Services Auth | v3-rev20241206 / 21.3.0 |
+
+`gradle/libs.versions.toml` is authoritative. The Compose BOM is deliberately pinned to 2025.06.x —
+see the comment in that file before raising it (`tv-foundation` alpha10 calls a prefetch API removed
+in Compose 1.9).
 
 ### Architecture
 - **Multi-Module**: Separate modules for mobile, TV, and core functionality
@@ -206,11 +222,12 @@ No additional configuration is required for the initial build. The app will prom
 ```
 
 **Output Locations:**
-All generated APKs are automatically collected into the root directory:
-- `build/outputs/apk/fijerena-mobile-debug.apk`
-- `build/outputs/apk/fijerena-tv-debug.apk`
+Standard AGP paths, one per module — there is no root-level copy step:
+- `mobile/build/outputs/apk/debug/mobile-debug.apk`
+- `tv/build/outputs/apk/debug/tv-debug.apk`
 
-*Note: APKs are prefixed with `fijerena-` and collected from their respective module build folders.*
+The `scripts/deploy-*.sh` helpers rebuild and install from these paths; prefer them over hand-rolled
+`gradlew` + `adb` sequences.
 
 ### Release Builds
 
@@ -328,6 +345,7 @@ A single **[AGENTS.md](AGENTS.md)** file serves as the canonical guide for all A
 - **[docs/FEATURES.md](docs/FEATURES.md)** - Detailed feature documentation with API references
 - **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - Complete database schema
 - **[docs/epg_guide.md](docs/epg_guide.md)** - EPG pipeline implementation guide
+- **[docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md)** - Why the EPG index grew to 87% dead space, and how to read DB state from a file header
 - **[docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md)** - App navigation flow and screen hierarchy
 - **[docs/ui-theme-options.md](docs/ui-theme-options.md)** - Theme system documentation
 - **[docs/MOBILE_RUN_GUIDE.md](docs/MOBILE_RUN_GUIDE.md)** - Mobile build, install, and run guide

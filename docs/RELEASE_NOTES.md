@@ -1,5 +1,32 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Durable Watch State, EPG Change Detection & TV Back Fixes
+**Release Date:** 2026-08-28
+
+### Durable Watch State (`plans/watch-state-durable-storage-plan.md`, Phases 1–6)
+- **`watch_state` table (`xtream_v2.db` v15):** Playback position and completion moved out of the `watch_history_v3` SharedPreferences blob, which truncated to `watchHistorySize` on every write and silently evicted anything older. Rows are now kept forever; `watchHistorySize` bounds only the length of the Recent row. On the first `setProvider()` after upgrade, `MediaRepository.backfillAndPurgeWatchState()` copies the blob in, sets a **per-provider** `watch_state_migrated_v1` flag, then removes both legacy keys — backfill always runs before purge, so a provider not opened between the dual-write and purge releases can't lose history.
+- **Eviction bug fixed on read flip:** Reads moved to `watch_state` in Phase 3; `getPlaybackPositions(contentType)` is now one indexed query returning a Map, replacing the per-item linear scan of the blob.
+- **TMDB dedup across catalogue variants:** A title watched under one language/quality variant now reads as watched under all of them. Movies join `xtream_streams` on a shared `tmdbId`.
+- **Episode dedup redesigned after it never worked:** The original episode query was structurally incapable of matching real data — episode-level `tmdbId` is essentially never populated (543/543 and 95/95 NULL for one show across two cached variants), and the real duplication is *separate `xtream_series` rows entirely* (25 distinct `seriesId` sharing one `tmdbId` on one provider), not rows sharing a `seriesId`. Both `getSiblingCompletedEpisodeIds` and `clearGroupCompletion` were rewired to a two-level join: `xtream_series` finds siblings by shared **series-level** `tmdbId`, then `xtream_episodes` matches each sibling's `(season, episodeNum)` — confirmed identical across variants on-device. `guardSeriesLevelEpisodeTmdbIds` is kept as data hygiene but is no longer read by dedup.
+- **Manual mark watched/unwatched (Phase 6):** `MediaRepository.setWatched(itemId, contentType, watched)` replaces the dead `clearPlaybackPosition`. A manual mark leaves `lastPlayedAt` null so it never enters the Recent row, and `setWatched` no-ops for server-backed providers (Jellyfin owns that state). `upsertProgress`'s `isCompleted` is now sticky (`MAX(existing, new)`) — only an explicit unmark clears it. Unmarking spreads across TMDB siblings, mirroring the dedup read. UI follows each surface's existing affordance: an icon beside the favorite toggle on movie details, a second action row in the TV favorite/search context menus, long-press on TV episode cards, and the mobile episode watched badge as its own tap target.
+- **Track restoration:** `audioTrackIndex`/`subtitleTrackIndex` persist per row with a series-level fallback, fixing TV never restoring a saved audio/subtitle track.
+
+### EPG Refresh Change Detection (`plans/refresh-change-detection-plan.md`)
+- **Conditional requests + content hash (`providers.db` v10):** `downloadSource` sends `If-None-Match`/`If-Modified-Since` from the source's stored `etag`/`last_modified_header`; a `304` short-circuits with no body read. Otherwise a SHA-256 of the payload is compared to `last_content_sha256` — computed in the download read pass for plain sources, and after decompression for `.gz` (gzip's mtime header taints the raw bytes even when content is identical).
+- **Skip guards:** An unchanged source skips `ingestFromStream` entirely and is excluded from `executeSwapToMain`'s id list at every call site — including it would delete its primary rows and transfer nothing back, since staging was never populated. Counts carry forward via `EpgSourceDao.markUnchanged` instead of resetting to zero. A hash match only skips within 24h of the last real ingest, because ingestion windows programmes against wall-clock time and a byte-identical static file must still be re-ingested to keep the guide window moving.
+- **Truncated downloads detected:** `read()` returning -1 can't distinguish a clean EOF from a cut connection; a flaky CDN's short read was surfacing much later as an `XmlPullParserException` deep in ingestion. `totalRead` is now checked against `Content-Length` and a mismatch takes the normal retry path.
+- **Retry backoff raised to 10 minutes (LINEAR):** WorkManager's ~30s default kept re-hitting an actively blocking endpoint, giving it no chance to clear. Applied to both the periodic worker and `EpgSyncDebugReceiver`'s one-shot request.
+
+### Sync & Change Feedback in the UI
+- **Xtream sync delta surfaced (`providers.db` v9):** `XtreamContentManager` already computed per-row insert/update/delete counts to decide what to write; they're now kept as a `SyncDelta` and persisted to `lastSyncInserted`/`lastSyncUpdated`/`lastSyncDeleted`. Provider screens show "No changes since last sync" or "N added • N updated • N removed", gated on Xtream and on there being no `lastSyncError` (the columns hold the last *successful* run's numbers, so showing them beside an error would read as partial success).
+- **EPG management "Unchanged":** A source the finished run confirmed unchanged shows "Unchanged" in place of its download/ingest durations, which would otherwise be stale numbers from whenever it last actually ran.
+
+### TV Input Fixes
+- **Back on detail screens took two presses:** With focus on Play (or any button), the first Back press only cleared focus and left the D-pad dead. An explicit `BackHandler` was not enough — verified on a real Shield that the event is marked handled downstream before reaching the `OnBackPressedDispatcher` bridge (ruled out `androidx.tv:tv-material`'s `Surface`, which only intercepts `DPAD_CENTER`/`ENTER`). Both `:tv` `MovieDetailsScreen` and `EpisodeSelectionScreen` now intercept Back in `onPreviewKeyEvent` on their root `LazyColumn`, which runs top-down before any descendant — the same pattern `TvDpadEscape.kt` uses.
+- **Alternate-stream focus guard:** Made sticky rather than one-shot, and now polls for confirmed focus after a stream switch instead of guessing a frame count.
+
+---
+
 ## Version: TV Focus Overhaul, TMDB Recommendations & DB Schema Upgrades
 **Release Date:** 2026-08-21
 
@@ -147,6 +174,13 @@
 **Release Date:** 2026-03-20
 
 ### AI Audio Suite (EXPERIMENTAL / WIP)
+
+> **Superseded — this entire section describes removed code.** The `core:ai` module, the DTLN
+> `.tflite` assets, `BraviaVoiceZoomManager`, and the AI DSP stats rows were all deleted in
+> `6e3b2f2c` ("Remove Clear Voice (DTLN) and AI search (Sentence-Transformer) features", #119,
+> 2026-03-18). The orphaned TensorFlow Lite entries left behind in `libs.versions.toml` were
+> removed on 2026-08-28. Kept here as history; none of it is in the codebase.
+
 - **Clear Voice (Dialogue Boost):** Integrated two-stage DTLN models for speech enhancement. **(Currently non-functional / Under development)**.
 - **Smart Night Mode:** Added real-time dynamics compression and limiting (HAL/APP fallback).
 - **Sony Voice Zoom:** Experimental native integration for Sony Bravia (XR Processor required). **(Status unverified)**.
