@@ -339,13 +339,15 @@ private fun EpisodeListContent(
     // Focus requester for the stream name row, so switching to an alternate stream can keep
     // focus there instead of it falling back to the window root (see streamSwitchSignal below).
     val streamNameFocusRequester = remember { FocusRequester() }
-    // Set right before an alternate-stream switch so the resume-anchor-arrived effect below
-    // skips re-focusing Play — two unwatched alternates share the same resume anchor, so that
-    // effect wouldn't even re-fire on its own to steal focus back.
-    var justSwitchedStream by remember { mutableStateOf(false) }
     // Bumped in onSelect, independent of resumeEpisodeId: selecting a dropdown item destroys
     // that focused node, and Compose has nothing left to restore to, so focus falls to the
-    // window root and D-pad input goes nowhere until this claims it back for the row.
+    // window root and D-pad input goes nowhere until this claims it back for the row. Also
+    // doubles as "a switch has happened this screen instance" — see the resumeEpisodeId effect
+    // below, which reads it as a sticky flag, not a one-shot: switchToAlternateStream reloads
+    // seriesDetail from cache and then from the network, so the resume anchor can land on this
+    // screen more than once for a single switch (and the network leg can take seconds, per
+    // loadSeriesDetail's comment on the Law & Order case), so a single-shot flag consumed by the
+    // first of those firings left the later one free to steal focus back to Play.
     var streamSwitchSignal by remember { mutableStateOf(0) }
 
     // D-pad focus target for the resume episode card — requested below once it's on screen, so
@@ -487,13 +489,11 @@ private fun EpisodeListContent(
     val anchorResumePosMs = anchorEpisode?.id?.let { episodePlaybackPositions[it] } ?: 0L
     val hasResume = anchorResumePosMs > 0L
 
-    // Request focus on Play/Resume button when screen loads or anchor arrives — unless this
-    // update is the result of switching to an alternate stream, in which case focus stays on
-    // the stream name row so the D-pad doesn't silently land on Play.
+    // Request focus on Play/Resume button when screen loads or anchor arrives — unless the user
+    // has switched to an alternate stream at some point on this screen, in which case focus
+    // stays on the stream name row so the D-pad doesn't silently land on Play.
     LaunchedEffect(resumeEpisodeId) {
-        if (justSwitchedStream) {
-            justSwitchedStream = false
-        } else {
+        if (streamSwitchSignal == 0) {
             try {
                 playButtonFocusRequester.requestFocus()
             } catch (_: IllegalStateException) {
@@ -802,7 +802,6 @@ private fun EpisodeListContent(
                                         currentName = seriesName,
                                         alternates = alternateStreams,
                                         onSelect = {
-                                            justSwitchedStream = true
                                             streamSwitchSignal++
                                             onAlternateStreamSelected(it)
                                         },

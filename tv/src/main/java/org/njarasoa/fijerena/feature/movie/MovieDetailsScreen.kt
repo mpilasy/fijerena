@@ -216,22 +216,21 @@ private fun MovieDetailsContent(
     // Focus requester for the stream name row, so switching to an alternate stream can keep
     // focus there instead of it falling back to the window root (see streamSwitchSignal below).
     val streamNameFocusRequester = remember { FocusRequester() }
-    // Set right before an alternate-stream switch so the resume-data-arrived effect below skips
-    // re-focusing Play — two unwatched alternates share resumePositionMs == 0L, so that effect
-    // wouldn't even re-fire on its own to steal focus back.
-    var justSwitchedStream by remember { mutableStateOf(false) }
     // Bumped in onSelect, independent of resumePositionMs: selecting a dropdown item destroys
     // that focused node, and Compose has nothing left to restore to, so focus falls to the
-    // window root and D-pad input goes nowhere until this claims it back for the row.
+    // window root and D-pad input goes nowhere until this claims it back for the row. Also
+    // doubles as "a switch has happened this screen instance" — see the resumePositionMs effect
+    // below, which reads it as a sticky flag, not a one-shot: a single-shot flag consumed by the
+    // first post-switch resumePositionMs change would leave a later one (e.g. a slow network
+    // fetch resolving after a fast cache draw) free to steal focus back to Play. See the same
+    // fix on EpisodeSelectionScreen's stream picker for the case that actually double-fires.
     var streamSwitchSignal by remember { mutableStateOf(0) }
 
-    // Request focus on Play/Resume button when screen loads or resume data arrives — unless
-    // this update is the result of switching to an alternate stream, in which case focus stays
-    // on the stream name row so the D-pad doesn't silently land on Play.
+    // Request focus on Play/Resume button when screen loads or resume data arrives — unless the
+    // user has switched to an alternate stream at some point on this screen, in which case focus
+    // stays on the stream name row so the D-pad doesn't silently land on Play.
     LaunchedEffect(resumePositionMs) {
-        if (justSwitchedStream) {
-            justSwitchedStream = false
-        } else {
+        if (streamSwitchSignal == 0) {
             try {
                 playButtonFocusRequester.requestFocus()
             } catch (_: IllegalStateException) {
@@ -622,7 +621,6 @@ private fun MovieDetailsContent(
                         currentName = movieName,
                         alternates = alternateStreams,
                         onSelect = {
-                            justSwitchedStream = true
                             streamSwitchSignal++
                             onAlternateStreamSelected(it)
                         },
