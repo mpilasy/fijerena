@@ -67,26 +67,40 @@ interface XtreamEpisodeDao {
     >
 
     /**
-     * Phase 5 dedup (plans/watch-state-durable-storage-plan.md): episode ids of this series
-     * completed by a TMDB sibling. Scoped to [seriesId] on both sides — the completed lookup and
-     * the candidate set — since dedup only ever needs to run for the series currently on screen.
-     * The `tmdbId` guard against a series-level id copied onto every episode
-     * ([org.njarasoa.fijerena.core.network.xtream.manager.XtreamContentManager.getSeriesInfo])
-     * is applied at write time, not here: an unguarded repeat would otherwise complete this whole
-     * series the moment one episode did.
+     * Phase 5 dedup (plans/watch-state-durable-storage-plan.md), corrected 2026-08-27 after an
+     * on-device check showed the original episode-`tmdbId`-based join was structurally incapable
+     * of matching anything: unlike movies, where five language variants are five rows in one flat
+     * catalogue, five language variants of a show are five separate `xtream_series` rows, each
+     * with its own complete, separately-numbered episode list (confirmed: 25 distinct `seriesId`
+     * sharing one series-level `tmdbId` for a single show on one provider). The real correlation
+     * key is `(season, episodeNum)` under a sibling series sharing *this* series' `tmdbId` — not
+     * `XtreamEpisodeEntity.tmdbId`, which was NULL for effectively every episode checked (543/543
+     * and 95/95 on one show; 39/40 and the lone non-null value the *series'* own id leaked onto
+     * one episode — the guard's failure mode, occurring naturally). Two-level join: `xtream_series`
+     * finds sibling series by shared `tmdbId`, then `xtream_episodes` finds each sibling's matching
+     * `(season, episodeNum)` row. The sibling-series subquery includes [seriesId] itself (a
+     * series' own `tmdbId` always matches itself), so a directly-completed episode satisfies this
+     * via a self-match — the caller's separate `isCompleted` check becomes redundant against this
+     * result, not incorrect. A series with no `tmdbId` of its own degrades to no dedup.
      */
     @Query(
         "SELECT e2.id AS itemId " +
             "FROM xtream_episodes e2 " +
-            "JOIN (" +
-            "SELECT e.tmdbId AS tmdbId " +
-            "FROM watch_state w " +
-            "JOIN xtream_episodes e ON e.providerId = w.providerId AND w.itemId = e.id " +
-            "WHERE w.providerId = :providerId AND w.contentType = '${ContentType.TV_SHOWS}' AND w.isCompleted = 1 " +
-            "AND e.tmdbId IS NOT NULL AND e.seriesId = :seriesId " +
-            "GROUP BY e.tmdbId" +
-            ") done ON e2.tmdbId = done.tmdbId " +
-            "WHERE e2.providerId = :providerId AND e2.seriesId = :seriesId",
+            "WHERE e2.providerId = :providerId AND e2.seriesId = :seriesId " +
+            "AND EXISTS (" +
+            "SELECT 1 FROM xtream_episodes sib " +
+            "JOIN watch_state w ON w.providerId = sib.providerId AND w.itemId = sib.id " +
+            "WHERE sib.providerId = :providerId " +
+            "AND sib.season = e2.season AND sib.episodeNum = e2.episodeNum " +
+            "AND sib.seriesId IN (" +
+            "SELECT s2.seriesId FROM xtream_series s2 " +
+            "WHERE s2.providerId = :providerId AND s2.tmdbId IS NOT NULL " +
+            "AND s2.tmdbId = (" +
+            "SELECT s1.tmdbId FROM xtream_series s1 WHERE s1.providerId = :providerId AND s1.seriesId = :seriesId" +
+            ")" +
+            ") " +
+            "AND w.contentType = '${ContentType.TV_SHOWS}' AND w.isCompleted = 1" +
+            ")",
     )
     suspend fun getSiblingCompletedEpisodeIds(
         providerId: Long,
@@ -94,20 +108,28 @@ interface XtreamEpisodeDao {
     ): List<String>
 
     /**
-     * Phase 6 unwatched, episode form of [org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao.clearGroupCompletion]:
-     * clears completion on every `watch_state` row sharing [itemId]'s `tmdbId`. No `seriesId` scope
-     * is needed here — [guardSeriesLevelEpisodeTmdbIds][org.njarasoa.fijerena.core.network.xtream.manager.guardSeriesLevelEpisodeTmdbIds]
-     * already nulls a `tmdbId` that repeats within a series before it ever reaches this table, so a
-     * surviving non-null episode `tmdbId` is presumed genuinely episode-specific.
+     * Phase 6 unwatched, episode form of [org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao.clearGroupCompletion].
+     * Same two-level join as [getSiblingCompletedEpisodeIds]: [itemId]'s `(season, episodeNum)`
+     * matched across every sibling series sharing its series' `tmdbId`, not by episode `tmdbId`.
+     * The target itself is included in its own sibling set (a series' `tmdbId` matches itself), so
+     * this clears the one row too — redundant with the direct `markUnwatched` call, not incorrect.
      */
     @Query(
         "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +
             "WHERE providerId = :providerId AND contentType = '${ContentType.TV_SHOWS}' " +
             "AND itemId IN (" +
-            "SELECT e2.id FROM xtream_episodes e2 " +
-            "WHERE e2.providerId = :providerId AND e2.tmdbId IS NOT NULL AND e2.tmdbId = (" +
-            "SELECT tmdbId FROM xtream_episodes WHERE providerId = :providerId AND id = :itemId" +
+            "SELECT sib.id FROM xtream_episodes target " +
+            "JOIN xtream_episodes sib " +
+            "ON sib.providerId = target.providerId " +
+            "AND sib.season = target.season AND sib.episodeNum = target.episodeNum " +
+            "AND sib.seriesId IN (" +
+            "SELECT s2.seriesId FROM xtream_series s2 " +
+            "WHERE s2.providerId = :providerId AND s2.tmdbId IS NOT NULL " +
+            "AND s2.tmdbId = (" +
+            "SELECT s1.tmdbId FROM xtream_series s1 WHERE s1.providerId = :providerId AND s1.seriesId = target.seriesId" +
             ")" +
+            ") " +
+            "WHERE target.providerId = :providerId AND target.id = :itemId" +
             ")",
     )
     suspend fun clearGroupCompletion(
