@@ -67,6 +67,9 @@ class XmltvEpgService(
         // to avoid object boxing, allocation overhead, and iterator instantiation during hot loops.
         val normalizedNames: Array<String>,
         val normalizedIds: Array<String>,
+        // Programme lookups keyed on xmltv id alone would also match another provider's source
+        // holding the same id, so every query below is restricted to these sources too.
+        val sourceIds: List<Long>,
     )
 
     private suspend fun buildChannelMatchMaps(): ChannelMatchMaps? {
@@ -118,7 +121,8 @@ class XmltvEpgService(
             byName = byName,
             byNormalized = byNormalized,
             normalizedNames = normalizedNamesList.toTypedArray(),
-            normalizedIds = normalizedIdsList.toTypedArray()
+            normalizedIds = normalizedIdsList.toTypedArray(),
+            sourceIds = sourceIds
         ).also {
             cachedChannelMaps = it
             missCachedUntilMs = 0L
@@ -198,7 +202,7 @@ class XmltvEpgService(
                 // built from channel id + start epoch and must stay unique.
                 val programmesByChannel = mutableMapOf<String, LinkedHashMap<Long, EpgSearchResultRow>>()
                 for (chunk in uniqueXmltvIds.chunked(500)) {
-                    val rows = dao.getProgrammesForChannels(chunk, windowStart, windowEnd)
+                    val rows = dao.getProgrammesForChannels(chunk, maps.sourceIds, windowStart, windowEnd)
                     for (row in rows) {
                         val byStart = programmesByChannel.getOrPut(row.channelId) { LinkedHashMap() }
                         byStart.putIfAbsent(row.startEpoch, row)
@@ -263,7 +267,7 @@ class XmltvEpgService(
                 // intermediate list and Map.Entry allocations.
                 val nowPlayingByChannel = mutableMapOf<String, EpgSearchResultRow>()
                 for (chunk in uniqueXmltvIds.chunked(500)) {
-                    val rows = dao.getNowPlayingForChannels(chunk, nowEpoch)
+                    val rows = dao.getNowPlayingForChannels(chunk, maps.sourceIds, nowEpoch)
                     for (row in rows) {
                         nowPlayingByChannel[row.channelId] = row
                     }
