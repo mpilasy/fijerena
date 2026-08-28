@@ -37,6 +37,9 @@ class AccountManager(
         @Volatile
         private var sharedPrefs: SharedPreferences? = null
 
+        // Jetpack Security Crypto is deprecated as of its first stable release (1.1.0). Still the
+        // credential store; replacing it is tracked in docs/plans/secret-store-migration-plan.md.
+        @Suppress("DEPRECATION")
         private fun encryptedPrefs(context: Context): SharedPreferences =
             sharedPrefs ?: synchronized(this) {
                 sharedPrefs ?: EncryptedSharedPreferences

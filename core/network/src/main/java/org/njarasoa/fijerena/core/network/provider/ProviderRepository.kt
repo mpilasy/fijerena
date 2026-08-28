@@ -24,6 +24,9 @@ class ProviderRepository(
     private val db = SettingsDatabase.getInstance(context)
     private val dao = db.providerDao()
 
+    // Jetpack Security Crypto is deprecated as of its first stable release (1.1.0). Still the
+    // credential store; replacing it is tracked in docs/plans/secret-store-migration-plan.md.
+    @Suppress("DEPRECATION")
     private val masterKey: MasterKey by lazy {
         MasterKey
             .Builder(context)
@@ -330,7 +333,7 @@ class ProviderRepository(
      * this `providerId`. `media_cache_$providerId` (favorites, favorite categories) is cleared in
      * the same pass — `deleteProvider` never touched it before, leaking that prefs file on every
      * deletion; bounded while history was capped at 25 rows, no longer bounded once storage is.
-     * See plans/watch-state-durable-storage-plan.md.
+     * See docs/plans/watch-state-durable-storage-plan.md.
      */
     private suspend fun clearProviderWatchState(providerId: Long) {
         XtreamDatabase.getInstance(context).watchStateDao().deleteAll(providerId)
@@ -343,6 +346,7 @@ class ProviderRepository(
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun getProviderPrefs(providerId: Long): android.content.SharedPreferences =
         encryptedPrefsCache.computeIfAbsent(providerId) {
             EncryptedSharedPreferences.create(
