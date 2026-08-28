@@ -282,14 +282,20 @@ Each plan states its own status at the top - trust that over any summary here.
 
 | Plan | Status |
 |------|--------|
-| [docs/plans/watch-state-durable-storage-plan.md](docs/plans/watch-state-durable-storage-plan.md) | Phases 1-6 landed |
+| [docs/plans/watch-state-durable-storage-plan.md](docs/plans/watch-state-durable-storage-plan.md) | **Complete** - all six phases landed; kept, see below |
 | [docs/plans/refresh-change-detection-plan.md](docs/plans/refresh-change-detection-plan.md) | Phases 0-3 and 5 landed; Phase 4 outstanding |
 | [docs/plans/codebase-audit-fix-plan.md](docs/plans/codebase-audit-fix-plan.md) | 29/29 complete (T1-T4) |
 | [docs/plans/tv-ui-performance-plan.md](docs/plans/tv-ui-performance-plan.md) | Partially landed; baseline measured on hardware 2026-08-26 |
 | [docs/plans/xtream-multi-device-sync-plan.md](docs/plans/xtream-multi-device-sync-plan.md) | Not started; backend option undecided |
 | [docs/plans/secret-store-migration-plan.md](docs/plans/secret-store-migration-plan.md) | Not started, deferred deliberately |
 
-Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan alone is cited from ~20 files. The durable record of what actually shipped is `docs/RELEASE_NOTES.md`; `23d2ced3` set the precedent of dropping finished plans rather than archiving them, though a completed one is sometimes kept while its findings are still being cited.
+Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
+
+**A complete plan is not automatically deletable.** `23d2ced3` set the precedent of dropping finished plans rather than archiving them, and `docs/RELEASE_NOTES.md` is the durable record of what shipped. But a plan that source comments cite is load-bearing documentation: the comments say *which* phase a piece of code implements and the plan says *why* that design was chosen, so deleting it turns those references into dead paths and strands the reasoning.
+
+So before deleting a finished plan, grep for citations of its filename. If any exist, keep the file - the watch-state plan is complete and deliberately retained on exactly these grounds. Prune only plans nothing cites.
+
+A complete plan may also still carry live information. The watch-state plan's "Known adjacent problems, deliberately out of scope" section records four defects found while building it and consciously not fixed - among them that `getSeriesWatchProgress()` does not apply Phase 5's TMDB dedup, so a series row's percentage can under-report against what the episode list shows (found 2026-08-27, left as-is by explicit decision, `c10ec1dc`). That is the only written record of those decisions.
 
 When asked to produce a plan, write the real file under `docs/plans/` - not only an ephemeral plan-mode scratch file.
 
