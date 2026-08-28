@@ -150,12 +150,14 @@ interface EpgIndexDao {
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
         WHERE p.channel_id IN (:channelIds)
+          AND p.source_id IN (:sourceIds)
           AND p.end_epoch > :windowStart AND p.start_epoch <= :windowEnd
         ORDER BY p.start_epoch ASC
         """,
     )
     suspend fun getProgrammesForChannels(
         channelIds: List<String>,
+        sourceIds: List<Long>,
         windowStart: Long,
         windowEnd: Long,
     ): List<EpgSearchResultRow>
@@ -168,11 +170,13 @@ interface EpgIndexDao {
         FROM epg_programme p
         INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
         WHERE p.channel_id IN (:channelIds)
+          AND p.source_id IN (:sourceIds)
           AND p.start_epoch <= :nowEpoch AND p.end_epoch > :nowEpoch
         """,
     )
     suspend fun getNowPlayingForChannels(
         channelIds: List<String>,
+        sourceIds: List<Long>,
         nowEpoch: Long,
     ): List<EpgSearchResultRow>
 

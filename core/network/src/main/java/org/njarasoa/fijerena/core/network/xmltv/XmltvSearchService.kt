@@ -89,7 +89,7 @@ class XmltvSearchService(
             }
 
             val channelIds = matchedChannels.map { it.xmltvId }
-            val rows = dao.getProgrammesForChannels(channelIds, now, twoHoursLater)
+            val rows = dao.getProgrammesForChannels(channelIds, sourceIds, now, twoHoursLater)
             rowsToSearchResult(rows, searchedFromIndex = true)
         } catch (e: Exception) {
             Log.w(TAG, "Channel search failed", e)
