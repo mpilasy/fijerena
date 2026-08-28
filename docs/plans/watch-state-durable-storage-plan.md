@@ -828,7 +828,7 @@ its new data source.
 
 ## Interaction with the sync plan
 
-`plans/xtream-multi-device-sync-plan.md` specifies a server-side
+`docs/plans/xtream-multi-device-sync-plan.md` specifies a server-side
 `watch_history(profile_id, item_id, content_type, position_ms, duration_ms, is_completed, ...)`
 table with `PRIMARY KEY (profile_id, item_id, content_type)`. The local schema above is that shape
 with `providerId` in place of `profile_id`, which makes the eventual outbox a column mapping rather

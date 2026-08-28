@@ -274,6 +274,25 @@ For deep-dives, see the `docs/` directory:
 | [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) | Version history and changelog |
 | [TODO.md](TODO.md) | Known issues, open investigations, and optimization status |
 
+### Plans
+
+Multi-phase work is planned in writing before it is built, in `docs/plans/<kebab-case-topic>-plan.md`. Everything else in `docs/` is standing reference material that describes how the app works today; a plan describes work that is proposed, in progress, or deliberately deferred.
+
+Each plan states its own status at the top - trust that over any summary here.
+
+| Plan | Status |
+|------|--------|
+| [docs/plans/watch-state-durable-storage-plan.md](docs/plans/watch-state-durable-storage-plan.md) | Phases 1-6 landed |
+| [docs/plans/refresh-change-detection-plan.md](docs/plans/refresh-change-detection-plan.md) | Phases 0-3 and 5 landed; Phase 4 outstanding |
+| [docs/plans/codebase-audit-fix-plan.md](docs/plans/codebase-audit-fix-plan.md) | 29/29 complete (T1-T4) |
+| [docs/plans/tv-ui-performance-plan.md](docs/plans/tv-ui-performance-plan.md) | Partially landed; baseline measured on hardware 2026-08-26 |
+| [docs/plans/xtream-multi-device-sync-plan.md](docs/plans/xtream-multi-device-sync-plan.md) | Not started; backend option undecided |
+| [docs/plans/secret-store-migration-plan.md](docs/plans/secret-store-migration-plan.md) | Not started, deferred deliberately |
+
+Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan alone is cited from ~20 files. The durable record of what actually shipped is `docs/RELEASE_NOTES.md`; `23d2ced3` set the precedent of dropping finished plans rather than archiving them, though a completed one is sometimes kept while its findings are still being cited.
+
+When asked to produce a plan, write the real file under `docs/plans/` - not only an ephemeral plan-mode scratch file.
+
 ---
 
 ## Performance & Bug Journal

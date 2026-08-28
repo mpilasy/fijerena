@@ -25,7 +25,7 @@ sealed class FavoriteMenuTarget {
         /**
          * Null for a content type manual marking doesn't apply to (Live TV has no "watched"
          * concept), which is also what keeps the watched entry off the menu for it — see
-         * plans/watch-state-durable-storage-plan.md Phase 6.
+         * docs/plans/watch-state-durable-storage-plan.md Phase 6.
          */
         val isWatched: Boolean? = null,
     ) : FavoriteMenuTarget()

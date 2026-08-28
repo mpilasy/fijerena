@@ -236,7 +236,7 @@ class MediaRepository(
 
     /**
      * One-time per-provider copy of `watch_history_v3` into `watch_state`, followed by purging
-     * the blob — Phase 2 and Phase 4 of plans/watch-state-durable-storage-plan.md, combined into
+     * the blob — Phase 2 and Phase 4 of docs/plans/watch-state-durable-storage-plan.md, combined into
      * one hook because Phase 4 depends on Phase 2 having actually run for *this* provider.
      *
      * Phases 2 and 4 are separate releases, so a provider nobody has opened since Phase 2 shipped
@@ -530,7 +530,7 @@ class MediaRepository(
             putString(KEY_LAST_CONTENT_TYPE, contentType)
         }
 
-        // Owns recency and metadata only (Phase 4, plans/watch-state-durable-storage-plan.md).
+        // Owns recency and metadata only (Phase 4, docs/plans/watch-state-durable-storage-plan.md).
         // Must not name positionMs/durationMs/isCompleted, so a start write can never erase
         // progress a later progress write already stored. The blob write this used to fall back
         // to (`addToWatchHistory`) is gone — watch_history_v3 is retired.
@@ -609,7 +609,7 @@ class MediaRepository(
 
     /**
      * Every watch-state row for this provider, across every content type, unbounded —
-     * `watch_state`-backed since Phase 3 of plans/watch-state-durable-storage-plan.md. No
+     * `watch_state`-backed since Phase 3 of docs/plans/watch-state-durable-storage-plan.md. No
      * production caller as of Phase 3 (the old sync `getRecentItems` was the one caller, and it
      * folded into [getRecentItemsFromWatchState], which reads the capped/collapsed queries
      * directly instead); kept for callers that want the whole history, such as a future export.
@@ -666,7 +666,7 @@ class MediaRepository(
     }
 
     /**
-     * No-op since Phase 4 (plans/watch-state-durable-storage-plan.md): there is no longer a
+     * No-op since Phase 4 (docs/plans/watch-state-durable-storage-plan.md): there is no longer a
      * debounced blob write to force out early, and the table upserts were never debounced in the
      * first place — each dispatches to [writeScope] immediately. Kept, rather than deleted, so
      * its callers (a pause/stop hook expecting "make sure the last position landed") don't need
@@ -871,7 +871,7 @@ class MediaRepository(
                 }
             val isCompleted = progressPercent > 95.0f
             // Owns position, duration, completion and lastPlayedAt (Phase 4,
-            // plans/watch-state-durable-storage-plan.md). No blob read-modify-write to preserve
+            // docs/plans/watch-state-durable-storage-plan.md). No blob read-modify-write to preserve
             // metadata this call doesn't carry any more — the upsert's own `COALESCE` against
             // `watch_state`'s existing row does that for real, in SQL, instead of the app fetching
             // an "existing" entry first to pass back in.
@@ -944,7 +944,7 @@ class MediaRepository(
     }
 
     /**
-     * TMDB dedup (Phase 5, plans/watch-state-durable-storage-plan.md): movie ids completed by a
+     * TMDB dedup (Phase 5, docs/plans/watch-state-durable-storage-plan.md): movie ids completed by a
      * different catalogue entry for the same title — a second language track, a 4K re-rip — under
      * its own id rather than this one. Xtream-only by construction: SMB, Local and Remote M3U have
      * no catalogue rows to join `watch_state` against, so the query simply returns nothing for
@@ -958,7 +958,7 @@ class MediaRepository(
             .toSet()
 
     /**
-     * TMDB dedup (Phase 5, plans/watch-state-durable-storage-plan.md), episode form: episode ids
+     * TMDB dedup (Phase 5, docs/plans/watch-state-durable-storage-plan.md), episode form: episode ids
      * of [seriesId] completed by a sibling in a *different* series row that shares this series'
      * `tmdb_id` — a language/quality variant of the same show is a separate `xtream_series` row
      * with its own complete episode list, not a duplicate row within this one, so this is not the
@@ -998,7 +998,7 @@ class MediaRepository(
     /**
      * The single "Recent" list: everything watched for [contentType], resumable items first and
      * the rest of the history after, each half newest-first. Storage in `watch_state` is
-     * unbounded (see plans/watch-state-durable-storage-plan.md); `watchHistorySize` is now a
+     * unbounded (see docs/plans/watch-state-durable-storage-plan.md); `watchHistorySize` is now a
      * display cap taken by the query itself, not a retention policy — [getPlaybackPositions] and
      * [getSeriesWatchProgress] are unaffected by it, since a watched check or a resume bar is an
      * attribute of a stream, not a history entry.
@@ -1248,7 +1248,7 @@ class MediaRepository(
     }
 
     /**
-     * Manual watched/unwatched mark (Phase 6, plans/watch-state-durable-storage-plan.md), replacing
+     * Manual watched/unwatched mark (Phase 6, docs/plans/watch-state-durable-storage-plan.md), replacing
      * `clearPlaybackPosition` — which only ever cleared the blob and had no UI caller anywhere in
      * `tv/` or `mobile/`. Not routed through [savePlaybackPosition]: that method early-returns on
      * `position <= 0 && duration <= 0`, exactly what a manual mark looks like, so it needs its own

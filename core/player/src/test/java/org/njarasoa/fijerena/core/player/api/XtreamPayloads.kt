@@ -20,7 +20,7 @@ object XtreamPayloads {
     /**
      * An info object with no episode list. Deliberately read as a real show with nothing under it,
      * not as unavailable — nothing here separates that from a show the catalogue genuinely lists
-     * empty. Decided 2026-08-19; see `plans/id-type-safety-plan.md`.
+     * empty. Decided 2026-08-19; see `docs/plans/id-type-safety-plan.md`.
      */
     const val SERIES_INFO_ONLY = """{"info":{"name":"EN - Law & Order (1990) (US)"},"episodes":{}}"""
 

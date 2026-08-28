@@ -36,7 +36,7 @@ class SettingsExportManager(
     companion object {
         private const val TAG = "SettingsExportManager"
 
-        // 4: added providerWatchState (plans/watch-state-durable-storage-plan.md, Phase 4). A
+        // 4: added providerWatchState (docs/plans/watch-state-durable-storage-plan.md, Phase 4). A
         // backup taken before version 4 has no watch state in it at all — SettingsExportManager
         // never exported watch_history_v3 — so there is no older shape to migrate on import;
         // providerWatchState simply decodes to its empty default on an old file.
@@ -325,7 +325,7 @@ class SettingsExportManager(
                     )
                 }
 
-            // Export watch state per provider (Phase 4, plans/watch-state-durable-storage-plan.md).
+            // Export watch state per provider (Phase 4, docs/plans/watch-state-durable-storage-plan.md).
             // Not Xtream-specific: watch_state also carries SMB/Local/Remote M3U rows.
             val watchStateDao = XtreamDatabase.getInstance(context).watchStateDao()
             val providerWatchState =
@@ -711,7 +711,7 @@ class SettingsExportManager(
                     }
                 }
 
-                // Import watch state per provider (Phase 4, plans/watch-state-durable-storage-plan.md).
+                // Import watch state per provider (Phase 4, docs/plans/watch-state-durable-storage-plan.md).
                 // Rides the same toggle as favorites rather than a checkbox of its own — both are
                 // per-provider local state restored the same way. providerId is never read from
                 // the file: each row is rebuilt under matchingProvider.id, since ProviderEntity.id

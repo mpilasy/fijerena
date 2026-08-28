@@ -350,7 +350,7 @@ private fun MovieDetailsContent(
                             )
                         }
                     )
-                    // Watched button (Phase 6, plans/watch-state-durable-storage-plan.md)
+                    // Watched button (Phase 6, docs/plans/watch-state-durable-storage-plan.md)
                     CinemaIconButton(
                         onClick = onToggleWatched,
                         icon = {

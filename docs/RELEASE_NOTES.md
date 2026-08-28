@@ -3,7 +3,7 @@
 ## Version: Durable Watch State, EPG Change Detection & TV Back Fixes
 **Release Date:** 2026-08-28
 
-### Durable Watch State (`plans/watch-state-durable-storage-plan.md`, Phases 1–6)
+### Durable Watch State (`docs/plans/watch-state-durable-storage-plan.md`, Phases 1–6)
 - **`watch_state` table (`xtream_v2.db` v15):** Playback position and completion moved out of the `watch_history_v3` SharedPreferences blob, which truncated to `watchHistorySize` on every write and silently evicted anything older. Rows are now kept forever; `watchHistorySize` bounds only the length of the Recent row. On the first `setProvider()` after upgrade, `MediaRepository.backfillAndPurgeWatchState()` copies the blob in, sets a **per-provider** `watch_state_migrated_v1` flag, then removes both legacy keys — backfill always runs before purge, so a provider not opened between the dual-write and purge releases can't lose history.
 - **Eviction bug fixed on read flip:** Reads moved to `watch_state` in Phase 3; `getPlaybackPositions(contentType)` is now one indexed query returning a Map, replacing the per-item linear scan of the blob.
 - **TMDB dedup across catalogue variants:** A title watched under one language/quality variant now reads as watched under all of them. Movies join `xtream_streams` on a shared `tmdbId`.
@@ -11,7 +11,7 @@
 - **Manual mark watched/unwatched (Phase 6):** `MediaRepository.setWatched(itemId, contentType, watched)` replaces the dead `clearPlaybackPosition`. A manual mark leaves `lastPlayedAt` null so it never enters the Recent row, and `setWatched` no-ops for server-backed providers (Jellyfin owns that state). `upsertProgress`'s `isCompleted` is now sticky (`MAX(existing, new)`) — only an explicit unmark clears it. Unmarking spreads across TMDB siblings, mirroring the dedup read. UI follows each surface's existing affordance: an icon beside the favorite toggle on movie details, a second action row in the TV favorite/search context menus, long-press on TV episode cards, and the mobile episode watched badge as its own tap target.
 - **Track restoration:** `audioTrackIndex`/`subtitleTrackIndex` persist per row with a series-level fallback, fixing TV never restoring a saved audio/subtitle track.
 
-### EPG Refresh Change Detection (`plans/refresh-change-detection-plan.md`)
+### EPG Refresh Change Detection (`docs/plans/refresh-change-detection-plan.md`)
 - **Conditional requests + content hash (`providers.db` v10):** `downloadSource` sends `If-None-Match`/`If-Modified-Since` from the source's stored `etag`/`last_modified_header`; a `304` short-circuits with no body read. Otherwise a SHA-256 of the payload is compared to `last_content_sha256` — computed in the download read pass for plain sources, and after decompression for `.gz` (gzip's mtime header taints the raw bytes even when content is identical).
 - **Skip guards:** An unchanged source skips `ingestFromStream` entirely and is excluded from `executeSwapToMain`'s id list at every call site — including it would delete its primary rows and transfer nothing back, since staging was never populated. Counts carry forward via `EpgSourceDao.markUnchanged` instead of resetting to zero. A hash match only skips within 24h of the last real ingest, because ingestion windows programmes against wall-clock time and a byte-identical static file must still be re-ingested to keep the guide window moving.
 - **Truncated downloads detected:** `read()` returning -1 can't distinguish a clean EOF from a cut connection; a flaky CDN's short read was surfacing much later as an `XmlPullParserException` deep in ingestion. `totalRead` is now checked against `Content-Length` and a mismatch takes the normal retry path.
@@ -71,7 +71,7 @@
 - **Service instance published only when ready:** `StreamingPlaybackService`'s singleton instance is now published after the player itself is initialized, not before — callers using `awaitInstance()` could otherwise observe a not-yet-usable service.
 - **`instanceReady` re-armed on recreation:** If Android recreates the service after reclaiming it during long standby, `instanceReady` is now reset to a fresh `CompletableDeferred()` in `onDestroy()` so `awaitInstance()` doesn't hand out a permanently-stale, already-completed deferred — this was the root cause of live TV getting stuck after the device spent hours in standby.
 
-### Bug Sweep Fixes (see `plans/bugs-plan.md` for full trigger/impact analysis)
+### Bug Sweep Fixes (see `docs/plans/bugs-plan.md` for full trigger/impact analysis)
 - **EPG cache invalidation after sync:** `EpgFileManager` now clears `XmltvEpgService`'s per-provider 12h SharedPreferences cache immediately after a successful sync, instead of leaving the player to show a pre-sync now/next snapshot for up to 12h.
 - **AppContainer no longer caches a provider-less repo:** `getMediaRepository()` only caches the resolved `MediaRepository` once a real provider entity is attached — a repo built before any active provider exists is returned but never poisons `mediaRepositories[0L]`.
 - **RefreshQueue de-dups against in-flight tasks:** `submit()` now checks tasks already executing (not just the pending queue), coalescing into the running task's `Deferred` instead of racing a concurrent duplicate run.

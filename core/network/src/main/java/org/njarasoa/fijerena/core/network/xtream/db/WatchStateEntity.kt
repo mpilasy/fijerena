@@ -8,7 +8,7 @@ import androidx.room.Index
  *
  * Replaces the `watch_history_v3` SharedPreferences blob, which truncated to
  * `providerSettings.watchHistorySize` entries on every write and silently evicted anything older —
- * see `plans/watch-state-durable-storage-plan.md`. Covers Xtream and the other local-blob
+ * see `docs/plans/watch-state-durable-storage-plan.md`. Covers Xtream and the other local-blob
  * providers (SMB, Local, Remote M3U); not `xtream_`-prefixed because `MediaRepository` backs all
  * of them, not just Xtream. Jellyfin is out of scope: it owns this state server-side.
  *

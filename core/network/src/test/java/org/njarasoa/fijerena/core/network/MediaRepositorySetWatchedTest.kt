@@ -25,7 +25,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 
 /**
- * Manual watched/unwatched marks (Phase 6, plans/watch-state-durable-storage-plan.md). Movies/
+ * Manual watched/unwatched marks (Phase 6, docs/plans/watch-state-durable-storage-plan.md). Movies/
  * TV Shows also clear a completed TMDB sibling group on unwatched, which needs a real Xtream
  * catalogue join this module's plain-JVM tests can't exercise — covered here with LIVE_TV, which
  * skips that branch entirely and lets these tests check the single-row semantics in isolation.
