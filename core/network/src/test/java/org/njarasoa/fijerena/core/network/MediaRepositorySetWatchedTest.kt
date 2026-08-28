@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -15,12 +16,13 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import io.mockk.coEvery
 import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 
 /**
  * Manual watched/unwatched marks (Phase 6, plans/watch-state-durable-storage-plan.md). Movies/
@@ -143,6 +145,29 @@ class MediaRepositorySetWatchedTest {
             assertTrue(row.isCompleted)
             assertEquals("42", row.seriesId)
             assertEquals("a manual mark on an unplayed episode must still be findable by its own id", "ep9", row.episodeId)
+        }
+
+    @Test
+    fun `setWatched no-ops for a server-backed provider`() =
+        runBlocking {
+            // Jellyfin owns this state server-side and has no MediaProvider capability to accept
+            // a manual mark through this app — writing local watch_state for it would be dead
+            // data, since getPlaybackPositionSuspend never reads local state back for it.
+            val provider = mockk<MediaProvider>(relaxed = true)
+            every { provider.capabilities } returns
+                ProviderCapabilities(
+                    supportedContentTypes = setOf(ContentType.MOVIES),
+                    supportsEpg = false,
+                    supportsSearch = false,
+                    supportsAuthentication = false,
+                    supportsProgressSync = false,
+                    supportsServerUserData = true,
+                )
+            repository.setProvider(provider)
+
+            repository.setWatched("movie1", ContentType.MOVIES, watched = true)
+
+            assertEquals(null, watchStateDao.getItem(1L, "movie1", ContentType.MOVIES))
         }
 
     @Test

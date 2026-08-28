@@ -1247,31 +1247,37 @@ class MediaRepository(
         contentType: String,
         watched: Boolean,
     ) {
-        val now = System.currentTimeMillis()
-        if (watched) {
-            // A never-played episode has no existing row to carry a seriesId forward from, and
-            // this method's own signature has no seriesId parameter to accept one — resolve it
-            // from the catalogue instead, or getSeriesCompletedCounts silently drops the row.
-            val seriesId =
-                if (contentType == ContentType.TV_SHOWS) {
-                    episodeDao.getSeriesIdForEpisode(providerId, itemId)?.toString()
-                } else {
-                    null
+        // Jellyfin owns this state server-side and has no MediaProvider capability to accept a
+        // manual mark through this app — writing to the local watch_state table for it would be
+        // dead data, since getPlaybackPositionSuspend's usesServerUserData branch never reads
+        // local state back for these providers. No-op rather than write something nothing shows.
+        if (!usesServerUserData) {
+            val now = System.currentTimeMillis()
+            if (watched) {
+                // A never-played episode has no existing row to carry a seriesId forward from, and
+                // this method's own signature has no seriesId parameter to accept one — resolve it
+                // from the catalogue instead, or getSeriesCompletedCounts silently drops the row.
+                val seriesId =
+                    if (contentType == ContentType.TV_SHOWS) {
+                        episodeDao.getSeriesIdForEpisode(providerId, itemId)?.toString()
+                    } else {
+                        null
+                    }
+                watchStateDao.markWatched(
+                    providerId,
+                    itemId,
+                    contentType,
+                    now,
+                    seriesId = seriesId,
+                    episodeId = if (seriesId != null) itemId else null,
+                )
+            } else {
+                watchStateDao.markUnwatched(providerId, itemId, contentType, now)
+                when (contentType) {
+                    ContentType.MOVIES ->
+                        streamDao.clearGroupCompletion(providerId, contentType, XtreamStreamEntity.TYPE_VOD, itemId, now)
+                    ContentType.TV_SHOWS -> episodeDao.clearGroupCompletion(providerId, itemId, now)
                 }
-            watchStateDao.markWatched(
-                providerId,
-                itemId,
-                contentType,
-                now,
-                seriesId = seriesId,
-                episodeId = if (seriesId != null) itemId else null,
-            )
-        } else {
-            watchStateDao.markUnwatched(providerId, itemId, contentType, now)
-            when (contentType) {
-                ContentType.MOVIES ->
-                    streamDao.clearGroupCompletion(providerId, contentType, XtreamStreamEntity.TYPE_VOD, itemId, now)
-                ContentType.TV_SHOWS -> episodeDao.clearGroupCompletion(providerId, itemId, now)
             }
         }
     }
