@@ -532,8 +532,78 @@ collapses the sibling set before the outer join, which is what stops one stream 
 watched variants and multiplying rows. `index_xtream_streams_providerId_tmdbId` (added in
 `MIGRATION_14_15`) serves both ends.
 
-The episode form is the same statement against `xtream_episodes`, joining `w.itemId = e.id` and
-scoped to the series being displayed.
+**The episode form is not the same statement, and cannot be.** This was the original draft here,
+and it shipped once before an on-device check against a real catalogue (`549` Law & Order, `124364`
+From, provider 13, 2026-08-27) showed why it never fires:
+
+- **Episode-level `tmdb_id` is essentially never usable.** Every one of Law & Order's 543 + 95
+  episodes (two catalogue variants) has `tmdbId IS NULL`. From's episodes are 39/40 NULL in one
+  variant, with the single non-NULL value equal to the *series'* own `tmdb_id` (`124364`) leaked
+  onto exactly one episode — the exact failure mode the guard below exists for, occurring naturally
+  in the wild. Panels that bother to tag episodes at all mostly don't tag them per-episode.
+- **The real duplication is not rows sharing one `seriesId` — it is separate `seriesId`s
+  entirely.** Unlike movies, where five language variants are five rows in the same flat
+  `xtream_streams` table, five language variants of a *show* are five separate `xtream_series` rows
+  (confirmed on-device: 25 distinct `seriesId` under provider 13 alone share `xtream_series.tmdbId
+  = 124364` for From), each carrying its *own* complete, separately-numbered episode list. A query
+  joined and scoped to one `seriesId` on both sides — matching the movies form's shape — can only
+  ever compare a series' episodes against themselves. It was structurally incapable of finding a
+  sibling, guard or no guard.
+
+What does correlate, confirmed on-device across four of From's language variants:
+
+```
+seriesId=6548  (EN)  id=343994   season=1 episodeNum=1
+seriesId=17878 (FR)  id=749050   season=1 episodeNum=1
+seriesId=34211 (HU)  id=1430071  season=1 episodeNum=1
+seriesId=49691 (MAX) id=2129208  season=1 episodeNum=1
+```
+
+Four different episode rows, four different `seriesId`s, same real episode — identified by
+`(season, episodeNum)` under a `seriesId` whose *own* `xtream_series.tmdbId` matches the currently
+displayed series'. So episode dedup joins two levels, not one: first `xtream_series` to find sibling
+series sharing this series' `tmdbId`, then `xtream_episodes` to find each sibling's matching
+`(season, episodeNum)` row — never touching `XtreamEpisodeEntity.tmdbId` at all.
+
+```sql
+SELECT e2.id AS itemId
+FROM xtream_episodes e2
+WHERE e2.providerId = :providerId AND e2.seriesId = :seriesId
+  AND EXISTS (
+    SELECT 1
+    FROM xtream_episodes sib
+    JOIN watch_state w ON w.providerId = sib.providerId AND w.itemId = sib.id
+    WHERE sib.providerId = :providerId
+      AND sib.season = e2.season AND sib.episodeNum = e2.episodeNum
+      AND sib.seriesId IN (
+          SELECT s2.seriesId FROM xtream_series s2
+          WHERE s2.providerId = :providerId AND s2.tmdbId IS NOT NULL
+            AND s2.tmdbId = (
+                SELECT s1.tmdbId FROM xtream_series s1
+                WHERE s1.providerId = :providerId AND s1.seriesId = :seriesId
+            )
+      )
+      AND w.contentType = 'TV_SHOWS' AND w.isCompleted = 1
+  )
+```
+
+The sibling-series subquery naturally includes `:seriesId` itself (a series' own `tmdbId` always
+matches itself), so a directly-completed episode satisfies the `EXISTS` via `sib = e2` without
+needing a separate self-check — the caller's existing `if (watched.isCompleted) add(id)` becomes
+redundant-but-harmless against this result, not incorrect. A series with no `tmdbId` of its own
+degrades to no dedup (`s2.tmdbId = NULL` matches nothing), same fail-safe shape as everywhere else
+in this design.
+
+`clearGroupCompletion`'s episode form (Phase 6) mirrors this: given the target episode's `(season,
+episodeNum, seriesId)`, clear completion on every episode at that `(season, episodeNum)` across
+every sibling series sharing that series' `tmdbId` — the same two-level join, `UPDATE` instead of
+`SELECT`.
+
+**The write-time guard survives, demoted.** `XtreamEpisodeEntity.tmdbId` is no longer read by dedup
+at all, so nulling a series-level value copied onto more than one episode no longer changes dedup's
+behavior either way. Left in place anyway: it is still correct data hygiene for the column
+independent of what currently consumes it, and removing it would only save a few lines while adding
+risk if something else ever comes to depend on that column meaning what it claims to.
 
 **Dedup `isCompleted` only. Never `playbackPosition`.** Completion is a boolean and transfers
 safely. A millisecond offset does not: a different variant has different intros, ads and runtime,
@@ -541,23 +611,13 @@ so 40 minutes into the EN rip is not 40 minutes into the FR one. Resume stays pe
 dedup in a query that returns nothing but item ids enforces this structurally — there is no column
 in the result a sibling's position could travel through.
 
-**Mandatory guard on episodes, applied at write time.** Panels frequently copy the *series*
-`tmdb_id` into every episode's info block. Unguarded, completing S01E01 would mark the entire
-series complete — silent and far worse than the bug being fixed. Rule: if the same `tmdbId` appears
-on more than one episode of a series, it is a series-level value and is not an episode identity.
-
-Enforce it during catalogue sync by nulling `XtreamEpisodeEntity.tmdbId` wherever it repeats within
-a `seriesId`, rather than filtering on every read. The sync already computes per-series episode
-sets, the check is one local `GROUP BY seriesId, tmdbId HAVING COUNT(*) > 1`, and doing it on write
-means the read query above needs no episode-specific special case. It also fails safe: a panel that
-supplies nothing usable degrades to no dedup rather than to wrong dedup.
-
 **Ship movies first.** Movies are a flat namespace with no hierarchy and panels populate VOD
-`tmdb_id` fairly reliably. Episodes carry the collapse risk above.
+`tmdb_id` fairly reliably. Episodes needed the redesign above before they worked at all.
 
-**Expect partial coverage.** Panels derive `tmdb_id` per listing from their own scraper; the EN
-listing often matches while the FR or 4K listing comes back null. Dedup will cover the subset the
-panel matched and silently miss the rest. Worth knowing before judging the result broken.
+**Expect partial coverage.** A series with no `tmdb_id` of its own (not an episode-level one —
+series-level `tmdb_id` is what this now depends on) degrades to no dedup for that show. On the
+provider checked, series-level `tmdb_id` was present for both Law & Order and From; coverage will
+vary by panel.
 
 ---
 

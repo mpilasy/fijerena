@@ -959,10 +959,12 @@ class MediaRepository(
 
     /**
      * TMDB dedup (Phase 5, plans/watch-state-durable-storage-plan.md), episode form: episode ids
-     * of [seriesId] completed by a TMDB sibling. Scoped to one series — call from wherever an
-     * episode list reads watched state for that series, not per content-type like
-     * [getSiblingCompletedMovieIds]. `seriesId` is a raw Xtream series id everywhere except a
-     * non-Xtream provider, which has none — degrades to no dedup rather than a crash.
+     * of [seriesId] completed by a sibling in a *different* series row that shares this series'
+     * `tmdb_id` — a language/quality variant of the same show is a separate `xtream_series` row
+     * with its own complete episode list, not a duplicate row within this one, so this is not the
+     * same shape as [getSiblingCompletedMovieIds]. Call from wherever an episode list reads watched
+     * state for that series. `seriesId` is a raw Xtream series id everywhere except a non-Xtream
+     * provider, which has none — degrades to no dedup rather than a crash.
      */
     suspend fun getSiblingCompletedEpisodeIds(seriesId: String): Set<String> {
         val numericSeriesId = seriesId.toIntOrNull()

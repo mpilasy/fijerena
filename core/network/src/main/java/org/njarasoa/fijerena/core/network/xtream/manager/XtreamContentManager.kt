@@ -26,12 +26,15 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.*
 
 /**
- * Mandatory guard for Phase 5 dedup (plans/watch-state-durable-storage-plan.md): panels frequently
- * copy the *series* `tmdb_id` into every episode's info block. A `tmdbId` that repeats across more
- * than one episode of the same series is a series-level value, not episode identity — nulling it
- * here (at write time, once per sync) means the sibling query never sees it, rather than every
- * read needing its own special case. [episodes] is expected to already be scoped to one series
- * (as [XtreamContentManager.getSeriesInfo]'s call site is), so no `seriesId` grouping is needed.
+ * Data-hygiene guard, demoted from Phase 5 dedup (plans/watch-state-durable-storage-plan.md) to a
+ * standalone one after an on-device check showed episode-`tmdbId`-based dedup couldn't work at all
+ * — the real duplication lives across separate `xtream_series` rows (see
+ * [org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao.getSiblingCompletedEpisodeIds]),
+ * so dedup no longer reads this column. Kept anyway: panels frequently copy the *series* `tmdb_id`
+ * into every episode's info block, and a `tmdbId` that repeats across more than one episode of the
+ * same series is a series-level value, not episode identity, regardless of whether anything
+ * currently consumes the column. [episodes] is expected to already be scoped to one series (as
+ * [XtreamContentManager.getSeriesInfo]'s call site is), so no `seriesId` grouping is needed.
  */
 internal fun guardSeriesLevelEpisodeTmdbIds(episodes: List<XtreamEpisodeEntity>): List<XtreamEpisodeEntity> {
     val tmdbIdCounts = episodes.mapNotNull { it.tmdbId }.groupingBy { it }.eachCount()
