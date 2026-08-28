@@ -240,15 +240,15 @@ class MovieDetailsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val currentState = _uiState.value as? UiState.Success ?: return@launch
             val repo = mediaRepository ?: return@launch
-            val newWatched = !currentState.isWatched
-            repo.setWatched(movieId, "MOVIES", newWatched)
+            repo.setWatched(movieId, "MOVIES", !currentState.isWatched)
+            // Re-derived rather than assumed: setWatched is a suspend call, not fire-and-forget,
+            // so its write (if any) has already landed by the time it returns — but it silently
+            // no-ops for a server-backed provider (Jellyfin owns this state server-side and has
+            // no local write to accept), so blindly flipping isWatched here would show a check
+            // that the server was never told about.
+            val resume = resolveResumeState(repo)
             _uiState.value =
-                if (newWatched) {
-                    currentState.copy(isWatched = true, resumePositionMs = 0L, resumeDurationMs = 0L)
-                } else {
-                    val resume = resolveResumeState(repo)
-                    currentState.copy(isWatched = false, resumePositionMs = resume.positionMs, resumeDurationMs = resume.durationMs)
-                }
+                currentState.copy(isWatched = resume.isWatched, resumePositionMs = resume.positionMs, resumeDurationMs = resume.durationMs)
         }
     }
 }
