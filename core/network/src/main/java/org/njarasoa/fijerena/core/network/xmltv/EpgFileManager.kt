@@ -25,8 +25,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -87,6 +91,8 @@ class EpgFileManager private constructor(
         fun refreshStaleTaskId(providerId: Long): String = "epg_refresh_stale_$providerId"
 
         fun refreshFailedTaskId(providerId: Long): String = "epg_refresh_failed_$providerId"
+
+        fun refreshSelectedTaskId(providerId: Long): String = "epg_refresh_selected_$providerId"
         private const val RETRY_DELAY_MS = 5000L
         private const val SCHEDULED_REFRESH_AGE_MS = 3_600_000L // scheduled runs refresh if data is older than 1 hour
         // A content-hash match skips ingestion (see canSkipIngest) unless the last real ingest is
@@ -226,6 +232,27 @@ class EpgFileManager private constructor(
     private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
     val state: StateFlow<MultiSourceState> = _state.asStateFlow()
 
+    /** Provider whose sources [_state] is reporting on. Null until the first refresh of the process. */
+    private val _refreshProviderId = MutableStateFlow<Long?>(null)
+
+    /**
+     * [state] as seen by [providerId]. One pipeline serves every provider, so a screen that reads
+     * [state] directly renders another provider's refresh — its progress, its source labels, its
+     * totals — as though it were its own. This reports Idle for a run that is not this provider's.
+     */
+    fun stateFor(providerId: Long): Flow<MultiSourceState> =
+        combine(_state, _refreshProviderId) { state, owner ->
+            if (owner == null || owner == providerId) state else MultiSourceState.Idle
+        }
+
+    /**
+     * Serialises ingestion. The staging tables are a single process-wide pair, so a second run
+     * starting mid-flight clears the rows the first one is still filling. Not covered by
+     * [processJob]: [EpgSyncWorker] calls [processAllSources] directly to stay inside its wake
+     * lock, so a background sync and a screen's refresh can otherwise overlap.
+     */
+    private val ingestMutex = Mutex()
+
     private val okHttpClient by lazy {
         org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
             .newBuilder()
@@ -345,11 +372,15 @@ class EpgFileManager private constructor(
      */
     private fun launchGenericTask(
         taskId: String,
+        providerId: Long,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
         dbQueryAndProcess: suspend () -> Unit,
     ) {
         processJob?.cancel()
+        // Claim the state before the first Pending, so the waiting screen belongs to the provider
+        // that asked for the refresh rather than to whoever ran last.
+        _refreshProviderId.value = providerId
         if (_state.value !is MultiSourceState.Processing) {
             _state.value = MultiSourceState.Pending
         }
@@ -431,7 +462,7 @@ class EpgFileManager private constructor(
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
-        launchGenericTask(refreshStaleTaskId(providerId), onComplete, onCellularConfirm) {
+        launchGenericTask(refreshStaleTaskId(providerId), providerId, onComplete, onCellularConfirm) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val thresholdMs = System.currentTimeMillis() - staleThresholdMs
             val staleSources = sourceDao.getStaleSources(providerId, thresholdMs)
@@ -450,7 +481,7 @@ class EpgFileManager private constructor(
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
-        launchGenericTask(refreshFailedTaskId(providerId), onComplete, onCellularConfirm) {
+        launchGenericTask(refreshFailedTaskId(providerId), providerId, onComplete, onCellularConfirm) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val failedSources = sourceDao.getFailedSources(providerId)
             if (failedSources.isNotEmpty()) {
@@ -464,13 +495,15 @@ class EpgFileManager private constructor(
     }
 
     fun launchRefreshSelected(
+        providerId: Long,
         selectedIds: Set<Long>,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
-        launchGenericTask("epg_refresh_selected", onComplete, onCellularConfirm) {
+        launchGenericTask(refreshSelectedTaskId(providerId), providerId, onComplete, onCellularConfirm) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-            val selectedSources = sourceDao.getAllSourcesOnce().filter { it.id in selectedIds }
+            val selectedSources =
+                sourceDao.getAllSourcesOnce().filter { it.id in selectedIds && it.providerId == providerId }
             if (selectedSources.isNotEmpty()) {
                 processAllSourcesInternal(selectedSources)
             } else {
@@ -482,11 +515,12 @@ class EpgFileManager private constructor(
     }
 
     fun launchProcessSingleSource(
+        providerId: Long,
         sourceId: Long,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
-        launchGenericTask("epg_refresh_source_$sourceId", onComplete, onCellularConfirm) {
+        launchGenericTask("epg_refresh_source_$sourceId", providerId, onComplete, onCellularConfirm) {
             processSingleSourceInternal(sourceId)
         }
     }
@@ -522,12 +556,14 @@ class EpgFileManager private constructor(
         val lastModifiedHeader: String? = null,
     )
 
-    private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) {
+    private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) = ingestMutex.withLock {
         if (sources.isEmpty()) {
             _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_no_sources))
-            return
+            return@withLock
         }
 
+        // Every source in a refresh belongs to the same provider — that is what the run reports on.
+        _refreshProviderId.value = sources.first().providerId
         val startTime = System.currentTimeMillis()
         val fixedDevice = isFixedDevice()
         val batchSize = if (fixedDevice) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
@@ -808,7 +844,7 @@ class EpgFileManager private constructor(
             )
     }
 
-    private suspend fun processSingleSourceInternal(sourceId: Long) {
+    private suspend fun processSingleSourceInternal(sourceId: Long) = ingestMutex.withLock {
         val startTime = System.currentTimeMillis()
         val batchSize = if (isFixedDevice()) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
         try {
@@ -816,8 +852,9 @@ class EpgFileManager private constructor(
             val source =
                 sourceDao.getSourceById(sourceId) ?: run {
                     _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_source_not_found))
-                    return
+                    return@withLock
                 }
+            _refreshProviderId.value = source.providerId
             val indexer = EpgIndexer.getInstance(context)
             val label = source.label.ifBlank { extractLabel(source.url) }
 

@@ -9,6 +9,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.filter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -20,7 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -50,6 +51,7 @@ import java.util.Locale
 import org.njarasoa.fijerena.core.ui.utils.UiText
 import org.njarasoa.fijerena.core.ui.R
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class EpgBrowserViewModel(
     private val context: Context,
     private val providerRepository: ProviderRepository,
@@ -177,7 +179,29 @@ class EpgBrowserViewModel(
 
     private val epgFileManager = EpgFileManager.getInstance(context)
 
-    val epgProcessingState: StateFlow<EpgFileManager.MultiSourceState> = epgFileManager.state
+    /** The provider this screen browses. Everything below reports on it alone. */
+    private val activeProviderIdFlow: Flow<Long?> =
+        flow {
+            emit(
+                withContext(Dispatchers.IO) {
+                    runCatching { SettingsDatabase.getInstance(context).providerDao().getActiveProvider()?.id }.getOrNull()
+                },
+            )
+        }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
+
+    /**
+     * Another provider's refresh must not drive this screen's progress UI — one pipeline serves
+     * every provider, so reading EpgFileManager.state directly showed its sources and totals here.
+     */
+    val epgProcessingState: StateFlow<EpgFileManager.MultiSourceState> =
+        activeProviderIdFlow
+            .flatMapLatest { providerId ->
+                if (providerId == null) {
+                    flowOf(EpgFileManager.MultiSourceState.Idle)
+                } else {
+                    epgFileManager.stateFor(providerId)
+                }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EpgFileManager.MultiSourceState.Idle)
 
     /**
      * The sources of the provider being browsed, not of every provider configured. This screen is
@@ -186,14 +210,11 @@ class EpgBrowserViewModel(
      * freshly-synced one read as "Never refreshed".
      */
     private val sourcesFlow: Flow<List<org.njarasoa.fijerena.core.network.provider.EpgSourceEntity>> =
-        flow {
-            val providerId =
-                withContext(Dispatchers.IO) {
-                    runCatching { SettingsDatabase.getInstance(context).providerDao().getActiveProvider()?.id }.getOrNull()
-                }
-            val dao = SettingsDatabase.getInstance(context).epgSourceDao()
-            emitAll(if (providerId == null) flowOf(emptyList()) else dao.getSourcesForProvider(providerId))
-        }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
+        activeProviderIdFlow
+            .flatMapLatest { providerId ->
+                val dao = SettingsDatabase.getInstance(context).epgSourceDao()
+                if (providerId == null) flowOf(emptyList()) else dao.getSourcesForProvider(providerId)
+            }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
 
     /**
      * Oldest `lastIngestedAtMs` among enabled sources that have actually run — the data is only as

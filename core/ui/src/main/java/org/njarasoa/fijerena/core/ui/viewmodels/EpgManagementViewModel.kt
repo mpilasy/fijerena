@@ -67,7 +67,10 @@ class EpgManagementViewModel(
             .map { list -> list.count { it.enabled && it.lastError != null } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val processingState: StateFlow<EpgFileManager.MultiSourceState> = epgFileManager.state
+    val processingState: StateFlow<EpgFileManager.MultiSourceState> =
+        epgFileManager
+            .stateFor(providerId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EpgFileManager.MultiSourceState.Idle)
 
     val indexState: StateFlow<EpgIndexState> = indexer.state
 
@@ -413,7 +416,7 @@ class EpgManagementViewModel(
     }
 
     fun refreshSelected(selectedIds: Set<Long>) {
-        val taskId = "epg_refresh_selected"
+        val taskId = EpgFileManager.refreshSelectedTaskId(providerId)
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
             _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
@@ -425,6 +428,7 @@ class EpgManagementViewModel(
         _taskSourceIds.value += (taskId to idsToRefresh)
 
         epgFileManager.launchRefreshSelected(
+            providerId = providerId,
             selectedIds = idsToRefresh,
             onComplete = {
                 refreshDbStats()
@@ -460,6 +464,7 @@ class EpgManagementViewModel(
         _taskSourceIds.value += (taskId to setOf(sourceId))
 
         epgFileManager.launchProcessSingleSource(
+            providerId = providerId,
             sourceId = sourceId,
             onComplete = {
                 refreshDbStats()
