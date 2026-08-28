@@ -37,22 +37,35 @@ class AccountManager(
         @Volatile
         private var sharedPrefs: SharedPreferences? = null
 
+        @Suppress("DEPRECATION")
+        private fun createEncryptedPrefs(context: Context): SharedPreferences =
+            EncryptedSharedPreferences.create(
+                context.applicationContext,
+                "xtream_secure_credentials",
+                MasterKey
+                    .Builder(context.applicationContext)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build(),
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            )
+
         // Jetpack Security Crypto is deprecated as of its first stable release (1.1.0). Still the
         // credential store; replacing it is tracked in docs/plans/secret-store-migration-plan.md.
         @Suppress("DEPRECATION")
         private fun encryptedPrefs(context: Context): SharedPreferences =
             sharedPrefs ?: synchronized(this) {
-                sharedPrefs ?: EncryptedSharedPreferences
-                    .create(
-                        context.applicationContext,
-                        "xtream_secure_credentials",
-                        MasterKey
-                            .Builder(context.applicationContext)
-                            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                            .build(),
-                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-                    ).also { sharedPrefs = it }
+                sharedPrefs ?: try {
+                    createEncryptedPrefs(context)
+                } catch (_: Exception) {
+                    val appContext = context.applicationContext
+                    appContext.deleteSharedPreferences("xtream_secure_credentials")
+                    try {
+                        createEncryptedPrefs(appContext)
+                    } catch (_: Exception) {
+                        appContext.getSharedPreferences("xtream_secure_credentials", Context.MODE_PRIVATE)
+                    }
+                }.also { sharedPrefs = it }
             }
 
         private const val KEY_URL = "url"

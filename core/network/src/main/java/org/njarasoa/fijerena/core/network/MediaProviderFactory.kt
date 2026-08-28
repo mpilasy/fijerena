@@ -162,23 +162,28 @@ object MediaProviderFactory {
     private fun getJellyfinSessionPrefs(
         context: Context,
         providerId: Long,
-    ): android.content.SharedPreferences? =
-        try {
-            val masterKey =
-                MasterKey
-                    .Builder(context)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build()
-            EncryptedSharedPreferences.create(
-                context,
-                "provider_creds_$providerId",
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
-        } catch (_: Exception) {
-            null
-        }
+    ): android.content.SharedPreferences? {
+        val fileName = "provider_creds_$providerId"
+        val prefs =
+            try {
+                val masterKey =
+                    MasterKey
+                        .Builder(context)
+                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                        .build()
+                EncryptedSharedPreferences.create(
+                    context,
+                    fileName,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                )
+            } catch (_: Exception) {
+                context.deleteSharedPreferences(fileName)
+                null
+            }
+        return prefs
+    }
 
     private fun createSmb(
         entity: ProviderEntity,

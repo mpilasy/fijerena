@@ -348,13 +348,31 @@ class ProviderRepository(
 
     @Suppress("DEPRECATION")
     private fun getProviderPrefs(providerId: Long): android.content.SharedPreferences =
-        encryptedPrefsCache.computeIfAbsent(providerId) {
-            EncryptedSharedPreferences.create(
-                context,
-                "provider_creds_$providerId",
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+        encryptedPrefsCache.computeIfAbsent(providerId) { id ->
+            val fileName = "provider_creds_$id"
+            val prefs =
+                try {
+                    EncryptedSharedPreferences.create(
+                        context,
+                        fileName,
+                        masterKey,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                    )
+                } catch (_: Exception) {
+                    context.deleteSharedPreferences(fileName)
+                    try {
+                        EncryptedSharedPreferences.create(
+                            context,
+                            fileName,
+                            masterKey,
+                            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                        )
+                    } catch (_: Exception) {
+                        context.getSharedPreferences(fileName, Context.MODE_PRIVATE)
+                    }
+                }
+            prefs
         }
 }
