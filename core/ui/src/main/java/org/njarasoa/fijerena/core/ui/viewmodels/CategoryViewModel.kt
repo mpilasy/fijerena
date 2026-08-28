@@ -443,60 +443,63 @@ class CategoryViewModel(
      * Called after streams change or favorites are toggled.
      */
     private suspend fun refreshPerItemData() {
-        if (!::repository.isInitialized) return
-        val streams = currentStreams
-        val ct = contentType
-        val cats = categories
+        if (::repository.isInitialized) {
+            val streams = currentStreams
+            val ct = contentType
+            val cats = categories
 
-        withContext(Dispatchers.Default) {
-            // Build favorite IDs set
-            _favoriteIds.value =
-                streams
-                    .filter { repository.isFavorite(it.id, ct) }
-                    .mapTo(HashSet()) { it.id }
+            withContext(Dispatchers.Default) {
+                // Build favorite IDs set
+                _favoriteIds.value =
+                    streams
+                        .filter { repository.isFavorite(it.id, ct) }
+                        .mapTo(HashSet()) { it.id }
 
-            // Build favorite category IDs set
-            _favoriteCategoryIds.value =
-                cats
-                    .filter { repository.isFavoriteCategory(it.id, ct) }
-                    .mapTo(HashSet()) { it.id }
+                // Build favorite category IDs set
+                _favoriteCategoryIds.value =
+                    cats
+                        .filter { repository.isFavoriteCategory(it.id, ct) }
+                        .mapTo(HashSet()) { it.id }
 
-            // Build watch progress map (optimized bulk lookup)
-            val itemIds = streams.map { it.id }
-            val positions = repository.getPlaybackPositions(itemIds, ct)
+                // Build watch progress map (optimized bulk lookup)
+                val itemIds = streams.map { it.id }
+                val positions = repository.getPlaybackPositions(itemIds, ct)
 
-            val progressMap = HashMap<String, Float>(positions.size)
-            val watched = HashSet<String>()
-            for ((id, item) in positions) {
-                // Resumable band only, so a card's bar means the same thing everywhere:
-                // barely-started and finished items get no bar rather than a sliver or a full one.
-                item.resumeProgress()?.let { progressMap[id] = it }
-                if (item.isCompleted) watched.add(id)
-            }
-            // Series rows track episodes completed, not minutes: watch history is keyed by
-            // episode, so a series id never resolves through the lookup above. A fully watched
-            // series drops out of the bar map and gets the check instead, matching movies.
-            if (ct == ContentType.TV_SHOWS) {
-                val seriesProgress = repository.getSeriesWatchProgress()
-                for (item in streams) {
-                    val fraction = seriesProgress[item.id] ?: continue
-                    if (fraction >= 1f) {
-                        watched.add(item.id)
-                    } else {
-                        progressMap[item.id] = fraction
+                val progressMap = HashMap<String, Float>(positions.size)
+                val watched = HashSet<String>()
+                for ((id, item) in positions) {
+                    // Resumable band only, so a card's bar means the same thing everywhere:
+                    // barely-started and finished items get no bar rather than a sliver or a full one.
+                    item.resumeProgress()?.let { progressMap[id] = it }
+                    if (item.isCompleted) watched.add(id)
+                }
+                // Series rows track episodes completed, not minutes: watch history is keyed by
+                // episode, so a series id never resolves through the lookup above. A fully watched
+                // series drops out of the bar map and gets the check instead, matching movies.
+                if (ct == ContentType.TV_SHOWS) {
+                    val seriesProgress = repository.getSeriesWatchProgress()
+                    for (item in streams) {
+                        val fraction = seriesProgress[item.id]
+                        if (fraction != null) {
+                            if (fraction >= 1f) {
+                                watched.add(item.id)
+                            } else {
+                                progressMap[item.id] = fraction
+                            }
+                        }
                     }
                 }
-            }
-            // TMDB dedup (Phase 5): a different catalogue entry for the same title — a second
-            // language track, a 4K re-rip — completed under its own id. Movies only for now; a
-            // sibling only ever adds a check, never a resume bar, so it can't undo a progress
-            // entry this item already has above.
-            if (ct == ContentType.MOVIES) {
-                watched.addAll(repository.getSiblingCompletedMovieIds())
-            }
+                // TMDB dedup (Phase 5): a different catalogue entry for the same title — a second
+                // language track, a 4K re-rip — completed under its own id. Movies only for now; a
+                // sibling only ever adds a check, never a resume bar, so it can't undo a progress
+                // entry this item already has above.
+                if (ct == ContentType.MOVIES) {
+                    watched.addAll(repository.getSiblingCompletedMovieIds())
+                }
 
-            _watchProgress.value = progressMap
-            _watchedIds.value = watched
+                _watchProgress.value = progressMap
+                _watchedIds.value = watched
+            }
         }
     }
 

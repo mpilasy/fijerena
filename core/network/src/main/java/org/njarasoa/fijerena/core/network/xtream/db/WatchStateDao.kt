@@ -152,6 +152,7 @@ interface WatchStateDao {
     ): List<WatchStateEntity>
 
     /** Tier 1: Recent row for TV Shows — one card per series, collapsed before the limit. */
+    @androidx.room.RewriteQueriesToDropUnusedColumns
     @Query(
         "SELECT * FROM (" +
             "SELECT *, ROW_NUMBER() OVER (" +
