@@ -927,16 +927,37 @@ class MediaRepository(
      * id, with the series id only carried alongside — so this is a real aggregate over
      * `watch_state`, divided by the provider's cached episode count. Series the provider can't
      * count locally are absent, and show no progress rather than a wrong one.
+     *
+     * The numerator applies Phase 5 TMDB dedup, so a series watched through one language variant
+     * reports progress on every variant. Without it this aggregate disagreed with the episode list
+     * directly beneath it: [getSiblingCompletedEpisodeIds] spreads completion across sibling series
+     * for the per-episode check, so the episodes showed checked while the row above them read 0%.
      */
     suspend fun getSeriesWatchProgress(): Map<String, Float> {
         val totals = provider?.getEpisodeCountsBySeries()
         val result = HashMap<String, Float>()
         if (totals != null && totals.isNotEmpty()) {
             val completedPerSeries = watchStateDao.getSeriesCompletedCounts(providerId, ContentType.TV_SHOWS)
+            val deduped = episodeDao.getSiblingCompletedCountsBySeries(providerId)
+            val completed = HashMap<String, Int>(completedPerSeries.size + deduped.size)
             for (row in completedPerSeries) {
-                val total = totals[row.seriesId]
+                completed[row.seriesId] = row.completed
+            }
+            // Union, not replace. The dedup query reaches only series carrying a `tmdbId` and only
+            // episodes still in the catalogue cache, while the direct count reaches any series with
+            // a `watch_state` row. Taking the larger keeps both: a sibling-completed series gains
+            // the spread, and a series the dedup query cannot see keeps the count it always had.
+            // They overlap rather than sum — the same episode is counted by both — so max, not plus.
+            for ((seriesId, count) in deduped) {
+                val key = seriesId.toString()
+                if (count > (completed[key] ?: 0)) {
+                    completed[key] = count
+                }
+            }
+            for ((seriesId, count) in completed) {
+                val total = totals[seriesId]
                 if (total != null && total > 0) {
-                    result[row.seriesId] = (row.completed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                    result[seriesId] = (count.toFloat() / total.toFloat()).coerceIn(0f, 1f)
                 }
             }
         }

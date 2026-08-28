@@ -295,7 +295,7 @@ Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-stat
 
 So before deleting a finished plan, grep for citations of its filename. If any exist, keep the file - the watch-state plan is complete and deliberately retained on exactly these grounds. Prune only plans nothing cites.
 
-A complete plan may also still carry live information. The watch-state plan's "Known adjacent problems, deliberately out of scope" section records four defects found while building it and consciously not fixed - among them that `getSeriesWatchProgress()` does not apply Phase 5's TMDB dedup, so a series row's percentage can under-report against what the episode list shows (found 2026-08-27, left as-is by explicit decision, `c10ec1dc`). That is the only written record of those decisions.
+A complete plan may also still carry live information. The watch-state plan's "Known adjacent problems, deliberately out of scope" section records four defects found while building it and consciously not fixed - Favorites having the identical truncation defect, `XtreamUserDataManager`'s parallel blob, and the duplicated `last_*` navigation keys. That is the only written record of those decisions, and it is why the plan is still worth reading after completion. A fourth entry - `getSeriesWatchProgress()` not applying Phase 5's TMDB dedup - was fixed on 2026-08-28 and is struck through rather than deleted, so the reasoning that deferred it stays legible.
 
 When asked to produce a plan, write the real file under `docs/plans/` - not only an ephemeral plan-mode scratch file.
 

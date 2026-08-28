@@ -108,6 +108,51 @@ interface XtreamEpisodeDao {
     ): List<String>
 
     /**
+     * Numerator for the series-row watch bar, with Phase 5 dedup applied — the aggregate form of
+     * [getSiblingCompletedEpisodeIds], for every cached series at once rather than one series at a
+     * time. Without it the bar counts only episodes completed under *this* `seriesId`, so a show
+     * watched through a different language variant reads 0% on the row while its own episode list
+     * correctly shows those episodes checked. That disagreement is the bug this fixes.
+     *
+     * Shaped as a CTE rather than the `EXISTS` form [getSiblingCompletedEpisodeIds] uses, because
+     * this one is not scoped to a single series: driving from `watch_state` (a handful of completed
+     * rows) and joining outwards keeps it index-only, where the correlated-subquery form re-derived
+     * each series' `tmdbId` per candidate episode. Measured against a real 47,552-series catalogue:
+     * 223ms for the `EXISTS` shape, 0.1ms for this one.
+     *
+     * Counts `DISTINCT (season, episodeNum)` so a series listing the same episode twice cannot
+     * exceed its own denominator from [countEpisodesBySeries], which counts rows. No duplicates
+     * were present in the catalogue checked, so this is a guard rather than an observed fix.
+     *
+     * Series whose `tmdbId` is NULL are absent from the result and keep the undeduplicated count
+     * the caller already has — same fail-safe shape as the rest of Phase 5.
+     */
+    @Query(
+        "WITH done AS (" +
+            "SELECT s.tmdbId AS tmdbId, sib.season AS season, sib.episodeNum AS episodeNum " +
+            "FROM watch_state w " +
+            "JOIN xtream_episodes sib ON sib.providerId = w.providerId AND sib.id = w.itemId " +
+            "JOIN xtream_series s ON s.providerId = sib.providerId AND s.seriesId = sib.seriesId " +
+            "WHERE w.providerId = :providerId AND w.contentType = '${ContentType.TV_SHOWS}' " +
+            "AND w.isCompleted = 1 AND s.tmdbId IS NOT NULL " +
+            "GROUP BY s.tmdbId, sib.season, sib.episodeNum" +
+            ") " +
+            "SELECT e.seriesId AS seriesId, " +
+            "COUNT(DISTINCT e.season || '/' || e.episodeNum) AS completed " +
+            "FROM xtream_episodes e " +
+            "JOIN xtream_series s2 ON s2.providerId = e.providerId AND s2.seriesId = e.seriesId " +
+            "JOIN done d ON d.tmdbId = s2.tmdbId AND d.season = e.season AND d.episodeNum = e.episodeNum " +
+            "WHERE e.providerId = :providerId " +
+            "GROUP BY e.seriesId",
+    )
+    suspend fun getSiblingCompletedCountsBySeries(providerId: Long): Map<
+        @MapColumn(columnName = "seriesId")
+        Int,
+        @MapColumn(columnName = "completed")
+        Int,
+    >
+
+    /**
      * Phase 6 unwatched, episode form of [org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao.clearGroupCompletion].
      * Same two-level join as [getSiblingCompletedEpisodeIds]: [itemId]'s `(season, episodeNum)`
      * matched across every sibling series sharing its series' `tmdbId`, not by episode `tmdbId`.
