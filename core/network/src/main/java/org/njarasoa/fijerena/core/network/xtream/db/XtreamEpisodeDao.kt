@@ -41,6 +41,20 @@ interface XtreamEpisodeDao {
     @Query("SELECT COUNT(*) FROM xtream_episodes WHERE providerId = :providerId")
     fun countEpisodes(providerId: Long): Int
 
+    /**
+     * Resolves an episode's series, for a manual watched mark (Phase 6,
+     * plans/watch-state-durable-storage-plan.md) on an episode with no existing `watch_state` row.
+     * `markWatched`'s repository-level signature carries no `seriesId` — without this lookup a
+     * never-played episode marked watched directly would insert a row with `seriesId` null, and
+     * `getSeriesCompletedCounts`'s `seriesId IS NOT NULL` filter would silently drop it from the
+     * series' progress rollup.
+     */
+    @Query("SELECT seriesId FROM xtream_episodes WHERE providerId = :providerId AND id = :episodeId LIMIT 1")
+    suspend fun getSeriesIdForEpisode(
+        providerId: Long,
+        episodeId: String,
+    ): Int?
+
     // Denominator for the series-row watch bar: how many episodes each cached series has.
     // Only covers series whose detail has been opened at least once, which is exactly the set
     // that can have completed episodes in watch history.

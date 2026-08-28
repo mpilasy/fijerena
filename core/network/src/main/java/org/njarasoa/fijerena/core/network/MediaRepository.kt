@@ -24,6 +24,8 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -64,7 +66,7 @@ data class WatchedItem(
 /**
  * Fraction watched (0..1) when this item is far enough in to be worth resuming but
  * not close enough to the end to count as done, else null. Same band as
- * [MediaRepository.getRecentItems], so anything that draws a progress bar is
+ * [MediaRepository.getRecentItemsFromWatchState], so anything that draws a progress bar is
  * exactly what the detail screen offers a Resume button for.
  */
 fun WatchedItem.resumeProgress(): Float? {
@@ -127,6 +129,11 @@ class MediaRepository(
     private val providerId: Long,
     private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT,
     private val watchStateDao: WatchStateDao = XtreamDatabase.getInstance(context).watchStateDao(),
+    // Injectable for the same reason as watchStateDao: setWatched/getSiblingCompleted* touch the
+    // Xtream catalogue directly, and this module's unit tests have no Robolectric/Room to back a
+    // real XtreamDatabase.getInstance(context) call under a plain mockk Context.
+    private val streamDao: XtreamStreamDao = XtreamDatabase.getInstance(context).streamDao(),
+    private val episodeDao: XtreamEpisodeDao = XtreamDatabase.getInstance(context).episodeDao(),
 ) : Closeable {
     @Volatile
     private var provider: MediaProvider? = null
@@ -946,9 +953,7 @@ class MediaRepository(
      * watched state, not this whole-content-type one.
      */
     suspend fun getSiblingCompletedMovieIds(): Set<String> =
-        XtreamDatabase
-            .getInstance(context)
-            .streamDao()
+        streamDao
             .getSiblingCompletedStreamIds(providerId, ContentType.MOVIES, XtreamStreamEntity.TYPE_VOD)
             .toSet()
 
@@ -963,11 +968,7 @@ class MediaRepository(
         val numericSeriesId = seriesId.toIntOrNull()
         val result =
             if (numericSeriesId != null) {
-                XtreamDatabase
-                    .getInstance(context)
-                    .episodeDao()
-                    .getSiblingCompletedEpisodeIds(providerId, numericSeriesId)
-                    .toSet()
+                episodeDao.getSiblingCompletedEpisodeIds(providerId, numericSeriesId).toSet()
             } else {
                 emptySet()
             }
@@ -1248,14 +1249,29 @@ class MediaRepository(
     ) {
         val now = System.currentTimeMillis()
         if (watched) {
-            watchStateDao.markWatched(providerId, itemId, contentType, now)
+            // A never-played episode has no existing row to carry a seriesId forward from, and
+            // this method's own signature has no seriesId parameter to accept one — resolve it
+            // from the catalogue instead, or getSeriesCompletedCounts silently drops the row.
+            val seriesId =
+                if (contentType == ContentType.TV_SHOWS) {
+                    episodeDao.getSeriesIdForEpisode(providerId, itemId)?.toString()
+                } else {
+                    null
+                }
+            watchStateDao.markWatched(
+                providerId,
+                itemId,
+                contentType,
+                now,
+                seriesId = seriesId,
+                episodeId = if (seriesId != null) itemId else null,
+            )
         } else {
             watchStateDao.markUnwatched(providerId, itemId, contentType, now)
-            val db = XtreamDatabase.getInstance(context)
             when (contentType) {
                 ContentType.MOVIES ->
-                    db.streamDao().clearGroupCompletion(providerId, contentType, XtreamStreamEntity.TYPE_VOD, itemId, now)
-                ContentType.TV_SHOWS -> db.episodeDao().clearGroupCompletion(providerId, itemId, now)
+                    streamDao.clearGroupCompletion(providerId, contentType, XtreamStreamEntity.TYPE_VOD, itemId, now)
+                ContentType.TV_SHOWS -> episodeDao.clearGroupCompletion(providerId, itemId, now)
             }
         }
     }

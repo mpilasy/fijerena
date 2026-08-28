@@ -15,8 +15,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import io.mockk.coEvery
 import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
 import org.njarasoa.fijerena.core.player.domain.ContentType
 
 /**
@@ -28,6 +31,8 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 class MediaRepositorySetWatchedTest {
     private lateinit var context: Context
     private lateinit var watchStateDao: FakeWatchStateDao
+    private lateinit var episodeDao: XtreamEpisodeDao
+    private lateinit var streamDao: XtreamStreamDao
     private lateinit var repository: MediaRepository
 
     @Before
@@ -37,7 +42,12 @@ class MediaRepositorySetWatchedTest {
         context = mockk(relaxed = true)
         every { context.getSharedPreferences(any(), any()) } returns mockk<SharedPreferences>(relaxed = true)
         watchStateDao = FakeWatchStateDao()
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+        episodeDao = mockk(relaxed = true)
+        streamDao = mockk(relaxed = true)
+        // Unless a test says otherwise, the episode isn't in the local catalogue - setWatched
+        // must degrade to no seriesId rather than crash.
+        coEvery { episodeDao.getSeriesIdForEpisode(any(), any()) } returns null
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao, streamDao = streamDao, episodeDao = episodeDao)
     }
 
     @After
@@ -116,6 +126,23 @@ class MediaRepositorySetWatchedTest {
             repository.setWatched("never-seen", ContentType.LIVE_TV, watched = false)
 
             assertEquals(null, watchStateDao.getItem(1L, "never-seen", ContentType.LIVE_TV))
+        }
+
+    @Test
+    fun `marking a never-played episode watched resolves its seriesId from the catalogue`() =
+        runBlocking {
+            // "ep9" has no watch_state row at all yet - the exact case markWatched's INSERT path
+            // has no seriesId parameter for, since MediaRepository.setWatched's own signature
+            // carries none either. Without the catalogue lookup this row would insert with
+            // seriesId = null and silently drop out of getSeriesCompletedCounts's rollup.
+            coEvery { episodeDao.getSeriesIdForEpisode(1L, "ep9") } returns 42
+
+            repository.setWatched("ep9", ContentType.TV_SHOWS, watched = true)
+
+            val row = watchStateDao.getItem(1L, "ep9", ContentType.TV_SHOWS)!!
+            assertTrue(row.isCompleted)
+            assertEquals("42", row.seriesId)
+            assertEquals("a manual mark on an unplayed episode must still be findable by its own id", "ep9", row.episodeId)
         }
 
     @Test

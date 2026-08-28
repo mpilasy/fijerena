@@ -72,6 +72,8 @@ class FakeWatchStateDao : WatchStateDao {
         itemId: String,
         contentType: String,
         now: Long,
+        seriesId: String?,
+        episodeId: String?,
     ) {
         val k = key(providerId, itemId, contentType)
         val existing = rows[k]
@@ -88,6 +90,8 @@ class FakeWatchStateDao : WatchStateDao {
                     isCompleted = true,
                     updatedAt = now,
                     lastPlayedAt = null,
+                    seriesId = seriesId,
+                    episodeId = episodeId,
                 )
     }
 
