@@ -13,9 +13,12 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 
 /**
  * WorkManager worker for background EPG sync (all device types).
+ *
+ * Refreshes the active provider from its own EPG sources only.
  *
  * Runs as a foreground service via setForeground() to bypass Android Doze mode,
  * which blocks DNS on Ethernet-connected Shield TVs during overnight maintenance windows.
@@ -71,14 +74,21 @@ class EpgSyncWorker(
         val fileManager = EpgFileManager.getInstance(applicationContext)
         val force = inputData.getBoolean("force", false)
 
+        // A sync belongs to the active provider and refreshes its own sources only.
+        val providerId = ProviderRepository(applicationContext).getActiveProvider()?.id
+        if (providerId == null) {
+            Log.i(TAG, "doWork: no active provider, nothing to sync")
+            return Result.success()
+        }
+
         return try {
             val staleSources = if (force) {
-                Log.i(TAG, "doWork: force=true, refreshing all sources")
-                fileManager.getAllSources()
+                Log.i(TAG, "doWork: force=true, refreshing all sources of provider $providerId")
+                fileManager.getAllSources(providerId)
             } else {
-                fileManager.getStaleSources()
+                fileManager.getStaleSources(providerId)
             }
-            val xmltvResult = if (staleSources.isEmpty()) {
+            if (staleSources.isEmpty()) {
                 Log.i(TAG, "doWork: all sources fresh, nothing to do")
                 Result.success()
             } else {
@@ -94,8 +104,6 @@ class EpgSyncWorker(
                     Result.success()
                 }
             }
-
-            xmltvResult
         } catch (e: Exception) {
             Log.w(TAG, "doWork: failed — ${e.message}", e)
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()

@@ -190,7 +190,7 @@ class XtreamSessionManager(
                     ),
                 )
                 // Trigger an immediate background refresh if the index is empty
-                EpgFileManager.getInstance(context).refreshOutdatedSources()
+                EpgFileManager.getInstance(context).refreshOutdatedSources(providerId)
             }
         } catch (e: Exception) {
             android.util.Log.e("XtreamSessionManager", "Failed to auto-add XMLTV source", e)

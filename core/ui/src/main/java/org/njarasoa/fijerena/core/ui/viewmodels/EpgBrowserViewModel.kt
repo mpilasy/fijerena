@@ -233,25 +233,33 @@ class EpgBrowserViewModel(
     val toastMessage: SharedFlow<UiText> = _toastMessage.asSharedFlow()
 
     fun refreshStale() {
-        val taskId = "epg_refresh_stale"
-        if (RefreshQueue.queuedTaskIds.value.contains(taskId)) {
-            _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
-            return
-        }
         viewModelScope.launch {
+            // A refresh only covers the active provider's own sources, and the task id it queues
+            // under is scoped to that provider too.
+            val providerId =
+                withContext(Dispatchers.IO) { providerRepository.getActiveProvider()?.id }
+                    ?: run {
+                        _toastMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
+                        return@launch
+                    }
+            val taskId = EpgFileManager.refreshStaleTaskId(providerId)
+            if (RefreshQueue.queuedTaskIds.value.contains(taskId)) {
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
+                return@launch
+            }
             val interval = epgSettings.value.epgRefreshInterval
             val staleThreshold = if (interval <= 0) 24L * 3600 * 1000 else interval.toLong() * 3600 * 1000
             val thresholdMs = System.currentTimeMillis() - staleThreshold
             val stale =
                 withContext(Dispatchers.IO) {
-                    SettingsDatabase.getInstance(context).epgSourceDao().getStaleSources(thresholdMs)
+                    SettingsDatabase.getInstance(context).epgSourceDao().getStaleSources(providerId, thresholdMs)
                 }
             if (stale.isEmpty()) {
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
                 return@launch
             }
             _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refreshing_stale, stale.size))
-            epgFileManager.launchRefreshStale()
+            epgFileManager.launchRefreshStale(providerId)
         }
     }
 
@@ -328,7 +336,10 @@ class EpgBrowserViewModel(
             withContext(Dispatchers.IO) {
                 try {
                     val settingsDb = SettingsDatabase.getInstance(context)
-                    val sources = settingsDb.epgSourceDao().getAllSourcesOnce()
+                    val providerId = providerRepository.getActiveProvider()?.id
+                    val sources =
+                        providerId?.let { settingsDb.epgSourceDao().getEnabledSourcesForProvider(it) }
+                            ?: emptyList()
                     _sourceLabels.value = sources.associate { it.id to it.label }
                 } catch (e: Exception) {
                     android.util.Log.e("EpgBrowserViewModel", "Failed to load EPG source labels", e)
@@ -358,7 +369,7 @@ class EpgBrowserViewModel(
             val settingsDb = SettingsDatabase.getInstance(context)
             val sourceDao = settingsDb.epgSourceDao()
             val validSources =
-                activeProviderId?.let { sourceDao.getEnabledSourcesForSearch(it) } ?: emptyList()
+                activeProviderId?.let { sourceDao.getEnabledSourcesForProvider(it) } ?: emptyList()
             val sourceIds = validSources.map { it.id }
 
             val nowEpoch = System.currentTimeMillis() / 1000L
@@ -502,7 +513,7 @@ class EpgBrowserViewModel(
                 val settingsDb = SettingsDatabase.getInstance(context)
                 val sourceDao = settingsDb.epgSourceDao()
                 val validSources =
-                    activeProviderId?.let { sourceDao.getEnabledSourcesForSearch(it) } ?: emptyList()
+                    activeProviderId?.let { sourceDao.getEnabledSourcesForProvider(it) } ?: emptyList()
                 val sourceIds = validSources.map { it.id }
 
                 val matcher = channelMatcher

@@ -15,9 +15,6 @@ interface EpgSourceDao {
     @Query("SELECT * FROM epg_source ORDER BY added_at_ms ASC")
     suspend fun getAllSourcesOnce(): List<EpgSourceEntity>
 
-    @Query("SELECT * FROM epg_source WHERE enabled = 1 ORDER BY added_at_ms ASC")
-    suspend fun getEnabledSources(): List<EpgSourceEntity>
-
     @Query("SELECT * FROM epg_source WHERE id = :id")
     suspend fun getSourceById(id: Long): EpgSourceEntity?
 
@@ -33,8 +30,8 @@ interface EpgSourceDao {
     @Query("SELECT id FROM epg_source WHERE provider_id = :providerId")
     suspend fun getSourceIdsForProvider(providerId: Long): List<Long>
 
-    @Query("SELECT * FROM epg_source WHERE enabled = 1 AND provider_id = :providerId")
-    suspend fun getEnabledSourcesForSearch(providerId: Long): List<EpgSourceEntity>
+    @Query("SELECT * FROM epg_source WHERE enabled = 1 AND provider_id = :providerId ORDER BY added_at_ms ASC")
+    suspend fun getEnabledSourcesForProvider(providerId: Long): List<EpgSourceEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSource(source: EpgSourceEntity): Long
@@ -95,13 +92,23 @@ interface EpgSourceDao {
         error: String,
     )
 
-    @Query("SELECT * FROM epg_source WHERE enabled = 1 AND last_error IS NOT NULL ORDER BY added_at_ms ASC")
-    suspend fun getFailedSources(): List<EpgSourceEntity>
+    @Query(
+        "SELECT * FROM epg_source WHERE enabled = 1 AND provider_id = :providerId AND last_error IS NOT NULL ORDER BY added_at_ms ASC",
+    )
+    suspend fun getFailedSources(providerId: Long): List<EpgSourceEntity>
 
     @Query(
-        "SELECT * FROM epg_source WHERE enabled = 1 AND (last_ingested_at_ms = 0 OR last_ingested_at_ms < :thresholdMs) ORDER BY added_at_ms ASC",
+        """
+        SELECT * FROM epg_source
+        WHERE enabled = 1 AND provider_id = :providerId
+          AND (last_ingested_at_ms = 0 OR last_ingested_at_ms < :thresholdMs)
+        ORDER BY added_at_ms ASC
+        """,
     )
-    suspend fun getStaleSources(thresholdMs: Long): List<EpgSourceEntity>
+    suspend fun getStaleSources(
+        providerId: Long,
+        thresholdMs: Long,
+    ): List<EpgSourceEntity>
 
     @Query("SELECT COUNT(*) FROM epg_source")
     suspend fun getSourceCount(): Int
