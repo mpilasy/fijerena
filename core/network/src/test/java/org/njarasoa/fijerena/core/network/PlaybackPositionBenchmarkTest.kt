@@ -12,6 +12,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.fixtures.FakeFavoriteStateDao
+import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
@@ -50,7 +52,13 @@ class PlaybackPositionBenchmarkTest {
         )
 
 
-        repository = MediaRepository(context, 1L)
+        repository =
+            MediaRepository(
+                context,
+                1L,
+                watchStateDao = FakeWatchStateDao(),
+                favoriteStateDao = FakeFavoriteStateDao(),
+            )
         repository.setProvider(provider)
     }
 

@@ -101,16 +101,6 @@ fun ProviderSettingsSection(
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-    // Favorites Max Size
-    FavoritesMaxSizeSetting(
-        currentSize = providerSettings.favoritesMaxSize,
-        onSizeChanged = { size ->
-            onUpdateSettings(providerSettings.copy(favoritesMaxSize = size))
-        },
-    )
-
-    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
     // Clear Favorites
     Column {
         Text(
@@ -388,104 +378,6 @@ private fun WatchHistorySizeSetting(
                         }
                     },
                     enabled = newSize.toIntOrNull()?.let { it in 1..100 } == true,
-                    text = stringResource(R.string.provider_save_button),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FavoritesMaxSizeSetting(
-    currentSize: Int,
-    onSizeChanged: (Int) -> Unit,
-) {
-    val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val styles =
-        remember(scale, typography) {
-            object {
-                val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
-                val titleLarge = typography.titleLarge.copy(fontSize = typography.titleLarge.fontSize.scaled(scale))
-                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-            }
-        }
-    var isEditing by remember { mutableStateOf(false) }
-    var newSize by remember { mutableStateOf("") }
-
-    // Leaving edit mode destroys the focused TextField; without a hand-off Compose drops focus to
-    // the window root and the next D-pad press restarts at the top of the form.
-    val editButtonFocusRequester = rememberFocusReturn(active = isEditing)
-
-    Column {
-        Text(
-            text = stringResource(R.string.provider_favorites_max_size_label),
-            style = styles.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            text = stringResource(R.string.provider_favorites_max_size_desc),
-            style = styles.bodySmall,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-        )
-        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-
-        if (!isEditing) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = currentSize.toString(),
-                    style = styles.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                )
-                CinemaSecondaryButton(
-                    onClick = {
-                        isEditing = true
-                        newSize = currentSize.toString()
-                    },
-                    text = stringResource(R.string.provider_edit_button),
-                    modifier = Modifier.focusRequester(editButtonFocusRequester),
-                )
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextField(
-                    value = newSize,
-                    onValueChange = { newValue ->
-                        if (newValue.isEmpty() || newValue.toIntOrNull() != null) {
-                            newSize = newValue
-                        }
-                    },
-                    label = { Text(stringResource(R.string.provider_max_size_label)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.width(TvDimensions.selectionListWidth.scaled(scale)).tvDpadEscape(),
-                )
-                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-                CinemaSecondaryButton(
-                    onClick = {
-                        isEditing = false
-                        newSize = ""
-                    },
-                    text = stringResource(R.string.common_cancel),
-                )
-                Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                CinemaPrimaryButton(
-                    onClick = {
-                        val size = newSize.toIntOrNull()
-                        if (size != null && size in 10..500) {
-                            onSizeChanged(size)
-                            isEditing = false
-                            newSize = ""
-                        }
-                    },
-                    enabled = newSize.toIntOrNull()?.let { it in 10..500 } == true,
                     text = stringResource(R.string.provider_save_button),
                 )
             }

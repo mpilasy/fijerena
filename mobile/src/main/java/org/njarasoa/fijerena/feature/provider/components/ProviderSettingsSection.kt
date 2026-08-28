@@ -49,9 +49,6 @@ fun ColumnScope.ProviderSettingsSection(
     watchHistorySize: String,
     newWatchHistorySize: String,
     isEditingQueueSize: Boolean,
-    favoritesMaxSize: String,
-    newFavoritesMaxSize: String,
-    isEditingFavoritesSize: Boolean,
     cachingEnabled: Boolean,
     categoryFilters: CategoryFilters,
     streamOutputFormat: String,
@@ -64,9 +61,6 @@ fun ColumnScope.ProviderSettingsSection(
     onWatchHistorySizeChange: (String) -> Unit,
     onNewWatchHistorySizeChange: (String) -> Unit,
     onIsEditingQueueSizeChange: (Boolean) -> Unit,
-    onFavoritesMaxSizeChange: (String) -> Unit,
-    onNewFavoritesMaxSizeChange: (String) -> Unit,
-    onIsEditingFavoritesSizeChange: (Boolean) -> Unit,
     onCachingEnabledChange: (Boolean) -> Unit,
     onStreamOutputFormatChange: (String) -> Unit,
     onPlaylistTypeChange: (String) -> Unit,
@@ -175,67 +169,6 @@ fun ColumnScope.ProviderSettingsSection(
                                 }
                             },
                             enabled = newWatchHistorySize.toIntOrNull()?.let { it in 1..100 } == true,
-                        ) { Text(stringResource(R.string.provider_save_button)) }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                // Favorites Max Size
-                Text(text = stringResource(R.string.provider_favorites_max_size_label), style = MaterialTheme.typography.titleSmall)
-                Text(
-                    text = stringResource(R.string.provider_favorites_max_size_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                )
-                Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-
-                if (!isEditingFavoritesSize) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(text = favoritesMaxSize, style = MaterialTheme.typography.titleLarge)
-                        CinemaOutlinedButton(onClick = {
-                            onIsEditingFavoritesSizeChange(true)
-                            onNewFavoritesMaxSizeChange(favoritesMaxSize)
-                        }) { Text(stringResource(R.string.provider_edit_button)) }
-                    }
-                } else {
-                    OutlinedTextField(
-                        value = newFavoritesMaxSize,
-                        onValueChange = { if (it.isEmpty() || it.toIntOrNull() != null) onNewFavoritesMaxSizeChange(it) },
-                        label = { Text(stringResource(R.string.provider_max_size_label)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End),
-                    ) {
-                        CinemaOutlinedButton(onClick = {
-                            onIsEditingFavoritesSizeChange(false)
-                            onNewFavoritesMaxSizeChange("")
-                        }) { Text(stringResource(R.string.common_cancel)) }
-                        CinemaButton(
-                            onClick = {
-                                val size = newFavoritesMaxSize.toIntOrNull()
-                                if (size != null && size in 10..500) {
-                                    onFavoritesMaxSizeChange(size.toString())
-                                    onIsEditingFavoritesSizeChange(false)
-                                    onNewFavoritesMaxSizeChange("")
-                                    coroutineScope.launch {
-                                        val newSettings = providerSettings.copy(favoritesMaxSize = size)
-                                        providerRepo.updateProviderSettings(editId, newSettings)
-                                        onProviderSettingsChange(newSettings)
-                                        syncManager.syncProviderSettings(editId)
-                                    }
-                                }
-                            },
-                            enabled = newFavoritesMaxSize.toIntOrNull()?.let { it in 10..500 } == true,
                         ) { Text(stringResource(R.string.provider_save_button)) }
                     }
                 }

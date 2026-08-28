@@ -261,8 +261,6 @@
     <string name="provider_watch_history_size_desc">Nombre de fiches affichées dans la ligne Récents (1-100)</string>
     <string name="provider_edit_button">Modifier</string>
     <string name="provider_queue_size_label">Taille de la file</string>
-    <string name="provider_favorites_max_size_label">Max Favoris</string>
-    <string name="provider_favorites_max_size_desc">Nombre maximum de favoris à stocker (10-500)</string>
     <string name="provider_max_size_label">Taille Max</string>
     <string name="provider_clear_favorites_desc">Supprimer tous les favoris de tous les types de contenu</string>
     <string name="provider_clear_favorites_button">Effacer tous les favoris</string>

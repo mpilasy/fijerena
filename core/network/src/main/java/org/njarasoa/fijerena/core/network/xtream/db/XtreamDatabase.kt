@@ -17,8 +17,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         XtreamSeriesFts::class,
         XtreamEpgCacheEntity::class,
         WatchStateEntity::class,
+        FavoriteStateEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -33,6 +34,8 @@ abstract class XtreamDatabase : RoomDatabase() {
     abstract fun epgCacheDao(): XtreamEpgCacheDao
 
     abstract fun watchStateDao(): WatchStateDao
+
+    abstract fun favoriteStateDao(): FavoriteStateDao
 
     companion object {
         @Volatile
@@ -126,6 +129,29 @@ abstract class XtreamDatabase : RoomDatabase() {
          * See `docs/plans/watch-state-durable-storage-plan.md`. Nothing reads or writes this table
          * yet — it ships dark until Phase 2.
          */
+        /**
+         * Migration 15→16: durable favourites, replacing the `favorites_v2` and
+         * `favorite_categories` SharedPreferences blobs that truncated at
+         * `providerSettings.favoritesMaxSize` on every write.
+         * See `docs/plans/favorites-durable-storage-plan.md`.
+         */
+        private val MIGRATION_15_16 =
+            object : Migration(15, 16) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `favorite_state` (" +
+                            "`providerId` INTEGER NOT NULL, `itemId` TEXT NOT NULL, `contentType` TEXT NOT NULL, " +
+                            "`kind` TEXT NOT NULL, `name` TEXT NOT NULL, `parentCategoryId` TEXT, " +
+                            "`createdAt` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`providerId`, `itemId`, `contentType`, `kind`))",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_favorite_state_providerId_kind_contentType_createdAt` " +
+                            "ON `favorite_state` (`providerId`, `kind`, `contentType`, `createdAt`)",
+                    )
+                }
+            }
+
         private val MIGRATION_14_15 =
             object : Migration(14, 15) {
                 override fun migrate(db: SupportSQLiteDatabase) {
@@ -162,7 +188,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                         "xtream_v2.db",
                     ).addMigrations(
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
-                        MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15,
+                        MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16,
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()

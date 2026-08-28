@@ -127,16 +127,17 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 15
+**Version:** 16
 
 Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
-`watch_state` table. (v10 added FTS4 search tables for streams/series; v11 added `excluded` flags and
-indexes; v12 added TMDB detail fields; v13 added `xtream_epg_cache` table; v14 added `plotFetchedAt`
-for TMDB synopses; v15 added `watch_state` and an index on `xtream_streams(providerId, tmdbId)`.)
+`watch_state` and `favorite_state` tables. (v10 added FTS4 search tables for streams/series; v11
+added `excluded` flags and indexes; v12 added TMDB detail fields; v13 added `xtream_epg_cache` table;
+v14 added `plotFetchedAt` for TMDB synopses; v15 added `watch_state` and an index on
+`xtream_streams(providerId, tmdbId)`; v16 added `favorite_state`.)
 
-Despite the file name, `watch_state` is **not** Xtream-only — `MediaRepository` backs Xtream, SMB,
-Local, and Remote M3U through it. It lives here because this is the database `MediaRepository`
-already owns; Jellyfin is out of scope (it keeps this state server-side).
+Despite the file name, neither `watch_state` nor `favorite_state` is Xtream-only — `MediaRepository`
+backs Xtream, SMB, Local, and Remote M3U through them. They live here because this is the database
+`MediaRepository` already owns; Jellyfin is out of scope (it keeps this state server-side).
 
 ### Table: `xtream_categories`
 | Column | Type | Description |
@@ -288,6 +289,33 @@ Full-text search over `xtream_series.name`. Content table: `xtream_series`. Toke
 
 ---
 
+### Table: `favorite_state` (added v16)
+Durable favourites, kept forever. Replaces the `favorites_v2` and `favorite_categories`
+SharedPreferences blobs, which were capped at `providerSettings.favoritesMaxSize` (default 100) and
+truncated on every write, silently evicting the oldest entry. See
+`docs/plans/favorites-durable-storage-plan.md`.
+
+One table serves both blobs; `kind` discriminates. For `CATEGORY` rows, `itemId` **is** the category
+id and `parentCategoryId` is NULL.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `providerId` | INTEGER (PK) | Foreign key to `providers.id` |
+| `itemId` | TEXT (PK) | Stream ID, or the category ID when `kind = CATEGORY` |
+| `contentType` | TEXT (PK) | `LIVE_TV`, `MOVIES`, or `TV_SHOWS` |
+| `kind` | TEXT (PK) | `STREAM` or `CATEGORY` |
+| `name` | TEXT | Display name at the time of favouriting |
+| `parentCategoryId` | TEXT? | The stream's owning category; NULL for `kind = CATEGORY` |
+| `createdAt` | INTEGER | When it was favourited; drives the newest-first ordering the UI shows |
+
+**Index:** `(providerId, kind, contentType, createdAt)`
+
+**No cap.** Rows are inserted and deleted only — nothing truncates. `MediaRepository` still serves
+reads from an in-memory snapshot of this table, because Compose calls `isFavorite()` synchronously
+during composition; the snapshot is filled in `setProvider()`, which runs on `Dispatchers.IO`.
+
+---
+
 ## 4. Per-Provider Local Storage (SharedPreferences)
 
 Located in `media_cache_{providerId}.xml`. Stores user-specific data that is not provided by the media server.
@@ -297,9 +325,7 @@ Data is stored as serialized JSON strings of Kotlin Data Classes.
 
 | Key | Data Class | Description |
 |-----|------------|-------------|
-| `favorites_v2` | `List<FavoriteItem>` | User-starred streams (series are stored here too, with `contentType`). |
-| `favorite_categories`| `List<FavoriteCategoryItem>`| User-starred categories. |
-| `recent_categories_{contentType}` | `List<RecentCategory>` | Last 20 browsed categories, one key per content type (`LIVE_TV`, `MOVIES`, `TV_SHOWS`). |
+| `recent_categories_{contentType}` | `List<RecentCategory>` | Last 20 browsed categories, one key per content type (`LIVE_TV`, `MOVIES`, `TV_SHOWS`). Still a capped blob — see the note below. |
 
 **Retired:** `watch_history_v3` (and its `watch_history_v2` predecessor) no longer exist. Watch
 position and completion live in the `watch_state` table (§3). On the first `setProvider()` after
@@ -307,11 +333,21 @@ upgrade, `MediaRepository.backfillAndPurgeWatchState()` copies the blob into `wa
 `watch_state_migrated_v1`, then removes both keys. The flag is per-provider, never global, so a
 provider not opened between the dual-write and purge releases still gets copied before it is purged.
 
+**Retired:** `favorites_v2` and `favorite_categories` no longer exist either. Favourites live in the
+`favorite_state` table (§3). `MediaRepository.backfillAndPurgeFavorites()` copies both blobs on the
+first `setProvider()` after upgrade, sets `favorites_migrated_v1`, then removes both keys — again
+per-provider, never global.
+
+`recent_categories_{contentType}` is the last remaining capped blob (20 entries, and a decode failure
+yields an empty list). It is left as-is deliberately: it is a convenience list the user never
+curates, so eviction there is the intended behaviour rather than data loss.
+
 ### Scalar Keys (last-browsed position restore)
 
 | Key | Type | Description |
 |-----|------|-------------|
 | `watch_state_migrated_v1` | BOOLEAN | One-time flag: this provider's watch-history blob has been copied into `watch_state` |
+| `favorites_migrated_v1` | BOOLEAN | One-time flag: this provider's favourites blobs have been copied into `favorite_state` |
 | `last_content_type` | TEXT | Content type last browsed |
 | `last_live_category` / `last_live_item` | TEXT | Last Live TV category and item |
 | `last_movies_category` / `last_movies_item` | TEXT | Last Movies category and item |
