@@ -339,6 +339,9 @@ private fun EpisodeListContent(
     // Focus requester for the stream name row, so switching to an alternate stream can keep
     // focus there instead of it falling back to the window root (see streamSwitchSignal below).
     val streamNameFocusRequester = remember { FocusRequester() }
+    // True once the row actually reports itself focused — lets the reassertion loop below stop
+    // as soon as it has actually won, instead of guessing how many frames that takes.
+    var streamRowFocused by remember { mutableStateOf(false) }
     // Bumped in onSelect, independent of resumeEpisodeId: selecting a dropdown item destroys
     // that focused node, and Compose has nothing left to restore to, so focus falls to the
     // window root and D-pad input goes nowhere until this claims it back for the row. Also
@@ -504,14 +507,17 @@ private fun EpisodeListContent(
     LaunchedEffect(streamSwitchSignal) {
         if (streamSwitchSignal == 0) return@LaunchedEffect
         // The dropdown's own dismissal falls back to focusing the window root, asynchronously,
-        // on its own timeline — a single requestFocus() here can lose that race. Re-assert for a
-        // few frames so our claim is the last one standing.
-        repeat(10) {
+        // on its own timeline that can outlast a fixed number of frames on real hardware (a
+        // guessed frame count is what left focus dead on a real Shield after this looked fixed
+        // in testing) — poll instead, and stop the instant the row actually reports focused.
+        var attempts = 0
+        while (!streamRowFocused && attempts < 90) {
             try {
                 streamNameFocusRequester.requestFocus()
             } catch (_: IllegalStateException) {
             }
             withFrameNanos { }
+            attempts++
         }
     }
 
@@ -807,6 +813,7 @@ private fun EpisodeListContent(
                                         },
                                         textStyle = scaledStyles.bodySmall,
                                         focusRequester = streamNameFocusRequester,
+                                        onFocusedChanged = { streamRowFocused = it },
                                     )
 
                                     // TMDB ID
@@ -940,6 +947,7 @@ private fun StreamNamePicker(
     onSelect: (MediaItem) -> Unit,
     textStyle: TextStyle,
     focusRequester: FocusRequester,
+    onFocusedChanged: (Boolean) -> Unit = {},
 ) {
     val textColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh)
 
@@ -980,7 +988,10 @@ private fun StreamNamePicker(
                         },
                     )
                     .focusRequester(focusRequester)
-                    .onFocusChanged { isFocused = it.isFocused }
+                    .onFocusChanged {
+                        isFocused = it.isFocused
+                        onFocusedChanged(it.isFocused)
+                    }
                     .clickable {
                         coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
                         expanded = true
