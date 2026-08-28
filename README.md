@@ -347,10 +347,8 @@ A single **[AGENTS.md](AGENTS.md)** file serves as the canonical guide for all A
 - **[docs/epg_guide.md](docs/epg_guide.md)** - EPG pipeline implementation guide
 - **[docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md)** - Why the EPG index grew to 87% dead space, and how to read DB state from a file header
 - **[docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md)** - App navigation flow and screen hierarchy
-- **[docs/ui-theme-options.md](docs/ui-theme-options.md)** - Theme system documentation
-- **[docs/MOBILE_RUN_GUIDE.md](docs/MOBILE_RUN_GUIDE.md)** - Mobile build, install, and run guide
+- **[docs/RUN_GUIDE.md](docs/RUN_GUIDE.md)** - Build, install, and deployment guide for TV and mobile
 - **[docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md)** - Version history and changelog
-- **[TODO.md](TODO.md)** - Known issues and optimization status
 
 ## 🎨 Theme System
 

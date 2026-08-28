@@ -218,39 +218,9 @@ composable<Screen.NewScreen> { backStackEntry ->
 navController.navigate(Screen.NewScreen(someParam = "value"))
 ```
 
-## ADB Deployment
+---
 
-### Emulator Targets
-Emulator port numbers (`emulator-5554`, `-5556`, ...) are assigned by **launch order**, not by which AVD it is. Check `product:`/`model:` from `adb devices -l` to identify which emulator is TV vs. mobile before installing — never assume from the port number alone.
+## Deployment & Build
 
-```bash
-adb devices -l                                                          # check product:/model: first
-adb -s emulator-XXXX install tv/build/outputs/apk/debug/tv-debug.apk         # whichever serial is the TV AVD
-adb -s emulator-YYYY install mobile/build/outputs/apk/debug/mobile-debug.apk # whichever serial is the mobile AVD
-```
+For comprehensive instructions on building and deploying the app via ADB to emulators and physical devices, see [RUN_GUIDE.md](RUN_GUIDE.md).
 
-### Physical Devices
-
-TV device IPs drift across sessions (DHCP) — run `adb mdns services` to find a device that moved rather than assuming a fixed address.
-
-```bash
-# Connect to TV via network
-adb connect <TV_IP>:5555
-
-# Build with assembleDebug + install per-device with -s when both TV and
-# mobile devices are connected — installDebug with no filter installs onto
-# every connected device regardless of type.
-./gradlew :tv:assembleDebug :mobile:assembleDebug
-adb -s <device_id> install -r <apk-path>
-```
-
-## Dependencies
-
-Both :mobile and :tv modules depend on:
-```kotlin
-implementation(project(":core:navigation"))
-implementation(project(":core:data"))
-implementation(project(":core:ui"))
-implementation(project(":core:network"))
-implementation(project(":core:player"))
-```
