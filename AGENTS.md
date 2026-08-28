@@ -265,7 +265,7 @@ For deep-dives, see the `docs/` directory:
 |----------|----------|
 | [docs/design.md](docs/design.md) | Full system design: module graph, domain model, player system, EPG architecture, theme system, screen inventory |
 | [docs/FEATURES.md](docs/FEATURES.md) | Comprehensive feature reference with API details |
-| [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Complete database schema for all Room DBs and SharedPreferences |
+| [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Complete database schema for all Room DBs and SharedPreferences. **Update it in the same commit as any migration** - see below |
 | [docs/epg_guide.md](docs/epg_guide.md) | EPG pipeline implementation guide with data models and file inventory |
 | [docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md) | Type-safe navigation system, screen definitions, and flow diagrams |
 | [docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md) | Why the EPG index grew to 87% dead space, the PRAGMA/Requery traps behind it, and how to read DB state from a file header |
@@ -273,6 +273,20 @@ For deep-dives, see the `docs/` directory:
 | [docs/MOBILE_RUN_GUIDE.md](docs/MOBILE_RUN_GUIDE.md) | Mobile build, install, and run guide |
 | [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md) | Version history and changelog |
 | [TODO.md](TODO.md) | Known issues, open investigations, and optimization status |
+
+### Schema changes
+
+**Every Room migration updates `docs/DATABASE_SCHEMA.md` in the same commit.** Not as a follow-up. That doc is the only prose description of the schema, so a migration that lands without it leaves the file stating a version number the code no longer uses - which is exactly how it drifted before (`providers.db` documented as v8 when it was v10, `xtream_v2.db` as v14 when it was v15).
+
+A migration means any of: a new `MIGRATION_n_n+1`, a version bump, a new entity, a new column, a new index. For each, update:
+
+- the database's `**Version:**` line;
+- the parenthetical migration history in that section's intro ("v15 added `watch_state`…"), appending the new entry;
+- a full table section for a new table - every column with type and description, the primary key, and each index;
+- any new SharedPreferences key the migration introduces, especially one-time backfill/purge flags (`watch_state_migrated_v1`, `favorites_migrated_v1`), in the scalar-keys table of §4;
+- when a migration replaces a SharedPreferences blob: remove that key from the §4 table and add a **Retired:** note naming the table that now owns it and the backfill hook that copies it.
+
+---
 
 ### Plans
 
