@@ -5,7 +5,7 @@ This document details the complete database schema for the Fijerena application,
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 8
+**Version:** 10
 
 Manages media provider configurations, authentication metadata, and persistent EPG source URLs.
 
@@ -36,6 +36,12 @@ Manages media provider configurations, authentication metadata, and persistent E
 | `lastSyncedAtMs` | INTEGER | Timestamp of last manual/background content sync (added v6) |
 | `lastSyncDurationMs` | INTEGER | Duration of last sync (added v6) |
 | `lastSyncError` | TEXT | Error message from last failed sync, if any (added v6) |
+| `lastSyncInserted` | INTEGER | Rows inserted by the last sync (added v9) |
+| `lastSyncUpdated` | INTEGER | Rows updated by the last sync (added v9) |
+| `lastSyncDeleted` | INTEGER | Rows deleted by the last sync (added v9) |
+
+The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successful** sync's `SyncDelta`
+(they are `COALESCE`d, not zeroed, on a failed run). All three zero means the catalog did not change.
 
 ### Table: `epg_source`
 | Column | Type | Description |
@@ -55,8 +61,13 @@ Manages media provider configurations, authentication metadata, and persistent E
 | `ingest_method` | TEXT | Ingestion strategy: `DOWNLOADED`, `STREAMED`, or `XTREAM_API` |
 | `last_ingestion_duration_ms` | INTEGER | Time spent parsing/inserting |
 | `last_download_duration_ms` | INTEGER | Time spent fetching XML file |
+| `last_content_sha256` | TEXT | SHA-256 of the last ingested payload, decompressed for `.gz` sources; null = never hashed (added v10) |
+| `etag` | TEXT | `ETag` from the last download, sent back as `If-None-Match` (added v10) |
+| `last_modified_header` | TEXT | `Last-Modified` from the last download, sent back as `If-Modified-Since` (added v10) |
 
 **Index:** `index_epg_source_provider_id` on `(provider_id)`
+
+The last three columns drive refresh change detection — see `docs/epg_guide.md` → "Change Detection".
 
 ---
 
@@ -116,9 +127,16 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 14
+**Version:** 15
 
-Persistent cache for Xtream Codes API metadata to enable offline browsing. (v10 added FTS4 search tables for streams/series; v11 added `excluded` flags and indexes; v12 added TMDB detail fields; v13 added `xtream_epg_cache` table; v14 added `plotFetchedAt` for TMDB synopses.)
+Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
+`watch_state` table. (v10 added FTS4 search tables for streams/series; v11 added `excluded` flags and
+indexes; v12 added TMDB detail fields; v13 added `xtream_epg_cache` table; v14 added `plotFetchedAt`
+for TMDB synopses; v15 added `watch_state` and an index on `xtream_streams(providerId, tmdbId)`.)
+
+Despite the file name, `watch_state` is **not** Xtream-only — `MediaRepository` backs Xtream, SMB,
+Local, and Remote M3U through it. It lives here because this is the database `MediaRepository`
+already owns; Jellyfin is out of scope (it keeps this state server-side).
 
 ### Table: `xtream_categories`
 | Column | Type | Description |
@@ -165,7 +183,7 @@ Persistent cache for Xtream Codes API metadata to enable offline browsing. (v10 
 | `containerExtension` | TEXT | Extension (e.g. `mp4`, `mkv`) (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 
-**Indices:** `(providerId, type)`, `(categoryId, providerId)`, `(providerId, type, categoryId)`, `(providerId, type, categoryId, excluded)`
+**Indices:** `(providerId, type)`, `(categoryId, providerId)`, `(providerId, type, categoryId)`, `(providerId, type, categoryId, excluded)`, `(providerId, tmdbId)` (added v15, for TMDB sibling dedup)
 
 ### Table: `xtream_series`
 | Column | Type | Description |
@@ -229,6 +247,39 @@ Per-stream EPG payload cache table.
 | `payload` | TEXT | JSON string of EPG listings |
 | `updatedAt` | INTEGER | Timestamp when cached |
 
+### Table: `watch_state` (added v15)
+Durable playback position and completion state, kept forever. Replaces the `watch_history_v3`
+SharedPreferences blob, which truncated to `providerSettings.watchHistorySize` on every write and
+silently evicted anything older. See `plans/watch-state-durable-storage-plan.md`.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `providerId` | INTEGER (PK) | Foreign key to `providers.id` |
+| `itemId` | TEXT (PK) | Movie / episode / channel ID |
+| `contentType` | TEXT (PK) | `LIVE_TV`, `MOVIES`, or `TV_SHOWS` |
+| `itemName` | TEXT | Display name at the time of writing |
+| `categoryId` | TEXT | Owning category |
+| `positionMs` | INTEGER | Saved playback position |
+| `durationMs` | INTEGER | Item duration as known at save time |
+| `isCompleted` | INTEGER | Boolean (0/1). Sticky on progress upserts (`MAX(existing, new)`); only `setWatched(false)` clears it |
+| `updatedAt` | INTEGER | Last-modified stamp for this row |
+| `lastPlayedAt` | INTEGER | Set by playback only; drives the Recent row. Stays null for a manual watched/unwatched mark |
+| `seriesId` | TEXT | Owning series, for episodes |
+| `episodeId` | TEXT | Episode ID, for episodes |
+| `seriesName` | TEXT | Series display name |
+| `episodeExtension` | TEXT | Container extension needed to rebuild the episode URL |
+| `audioTrackIndex` | INTEGER | Last selected audio track, restored on replay (series-level fallback) |
+| `subtitleTrackIndex` | INTEGER | Last selected subtitle track, restored on replay |
+
+**Indices:** `(providerId, contentType, lastPlayedAt)`, `(providerId, seriesId)`
+
+**TMDB dedup:** a title cached under several catalogue variants (language/quality) is watched once
+and reads as watched everywhere. Movies join `xtream_streams` on a shared `tmdbId`. Episodes cannot —
+episode-level `tmdbId` is effectively never populated by providers — so the episode query is a
+two-level join: `xtream_series` finds sibling series by shared **series-level** `tmdbId`, then
+`xtream_episodes` matches each sibling's `(season, episodeNum)`. Dedup is Xtream-only by
+construction; other providers have no catalogue table to join against and degrade to no dedup.
+
 ### Virtual Table: `xtream_streams_fts` (FTS4, added v10)
 Full-text search over `xtream_streams.name`. Content table: `xtream_streams`. Tokenizer: `unicode61`.
 
@@ -246,15 +297,21 @@ Data is stored as serialized JSON strings of Kotlin Data Classes.
 
 | Key | Data Class | Description |
 |-----|------------|-------------|
-| `watch_history_v3` | `List<WatchedItem>` | Playback positions and completion status (auto-migrated from `watch_history_v2`). |
 | `favorites_v2` | `List<FavoriteItem>` | User-starred streams (series are stored here too, with `contentType`). |
 | `favorite_categories`| `List<FavoriteCategoryItem>`| User-starred categories. |
 | `recent_categories_{contentType}` | `List<RecentCategory>` | Last 20 browsed categories, one key per content type (`LIVE_TV`, `MOVIES`, `TV_SHOWS`). |
+
+**Retired:** `watch_history_v3` (and its `watch_history_v2` predecessor) no longer exist. Watch
+position and completion live in the `watch_state` table (§3). On the first `setProvider()` after
+upgrade, `MediaRepository.backfillAndPurgeWatchState()` copies the blob into `watch_state`, sets
+`watch_state_migrated_v1`, then removes both keys. The flag is per-provider, never global, so a
+provider not opened between the dual-write and purge releases still gets copied before it is purged.
 
 ### Scalar Keys (last-browsed position restore)
 
 | Key | Type | Description |
 |-----|------|-------------|
+| `watch_state_migrated_v1` | BOOLEAN | One-time flag: this provider's watch-history blob has been copied into `watch_state` |
 | `last_content_type` | TEXT | Content type last browsed |
 | `last_live_category` / `last_live_item` | TEXT | Last Live TV category and item |
 | `last_movies_category` / `last_movies_item` | TEXT | Last Movies category and item |

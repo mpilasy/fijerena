@@ -31,12 +31,13 @@ Channels organized by provider-defined categories. D-pad Up/Down switches channe
 - **Mobile:** Tap-driven docked mini-player — tapping a channel docks and plays it immediately above the scrollable list; tapping the dock (or its expand affordance) promotes to full-screen. The dock auto-seeds from the last-played channel on entry so Live TV never opens to a bare list. Back from full-screen collapses to the dock; Back from the dock clears it back to the bare list before a further Back leaves Live TV.
 
 ### Movies (VOD)
-Movie details screen with plot, cast, director, genre, rating, year, duration, video/audio tech info. Play or Resume (if progress saved). Auto-resume saves position every 5 seconds, resumes if 2–95% complete.
+Movie details screen with plot, cast, director, genre, rating, year, duration, video/audio tech info. Play or Resume (if progress saved). Auto-resume saves position every 5 seconds, resumes if 2–95% complete. A watched/unwatched toggle sits beside the favorite toggle — marking watched hides the resume bar immediately; unmarking re-derives it from a fresh lookup.
 
 ### TV Shows
 Season accordion with episode list. Auto-expands the next unwatched season. Episode thumbnails, per-episode metadata, resume support. Series-level metadata with season fallback.
 - **TMDB Enrichment:** Fetches per-episode synopses from TMDB when available, ensuring high-quality metadata even when IPTV providers offer minimal descriptions.
 - **Episode Navigation:** Swipe (mobile) or D-pad Left/Right (TV) to jump between episodes directly from the player.
+- **Mark Watched:** TV — long-press an episode card (the existing D-pad long-press convention). Mobile — tap the watched badge itself, shown filled or outline.
 
 ### EPG Guide (TV Guide)
 Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute slots. Auto-scrolls to "now". Date navigation (prev/next day, jump to today). Click channel or programme to start playback. Backed by `XmltvEpgService`'s 12-hour SharedPreferences cache (`PARSED_CACHE_TTL_MS`).
@@ -99,7 +100,9 @@ Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 - Per-source progress: shows download % and ingestion % with channel/programme counts
 - Cancel button: running or queued EPG refreshes can be cancelled mid-operation
 - Auto-refresh on startup and periodic background sync (configurable 4h–48h) with real-time "Next refresh" display
-- Intelligent Retries: 5-attempt retry loop with exponential backoff (1m, 2m, 4m, 8m, 16m) for the entire task
+- Intelligent Retries: 5-attempt retry loop with exponential backoff (1m, 2m, 4m, 8m, 16m) for the entire task; background WorkManager retries back off linearly at 10 minutes
+- Change detection: a source that hasn't changed since the last refresh (server returns `304`, or the payload hash matches) skips both download and ingestion, and its row reads **"Unchanged"** in place of the download/ingest durations. A hash match is overridden once a day so the guide window keeps moving forward
+- Truncated downloads are detected against `Content-Length` and retried, instead of failing later as a parse error
 - First source clears existing data (full rebuild); subsequent sources append
 - Selective refresh: can refresh selected sources, failed sources, or outdated sources
 - Source deletion cleans up associated channels and programmes from the index
@@ -182,31 +185,12 @@ Instead of showing the stats overlay automatically on buffering, the app now sho
 **NETWORK:** Speed, Measured Bandwidth, Buffer health, Buffered position, Rebuffer count/duration, ABR quality switches
 **PLAYBACK:** Position, Duration
 **PERFORMANCE:** Dropped frames (color-coded: <0.5% green, <2% yellow, ≥2% red), Drop Rate
-**DEVICE:** Model, Android API Level, AI Tier (REALTIME/BASIC), Build time, Git hash
-**AI AUDIO DSP:**
-- **Clear Voice**: Status (ON/OFF), Strength %, Slow-device auto-disable status
-- **AI Latency**: Current and average inference time in milliseconds
-- **AI Frames**: Count of processed vs. skipped frames (due to latency guard)
-- **Voice Zoom**: Status (Sony Bravia only)
-**STREAM:** Type (Live/VOD), Retries, Uptime, URL
+**APP:** Heap used/max with percentage (color-coded: <60% green, <85% yellow, else red), GC count and time, UI frames skipped
+**STREAM:** Type (Live/VOD), Retries, Stream health (Live only — healthy / unstable with recycle count / degraded with attempt count), Uptime, URL
+**DEVICE:** Model, Android API Level
+**Footer:** Build time and git hash (`BuildConfig.BUILD_TIME` / `GIT_HASH`), plus model and detected device type from `DeviceDetector`
 
 Mobile stats overlay: dismissible only via X button.
-
----
-
-## AI Audio Suite (EXPERIMENTAL / WIP)
-
-Exclusive to PREMIUM tier devices (NVIDIA Shield, OnePlus 12/12R/13, high-end Sony Bravia).
-
-### Clear Voice (Dialogue Enhancement) - [UNDER DEVELOPMENT]
-**Current Status: NON-FUNCTIONAL.** 
-The implementation uses a two-stage DTLN (Dual-signal Transformation LSTM Network) model to isolate and boost speech.
-- **Experimental Stage**: Integrated into the pipeline but currently disabled or failing to process audio correctly.
-- **Planned Features**: Real-time GPU/NPU inference, 25ms latency guard, and auto-disable safety valve.
-
-### Sony Voice Zoom - [EXPERIMENTAL]
-**Current Status: Status unverified.** 
-Planned native integration with Sony Bravia's hardware "Voice Zoom" feature (requires compatible XR processor).
 
 ---
 
@@ -244,6 +228,27 @@ Two side-panel overlays available during Live TV playback:
 - **Last watched** — slides in from right edge. TV: D-pad Right. Mobile: swipe left.
 
 Overlays use semi-transparent `GlassPanel` (50% opacity). Background scrim is 30% black. Select a stream to switch channels; dismiss with Back or by opening the opposite panel. Overlays close automatically when a stream is selected.
+
+---
+
+## Watch State
+
+Playback position and watched status are stored durably in SQLite (`watch_state`), kept forever and never truncated. The "Last Watched size" setting bounds only how long the Recent row is — not what the app remembers. Applies to Xtream, SMB, Local, and Remote M3U; Jellyfin keeps this state on the server and is untouched by any of the below.
+
+### Mark Watched / Unwatched
+Available from movie details, TV episode cards (long-press), mobile episode badges, TV content lists, and search results. Marking is manual and independent of playback: it never adds the item to the Recent row.
+
+Completion is **sticky** — a brief accidental rewatch can't silently clear a mark. Only an explicit "mark unwatched" clears it.
+
+### Cross-Variant Dedup (TMDB)
+Providers routinely carry the same title several times (language, quality, or source variants). Watching one variant marks all of them, matched on TMDB ID:
+- **Movies:** sibling rows in the catalogue sharing a `tmdbId`.
+- **TV Shows:** each variant is a *separate series* with its own complete, separately-numbered episode list, and episode-level TMDB IDs are essentially never populated by providers. Siblings are found by shared **series-level** TMDB ID, then matched on `(season, episode)` — which is stable across variants.
+
+Unmarking spreads the same way, clearing every sibling; otherwise a sibling's row would immediately drive the check straight back on. Dedup requires a cached catalogue, so it is Xtream-only; other providers degrade to no dedup rather than failing.
+
+### Track Memory
+The audio and subtitle tracks chosen during playback are saved per item and restored on replay. A newly started episode with no saved choice of its own falls back to the most recent choice made anywhere in the same series.
 
 ---
 
@@ -291,6 +296,7 @@ Enable in Settings. Features gated behind dev mode:
 | Setting | Description |
 |---------|-------------|
 | Active Provider | Shows current provider name, URL, and subscription info (Xtream: expiry, max connections, trial status) |
+| Last Sync | Timestamp plus what the sync actually changed — "No changes since last sync", or "N added • N updated • N removed". Xtream only, and hidden when the last sync errored (the counts belong to the last *successful* run and would read as a partial success) |
 | Manage Providers | CRUD for all providers; set active |
 | Theme | Select from 4 dark themes |
 | Manage EPG Data | Add/edit/delete XMLTV sources, trigger refresh |

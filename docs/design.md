@@ -89,11 +89,16 @@ RemoteM3uMediaProvider           -- remote M3U URL fetching + parsing
 
 | Store | Purpose | Location |
 |-------|---------|----------|
-| `providers.db` (Room v8) | Provider configurations (name, URL, type, config JSON, active flag, sync stats), EPG sources, pipeline stats | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity` |
-| EncryptedSharedPreferences | Per-provider passwords (keyed by provider ID) | `provider_password_{id}` |
-| `xtream_cache_{id}` SharedPreferences | Per-provider Xtream category/item cache | JSON blobs |
-| `app_settings` SharedPreferences | Global settings (theme, dev mode, buffer multipliers) | `AppSettings` |
+| `providers.db` (Room v10) | Provider configurations (name, URL, type, config JSON, active flag, sync stats + last-sync delta), EPG sources (incl. change-detection validators), pipeline stats | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity` |
+| `xtream_v2.db` (Room v15) | Xtream catalog cache (categories, streams, series, episodes, per-stream EPG payloads, FTS4) **and** the provider-agnostic `watch_state` table | `Xtream*Entity`, `WatchStateEntity` |
 | `epg_index.db` (Room v16) | EPG programme index with FTS4 search | See EPG section |
+| EncryptedSharedPreferences | Per-provider passwords (keyed by provider ID) | `provider_creds_{id}`, `xtream_secure_credentials` |
+| `xtream_cache_{id}` SharedPreferences | Per-provider Xtream category/item cache | JSON blobs |
+| `media_cache_{id}` SharedPreferences | Per-provider favorites, favorite categories, recent categories, last-browsed position | JSON blobs + scalars |
+| `app_settings` SharedPreferences | Global settings (theme, dev mode, buffer multipliers) | `AppSettings` |
+
+Watch position and completion are **not** in SharedPreferences — the `watch_history_v3` blob was
+retired in favour of `watch_state`, which is never truncated. See `docs/DATABASE_SCHEMA.md` §3.
 
 ---
 
@@ -394,7 +399,7 @@ Virtual categories appear alongside provider categories in the category list:
 | Last Watched | All | Chronological history, auto-updated on play |
 | Recent Categories | All | Recently browsed categories (max 20, per content type) |
 
-Data stored in per-provider SharedPreferences. Favorites and Last Watched have configurable max sizes per provider settings.
+Favorites and Recent Categories are stored in per-provider SharedPreferences, with configurable max sizes per provider settings. Continue Watching and Last Watched are derived from the `watch_state` table — the size setting bounds the rendered row, not what is stored.
 
 ---
 

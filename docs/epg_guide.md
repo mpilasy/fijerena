@@ -66,8 +66,26 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
 - 60-second connect timeout, 3-minute read timeout
 - **Global Task Retries:** 5 attempts with exponential backoff (1m, 2m, 4m, 8m, 16m) for the entire refresh task
 - **Download Retries:** 3 retries with exponential backoff (5s base) for individual file downloads
+- **WorkManager Retries:** `EpgSyncWorker` uses `BackoffPolicy.LINEAR` at 10 minutes, both for the periodic schedule and for `EpgSyncDebugReceiver`'s one-shot request. WorkManager's ~30s default just keeps hammering a source that is actively rate-limiting.
+- **Truncation Detection:** `input.read()` returning -1 only means the connection closed, which is indistinguishable from a clean end of body. After the read loop, `totalRead` is compared against the response's `Content-Length` when the server sends one; a mismatch is treated as a download error and takes the retry path, rather than surfacing much later as an `XmlPullParserException` deep in ingestion.
 - 128KB I/O buffers
 - `OutOfMemoryError` caught explicitly
+
+**Change Detection:**
+
+A refresh that would re-download and re-parse an unchanged source is pure waste. Three mechanisms, in order:
+
+1. **Conditional request.** `downloadSource` sends `If-None-Match` / `If-Modified-Since` from the source's stored `etag` / `last_modified_header`. A `304 Not Modified` short-circuits with no body read at all.
+2. **Content hash.** For non-`.gz` sources a SHA-256 is computed in the same read pass and compared to `last_content_sha256`. `.gz` sources cannot be hashed at download time — gzip's mtime header taints the raw bytes even when the decompressed content is identical — so `ingestDownloadedSource` hashes the *decompressed* stream instead (`hashDecompressedGzip`, a read-and-discard pass, not a parse) before committing to a real ingest.
+3. **Staleness guard (`canSkipIngest`).** A hash match only skips ingestion within `STALENESS_FORCE_INGEST_MS` (24h) of the last real ingest. `ingestFromStream` windows programmes against wall-clock time (`cutoffEpoch` / `futureLimitEpoch`), so a byte-identical static file re-ingested days later still extends the guide further into the future — skipping it forever would silently freeze the guide window while the source kept reporting healthy refreshes.
+
+A confirmed-unchanged source:
+- skips `EpgIndexer.ingestFromStream` entirely,
+- is **excluded** from `executeSwapToMain`'s id list at every call site — including it would delete its primary rows and transfer nothing back, since staging was never populated for it,
+- carries its last known channel/programme counts forward via `EpgSourceDao.markUnchanged` rather than resetting them to zero,
+- is flagged `unchanged = true` in its result, which the EPG management screens render as "Unchanged" in place of download/ingest durations (which would otherwise be stale numbers from whenever it last actually ran).
+
+Validators and hash live on `epg_source` (`etag`, `last_modified_header`, `last_content_sha256`, added in `providers.db` MIGRATION_9_10).
 
 **Channel-based producer-consumer pipeline:**
 
@@ -464,7 +482,10 @@ data class EpgSourceEntity(val id: Long, val url: String, val label: String,
                            val enabled: Boolean, val lastChannels: Int,
                            val lastProgrammes: Int, val lastDownloadBytes: Long,
                            val ingestMethod: String, val lastIngestionDurationMs: Long,
-                           val lastDownloadDurationMs: Long)
+                           val lastDownloadDurationMs: Long, val providerId: Long,
+                           // Change detection — see "Change Detection" above
+                           val lastContentSha256: String?, val etag: String?,
+                           val lastModifiedHeader: String?)
 
 data class EpgPipelineStatsEntity(val id: Int = 1, val updatedAtMs: Long,
                                   val durationMs: Long, val sourcesProcessed: Int,
@@ -480,7 +501,6 @@ data class EpgProgrammeEntity(val id: Long, val channelId: String, val title: St
                               val titleLowercase: String, val description: String?,
                               val category: String?, val startEpoch: Long, val endEpoch: Long,
                               val sourceId: Long)
-```
 data class EpgProgrammeFts(val title: String, val description: String?)  // FTS4 content table
 data class EpgIndexMetadata(val id: Int, val fileSizeBytes: Long, val fileLastModifiedMs: Long,
                             val indexedAtMs: Long, val channelCount: Int,

@@ -136,6 +136,11 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
   - **Live TV:** Added to history after **10 seconds** of continuous playback.
   - **VOD (Movies/Series):** Added to history only after reaching a **2% watch threshold**.
   - **Session Finalization:** `loaderViewModel.stopPlayback()` MUST be called when exiting the player or switching streams to ensure final progress is reported and history is flushed to disk.
+- **Watch State Storage:** Position and completion live in the durable `watch_state` Room table (`xtream_v2.db` v15), **not** in SharedPreferences — the old `watch_history_v3` blob truncated to `watchHistorySize` on every write and is now migrated and purged on first `setProvider()`. `watchHistorySize` still bounds the *Recent* row's length, never what is stored. Reads go through `MediaRepository`; never re-introduce a blob writer.
+  - **Completion is sticky:** progress upserts do `MAX(existing, new)` on `isCompleted`. Only `setWatched(false)` clears it.
+  - **Manual marking:** `MediaRepository.setWatched(itemId, contentType, watched)`. No-ops for server-backed providers (Jellyfin owns that state). A manual mark leaves `lastPlayedAt` null so it never pollutes the Recent row.
+  - **TMDB dedup:** movies join `xtream_streams` on shared `tmdbId`; episodes join `xtream_series` on **series-level** `tmdbId`, then match `(season, episodeNum)` — episode-level `tmdbId` is effectively never populated by providers and must not be used for this.
+  - **Track prefs:** `audioTrackIndex`/`subtitleTrackIndex` persist per row, with a series-level fallback so a new episode inherits the last choice made in that series.
 
 ---
 
@@ -147,7 +152,9 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **Search:** Two-tier strategy, both via SQLite **FTS4 MATCH** in `XmltvSearchService`: a raw query preserving FTS operators (OR/NEAR/NOT, prefix wildcard), then a sanitized "safe" AND-style retry if the raw query returns nothing. No LIKE or XML-scan fallback exists — if the index isn't built yet (`EpgIndexState.NotIndexed`), search returns null; if the FTS index is mid-rebuild (`isFtsStale()`), search throws rather than degrading to a full scan. The old FTS index stays usable until `rebuildFtsAndUpdateState()` actually starts (stale is marked at entry, not at dispatch), so this only affects the actual rebuild window, not the scheduling gap.
 - **Timezone:** Per-source `timezoneOffsetHours` override applied at parse time.
 - **State Machine:** `MultiSourceState` sealed interface: `Idle` -> `Processing` -> `Completed`/`Error`, plus `Clearing` state. Per-source progress tracked via `ActiveSourceProgress(label, phase, channels, programmes)`.
-- **Persistent Stats:** Pipeline completion triggers an update to `EpgPipelineStatsEntity` in `providers.db` (version 8).
+- **Change Detection:** `downloadSource` sends `If-None-Match`/`If-Modified-Since` from the source's stored `etag`/`last_modified_header`; a `304` short-circuits with no body read. Otherwise a SHA-256 of the payload is compared to `last_content_sha256` (computed during the download pass for plain sources, after decompression for `.gz` — gzip's mtime header taints the raw bytes). A confirmed-unchanged source skips `ingestFromStream` entirely, is excluded from `executeSwapToMain`'s id list (its staging table was never populated), and carries its previous counts forward via `EpgSourceDao.markUnchanged`. A hash match only skips within 24h of the last real ingest — ingestion windows programmes against wall-clock time, so a byte-identical file must be re-ingested daily or the guide window silently freezes.
+- **Download Integrity:** `read()` returning -1 alone can't distinguish a clean EOF from a cut connection. `totalRead` is checked against `Content-Length` when the server sends one; a mismatch is a download error and takes the normal retry path.
+- **Persistent Stats:** Pipeline completion triggers an update to `EpgPipelineStatsEntity` in `providers.db` (version 10).
 - **Clear All Data:** Uses DB `destroy()` + `getInstance()` (recreate) instead of `DELETE FROM` — critical for performance on large databases (4M+ rows). Cancel in-flight work via `RefreshQueue.cancelAll()`.
 - **ViewModel Resilience:** `EpgManagementViewModel` uses a `db()` function (always calls `EpgIndexDatabase.getInstance()`) and `_dbGeneration` StateFlow counter. After DB destroy/recreate, bumping the generation causes `flatMapLatest` to re-subscribe all Room Flows to the new DB instance.
 - **Management:** Multi-source EPG management in `Screen.EpgManagement`.
@@ -170,6 +177,8 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
   - **Xtream:** Two-phase parallel search with multi-word matching.
   - **Jellyfin:** Server-side search.
 - **Virtual Categories:** Favorites (configurable 10-500), Last Watched (1-100), Continue Watching (VOD), Recent Categories.
+- **Mark Watched/Unwatched:** Manual toggle on movie details (icon beside the favorite toggle), TV content lists and search (`FavoriteContextMenuDialog`/`SearchFavoriteDialog` second action row), TV episode cards (long-press), and the mobile episode watched badge (itself the tap target). Each surface reuses its existing affordance — do not invent a new one.
+- **Sync Feedback:** Provider screens show the last sync's catalog delta ("No changes since last sync", or "N added • N updated • N removed"), gated on Xtream and on `lastSyncError` being null. EPG management shows "Unchanged" in place of durations for a source the last run confirmed unchanged.
 - **Jellyfin Quick Connect:** Supported for easy auth.
 - **Settings:** Provider management, theme selection, EPG management, cache management, UI scale, export/import (JSON).
 
@@ -275,9 +284,9 @@ Hard-won lessons from production debugging. Read these before making changes in 
 **Context:** `getFavoriteCategoryItems()`, `getFavoriteItems()`, and `getFavoriteShowItems()` all deserialize JSON from SharedPreferences on every call with no in-memory cache. Called per-chip inside `LazyRow items {}` — 500+ deserializations per recompose for large providers.
 **Fix:** Apply in-memory cache + dirty-flag + debounced-write pattern (same as `cachedWatchHistory`).
 
-### Watch history lookups are O(n*m) in refreshPerItemData
-**Context:** `MediaRepository.getPlaybackPosition()` does a linear scan of watch history per call. `refreshPerItemData()` calls it in a loop over every stream.
-**Fix:** Build a Map index for O(1) lookups. Always check for linear scans inside loops when profiling data layers.
+### Watch history lookups were O(n*m) in refreshPerItemData
+**Context:** `MediaRepository.getPlaybackPosition()` did a linear scan of the watch-history blob per call, and `refreshPerItemData()` called it in a loop over every stream.
+**Fix (landed):** `getPlaybackPositions(contentType)` now issues one indexed `watch_state` query and returns a Map for O(1) lookups. The lesson stands: always check for linear scans inside loops when profiling data layers.
 
 ### contentHash self-referential hash bug in XtreamContentManager
 **Context:** `hashCode()` on a data class that includes the `contentHash` field (defaulting to 0). The stored entity has a non-zero `contentHash`, so `hashCode()` never matches — causing spurious DB re-inserts on every sync.
