@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.movie
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -193,6 +194,13 @@ private fun MovieDetailsContent(
     onRelatedTitleSelected: (MediaItem) -> Unit,
     onAlternateStreamSelected: (MediaItem) -> Unit,
 ) {
+    // Explicit handler so Back navigates on the first press. Without it, Back falls through to
+    // whatever a focused TV Button/Surface does with the key on its own, which on a real Shield
+    // swallows the first press to just clear focus and only navigates back on the second.
+    BackHandler {
+        onBack()
+    }
+
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val providerName by remember { mutableStateOf(appSettings.providerName) }

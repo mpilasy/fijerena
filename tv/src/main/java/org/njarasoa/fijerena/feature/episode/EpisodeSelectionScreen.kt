@@ -268,9 +268,16 @@ private fun EpisodeListContent(
     // Continue Watching resume episode below); arriving here never auto-opens it.
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
 
-    // Handle back press: dismiss detail panel first, then navigate back
+    // Handle back press: dismiss detail panel first, then navigate back. Two handlers, not one
+    // with a branch inside — the base-list case (selectedEpisode == null) needs its own explicit
+    // BackHandler too. Without it, Back on this screen falls through to whatever a focused TV
+    // Button/Surface does with the key on its own, which on a real Shield swallows the first
+    // press to just clear focus and only navigates back on the second.
     BackHandler(enabled = selectedEpisode != null) {
         selectedEpisode = null
+    }
+    BackHandler(enabled = selectedEpisode == null) {
+        onBack()
     }
 
     // Track refresh state for animation
