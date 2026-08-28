@@ -78,7 +78,7 @@ class XmltvSearchService(
                     ?: return rowsToSearchResult(emptyList(), searchedFromIndex = true)
             val settingsDb = SettingsDatabase.getInstance(context)
             val sourceDao = settingsDb.epgSourceDao()
-            val validSources = sourceDao.getEnabledSourcesForSearch(activeProviderId)
+            val validSources = sourceDao.getEnabledSourcesForProvider(activeProviderId)
             val sourceIds = validSources.map { it.id }
             if (sourceIds.isEmpty()) return rowsToSearchResult(emptyList(), searchedFromIndex = true)
 
@@ -136,7 +136,7 @@ class XmltvSearchService(
         val settingsDb = SettingsDatabase.getInstance(context)
         val sourceDao = settingsDb.epgSourceDao()
         val validSources =
-            activeProviderId?.let { sourceDao.getEnabledSourcesForSearch(it) } ?: emptyList()
+            activeProviderId?.let { sourceDao.getEnabledSourcesForProvider(it) } ?: emptyList()
         val sourceIds = validSources.map { it.id }
 
         var result: XmltvSearchResult? = null

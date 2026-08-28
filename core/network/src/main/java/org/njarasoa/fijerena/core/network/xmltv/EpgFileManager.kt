@@ -78,6 +78,15 @@ class EpgFileManager private constructor(
         private const val KEY_MIGRATED_TO_SOURCES = "migrated_to_sources_v1"
         private const val STREAM_BUFFER_SIZE = 131072 // 128KB
         private const val MAX_RETRIES = 3
+
+        /**
+         * Task ids carry the provider, because [RefreshQueue] coalesces same-id submissions into
+         * the running task. A refresh covers one provider's sources only, so an unsuffixed id
+         * would let a second provider's refresh silently become the first one's run.
+         */
+        fun refreshStaleTaskId(providerId: Long): String = "epg_refresh_stale_$providerId"
+
+        fun refreshFailedTaskId(providerId: Long): String = "epg_refresh_failed_$providerId"
         private const val RETRY_DELAY_MS = 5000L
         private const val SCHEDULED_REFRESH_AGE_MS = 3_600_000L // scheduled runs refresh if data is older than 1 hour
         // A content-hash match skips ingestion (see canSkipIngest) unless the last real ingest is
@@ -418,13 +427,14 @@ class EpgFileManager private constructor(
     }
 
     fun launchRefreshStale(
+        providerId: Long,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
-        launchGenericTask("epg_refresh_stale", onComplete, onCellularConfirm) {
+        launchGenericTask(refreshStaleTaskId(providerId), onComplete, onCellularConfirm) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val thresholdMs = System.currentTimeMillis() - staleThresholdMs
-            val staleSources = sourceDao.getStaleSources(thresholdMs)
+            val staleSources = sourceDao.getStaleSources(providerId, thresholdMs)
             if (staleSources.isNotEmpty()) {
                 processAllSourcesInternal(staleSources)
             } else {
@@ -436,12 +446,13 @@ class EpgFileManager private constructor(
     }
 
     fun launchRefreshFailed(
+        providerId: Long,
         onComplete: (suspend () -> Unit)? = null,
         onCellularConfirm: (suspend () -> Boolean)? = null,
     ) {
-        launchGenericTask("epg_refresh_failed", onComplete, onCellularConfirm) {
+        launchGenericTask(refreshFailedTaskId(providerId), onComplete, onCellularConfirm) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-            val failedSources = sourceDao.getFailedSources()
+            val failedSources = sourceDao.getFailedSources(providerId)
             if (failedSources.isNotEmpty()) {
                 processAllSourcesInternal(failedSources)
             } else {
@@ -1318,12 +1329,12 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Refresh all enabled sources that are considered stale (last ingested > interval).
-     * Returns true if refresh was started (stale sources found), false otherwise.
+     * Refresh the enabled sources of [providerId] that are considered stale (last ingested >
+     * interval). Returns true if refresh was started (stale sources found), false otherwise.
      */
-    suspend fun refreshOutdatedSources(): Boolean {
+    suspend fun refreshOutdatedSources(providerId: Long): Boolean {
         val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-        val sources = sourceDao.getEnabledSources()
+        val sources = sourceDao.getEnabledSourcesForProvider(providerId)
         if (sources.isEmpty()) return false
 
         if (_state.value is MultiSourceState.Processing) {
@@ -1354,16 +1365,17 @@ class EpgFileManager private constructor(
     }
 
     /**
-     * Returns all enabled sources whose data is considered stale.
-     * Used by [EpgSyncWorker] to query which sources to process before calling [processAllSources].
+     * Returns the enabled sources of [providerId]. Used by [EpgSyncWorker] to query which sources
+     * to process before calling [processAllSources]; a source belongs to exactly one provider, so a
+     * refresh never touches another provider's guide.
      */
-    internal suspend fun getAllSources(): List<EpgSourceEntity> {
-        return SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSources()
+    internal suspend fun getAllSources(providerId: Long): List<EpgSourceEntity> {
+        return SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSourcesForProvider(providerId)
     }
 
-    internal suspend fun getStaleSources(): List<EpgSourceEntity> {
+    internal suspend fun getStaleSources(providerId: Long): List<EpgSourceEntity> {
         val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-        val sources = sourceDao.getEnabledSources()
+        val sources = sourceDao.getEnabledSourcesForProvider(providerId)
         if (sources.isEmpty()) return emptyList()
         val now = System.currentTimeMillis()
         return sources.filter { source ->

@@ -82,7 +82,7 @@ class XmltvEpgService(
 
         val settingsDb = SettingsDatabase.getInstance(context)
         val sourceDao = settingsDb.epgSourceDao()
-        val validSources = sourceDao.getEnabledSourcesForSearch(providerId)
+        val validSources = sourceDao.getEnabledSourcesForProvider(providerId)
         val sourceIds = validSources.map { it.id }
         if (sourceIds.isEmpty()) return cacheMiss()
 

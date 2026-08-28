@@ -321,7 +321,7 @@ class EpgManagementViewModel(
     }
 
     fun refreshStale() {
-        val taskId = "epg_refresh_stale"
+        val taskId = EpgFileManager.refreshStaleTaskId(providerId)
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
             _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
@@ -333,7 +333,7 @@ class EpgManagementViewModel(
             val thresholdMs = System.currentTimeMillis() - epgFileManager.staleThresholdMs
             val sourcesToRefresh =
                 withContext(Dispatchers.IO) {
-                    settingsDb().epgSourceDao().getStaleSources(thresholdMs)
+                    settingsDb().epgSourceDao().getStaleSources(providerId, thresholdMs)
                 }.filter { !queued.contains("epg_refresh_source_${it.id}") }
 
             if (sourcesToRefresh.isEmpty()) {
@@ -344,6 +344,7 @@ class EpgManagementViewModel(
             _taskSourceIds.value += (taskId to sourcesToRefresh.map { it.id }.toSet())
 
             epgFileManager.launchRefreshStale(
+                providerId = providerId,
                 onComplete = {
                     refreshDbStats()
                     _taskSourceIds.value -= taskId
@@ -369,7 +370,7 @@ class EpgManagementViewModel(
     }
 
     fun refreshFailed() {
-        val taskId = "epg_refresh_failed"
+        val taskId = EpgFileManager.refreshFailedTaskId(providerId)
         val queued = RefreshQueue.queuedTaskIds.value
         if (queued.contains(taskId)) {
             _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
@@ -377,7 +378,7 @@ class EpgManagementViewModel(
         }
 
         viewModelScope.launch {
-            val sources = withContext(Dispatchers.IO) { settingsDb().epgSourceDao().getFailedSources() }
+            val sources = withContext(Dispatchers.IO) { settingsDb().epgSourceDao().getFailedSources(providerId) }
             if (sources.isEmpty()) {
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_failed_sources))
                 return@launch
@@ -386,6 +387,7 @@ class EpgManagementViewModel(
             _taskSourceIds.value += (taskId to sources.map { it.id }.toSet())
 
             epgFileManager.launchRefreshFailed(
+                providerId = providerId,
                 onComplete = {
                     refreshDbStats()
                     _taskSourceIds.value -= taskId
