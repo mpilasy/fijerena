@@ -376,6 +376,40 @@ private fun EpisodeListContent(
     var episodePlaybackPositions by remember(seriesDetail) { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var watchedEpisodeIds by remember(seriesDetail) { mutableStateOf<Set<String>>(emptySet()) }
 
+    // Re-reads progress/watched (including TMDB siblings) for every episode of this series.
+    // Called after a manual mark, not just on initial load — a single-episode optimistic patch
+    // would miss a sibling that the mark just made completed, and wouldn't restore a resume bar
+    // an unmark brings back. Doesn't touch resumeEpisodeId/expandedSeasons: a manual toggle should
+    // not re-anchor or re-expand a season out from under the user.
+    suspend fun refreshEpisodeWatchState() {
+        val allEpisodeIds = mutableListOf<String>()
+        for (episodes in seriesDetail.episodes.values) {
+            for (ep in episodes) {
+                allEpisodeIds.add(ep.id)
+            }
+        }
+        val allWatched = mediaRepository.getPlaybackPositionsSuspend(allEpisodeIds, ContentType.TV_SHOWS)
+        episodeProgress =
+            buildMap {
+                for ((id, watched) in allWatched) {
+                    watched.resumeProgress()?.let { put(id, it) }
+                }
+            }
+        episodePlaybackPositions =
+            buildMap {
+                for ((id, watched) in allWatched) {
+                    watched.resumeProgress()?.let { put(id, watched.playbackPosition) }
+                }
+            }
+        watchedEpisodeIds =
+            buildSet {
+                for ((id, watched) in allWatched) {
+                    if (watched.isCompleted) add(id)
+                }
+                addAll(mediaRepository.getSiblingCompletedEpisodeIds(seriesDetail.id))
+            }
+    }
+
     // Playback positions for every episode: the progress bars and watched checks above, plus
     // auto-expanding the season holding the next unwatched/in-progress episode.
     LaunchedEffect(seriesDetail) {
@@ -848,12 +882,17 @@ private fun EpisodeListContent(
                                 onLongPress = {
                                     // Manual watched/unwatched mark (Phase 6,
                                     // plans/watch-state-durable-storage-plan.md). Optimistic:
-                                    // flips the badge immediately rather than waiting on the write.
+                                    // flips this episode's own badge immediately rather than
+                                    // waiting on the write; the full re-read after it lands is what
+                                    // catches a TMDB sibling this mark just completed too (Phase 5)
+                                    // and restores the resume bar on an unmark — a single-item
+                                    // patch would miss both.
                                     val nowWatched = episode.id !in watchedEpisodeIds
                                     watchedEpisodeIds =
                                         if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
                                     watchedToggleScope.launch {
                                         mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
+                                        refreshEpisodeWatchState()
                                     }
                                 },
                             )

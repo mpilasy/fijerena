@@ -102,11 +102,17 @@ interface WatchStateDao {
      * touches only `isCompleted`/`updatedAt`, leaving position, duration, `lastPlayedAt` and
      * metadata exactly as playback left them, so a later `setWatched(false)` brings the resume bar
      * back where it was rather than erasing it.
+     *
+     * [seriesId]/[episodeId] are insert-only, same as everything else here — an episode with no
+     * existing row has none to carry forward on conflict. `MediaRepository.setWatched` resolves
+     * [seriesId] from the catalogue before calling this for a TV Shows mark; without it, a
+     * never-played episode marked watched directly would silently drop out of
+     * [getSeriesCompletedCounts]'s `seriesId IS NOT NULL` rollup.
      */
     @Query(
         "INSERT INTO watch_state (providerId, itemId, contentType, itemName, categoryId, positionMs, " +
-            "durationMs, isCompleted, updatedAt, lastPlayedAt) " +
-            "VALUES (:providerId, :itemId, :contentType, '', '', 0, 0, 1, :now, NULL) " +
+            "durationMs, isCompleted, updatedAt, lastPlayedAt, seriesId, episodeId) " +
+            "VALUES (:providerId, :itemId, :contentType, '', '', 0, 0, 1, :now, NULL, :seriesId, :episodeId) " +
             "ON CONFLICT(providerId, itemId, contentType) DO UPDATE SET " +
             "isCompleted = 1, updatedAt = excluded.updatedAt",
     )
@@ -115,6 +121,8 @@ interface WatchStateDao {
         itemId: String,
         contentType: String,
         now: Long,
+        seriesId: String? = null,
+        episodeId: String? = null,
     )
 
     /**
