@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- EpgSyncWorker waits on ConnectivityManager.activeNetwork before starting a sync. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application>
+        <!--
+            EpgSyncWorker and EpgFtsRebuildWorker both call setForeground() with
+            FOREGROUND_SERVICE_TYPE_DATA_SYNC. The :mobile and :tv manifests already declare this
+            service with "dataSync|mediaPlayback"; declaring the dataSync half here as well keeps
+            the library self-consistent, so linting :core:network in isolation sees the type its
+            own workers require.
+        -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+    </application>
 </manifest>
