@@ -270,9 +270,9 @@ private fun EpisodeListContent(
 
     // Handle back press: dismiss detail panel first, then navigate back. Two handlers, not one
     // with a branch inside — the base-list case (selectedEpisode == null) needs its own explicit
-    // BackHandler too. Without it, Back on this screen falls through to whatever a focused TV
-    // Button/Surface does with the key on its own, which on a real Shield swallows the first
-    // press to just clear focus and only navigates back on the second.
+    // BackHandler too. Fallback only in practice — the real fix is the LazyColumn's
+    // onPreviewKeyEvent below (see its comment); confirmed on a real Shield that this
+    // BackHandler alone never fires on the first press while a focused TV Button has focus.
     BackHandler(enabled = selectedEpisode != null) {
         selectedEpisode = null
     }
@@ -564,7 +564,22 @@ private fun EpisodeListContent(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                modifier = Modifier.fillMaxSize(),
+                // Confirmed on a real Shield (logcat, MovieDetailsScreen's identical bug): the
+                // first Back press while a focused TV Button has focus reaches Compose's key
+                // dispatch fine, but something between there and the BackHandler(selectedEpisode
+                // == null) above marks it handled — that BackHandler never fires on the first
+                // press, only the second. Intercept here instead: onPreviewKeyEvent runs
+                // top-down, before any descendant (including the focused Button) gets a look, so
+                // this always wins the race. Matches the same pattern TvDpadEscape.kt uses.
+                modifier =
+                    Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+                        if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
+                            onBack()
+                            true
+                        } else {
+                            false
+                        }
+                    },
             ) {
                 // Hero Section: Header + Poster + GlassPanel Metadata
                 item(key = "series_hero", contentType = "hero") {
