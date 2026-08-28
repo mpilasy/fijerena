@@ -33,7 +33,7 @@ import org.njarasoa.fijerena.core.player.domain.SeriesId
  * replaced the separate Continue Watching and Last Watched categories.
  *
  * Reads `watch_state` (via [FakeWatchStateDao]) rather than the blob since Phase 3 of
- * plans/watch-state-durable-storage-plan.md. [repositoryWith] seeds rows with decreasing
+ * docs/plans/watch-state-durable-storage-plan.md. [repositoryWith] seeds rows with decreasing
  * `lastPlayedAt` in argument order, standing in for the blob's old "index 0 is newest" convention
  * that the real writers no longer produce directly — recency now comes from a clock, not a list
  * position — so relative order across fixture calls is explicit rather than incidental.

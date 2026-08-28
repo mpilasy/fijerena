@@ -246,7 +246,7 @@ fun SearchScreen(
                             },
                             onResultLongPress = { result ->
                                 // Manual watched/unwatched mark (Phase 6,
-                                // plans/watch-state-durable-storage-plan.md). Unlike isFavorite,
+                                // docs/plans/watch-state-durable-storage-plan.md). Unlike isFavorite,
                                 // there is no synchronous in-memory cache for watch_state — the
                                 // menu target has to wait on one suspend fetch before it opens.
                                 val isWatchable =
@@ -1054,7 +1054,7 @@ private fun SearchFavoriteDialog(
                 maxLines = 2,
             )
         },
-        // Watched toggle (Phase 6, plans/watch-state-durable-storage-plan.md), beside the
+        // Watched toggle (Phase 6, docs/plans/watch-state-durable-storage-plan.md), beside the
         // favorite action below — null onToggleWatched/isWatched (Live TV) omits the row.
         text =
             if (onToggleWatched != null && isWatched != null) {

@@ -250,7 +250,7 @@ Per-stream EPG payload cache table.
 ### Table: `watch_state` (added v15)
 Durable playback position and completion state, kept forever. Replaces the `watch_history_v3`
 SharedPreferences blob, which truncated to `providerSettings.watchHistorySize` on every write and
-silently evicted anything older. See `plans/watch-state-durable-storage-plan.md`.
+silently evicted anything older. See `docs/plans/watch-state-durable-storage-plan.md`.
 
 | Column | Type | Description |
 |--------|------|-------------|

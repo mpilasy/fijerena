@@ -55,7 +55,7 @@ class XtreamEpgManager(
      * The cache expired but never evicted: reads filter `updatedAt >= cutoff`, so stale rows went
      * unread while still occupying disk. Measured on a Shield, the table reached 1.2 GB — 83% of
      * `xtream_v2.db` — of which *none* was inside the 6-hour window, so it held no usable EPG at
-     * all. See plans/tv-ui-performance-plan.md.
+     * all. See docs/plans/tv-ui-performance-plan.md.
      *
      * Batched, with a pause between batches, for the reason in [XtreamEpgCacheDao.deleteStaleBatch]:
      * this database is `auto_vacuum = FULL`, so one unbounded delete tries to reshuffle the whole

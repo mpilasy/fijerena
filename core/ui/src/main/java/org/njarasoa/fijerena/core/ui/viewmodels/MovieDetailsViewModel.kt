@@ -198,7 +198,7 @@ class MovieDetailsViewModel(
                 durationMs = watched.duration
             }
         }
-        // TMDB dedup (Phase 5, plans/watch-state-durable-storage-plan.md): a different catalogue
+        // TMDB dedup (Phase 5, docs/plans/watch-state-durable-storage-plan.md): a different catalogue
         // entry for the same title (a second language track, a 4K re-rip) completed under its own
         // id still has to show this one watched — otherwise the grid checks it (CategoryViewModel
         // does this same union) while its own details page contradicts that.
@@ -229,7 +229,7 @@ class MovieDetailsViewModel(
     }
 
     /**
-     * Manual watched/unwatched mark (Phase 6, plans/watch-state-durable-storage-plan.md). Marking
+     * Manual watched/unwatched mark (Phase 6, docs/plans/watch-state-durable-storage-plan.md). Marking
      * watched leaves the stored position in `watch_state` alone — a rewatch still resumes — but
      * hides this screen's own resume bar immediately rather than waiting for a reload, matching
      * `WatchedItem.resumeProgress()`'s rule that a completed item never offers one. Marking

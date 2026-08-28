@@ -57,7 +57,7 @@ interface XtreamStreamDao {
     ): List<XtreamStreamEntity>
 
     /**
-     * Phase 5 dedup (plans/watch-state-durable-storage-plan.md): item ids in this content type
+     * Phase 5 dedup (docs/plans/watch-state-durable-storage-plan.md): item ids in this content type
      * completed by a TMDB sibling — a different catalogue entry for the same title (five language
      * variants, a 4K re-rip) whose own `watch_state` row is completed. `watch_state` never stores
      * a `tmdbId` itself (see "No tmdbId column" in the plan), so this reaches it by joining back

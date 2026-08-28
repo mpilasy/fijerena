@@ -43,7 +43,7 @@ interface XtreamEpisodeDao {
 
     /**
      * Resolves an episode's series, for a manual watched mark (Phase 6,
-     * plans/watch-state-durable-storage-plan.md) on an episode with no existing `watch_state` row.
+     * docs/plans/watch-state-durable-storage-plan.md) on an episode with no existing `watch_state` row.
      * `markWatched`'s repository-level signature carries no `seriesId` — without this lookup a
      * never-played episode marked watched directly would insert a row with `seriesId` null, and
      * `getSeriesCompletedCounts`'s `seriesId IS NOT NULL` filter would silently drop it from the
@@ -67,7 +67,7 @@ interface XtreamEpisodeDao {
     >
 
     /**
-     * Phase 5 dedup (plans/watch-state-durable-storage-plan.md), corrected 2026-08-27 after an
+     * Phase 5 dedup (docs/plans/watch-state-durable-storage-plan.md), corrected 2026-08-27 after an
      * on-device check showed the original episode-`tmdbId`-based join was structurally incapable
      * of matching anything: unlike movies, where five language variants are five rows in one flat
      * catalogue, five language variants of a show are five separate `xtream_series` rows, each

@@ -909,7 +909,7 @@ private fun EpisodeListContent(
                                 },
                                 onLongPress = {
                                     // Manual watched/unwatched mark (Phase 6,
-                                    // plans/watch-state-durable-storage-plan.md). Optimistic:
+                                    // docs/plans/watch-state-durable-storage-plan.md). Optimistic:
                                     // flips this episode's own badge immediately rather than
                                     // waiting on the write; the full re-read after it lands is what
                                     // catches a TMDB sibling this mark just completed too (Phase 5)

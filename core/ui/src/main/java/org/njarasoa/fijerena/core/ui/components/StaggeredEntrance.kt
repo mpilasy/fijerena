@@ -72,7 +72,7 @@ private class StaggeredEntranceNode(
                     //
                     // Correctness, not a measured win: this was tried as the fix for the ~1s stall
                     // after a Live TV back-out and made no difference to it (see
-                    // plans/tv-ui-performance-plan.md task 6b). Kept because invalidating
+                    // docs/plans/tv-ui-performance-plan.md task 6b). Kept because invalidating
                     // measurement for a placement-only animation is simply wrong.
                     invalidatePlacement()
                 }

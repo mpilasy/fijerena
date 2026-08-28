@@ -16,7 +16,7 @@ import org.njarasoa.fijerena.core.player.domain.SeriesId
  * else in the codebase would have produced by accident.
  *
  * Counts and percentages below are from the phone on 2026-08-19 (12 TV_SHOWS rows, providers
- * 2/8/9); see `plans/id-type-safety-plan.md`.
+ * 2/8/9); see `docs/plans/id-type-safety-plan.md`.
  */
 object WatchHistoryFixtures {
     /**
