@@ -805,9 +805,10 @@ its new data source.
 
 ## Known adjacent problems, deliberately out of scope
 
-- **Favorites have the identical defect.** Same prefs file, same whole-blob rewrite, same
-  `catch { emptyList() }` wipe path, capped at 100. Same fix applies; not required by this
-  requirement.
+- ~~**Favorites have the identical defect.**~~ **Fixed 2026-08-28** — same prefs file, same
+  whole-blob rewrite, same `catch { emptyList() }` wipe path, capped at 100. Ported to a
+  `favorite_state` table on the same pattern; see
+  [favorites-durable-storage-plan.md](favorites-durable-storage-plan.md).
 - ~~**`XtreamUserDataManager` keeps its own parallel blob** in `xtream_cache_$providerId`.~~
   **Deleted 2026-08-28.** Its unversioned `watch_history` of `List<WatchedStream>` was keyed on
   **int** stream ids against `MediaRepository`'s String ids, and held a stale copy of the same flags

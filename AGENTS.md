@@ -287,6 +287,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/codebase-audit-fix-plan.md](docs/plans/codebase-audit-fix-plan.md) | 29/29 complete (T1-T4) |
 | [docs/plans/tv-ui-performance-plan.md](docs/plans/tv-ui-performance-plan.md) | Partially landed; baseline measured on hardware 2026-08-26 |
 | [docs/plans/xtream-multi-device-sync-plan.md](docs/plans/xtream-multi-device-sync-plan.md) | Not started; backend option undecided |
+| [docs/plans/favorites-durable-storage-plan.md](docs/plans/favorites-durable-storage-plan.md) | **Complete** - all four phases landed |
 | [docs/plans/secret-store-migration-plan.md](docs/plans/secret-store-migration-plan.md) | Not started, deferred deliberately |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
@@ -295,7 +296,7 @@ Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-stat
 
 So before deleting a finished plan, grep for citations of its filename. If any exist, keep the file - the watch-state plan is complete and deliberately retained on exactly these grounds. Prune only plans nothing cites.
 
-A complete plan may also still carry live information. The watch-state plan's "Known adjacent problems, deliberately out of scope" section records four defects found while building it and consciously not fixed. Three were resolved on 2026-08-28 - the `getSeriesWatchProgress()` TMDB dedup gap, `XtreamUserDataManager`'s parallel blob, and the duplicated `last_*` navigation keys that went with it - and are struck through rather than deleted, so the reasoning that deferred them stays legible. **One is still open: Favorites carry the identical truncation defect** - `favorites_v2` and `favorite_categories` are JSON blobs in `media_cache_<providerId>`, capped at 100, rewritten whole on every change, and silently emptied by a `catch { emptyList() }` on decode failure. Same fix as watch state: a table.
+A complete plan may also still carry live information. The watch-state plan's "Known adjacent problems, deliberately out of scope" section records four defects found while building it and consciously not fixed. Three were resolved on 2026-08-28 - the `getSeriesWatchProgress()` TMDB dedup gap, `XtreamUserDataManager`'s parallel blob, and the duplicated `last_*` navigation keys that went with it - and are struck through rather than deleted, so the reasoning that deferred them stays legible. All four are now closed - Favorites carried the identical truncation defect and were ported to a `favorite_state` table on 2026-08-28. The last capped blob left anywhere is `recent_categories_<contentType>` (20 entries), kept deliberately: it is a convenience list nobody curates, so eviction is the intended behaviour there rather than data loss.
 
 When asked to produce a plan, write the real file under `docs/plans/` - not only an ephemeral plan-mode scratch file.
 

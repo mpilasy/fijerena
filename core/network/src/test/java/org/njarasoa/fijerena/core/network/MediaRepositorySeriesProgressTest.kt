@@ -14,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.fixtures.FakeFavoriteStateDao
 import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao
@@ -49,7 +50,7 @@ class MediaRepositorySeriesProgressTest {
         episodeDao = mockk(relaxed = true)
         streamDao = mockk(relaxed = true)
         coEvery { episodeDao.getSiblingCompletedCountsBySeries(any()) } returns emptyMap()
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao, streamDao = streamDao, episodeDao = episodeDao)
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao, favoriteStateDao = FakeFavoriteStateDao(), streamDao = streamDao, episodeDao = episodeDao)
     }
 
     @After

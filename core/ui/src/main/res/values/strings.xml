@@ -261,8 +261,6 @@
     <string name="provider_watch_history_size_desc">Cards to show in the Recent row (1-100)</string>
     <string name="provider_edit_button">Edit</string>
     <string name="provider_queue_size_label">Queue Size</string>
-    <string name="provider_favorites_max_size_label">Favorites Max Size</string>
-    <string name="provider_favorites_max_size_desc">Maximum number of favorites to store (10-500)</string>
     <string name="provider_max_size_label">Max Size</string>
     <string name="provider_clear_favorites_desc">Remove all favorited streams from all content types</string>
     <string name="provider_clear_favorites_button">Clear All Favorites</string>

@@ -12,6 +12,8 @@ import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
@@ -40,9 +42,13 @@ class SettingsExportManager(
         // backup taken before version 4 has no watch state in it at all — SettingsExportManager
         // never exported watch_history_v3 — so there is no older shape to migrate on import;
         // providerWatchState simply decodes to its empty default on an old file.
-        private const val EXPORT_VERSION = 4
-        private const val KEY_FAVORITES = "favorites_v2"
-        private const val KEY_FAVORITE_CATEGORIES = "favorite_categories"
+        // 5: favourites moved from the favorites_v2 / favorite_categories blobs to the
+        // favorite_state table (docs/plans/favorites-durable-storage-plan.md). The on-the-wire
+        // shape did not change — providerFavorites still carries the same fields, matched by
+        // provider name+URL — so a version 4 file restores onto this build unchanged, and a
+        // version 5 file restores onto an older build unchanged. Only the storage read from and
+        // written to differs.
+        private const val EXPORT_VERSION = 5
     }
 
     private val json =
@@ -264,21 +270,14 @@ class SettingsExportManager(
                     )
                 }
 
-            // Export favorites per provider
+            // Export favorites per provider. Rows since docs/plans/favorites-durable-storage-plan.md;
+            // the on-disk shape is unchanged, so old backups still import and new ones still restore
+            // onto a build that predates the table.
+            val favoriteStateDao = XtreamDatabase.getInstance(context).favoriteStateDao()
             val providerFavorites =
                 allProviders.mapNotNull { entity ->
-                    val cachePrefs =
-                        context.getSharedPreferences(
-                            "media_cache_${entity.id}",
-                            Context.MODE_PRIVATE,
-                        )
-                    val favJson = cachePrefs.getString(KEY_FAVORITES, null) ?: return@mapNotNull null
                     val favorites =
-                        try {
-                            json.decodeFromString<List<FavoriteItem>>(favJson)
-                        } catch (e: Exception) {
-                            return@mapNotNull null
-                        }
+                        favoriteStateDao.getAll(entity.id).filter { it.kind == FavoriteKind.STREAM }
                     if (favorites.isEmpty()) return@mapNotNull null
                     ProviderFavorites(
                         providerName = entity.name,
@@ -287,8 +286,8 @@ class SettingsExportManager(
                             favorites.map { fav ->
                                 ExportedFavorite(
                                     itemId = fav.itemId,
-                                    itemName = fav.itemName,
-                                    categoryId = fav.categoryId,
+                                    itemName = fav.name,
+                                    categoryId = fav.parentCategoryId ?: "",
                                     contentType = fav.contentType,
                                 )
                             },
@@ -298,18 +297,8 @@ class SettingsExportManager(
             // Export favorite categories per provider
             val providerFavoriteCategories =
                 allProviders.mapNotNull { entity ->
-                    val cachePrefs =
-                        context.getSharedPreferences(
-                            "media_cache_${entity.id}",
-                            Context.MODE_PRIVATE,
-                        )
-                    val favCatJson = cachePrefs.getString(KEY_FAVORITE_CATEGORIES, null) ?: return@mapNotNull null
                     val favCats =
-                        try {
-                            json.decodeFromString<List<FavoriteCategoryItem>>(favCatJson)
-                        } catch (e: Exception) {
-                            return@mapNotNull null
-                        }
+                        favoriteStateDao.getAll(entity.id).filter { it.kind == FavoriteKind.CATEGORY }
                     if (favCats.isEmpty()) return@mapNotNull null
                     ProviderFavoriteCategories(
                         providerName = entity.name,
@@ -317,8 +306,8 @@ class SettingsExportManager(
                         favoriteCategories =
                             favCats.map { fav ->
                                 ExportedFavoriteCategory(
-                                    categoryId = fav.categoryId,
-                                    categoryName = fav.categoryName,
+                                    categoryId = fav.itemId,
+                                    categoryName = fav.name,
                                     contentType = fav.contentType,
                                 )
                             },
@@ -625,44 +614,40 @@ class SettingsExportManager(
                 var favoritesRestored = 0
 
                 if (options.importFavorites && exported.providerFavorites.isNotEmpty()) {
+                    val favoriteStateDao = XtreamDatabase.getInstance(context).favoriteStateDao()
                     for (pf in exported.providerFavorites) {
                         val matchingProvider =
                             providersByNameUrl["${pf.providerName}\u0000${pf.providerUrl}"]
                                 ?: providersByName[pf.providerName]
                                 ?: continue
-                        val cachePrefs =
-                            context.getSharedPreferences(
-                                "media_cache_${matchingProvider.id}",
-                                Context.MODE_PRIVATE,
-                            )
-                        // Merge with existing favorites (don't overwrite)
-                        val existingJson = cachePrefs.getString(KEY_FAVORITES, null)
-                        val existingFavorites =
-                            if (existingJson != null) {
-                                try {
-                                    json.decodeFromString<List<FavoriteItem>>(existingJson)
-                                } catch (e: Exception) {
-                                    emptyList()
-                                }
-                            } else {
-                                emptyList()
-                            }
-                        val existingKeys = existingFavorites.mapTo(HashSet()) { Pair(it.itemId, it.contentType) }
-                        val newFavorites =
+                        // providerId is never taken from the file — ProviderEntity.id is
+                        // autoGenerate, so the id the backup was taken under means nothing here.
+                        // Existing rows win: restoring must not renumber a favourite the user
+                        // already has, so anything already present is skipped rather than replaced.
+                        val existingKeys =
+                            favoriteStateDao
+                                .getAll(matchingProvider.id)
+                                .asSequence()
+                                .filter { it.kind == FavoriteKind.STREAM }
+                                .mapTo(HashSet()) { it.itemId to it.contentType }
+                        val now = System.currentTimeMillis()
+                        val newRows =
                             pf.favorites
-                                .filter { Pair(it.itemId, it.contentType) !in existingKeys }
+                                .filter { (it.itemId to it.contentType) !in existingKeys }
                                 .map { fav ->
-                                    FavoriteItem(
+                                    FavoriteStateEntity(
+                                        providerId = matchingProvider.id,
                                         itemId = fav.itemId,
-                                        itemName = fav.itemName,
-                                        categoryId = fav.categoryId,
                                         contentType = fav.contentType,
+                                        kind = FavoriteKind.STREAM,
+                                        name = fav.itemName,
+                                        parentCategoryId = fav.categoryId,
+                                        createdAt = now,
                                     )
                                 }
-                        if (newFavorites.isNotEmpty()) {
-                            val merged = existingFavorites + newFavorites
-                            cachePrefs.edit { putString(KEY_FAVORITES, json.encodeToString(merged)) }
-                            favoritesRestored += newFavorites.size
+                        if (newRows.isNotEmpty()) {
+                            favoriteStateDao.restoreAll(newRows)
+                            favoritesRestored += newRows.size
                         }
                     }
                 }
@@ -671,42 +656,36 @@ class SettingsExportManager(
                 var favoriteCategoriesRestored = 0
 
                 if (options.importFavorites && exported.providerFavoriteCategories.isNotEmpty()) {
+                    val favoriteStateDao = XtreamDatabase.getInstance(context).favoriteStateDao()
                     for (pfc in exported.providerFavoriteCategories) {
                         val matchingProvider =
                             providersByNameUrl["${pfc.providerName}\u0000${pfc.providerUrl}"]
                                 ?: providersByName[pfc.providerName]
                                 ?: continue
-                        val cachePrefs =
-                            context.getSharedPreferences(
-                                "media_cache_${matchingProvider.id}",
-                                Context.MODE_PRIVATE,
-                            )
-                        val existingJson = cachePrefs.getString(KEY_FAVORITE_CATEGORIES, null)
-                        val existingFavCats =
-                            if (existingJson != null) {
-                                try {
-                                    json.decodeFromString<List<FavoriteCategoryItem>>(existingJson)
-                                } catch (_: Exception) {
-                                    emptyList()
-                                }
-                            } else {
-                                emptyList()
-                            }
-                        val existingKeys = existingFavCats.mapTo(HashSet()) { Pair(it.categoryId, it.contentType) }
-                        val newFavCats =
+                        val existingKeys =
+                            favoriteStateDao
+                                .getAll(matchingProvider.id)
+                                .asSequence()
+                                .filter { it.kind == FavoriteKind.CATEGORY }
+                                .mapTo(HashSet()) { it.itemId to it.contentType }
+                        val now = System.currentTimeMillis()
+                        val newRows =
                             pfc.favoriteCategories
-                                .filter { Pair(it.categoryId, it.contentType) !in existingKeys }
+                                .filter { (it.categoryId to it.contentType) !in existingKeys }
                                 .map { fav ->
-                                    FavoriteCategoryItem(
-                                        categoryId = fav.categoryId,
-                                        categoryName = fav.categoryName,
+                                    FavoriteStateEntity(
+                                        providerId = matchingProvider.id,
+                                        itemId = fav.categoryId,
                                         contentType = fav.contentType,
+                                        kind = FavoriteKind.CATEGORY,
+                                        name = fav.categoryName,
+                                        parentCategoryId = null,
+                                        createdAt = now,
                                     )
                                 }
-                        if (newFavCats.isNotEmpty()) {
-                            val merged = existingFavCats + newFavCats
-                            cachePrefs.edit { putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(merged)) }
-                            favoriteCategoriesRestored += newFavCats.size
+                        if (newRows.isNotEmpty()) {
+                            favoriteStateDao.restoreAll(newRows)
+                            favoriteCategoriesRestored += newRows.size
                         }
                     }
                 }

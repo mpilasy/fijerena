@@ -16,6 +16,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.fixtures.FakeFavoriteStateDao
 import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao
@@ -49,7 +50,7 @@ class MediaRepositorySetWatchedTest {
         // Unless a test says otherwise, the episode isn't in the local catalogue - setWatched
         // must degrade to no seriesId rather than crash.
         coEvery { episodeDao.getSeriesIdForEpisode(any(), any()) } returns null
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao, streamDao = streamDao, episodeDao = episodeDao)
+        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao, favoriteStateDao = FakeFavoriteStateDao(), streamDao = streamDao, episodeDao = episodeDao)
     }
 
     @After

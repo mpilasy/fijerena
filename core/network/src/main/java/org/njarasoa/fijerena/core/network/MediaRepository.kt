@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -21,6 +22,9 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateDao
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
@@ -116,6 +120,30 @@ data class FavoriteCategoryItem(
     val timestamp: Long = System.currentTimeMillis(),
 )
 
+/** A favourited stream as a `favorite_state` row. */
+private fun FavoriteItem.toEntity(providerId: Long): FavoriteStateEntity =
+    FavoriteStateEntity(
+        providerId = providerId,
+        itemId = itemId,
+        contentType = contentType,
+        kind = FavoriteKind.STREAM,
+        name = itemName,
+        parentCategoryId = categoryId,
+        createdAt = timestamp,
+    )
+
+/** A favourited category as a `favorite_state` row: the category id *is* the item id. */
+private fun FavoriteCategoryItem.toEntity(providerId: Long): FavoriteStateEntity =
+    FavoriteStateEntity(
+        providerId = providerId,
+        itemId = categoryId,
+        contentType = contentType,
+        kind = FavoriteKind.CATEGORY,
+        name = categoryName,
+        parentCategoryId = null,
+        createdAt = timestamp,
+    )
+
 @Serializable
 data class RecentCategory(
     val categoryId: String,
@@ -134,6 +162,7 @@ class MediaRepository(
     // real XtreamDatabase.getInstance(context) call under a plain mockk Context.
     private val streamDao: XtreamStreamDao = XtreamDatabase.getInstance(context).streamDao(),
     private val episodeDao: XtreamEpisodeDao = XtreamDatabase.getInstance(context).episodeDao(),
+    private val favoriteStateDao: FavoriteStateDao = XtreamDatabase.getInstance(context).favoriteStateDao(),
 ) : Closeable {
     @Volatile
     private var provider: MediaProvider? = null
@@ -212,6 +241,7 @@ class MediaRepository(
         private const val KEY_WATCH_HISTORY = "watch_history_v3"
         private const val KEY_WATCH_HISTORY_V2 = "watch_history_v2"
         private const val KEY_WATCH_STATE_MIGRATED = "watch_state_migrated_v1"
+        private const val KEY_FAVORITES_MIGRATED = "favorites_migrated_v1"
         private const val KEY_FAVORITES = "favorites_v2"
         private const val KEY_FAVORITE_CATEGORIES = "favorite_categories"
         private const val KEY_RECENT_CATEGORIES = "recent_categories"
@@ -232,6 +262,7 @@ class MediaRepository(
     fun setProvider(mediaProvider: MediaProvider) {
         provider = mediaProvider
         backfillAndPurgeWatchState()
+        backfillAndPurgeFavorites()
     }
 
     /**
@@ -291,6 +322,67 @@ class MediaRepository(
             synchronized(watchHistoryLock) {
                 cachedWatchHistory = emptyList()
             }
+        }
+    }
+
+
+    /**
+     * One-time per-provider copy of the `favorites_v2` and `favorite_categories` blobs into
+     * `favorite_state`, then purging both keys — see
+     * `docs/plans/favorites-durable-storage-plan.md`.
+     *
+     * Per-provider rather than a single global flag, for the reason the watch-state plan sets out:
+     * a provider nobody has opened since this shipped must not have its blob purged before it was
+     * copied. Backfill and purge ship together here, so the "flag set, blob never copied" window
+     * that plan worries about cannot open — the flag is still per-provider because the *hook* is
+     * per-provider, and a second provider added later starts from its own unset flag.
+     *
+     * Runs before the snapshot is first read: [loadFavoriteSnapshotLocked] fills from the table, so
+     * a snapshot taken before this finished would look empty. Reading the blobs here goes straight
+     * to prefs rather than through the public getters, which now read the table and would copy it
+     * into itself. Replay-safe: every row goes through the same upsert a normal favourite does.
+     */
+    private fun backfillAndPurgeFavorites() {
+        if (cache.getBoolean(KEY_FAVORITES_MIGRATED, false)) {
+            synchronized(favoriteLock) { loadFavoriteSnapshotLocked() }
+            return
+        }
+        val blobFavorites = decodeBlob<FavoriteItem>(KEY_FAVORITES)
+        val blobCategories = decodeBlob<FavoriteCategoryItem>(KEY_FAVORITE_CATEGORIES)
+        for (item in blobFavorites) {
+            favoriteStateDao.upsert(item.toEntity(providerId))
+        }
+        for (item in blobCategories) {
+            favoriteStateDao.upsert(item.toEntity(providerId))
+        }
+        cache.edit(commit = true) {
+            putBoolean(KEY_FAVORITES_MIGRATED, true)
+            remove(KEY_FAVORITES)
+            remove(KEY_FAVORITE_CATEGORIES)
+        }
+        synchronized(favoriteLock) {
+            cachedFavorites = null
+            cachedFavoriteCategories = null
+            favoriteIdSet = null
+            favoriteCategoryIdSet = null
+            // Refill immediately rather than leaving it to whoever reads first: setProvider runs on
+            // Dispatchers.IO, and the first reader is often on Main.
+            loadFavoriteSnapshotLocked()
+        }
+    }
+
+    /**
+     * A legacy favourites blob, or an empty list if it is absent or unreadable. The
+     * `catch { emptyList() }` that made a malformed blob indistinguishable from "no favourites"
+     * only survives here, on the one-shot migration read, where there is genuinely nothing better
+     * to do with a corrupt value that is about to be deleted.
+     */
+    private inline fun <reified T> decodeBlob(key: String): List<T> {
+        val raw = cache.getString(key, null) ?: return emptyList()
+        return try {
+            json.decodeFromString<List<T>>(raw)
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 
@@ -707,11 +799,14 @@ class MediaRepository(
         if (favorites.any { it.itemId == itemId && it.contentType == contentType }) {
             return false
         }
-        favorites.add(0, FavoriteItem(itemId, itemName, categoryId, contentType))
-        val trimmed = favorites.take(providerSettings.favoritesMaxSize)
-        cache.commitAsync { putString(KEY_FAVORITES, json.encodeToString(trimmed)) }
-        cachedFavorites = trimmed
+        val item = FavoriteItem(itemId, itemName, categoryId, contentType)
+        // No take(favoritesMaxSize) here any more: the cap is what silently evicted the oldest
+        // favourite once the list filled up. Rows are unbounded — see
+        // docs/plans/favorites-durable-storage-plan.md.
+        favorites.add(0, item)
+        cachedFavorites = favorites
         favoriteIdSet = null
+        writeScope.launch { favoriteStateDao.upsert(item.toEntity(providerId)) }
         return true
     }
 
@@ -722,20 +817,50 @@ class MediaRepository(
         val favorites = getFavoriteItems().toMutableList()
         val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
         if (!removed) return false
-        cache.commitAsync { putString(KEY_FAVORITES, json.encodeToString(favorites)) }
         cachedFavorites = favorites
         favoriteIdSet = null
+        writeScope.launch { favoriteStateDao.delete(providerId, itemId, contentType, FavoriteKind.STREAM) }
         return true
     }
 
+    /**
+     * Fills both favourite snapshots from `favorite_state` in one read.
+     *
+     * Blocking rather than suspending because Compose asks [isFavorite] synchronously while
+     * composing a row, and `CategoryViewModel.rebuildVirtualCategories` asks
+     * [getFavoriteCategoriesForContentType] from `Dispatchers.Main.immediate` — there is no
+     * coroutine to suspend in at either call site.
+     *
+     * The `runBlocking(Dispatchers.IO)` is load-bearing, not decoration. Room asserts against
+     * blocking queries on the main thread and throws `IllegalStateException`, which is exactly what
+     * happened the first time this shipped without it: [setProvider] only invalidated the snapshot,
+     * so the first read after a backfill ran cold on Main and killed the app on launch. Warming in
+     * [setProvider] (below, on IO) makes that the rare path; this makes it survivable when it is
+     * hit anyway. The stall it can cost is one indexed read of a small table — the blob it replaced
+     * did a prefs read plus a JSON parse on the same thread.
+     *
+     * Caller must hold [favoriteLock].
+     */
+    private fun loadFavoriteSnapshotLocked() {
+        if (cachedFavorites != null && cachedFavoriteCategories != null) return
+        val rows = runBlocking(Dispatchers.IO) { favoriteStateDao.getAll(providerId) }
+        cachedFavorites =
+            rows
+                .asSequence()
+                .filter { it.kind == FavoriteKind.STREAM }
+                .map { FavoriteItem(it.itemId, it.name, it.parentCategoryId ?: "", it.contentType, it.createdAt) }
+                .toList()
+        cachedFavoriteCategories =
+            rows
+                .asSequence()
+                .filter { it.kind == FavoriteKind.CATEGORY }
+                .map { FavoriteCategoryItem(it.itemId, it.name, it.contentType, it.createdAt) }
+                .toList()
+    }
+
     private fun getFavoriteItems(): List<FavoriteItem> = synchronized(favoriteLock) {
-        cachedFavorites?.let { return it }
-        val favJson = cache.getString(KEY_FAVORITES, null) ?: return emptyList<FavoriteItem>().also { cachedFavorites = it }
-        return try {
-            json.decodeFromString<List<FavoriteItem>>(favJson).also { cachedFavorites = it }
-        } catch (e: Exception) {
-            emptyList<FavoriteItem>().also { cachedFavorites = it }
-        }
+        loadFavoriteSnapshotLocked()
+        return cachedFavorites.orEmpty()
     }
 
     fun getFavoritesForContentType(contentType: String): List<MediaItem> = synchronized(favoriteLock) {
@@ -764,10 +889,11 @@ class MediaRepository(
         return (itemId to contentType) in set
     }
 
+    /** Streams only — both "Clear All Favorites" dialogs say "favorited streams". */
     fun clearFavorites() = synchronized(favoriteLock) {
         cachedFavorites = emptyList()
         favoriteIdSet = null
-        cache.commitAsync { remove(KEY_FAVORITES) }
+        writeScope.launch { favoriteStateDao.deleteAllOfKind(providerId, FavoriteKind.STREAM) }
     }
 
     // --- Favorite Categories ---
@@ -781,11 +907,11 @@ class MediaRepository(
         if (favorites.any { it.categoryId == categoryId && it.contentType == contentType }) {
             return false
         }
-        favorites.add(0, FavoriteCategoryItem(categoryId, categoryName, contentType))
-        val trimmed = favorites.take(providerSettings.favoritesMaxSize)
-        cache.commitAsync { putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(trimmed)) }
-        cachedFavoriteCategories = trimmed
+        val item = FavoriteCategoryItem(categoryId, categoryName, contentType)
+        favorites.add(0, item)
+        cachedFavoriteCategories = favorites
         favoriteCategoryIdSet = null
+        writeScope.launch { favoriteStateDao.upsert(item.toEntity(providerId)) }
         return true
     }
 
@@ -796,22 +922,15 @@ class MediaRepository(
         val favorites = getFavoriteCategoryItems().toMutableList()
         val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
         if (!removed) return false
-        cache.commitAsync { putString(KEY_FAVORITE_CATEGORIES, json.encodeToString(favorites)) }
         cachedFavoriteCategories = favorites
         favoriteCategoryIdSet = null
+        writeScope.launch { favoriteStateDao.delete(providerId, categoryId, contentType, FavoriteKind.CATEGORY) }
         return true
     }
 
     fun getFavoriteCategoryItems(): List<FavoriteCategoryItem> = synchronized(favoriteLock) {
-        cachedFavoriteCategories?.let { return it }
-        val raw =
-            cache.getString(KEY_FAVORITE_CATEGORIES, null)
-                ?: return emptyList<FavoriteCategoryItem>().also { cachedFavoriteCategories = it }
-        return try {
-            json.decodeFromString<List<FavoriteCategoryItem>>(raw).also { cachedFavoriteCategories = it }
-        } catch (_: Exception) {
-            emptyList<FavoriteCategoryItem>().also { cachedFavoriteCategories = it }
-        }
+        loadFavoriteSnapshotLocked()
+        return cachedFavoriteCategories.orEmpty()
     }
 
     fun getFavoriteCategoriesForContentType(contentType: String): List<MediaCategory> = synchronized(favoriteLock) {
@@ -841,7 +960,7 @@ class MediaRepository(
     fun clearFavoriteCategories() = synchronized(favoriteLock) {
         cachedFavoriteCategories = emptyList()
         favoriteCategoryIdSet = null
-        cache.commitAsync { remove(KEY_FAVORITE_CATEGORIES) }
+        writeScope.launch { favoriteStateDao.deleteAllOfKind(providerId, FavoriteKind.CATEGORY) }
     }
 
     /**

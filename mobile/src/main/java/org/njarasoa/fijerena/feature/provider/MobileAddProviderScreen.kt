@@ -162,9 +162,6 @@ fun MobileAddProviderScreen(
     var watchHistorySize by remember { mutableStateOf("25") }
     var newWatchHistorySize by remember { mutableStateOf("") }
     var isEditingQueueSize by remember { mutableStateOf(false) }
-    var favoritesMaxSize by remember { mutableStateOf("100") }
-    var newFavoritesMaxSize by remember { mutableStateOf("") }
-    var isEditingFavoritesSize by remember { mutableStateOf(false) }
     var cachingEnabled by remember { mutableStateOf(true) }
     var categoryFilters by remember { mutableStateOf(CategoryFilters()) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
@@ -184,7 +181,6 @@ fun MobileAddProviderScreen(
             providerSettings = ps
             autoResumeEnabled = ps.autoResumeEnabled
             watchHistorySize = ps.watchHistorySize.toString()
-            favoritesMaxSize = ps.favoritesMaxSize.toString()
             cachingEnabled = ps.cachingEnabled
             categoryFilters = ps.categoryFilters
             streamOutputFormat = ps.streamOutputFormat
@@ -349,9 +345,6 @@ fun MobileAddProviderScreen(
                 watchHistorySize = watchHistorySize,
                 newWatchHistorySize = newWatchHistorySize,
                 isEditingQueueSize = isEditingQueueSize,
-                favoritesMaxSize = favoritesMaxSize,
-                newFavoritesMaxSize = newFavoritesMaxSize,
-                isEditingFavoritesSize = isEditingFavoritesSize,
                 cachingEnabled = cachingEnabled,
                 categoryFilters = categoryFilters,
                 streamOutputFormat = streamOutputFormat,
@@ -364,9 +357,6 @@ fun MobileAddProviderScreen(
                 onWatchHistorySizeChange = { watchHistorySize = it },
                 onNewWatchHistorySizeChange = { newWatchHistorySize = it },
                 onIsEditingQueueSizeChange = { isEditingQueueSize = it },
-                onFavoritesMaxSizeChange = { favoritesMaxSize = it },
-                onNewFavoritesMaxSizeChange = { newFavoritesMaxSize = it },
-                onIsEditingFavoritesSizeChange = { isEditingFavoritesSize = it },
                 onCachingEnabledChange = { cachingEnabled = it },
                 onStreamOutputFormatChange = { streamOutputFormat = it },
                 onPlaylistTypeChange = { playlistType = it },
