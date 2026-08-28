@@ -39,17 +39,17 @@ android {
 
 dependencies {
     api(project(":core:player"))
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.security:security-crypto:1.1.0")
     implementation(libs.androidx.core.ktx)
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
     // DocumentFile for local media scanning (SAF)
-    implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation("androidx.documentfile:documentfile:1.1.0")
 
     // SMB2/3 client for network share access
-    implementation("com.hierynomus:smbj:0.13.0")
+    implementation("com.hierynomus:smbj:0.15.0")
 
     // Ktor HTTP client for Jellyfin API
     implementation(libs.bundles.networking)
@@ -75,7 +75,7 @@ dependencies {
     implementation(libs.google.api.services.drive) {
         exclude(group = "org.apache.httpcomponents")
     }
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
 
     // Testing
     testImplementation(libs.junit)
