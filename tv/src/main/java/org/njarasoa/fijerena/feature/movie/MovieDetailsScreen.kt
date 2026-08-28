@@ -4,6 +4,11 @@ package org.njarasoa.fijerena.feature.movie
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -194,9 +199,9 @@ private fun MovieDetailsContent(
     onRelatedTitleSelected: (MediaItem) -> Unit,
     onAlternateStreamSelected: (MediaItem) -> Unit,
 ) {
-    // Explicit handler so Back navigates on the first press. Without it, Back falls through to
-    // whatever a focused TV Button/Surface does with the key on its own, which on a real Shield
-    // swallows the first press to just clear focus and only navigates back on the second.
+    // Fallback for any state where the LazyColumn's onPreviewKeyEvent below isn't in the tree
+    // yet (e.g. very first composition) — the real fix, and the one actually exercised in
+    // practice, is that onPreviewKeyEvent.
     BackHandler {
         onBack()
     }
@@ -293,7 +298,22 @@ private fun MovieDetailsContent(
     // measure pass on every rebuild of this screen, which is why backing out of the player was
     // slow. EpisodeSelectionScreen already builds these same rows as LazyColumn items.
     LazyColumn(
-        modifier = Modifier.fillMaxSize().focusable(),
+        // Confirmed on a real Shield (logcat): the first Back press while a focused TV Button
+        // has focus reaches Compose's key dispatch fine (a non-consuming onPreviewKeyEvent here
+        // logs it), but something between here and the BackHandler/OnBackPressedDispatcher
+        // bridge marks it handled — BackHandler never fires on that first press, only the
+        // second. Rather than chase the exact consumer, intercept here instead: onPreviewKeyEvent
+        // runs top-down, before any descendant (including the focused Button) gets a look, so
+        // this always wins the race. Matches the same pattern TvDpadEscape.kt uses for the same
+        // class of problem.
+        modifier = Modifier.fillMaxSize().focusable().onPreviewKeyEvent { event ->
+            if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
+                onBack()
+                true
+            } else {
+                false
+            }
+        },
         contentPadding =
             PaddingValues(
                 horizontal = Spacing.tvSafeMarginHorizontal,
