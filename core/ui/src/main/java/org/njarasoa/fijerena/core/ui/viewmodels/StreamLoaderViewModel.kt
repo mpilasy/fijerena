@@ -197,6 +197,22 @@ class StreamLoaderViewModel(
                         }
                     }
 
+                    // An episode with no saved choice of its own inherits the series' most
+                    // recent one — a fresh episode of a show you've already picked a language/
+                    // subtitle track for shouldn't reset to nothing. Only when this episode has
+                    // neither: one already set (even alone) means the user made a choice for it
+                    // specifically, and that sticks over the series fallback.
+                    if (contentType == ContentType.TV_SHOWS &&
+                        series != null &&
+                        savedAudioIndex == null &&
+                        savedSubtitleIndex == null
+                    ) {
+                        repo.getSeriesTrackPrefs(series, contentType)?.let { (audioIdx, subtitleIdx) ->
+                            savedAudioIndex = audioIdx
+                            savedSubtitleIndex = subtitleIdx
+                        }
+                    }
+
                     // Check Favorite
                     val isFav = repo.isFavoriteSuspend(streamId, contentType)
                     val activeStreams = if (currentStreams.isNotEmpty()) currentStreams else streamList

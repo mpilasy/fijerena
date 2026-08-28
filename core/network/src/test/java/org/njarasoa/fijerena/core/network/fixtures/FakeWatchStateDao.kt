@@ -202,6 +202,19 @@ class FakeWatchStateDao : WatchStateDao {
         contentType: String,
     ): WatchStateEntity? = rows[key(providerId, itemId, contentType)]
 
+    override suspend fun getLatestSeriesTrackPrefs(
+        providerId: Long,
+        seriesId: String,
+        contentType: String,
+    ): WatchStateEntity? =
+        rows.values
+            .filter {
+                it.providerId == providerId &&
+                    it.seriesId == seriesId &&
+                    it.contentType == contentType &&
+                    (it.audioTrackIndex != null || it.subtitleTrackIndex != null)
+            }.maxByOrNull { it.updatedAt }
+
     override suspend fun getAll(providerId: Long): List<WatchStateEntity> = rows.values.filter { it.providerId == providerId }
 
     override suspend fun deleteAll(providerId: Long) {
