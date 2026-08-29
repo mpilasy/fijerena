@@ -21,6 +21,7 @@ object CinemaAlpha {
     const val focusedTint = 0.2f // Focused container background
     const val glassBorder = 0.15f // Glass border
     const val divider = 0.1f // Divider opacity
+    const val cardHairline = 0.12f // Faint top-highlight border on list-row cards
     const val ghost = 0.05f // Barely visible tints
 
     // Image overlays
@@ -30,4 +31,8 @@ object CinemaAlpha {
 
     // Focus/Interaction
     const val focusedGlow = 0.4f // Glow elevation color
+
+    // Hero cards (Content Type Selection)
+    const val heroSheen = 0.12f // Diagonal gloss highlight over a hero card's gradient fill
+    const val heroChipBackground = 0.18f // Frosted chip behind a hero card's icon or count
 }

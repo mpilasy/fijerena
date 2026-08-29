@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -87,6 +88,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.core.ui.theme.CinemaLive
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrangeDark
@@ -517,6 +519,11 @@ private fun ContentTypeHeroCard(
         shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.xLarge)),
         border =
             CardDefaults.border(
+                border =
+                    Border(
+                        border = BorderStroke(TvFocusTokens.borderThin, CinemaGlassBorder),
+                        shape = RoundedCornerShape(CinemaCornerRadius.xLarge),
+                    ),
                 focusedBorder =
                     Border(
                         border =
@@ -527,8 +534,17 @@ private fun ContentTypeHeroCard(
                         shape = RoundedCornerShape(CinemaCornerRadius.xLarge),
                     ),
             ),
+        glow = CardDefaults.glow(glow = TvFocusTokens.restingGlow, focusedGlow = TvFocusTokens.focusedGlow),
     ) {
         val brush = remember(gradientColors) { Brush.verticalGradient(colors = gradientColors) }
+        // Diagonal gloss over the flat gradient fill — same "raised glass" cue as GlassPanel, so
+        // the card reads as a lit surface rather than a solid block of color.
+        val sheenBrush =
+            remember {
+                Brush.linearGradient(
+                    colors = listOf(CinemaTextPrimary.copy(alpha = CinemaAlpha.heroSheen), Color.Transparent),
+                )
+            }
         Box(
             modifier =
                 Modifier
@@ -539,18 +555,35 @@ private fun ContentTypeHeroCard(
                     ),
             contentAlignment = Alignment.Center,
         ) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(sheenBrush, shape = RoundedCornerShape(CinemaCornerRadius.xLarge)),
+            )
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(Spacing.md),
             ) {
                 Box(contentAlignment = Alignment.TopEnd) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = CinemaTextPrimary,
-                        modifier = Modifier.size(TvDimensions.contentTypeIconSize.scaled(scale)),
-                    )
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(TvDimensions.contentTypeIconSize.scaled(scale) + Spacing.sm.scaled(scale))
+                                .background(
+                                    CinemaTextPrimary.copy(alpha = CinemaAlpha.heroChipBackground),
+                                    shape = CircleShape,
+                                ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = CinemaTextPrimary,
+                            modifier = Modifier.size(TvDimensions.contentTypeIconSize.scaled(scale)),
+                        )
+                    }
                     if (showLivePulse) {
                         val pulseTransition = rememberInfiniteTransition(label = "live_pulse")
                         val pulseAlpha by pulseTransition.animateFloat(
@@ -623,13 +656,22 @@ private fun ContentTypeHeroCard(
                         } else {
                             stringResource(R.string.category_count_format, filtered)
                         }
-                    Text(
-                        text = countText,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = Spacing.xs),
-                    )
+                    Box(
+                        modifier =
+                            Modifier
+                                .padding(top = Spacing.xs)
+                                .background(
+                                    CinemaTextPrimary.copy(alpha = CinemaAlpha.heroChipBackground),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small),
+                                ).padding(horizontal = Spacing.sm, vertical = Spacing.xxs),
+                    ) {
+                        Text(
+                            text = countText,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             }
         }

@@ -50,11 +50,13 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
@@ -427,6 +429,7 @@ private fun StreamItem(
                     url = item.thumbnailUrl,
                     fallbackLetter = item.name.firstOrNull(),
                     contentType = ThumbnailContentType.DEFAULT,
+                    overlayGradient = true,
                     modifier =
                         Modifier
                             .size(
@@ -436,6 +439,7 @@ private fun StreamItem(
                 )
 
                 // Text info
+                val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
@@ -458,10 +462,12 @@ private fun StreamItem(
                             )
                         }
 
+                        parsedTitle.badge?.let { LanguageBadge(it) }
+
                         Text(
                             // See mobile's StreamCard — provider data occasionally sends a blank
                             // name (e.g. "EN -  (US)" with nothing between the dashes).
-                            text = item.name.ifBlank { stringResource(R.string.content_untitled) },
+                            text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
                             style = scaledStyles.titleMedium,
                             color = CinemaTextPrimary,
                             maxLines = 1,

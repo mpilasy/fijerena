@@ -72,6 +72,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
+import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -1125,7 +1126,7 @@ private fun EpisodeCard(
             if (isContinueWatching) {
                 BorderStroke(MobileDimensions.strokeWidth, MaterialTheme.colorScheme.primary)
             } else {
-                null
+                cinemaCardHairlineBorder()
             },
     ) {
         Row(

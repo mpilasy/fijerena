@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -49,6 +51,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -73,6 +76,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import java.util.Date
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileControlsOverlay(
     playbackState: PlaybackState,
@@ -234,57 +238,63 @@ fun MobileControlsOverlay(
             }
         }
 
-        // Center row: Rewind | Play/Pause | FastForward (VOD only shows seek buttons)
-        Row(
+        // Center row: Rewind | Play/Pause | FastForward (VOD only shows seek buttons), grouped
+        // into a pill-shaped glass surface instead of icons floating loose on the dimmed video.
+        GlassPanel(
             modifier = Modifier.align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xl),
-            verticalAlignment = Alignment.CenterVertically,
+            panelShape = CircleShape,
         ) {
-            if (onRewind != null) {
-                IconButton(
-                    onClick = onRewind,
-                    modifier = Modifier.size(MobileDimensions.iconPlayContainer),
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = CinemaIcons.FastRewind,
-                            contentDescription = stringResource(R.string.player_rewind_1min_description),
-                            tint = CinemaTextPrimary,
-                            modifier = Modifier.size(MobileDimensions.iconLarge),
-                        )
-                        Text(stringResource(R.string.player_rewind_label), style = typography.labelSmall, color = CinemaTextPrimary)
+            Row(
+                modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xl),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (onRewind != null) {
+                    IconButton(
+                        onClick = onRewind,
+                        modifier = Modifier.size(MobileDimensions.iconPlayContainer),
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = CinemaIcons.FastRewind,
+                                contentDescription = stringResource(R.string.player_rewind_1min_description),
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(MobileDimensions.iconLarge),
+                            )
+                            Text(stringResource(R.string.player_rewind_label), style = typography.labelSmall, color = CinemaTextPrimary)
+                        }
                     }
                 }
-            }
-            IconButton(
-                onClick = onPlayPause,
-                modifier = Modifier.size(MobileDimensions.iconPlayContainer),
-            ) {
-                Icon(
-                    imageVector =
-                        if (playbackState is PlaybackState.Paused) {
-                            CinemaIcons.PlayArrow
-                        } else {
-                            CinemaIcons.Pause
-                        },
-                    contentDescription = stringResource(if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause),
-                    tint = CinemaTextPrimary,
-                    modifier = Modifier.size(MobileDimensions.iconPlayIcon),
-                )
-            }
-            if (onFastForward != null) {
                 IconButton(
-                    onClick = onFastForward,
+                    onClick = onPlayPause,
                     modifier = Modifier.size(MobileDimensions.iconPlayContainer),
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = CinemaIcons.FastForward,
-                            contentDescription = stringResource(R.string.player_fast_forward_5min_description),
-                            tint = CinemaTextPrimary,
-                            modifier = Modifier.size(MobileDimensions.iconLarge),
-                        )
-                        Text(stringResource(R.string.player_forward_label), style = typography.labelSmall, color = CinemaTextPrimary)
+                    Icon(
+                        imageVector =
+                            if (playbackState is PlaybackState.Paused) {
+                                CinemaIcons.PlayArrow
+                            } else {
+                                CinemaIcons.Pause
+                            },
+                        contentDescription = stringResource(if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause),
+                        tint = CinemaTextPrimary,
+                        modifier = Modifier.size(MobileDimensions.iconPlayIcon),
+                    )
+                }
+                if (onFastForward != null) {
+                    IconButton(
+                        onClick = onFastForward,
+                        modifier = Modifier.size(MobileDimensions.iconPlayContainer),
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = CinemaIcons.FastForward,
+                                contentDescription = stringResource(R.string.player_fast_forward_5min_description),
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(MobileDimensions.iconLarge),
+                            )
+                            Text(stringResource(R.string.player_forward_label), style = typography.labelSmall, color = CinemaTextPrimary)
+                        }
                     }
                 }
             }
@@ -314,6 +324,13 @@ fun MobileControlsOverlay(
                         var isSeeking by remember { mutableStateOf(false) }
                         var seekPosition by remember { mutableStateOf(0f) }
 
+                        val scrubberColors =
+                            SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
+                            )
+                        val scrubberInteractionSource = remember { MutableInteractionSource() }
                         Slider(
                             value = if (isSeeking) seekPosition else position.toFloat() / duration.toFloat(),
                             onValueChange = { newValue ->
@@ -326,12 +343,17 @@ fun MobileControlsOverlay(
                                 isSeeking = false
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            colors =
-                                SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                                    inactiveTrackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
-                                ),
+                            colors = scrubberColors,
+                            interactionSource = scrubberInteractionSource,
+                            // Default thumb is a 4dp-wide bar — round and enlarge it so it reads
+                            // as a draggable knob, not a thin tick mark.
+                            thumb = {
+                                SliderDefaults.Thumb(
+                                    interactionSource = scrubberInteractionSource,
+                                    colors = scrubberColors,
+                                    thumbSize = DpSize(MobileDimensions.playerScrubberThumbSize, MobileDimensions.playerScrubberThumbSize),
+                                )
+                            },
                         )
 
                         Row(
