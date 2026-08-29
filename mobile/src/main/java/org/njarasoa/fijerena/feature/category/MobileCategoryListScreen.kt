@@ -1332,7 +1332,10 @@ private fun StreamCard(
                         )
                     }
                     Text(
-                        text = item.name,
+                        // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with
+                        // nothing between the dashes) — an empty row reads as broken, not a
+                        // catalogue gap.
+                        text = item.name.ifBlank { stringResource(R.string.content_untitled) },
                         style = MaterialTheme.typography.bodyLarge,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,

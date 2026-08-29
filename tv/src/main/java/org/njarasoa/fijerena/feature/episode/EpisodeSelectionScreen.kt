@@ -104,6 +104,7 @@ import org.njarasoa.fijerena.core.player.domain.seasonNumberContaining
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.ui.R
@@ -1248,7 +1249,7 @@ private fun EpisodeDetailPanel(
                                 color = CinemaTextSecondary,
                             )
                         }
-                        episode.metadata.duration?.let { duration ->
+                        episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
                             Text(
                                 text = formatDuration(duration),
                                 style = detailScaledStyles.titleMedium,
@@ -1667,7 +1668,7 @@ private fun EpisodeCard(
             }
 
             // Duration
-            episode.metadata.duration?.let { duration ->
+            episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
                 Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 Text(
                     text = duration,

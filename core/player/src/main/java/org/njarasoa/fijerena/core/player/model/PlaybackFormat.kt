@@ -25,7 +25,9 @@ fun formatBitrate(bitrate: Int): String =
     if (bitrate > 0) {
         val kbps = bitrate / 1000
         if (kbps > 1000) {
-            String.format(Locale.getDefault(), "%.1f Mbps", kbps / 1000f)
+            // Locale.US, not getDefault(): a device-locale decimal comma here would read as
+            // inconsistent next to formatRating()'s always-dot output elsewhere on screen.
+            String.format(Locale.US, "%.1f Mbps", kbps / 1000f)
         } else {
             "$kbps Kbps"
         }
@@ -100,8 +102,17 @@ fun formatDuration(duration: String): String {
  */
 fun formatRating(rating: String): String {
     val value = rating.trim().toDoubleOrNull() ?: return rating
-    return "%.1f".format(value)
+    // Locale.US, not the default: on a device set to a comma-decimal locale this rendered "6,4"
+    // for one row and "9.0" for another (same list, different providers), which reads as a bug.
+    return String.format(Locale.US, "%.1f", value)
 }
+
+/**
+ * True when [duration] parses to more than zero seconds. Providers sometimes send "0" for an
+ * unknown/missing runtime — treat that as absent rather than render it as a bogus "0s".
+ */
+fun hasMeaningfulDuration(duration: String?): Boolean =
+    duration != null && (parseDurationToSeconds(duration) ?: 0) > 0
 
 /** Resolution bucket label, e.g. "4K", "1080p", "720p". */
 fun resolutionLabel(

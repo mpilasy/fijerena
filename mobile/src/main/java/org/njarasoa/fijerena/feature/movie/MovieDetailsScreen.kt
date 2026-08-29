@@ -2,8 +2,10 @@ package org.njarasoa.fijerena.feature.movie
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +30,7 @@ import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.channelLabel
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
@@ -231,6 +234,10 @@ private fun MovieDetailsContent(
         if (hasRating || hasContentRating || hasDuration) {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             Row(
+                // Content rating + star rating + duration + "ends at" can add up to wider than a
+                // narrow phone screen; a plain Row clips the tail (e.g. "Ends at" left dangling
+                // with its time cut off) instead of wrapping. Scroll rather than clip.
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -253,7 +260,7 @@ private fun MovieDetailsContent(
                         color = MaterialTheme.colorScheme.secondary,
                     )
                 }
-                movieDetail.metadata.duration?.let { duration ->
+                movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
                     Text(
                         text = formatDuration(duration),
                         style = MaterialTheme.typography.titleMedium,
