@@ -301,7 +301,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/xtream-multi-device-sync-plan.md](docs/plans/xtream-multi-device-sync-plan.md) | Not started; backend option undecided |
 | [docs/plans/favorites-durable-storage-plan.md](docs/plans/favorites-durable-storage-plan.md) | **Complete** - all four phases landed |
 | [docs/plans/secret-store-migration-plan.md](docs/plans/secret-store-migration-plan.md) | Not started, deferred deliberately |
-| [docs/plans/ui-look-feel-uplift-plan.md](docs/plans/ui-look-feel-uplift-plan.md) | Phase 1-3 landed 2026-08-29 (2c skipped, Phase 3 scope changed, see plan); Phase 4 not started |
+| [docs/plans/ui-look-feel-uplift-plan.md](docs/plans/ui-look-feel-uplift-plan.md) | Phases 1-3 complete 2026-08-29 (2c skipped, Phase 3 scope changed); Phase 4 specced (4a-4c), not started |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 
