@@ -475,6 +475,31 @@ private fun MovieDetailsContent(
                         }
                     }
 
+                    // The provider's own (often raw) stream name, now that the headline is TMDB's
+                    // title. A dropdown when the local catalogue holds other instances of the same
+                    // TMDB title.
+                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                    StreamNamePicker(
+                        // The catalogue's raw name, not movieDetail.name — some providers'
+                        // detail API returns a cleaned-up name inconsistent with the raw name
+                        // alternates are listed under, so use the same source as alternates.
+                        currentName = movieName,
+                        alternates = alternateStreams,
+                        onSelect = {
+                            streamSwitchSignal++
+                            onAlternateStreamSelected(it)
+                        },
+                        textStyle = scaledStyles.bodySmall,
+                        focusRequester = streamNameFocusRequester,
+                        onFocusedChanged = { streamRowFocused = it },
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    Text(
+                        text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
+                        style = scaledStyles.bodySmall,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
+
                     // Genre tags
                     movieDetail.metadata.genre?.let { genre ->
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -645,31 +670,6 @@ private fun MovieDetailsContent(
                             TechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
                         }
                     }
-
-                    // The provider's own (often raw) stream name, now that the headline is TMDB's
-                    // title. A dropdown when the local catalogue holds other instances of the same
-                    // TMDB title.
-                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                    StreamNamePicker(
-                        // The catalogue's raw name, not movieDetail.name — some providers'
-                        // detail API returns a cleaned-up name inconsistent with the raw name
-                        // alternates are listed under, so use the same source as alternates.
-                        currentName = movieName,
-                        alternates = alternateStreams,
-                        onSelect = {
-                            streamSwitchSignal++
-                            onAlternateStreamSelected(it)
-                        },
-                        textStyle = scaledStyles.bodySmall,
-                        focusRequester = streamNameFocusRequester,
-                        onFocusedChanged = { streamRowFocused = it },
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                    Text(
-                        text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
-                        style = scaledStyles.bodySmall,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    )
 
                     // Category this movie belongs to — OK opens its stream list
                     if (categoryName != null) {
