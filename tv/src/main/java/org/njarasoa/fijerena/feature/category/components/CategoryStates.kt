@@ -21,26 +21,26 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
+import org.njarasoa.fijerena.core.ui.components.SkeletonList
+
 @Composable
 internal fun LoadingScreen() {
-    Box(
+    Column(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(TvDimensions.progressIndicator),
-                color = CinemaAccent,
-            )
-            Text(
-                text = stringResource(R.string.common_loading),
-                style = MaterialTheme.typography.titleLarge,
-                color = CinemaTextSecondary,
-            )
-        }
+        Text(
+            text = stringResource(R.string.common_loading),
+            style = MaterialTheme.typography.titleMedium,
+            color = CinemaTextSecondary,
+        )
+        SkeletonList(
+            rowCount = 6,
+            rowHeight = TvDimensions.cardHeight,
+            thumbnailWidth = TvDimensions.posterWidth * 0.5f,
+            thumbnailHeight = TvDimensions.posterHeight * 0.5f,
+            verticalSpacing = Spacing.sm,
+        )
     }
 }
 

@@ -94,7 +94,9 @@ import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
+import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.rememberFavoriteHintVisible
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -510,10 +512,15 @@ fun MobileCategoryListScreen(
             when (val state = uiState) {
                 is CategoryViewModel.UiState.Loading -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize().padding(Spacing.sm),
                     ) {
-                        CircularProgressIndicator()
+                        SkeletonList(
+                            rowCount = 8,
+                            rowHeight = MobileDimensions.streamCardHeight,
+                            thumbnailWidth = MobileDimensions.posterWidth,
+                            thumbnailHeight = MobileDimensions.posterHeight,
+                            verticalSpacing = LocalUiStyle.current.grid.spacing,
+                        )
                     }
                 }
                 is CategoryViewModel.UiState.Success -> {
@@ -1149,19 +1156,22 @@ private fun StreamsList(
             }
         }
         streamsLoading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
+            Column(
+                modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.sm, vertical = Spacing.xs),
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(Spacing.md))
-                    Text(
-                        text = stringResource(R.string.category_loading_streams),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    text = stringResource(R.string.category_loading_streams),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = Spacing.xs),
+                )
+                SkeletonList(
+                    rowCount = 8,
+                    rowHeight = MobileDimensions.streamCardHeight,
+                    thumbnailWidth = MobileDimensions.posterWidth,
+                    thumbnailHeight = MobileDimensions.posterHeight,
+                    verticalSpacing = LocalUiStyle.current.grid.spacing,
+                )
             }
         }
         items.isNullOrEmpty() -> {
@@ -1358,11 +1368,10 @@ private fun StreamCard(
                     )
                 }
                 item.metadata.rating?.let { rating ->
-                    Text(
-                        text = "★ ${formatRating(rating)}",
+                    RatingBadge(
+                        rating = rating,
+                        textColor = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textMedium),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textMedium),
-                        maxLines = 1,
                     )
                 }
                 // "What's On Now" for Live TV

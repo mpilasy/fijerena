@@ -109,6 +109,7 @@ import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
@@ -596,9 +597,9 @@ private fun EpisodeListContent(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                                 ) {
-                                    // TMDB's clean title once it resolves, the provider's raw stream name until then
+                                    // Original provider series name
                                     Text(
-                                        text = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
+                                        text = seriesDetail.name.ifEmpty { seriesName },
                                         style = scaledStyles.displaySmall,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
@@ -679,10 +680,10 @@ private fun EpisodeListContent(
                                             )
                                         }
                                         seriesDetail.metadata.rating?.let { rating ->
-                                            Text(
-                                                text = "★ ${formatRating(rating)}",
+                                            RatingBadge(
+                                                rating = rating,
                                                 style = scaledStyles.titleMedium,
-                                                color = CinemaAccent,
+                                                textColor = CinemaAccent,
                                             )
                                         }
                                         val year = seriesDetail.metadata.year ?: seriesDetail.metadata.releaseDate?.take(4)?.toIntOrNull()
@@ -1235,10 +1236,10 @@ private fun EpisodeDetailPanel(
                         // Prefer episode rating, fallback to series rating
                         val rating = episode.metadata.rating ?: seriesDetail.metadata.rating
                         rating?.let {
-                            Text(
-                                text = "★ ${formatRating(it)}",
+                            RatingBadge(
+                                rating = it,
                                 style = detailScaledStyles.titleMedium,
-                                color = CinemaAccent,
+                                textColor = CinemaAccent,
                             )
                         }
                         val year = episode.metadata.year ?: episode.metadata.airDate?.take(4)?.toIntOrNull() ?: seriesDetail.metadata.year

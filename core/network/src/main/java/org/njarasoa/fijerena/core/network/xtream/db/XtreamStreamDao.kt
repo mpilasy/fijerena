@@ -249,7 +249,8 @@ interface XtreamStreamDao {
         SET contentRating = :contentRating,
             tmdbId = :tmdbId,
             containerExtension = :containerExtension,
-            detailFetchedAt = :detailFetchedAt
+            detailFetchedAt = :detailFetchedAt,
+            posterPath = COALESCE(:posterPath, posterPath)
         WHERE streamId = :streamId AND providerId = :providerId AND type = :type
     """,
     )
@@ -261,5 +262,6 @@ interface XtreamStreamDao {
         tmdbId: String?,
         containerExtension: String?,
         detailFetchedAt: Long,
+        posterPath: String? = null,
     )
 }

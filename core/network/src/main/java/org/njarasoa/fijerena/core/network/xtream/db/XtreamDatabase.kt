@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WatchStateEntity::class,
         FavoriteStateEntity::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -179,6 +179,17 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 16→17: add `posterPath` column to `xtream_streams` and `xtream_series` for TMDB poster caching.
+         */
+        private val MIGRATION_16_17 =
+            object : Migration(16, 17) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `xtream_streams` ADD COLUMN `posterPath` TEXT")
+                    db.execSQL("ALTER TABLE `xtream_series` ADD COLUMN `posterPath` TEXT")
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -188,7 +199,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                         "xtream_v2.db",
                     ).addMigrations(
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
-                        MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16,
+                        MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()

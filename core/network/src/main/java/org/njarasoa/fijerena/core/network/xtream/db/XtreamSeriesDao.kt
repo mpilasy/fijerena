@@ -118,7 +118,8 @@ interface XtreamSeriesDao {
         UPDATE xtream_series
         SET contentRating = :contentRating,
             tmdbId = :tmdbId,
-            detailFetchedAt = :detailFetchedAt
+            detailFetchedAt = :detailFetchedAt,
+            posterPath = COALESCE(:posterPath, posterPath)
         WHERE seriesId = :seriesId AND providerId = :providerId
     """,
     )
@@ -128,5 +129,6 @@ interface XtreamSeriesDao {
         contentRating: String?,
         tmdbId: String?,
         detailFetchedAt: Long,
+        posterPath: String? = null,
     )
 }

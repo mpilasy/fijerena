@@ -55,8 +55,10 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
+import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
@@ -290,12 +292,14 @@ internal fun StreamList(
             when {
                 streamsLoading -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize().padding(Spacing.sm.scaled(scale)),
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(TvDimensions.progressIndicator),
-                            color = CinemaAccent,
+                        SkeletonList(
+                            rowCount = 6,
+                            rowHeight = (TvDimensions.cardHeight).scaled(scale),
+                            thumbnailWidth = (TvDimensions.posterWidth * thumbnailScale).scaled(scale),
+                            thumbnailHeight = (TvDimensions.posterHeight * thumbnailScale).scaled(scale),
+                            verticalSpacing = LocalUiStyle.current.grid.spacing.scaled(scale),
                         )
                     }
                 }
@@ -476,11 +480,10 @@ private fun StreamItem(
                     }
                     // Rating (e.g. "7.9 | PG-13")
                     item.metadata.rating?.let { rating ->
-                        Text(
-                            text = "★ ${formatRating(rating)}",
+                        RatingBadge(
+                            rating = rating,
+                            textColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
                             style = scaledStyles.bodySmall,
-                            color = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
-                            maxLines = 1,
                         )
                     }
                     // "What's On Now" for Live TV

@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -210,9 +211,9 @@ private fun MovieDetailsContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-        // Title — TMDB's clean title once it resolves, the provider's raw stream name until then
+        // Title — original provider stream name
         Text(
-            text = tmdbTitle ?: movieDetail.name,
+            text = movieDetail.name.ifEmpty { movieName },
             style = MaterialTheme.typography.headlineLarge,
         )
 
@@ -254,10 +255,10 @@ private fun MovieDetailsContent(
                     )
                 }
                 movieDetail.metadata.rating?.let { rating ->
-                    Text(
-                        text = "★ ${formatRating(rating)}",
+                    RatingBadge(
+                        rating = rating,
+                        textColor = MaterialTheme.colorScheme.secondary,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.secondary,
                     )
                 }
                 movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->

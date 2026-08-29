@@ -36,6 +36,7 @@ data class XtreamSeriesEntity(
     val contentRating: String? = null,
     val tmdbId: String? = null,
     val detailFetchedAt: Long? = null,
+    val posterPath: String? = null,
 ) {
     companion object {
         fun computeHash(
