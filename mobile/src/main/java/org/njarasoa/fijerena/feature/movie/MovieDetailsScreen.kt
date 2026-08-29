@@ -219,6 +219,27 @@ private fun MovieDetailsContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
+        // The provider's own (often raw) stream name, now that the headline above is TMDB's title.
+        // A dropdown when the local catalogue holds other instances of the same TMDB title.
+        StreamNamePicker(
+            // The catalogue's raw name, not movieDetail.name — some providers' detail API
+            // returns a cleaned-up name inconsistent with the raw name alternates are listed
+            // under, so use the same source as alternates to keep the picker consistent.
+            currentName = movieName,
+            alternates = alternateStreams,
+            onSelect = onAlternateStreamSelected,
+        )
+
+        // TMDB ID
+        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+        Text(
+            text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+        )
+
+        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+
         // Movie metadata - genre on its own line
         movieDetail.metadata.genre?.let { genre ->
             Text(
@@ -444,26 +465,6 @@ private fun MovieDetailsContent(
                 MobileTechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
             }
         }
-
-        // The provider's own (often raw) stream name, now that the headline above is TMDB's title.
-        // A dropdown when the local catalogue holds other instances of the same TMDB title.
-        Spacer(modifier = Modifier.height(CinemaSpacing.md))
-        StreamNamePicker(
-            // The catalogue's raw name, not movieDetail.name — some providers' detail API
-            // returns a cleaned-up name inconsistent with the raw name alternates are listed
-            // under, so use the same source as alternates to keep the picker consistent.
-            currentName = movieName,
-            alternates = alternateStreams,
-            onSelect = onAlternateStreamSelected,
-        )
-
-        // TMDB ID
-        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-        Text(
-            text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-        )
 
         // Category this movie belongs to — tap to browse it
         if (categoryName != null) {
