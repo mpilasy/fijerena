@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.res.stringResource
@@ -30,8 +33,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -132,6 +137,7 @@ private fun RelatedTitleCard(
     cardStyle: RelatedCardStyle,
     onClick: () -> Unit,
 ) {
+    val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
     Card(
         onClick = onClick,
         modifier = Modifier.width(TvDimensions.posterWidth),
@@ -141,24 +147,39 @@ private fun RelatedTitleCard(
         glow = cardStyle.glow,
         shape = cardStyle.shape,
     ) {
-        CinemaThumbnail(
-            url = item.thumbnailUrl,
-            fallbackLetter = item.name.firstOrNull(),
-            contentType =
-                if (item.mediaType == MediaType.SERIES) {
-                    ThumbnailContentType.TV_SHOW
-                } else {
-                    ThumbnailContentType.MOVIE
-                },
+        Box(
             modifier =
                 Modifier.size(
                     width = TvDimensions.posterWidth,
                     height = TvDimensions.posterHeightLarge,
                 ),
-        )
+        ) {
+            CinemaThumbnail(
+                url = item.thumbnailUrl,
+                fallbackLetter = item.name.firstOrNull(),
+                contentType =
+                    if (item.mediaType == MediaType.SERIES) {
+                        ThumbnailContentType.TV_SHOW
+                    } else {
+                        ThumbnailContentType.MOVIE
+                    },
+                overlayGradient = true,
+                modifier =
+                    Modifier.size(
+                        width = TvDimensions.posterWidth,
+                        height = TvDimensions.posterHeightLarge,
+                    ),
+            )
+            parsedTitle.badge?.let {
+                LanguageBadge(
+                    code = it,
+                    modifier = Modifier.align(Alignment.TopStart).padding(Spacing.xxs),
+                )
+            }
+        }
         Text(
             // See mobile's StreamCard — provider data occasionally sends a blank name.
-            text = item.name.ifBlank { stringResource(R.string.content_untitled) },
+            text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
             style = MaterialTheme.typography.bodySmall,
             color = CinemaTextPrimary,
             maxLines = 2,

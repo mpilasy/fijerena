@@ -1,5 +1,27 @@
 # UI Look & Feel Uplift Plan
 
+**Status:** Phase 1 (1a–1c), Phase 2 (2a–2b), and Phase 3 landed 2026-08-29.
+2c skipped deliberately — `TvPlayerControlsOverlay.kt`'s icon row already
+renders through `CinemaButton` (rounded, individually tinted) inside a
+`TvGlassPanel`, so the "bare icons on black" problem 2a/2b fixed on mobile
+didn't reproduce there. Phase 4 (backlog) not started.
+
+**Phase 3 scope changed from the plan below (user decision, superseding the
+"hard constraint" section):** on review, TV's `ContentTypeHeroCard` already
+was the row-of-vertical-tiles shape this plan proposed — only mobile's
+`GradientContentCard` had the banned horizontal-bar shape. The user then
+asked to keep both platforms' existing layouts as-is and fix only "flat, not
+modern" — no tile/grid rewrite happened. What actually landed on both
+`GradientContentCard` (mobile) and `ContentTypeHeroCard` (TV), same content,
+same order: real elevation/glow (mobile `CardDefaults.cardElevation`, TV
+`TvFocusTokens.restingGlow` — new, a permanent dim version of `focusedGlow`),
+a resting hairline border (`CinemaGlassBorder`, previously focus-only on TV),
+a diagonal gloss overlay brush, the icon sitting in a frosted circular chip,
+and the count number/text sitting in a frosted pill — `CinemaAlpha.heroSheen`
+and `CinemaAlpha.heroChipBackground` are the two new tokens behind the last
+three. The tile-layout section below is kept for the reasoning trail but is
+no longer the plan of record.
+
 Scope: visual polish only — no functional changes. Screens reviewed: Content Type
 Selection, Movies/TV Shows/Live TV lists, Movie/Series Details, Live TV player,
 VOD player, on mobile (TV checked for parity where relevant).

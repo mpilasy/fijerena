@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -12,13 +13,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -57,23 +62,33 @@ private fun RelatedTitleCard(
     item: MediaItem,
     onClick: () -> Unit,
 ) {
+    val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
     CinemaCard(
         onClick = onClick,
         modifier = Modifier.width(CARD_WIDTH),
     ) {
-        CinemaThumbnail(
-            url = item.thumbnailUrl,
-            fallbackLetter = item.name.firstOrNull(),
-            contentType =
-                if (item.mediaType == MediaType.SERIES) {
-                    ThumbnailContentType.TV_SHOW
-                } else {
-                    ThumbnailContentType.MOVIE
-                },
-            modifier = Modifier.size(width = CARD_WIDTH, height = POSTER_HEIGHT),
-        )
+        Box(modifier = Modifier.size(width = CARD_WIDTH, height = POSTER_HEIGHT)) {
+            CinemaThumbnail(
+                url = item.thumbnailUrl,
+                fallbackLetter = item.name.firstOrNull(),
+                contentType =
+                    if (item.mediaType == MediaType.SERIES) {
+                        ThumbnailContentType.TV_SHOW
+                    } else {
+                        ThumbnailContentType.MOVIE
+                    },
+                overlayGradient = true,
+                modifier = Modifier.size(width = CARD_WIDTH, height = POSTER_HEIGHT),
+            )
+            parsedTitle.badge?.let {
+                LanguageBadge(
+                    code = it,
+                    modifier = Modifier.align(Alignment.TopStart).padding(Spacing.xxs),
+                )
+            }
+        }
         Text(
-            text = item.name,
+            text = parsedTitle.title,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 2,
             minLines = 2,

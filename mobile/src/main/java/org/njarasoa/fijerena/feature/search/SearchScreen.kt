@@ -785,6 +785,7 @@ private fun SearchResultCard(
                 url = result.thumbnailUrl,
                 fallbackLetter = result.streamName.firstOrNull(),
                 contentType = ThumbnailContentType.DEFAULT,
+                overlayGradient = true,
                 modifier =
                     Modifier.size(
                         width = MobileDimensions.posterWidth,

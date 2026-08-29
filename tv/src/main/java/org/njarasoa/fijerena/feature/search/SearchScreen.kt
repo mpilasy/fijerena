@@ -1005,6 +1005,7 @@ private fun SearchResultItem(
                 url = result.thumbnailUrl,
                 fallbackLetter = result.streamName.firstOrNull(),
                 contentType = ThumbnailContentType.DEFAULT,
+                overlayGradient = true,
                 modifier =
                     Modifier.size(
                         width = TvDimensions.posterWidth,

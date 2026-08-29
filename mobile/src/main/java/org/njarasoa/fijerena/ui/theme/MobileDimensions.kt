@@ -27,6 +27,20 @@ object MobileDimensions {
     val dividerThin: Dp = 0.5.dp
     val strokeWidth: Dp = 2.dp
 
+    /** Default elevation for [org.njarasoa.fijerena.ui.components.cards.CinemaCard] list rows —
+     * enough shadow that a row reads as a raised card against the screen behind it, not a flat
+     * table cell. */
+    val cardRowElevation: Dp = 2.dp
+
+    /** VOD scrubber thumb — M3's default is a 4dp-wide bar, which reads as a thin needle rather
+     * than a draggable knob. Round (equal width/height) and sized for a thumb, not a tick mark. */
+    val playerScrubberThumbSize: Dp = 20.dp
+
+    /** Content Type Selection hero cards — resting/pressed elevation so a card reads as a raised
+     * surface, not a flat gradient rectangle. */
+    val heroCardElevation: Dp = 8.dp
+    val heroCardPressedElevation: Dp = 3.dp
+
     /** Thickness of the resume-progress bar along the bottom of stream and episode rows. */
     val resumeBarHeight: Dp = 5.dp
 

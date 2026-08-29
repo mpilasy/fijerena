@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -59,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
+import org.njarasoa.fijerena.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.ui.theme.CinemaOrangeDark
@@ -400,6 +402,15 @@ private fun GradientContentCard(
     modifier: Modifier = Modifier,
 ) {
     val brush = remember(gradientColors) { Brush.horizontalGradient(colors = gradientColors) }
+    // Diagonal gloss over the flat gradient fill — a highlight fading from the top-left corner,
+    // the same "raised glass" cue GlassPanel uses elsewhere, so the card reads as a lit surface
+    // rather than a solid block of color.
+    val sheenBrush =
+        remember {
+            Brush.linearGradient(
+                colors = listOf(CinemaTextPrimary.copy(alpha = CinemaAlpha.heroSheen), Color.Transparent),
+            )
+        }
     Card(
         onClick = onClick,
         modifier =
@@ -407,6 +418,12 @@ private fun GradientContentCard(
                 .fillMaxWidth()
                 .height(MobileDimensions.contentTypeCardHeight),
         shape = RoundedCornerShape(CinemaCornerRadius.large),
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation = MobileDimensions.heroCardElevation,
+                pressedElevation = MobileDimensions.heroCardPressedElevation,
+            ),
+        border = BorderStroke(MobileDimensions.dividerThin, CinemaGlassBorder),
     ) {
         Box(
             modifier =
@@ -418,6 +435,12 @@ private fun GradientContentCard(
                     ),
             contentAlignment = Alignment.CenterStart,
         ) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(sheenBrush, shape = RoundedCornerShape(CinemaCornerRadius.large)),
+            )
             Row(
                 modifier =
                     Modifier
@@ -432,12 +455,23 @@ private fun GradientContentCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(contentAlignment = Alignment.TopEnd) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = CinemaTextPrimary,
-                            modifier = Modifier.size(MobileDimensions.iconLarge),
-                        )
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(MobileDimensions.iconLarge + CinemaSpacing.sm)
+                                    .background(
+                                        CinemaTextPrimary.copy(alpha = CinemaAlpha.heroChipBackground),
+                                        shape = CircleShape,
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(MobileDimensions.iconLarge),
+                            )
+                        }
                         if (showLivePulse) {
                             val pulseTransition = rememberInfiniteTransition(label = "live_pulse")
                             val pulseAlpha by pulseTransition.animateFloat(
@@ -493,24 +527,33 @@ private fun GradientContentCard(
                     )
                 } else {
                     val (filtered, total) = categoryCounts
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.Center,
+                    Box(
+                        modifier =
+                            Modifier
+                                .background(
+                                    CinemaTextPrimary.copy(alpha = CinemaAlpha.heroChipBackground),
+                                    shape = RoundedCornerShape(CinemaCornerRadius.small),
+                                ).padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xxs),
                     ) {
-                        Text(
-                            text = "$filtered",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                        )
-                        if (showTotal && filtered < total) {
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
                             Text(
-                                text = stringResource(R.string.category_of_total_format, total),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
+                                text = "$filtered",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                                fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                             )
+                            if (showTotal && filtered < total) {
+                                Text(
+                                    text = stringResource(R.string.category_of_total_format, total),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textLow),
+                                    maxLines = 1,
+                                )
+                            }
                         }
                     }
                 }

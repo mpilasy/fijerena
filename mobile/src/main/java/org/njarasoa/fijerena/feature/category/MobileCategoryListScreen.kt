@@ -85,6 +85,7 @@ import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.browseTargetFor
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -93,6 +94,7 @@ import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.rememberFavoriteHintVisible
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -129,6 +131,7 @@ import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
+import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -1293,7 +1296,7 @@ private fun StreamCard(
             if (isCurrentlyPlaying) {
                 androidx.compose.foundation.BorderStroke(MobileDimensions.strokeWidth, CinemaAccent)
             } else {
-                null
+                cinemaCardHairlineBorder()
             },
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -1311,6 +1314,7 @@ private fun StreamCard(
                 url = item.thumbnailUrl,
                 fallbackLetter = item.name.firstOrNull(),
                 contentType = ThumbnailContentType.DEFAULT,
+                overlayGradient = true,
                 modifier =
                     Modifier.size(
                         width = MobileDimensions.posterWidth,
@@ -1318,6 +1322,7 @@ private fun StreamCard(
                     ),
             )
             // Stream name + rating
+            val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -1331,11 +1336,12 @@ private fun StreamCard(
                             modifier = Modifier.size(MobileDimensions.iconSmall),
                         )
                     }
+                    parsedTitle.badge?.let { LanguageBadge(it) }
                     Text(
                         // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with
                         // nothing between the dashes) — an empty row reads as broken, not a
                         // catalogue gap.
-                        text = item.name.ifBlank { stringResource(R.string.content_untitled) },
+                        text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
                         style = MaterialTheme.typography.bodyLarge,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
