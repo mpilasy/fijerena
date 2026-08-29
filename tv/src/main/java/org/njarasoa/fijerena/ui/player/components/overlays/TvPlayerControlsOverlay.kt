@@ -263,8 +263,16 @@ fun TvPlayerControlsOverlay(
             )
         }
 
-        // Center: Play/Pause (VOD only, hidden for live)
-        if (showFullControls && !isLive) {
+        // Center: Play/Pause (VOD only, hidden for live). Also gated to Playing/Paused —
+        // showFullControls is driven purely by the OK-key toggle, with no gate on playback state,
+        // so pressing OK during Buffering/Error/Ended/Idle used to land this button directly on
+        // top of PlayerScreen's own centered content for that state (BufferingContent(),
+        // ErrorContent(), ...). An earlier version of this fix excluded only Buffering and missed
+        // Error the same way; allowlisting Playing/Paused closes all of them at once instead of
+        // one at a time. Mobile's equivalent overlay uses the same allowlist for the same reason.
+        // The rest of this panel (title, description, audio/subtitle/quality selectors) stays
+        // visible regardless — only this button collides with another state's centered content.
+        if (showFullControls && !isLive && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)) {
             CinemaButton(
                 onClick = {
                     if (isPaused) viewModel.resume() else viewModel.pause()
