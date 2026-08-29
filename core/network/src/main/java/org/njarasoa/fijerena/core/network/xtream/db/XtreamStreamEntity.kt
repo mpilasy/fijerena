@@ -47,6 +47,7 @@ data class XtreamStreamEntity(
     val tmdbId: String? = null,
     val containerExtension: String? = null,
     val detailFetchedAt: Long? = null,
+    val posterPath: String? = null,
 ) {
     companion object {
         const val TYPE_LIVE = "LIVE"

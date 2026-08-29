@@ -79,6 +79,7 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -333,9 +334,9 @@ private fun MovieDetailsContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                 ) {
-                    // TMDB's clean title once it resolves, the provider's raw stream name until then
+                    // Original provider stream name
                     Text(
-                        text = tmdbTitle ?: movieDetail.name.ifEmpty { movieName },
+                        text = movieDetail.name.ifEmpty { movieName },
                         style = scaledStyles.displaySmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -439,10 +440,10 @@ private fun MovieDetailsContent(
                             )
                         }
                         movieDetail.metadata.rating?.let { rating ->
-                            Text(
-                                text = "★ ${formatRating(rating)}",
+                            RatingBadge(
+                                rating = rating,
                                 style = scaledStyles.titleMedium,
-                                color = CinemaAccent,
+                                textColor = CinemaAccent,
                             )
                         }
                         movieDetail.metadata.year?.let { year ->

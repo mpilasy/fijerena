@@ -232,7 +232,9 @@ class XtreamMediaProvider(
                         enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
                     }
                     if (!cachedRatingFresh) {
-                        repository.saveSeriesDetailCache(id, certification, tmdbSeriesId.toString(), System.currentTimeMillis())
+                        val tmdbDetails = runCatching { tmdb.getTvDetails(tmdbSeriesId) }.getOrNull()
+                        val tmdbPosterPath = tmdbDetails?.posterPath
+                        repository.saveSeriesDetailCache(id, certification, tmdbSeriesId.toString(), System.currentTimeMillis(), tmdbPosterPath)
                     }
                 }
                 repository.persistEpisodeOverviews(enriched.episodes)
@@ -382,17 +384,16 @@ class XtreamMediaProvider(
             is XtreamResponse.Ok -> {
                 val detail = result.value.toDomain(movieId)
                 val tmdbMovieId = detail.metadata.tmdbId?.toIntOrNull()
-                val enriched =
-                    if (tmdb.hasApiKey() && tmdbMovieId != null) {
-                        val certification = fetchMovieCertification(tmdbMovieId)
-                        if (certification != null) {
-                            detail.copy(metadata = detail.metadata.copy(contentRating = certification))
-                        } else {
-                            detail
-                        }
-                    } else {
-                        detail
+                var enriched = detail
+                var tmdbPosterPath: String? = null
+                if (tmdb.hasApiKey() && tmdbMovieId != null) {
+                    val certification = fetchMovieCertification(tmdbMovieId)
+                    if (certification != null) {
+                        enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
                     }
+                    val tmdbDetails = runCatching { tmdb.getMovieDetails(tmdbMovieId) }.getOrNull()
+                    tmdbPosterPath = tmdbDetails?.posterPath
+                }
                 movieDetailCache.put(movieId, enriched)
                 repository.saveMovieDetailCache(
                     vodId = id,
@@ -400,6 +401,7 @@ class XtreamMediaProvider(
                     tmdbId = enriched.metadata.tmdbId,
                     containerExtension = enriched.extension,
                     fetchedAt = System.currentTimeMillis(),
+                    posterPath = tmdbPosterPath,
                 )
                 kotlin.Result.success(enriched)
             }

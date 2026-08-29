@@ -127,13 +127,14 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 16
+**Version:** 17
 
 Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
 `watch_state` and `favorite_state` tables. (v10 added FTS4 search tables for streams/series; v11
 added `excluded` flags and indexes; v12 added TMDB detail fields; v13 added `xtream_epg_cache` table;
 v14 added `plotFetchedAt` for TMDB synopses; v15 added `watch_state` and an index on
-`xtream_streams(providerId, tmdbId)`; v16 added `favorite_state`.)
+`xtream_streams(providerId, tmdbId)`; v16 added `favorite_state`; v17 added `posterPath` on
+`xtream_streams` and `xtream_series` for TMDB poster art caching.)
 
 Despite the file name, neither `watch_state` nor `favorite_state` is Xtream-only — `MediaRepository`
 backs Xtream, SMB, Local, and Remote M3U through them. They live here because this is the database
@@ -183,6 +184,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `tmdbId` | TEXT | Sourced TMDB ID (added v12) |
 | `containerExtension` | TEXT | Extension (e.g. `mp4`, `mkv`) (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
+| `posterPath` | TEXT | Sourced TMDB poster path (added v17) |
 
 **Indices:** `(providerId, type)`, `(categoryId, providerId)`, `(providerId, type, categoryId)`, `(providerId, type, categoryId, excluded)`, `(providerId, tmdbId)` (added v15, for TMDB sibling dedup)
 
@@ -211,6 +213,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `contentRating` | TEXT | Age/content classification rating (added v12) |
 | `tmdbId` | TEXT | Sourced TMDB ID (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
+| `posterPath` | TEXT | Sourced TMDB poster path (added v17) |
 
 **Indices:** `(providerId)`, `(categoryId, providerId)`, `(providerId, categoryId, excluded)`
 

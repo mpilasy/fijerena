@@ -7,8 +7,15 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -32,6 +40,7 @@ import coil3.request.crossfade
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 
 /**
@@ -221,4 +230,101 @@ fun ShimmerPlaceholder(modifier: Modifier = Modifier) {
                 .background(shimmerBrush)
                 .graphicsLayer { translationX = translateX },
     )
+}
+
+/**
+ * Skeleton placeholder shaped like a media list row (thumbnail + 2 text lines).
+ */
+@Composable
+fun SkeletonRow(
+    modifier: Modifier = Modifier,
+    thumbnailWidth: Dp = CinemaSpacing.xxl + CinemaSpacing.lg,
+    thumbnailHeight: Dp = CinemaSpacing.xl + CinemaSpacing.xs,
+) {
+    val cardRadius = CinemaCornerRadius.medium
+    val chipRadius = CinemaCornerRadius.small
+    val palette = CinemaThemeHolder.current
+
+    Box(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(cardRadius))
+                .background(palette.surfaceVariant.copy(alpha = CinemaAlpha.tint)),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(CinemaSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+        ) {
+            // Thumbnail block
+            Box(
+                modifier =
+                    Modifier
+                        .size(width = thumbnailWidth, height = thumbnailHeight)
+                        .clip(RoundedCornerShape(chipRadius)),
+            ) {
+                ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
+            }
+
+            // Text lines block
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+            ) {
+                // Title line
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(0.7f)
+                            .height(CinemaSpacing.md)
+                            .clip(RoundedCornerShape(chipRadius)),
+                ) {
+                    ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
+                }
+
+                // Subtitle line
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(0.4f)
+                            .height(CinemaSpacing.sm)
+                            .clip(RoundedCornerShape(chipRadius)),
+                ) {
+                    ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Vertical stack of [SkeletonRow] items representing a loading list.
+ */
+@Composable
+fun SkeletonList(
+    modifier: Modifier = Modifier,
+    rowCount: Int = 6,
+    rowHeight: Dp = CinemaSpacing.xxl + CinemaSpacing.md,
+    thumbnailWidth: Dp = CinemaSpacing.xxl + CinemaSpacing.lg,
+    thumbnailHeight: Dp = CinemaSpacing.xl + CinemaSpacing.xs,
+    verticalSpacing: Dp = CinemaSpacing.xs,
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+    ) {
+        for (i in 0 until rowCount) {
+            SkeletonRow(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(rowHeight),
+                thumbnailWidth = thumbnailWidth,
+                thumbnailHeight = thumbnailHeight,
+            )
+        }
+    }
 }

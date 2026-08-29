@@ -58,6 +58,7 @@ import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -426,9 +427,9 @@ private fun EpisodeListContent(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-                // Title
+                // Title — original provider series name
                 Text(
-                    text = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
+                    text = seriesDetail.name.ifEmpty { seriesName },
                     style = MaterialTheme.typography.headlineLarge,
                 )
 
@@ -473,10 +474,10 @@ private fun EpisodeListContent(
                         )
                     }
                     seriesDetail.metadata.rating?.let { rating ->
-                        Text(
-                            text = "★ ${formatRating(rating)}",
+                        RatingBadge(
+                            rating = rating,
+                            textColor = MaterialTheme.colorScheme.secondary,
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.secondary,
                         )
                     }
                     year?.let {
@@ -924,10 +925,10 @@ private fun EpisodeDetailContent(
                     )
                 }
                 rating?.let {
-                    Text(
-                        text = "★ ${formatRating(it)}",
+                    RatingBadge(
+                        rating = it,
+                        textColor = MaterialTheme.colorScheme.secondary,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.secondary,
                     )
                 }
                 year?.let {

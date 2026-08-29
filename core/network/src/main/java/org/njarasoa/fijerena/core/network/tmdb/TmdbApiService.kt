@@ -132,4 +132,17 @@ class TmdbApiService(
     }
 
     fun hasApiKey(): Boolean = apiKey.isNotBlank()
+
+    companion object {
+        const val IMAGE_BASE_URL = "https://image.tmdb.org/t/p/"
+        const val POSTER_SIZE_W185 = "w185"
+        const val POSTER_SIZE_W342 = "w342"
+        const val POSTER_SIZE_ORIGINAL = "original"
+
+        fun posterUrl(path: String?, size: String = POSTER_SIZE_W185): String? {
+            val p = path?.trim()?.removePrefix("/") ?: return null
+            if (p.isEmpty()) return null
+            return "$IMAGE_BASE_URL$size/$p"
+        }
+    }
 }

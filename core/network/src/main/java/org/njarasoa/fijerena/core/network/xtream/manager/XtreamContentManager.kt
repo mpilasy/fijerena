@@ -936,8 +936,9 @@ class XtreamContentManager(
         tmdbId: String?,
         containerExtension: String?,
         fetchedAt: Long,
+        posterPath: String? = null,
     ) = withContext(Dispatchers.IO) {
-        streamDao.updateDetailCache(providerId, vodId, XtreamStreamEntity.TYPE_VOD, contentRating, tmdbId, containerExtension, fetchedAt)
+        streamDao.updateDetailCache(providerId, vodId, XtreamStreamEntity.TYPE_VOD, contentRating, tmdbId, containerExtension, fetchedAt, posterPath)
     }
 
     /**
@@ -964,8 +965,9 @@ class XtreamContentManager(
         contentRating: String?,
         tmdbId: String?,
         fetchedAt: Long,
+        posterPath: String? = null,
     ) = withContext(Dispatchers.IO) {
-        seriesDao.updateDetailCache(providerId, seriesId, contentRating, tmdbId, fetchedAt)
+        seriesDao.updateDetailCache(providerId, seriesId, contentRating, tmdbId, fetchedAt, posterPath)
     }
 
     /**
@@ -1093,13 +1095,14 @@ class XtreamContentManager(
         return (System.currentTimeMillis() - ts) < CACHE_EXPIRATION_MS
     }
 
-    private fun mapStreamEntityToModel(it: XtreamStreamEntity) =
-        XtreamStream(
+    private fun mapStreamEntityToModel(it: XtreamStreamEntity): XtreamStream {
+        val tmdbPoster = org.njarasoa.fijerena.core.network.tmdb.TmdbApiService.posterUrl(it.posterPath)
+        return XtreamStream(
             num = it.num,
             name = it.name,
             streamType = it.streamType,
             streamId = it.streamId,
-            streamIcon = it.streamIcon,
+            streamIcon = tmdbPoster ?: it.streamIcon,
             epgChannelId = it.epgChannelId,
             added = it.added,
             categoryId = it.categoryId,
@@ -1114,15 +1117,18 @@ class XtreamContentManager(
             releaseDate = it.releaseDate,
             rating = it.rating.toJsonPrimitive(),
             duration = it.duration.toJsonPrimitive(),
-            youtubeTrailer = it.youtubeTrailer,        )
+            youtubeTrailer = it.youtubeTrailer,
+        )
+    }
 
-    private fun mapSeriesEntityToStream(it: XtreamSeriesEntity) =
-        XtreamStream(
+    private fun mapSeriesEntityToStream(it: XtreamSeriesEntity): XtreamStream {
+        val tmdbPoster = org.njarasoa.fijerena.core.network.tmdb.TmdbApiService.posterUrl(it.posterPath)
+        return XtreamStream(
             num = it.num ?: 0,
             name = it.name,
             streamType = "series",
             streamId = it.seriesId,
-            streamIcon = it.cover,
+            streamIcon = tmdbPoster ?: it.cover,
             epgChannelId = null,
             added = it.releaseDate,
             categoryId = it.categoryId,
@@ -1139,6 +1145,7 @@ class XtreamContentManager(
             duration = it.episodeRunTime.toJsonPrimitive(),
             youtubeTrailer = it.youtubeTrailer,
         )
+    }
 
     suspend fun searchStreams(type: String, query: String, includeExcluded: Boolean = false): List<XtreamStream> =
         withContext(Dispatchers.IO) {

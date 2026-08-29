@@ -1,7 +1,6 @@
 # UI Look & Feel Uplift Plan
 
-**Status:** Phases 1–3 complete (landed 2026-08-29, commit `b26a3015`). Phase 4
-specced below, not started.
+**Status:** Complete (Phases 1–3 landed 2026-08-29; Phase 4 landed 2026-08-29).
 
 | Phase | Item | Status |
 |-------|------|--------|
@@ -12,9 +11,9 @@ specced below, not started.
 | 2 | 2b Scrubber restyle | Done 2026-08-29 (mobile) |
 | 2 | 2c TV player controls | Skipped deliberately — see 2c |
 | 3 | Content Type Selection | Done 2026-08-29, **scope changed** — see Phase 3 |
-| 4 | 4a TMDB poster art in list rows | Not started — **premise corrected**, see 4a |
-| 4 | 4b Skeleton loading states | Not started |
-| 4 | 4c Badge consistency pass | Not started |
+| 4 | 4a TMDB poster art in list rows | Done 2026-08-29 |
+| 4 | 4b Skeleton loading states | Done 2026-08-29 |
+| 4 | 4c Badge consistency pass | Done 2026-08-29 |
 
 Scope: visual polish only — no functional changes. Screens reviewed: Content Type
 Selection, Movies/TV Shows/Live TV lists, Movie/Series Details, Live TV player,

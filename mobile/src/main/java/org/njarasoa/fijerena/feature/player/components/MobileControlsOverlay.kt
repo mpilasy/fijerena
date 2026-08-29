@@ -60,6 +60,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -207,14 +208,11 @@ fun MobileControlsOverlay(
                             )
                         }
                         if (videoCodec != null) {
-                            Text(
+                            CinemaBadge(
                                 text = videoCodec!!,
+                                backgroundColor = CinemaSurface.copy(alpha = CinemaAlpha.tint),
+                                textColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                 style = typography.labelSmall.copy(fontSize = 10.sp),
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                                modifier =
-                                    Modifier
-                                        .background(CinemaSurface.copy(alpha = 0.3f), shape = RoundedCornerShape(CinemaSpacing.xxs))
-                                        .padding(horizontal = Spacing.xxs, vertical = Spacing.xxxs / 2),
                             )
                         }
                     }
