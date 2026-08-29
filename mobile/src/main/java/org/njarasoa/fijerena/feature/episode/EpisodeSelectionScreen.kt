@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -53,6 +54,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.ui.R
@@ -449,6 +451,11 @@ private fun EpisodeListContent(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Row(
+                    // Content rating + star rating + year + episode count + "ends at" can add up
+                    // to wider than a narrow phone screen; a plain Row clips the tail (e.g.
+                    // "Ends at" left dangling with its time cut off) instead of wrapping. Scroll
+                    // rather than clip.
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -897,6 +904,9 @@ private fun EpisodeDetailContent(
         if (contentRating != null || rating != null || year != null || hasDuration) {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             Row(
+                // See the series header above — same overflow-clips-instead-of-wraps risk on a
+                // narrow phone screen.
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -925,7 +935,7 @@ private fun EpisodeDetailContent(
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
-                episode.metadata.duration?.let { duration ->
+                episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
                     Text(
                         text = formatDuration(duration),
                         style = MaterialTheme.typography.titleMedium,
@@ -1197,7 +1207,7 @@ private fun EpisodeCard(
                 }
 
                 // Duration
-                episode.metadata.duration?.let { duration ->
+                episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                     Text(
                         text = formatDuration(duration),

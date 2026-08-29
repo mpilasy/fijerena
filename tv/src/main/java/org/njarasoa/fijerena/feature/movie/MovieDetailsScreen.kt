@@ -73,6 +73,7 @@ import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.channelLabel
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.formatDuration
+import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
@@ -451,7 +452,7 @@ private fun MovieDetailsContent(
                                 color = CinemaTextSecondary,
                             )
                         }
-                        movieDetail.metadata.duration?.let { duration ->
+                        movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
                             Text(
                                 text = formatDuration(duration),
                                 style = scaledStyles.titleMedium,

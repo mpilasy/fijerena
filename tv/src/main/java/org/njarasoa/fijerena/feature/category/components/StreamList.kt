@@ -459,7 +459,9 @@ private fun StreamItem(
                         }
 
                         Text(
-                            text = item.name,
+                            // See mobile's StreamCard — provider data occasionally sends a blank
+                            // name (e.g. "EN -  (US)" with nothing between the dashes).
+                            text = item.name.ifBlank { stringResource(R.string.content_untitled) },
                             style = scaledStyles.titleMedium,
                             color = CinemaTextPrimary,
                             maxLines = 1,

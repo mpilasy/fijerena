@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -29,6 +30,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -155,7 +157,8 @@ private fun RelatedTitleCard(
                 ),
         )
         Text(
-            text = item.name,
+            // See mobile's StreamCard — provider data occasionally sends a blank name.
+            text = item.name.ifBlank { stringResource(R.string.content_untitled) },
             style = MaterialTheme.typography.bodySmall,
             color = CinemaTextPrimary,
             maxLines = 2,

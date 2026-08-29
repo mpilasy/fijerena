@@ -359,6 +359,7 @@
     <string name="series_episode_label">Épisode %1$d</string>
     <string name="series_continue_watching_badge">Reprendre la lecture</string>
     <string name="content_watched_badge">Vu</string>
+    <string name="content_untitled">Sans titre</string>
 
     <!-- Technical Info -->
     <string name="tech_video_label">Vidéo :</string>
