@@ -151,26 +151,43 @@ fun TvPlayerControlsOverlay(
     // Focus requester for the first focusable control.
     //
     // [controlsFocusRequester] is attached to the centre play/pause button, which is hidden for
-    // live (there is nothing to pause). Aiming at it on a live stream targets a node that was
-    // never composed, so the request failed into a log line and the icon row below — subtitles,
-    // favourite, stats — could not be reached by D-pad at all. Live lands on that row instead;
-    // it is a focus group, so focus falls through to whichever of its buttons is first for this
-    // stream (the row's contents vary with the track counts).
+    // live (there is nothing to pause) AND for VOD while playbackState is anything but
+    // Playing/Paused (see the button's own composition guard below). Aiming at it before that
+    // button exists targets a node that was never composed, so the request fails into a log
+    // line and the icon row below — subtitles, favourite, stats — could not be reached by
+    // D-pad at all. [canFocusPlayPause] tracks whether that button currently exists; while it
+    // doesn't, focus falls to the icon row instead (a focus group, so it lands on whichever of
+    // its buttons is first). Keying the effect on [canFocusPlayPause] means that once playback
+    // moves into Playing/Paused — e.g. buffering finishes right as OSD is opened — focus is
+    // re-requested onto the play/pause button, so a subsequent centre press pauses instead of
+    // activating whatever the icon row happened to land on.
     val controlsFocusRequester = remember { FocusRequester() }
     val iconRowFocusRequester = remember { FocusRequester() }
     var isProgressBarFocused by remember { mutableStateOf(false) }
+    val canFocusPlayPause = !isLive && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)
 
-    LaunchedEffect(showFullControls, isLive) {
-        if (showFullControls) {
+    // One-shot per OSD session: once focus has landed on the play/pause button, later
+    // Playing<->Paused/Buffering flicker must not keep yanking focus away from wherever the
+    // user has since navigated.
+    var reachedPlayPauseFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(showFullControls) {
+        if (showFullControls) reachedPlayPauseFocus = false
+    }
+
+    LaunchedEffect(showFullControls, isLive, canFocusPlayPause) {
+        if (showFullControls && !reachedPlayPauseFocus) {
             // Small delay to allow composition to complete
             androidx.compose.runtime.withFrameMillis {}
+            val requester = if (isLive || !canFocusPlayPause) iconRowFocusRequester else controlsFocusRequester
             try {
-                if (isLive) iconRowFocusRequester.requestFocus() else controlsFocusRequester.requestFocus()
+                requester.requestFocus()
+                if (canFocusPlayPause) reachedPlayPauseFocus = true
             } catch (e: Exception) {
                 // Retry after another frame
                 try {
                     androidx.compose.runtime.withFrameMillis {}
-                    if (isLive) iconRowFocusRequester.requestFocus() else controlsFocusRequester.requestFocus()
+                    requester.requestFocus()
+                    if (canFocusPlayPause) reachedPlayPauseFocus = true
                 } catch (e2: Exception) {
                     android.util.Log.e("TvPlayerControlsOverlay", "Failed to request focus for controls", e2)
                 }
