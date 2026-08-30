@@ -397,6 +397,7 @@
     <string name="player_subtitles">Subtitles</string>
     <string name="player_quality">Quality</string>
     <string name="player_stats">Stats</string>
+    <string name="player_info">Info</string>
     <string name="player_remaining_ends_at_format">Remaining: %1$s  •  Ends at %2$s</string>
     <string name="player_controls_title">🎮 Player Controls</string>
     <string name="player_hint_dismiss_format">This message will auto-dismiss in %1$d seconds</string>
