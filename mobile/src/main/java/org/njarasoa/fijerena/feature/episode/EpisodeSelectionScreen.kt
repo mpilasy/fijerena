@@ -427,9 +427,10 @@ private fun EpisodeListContent(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-                // Title — original provider series name
+                // Title — TMDB's original title, falling back to the provider's own series
+                // name when TMDB has no match (or the lookup hasn't come back yet).
                 Text(
-                    text = seriesDetail.name.ifEmpty { seriesName },
+                    text = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
                     style = MaterialTheme.typography.headlineLarge,
                 )
 

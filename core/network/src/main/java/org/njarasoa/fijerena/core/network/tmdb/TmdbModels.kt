@@ -87,6 +87,10 @@ data class TmdbRecommendation(
     val title: String? = null,
     @SerialName("name")
     val name: String? = null,
+    @SerialName("original_title")
+    val originalTitle: String? = null,
+    @SerialName("original_name")
+    val originalName: String? = null,
     @SerialName("release_date")
     val releaseDate: String? = null,
     @SerialName("first_air_date")
@@ -101,6 +105,13 @@ data class TmdbRecommendation(
     /** `title` for movies, `name` for TV; null when TMDB sent neither. */
     val displayTitle: String?
         get() = title?.takeIf { it.isNotBlank() } ?: name?.takeIf { it.isNotBlank() }
+
+    /** `original_title` for movies, `original_name` for TV; falls back to [displayTitle]. */
+    val originalDisplayTitle: String?
+        get() =
+            originalTitle?.takeIf { it.isNotBlank() }
+                ?: originalName?.takeIf { it.isNotBlank() }
+                ?: displayTitle
 
     /** Release/air year, or null when the date is missing or not a `yyyy-MM-dd` string. */
     val year: Int?
