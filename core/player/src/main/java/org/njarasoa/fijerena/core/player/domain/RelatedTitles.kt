@@ -10,6 +10,10 @@ package org.njarasoa.fijerena.core.player.domain
  * them would let the weaker source dilute the stronger one under a single heading.
  */
 data class RelatedTitles(
+    /** Other movies in the same TMDB collection (e.g. a franchise/trilogy). Movies only. */
+    val collection: List<MediaItem> = emptyList(),
+    /** The collection's TMDB name (e.g. "The Matrix Collection"); null whenever [collection] is empty. */
+    val collectionName: String? = null,
     val recommended: List<MediaItem> = emptyList(),
     val similar: List<MediaItem> = emptyList(),
 )

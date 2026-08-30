@@ -101,6 +101,10 @@ data class TmdbRecommendation(
     val overview: String? = null,
     @SerialName("vote_average")
     val voteAverage: Double? = null,
+    // Only present on a `/movie/{id}` details response, and only when the movie is part of a
+    // franchise. Null for every other use of this shape (recommendations, similar, TV).
+    @SerialName("belongs_to_collection")
+    val belongsToCollection: TmdbCollectionRef? = null,
 ) {
     /** `title` for movies, `name` for TV; null when TMDB sent neither. */
     val displayTitle: String?
@@ -117,3 +121,25 @@ data class TmdbRecommendation(
     val year: Int?
         get() = (releaseDate ?: firstAirDate)?.take(4)?.toIntOrNull()
 }
+
+/** The collection a movie belongs to, as embedded in a `/movie/{id}` response. */
+@Serializable
+data class TmdbCollectionRef(
+    @SerialName("id")
+    val id: Int,
+    @SerialName("name")
+    val name: String? = null,
+)
+
+/** `/collection/{id}`: the franchise's name and every movie in it. */
+@Serializable
+data class TmdbCollectionResponse(
+    @SerialName("id")
+    val id: Int,
+    @SerialName("name")
+    val name: String? = null,
+    // Each part has the same shape as a `/movie/{id}` result (id, title, original_title,
+    // poster_path, release_date, overview, vote_average).
+    @SerialName("parts")
+    val parts: List<TmdbRecommendation> = emptyList(),
+)
