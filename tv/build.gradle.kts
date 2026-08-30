@@ -18,6 +18,44 @@ tasks.withType<KotlinCompile>().configureEach {
     }
 }
 
+// The composeBom pin below is supposed to keep every androidx.compose.* artifact at 1.8.3 (see
+// the comment on composeBom in libs.versions.toml: tv-foundation:1.0.0-alpha10's TvLazyListState
+// calls LazyLayoutPrefetchState.schedulePrefetch on every scroll, a method Compose 1.9 removed).
+// But implementation(platform(bom)) only *recommends* that version — plain conflict resolution
+// still lets a published "prevents a regression in Overscroll" constraint drag
+// androidx.compose.foundation/ui/animation up to 1.10.0 on the actual runtime classpath, crashing
+// TvLazyColumn/TvLazyRow on first scroll. useVersion (a hard force) actually wins where a
+// dependency-level `strictly` constraint did not — force overrides other constraints outright
+// instead of merely failing loudly when they disagree.
+// Scoped to exactly the artifacts implicated in that constraint's chain (foundation, ui,
+// animation, and their -android publication variants) rather than every androidx.compose.*
+// group: material/material3 need to stay off this list (material3 is intentionally pinned
+// separately, to 1.4.0 rather than the BOM's 1.3.2 — see the composeMaterial3 alias), and several
+// other compose artifacts (material-icons-extended/core, runtime-annotation, ...) simply don't
+// publish a 1.8.3 release at all — forcing every androidx.compose.* module here 404s on those.
+val composeArtifactsToPin =
+    setOf(
+        "foundation", "foundation-android",
+        "foundation-layout", "foundation-layout-android",
+        "ui", "ui-android",
+        "ui-graphics", "ui-graphics-android",
+        "ui-unit", "ui-unit-android",
+        "ui-util", "ui-util-android",
+        "ui-tooling", "ui-tooling-android",
+        "ui-tooling-data", "ui-tooling-data-android",
+        "ui-tooling-preview", "ui-tooling-preview-android",
+        "animation", "animation-android",
+        "animation-core", "animation-core-android",
+    )
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group.startsWith("androidx.compose.") && requested.name in composeArtifactsToPin) {
+            useVersion("1.8.3")
+            because("pin to composeBom 2025.06.01's Compose 1.8.3 — tv-foundation:1.0.0-alpha10 needs pre-1.9 Compose")
+        }
+    }
+}
+
 android {
     namespace = "org.njarasoa.fijerena"
     compileSdk = 36
