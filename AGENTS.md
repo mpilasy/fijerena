@@ -136,7 +136,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
   - **Live TV:** Added to history after **10 seconds** of continuous playback.
   - **VOD (Movies/Series):** Added to history only after reaching a **2% watch threshold**.
   - **Session Finalization:** `loaderViewModel.stopPlayback()` MUST be called when exiting the player or switching streams to ensure final progress is reported and history is flushed to disk.
-- **Watch State Storage:** Position and completion live in the durable `watch_state` Room table (`xtream_v2.db` v15), **not** in SharedPreferences — the old `watch_history_v3` blob truncated to `watchHistorySize` on every write and is now migrated and purged on first `setProvider()`. `watchHistorySize` still bounds the *Recent* row's length, never what is stored. Reads go through `MediaRepository`; never re-introduce a blob writer.
+- **Watch State Storage:** Position and completion live in the durable `watch_state` Room table (`xtream_v2.db` v17), **not** in SharedPreferences — the old `watch_history_v3` blob truncated to `watchHistorySize` on every write and is now migrated and purged on first `setProvider()`. `watchHistorySize` still bounds the *Recent* row's length, never what is stored. Reads go through `MediaRepository`; never re-introduce a blob writer.
   - **Completion is sticky:** progress upserts do `MAX(existing, new)` on `isCompleted`. Only `setWatched(false)` clears it.
   - **Manual marking:** `MediaRepository.setWatched(itemId, contentType, watched)`. No-ops for server-backed providers (Jellyfin owns that state). A manual mark leaves `lastPlayedAt` null so it never pollutes the Recent row.
   - **TMDB dedup:** movies join `xtream_streams` on shared `tmdbId`; episodes join `xtream_series` on **series-level** `tmdbId`, then match `(season, episodeNum)` — episode-level `tmdbId` is effectively never populated by providers and must not be used for this.
@@ -301,7 +301,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/xtream-multi-device-sync-plan.md](docs/plans/xtream-multi-device-sync-plan.md) | Not started; backend option undecided |
 | [docs/plans/favorites-durable-storage-plan.md](docs/plans/favorites-durable-storage-plan.md) | **Complete** - all four phases landed |
 | [docs/plans/secret-store-migration-plan.md](docs/plans/secret-store-migration-plan.md) | Not started, deferred deliberately |
-| [docs/plans/ui-look-feel-uplift-plan.md](docs/plans/ui-look-feel-uplift-plan.md) | Phases 1-3 complete 2026-08-29 (2c skipped, Phase 3 scope changed); Phase 4 specced (4a-4c), not started |
+| [docs/plans/ui-look-feel-uplift-plan.md](docs/plans/ui-look-feel-uplift-plan.md) | **Complete** - all four phases landed (2026-08-29) |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 
