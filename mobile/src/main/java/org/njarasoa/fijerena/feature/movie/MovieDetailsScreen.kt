@@ -211,9 +211,10 @@ private fun MovieDetailsContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-        // Title — original provider stream name
+        // Title — TMDB's original title, falling back to the provider's own stream name
+        // when TMDB has no match (or the lookup hasn't come back yet).
         Text(
-            text = movieDetail.name.ifEmpty { movieName },
+            text = tmdbTitle ?: movieDetail.name.ifEmpty { movieName },
             style = MaterialTheme.typography.headlineLarge,
         )
 

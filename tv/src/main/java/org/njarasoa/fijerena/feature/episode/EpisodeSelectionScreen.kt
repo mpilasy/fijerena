@@ -597,9 +597,11 @@ private fun EpisodeListContent(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                                 ) {
-                                    // Original provider series name
+                                    // TMDB's original title, falling back to the provider's own
+                                    // series name when TMDB has no match (or the lookup hasn't
+                                    // come back yet).
                                     Text(
-                                        text = seriesDetail.name.ifEmpty { seriesName },
+                                        text = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
                                         style = scaledStyles.displaySmall,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )

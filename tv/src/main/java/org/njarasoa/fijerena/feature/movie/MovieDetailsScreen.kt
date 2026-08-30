@@ -334,9 +334,10 @@ private fun MovieDetailsContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                 ) {
-                    // Original provider stream name
+                    // TMDB's original title, falling back to the provider's own stream name
+                    // when TMDB has no match (or the lookup hasn't come back yet).
                     Text(
-                        text = movieDetail.name.ifEmpty { movieName },
+                        text = tmdbTitle ?: movieDetail.name.ifEmpty { movieName },
                         style = scaledStyles.displaySmall,
                         color = MaterialTheme.colorScheme.onSurface,
                     )

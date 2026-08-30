@@ -549,7 +549,7 @@ class XtreamMediaProvider(
 
         return try {
             val details = if (contentType == ContentType.MOVIES) tmdb.getMovieDetails(id) else tmdb.getTvDetails(id)
-            details.displayTitle
+            details.originalDisplayTitle
         } catch (e: Exception) {
             Log.w("XtreamMediaProvider", "TMDB title for $contentType $id: ${e.message}")
             null
