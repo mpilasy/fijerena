@@ -18,6 +18,31 @@ tasks.withType<KotlinCompile>().configureEach {
     }
 }
 
+// This project has no dependency lockfile, and several compose artifacts (ui-tooling among
+// them) carry no explicit version of their own — they float on whatever the BOM merely
+// *recommends* (implementation(platform(bom)) is not enforced). That means a plain rebuild can
+// silently resolve a newer androidx.compose.foundation than a build from days earlier, with zero
+// source change, the moment Google publishes a new release. That drift crossed a real line: the
+// composeBom comment in libs.versions.toml already documents that Compose 1.9 removes
+// LazyLayoutPrefetchState.schedulePrefetch, which tv-foundation:1.0.0-alpha10's TvLazyListState
+// still calls on every scroll -> NoSuchMethodError crash on any TvLazyColumn/TvLazyRow scroll.
+//
+// Only androidx.compose.foundation needs to be held back for tv-foundation's sake — NOT
+// androidx.compose.ui/ui-graphics, which Coil's image-loading path needs to resolve wherever the
+// rest of the graph naturally puts it (an earlier, broader version of this fix also forced
+// ui-graphics down to 1.8.3 and broke Painter's $stable field at runtime instead:
+// NoSuchFieldError on every poster). Keeping this to exactly the one group that actually
+// conflicts with tv-foundation is what makes both sides work at once.
+val foundationArtifactsToPin = setOf("foundation", "foundation-android", "foundation-layout", "foundation-layout-android")
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "androidx.compose.foundation" && requested.name in foundationArtifactsToPin) {
+            useVersion("1.8.3")
+            because("pin to composeBom 2025.06.01's Compose 1.8.3 — tv-foundation:1.0.0-alpha10 needs pre-1.9 Compose")
+        }
+    }
+}
+
 android {
     namespace = "org.njarasoa.fijerena"
     compileSdk = 36
