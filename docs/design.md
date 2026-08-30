@@ -90,7 +90,7 @@ RemoteM3uMediaProvider           -- remote M3U URL fetching + parsing
 | Store | Purpose | Location |
 |-------|---------|----------|
 | `providers.db` (Room v10) | Provider configurations (name, URL, type, config JSON, active flag, sync stats + last-sync delta), EPG sources (incl. change-detection validators), pipeline stats | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity` |
-| `xtream_v2.db` (Room v16) | Xtream catalog cache (categories, streams, series, episodes, per-stream EPG payloads, FTS4), the provider-agnostic `watch_state` table, and the provider-agnostic `favorite_state` table | `Xtream*Entity`, `WatchStateEntity`, `FavoriteStateEntity` |
+| `xtream_v2.db` (Room v17) | Xtream catalog cache (categories, streams, series, episodes, per-stream EPG payloads, FTS4), the provider-agnostic `watch_state` table, and the provider-agnostic `favorite_state` table | `Xtream*Entity`, `WatchStateEntity`, `FavoriteStateEntity` |
 | `epg_index.db` (Room v16) | EPG programme index with FTS4 search | See EPG section |
 | EncryptedSharedPreferences | Per-provider passwords (keyed by provider ID) | `provider_creds_{id}`, `xtream_secure_credentials` |
 | `xtream_cache_{id}` SharedPreferences | Per-provider Xtream category/item cache | JSON blobs |

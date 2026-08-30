@@ -1,5 +1,23 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: UI Look & Feel Uplift (Phases 1–4) & Durable Favorites
+**Release Date:** 2026-08-29
+
+### UI Look & Feel Uplift (`docs/plans/ui-look-feel-uplift-plan.md`)
+- **Language / Region Badges (Phase 1a):** Cleaned up title rendering by stripping raw provider prefixes (`EN -`, `FR -`, `NP:`) and suffixes (`(US)`, `(GB)`) via `parseDisplayTitle()` into a unified `LanguageBadge` pill.
+- **Thumbnail Scrim & List Row Depth (Phases 1b, 1c):** Added subtle bottom-gradient scrims to protect title legibility on uneven poster art and enhanced list card elevation and contrast tokens across mobile and TV.
+- **Mobile Player Controls Cluster & Scrubber (Phases 2a, 2b):** Modernized touch scrubber and player control overlay buttons with standard glass paneling and cohesive spacing tokens.
+- **Content Type Selection Screen (Phase 3):** Modernized card gradients, border accents, and live activity indicators with hardware-efficient draw modifiers.
+- **TMDB Poster Art Caching (Phase 4a, `xtream_v2.db` v17):** Added `posterPath` caching to `xtream_streams` and `xtream_series` with Room `MIGRATION_16_17`. Opportunistically caches high-quality TMDB poster URLs upon detail fetching and prefers TMDB CDN artwork over low-res IPTV stills.
+- **Skeleton Loading States (Phase 4b):** Replaced centred circular progress spinners with `SkeletonRow` / `SkeletonList` shimmer placeholders across category, stream, and loading screens on both mobile and TV.
+- **Badge & Rating Consistency Pass (Phase 4c):** Introduced `CinemaBadge` and `RatingBadge` standardizing the `"★ ${formatRating(rating)}"` and codec/resolution pill presentation across all screens.
+- **Original Title Presentation:** Updated Movie and Series detail pages to consistently display the original provider stream/series name.
+
+### Durable Favorites Storage (`docs/plans/favorites-durable-storage-plan.md`)
+- **`favorite_state` table (`xtream_v2.db` v16):** Migrated favorite items and categories out of SharedPreferences JSON blobs into durable Room storage.
+
+---
+
 ## Version: Durable Watch State, EPG Change Detection & TV Back Fixes
 **Release Date:** 2026-08-28
 
