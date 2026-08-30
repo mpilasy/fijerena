@@ -397,6 +397,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 onStreamEndedOrError = { errorMessage ->
                     handleStreamEndedOrError(errorMessage)
                 },
+                streamStartTimeMs = { _streamStartTimeMs.value },
             )
         player.addListener(playerListener!!)
 
@@ -453,6 +454,7 @@ class StreamingPlaybackService : MediaSessionService() {
             }
         cancelPendingRetry()
         playerListener?.resetErrorState()
+        playerListener?.resetStartupTiming()
         retryCount = 0
         autoRetryAttempted = false
         lastErrorMessage = null
@@ -477,13 +479,18 @@ class StreamingPlaybackService : MediaSessionService() {
         // Ensure we are in fast-startup mode
         setRecycling(false)
 
+        // DIAGNOSTIC (temporary, see conversation): split startup latency into
+        // request-init -> first-byte -> STATE_READY so a slow provider/DNS can be told
+        // apart from a slow buffer gate. Remove once the 30s VOD startup is root-caused.
+        val startupTiming = StartupTimingTransferListener(bandwidthMeter, _streamStartTimeMs.value)
+
         val mediaSource =
             mediaSourceFactory?.createMediaSource(
                 streamUrl = metadata.streamUrl,
                 headers = metadata.headers,
                 isLive = metadata.isLive,
                 onRetry = { _streamRetryCount.update { it + 1 } },
-                transferListener = bandwidthMeter,
+                transferListener = startupTiming,
             ) ?: run {
                 Log.w(TAG, "playStream: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
                 return
@@ -501,6 +508,61 @@ class StreamingPlaybackService : MediaSessionService() {
         }
         player.playWhenReady = true
         player.prepare()
+    }
+
+    // DIAGNOSTIC (temporary): delegates to the real bandwidth meter so measurement/ABR is
+    // unaffected, but logs the first onTransferInitializing (request sent) and first
+    // onTransferStart (response headers back, i.e. first byte) relative to startTimeMs.
+    // Guarded so only the very first segment/manifest transfer of a playStream() call is
+    // logged — later transfers (subsequent segments) would otherwise spam this every few
+    // seconds for the life of the stream.
+    private class StartupTimingTransferListener(
+        private val delegate: androidx.media3.datasource.TransferListener?,
+        private val startTimeMs: Long,
+    ) : androidx.media3.datasource.TransferListener {
+        private var loggedInit = false
+        private var loggedFirstByte = false
+
+        override fun onTransferInitializing(
+            source: androidx.media3.datasource.DataSource,
+            dataSpec: androidx.media3.datasource.DataSpec,
+            isNetwork: Boolean,
+        ) {
+            if (!loggedInit) {
+                loggedInit = true
+                Log.i(TAG, "StartupTiming: request initiated at +${SystemClock.elapsedRealtime() - startTimeMs}ms (${dataSpec.uri})")
+            }
+            delegate?.onTransferInitializing(source, dataSpec, isNetwork)
+        }
+
+        override fun onTransferStart(
+            source: androidx.media3.datasource.DataSource,
+            dataSpec: androidx.media3.datasource.DataSpec,
+            isNetwork: Boolean,
+        ) {
+            if (!loggedFirstByte) {
+                loggedFirstByte = true
+                Log.i(TAG, "StartupTiming: first byte at +${SystemClock.elapsedRealtime() - startTimeMs}ms (${dataSpec.uri})")
+            }
+            delegate?.onTransferStart(source, dataSpec, isNetwork)
+        }
+
+        override fun onBytesTransferred(
+            source: androidx.media3.datasource.DataSource,
+            dataSpec: androidx.media3.datasource.DataSpec,
+            isNetwork: Boolean,
+            bytesTransferred: Int,
+        ) {
+            delegate?.onBytesTransferred(source, dataSpec, isNetwork, bytesTransferred)
+        }
+
+        override fun onTransferEnd(
+            source: androidx.media3.datasource.DataSource,
+            dataSpec: androidx.media3.datasource.DataSpec,
+            isNetwork: Boolean,
+        ) {
+            delegate?.onTransferEnd(source, dataSpec, isNetwork)
+        }
     }
 
     private fun attemptStreamRetry(metadata: PlayerMetadata) {
@@ -903,17 +965,30 @@ class StreamingPlaybackService : MediaSessionService() {
         private val player: Player,
         private val onPositionSave: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null,
         private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {},
+        // DIAGNOSTIC (temporary): wall-clock playStream() start, so the first STATE_READY
+        // after a new stream can log total prepare-to-ready latency.
+        private val streamStartTimeMs: () -> Long = { 0L },
     ) : Player.Listener {
         private var isInErrorState = false
         private val saveIntervalMs = POSITION_SAVE_INTERVAL_MS
         private var lastSavedPosition = -saveIntervalMs
+        private var loggedFirstReady = false
 
         fun resetErrorState() {
             isInErrorState = false
         }
 
+        // DIAGNOSTIC (temporary): rearm the STATE_READY timing log for the next stream.
+        fun resetStartupTiming() {
+            loggedFirstReady = false
+        }
+
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_READY) {
+                if (!loggedFirstReady) {
+                    loggedFirstReady = true
+                    Log.i(TAG, "StartupTiming: STATE_READY at +${SystemClock.elapsedRealtime() - streamStartTimeMs()}ms")
+                }
                 val currentPosition = player.currentPosition
                 val duration = player.duration
                 val isPaused = !player.isPlaying
