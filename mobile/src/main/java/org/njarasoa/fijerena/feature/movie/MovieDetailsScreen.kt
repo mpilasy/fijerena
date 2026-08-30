@@ -484,6 +484,16 @@ private fun MovieDetailsContent(
         // Last thing on the screen, below the technical rows and the category: the rows are a
         // place to go next, so they sit after everything about this title. Items in their own
         // right so the one that is off-screen is never composed or measured until scrolled to.
+        if (relatedTitles.collection.isNotEmpty()) {
+            item(key = "related-collection") {
+                RelatedTitlesRow(
+                    title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
+                    items = relatedTitles.collection,
+                    onItemClick = onRelatedTitleSelected,
+                    modifier = Modifier.padding(top = CinemaSpacing.lg),
+                )
+            }
+        }
         if (relatedTitles.recommended.isNotEmpty()) {
             item(key = "related-recommended") {
                 RelatedTitlesRow(

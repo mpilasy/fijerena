@@ -123,6 +123,14 @@ class TmdbApiService(
                 parameter("language", "en-US")
             }.body()
 
+    /** The franchise's name and every movie in it, for the collection a movie's details named. */
+    suspend fun getCollection(collectionId: Int): TmdbCollectionResponse =
+        client
+            .get("collection/$collectionId") {
+                authenticate()
+                parameter("language", "en-US")
+            }.body()
+
     private fun io.ktor.client.request.HttpRequestBuilder.authenticate() {
         if (isV4Token) {
             header(HttpHeaders.Authorization, "Bearer $apiKey")

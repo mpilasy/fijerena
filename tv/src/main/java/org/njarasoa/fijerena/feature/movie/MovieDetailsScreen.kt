@@ -688,6 +688,16 @@ private fun MovieDetailsContent(
 
         // Hoisted out of the GlassPanel above so they can be items in their own right, and so the
         // one that is off-screen is never composed or measured until it is scrolled to.
+        if (relatedTitles.collection.isNotEmpty()) {
+            item(key = "related-collection") {
+                RelatedTitlesRow(
+                    title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
+                    items = relatedTitles.collection,
+                    onItemClick = onRelatedTitleSelected,
+                    modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
+                )
+            }
+        }
         if (relatedTitles.recommended.isNotEmpty()) {
             item(key = "related-recommended") {
                 RelatedTitlesRow(

@@ -520,21 +520,28 @@ class XtreamMediaProvider(
         val id = tmdbId?.toIntOrNull() ?: return RelatedTitles()
         if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return RelatedTitles()
 
-        // Two independent endpoints, so ask for both at once rather than paying the round trips
-        // one after the other.
-        val (recommended, similar) =
+        // Three independent endpoints, so ask for all of them at once rather than paying the
+        // round trips one after the other. Collections are a movie-only TMDB concept.
+        val (recommended, similar, collectionFetch) =
             coroutineScope {
                 val recommendedCall = async { fetchRelated(id, contentType, similar = false) }
                 val similarCall = async { fetchRelated(id, contentType, similar = true) }
-                recommendedCall.await() to similarCall.await()
+                val collectionCall = async { if (contentType == ContentType.MOVIES) fetchCollection(id) else CollectionFetch() }
+                Triple(recommendedCall.await(), similarCall.await(), collectionCall.await())
             }
 
         val mediaType = getMediaType(contentType)
         val taken = mutableSetOf<String>()
+        // Runs first, so a title belonging to the same collection as this one is always credited
+        // there even when TMDB also lists it under recommendations/similar — and the collection
+        // itself, being explicit rather than algorithmic, gets a row even with just one match.
+        val collectionMatches = matchToCatalogue(collectionFetch.parts, itemId, contentType, mediaType, taken, minCount = 1)
         return RelatedTitles(
+            collection = collectionMatches,
+            collectionName = collectionFetch.name.takeIf { collectionMatches.isNotEmpty() },
             recommended = matchToCatalogue(recommended, itemId, contentType, mediaType, taken),
-            // Runs second and shares [taken], so a title TMDB returns from both endpoints appears
-            // only under the stronger heading instead of filling both rows.
+            // Runs last and shares [taken], so a title TMDB returns from more than one endpoint
+            // appears only under the strongest heading instead of filling multiple rows.
             similar = matchToCatalogue(similar, itemId, contentType, mediaType, taken),
         )
     }
@@ -592,6 +599,22 @@ class XtreamMediaProvider(
             emptyList()
         }
 
+    private data class CollectionFetch(
+        val name: String? = null,
+        val parts: List<TmdbRecommendation> = emptyList(),
+    )
+
+    /** The other movies in [movieId]'s TMDB collection, if it belongs to one. */
+    private suspend fun fetchCollection(movieId: Int): CollectionFetch =
+        try {
+            val collectionId = tmdb.getMovieDetails(movieId).belongsToCollection?.id ?: return CollectionFetch()
+            val collection = tmdb.getCollection(collectionId)
+            CollectionFetch(name = collection.name, parts = collection.parts)
+        } catch (e: Exception) {
+            Log.w("XtreamMediaProvider", "TMDB collection for movie $movieId: ${e.message}")
+            CollectionFetch()
+        }
+
     /**
      * Keeps the TMDB titles this provider can actually play, in the order TMDB ranked them.
      * [taken] carries normalized titles already claimed — by an earlier row, or by an earlier
@@ -603,6 +626,7 @@ class XtreamMediaProvider(
         contentType: String,
         mediaType: MediaType,
         taken: MutableSet<String>,
+        minCount: Int = MIN_RELATED_TITLES,
     ): List<MediaItem> {
         val matches = mutableListOf<MediaItem>()
         for (result in results) {
@@ -633,7 +657,7 @@ class XtreamMediaProvider(
             // "NF - " / "4K-AMZ - " tags come off here rather than at either call site.
             matches += hit.toDomain(mediaType).let { it.copy(name = TitleMatcher.stripProviderPrefix(it.name)) }
         }
-        return if (matches.size < MIN_RELATED_TITLES) emptyList() else matches
+        return if (matches.size < minCount) emptyList() else matches
     }
 
     override suspend fun countExcludedSearchMatches(
