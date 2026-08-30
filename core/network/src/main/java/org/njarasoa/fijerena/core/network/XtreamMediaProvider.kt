@@ -535,7 +535,12 @@ class XtreamMediaProvider(
         // Runs first, so a title belonging to the same collection as this one is always credited
         // there even when TMDB also lists it under recommendations/similar — and the collection
         // itself, being explicit rather than algorithmic, gets a row even with just one match.
-        val collectionMatches = matchToCatalogue(collectionFetch.parts, itemId, contentType, mediaType, taken, minCount = 1)
+        // TMDB's collection always includes the movie being viewed itself; matchToCatalogue's own
+        // itemId check only catches that exact catalogue row, not the provider's other stream
+        // entries for the same film (multiple qualities/languages are common), so drop it by TMDB
+        // id first.
+        val collectionParts = collectionFetch.parts.filter { it.id != id }
+        val collectionMatches = matchToCatalogue(collectionParts, itemId, contentType, mediaType, taken, minCount = 1)
         return RelatedTitles(
             collection = collectionMatches,
             collectionName = collectionFetch.name.takeIf { collectionMatches.isNotEmpty() },
