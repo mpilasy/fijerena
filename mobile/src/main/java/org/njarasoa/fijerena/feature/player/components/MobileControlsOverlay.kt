@@ -222,8 +222,13 @@ fun MobileControlsOverlay(
             ClockDisplay()
         }
 
-        // Description and transport controls, centred in whatever space is left between the top
-        // bar and the bottom panel (never the whole screen — see the comment above).
+        // Description, centred in whatever space is left between the top bar and the bottom
+        // panel (never the whole screen — see the comment above). Transport controls used to
+        // live here too, in a pill sharing this Column with the description; a long (4-line)
+        // description could grow past the Box's actual height and, since nothing clipped it,
+        // shove the pill down behind the bottom panel — it just disappeared. Rewind/play/pause/
+        // forward now live in the bottom panel below, alongside the scrubber, which is sized to
+        // its own content and can't be squeezed by anything above it.
         Box(
             modifier =
                 Modifier
@@ -231,94 +236,29 @@ fun MobileControlsOverlay(
                     .fillMaxWidth(),
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
-            ) {
-                metadata.description?.let { description ->
-                    if (description.isNotBlank()) {
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = CinemaSpacing.xl)
-                                .background(
-                                    color = CinemaSurface.copy(alpha = CinemaAlpha.scrim),
-                                    shape = RoundedCornerShape(Spacing.xs)
-                                )
-                                .padding(CinemaSpacing.md)
-                        ) {
-                            Text(
-                                text = description,
-                                style = typography.bodyMedium,
-                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
-                                maxLines = 4,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.fillMaxWidth(0.8f) // Limit width for better readability
+            metadata.description?.let { description ->
+                if (description.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = CinemaSpacing.xl)
+                            .background(
+                                color = CinemaSurface.copy(alpha = CinemaAlpha.scrim),
+                                shape = RoundedCornerShape(Spacing.xs)
                             )
-                        }
-                    }
-                }
-
-                // Rewind | Play/Pause | FastForward (VOD only shows seek buttons), grouped into a
-                // pill-shaped glass surface instead of icons floating loose on the dimmed video.
-                GlassPanel(panelShape = CircleShape) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.sm),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xl),
-                        verticalAlignment = Alignment.CenterVertically,
+                            .padding(CinemaSpacing.md)
                     ) {
-                        if (onRewind != null) {
-                            IconButton(
-                                onClick = onRewind,
-                                modifier = Modifier.size(MobileDimensions.iconPlayContainer),
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        imageVector = CinemaIcons.FastRewind,
-                                        contentDescription = stringResource(R.string.player_rewind_1min_description),
-                                        tint = CinemaTextPrimary,
-                                        modifier = Modifier.size(MobileDimensions.iconLarge),
-                                    )
-                                    Text(stringResource(R.string.player_rewind_label), style = typography.labelSmall, color = CinemaTextPrimary)
-                                }
-                            }
-                        }
-                        IconButton(
-                            onClick = onPlayPause,
-                            modifier = Modifier.size(MobileDimensions.iconPlayContainer),
-                        ) {
-                            Icon(
-                                imageVector =
-                                    if (playbackState is PlaybackState.Paused) {
-                                        CinemaIcons.PlayArrow
-                                    } else {
-                                        CinemaIcons.Pause
-                                    },
-                                contentDescription = stringResource(if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause),
-                                tint = CinemaTextPrimary,
-                                modifier = Modifier.size(MobileDimensions.iconPlayIcon),
-                            )
-                        }
-                        if (onFastForward != null) {
-                            IconButton(
-                                onClick = onFastForward,
-                                modifier = Modifier.size(MobileDimensions.iconPlayContainer),
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        imageVector = CinemaIcons.FastForward,
-                                        contentDescription = stringResource(R.string.player_fast_forward_5min_description),
-                                        tint = CinemaTextPrimary,
-                                        modifier = Modifier.size(MobileDimensions.iconLarge),
-                                    )
-                                    Text(stringResource(R.string.player_forward_label), style = typography.labelSmall, color = CinemaTextPrimary)
-                                }
-                            }
-                        }
+                        Text(
+                            text = description,
+                            style = typography.bodyMedium,
+                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                            maxLines = 4,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth(0.8f) // Limit width for better readability
+                        )
                     }
                 }
             }
         }
-
         // Bottom section: progress + controls (scrollable for landscape)
         GlassPanel(
             modifier = Modifier.fillMaxWidth(),
@@ -477,6 +417,75 @@ fun MobileControlsOverlay(
                                     color = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                                     modifier = Modifier.padding(top = Spacing.xxxs),
                                 )
+                            }
+                        }
+                    }
+                }
+
+                // Rewind | Play/Pause | FastForward (VOD only shows seek buttons), grouped into a
+                // pill-shaped glass surface and centred in this panel — same container as the
+                // scrubber, so it's sized to content and can never be pushed off by the
+                // description above.
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = Spacing.xs, bottom = Spacing.xs),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    GlassPanel(panelShape = CircleShape) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.sm),
+                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xl),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (onRewind != null) {
+                                IconButton(
+                                    onClick = onRewind,
+                                    modifier = Modifier.size(MobileDimensions.iconPlayContainer),
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            imageVector = CinemaIcons.FastRewind,
+                                            contentDescription = stringResource(R.string.player_rewind_1min_description),
+                                            tint = CinemaTextPrimary,
+                                            modifier = Modifier.size(MobileDimensions.iconLarge),
+                                        )
+                                        Text(stringResource(R.string.player_rewind_label), style = typography.labelSmall, color = CinemaTextPrimary)
+                                    }
+                                }
+                            }
+                            IconButton(
+                                onClick = onPlayPause,
+                                modifier = Modifier.size(MobileDimensions.iconPlayContainer),
+                            ) {
+                                Icon(
+                                    imageVector =
+                                        if (playbackState is PlaybackState.Paused) {
+                                            CinemaIcons.PlayArrow
+                                        } else {
+                                            CinemaIcons.Pause
+                                        },
+                                    contentDescription = stringResource(if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause),
+                                    tint = CinemaTextPrimary,
+                                    modifier = Modifier.size(MobileDimensions.iconPlayIcon),
+                                )
+                            }
+                            if (onFastForward != null) {
+                                IconButton(
+                                    onClick = onFastForward,
+                                    modifier = Modifier.size(MobileDimensions.iconPlayContainer),
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            imageVector = CinemaIcons.FastForward,
+                                            contentDescription = stringResource(R.string.player_fast_forward_5min_description),
+                                            tint = CinemaTextPrimary,
+                                            modifier = Modifier.size(MobileDimensions.iconLarge),
+                                        )
+                                        Text(stringResource(R.string.player_forward_label), style = typography.labelSmall, color = CinemaTextPrimary)
+                                    }
+                                }
                             }
                         }
                     }
