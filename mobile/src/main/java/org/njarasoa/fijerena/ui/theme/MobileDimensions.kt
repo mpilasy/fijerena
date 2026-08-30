@@ -17,8 +17,8 @@ object MobileDimensions {
     val iconMedium: Dp = 28.dp
     val iconLarge: Dp = 32.dp
     val iconXLarge: Dp = 48.dp
-    val iconPlayContainer: Dp = 72.dp
-    val iconPlayIcon: Dp = 56.dp
+    val iconPlayContainer: Dp = 56.dp
+    val iconPlayIcon: Dp = 36.dp
     val progressIndicatorSmall: Dp = 20.dp
     val progressIndicatorDefault: Dp = 24.dp
     val progressIndicatorLarge: Dp = 48.dp
