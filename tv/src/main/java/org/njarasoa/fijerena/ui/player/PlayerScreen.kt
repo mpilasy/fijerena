@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -155,8 +155,17 @@ fun PlayerScreen(
                         Modifier
                     }
                 )
-                .onKeyEvent { keyEvent ->
-                    android.util.Log.i("PlayerScreen", "onKeyEvent: action=${keyEvent.nativeKeyEvent.action}, code=${keyEvent.nativeKeyEvent.keyCode}")
+                // onPreviewKeyEvent (top-down, before any focused descendant) rather than
+                // onKeyEvent (bubble-up, after) — mirrors the BackHandler/onPreviewKeyEvent
+                // fix below for the same reason: a bubble-phase handler only gets an event
+                // once the currently focused child has passed on it. The Center/Enter reveal
+                // tap moves focus onto the play/pause button asynchronously (LaunchedEffect in
+                // TvPlayerControlsOverlay); if that lands before this same press's KeyUp is
+                // dispatched, the button's own click-on-KeyUp handling fired first and
+                // suppressNextCenterKeyUp never got a chance to run, so one press both opened
+                // the OSD and toggled play/pause. Preview phase always wins that race.
+                .onPreviewKeyEvent { keyEvent ->
+                    android.util.Log.i("PlayerScreen", "onPreviewKeyEvent: action=${keyEvent.nativeKeyEvent.action}, code=${keyEvent.nativeKeyEvent.keyCode}")
                     handlePlayerKeyEvent(
                         keyEvent = keyEvent,
                         state = state,
