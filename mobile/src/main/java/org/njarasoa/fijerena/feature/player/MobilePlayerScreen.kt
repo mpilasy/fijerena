@@ -547,8 +547,14 @@ fun MobilePlayerContent(
                 }
 
                 // Touch controls overlay
+                //
+                // Buffering is included alongside Playing/Paused (unlike the equivalent TV
+                // gate, which never excluded it in the first place) — without it, the tap
+                // gesture still flipped showControls, but the overlay itself stayed invisible
+                // for as long as a stream was buffering, silently swallowing every reveal tap.
+                // Idle/Error/Ended stay excluded: nothing here to control yet.
                 AnimatedVisibility(
-                    visible = !isInPipMode && showControls && !showStats && (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused),
+                    visible = !isInPipMode && showControls && !showStats && (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused || currentPs is PlaybackState.Buffering),
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
