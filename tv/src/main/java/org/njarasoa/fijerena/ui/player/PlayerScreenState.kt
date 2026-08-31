@@ -61,6 +61,14 @@ class PlayerScreenState(
     // Interaction state
     var lastOkClickTime by mutableLongStateOf(0L)
 
+    // Set when a Center/Enter KeyDown reveals the OSD (and moves focus onto a button —
+    // Favourite on live, Play/Pause on VOD). Compose's clickable() fires on KeyUp of
+    // Center/Enter, so the same physical press's KeyUp must be consumed too, or it activates
+    // whatever focus just landed on — turning "open the OSD" into "open the OSD AND toggle
+    // favourite / pause" from a single press. Not Compose state: read/written only inside
+    // handlePlayerKeyEvent, never observed by composition.
+    var suppressNextCenterKeyUp: Boolean = false
+
     // Fast-forward / rewind state
     var seekSpeedLabel by mutableStateOf<String?>(null)
 

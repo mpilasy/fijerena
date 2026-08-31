@@ -156,15 +156,25 @@ fun TvPlayerControlsOverlay(
     // button exists targets a node that was never composed, so the request fails into a log
     // line and the icon row below — subtitles, favourite, stats — could not be reached by
     // D-pad at all. [canFocusPlayPause] tracks whether that button currently exists; while it
-    // doesn't, focus falls to the icon row instead (a focus group, so it lands on whichever of
-    // its buttons is first). Keying the effect on [canFocusPlayPause] means that once playback
-    // moves into Playing/Paused — e.g. buffering finishes right as OSD is opened — focus is
-    // re-requested onto the play/pause button, so a subsequent centre press pauses instead of
-    // activating whatever the icon row happened to land on.
+    // doesn't, focus falls to [safeIconFocusRequester] instead (see below). Keying the effect
+    // on [canFocusPlayPause] means that once playback moves into Playing/Paused — e.g.
+    // buffering finishes right as OSD is opened — focus is re-requested onto the play/pause
+    // button, so a subsequent centre press pauses instead of activating an icon row button.
     val controlsFocusRequester = remember { FocusRequester() }
     val iconRowFocusRequester = remember { FocusRequester() }
     var isProgressBarFocused by remember { mutableStateOf(false) }
     val canFocusPlayPause = !isLive && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)
+
+    // Default focus when landing on the icon row (live, or VOD before canFocusPlayPause) must
+    // not go to [iconRowFocusRequester]'s implicit first child — that's whichever of
+    // chapters/audio/subtitle/quality is first for this stream's track counts, so on a typical
+    // single-audio-track live channel with subtitles, OK opens the OSD with focus already ON
+    // the subtitle button, and a second OK press opens that dialog instead of doing nothing.
+    // Favourite/stats are plain toggles, not dialogs, so landing there first is safe regardless
+    // of which selector buttons happen to be present.
+    val favoriteFocusRequester = remember { FocusRequester() }
+    val statsFocusRequester = remember { FocusRequester() }
+    val safeIconFocusRequester = if (onToggleFavorite != null) favoriteFocusRequester else statsFocusRequester
 
     // One-shot per OSD session: once focus has landed on the play/pause button, later
     // Playing<->Paused/Buffering flicker must not keep yanking focus away from wherever the
@@ -178,7 +188,7 @@ fun TvPlayerControlsOverlay(
         if (showFullControls && !reachedPlayPauseFocus) {
             // Small delay to allow composition to complete
             androidx.compose.runtime.withFrameMillis {}
-            val requester = if (isLive || !canFocusPlayPause) iconRowFocusRequester else controlsFocusRequester
+            val requester = if (isLive || !canFocusPlayPause) safeIconFocusRequester else controlsFocusRequester
             try {
                 requester.requestFocus()
                 if (canFocusPlayPause) reachedPlayPauseFocus = true
@@ -626,6 +636,7 @@ fun TvPlayerControlsOverlay(
                         if (onToggleFavorite != null) {
                             CinemaButton(
                                 onClick = { onToggleFavorite() },
+                                modifier = Modifier.focusRequester(favoriteFocusRequester),
                                 colors =
                                     ButtonDefaults.colors(
                                         containerColor =
@@ -657,6 +668,7 @@ fun TvPlayerControlsOverlay(
                         // Stats for nerds (always visible)
                         CinemaButton(
                             onClick = onShowStats,
+                            modifier = Modifier.focusRequester(statsFocusRequester),
                             colors =
                                 ButtonDefaults.colors(
                                     containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
