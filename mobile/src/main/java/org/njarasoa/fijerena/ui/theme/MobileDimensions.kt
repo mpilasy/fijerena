@@ -19,6 +19,8 @@ object MobileDimensions {
     val iconXLarge: Dp = 48.dp
     val iconPlayContainer: Dp = 56.dp
     val iconPlayIcon: Dp = 36.dp
+    // Height of the TMDB logo art rendered in place of the OSD's big title text.
+    val osdLogoHeight: Dp = 40.dp
     val progressIndicatorSmall: Dp = 20.dp
     val progressIndicatorDefault: Dp = 24.dp
     val progressIndicatorLarge: Dp = 48.dp

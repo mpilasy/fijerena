@@ -137,6 +137,16 @@ class PlaybackViewModel(
         }
     }
 
+    /** See [StreamingPlaybackService.updateMetadata]. */
+    fun updateMetadata(
+        streamUrl: String,
+        update: (PlayerMetadata) -> PlayerMetadata,
+    ) {
+        viewModelScope.launch {
+            StreamingPlaybackService.awaitInstance().updateMetadata(streamUrl, update)
+        }
+    }
+
     fun pause() {
         viewModelScope.launch {
             StreamingPlaybackService.awaitInstance().pause()

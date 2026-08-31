@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -49,6 +50,7 @@ import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
@@ -74,6 +76,7 @@ fun MobileMovieDetailsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
     val isWatched = (uiState as? MovieDetailsViewModel.UiState.Success)?.isWatched ?: false
@@ -95,27 +98,9 @@ fun MobileMovieDetailsScreen(
                         }
                     )
                 },
-                actions = {
-                    CinemaIconButton(onClick = { viewModel.toggleFavorite(lastSuccess?.streamName ?: movieName) },
-                        icon = {
-                            Icon(
-                                imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
-                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
-                            )
-                        }
-                    )
-                    // Watched button (Phase 6, docs/plans/watch-state-durable-storage-plan.md)
-                    CinemaIconButton(onClick = { viewModel.toggleWatched() },
-                        icon = {
-                            Icon(
-                                imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                                contentDescription = if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
-                                tint = if (isWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
-                            )
-                        }
-                    )
-                },
+                // Favorite/Watched moved into the icon row under the Play button (see
+                // MovieDetailsContent) — matches the Plex/Netflix "actions under the poster"
+                // layout instead of a top-bar icon cluster.
             )
         },
     ) { paddingValues ->
@@ -150,6 +135,11 @@ fun MobileMovieDetailsScreen(
                             resumePositionMs = shown.resumePositionMs,
                             resumeDurationMs = shown.resumeDurationMs,
                             categoryName = shown.categoryName,
+                            logoUrl = logoUrl,
+                            isFavorite = isFavorite,
+                            isWatched = isWatched,
+                            onToggleFavorite = { viewModel.toggleFavorite(shown.streamName) },
+                            onToggleWatched = { viewModel.toggleWatched() },
                             onPlayMovie = onPlayMovie,
                             onCategorySelected = { onCategorySelected(shown.categoryId) },
                             onRelatedTitleSelected = onRelatedTitleSelected,
@@ -176,6 +166,11 @@ private fun MovieDetailsContent(
     resumePositionMs: Long,
     resumeDurationMs: Long,
     categoryName: String?,
+    logoUrl: String?,
+    isFavorite: Boolean,
+    isWatched: Boolean,
+    onToggleFavorite: () -> Unit,
+    onToggleWatched: () -> Unit,
     onPlayMovie: (movieId: String, movieName: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onCategorySelected: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
@@ -211,12 +206,12 @@ private fun MovieDetailsContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-        // Title — TMDB's original title, falling back to the provider's own stream name
-        // when TMDB has no match (or the lookup hasn't come back yet).
-        Text(
-            text = tmdbTitle ?: movieDetail.name.ifEmpty { movieName },
-            style = MaterialTheme.typography.headlineLarge,
-        )
+        // Title — TMDB's branded logo art when it has one, else TMDB's own title falling back
+        // to the provider's stream name (when TMDB has no match, or the lookup hasn't landed).
+        val movieTitleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
+        TitleLogoOrText(contentDescription = movieTitleText, logoUrl = logoUrl) {
+            Text(text = movieTitleText, style = MaterialTheme.typography.headlineLarge)
+        }
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
@@ -309,7 +304,7 @@ private fun MovieDetailsContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-        // Play / Resume buttons
+        // Play / Resume button
         val hasResume = resumePositionMs > 0L
         if (hasResume) {
             val resumeTimeText = formatTime(resumePositionMs)
@@ -320,15 +315,6 @@ private fun MovieDetailsContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.movie_resume_from_format, resumeTimeText))
-            }
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            CinemaOutlinedButton(
-                onClick = {
-                    onPlayMovie(movieId, movieDetail.name, extension, true)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.movie_start_beginning))
             }
         } else {
             CinemaButton(
@@ -341,14 +327,38 @@ private fun MovieDetailsContent(
             }
         }
 
-        movieDetail.metadata.trailerUrl?.let { trailer ->
-            val trailerContext = LocalContext.current
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            CinemaOutlinedButton(
-                onClick = { openExternalUrl(trailerContext, trailer) },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.details_watch_trailer))
+        // Secondary actions row — only actions the app actually supports (no Cast/Shuffle).
+        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+        val trailerContext = LocalContext.current
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            DetailIconAction(
+                icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
+                onClick = onToggleFavorite,
+                tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+            )
+            DetailIconAction(
+                icon = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
+                onClick = onToggleWatched,
+                tint = if (isWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+            )
+            if (hasResume) {
+                DetailIconAction(
+                    icon = CinemaIcons.Replay,
+                    label = stringResource(R.string.movie_start_beginning),
+                    onClick = { onPlayMovie(movieId, movieDetail.name, extension, true) },
+                )
+            }
+            movieDetail.metadata.trailerUrl?.let { trailer ->
+                DetailIconAction(
+                    icon = CinemaIcons.Movie,
+                    label = stringResource(R.string.details_watch_trailer),
+                    onClick = { openExternalUrl(trailerContext, trailer) },
+                )
             }
         }
 

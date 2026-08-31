@@ -45,6 +45,7 @@ import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.RadioButtonChecked
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Replay
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Star
@@ -81,6 +82,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RadioButtonChecked
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
@@ -117,6 +119,7 @@ import androidx.compose.material.icons.sharp.PlayArrow
 import androidx.compose.material.icons.sharp.RadioButtonChecked
 import androidx.compose.material.icons.sharp.RadioButtonUnchecked
 import androidx.compose.material.icons.sharp.Refresh
+import androidx.compose.material.icons.sharp.Replay
 import androidx.compose.material.icons.sharp.Search
 import androidx.compose.material.icons.sharp.Settings
 import androidx.compose.material.icons.sharp.Star
@@ -307,4 +310,7 @@ object CinemaIcons {
     val List: ImageVector
         @Composable @ReadOnlyComposable get() =
             pick(Icons.AutoMirrored.Rounded.List, Icons.AutoMirrored.Outlined.List, Icons.AutoMirrored.Sharp.List)
+
+    val Replay: ImageVector
+        @Composable @ReadOnlyComposable get() = pick(Icons.Rounded.Replay, Icons.Outlined.Replay, Icons.Sharp.Replay)
 }

@@ -43,6 +43,15 @@ data class PlayerMetadata(
     val streamUrl: String = "",
     val isLive: Boolean = false,
     val headers: Map<String, String> = emptyMap(),
+    // Series name for episode playback — when set, the OSD renders it as the big title and
+    // demotes [title] (the episode name) to a subtitle line prefixed with [episodeLabel].
+    // Null for movies and Live TV, which keep [title] as the sole OSD title.
+    val showTitle: String? = null,
+    // "S{season}:E{episode}", e.g. "S3:E1" — only meaningful alongside [showTitle].
+    val episodeLabel: String? = null,
+    // TMDB's transparent-PNG wordmark art for this title, if any — the OSD renders this image
+    // in place of [showTitle]/[title] as text when present.
+    val logoUrl: String? = null,
 )
 
 data class AudioTrackInfo(

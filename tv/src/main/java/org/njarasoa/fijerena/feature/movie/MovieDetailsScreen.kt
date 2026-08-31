@@ -82,6 +82,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -138,6 +139,7 @@ fun MovieDetailsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
 
     // Provide UI scale for all child composables
@@ -157,6 +159,7 @@ fun MovieDetailsScreen(
                     movieDetail = state.movieDetail,
                     relatedTitles = relatedTitles,
                     tmdbTitle = tmdbTitle,
+                    logoUrl = logoUrl,
                     alternateStreams = alternateStreams,
                     movieId = state.movieDetail.id,
                     movieName = state.streamName,
@@ -184,6 +187,7 @@ private fun MovieDetailsContent(
     movieDetail: MovieDetail,
     relatedTitles: RelatedTitles,
     tmdbTitle: String?,
+    logoUrl: String?,
     alternateStreams: List<MediaItem>,
     movieId: String,
     movieName: String,
@@ -334,13 +338,21 @@ private fun MovieDetailsContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                 ) {
-                    // TMDB's original title, falling back to the provider's own stream name
-                    // when TMDB has no match (or the lookup hasn't come back yet).
-                    Text(
-                        text = tmdbTitle ?: movieDetail.name.ifEmpty { movieName },
-                        style = scaledStyles.displaySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                    // TMDB's branded logo art when it has one, else TMDB's original title
+                    // falling back to the provider's own stream name (when TMDB has no match,
+                    // or the lookup hasn't come back yet).
+                    val titleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
+                    TitleLogoOrText(
+                        contentDescription = titleText,
+                        logoUrl = logoUrl,
+                        logoHeight = TvDimensions.osdLogoHeight.scaled(scale),
+                    ) {
+                        Text(
+                            text = titleText,
+                            style = scaledStyles.displaySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                     // Favorite button
                     CinemaIconButton(
                         onClick = onToggleFavorite,

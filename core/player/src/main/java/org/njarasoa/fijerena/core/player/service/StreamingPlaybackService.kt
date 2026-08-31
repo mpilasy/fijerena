@@ -437,6 +437,22 @@ class StreamingPlaybackService : MediaSessionService() {
         player.addAnalyticsListener(analyticsListener!!)
     }
 
+    /**
+     * Patches the currently-playing metadata in place — e.g. once the series/episode/TMDB-logo
+     * lookup [playStream] kicked off resolves asynchronously, after the OSD is already showing
+     * it. A no-op when [streamUrl] no longer matches what's actually playing (a stale async
+     * result for content that's since been swapped out or stopped).
+     */
+    fun updateMetadata(
+        streamUrl: String,
+        update: (PlayerMetadata) -> PlayerMetadata,
+    ) {
+        val current = _currentMetadata.value
+        if (current.streamUrl == streamUrl) {
+            _currentMetadata.value = update(current)
+        }
+    }
+
     fun setContentType(contentType: PlayerConfigFactory.ContentType) {
         adaptiveLoadControl?.updateContentType(contentType)
     }
@@ -823,6 +839,11 @@ class StreamingPlaybackService : MediaSessionService() {
         val parameters =
             trackSelector.parameters
                 .buildUpon()
+                // A prior disableSubtitles() (explicit "Off", or restoring a saved -1
+                // preference at episode start) leaves TRACK_TYPE_TEXT disabled on this
+                // trackSelector. That flag wins over any override, so picking a language
+                // here would otherwise silently do nothing until it's cleared too.
+                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
                 .setOverrideForType(trackSelectionOverride)
                 .build()
 

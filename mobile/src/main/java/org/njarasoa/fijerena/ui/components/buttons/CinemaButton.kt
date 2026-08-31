@@ -3,9 +3,11 @@ package org.njarasoa.fijerena.ui.components.buttons
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,11 +18,16 @@ import androidx.compose.material3.ButtonElevation
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
@@ -142,6 +149,36 @@ fun CinemaIconButton(
         ) {
             icon()
         }
+    }
+}
+
+/**
+ * Secondary detail-screen action: a circular icon button with a short caption underneath it —
+ * the Plex/Netflix "Favorite / Restart / Trailer" row under a detail screen's primary Play button.
+ * Only actions the app actually supports belong in that row (no dead Cast/Shuffle buttons).
+ */
+@Composable
+fun DetailIconAction(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = CinemaTextPrimary,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier,
+    ) {
+        CinemaIconButton(onClick = onClick, icon = {
+            Icon(imageVector = icon, contentDescription = label, tint = tint)
+        })
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+            maxLines = 1,
+            modifier = Modifier.padding(top = 4.dp),
+        )
     }
 }
 
