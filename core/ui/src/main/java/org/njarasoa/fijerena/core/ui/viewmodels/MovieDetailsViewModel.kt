@@ -59,6 +59,10 @@ class MovieDetailsViewModel(
     private val _tmdbTitle = MutableStateFlow<String?>(null)
     val tmdbTitle: StateFlow<String?> = _tmdbTitle.asStateFlow()
 
+    /** TMDB's transparent-PNG wordmark art, shown in place of the plain-text headline when present. */
+    private val _logoUrl = MutableStateFlow<String?>(null)
+    val logoUrl: StateFlow<String?> = _logoUrl.asStateFlow()
+
     /** Other local catalogue entries for the same TMDB id — empty when there are none. */
     private val _alternateStreams = MutableStateFlow<List<MediaItem>>(emptyList())
     val alternateStreams: StateFlow<List<MediaItem>> = _alternateStreams.asStateFlow()
@@ -105,6 +109,7 @@ class MovieDetailsViewModel(
         relatedTitlesJob?.cancel()
         _relatedTitles.value = RelatedTitles()
         _tmdbTitle.value = null
+        _logoUrl.value = null
         _alternateStreams.value = emptyList()
         try {
             val repo = getRepository()
@@ -139,6 +144,7 @@ class MovieDetailsViewModel(
 
                     loadRelatedTitles(detail)
                     loadTmdbTitle(detail)
+                    loadLogoUrl(detail)
                     loadAlternateStreams(detail)
                 },
                 onFailure = { e ->
@@ -167,6 +173,15 @@ class MovieDetailsViewModel(
             _tmdbTitle.value =
                 runCatching {
                     getRepository().getTmdbTitle(detail.metadata.tmdbId, "MOVIES")
+                }.getOrNull()
+        }
+    }
+
+    private fun loadLogoUrl(detail: MovieDetail) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _logoUrl.value =
+                runCatching {
+                    getRepository().getTmdbLogoUrl(detail.metadata.tmdbId, "MOVIES")
                 }.getOrNull()
         }
     }

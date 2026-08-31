@@ -62,6 +62,7 @@ import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -72,6 +73,7 @@ import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
@@ -101,6 +103,7 @@ fun MobileEpisodeSelectionScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? SeriesDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
@@ -146,17 +149,9 @@ fun MobileEpisodeSelectionScreen(
                         }
                     )
                 },
-                actions = {
-                    CinemaIconButton(onClick = { viewModel.toggleFavorite(lastSuccess?.streamName ?: seriesName) },
-                        icon = {
-                            Icon(
-                                imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
-                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
-                            )
-                        }
-                    )
-                },
+                // Favorite moved into the icon row under the Play/Resume button (see
+                // EpisodeListContent) — matches the Plex/Netflix "actions under the poster" layout
+                // instead of a top-bar icon.
             )
         },
     ) { paddingValues ->
@@ -221,6 +216,9 @@ fun MobileEpisodeSelectionScreen(
                             resumeEpisodeId = resumeEpisodeId,
                             onResumeEpisodeDerived = { resumeEpisodeId = it },
                             categoryName = lastSuccess?.categoryName,
+                            logoUrl = logoUrl,
+                            isFavorite = isFavorite,
+                            onToggleFavorite = { viewModel.toggleFavorite(lastSuccess?.streamName ?: seriesName) },
                             onPlayEpisode = { episodeId, episodeTitle, extension, startFromBeginning ->
                                 resumeEpisodeId = episodeId
                                 onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
@@ -253,6 +251,9 @@ private fun EpisodeListContent(
     resumeEpisodeId: String? = null,
     onResumeEpisodeDerived: (String) -> Unit,
     categoryName: String?,
+    logoUrl: String?,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onPlayEpisode: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
     onEpisodeSelected: (DomainEpisodeItem) -> Unit,
     onCategorySelected: () -> Unit,
@@ -427,12 +428,13 @@ private fun EpisodeListContent(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-                // Title — TMDB's original title, falling back to the provider's own series
-                // name when TMDB has no match (or the lookup hasn't come back yet).
-                Text(
-                    text = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
-                    style = MaterialTheme.typography.headlineLarge,
-                )
+                // Title — TMDB's branded logo art when it has one, else TMDB's own title
+                // falling back to the provider's series name (when TMDB has no match, or the
+                // lookup hasn't landed).
+                val seriesTitleText = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName }
+                TitleLogoOrText(contentDescription = seriesTitleText, logoUrl = logoUrl) {
+                    Text(text = seriesTitleText, style = MaterialTheme.typography.headlineLarge)
+                }
 
                 // Genre
                 seriesDetail.metadata.genre?.let { genre ->
@@ -509,7 +511,7 @@ private fun EpisodeListContent(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-                // Play / Resume / Trailer Action buttons
+                // Play / Resume button
                 if (hasResume) {
                     val resumeButtonText =
                         if (anchorEpisode != null) {
@@ -531,17 +533,6 @@ private fun EpisodeListContent(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(resumeButtonText)
-                    }
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    CinemaOutlinedButton(
-                        onClick = {
-                            anchorEpisode?.let { ep ->
-                                onPlayEpisode(ep.id, ep.title, ep.extension ?: "mp4", true)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.movie_start_beginning))
                     }
                 } else {
                     val playButtonText =
@@ -566,13 +557,35 @@ private fun EpisodeListContent(
                     }
                 }
 
-                seriesDetail.metadata.trailerUrl?.let { trailer ->
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    CinemaOutlinedButton(
-                        onClick = { openExternalUrl(context, trailer) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.details_watch_trailer))
+                // Secondary actions row — only actions the app actually supports (no Cast/Shuffle).
+                Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    DetailIconAction(
+                        icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                        label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
+                        onClick = onToggleFavorite,
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                    )
+                    if (hasResume) {
+                        DetailIconAction(
+                            icon = CinemaIcons.Replay,
+                            label = stringResource(R.string.movie_start_beginning),
+                            onClick = {
+                                anchorEpisode?.let { ep ->
+                                    onPlayEpisode(ep.id, ep.title, ep.extension ?: "mp4", true)
+                                }
+                            },
+                        )
+                    }
+                    seriesDetail.metadata.trailerUrl?.let { trailer ->
+                        DetailIconAction(
+                            icon = CinemaIcons.Movie,
+                            label = stringResource(R.string.details_watch_trailer),
+                            onClick = { openExternalUrl(context, trailer) },
+                        )
                     }
                 }
 

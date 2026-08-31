@@ -112,6 +112,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
+import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
@@ -172,6 +173,7 @@ fun EpisodeSelectionScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
+    val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
 
     // Retained across a background refresh so the episode list stays on screen with just a
@@ -198,6 +200,7 @@ fun EpisodeSelectionScreen(
                     seriesDetail = shown.seriesDetail,
                     relatedTitles = relatedTitles,
                     tmdbTitle = tmdbTitle,
+                    logoUrl = logoUrl,
                     alternateStreams = alternateStreams,
                     seriesName = shown.streamName,
                     categoryId = shown.categoryId,
@@ -227,6 +230,7 @@ private fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     relatedTitles: RelatedTitles,
     tmdbTitle: String?,
+    logoUrl: String?,
     alternateStreams: List<MediaItem>,
     seriesName: String,
     categoryId: String,
@@ -597,14 +601,21 @@ private fun EpisodeListContent(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
                                 ) {
-                                    // TMDB's original title, falling back to the provider's own
-                                    // series name when TMDB has no match (or the lookup hasn't
-                                    // come back yet).
-                                    Text(
-                                        text = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
-                                        style = scaledStyles.displaySmall,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
+                                    // TMDB's branded logo art when it has one, else TMDB's
+                                    // original title falling back to the provider's own series
+                                    // name (when TMDB has no match, or the lookup hasn't landed).
+                                    val seriesTitleText = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName }
+                                    TitleLogoOrText(
+                                        contentDescription = seriesTitleText,
+                                        logoUrl = logoUrl,
+                                        logoHeight = TvDimensions.osdLogoHeight.scaled(scale),
+                                    ) {
+                                        Text(
+                                            text = seriesTitleText,
+                                            style = scaledStyles.displaySmall,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
                                     // Favorite button
                                     CinemaIconButton(
                                         onClick = onToggleFavorite,

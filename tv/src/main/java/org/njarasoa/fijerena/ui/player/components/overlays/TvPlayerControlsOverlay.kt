@@ -44,6 +44,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -65,6 +66,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.AdaptiveLogoImage
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -244,21 +246,71 @@ fun TvPlayerControlsOverlay(
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
             ) {
-                Text(
-                    text = metadata.channelName,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    modifier = Modifier.bounceMarquee(),
-                )
-                Text(
-                    text = metadata.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = CinemaTextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.bounceMarquee(),
-                )
+                // Big title treatment for VOD (movies get the show's own title big; episodes get
+                // the series title big with the episode demoted to a subtitle line). Live TV
+                // keeps the plain channel-name + title pair below — it has no TMDB entry of its
+                // own, and for VOD that channel name is set to the same string as the title, so
+                // showing it here too would just repeat the title a third time.
+                val bigTitle = metadata.showTitle ?: metadata.title.takeIf { !metadata.isLive }
+                if (bigTitle == null) {
+                    Text(
+                        text = metadata.channelName,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        modifier = Modifier.bounceMarquee(),
+                    )
+                }
+                if (bigTitle != null) {
+                    val logoUrl = metadata.logoUrl
+                    if (logoUrl != null) {
+                        AdaptiveLogoImage(
+                            logoUrl = logoUrl,
+                            contentDescription = bigTitle,
+                            modifier = Modifier.height(TvDimensions.osdLogoHeight),
+                        )
+                    } else {
+                        // No TMDB logo art for this title — fall back to a stylized gradient
+                        // rendering of the title text instead.
+                        Text(
+                            text = bigTitle,
+                            style =
+                                MaterialTheme.typography.headlineSmall.copy(
+                                    fontWeight = FontWeight.Black,
+                                    brush = Brush.linearGradient(listOf(CinemaAccent, CinemaTextPrimary)),
+                                ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.bounceMarquee(),
+                        )
+                    }
+                    if (metadata.showTitle != null) {
+                        // Some providers' episode titles already embed the show name — the real
+                        // name is consistently the last " - "-separated segment, so take that; a
+                        // clean title (no " - " in it, the common case) passes through unchanged.
+                        val episodeName = metadata.title.substringAfterLast(" - ").takeIf { it.isNotBlank() }
+                        val episodeSubtitle = listOfNotNull(metadata.episodeLabel, episodeName).joinToString(" - ")
+                        if (episodeSubtitle.isNotBlank()) {
+                            Text(
+                                text = episodeSubtitle,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.bounceMarquee(),
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = metadata.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = CinemaTextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.bounceMarquee(),
+                    )
+                }
 
                 // Resolution and Codec Info
                 if (videoResolution != null || videoCodec != null) {

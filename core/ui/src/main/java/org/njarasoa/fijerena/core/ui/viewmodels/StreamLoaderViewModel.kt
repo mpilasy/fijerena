@@ -58,6 +58,15 @@ class StreamLoaderViewModel(
             val isFavorite: Boolean = false,
             val savedAudioTrackIndex: Int? = null,
             val savedSubtitleTrackIndex: Int? = null,
+            // Set for episode playback only — the OSD uses it as the big title, demoting
+            // [streamName] (the episode title) to a subtitle line.
+            val seriesName: String? = null,
+            // "S{season}:E{episode}", e.g. "S3:E1" — set once the episode's series detail
+            // resolves; null for movies, Live TV, and until that lookup finishes.
+            val episodeLabel: String? = null,
+            // TMDB's transparent-PNG wordmark art, for the OSD title treatment. Null for Live TV,
+            // until the TMDB lookup finishes, or when TMDB has no logo for this title.
+            val logoUrl: String? = null,
         ) : StreamState()
 
         data class Error(
@@ -235,6 +244,7 @@ class StreamLoaderViewModel(
                             isFavorite = isFav,
                             savedAudioTrackIndex = savedAudioIndex,
                             savedSubtitleTrackIndex = savedSubtitleIndex,
+                            seriesName = if (contentType == ContentType.TV_SHOWS) seriesName else null,
                         )
 
                     // Notify provider that playback started (e.g. for Jellyfin session tracking)
@@ -314,6 +324,8 @@ class StreamLoaderViewModel(
         }
 
         var description: String? = null
+        var episodeLabel: String? = null
+        var logoUrl: String? = null
         if (contentType != ContentType.LIVE_TV) {
             val currentItem = currentStreams.find { it.id == streamId }
             description = currentItem?.metadata?.plot
@@ -325,11 +337,16 @@ class StreamLoaderViewModel(
                         seasonEpisodes.find { it.id == episodeId }
                     }
                     description = episode?.metadata?.plot ?: detail.metadata.plot
+                    episode?.seasonNumber?.let { season ->
+                        episodeLabel = "S$season:E${episode.episodeNumber}"
+                    }
+                    logoUrl = repo.getTmdbLogoUrl(detail.metadata.tmdbId, contentType)
                 }
             } else if (contentType == ContentType.MOVIES) {
                 val movieDetailResult = repo.getMovieDetail(streamId)
                 movieDetailResult.getOrNull()?.let { detail ->
                     description = detail.metadata.plot
+                    logoUrl = repo.getTmdbLogoUrl(detail.metadata.tmdbId, contentType)
                 }
             }
         } else if (currentProgram != null) {
@@ -342,7 +359,9 @@ class StreamLoaderViewModel(
                 currentState.copy(
                     currentEpgProgram = currentProgram,
                     nextEpgProgram = nextProgram,
+                    logoUrl = logoUrl,
                     description = description,
+                    episodeLabel = episodeLabel,
                 )
         }
     }

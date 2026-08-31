@@ -372,6 +372,9 @@ fun MobilePlayerContent(
                         streamUrl = state.streamUrl,
                         isLive = state.isLive,
                         headers = state.streamHeaders,
+                        showTitle = state.seriesName,
+                        episodeLabel = state.episodeLabel,
+                        logoUrl = state.logoUrl,
                     )
                 viewModel.playStream(metadata, state.resumePosition)
 
@@ -396,6 +399,23 @@ fun MobilePlayerContent(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // The series name / episode label / TMDB logo above resolve asynchronously (a series-detail
+    // and a TMDB lookup) well after the effect above already started playback with whatever was
+    // known at that instant — almost always still null. Patch them into the OSD's metadata as
+    // they land, without touching playback (see PlaybackViewModel.updateMetadata).
+    val enrichedState = streamState as? StreamLoaderViewModel.StreamState.Success
+    LaunchedEffect(enrichedState?.seriesName, enrichedState?.episodeLabel, enrichedState?.logoUrl) {
+        if (enrichedState != null) {
+            viewModel.updateMetadata(enrichedState.streamUrl) {
+                it.copy(
+                    showTitle = enrichedState.seriesName,
+                    episodeLabel = enrichedState.episodeLabel,
+                    logoUrl = enrichedState.logoUrl,
+                )
             }
         }
     }

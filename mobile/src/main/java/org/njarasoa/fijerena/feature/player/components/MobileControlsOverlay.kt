@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +61,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.AdaptiveLogoImage
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -183,13 +185,60 @@ fun MobileControlsOverlay(
                             .weight(1f)
                             .padding(horizontal = CinemaSpacing.xs),
                 ) {
-                    Text(
-                        text = metadata.title,
-                        style = typography.titleMedium,
-                        color = CinemaTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    // Big title treatment for VOD (movies get the show's own title big; episodes
+                    // get the series title big with the episode demoted to a subtitle line).
+                    // Live TV keeps the old small plain label — it has no TMDB entry of its own.
+                    val bigTitle = metadata.showTitle ?: metadata.title.takeIf { !metadata.isLive }
+                    if (bigTitle != null) {
+                        val logoUrl = metadata.logoUrl
+                        if (logoUrl != null) {
+                            AdaptiveLogoImage(
+                                logoUrl = logoUrl,
+                                contentDescription = bigTitle,
+                                modifier = Modifier.height(MobileDimensions.osdLogoHeight),
+                            )
+                        } else {
+                            // No TMDB logo art for this title — fall back to a stylized gradient
+                            // rendering of the title text instead.
+                            Text(
+                                text = bigTitle,
+                                style =
+                                    typography.headlineSmall.copy(
+                                        fontWeight = FontWeight.Black,
+                                        brush = Brush.linearGradient(listOf(CinemaAccent, CinemaTextPrimary)),
+                                    ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        if (metadata.showTitle != null) {
+                            // Some providers' episode titles already embed the show name (e.g.
+                            // the whole title is "A+ - Silo (2023) (US) - S03E01 - Who Are
+                            // You?") — appending that verbatim next to the wordmark would repeat
+                            // it and bury the actual episode name. The real name is consistently
+                            // the last " - "-separated segment, so take that; a clean title (no
+                            // " - " in it, the common case) passes through unchanged.
+                            val episodeName = metadata.title.substringAfterLast(" - ").takeIf { it.isNotBlank() }
+                            val episodeSubtitle = listOfNotNull(metadata.episodeLabel, episodeName).joinToString(" - ")
+                            if (episodeSubtitle.isNotBlank()) {
+                                Text(
+                                    text = episodeSubtitle,
+                                    style = typography.bodySmall,
+                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = metadata.title,
+                            style = typography.titleMedium,
+                            color = CinemaTextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
 
                     // Resolution and Codec Info
                     if (videoResolution != null || videoCodec != null) {

@@ -71,10 +71,16 @@ class SeriesDetailsViewModel(
     private val _tmdbTitle = MutableStateFlow<String?>(null)
     val tmdbTitle: StateFlow<String?> = _tmdbTitle.asStateFlow()
 
+    /** TMDB's transparent-PNG wordmark art, shown in place of the plain-text headline when present. */
+    private val _logoUrl = MutableStateFlow<String?>(null)
+    val logoUrl: StateFlow<String?> = _logoUrl.asStateFlow()
+
     private var relatedTitlesJob: Job? = null
     private var relatedTitlesTmdbId: String? = null
     private var tmdbTitleJob: Job? = null
     private var tmdbTitleTmdbId: String? = null
+    private var logoUrlJob: Job? = null
+    private var logoUrlTmdbId: String? = null
 
     /** Other local catalogue entries for the same TMDB id — empty when there are none. */
     private val _alternateStreams = MutableStateFlow<List<MediaItem>>(emptyList())
@@ -134,6 +140,9 @@ class SeriesDetailsViewModel(
         tmdbTitleJob?.cancel()
         tmdbTitleJob = null
         _tmdbTitle.value = null
+        logoUrlJob?.cancel()
+        logoUrlJob = null
+        _logoUrl.value = null
         alternateStreamsJob?.cancel()
         alternateStreamsJob = null
         _alternateStreams.value = emptyList()
@@ -158,6 +167,7 @@ class SeriesDetailsViewModel(
                     )
                 loadRelatedTitles(cached)
                 loadTmdbTitle(cached)
+                loadLogoUrl(cached)
                 loadAlternateStreams(cached)
             } else if (!isSwitch) {
                 // A stream switch never flashes Loading — the previous stream's content stays on
@@ -179,6 +189,7 @@ class SeriesDetailsViewModel(
 
                     loadRelatedTitles(detail)
                     loadTmdbTitle(detail)
+                    loadLogoUrl(detail)
                     loadAlternateStreams(detail)
                 },
                 // A failed refresh must not blank a screen already drawn from the cache — the
@@ -224,6 +235,24 @@ class SeriesDetailsViewModel(
                 _tmdbTitle.value =
                     runCatching {
                         ensureRepo().getTmdbTitle(tmdbId, "TV_SHOWS")
+                    }.getOrNull()
+            }
+    }
+
+    /**
+     * As [loadRelatedTitles]: the cached detail draws first and the fetched one follows with the
+     * same TMDB id, so fetch only for the first of them.
+     */
+    private fun loadLogoUrl(detail: SeriesDetail) {
+        val tmdbId = detail.metadata.tmdbId
+        if (logoUrlJob != null && tmdbId == logoUrlTmdbId) return
+        logoUrlJob?.cancel()
+        logoUrlTmdbId = tmdbId
+        logoUrlJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                _logoUrl.value =
+                    runCatching {
+                        ensureRepo().getTmdbLogoUrl(tmdbId, "TV_SHOWS")
                     }.getOrNull()
             }
     }

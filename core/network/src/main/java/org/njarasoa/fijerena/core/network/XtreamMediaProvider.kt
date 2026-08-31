@@ -568,6 +568,23 @@ class XtreamMediaProvider(
         }
     }
 
+    override suspend fun getTmdbLogoUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? {
+        if (!tmdb.hasApiKey()) return null
+        val id = tmdbId?.toIntOrNull() ?: return null
+        if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return null
+
+        return try {
+            val images = if (contentType == ContentType.MOVIES) tmdb.getMovieImages(id) else tmdb.getTvImages(id)
+            TmdbApiService.bestLogoUrl(images.logos)
+        } catch (e: Exception) {
+            Log.w("XtreamMediaProvider", "TMDB logo for $contentType $id: ${e.message}")
+            null
+        }
+    }
+
     override suspend fun getAlternateStreams(
         itemId: String,
         tmdbId: String?,

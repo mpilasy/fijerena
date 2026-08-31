@@ -123,6 +123,14 @@ class TmdbApiService(
                 parameter("language", "en-US")
             }.body()
 
+    /** Backdrops/posters/logos for a movie. Only `logos` (transparent wordmark art) is used. */
+    suspend fun getMovieImages(movieId: Int): TmdbImagesResponse =
+        client.get("movie/$movieId/images") { authenticate() }.body()
+
+    /** As [getMovieImages], for a TV series. */
+    suspend fun getTvImages(tvId: Int): TmdbImagesResponse =
+        client.get("tv/$tvId/images") { authenticate() }.body()
+
     /** The franchise's name and every movie in it, for the collection a movie's details named. */
     suspend fun getCollection(collectionId: Int): TmdbCollectionResponse =
         client
@@ -146,11 +154,26 @@ class TmdbApiService(
         const val POSTER_SIZE_W185 = "w185"
         const val POSTER_SIZE_W342 = "w342"
         const val POSTER_SIZE_ORIGINAL = "original"
+        const val LOGO_SIZE_W500 = "w500"
 
         fun posterUrl(path: String?, size: String = POSTER_SIZE_W185): String? {
             val p = path?.trim()?.removePrefix("/") ?: return null
             if (p.isEmpty()) return null
             return "$IMAGE_BASE_URL$size/$p"
+        }
+
+        /**
+         * Best logo for the OSD wordmark: prefer English, then any language-neutral mark (no
+         * language tag at all — usually the studio's international art), then whatever else TMDB
+         * has, each tier picking the widest/highest-voted first. Null when TMDB has none.
+         */
+        fun bestLogoUrl(logos: List<TmdbLogo>, language: String = "en"): String? {
+            val ranked = compareByDescending<TmdbLogo> { it.voteAverage }.thenByDescending { it.width }
+            val best =
+                logos.filter { it.language == language }.maxWithOrNull(ranked)
+                    ?: logos.filter { it.language.isNullOrBlank() }.maxWithOrNull(ranked)
+                    ?: logos.maxWithOrNull(ranked)
+            return posterUrl(best?.filePath, LOGO_SIZE_W500)
         }
     }
 }
