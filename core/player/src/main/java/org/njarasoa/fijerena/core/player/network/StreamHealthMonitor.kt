@@ -54,6 +54,10 @@ class StreamHealthMonitor(
     private var firstFailureTimestamp: Long = 0L
     private var isRecycleTriggered: Boolean = false
 
+    // Tracks how long metrics have been continuously healthy, so recycle backoff only clears
+    // once playback is genuinely stable again — see the isHealthy branch in updateMetrics().
+    private var firstHealthyTimestamp: Long = 0L
+
     // Counts recycles since the last confirmed stable playback. Without a cap, a sustained
     // real outage (e.g. packet loss) makes this recycle forever in silence with no feedback
     // that anything is wrong, unlike the hard-retry path which gives up after MAX_LIVE_RETRIES.
@@ -89,7 +93,27 @@ class StreamHealthMonitor(
         } else if (isHealthy) {
             // Reset the degradation timer if the stream recovers naturally
             firstFailureTimestamp = 0L
+
+            // Only clear recycle backoff once metrics have stayed healthy for a full window —
+            // a single healthy tick right after a recycle used to call notifyStablePlayback()
+            // immediately (see StreamingPlaybackService's Playing-state handler), wiping
+            // recycleAttempts before it could ever cross maxRecycleAttempts. That made the
+            // degraded/give-up tier unreachable: a connection that recovers for a few seconds
+            // then degrades again (the common case, not a one-off hiccup) recycled forever on
+            // the fast cadence with no escalation and no user-facing error.
+            if (firstHealthyTimestamp == 0L) {
+                firstHealthyTimestamp = now
+            } else if (now - firstHealthyTimestamp >= config.sustainedDegradationWindowMs) {
+                if (recycleAttempts != 0 || isDegraded) {
+                    Log.i(TAG, "Stream stable for ${config.sustainedDegradationWindowMs}ms — clearing recycle backoff.")
+                }
+                recycleAttempts = 0
+                isDegraded = false
+                degradedAttempts = 0
+            }
         } else {
+            firstHealthyTimestamp = 0L
+
             // Start or continue tracking the degradation window
             if (firstFailureTimestamp == 0L) {
                 firstFailureTimestamp = now

@@ -365,7 +365,11 @@ class StreamingPlaybackService : MediaSessionService() {
                     
                     if (newState is PlaybackState.Playing) {
                         retryCount = 0
-                        healthMonitor?.notifyStablePlayback()
+                        // Recycle backoff is cleared by StreamHealthMonitor itself once metrics
+                        // stay healthy for a full sustainedDegradationWindowMs — NOT here. A
+                        // single Playing state fires right after every recycle too, so resetting
+                        // eagerly on it wiped recycleAttempts before it could ever escalate to
+                        // the degraded/give-up tier (see StreamHealthMonitor.updateMetrics()).
                         // Reset recycling mode once we are successfully playing the new stream
                         if (isRecycling) {
                             Log.i(TAG, "Successfully resumed after recycle. Resetting recycling flag.")
