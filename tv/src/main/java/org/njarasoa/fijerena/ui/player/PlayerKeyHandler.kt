@@ -19,9 +19,18 @@ fun handlePlayerKeyEvent(
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
 ): Boolean {
-    // KeyUp: no-op for scrub mode (we only act on KeyDown to step the cursor and on Center to commit)
+    // KeyUp: no-op for scrub mode (we only act on KeyDown to step the cursor and on Center to
+    // commit) — except a Center/Enter KeyUp that must be consumed because its own KeyDown just
+    // revealed the OSD (see suppressNextCenterKeyUp's kdoc). Un-consumed, it falls through to
+    // the button focus just landed on and activates it — a single press should only open the
+    // OSD, never also toggle favourite or pause.
     if (keyEvent.type == KeyEventType.KeyUp) {
-        return false
+        return if ((keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter) && state.suppressNextCenterKeyUp) {
+            state.suppressNextCenterKeyUp = false
+            true
+        } else {
+            false
+        }
     }
 
     if (keyEvent.type != KeyEventType.KeyDown) {
@@ -52,6 +61,7 @@ fun handlePlayerKeyEvent(
                 } else {
                     state.showControls = true
                     state.showStreamInfo = true
+                    state.suppressNextCenterKeyUp = true
                     true
                 }
             } else {
@@ -62,6 +72,7 @@ fun handlePlayerKeyEvent(
                 } else {
                     state.showControls = true
                     state.showStreamInfo = true
+                    state.suppressNextCenterKeyUp = true
                     true
                 }
             }
