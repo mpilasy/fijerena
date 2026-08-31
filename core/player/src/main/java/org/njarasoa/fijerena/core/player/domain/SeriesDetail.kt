@@ -28,27 +28,33 @@ data class EpisodeItem(
 
 /**
  * Seasons to display, sorted and with empty ones (e.g. a "Season 0" specials
- * entry with no actual episodes) dropped. Falls back to deriving seasons from
- * the episode map's keys when the API didn't provide a season list.
+ * entry with no actual episodes) dropped. Some Xtream panels send a `seasons`
+ * list that's missing an entry for a season the episode map still has
+ * episodes under (seen in the wild: same episode data, one alternate stream's
+ * `seasons` array just omits the last season) — those are backfilled from the
+ * episode map too, so a season with real episodes is never dropped from the
+ * accordion, only under-counted.
  */
 fun SeriesDetail.sortedSeasons(seasonName: (Int) -> String): List<SeasonInfo> {
     val apiSeasons =
         seasons
             .filter { season -> episodes[season.seasonNumber.toString()]?.isNotEmpty() == true }
-            .sortedBy { it.seasonNumber }
-    if (apiSeasons.isNotEmpty()) return apiSeasons
+            .associateBy { it.seasonNumber }
 
-    return episodes.entries
-        .filter { (_, eps) -> eps.isNotEmpty() }
-        .mapNotNull { (key, eps) -> key.toIntOrNull()?.let { it to eps.size } }
-        .sortedBy { (num, _) -> num }
-        .map { (num, count) ->
-            SeasonInfo(
-                seasonNumber = num,
-                name = seasonName(num),
-                episodeCount = count,
-            )
-        }
+    val derivedSeasons =
+        episodes.entries
+            .filter { (_, eps) -> eps.isNotEmpty() }
+            .mapNotNull { (key, eps) -> key.toIntOrNull()?.let { it to eps.size } }
+            .filter { (num, _) -> num !in apiSeasons }
+            .map { (num, count) ->
+                SeasonInfo(
+                    seasonNumber = num,
+                    name = seasonName(num),
+                    episodeCount = count,
+                )
+            }
+
+    return (apiSeasons.values + derivedSeasons).sortedBy { it.seasonNumber }
 }
 
 /** All episodes across [sortedSeasons], each season's episodes sorted by episode number. */
