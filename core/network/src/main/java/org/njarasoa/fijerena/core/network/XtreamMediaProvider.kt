@@ -231,10 +231,30 @@ class XtreamMediaProvider(
                     if (certification != null) {
                         enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
                     }
+                    val tmdbDetails = runCatching { tmdb.getTvDetails(tmdbSeriesId) }.getOrNull()
+                    if (tmdbDetails != null) {
+                        val newReleaseDate = enriched.metadata.releaseDate ?: tmdbDetails.firstAirDate
+                        val newYear = enriched.metadata.year ?: tmdbDetails.year
+                        val newPlot = enriched.metadata.plot?.takeIf { it.isNotBlank() } ?: tmdbDetails.overview
+                        enriched =
+                            enriched.copy(
+                                metadata =
+                                    enriched.metadata.copy(
+                                        releaseDate = newReleaseDate,
+                                        year = newYear,
+                                        plot = newPlot,
+                                    ),
+                            )
+                    }
                     if (!cachedRatingFresh) {
-                        val tmdbDetails = runCatching { tmdb.getTvDetails(tmdbSeriesId) }.getOrNull()
                         val tmdbPosterPath = tmdbDetails?.posterPath
                         repository.saveSeriesDetailCache(id, certification, tmdbSeriesId.toString(), System.currentTimeMillis(), tmdbPosterPath)
+                    }
+                }
+                if (enriched.metadata.year == null) {
+                    val extractedYear = Regex("""\b(19\d\d|20\d\d)\b""").find(enriched.name)?.value?.toIntOrNull()
+                    if (extractedYear != null) {
+                        enriched = enriched.copy(metadata = enriched.metadata.copy(year = extractedYear))
                     }
                 }
                 repository.persistEpisodeOverviews(enriched.episodes)
@@ -393,6 +413,27 @@ class XtreamMediaProvider(
                     }
                     val tmdbDetails = runCatching { tmdb.getMovieDetails(tmdbMovieId) }.getOrNull()
                     tmdbPosterPath = tmdbDetails?.posterPath
+                    if (tmdbDetails != null) {
+                        val newReleaseDate = enriched.metadata.releaseDate ?: tmdbDetails.releaseDate
+                        val newYear = enriched.metadata.year ?: tmdbDetails.year
+                        val newPlot = enriched.metadata.plot?.takeIf { it.isNotBlank() } ?: tmdbDetails.overview
+                        enriched =
+                            enriched.copy(
+                                metadata =
+                                    enriched.metadata.copy(
+                                        releaseDate = newReleaseDate,
+                                        year = newYear,
+                                        plot = newPlot,
+                                    ),
+                            )
+                    }
+                }
+                // Stream title fallback for year (e.g. "The Godfather (1972)")
+                if (enriched.metadata.year == null) {
+                    val extractedYear = Regex("""\b(19\d\d|20\d\d)\b""").find(enriched.name)?.value?.toIntOrNull()
+                    if (extractedYear != null) {
+                        enriched = enriched.copy(metadata = enriched.metadata.copy(year = extractedYear))
+                    }
                 }
                 movieDetailCache.put(movieId, enriched)
                 repository.saveMovieDetailCache(

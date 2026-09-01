@@ -72,6 +72,7 @@ import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.channelLabel
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
+import org.njarasoa.fijerena.core.player.model.extractYear
 import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
@@ -459,9 +460,10 @@ private fun MovieDetailsContent(
                                 textColor = CinemaAccent,
                             )
                         }
-                        movieDetail.metadata.year?.let { year ->
+                        val year = extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
+                        year?.let {
                             Text(
-                                text = "$year",
+                                text = "$it",
                                 style = scaledStyles.titleMedium,
                                 color = CinemaTextSecondary,
                             )
@@ -581,6 +583,18 @@ private fun MovieDetailsContent(
                     }
 
                     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+                    // Release date / year
+                    val displayRelease = movieDetail.metadata.releaseDate
+                        ?: extractYear(movieDetail.metadata.year, null, movieDetail.name.ifBlank { movieName })?.toString()
+                    displayRelease?.let { releaseInfo ->
+                        Text(
+                            text = stringResource(R.string.movie_released_format, releaseInfo),
+                            style = scaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                    }
 
                     // Cast, Director
                     movieDetail.metadata.cast?.let { cast ->

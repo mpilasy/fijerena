@@ -52,4 +52,43 @@ class SeriesResumeAnchorTest {
     fun `unknown episode id falls back to itself`() {
         assertEquals("gone", series.resumeAnchorEpisodeId(seasons, "gone", isCompleted = { true }))
     }
+
+    @Test
+    fun `single release year returns that year`() {
+        val detail = SeriesDetail(
+            id = "s1",
+            name = "Test",
+            metadata = MediaMetadata(year = 2020),
+        )
+        assertEquals("2020", detail.seriesYearRange())
+    }
+
+    @Test
+    fun `past completed series returns start and end year range`() {
+        val detail = SeriesDetail(
+            id = "s1",
+            name = "Test",
+            metadata = MediaMetadata(year = 2008),
+            episodes = mapOf(
+                "1" to listOf(EpisodeItem("e1", 1, "E1", metadata = MediaMetadata(airDate = "2008-01-20"))),
+                "5" to listOf(EpisodeItem("e2", 16, "E2", metadata = MediaMetadata(airDate = "2013-09-29"))),
+            ),
+        )
+        assertEquals("2008–2013", detail.seriesYearRange())
+    }
+
+    @Test
+    fun `ongoing series returns start year to ongoing label`() {
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val detail = SeriesDetail(
+            id = "s1",
+            name = "Test",
+            metadata = MediaMetadata(year = 2022),
+            episodes = mapOf(
+                "1" to listOf(EpisodeItem("e1", 1, "E1", metadata = MediaMetadata(airDate = "2022-01-01"))),
+                "2" to listOf(EpisodeItem("e2", 1, "E2", metadata = MediaMetadata(airDate = "$currentYear-05-01"))),
+            ),
+        )
+        assertEquals("2022–ongoing", detail.seriesYearRange("ongoing"))
+    }
 }

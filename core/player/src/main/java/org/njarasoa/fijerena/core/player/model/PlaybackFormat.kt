@@ -148,3 +148,17 @@ fun channelLabel(
         8 -> surround71
         else -> custom(channels)
     }
+
+/**
+ * Extracts a 4-digit release year from metadata or by parsing the title string.
+ */
+fun extractYear(
+    metadataYear: Int?,
+    releaseDate: String?,
+    title: String?,
+): Int? {
+    val year = metadataYear
+        ?: releaseDate?.take(4)?.toIntOrNull()
+        ?: title?.let { Regex("""\b(19\d\d|20\d\d)\b""").find(it)?.value?.toIntOrNull() }
+    return year
+}

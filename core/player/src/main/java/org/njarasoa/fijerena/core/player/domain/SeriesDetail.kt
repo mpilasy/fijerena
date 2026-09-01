@@ -154,3 +154,31 @@ fun episodeScrollIndex(
     }
     return null
 }
+
+/**
+ * Returns formatted start and end years (e.g. "2008–2013", "2024–present", or "2021") for a series
+ * based on the series release year and its episodes' air dates.
+ */
+fun SeriesDetail.seriesYearRange(presentLabel: String = "present"): String? {
+    val startYear = metadata.year ?: metadata.releaseDate?.take(4)?.toIntOrNull()
+    val episodeYears =
+        episodes.values
+            .flatten()
+            .mapNotNull { it.metadata.year ?: it.metadata.airDate?.take(4)?.toIntOrNull() }
+
+    val minYear = startYear ?: episodeYears.minOrNull()
+    val maxEpisodeYear = episodeYears.maxOrNull()
+
+    return when {
+        minYear == null -> null
+        maxEpisodeYear == null || minYear == maxEpisodeYear -> "$minYear"
+        else -> {
+            val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+            if (maxEpisodeYear >= currentYear) {
+                "$minYear–$presentLabel"
+            } else {
+                "$minYear–$maxEpisodeYear"
+            }
+        }
+    }
+}
