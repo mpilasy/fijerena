@@ -18,6 +18,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -193,24 +195,37 @@ private fun MovieDetailsContent(
     ) {
         item(key = "detail") {
         Column {
-        // Cover image
-        CinemaThumbnail(
-            url = movieDetail.coverUrl,
-            fallbackLetter = movieDetail.name.firstOrNull(),
-            contentType = ThumbnailContentType.MOVIE,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(MobileDimensions.posterHeightLarge),
-        )
-
-        Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-        // Title — TMDB's branded logo art when it has one, else TMDB's own title falling back
-        // to the provider's stream name (when TMDB has no match, or the lookup hasn't landed).
-        val movieTitleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
-        TitleLogoOrText(contentDescription = movieTitleText, logoUrl = logoUrl) {
-            Text(text = movieTitleText, style = MaterialTheme.typography.headlineLarge)
+        // Cover image, with the title logo overlaid on it (bottom-left, over a gradient scrim
+        // so it reads regardless of what's under it) rather than as a separate headline block
+        // below the poster.
+        Box(modifier = Modifier.fillMaxWidth()) {
+            CinemaThumbnail(
+                url = movieDetail.coverUrl,
+                fallbackLetter = movieDetail.name.firstOrNull(),
+                contentType = ThumbnailContentType.MOVIE,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(MobileDimensions.posterHeightLarge),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))),
+            )
+            val movieTitleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
+            TitleLogoOrText(
+                contentDescription = movieTitleText,
+                logoUrl = logoUrl,
+                modifier = Modifier.align(Alignment.BottomStart).padding(CinemaSpacing.md),
+            ) {
+                Text(
+                    text = movieTitleText,
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White,
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
