@@ -42,4 +42,20 @@ class FormatRatingTest {
         assertEquals("N/A", formatRating("N/A"))
         assertEquals("", formatRating(""))
     }
+
+    @Test
+    fun `extractYear prefers metadata year`() {
+        assertEquals(1972, extractYear(metadataYear = 1972, releaseDate = "1975-01-01", title = "The Godfather (1980)"))
+    }
+
+    @Test
+    fun `extractYear falls back to releaseDate`() {
+        assertEquals(1972, extractYear(metadataYear = null, releaseDate = "1972-03-24", title = "The Godfather (1980)"))
+    }
+
+    @Test
+    fun `extractYear falls back to title year pattern`() {
+        assertEquals(1972, extractYear(metadataYear = null, releaseDate = null, title = "4K-AR - The Godfather (1972)"))
+        assertEquals(2023, extractYear(metadataYear = null, releaseDate = null, title = "Oppenheimer 2023 1080p"))
+    }
 }

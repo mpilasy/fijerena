@@ -365,6 +365,7 @@
     <string name="series_season_label">Season %1$d</string>
     <string name="series_episode_label">Episode %1$d</string>
     <string name="series_continue_watching_badge">Continue Watching</string>
+    <string name="series_present">ongoing</string>
     <string name="content_watched_badge">Watched</string>
     <string name="content_untitled">Untitled</string>
 

@@ -51,6 +51,7 @@ import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
 import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
 import org.njarasoa.fijerena.core.player.domain.seasonNumberContaining
+import org.njarasoa.fijerena.core.player.domain.seriesYearRange
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
@@ -462,20 +463,12 @@ private fun EpisodeListContent(
                     )
                 }
 
-                // Metadata row: content rating | rating | year | season count | ends at
-                val year = seriesDetail.metadata.year ?: seriesDetail.metadata.releaseDate?.take(4)?.toIntOrNull()
-                val anchorDuration = anchorEpisode?.metadata?.duration ?: seriesDetail.metadata.duration
-                val endsAtText =
-                    remember(anchorDuration, anchorResumePosMs) {
-                        computeEndsAt(context, anchorDuration, anchorResumePosMs)
-                    }
+                // Metadata row: content rating | rating | year | season count
+                val presentLabel = stringResource(R.string.series_present)
+                val yearRange = seriesDetail.seriesYearRange(presentLabel)
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Row(
-                    // Content rating + star rating + year + episode count + "ends at" can add up
-                    // to wider than a narrow phone screen; a plain Row clips the tail (e.g.
-                    // "Ends at" left dangling with its time cut off) instead of wrapping. Scroll
-                    // rather than clip.
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                     verticalAlignment = Alignment.CenterVertically,
@@ -499,9 +492,9 @@ private fun EpisodeListContent(
                             style = MaterialTheme.typography.titleMedium,
                         )
                     }
-                    year?.let {
+                    yearRange?.let {
                         Text(
-                            text = "$it",
+                            text = it,
                             style = MaterialTheme.typography.titleMedium,
                         )
                     }
@@ -515,14 +508,6 @@ private fun EpisodeListContent(
                         text = countText,
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    if (endsAtText != null) {
-                        Text(
-                            text = stringResource(R.string.movie_ends_at_format, endsAtText),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                            maxLines = 1,
-                        )
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
@@ -1083,6 +1068,16 @@ private fun EpisodeDetailContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
         )
+
+        // Container format
+        episode.extension?.takeIf { it.isNotBlank() }?.let { ext ->
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+            Text(
+                text = "${stringResource(R.string.tech_container_label)} ${ext.uppercase()}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+            )
+        }
 
         // Air date
         episode.metadata.airDate?.takeIf { it.isNotBlank() }?.let {

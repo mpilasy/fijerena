@@ -101,6 +101,7 @@ import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
 import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
 import org.njarasoa.fijerena.core.player.domain.seasonNumberContaining
+import org.njarasoa.fijerena.core.player.domain.seriesYearRange
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.formatDuration
@@ -699,10 +700,11 @@ private fun EpisodeListContent(
                                                 textColor = CinemaAccent,
                                             )
                                         }
-                                        val year = seriesDetail.metadata.year ?: seriesDetail.metadata.releaseDate?.take(4)?.toIntOrNull()
-                                        year?.let {
+                                        val presentLabel = stringResource(R.string.series_present)
+                                        val yearRange = seriesDetail.seriesYearRange(presentLabel)
+                                        yearRange?.let {
                                             Text(
-                                                text = "$it",
+                                                text = it,
                                                 style = scaledStyles.titleMedium,
                                                 color = CinemaTextSecondary,
                                             )
@@ -718,18 +720,6 @@ private fun EpisodeListContent(
                                             style = scaledStyles.titleMedium,
                                             color = CinemaTextSecondary,
                                         )
-                                        val anchorDuration = anchorEpisode?.metadata?.duration ?: seriesDetail.metadata.duration
-                                        val endsAtText =
-                                            remember(anchorDuration, anchorResumePosMs) {
-                                                computeEndsAt(context, anchorDuration, anchorResumePosMs)
-                                            }
-                                        if (endsAtText != null) {
-                                            Text(
-                                                text = stringResource(R.string.movie_ends_at_format, endsAtText),
-                                                style = scaledStyles.titleMedium,
-                                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
-                                            )
-                                        }
                                     }
 
                                     // Genre tags
@@ -1415,6 +1405,27 @@ private fun EpisodeDetailPanel(
                     director?.let {
                         Text(
                             text = stringResource(R.string.movie_director_format, it),
+                            style = detailScaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                    }
+
+                    // TMDB id: the episode's own when it has one, else the show's
+                    val tmdbId = episode.metadata.tmdbId ?: seriesDetail.metadata.tmdbId
+                    if (tmdbId != null) {
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        Text(
+                            text = stringResource(R.string.details_tmdb_format, tmdbId),
+                            style = detailScaledStyles.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                    }
+
+                    // Container format
+                    episode.extension?.takeIf { it.isNotBlank() }?.let { ext ->
+                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                        Text(
+                            text = "${stringResource(R.string.tech_container_label)} ${ext.uppercase()}",
                             style = detailScaledStyles.bodySmall,
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         )

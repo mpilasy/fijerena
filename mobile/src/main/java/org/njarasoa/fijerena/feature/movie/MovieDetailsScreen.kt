@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.channelLabel
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
+import org.njarasoa.fijerena.core.player.model.extractYear
 import org.njarasoa.fijerena.core.player.model.formatDuration
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
@@ -290,6 +291,13 @@ private fun MovieDetailsContent(
                     RatingBadge(
                         rating = rating,
                         textColor = MaterialTheme.colorScheme.secondary,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+                val year = extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
+                year?.let {
+                    Text(
+                        text = "$it",
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
