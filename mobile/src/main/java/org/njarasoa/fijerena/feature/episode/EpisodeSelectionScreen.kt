@@ -28,6 +28,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -415,25 +417,39 @@ private fun EpisodeListContent(
     ) {
         item(key = "series_hero_header") {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // Cover image
-                CinemaThumbnail(
-                    url = seriesDetail.coverUrl,
-                    fallbackLetter = seriesName.firstOrNull(),
-                    contentType = ThumbnailContentType.TV_SHOW,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(MobileDimensions.posterHeightLarge),
-                )
-
-                Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                // Title — TMDB's branded logo art when it has one, else TMDB's own title
-                // falling back to the provider's series name (when TMDB has no match, or the
-                // lookup hasn't landed).
-                val seriesTitleText = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName }
-                TitleLogoOrText(contentDescription = seriesTitleText, logoUrl = logoUrl) {
-                    Text(text = seriesTitleText, style = MaterialTheme.typography.headlineLarge)
+                // Cover image, with the title logo overlaid on it (bottom-left, over a gradient
+                // scrim so it reads regardless of what's under it) rather than as a separate
+                // headline block below the poster.
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    CinemaThumbnail(
+                        url = seriesDetail.coverUrl,
+                        fallbackLetter = seriesName.firstOrNull(),
+                        contentType = ThumbnailContentType.TV_SHOW,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(MobileDimensions.posterHeightLarge),
+                    )
+                    Box(
+                        modifier =
+                            Modifier
+                                .matchParentSize()
+                                .background(
+                                    Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))),
+                                ),
+                    )
+                    val seriesTitleText = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName }
+                    TitleLogoOrText(
+                        contentDescription = seriesTitleText,
+                        logoUrl = logoUrl,
+                        modifier = Modifier.align(Alignment.BottomStart).padding(CinemaSpacing.md),
+                    ) {
+                        Text(
+                            text = seriesTitleText,
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = Color.White,
+                        )
+                    }
                 }
 
                 // Genre
