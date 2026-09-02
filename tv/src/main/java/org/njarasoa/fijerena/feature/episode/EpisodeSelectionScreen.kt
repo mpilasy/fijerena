@@ -1583,12 +1583,14 @@ private fun SeasonTabs(
                 .padding(vertical = Spacing.sm.scaled(scale))
                 // Entering this row from outside (D-pad down from above, up from below) always
                 // lands on the selected tab, not whichever one the default search prefers.
-                // `enter` is only consulted once this Row is itself a focus-search candidate,
+                // `onEnter` is only consulted once this Row is itself a focus-search candidate,
                 // which requires `focusGroup()` — without it the row isn't a group at all and
-                // `enter` silently never fires, leaving Up/Down to fall through to the default
+                // `onEnter` silently never fires, leaving Up/Down to fall through to the default
                 // (and per the original bug report, unreliable) leaf search.
                 .focusGroup()
-                .focusProperties { enter = { focusRequesters.getOrNull(selectedIndex) ?: FocusRequester.Default } },
+                .focusProperties {
+                    onEnter = { focusRequesters.getOrNull(selectedIndex)?.requestFocus() }
+                },
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
