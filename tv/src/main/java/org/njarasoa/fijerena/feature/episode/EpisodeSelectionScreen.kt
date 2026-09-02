@@ -10,6 +10,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.focusable
@@ -28,12 +29,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
@@ -58,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -95,8 +96,6 @@ import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
-import org.njarasoa.fijerena.core.player.domain.defaultExpandedSeason
-import org.njarasoa.fijerena.core.player.domain.episodeScrollIndex
 import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
 import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
@@ -337,15 +336,26 @@ private fun EpisodeListContent(
             resumeEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
         }
 
-    // Accordion: only one season expanded at a time (first season by default)
-    var expandedSeasons by remember(seriesDetail) {
-        mutableStateOf(defaultExpandedSeason(resumeSeasonNumber, sortedSeasons))
+    // One season visible at a time, switched via tabs (D-pad left/right moves focus between
+    // them, which selects immediately — see SeasonTab below) instead of an accordion. Resume
+    // season wins on first load, same priority the accordion used to give it.
+    var selectedSeasonNumber by rememberSaveable(seriesDetail.id) {
+        mutableStateOf(resumeSeasonNumber ?: sortedSeasons.firstOrNull()?.seasonNumber)
     }
-    // Set by the manual season-header toggle below, so the auto-expand effect doesn't
-    // clobber a choice the user already made while the playback-position lookup was in flight.
-    // Also seeded true when a resume season is already known, so the "next unwatched" guess
-    // below never overrides the season the user actually asked to resume.
-    var hasManuallyToggledSeasons by remember(seriesDetail) { mutableStateOf(resumeSeasonNumber != null) }
+    // Set by a manual tab focus/click, so the auto-select effect below doesn't clobber a season
+    // the user already picked while the playback-position lookup was in flight. Also seeded true
+    // when a resume season is already known, so the "next unwatched" guess below never overrides
+    // the season the user actually asked to resume.
+    var hasManuallySelectedSeason by remember(seriesDetail.id) { mutableStateOf(resumeSeasonNumber != null) }
+
+    val currentSeasonIndex = sortedSeasons.indexOfFirst { it.seasonNumber == selectedSeasonNumber }
+    val previousSeason = if (currentSeasonIndex > 0) sortedSeasons[currentSeasonIndex - 1] else null
+    val nextSeason =
+        if (currentSeasonIndex in sortedSeasons.indices && currentSeasonIndex < sortedSeasons.lastIndex) {
+            sortedSeasons[currentSeasonIndex + 1]
+        } else {
+            null
+        }
 
     // Focus requester for primary Play / Resume button
     val playButtonFocusRequester = remember { FocusRequester() }
@@ -371,21 +381,45 @@ private fun EpisodeListContent(
     // OK is immediately playable without the user having to navigate to it first.
     val resumeCardFocusRequester = remember { FocusRequester() }
 
-    // Scroll the resume episode into view once its season is expanded, so "highlighted" also
-    // means visible without the user having to scroll to find it.
-    LaunchedEffect(resumeEpisodeId, resumeSeasonNumber, expandedSeasons) {
+    // Explicit Down target for the Category chip, the last focusable item above the season
+    // tabs: Compose's default directional search from there lands on the first episode card,
+    // not the tab row (the row's small height loses out to the much taller card right below
+    // it in the nearest-candidate heuristic — focusGroup()/enter alone doesn't override that,
+    // since the row is never chosen as a search candidate to begin with). SeasonTabs attaches
+    // this to whichever tab is currently selected.
+    val seasonTabsFocusRequester = remember { FocusRequester() }
+
+    // D-pad focus target for the first episode card of whichever season is selected — landing
+    // spot after a Left/Right season switch triggered from inside the episode list (see the
+    // onPreviewKeyEvent below), so browsing episodes across a season boundary stays fluid instead
+    // of stranding focus on a card whose key just vanished from the list.
+    val firstEpisodeFocusRequester = remember { FocusRequester() }
+
+    // Set true by that same Left/Right switch, consumed by the LaunchedEffect(selectedSeasonNumber)
+    // below. A plain "always refocus the first episode on season change" would also fire for a
+    // season picked from the tab row itself, yanking focus down off the tab the user is still on —
+    // this scopes the refocus to the one path that actually needs it, same signal-plus-effect shape
+    // as streamSwitchSignal above.
+    var seasonSwitchedFromEpisodeList by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedSeasonNumber) {
+        if (!seasonSwitchedFromEpisodeList) return@LaunchedEffect
+        seasonSwitchedFromEpisodeList = false
+        firstEpisodeFocusRequester.requestFocus()
+    }
+
+    // Scroll to the resume episode, so "highlighted" also means visible without the user having
+    // to scroll to find it — but only when it's actually the reason this season is selected. A
+    // manual tab focus/click must never yank the list back to the resume spot (or anywhere
+    // else); it stays exactly where the user left it.
+    LaunchedEffect(resumeEpisodeId) {
         val targetId = resumeEpisodeId ?: return@LaunchedEffect
-        val index =
-            episodeScrollIndex(
-                sortedSeasons = sortedSeasons,
-                episodesBySeason = sortedEpisodesBySeason,
-                hasMultipleSeasons = hasMultipleSeasons,
-                targetEpisodeId = targetId,
-                isExpanded = { it in expandedSeasons },
-            )
-        if (index != null) {
-            listState.animateScrollToItem(index)
-        }
+        if (seriesDetail.seasonNumberContaining(targetId) != selectedSeasonNumber) return@LaunchedEffect
+        val seasonEpisodes = sortedEpisodesBySeason[selectedSeasonNumber?.toString()] ?: return@LaunchedEffect
+        val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
+        if (episodeIndex < 0) return@LaunchedEffect
+        val headerItemCount = 1 + if (hasMultipleSeasons) 1 else 0
+        listState.animateScrollToItem(headerItemCount + episodeIndex)
     }
 
     // Per-episode resume fraction, drives the progress bar on each card. Re-read on every
@@ -398,8 +432,8 @@ private fun EpisodeListContent(
     // Re-reads progress/watched (including TMDB siblings) for every episode of this series.
     // Called after a manual mark, not just on initial load — a single-episode optimistic patch
     // would miss a sibling that the mark just made completed, and wouldn't restore a resume bar
-    // an unmark brings back. Doesn't touch resumeEpisodeId/expandedSeasons: a manual toggle should
-    // not re-anchor or re-expand a season out from under the user.
+    // an unmark brings back. Doesn't touch resumeEpisodeId/selectedSeasonNumber: a manual toggle
+    // should not re-anchor or re-select a season out from under the user.
     suspend fun refreshEpisodeWatchState() {
         val allEpisodeIds = mutableListOf<String>()
         for (episodes in seriesDetail.episodes.values) {
@@ -488,8 +522,8 @@ private fun EpisodeListContent(
                     episodesBySeason = sortedEpisodesBySeason,
                     isCompleted = { allWatched[it]?.isCompleted == true },
                 )
-        if (targetSeason != null && !hasManuallyToggledSeasons) {
-            expandedSeasons = setOf(targetSeason)
+        if (targetSeason != null && !hasManuallySelectedSeason) {
+            selectedSeasonNumber = targetSeason
         }
     }
 
@@ -857,6 +891,28 @@ private fun EpisodeListContent(
                                         CinemaSecondaryButton(
                                             onClick = onCategorySelected,
                                             text = stringResource(R.string.details_category_format, categoryName),
+                                            modifier =
+                                                if (hasMultipleSeasons) {
+                                                    // `focusProperties { down = ... }` (tried first) never took: D-pad Down
+                                                    // from here landed on the first episode card every time, skipping the
+                                                    // season tabs row between them, on a real Shield as well as here —
+                                                    // not a one-off emulator timing thing. Root cause unconfirmed (the tab
+                                                    // row's own focus targets are fine once actually reached: Left/Right
+                                                    // between tabs and later Up/Down into the row both work). Intercepting
+                                                    // the key directly and requesting the tab's FocusRequester ourselves
+                                                    // sidesteps whatever's misfiring in the search/entry path instead of
+                                                    // depending on it.
+                                                    Modifier.onPreviewKeyEvent { event ->
+                                                        if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
+                                                            seasonTabsFocusRequester.requestFocus()
+                                                            true
+                                                        } else {
+                                                            false
+                                                        }
+                                                    }
+                                                } else {
+                                                    Modifier
+                                                },
                                         )
                                     }
                                 }
@@ -873,64 +929,102 @@ private fun EpisodeListContent(
                     }
                 }
 
-                // Season-grouped episodes list
-                sortedSeasons.forEach { season ->
-                    val seasonKey = season.seasonNumber.toString()
-                    val seasonEpisodes = sortedEpisodesBySeason[seasonKey] ?: emptyList()
-                    val isExpanded = !hasMultipleSeasons || season.seasonNumber in expandedSeasons
-
-                    // Season header (skip if only 1 season)
-                    if (hasMultipleSeasons) {
-                        item(key = "season_header_$seasonKey", contentType = "header") {
-                            SeasonHeader(
-                                season = season,
-                                episodeCount = seasonEpisodes.size,
-                                isExpanded = isExpanded,
-                                onToggle = {
-                                    hasManuallyToggledSeasons = true
-                                    expandedSeasons =
-                                        if (isExpanded) {
-                                            emptySet()
-                                        } else {
-                                            setOf(season.seasonNumber)
-                                        }
-                                },
-                            )
-                        }
+                // Season tabs — pinned in place as the episode list scrolls under it (stickyHeader,
+                // not a plain item), so it reads as the control for what's below rather than
+                // scrolling away with it, same as the mobile row. D-pad left/right moves focus
+                // between tabs, which selects immediately (see SeasonTab); Left/Right from inside
+                // the episode list below does the same thing (see the onPreviewKeyEvent there).
+                if (hasMultipleSeasons) {
+                    stickyHeader(key = "season_tabs", contentType = "header") {
+                        SeasonTabs(
+                            seasons = sortedSeasons,
+                            selectedSeason = selectedSeasonNumber,
+                            onSeasonSelected = {
+                                // Guarded: focus-follow-select (see SeasonTab) fires this the
+                                // instant D-pad focus *enters* the row, landing on the already-
+                                // selected tab — a no-op season change that used to still flip
+                                // hasManuallySelectedSeason and write selectedSeasonNumber to its
+                                // own value. That write was enough to recompose this row out from
+                                // under the very focus-search transaction bringing it in, which is
+                                // why the first Up/Down into the tabs always missed them and
+                                // landed on the episode list instead. Skipping the no-op leaves
+                                // that transaction undisturbed; a real season change (left/right
+                                // to a different tab) still goes through normally.
+                                if (it != selectedSeasonNumber) {
+                                    hasManuallySelectedSeason = true
+                                    selectedSeasonNumber = it
+                                }
+                            },
+                            entryFocusRequester = seasonTabsFocusRequester,
+                        )
                     }
-
-                    if (isExpanded) {
-                        items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
-                            val isContinueWatching = episode.id == resumeEpisodeId
-                            EpisodeCard(
-                                episode = episode,
-                                cardStyle = episodeCardStyle,
-                                isContinueWatching = isContinueWatching,
-                                watchProgress = episodeProgress[episode.id] ?: 0f,
-                                isWatched = episode.id in watchedEpisodeIds,
-                                focusRequester = if (isContinueWatching) resumeCardFocusRequester else null,
-                                onClick = {
-                                    selectedEpisode = episode
-                                },
-                                onLongPress = {
-                                    // Manual watched/unwatched mark (Phase 6,
-                                    // docs/plans/watch-state-durable-storage-plan.md). Optimistic:
-                                    // flips this episode's own badge immediately rather than
-                                    // waiting on the write; the full re-read after it lands is what
-                                    // catches a TMDB sibling this mark just completed too (Phase 5)
-                                    // and restores the resume bar on an unmark — a single-item
-                                    // patch would miss both.
-                                    val nowWatched = episode.id !in watchedEpisodeIds
-                                    watchedEpisodeIds =
-                                        if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
-                                    watchedToggleScope.launch {
-                                        mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
-                                        refreshEpisodeWatchState()
-                                    }
-                                },
-                            )
-                        }
+                    // Gap before the episode cards, as its own plain (non-sticky) item — inside the
+                    // stickyHeader above, it would pin along with the tabs and show cards through
+                    // its unbacked height as they scroll past.
+                    item(key = "season_tabs_gap", contentType = "spacer") {
+                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
                     }
+                }
+
+                val currentSeasonEpisodes = sortedEpisodesBySeason[selectedSeasonNumber?.toString()] ?: emptyList()
+                itemsIndexed(currentSeasonEpisodes, key = { _, episode -> episode.id }, contentType = { _, _ -> "episode" }) { index, episode ->
+                    val isContinueWatching = episode.id == resumeEpisodeId
+                    EpisodeCard(
+                        episode = episode,
+                        cardStyle = episodeCardStyle,
+                        isContinueWatching = isContinueWatching,
+                        watchProgress = episodeProgress[episode.id] ?: 0f,
+                        isWatched = episode.id in watchedEpisodeIds,
+                        focusRequester = if (isContinueWatching) resumeCardFocusRequester else null,
+                        // Second requester on this card, alongside `focusRequester` above when
+                        // both apply — landing spot for the Left/Right season switch below,
+                        // always the current season's first episode regardless of resume state.
+                        additionalFocusRequester = if (index == 0) firstEpisodeFocusRequester else null,
+                        modifier =
+                            if (hasMultipleSeasons) {
+                                // Left/Right switches season from anywhere in the episode list,
+                                // the D-pad equivalent of the mobile swipe — same explicit-intercept
+                                // approach as the Category chip's Down into the tab row (plain
+                                // focus search across this LazyColumn boundary isn't reliable
+                                // either; see seasonTabsFocusRequester above), and the same
+                                // signal-plus-LaunchedEffect indirection to land on the new
+                                // season's first episode only once it actually exists.
+                                Modifier.onPreviewKeyEvent { event ->
+                                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                    val targetSeason =
+                                        when (event.key) {
+                                            Key.DirectionLeft -> previousSeason
+                                            Key.DirectionRight -> nextSeason
+                                            else -> null
+                                        } ?: return@onPreviewKeyEvent false
+                                    hasManuallySelectedSeason = true
+                                    seasonSwitchedFromEpisodeList = true
+                                    selectedSeasonNumber = targetSeason.seasonNumber
+                                    true
+                                }
+                            } else {
+                                Modifier
+                            },
+                        onClick = {
+                            selectedEpisode = episode
+                        },
+                        onLongPress = {
+                            // Manual watched/unwatched mark (Phase 6,
+                            // docs/plans/watch-state-durable-storage-plan.md). Optimistic:
+                            // flips this episode's own badge immediately rather than
+                            // waiting on the write; the full re-read after it lands is what
+                            // catches a TMDB sibling this mark just completed too (Phase 5)
+                            // and restores the resume bar on an unmark — a single-item
+                            // patch would miss both.
+                            val nowWatched = episode.id !in watchedEpisodeIds
+                            watchedEpisodeIds =
+                                if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
+                            watchedToggleScope.launch {
+                                mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
+                                refreshEpisodeWatchState()
+                            }
+                        },
+                    )
                 }
 
                 // Last rows of the list: Related titles
@@ -1456,30 +1550,126 @@ private fun EpisodeDetailPanel(
     }
 }
 
+/**
+ * One row of season pills. D-pad left/right moves focus between them via Compose's default
+ * focus search inside this Row — [SeasonTab] selects as soon as it receives focus, so that
+ * movement alone switches the visible season, the TV equivalent of the mobile swipe.
+ */
 @Composable
-private fun SeasonHeader(
+private fun SeasonTabs(
+    seasons: List<SeasonInfo>,
+    selectedSeason: Int?,
+    onSeasonSelected: (Int) -> Unit,
+    entryFocusRequester: FocusRequester,
+) {
+    val scale = LocalUiScale.current
+    // One FocusRequester per tab, explicitly wired to its left/right neighbor below — confirmed
+    // on a real Shield and in the emulator that Compose's default geometry-based focus search is
+    // unreliable for this row: D-pad down from the Category chip above landed on the *last* tab
+    // (nearest horizontally, not first in reading order), and D-pad left/right between tabs
+    // sometimes didn't move focus at all. Explicit wiring makes both deterministic.
+    val focusRequesters = remember(seasons) { seasons.map { FocusRequester() } }
+    val selectedIndex =
+        remember(seasons, selectedSeason) {
+            seasons.indexOfFirst { it.seasonNumber == selectedSeason }.coerceAtLeast(0)
+        }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                // Opaque: this row is pinned via stickyHeader, so episode cards scroll in
+                // underneath it and need to actually be hidden, not show through.
+                .background(MaterialTheme.colorScheme.background)
+                .padding(vertical = Spacing.sm.scaled(scale))
+                // Entering this row from outside (D-pad down from above, up from below) always
+                // lands on the selected tab, not whichever one the default search prefers.
+                // `enter` is only consulted once this Row is itself a focus-search candidate,
+                // which requires `focusGroup()` — without it the row isn't a group at all and
+                // `enter` silently never fires, leaving Up/Down to fall through to the default
+                // (and per the original bug report, unreliable) leaf search.
+                .focusGroup()
+                .focusProperties { enter = { focusRequesters.getOrNull(selectedIndex) ?: FocusRequester.Default } },
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        seasons.forEachIndexed { index, season ->
+            SeasonTab(
+                season = season,
+                isSelected = season.seasonNumber == selectedSeason,
+                onSelected = { onSeasonSelected(season.seasonNumber) },
+                focusRequester = focusRequesters[index],
+                previousTabFocusRequester = focusRequesters.getOrNull(index - 1),
+                nextTabFocusRequester = focusRequesters.getOrNull(index + 1),
+                // Second requester on the same node, alongside `focusRequester` above — only the
+                // selected tab gets it, and it moves with selection as `index` changes across
+                // recompositions. This is what the Category chip's explicit `down` (see caller)
+                // actually resolves to.
+                entryFocusRequester = if (index == selectedIndex) entryFocusRequester else null,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SeasonTab(
     season: SeasonInfo,
-    episodeCount: Int,
-    isExpanded: Boolean,
-    onToggle: () -> Unit,
+    isSelected: Boolean,
+    onSelected: () -> Unit,
+    focusRequester: FocusRequester,
+    previousTabFocusRequester: FocusRequester?,
+    nextTabFocusRequester: FocusRequester?,
+    entryFocusRequester: FocusRequester?,
 ) {
     val scale = LocalUiScale.current
     var isFocused by remember { mutableStateOf(false) }
     val focusScale by animateFloatAsState(
         targetValue = if (isFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
         animationSpec = tween(durationMillis = CinemaAnimation.focusDurationMs),
-        label = "season_header_focus_scale",
+        label = "season_tab_focus_scale",
     )
-    Row(
+
+    // Focus-follow-select, not a separate OK press: the point of a tab row is to be as immediate
+    // as the mobile swipe it stands in for. Deferred to a LaunchedEffect rather than called
+    // straight from onFocusChanged below: onSelected mutates state as far up as
+    // EpisodeListContent (hasManuallySelectedSeason/selectedSeasonNumber), and doing that
+    // synchronously from inside the focus-change callback risks recomposing this row out from
+    // under Compose's own focus-transfer machinery mid-transaction. A LaunchedEffect runs after
+    // that transaction settles.
+    LaunchedEffect(isFocused) {
+        if (isFocused) onSelected()
+    }
+
+    val containerColor =
+        when {
+            isFocused && isSelected -> TvFocusTokens.focusedSelectedContainer
+            isFocused -> TvFocusTokens.focusedContainer
+            isSelected -> TvFocusTokens.selectedContainer
+            else -> Color.Transparent
+        }
+
+    val textColor =
+        when {
+            isFocused && isSelected -> CinemaAccentLight
+            isFocused -> CinemaTextPrimary
+            isSelected -> CinemaAccent
+            else -> CinemaTextSecondary
+        }
+
+    Box(
         modifier =
             Modifier
-                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .then(entryFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+                .focusProperties {
+                    previousTabFocusRequester?.let { left = it }
+                    nextTabFocusRequester?.let { right = it }
+                }
                 .graphicsLayer {
                     scaleX = focusScale
                     scaleY = focusScale
                 }
                 .background(
-                    color = if (isFocused) CinemaAccent.copy(alpha = CinemaAlpha.tint) else Color.Transparent,
+                    color = containerColor,
                     shape = RoundedCornerShape(CornerRadius.medium),
                 )
                 .then(
@@ -1489,41 +1679,32 @@ private fun SeasonHeader(
                             color = CinemaAccentLight,
                             shape = RoundedCornerShape(CornerRadius.medium),
                         )
+                    } else if (isSelected) {
+                        Modifier.border(
+                            width = TvFocusTokens.borderThin,
+                            color = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
+                            shape = RoundedCornerShape(CornerRadius.medium),
+                        )
                     } else {
                         Modifier
                     },
                 )
+                // No separate .focusable(): .clickable() below already creates a focus target,
+                // and stacking a second one on the same node was the actual cause of tabs being
+                // unreachable by D-pad Up/Down from outside the row (Left/Right worked because
+                // those go through the explicit FocusRequester wiring above, bypassing search).
                 .onFocusChanged { isFocused = it.isFocused }
-                .clickable { onToggle() }
-                .padding(horizontal = Spacing.sm.scaled(scale), vertical = Spacing.sm.scaled(scale)),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                .clickable { onSelected() }
+                .padding(horizontal = Spacing.md.scaled(scale), vertical = Spacing.sm.scaled(scale)),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
-            contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
-            tint = CinemaAccentLight,
-            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-        )
         Text(
             text = stringResource(R.string.series_season_label, season.seasonNumber),
             style =
-                MaterialTheme.typography.headlineSmall.copy(
-                    fontSize =
-                        MaterialTheme.typography.headlineSmall.fontSize
-                            .scaled(scale),
+                MaterialTheme.typography.titleMedium.copy(
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale),
                 ),
-            color = CinemaAccentLight,
-        )
-        Text(
-            text = stringResource(R.string.series_total_episodes_format, episodeCount),
-            style =
-                MaterialTheme.typography.labelMedium.copy(
-                    fontSize =
-                        MaterialTheme.typography.labelMedium.fontSize
-                            .scaled(scale),
-                ),
-            color = CinemaTextSecondary,
+            color = textColor,
         )
     }
 }
@@ -1587,6 +1768,11 @@ private fun EpisodeCard(
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
     focusRequester: FocusRequester? = null,
+    // A second, independent FocusRequester on the same card — set alongside [focusRequester] when
+    // this episode is both the resume card and the season's first, since either can be requested
+    // on its own (resume-on-load vs. landing here after a season switch).
+    additionalFocusRequester: FocusRequester? = null,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
 ) {
@@ -1604,10 +1790,11 @@ private fun EpisodeCard(
     Card(
         onClick = onClick,
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .height(TvDimensions.episodeCardHeight.scaled(scale))
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                .then(if (additionalFocusRequester != null) Modifier.focusRequester(additionalFocusRequester) else Modifier)
                 .tvLongPress(onLongPress),
         colors = cardStyle.colors,
         shape = cardStyle.shape,
