@@ -561,14 +561,16 @@ class XtreamMediaProvider(
         val id = tmdbId?.toIntOrNull() ?: return RelatedTitles()
         if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return RelatedTitles()
 
-        // Three independent endpoints, so ask for all of them at once rather than paying the
-        // round trips one after the other. Collections are a movie-only TMDB concept.
-        val (recommended, similar, collectionFetch) =
+        // Recommendations and the collection are independent endpoints, so ask for both at once
+        // rather than paying the round trips one after the other. Collections are a movie-only
+        // TMDB concept. Similar titles are only ever a fallback for a thin recommendations list
+        // (see below), so that call is not fired here — paying for it when it will not be used
+        // would be wasted.
+        val (recommended, collectionFetch) =
             coroutineScope {
                 val recommendedCall = async { fetchRelated(id, contentType, similar = false) }
-                val similarCall = async { fetchRelated(id, contentType, similar = true) }
                 val collectionCall = async { if (contentType == ContentType.MOVIES) fetchCollection(id) else CollectionFetch() }
-                Triple(recommendedCall.await(), similarCall.await(), collectionCall.await())
+                Pair(recommendedCall.await(), collectionCall.await())
             }
 
         val mediaType = getMediaType(contentType)
@@ -582,13 +584,26 @@ class XtreamMediaProvider(
         // id first.
         val collectionParts = collectionFetch.parts.filter { it.id != id }
         val collectionMatches = matchToCatalogue(collectionParts, itemId, contentType, mediaType, taken, minCount = 1)
+
+        // "More Like This" is recommendations first, similar titles only topping up the rest —
+        // recommendations are the stronger signal, and a similar list that always fills a page
+        // regardless of genuine closeness must never bump a recommended title out of the cap.
+        val recommendedMatches = matchToCatalogue(recommended, itemId, contentType, mediaType, taken, minCount = 0)
+        val moreLikeThis =
+            if (recommendedMatches.size >= RelatedTitles.MAX_MORE_LIKE_THIS) {
+                recommendedMatches.take(RelatedTitles.MAX_MORE_LIKE_THIS)
+            } else {
+                val similar = fetchRelated(id, contentType, similar = true)
+                // Shares [taken], so a title TMDB returns from both endpoints is only ever
+                // credited once, under recommendations.
+                val similarMatches = matchToCatalogue(similar, itemId, contentType, mediaType, taken, minCount = 0)
+                (recommendedMatches + similarMatches).take(RelatedTitles.MAX_MORE_LIKE_THIS)
+            }
+
         return RelatedTitles(
             collection = collectionMatches,
             collectionName = collectionFetch.name.takeIf { collectionMatches.isNotEmpty() },
-            recommended = matchToCatalogue(recommended, itemId, contentType, mediaType, taken),
-            // Runs last and shares [taken], so a title TMDB returns from more than one endpoint
-            // appears only under the strongest heading instead of filling multiple rows.
-            similar = matchToCatalogue(similar, itemId, contentType, mediaType, taken),
+            moreLikeThis = if (moreLikeThis.size < MIN_RELATED_TITLES) emptyList() else moreLikeThis,
         )
     }
 
