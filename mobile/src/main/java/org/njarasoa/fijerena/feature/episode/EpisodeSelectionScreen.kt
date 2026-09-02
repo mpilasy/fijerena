@@ -17,8 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.*
@@ -45,8 +43,6 @@ import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
-import org.njarasoa.fijerena.core.player.domain.defaultExpandedSeason
-import org.njarasoa.fijerena.core.player.domain.episodeScrollIndex
 import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
 import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
@@ -284,26 +280,38 @@ private fun EpisodeListContent(
             resumeEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
         }
 
-    var expandedSeasons by remember(seriesDetail) {
-        mutableStateOf(defaultExpandedSeason(resumeSeasonNumber, sortedSeasons))
+    // One season visible at a time, switched via tabs or a horizontal swipe instead of an
+    // accordion — resume season wins on first load, same priority the accordion used to give it.
+    var selectedSeasonNumber by rememberSaveable(seriesDetail.id) {
+        mutableStateOf(resumeSeasonNumber ?: sortedSeasons.firstOrNull()?.seasonNumber)
     }
-    var hasManuallyToggledSeasons by remember(seriesDetail) { mutableStateOf(resumeSeasonNumber != null) }
+    // Set by a manual tab tap or swipe, so the auto-select effect below doesn't clobber a season
+    // the user already picked while the playback-position lookup was in flight. Seeded true when
+    // a resume season is already known, for the same reason the accordion seeded it.
+    var hasManuallySelectedSeason by remember(seriesDetail.id) { mutableStateOf(resumeSeasonNumber != null) }
+
+    val currentSeasonIndex = sortedSeasons.indexOfFirst { it.seasonNumber == selectedSeasonNumber }
+    val previousSeason = if (currentSeasonIndex > 0) sortedSeasons[currentSeasonIndex - 1] else null
+    val nextSeason =
+        if (currentSeasonIndex in sortedSeasons.indices && currentSeasonIndex < sortedSeasons.lastIndex) {
+            sortedSeasons[currentSeasonIndex + 1]
+        } else {
+            null
+        }
 
     val listState = rememberLazyListState()
 
-    LaunchedEffect(resumeEpisodeId, resumeSeasonNumber, expandedSeasons) {
+    // Scroll to the resume episode, but only when it's actually the reason this season is
+    // selected — a manual tab tap or swipe must never yank the list back to the resume spot (or
+    // anywhere else); it stays exactly where the user left it.
+    LaunchedEffect(resumeEpisodeId) {
         val targetId = resumeEpisodeId ?: return@LaunchedEffect
-        val index =
-            episodeScrollIndex(
-                sortedSeasons = sortedSeasons,
-                episodesBySeason = sortedEpisodesBySeason,
-                hasMultipleSeasons = hasMultipleSeasons,
-                targetEpisodeId = targetId,
-                isExpanded = { it in expandedSeasons },
-            )
-        if (index != null) {
-            listState.animateScrollToItem(index)
-        }
+        if (seriesDetail.seasonNumberContaining(targetId) != selectedSeasonNumber) return@LaunchedEffect
+        val seasonEpisodes = sortedEpisodesBySeason[selectedSeasonNumber?.toString()] ?: return@LaunchedEffect
+        val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
+        if (episodeIndex < 0) return@LaunchedEffect
+        val headerItemCount = 1 + if (hasMultipleSeasons) 1 else 0
+        listState.animateScrollToItem(headerItemCount + episodeIndex)
     }
 
     var episodeProgress by remember(seriesDetail) { mutableStateOf<Map<String, Float>>(emptyMap()) }
@@ -393,8 +401,8 @@ private fun EpisodeListContent(
                     episodesBySeason = sortedEpisodesBySeason,
                     isCompleted = { allWatched[it]?.isCompleted == true },
                 )
-        if (targetSeason != null && !hasManuallyToggledSeasons) {
-            expandedSeasons = setOf(targetSeason)
+        if (targetSeason != null && !hasManuallySelectedSeason) {
+            selectedSeasonNumber = targetSeason
         }
     }
 
@@ -414,7 +422,33 @@ private fun EpisodeListContent(
         state = listState,
         contentPadding = PaddingValues(CinemaSpacing.md),
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                // Horizontal swipe anywhere in the list switches season — the touch equivalent
+                // of tapping a season tab. Vertical scrolling is untouched: this only fires on
+                // a horizontal drag, same technique EpisodeDetailContent below uses for
+                // prev/next episode.
+                .pointerInput(hasMultipleSeasons, previousSeason, nextSeason) {
+                    if (!hasMultipleSeasons) return@pointerInput
+                    var dragAmount = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { dragAmount = 0f },
+                        onDragEnd = {
+                            if (dragAmount > EPISODE_SWIPE_THRESHOLD_PX && previousSeason != null) {
+                                hasManuallySelectedSeason = true
+                                selectedSeasonNumber = previousSeason.seasonNumber
+                            } else if (dragAmount < -EPISODE_SWIPE_THRESHOLD_PX && nextSeason != null) {
+                                hasManuallySelectedSeason = true
+                                selectedSeasonNumber = nextSeason.seasonNumber
+                            }
+                        },
+                        onHorizontalDrag = { change, delta ->
+                            dragAmount += delta
+                            change.consume()
+                        },
+                    )
+                },
     ) {
         item(key = "series_hero_header") {
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -671,60 +705,49 @@ private fun EpisodeListContent(
             }
         }
 
-        // Season-grouped episodes list
-        sortedSeasons.forEach { season ->
-            val seasonKey = season.seasonNumber.toString()
-            val seasonEpisodes = sortedEpisodesBySeason[seasonKey] ?: emptyList()
-            val isExpanded = !hasMultipleSeasons || season.seasonNumber in expandedSeasons
-
-            // Season header (skip if only 1 season)
-            if (hasMultipleSeasons) {
-                item(key = "season_header_$seasonKey", contentType = "header") {
-                    SeasonHeader(
-                        season = season,
-                        episodeCount = seasonEpisodes.size,
-                        isExpanded = isExpanded,
-                        onToggle = {
-                            hasManuallyToggledSeasons = true
-                            expandedSeasons =
-                                if (isExpanded) {
-                                    emptySet()
-                                } else {
-                                    setOf(season.seasonNumber)
-                                }
-                        },
-                    )
-                }
+        // Season tabs — pinned in place as the episode list scrolls under it (stickyHeader, not
+        // a plain item), so it reads as the control for what's below rather than scrolling away
+        // with it. A horizontal swipe anywhere in this list (see the pointerInput above) does
+        // the same thing as tapping a tab.
+        if (hasMultipleSeasons) {
+            stickyHeader(key = "season_tabs", contentType = "header") {
+                SeasonTabs(
+                    seasons = sortedSeasons,
+                    selectedSeason = selectedSeasonNumber,
+                    onSeasonSelected = {
+                        hasManuallySelectedSeason = true
+                        selectedSeasonNumber = it
+                    },
+                )
             }
+        }
 
-            if (isExpanded) {
-                items(seasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
-                    EpisodeCard(
-                        episode = episode,
-                        isContinueWatching = episode.id == resumeEpisodeId,
-                        watchProgress = episodeProgress[episode.id] ?: 0f,
-                        isWatched = episode.id in watchedEpisodeIds,
-                        onClick = {
-                            onEpisodeSelected(episode)
-                        },
-                        onToggleWatched = {
-                            // Manual watched/unwatched mark (Phase 6,
-                            // docs/plans/watch-state-durable-storage-plan.md). Optimistic: flips this
-                            // episode's own badge immediately rather than waiting on the write;
-                            // the full re-read after it lands is what catches a TMDB sibling this
-                            // mark just completed too (Phase 5) and restores the resume bar on an
-                            // unmark — a single-item patch would miss both.
-                            val nowWatched = episode.id !in watchedEpisodeIds
-                            watchedEpisodeIds =
-                                if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
-                            watchedToggleScope.launch {
-                                mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
-                                refreshEpisodeWatchState()
-                            }
-                        },
-                    )
-                }
-            }
+        val currentSeasonEpisodes = sortedEpisodesBySeason[selectedSeasonNumber?.toString()] ?: emptyList()
+        items(currentSeasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
+            EpisodeCard(
+                episode = episode,
+                isContinueWatching = episode.id == resumeEpisodeId,
+                watchProgress = episodeProgress[episode.id] ?: 0f,
+                isWatched = episode.id in watchedEpisodeIds,
+                onClick = {
+                    onEpisodeSelected(episode)
+                },
+                onToggleWatched = {
+                    // Manual watched/unwatched mark (Phase 6,
+                    // docs/plans/watch-state-durable-storage-plan.md). Optimistic: flips this
+                    // episode's own badge immediately rather than waiting on the write;
+                    // the full re-read after it lands is what catches a TMDB sibling this
+                    // mark just completed too (Phase 5) and restores the resume bar on an
+                    // unmark — a single-item patch would miss both.
+                    val nowWatched = episode.id !in watchedEpisodeIds
+                    watchedEpisodeIds =
+                        if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
+                    watchedToggleScope.launch {
+                        mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
+                        refreshEpisodeWatchState()
+                    }
+                },
+            )
         }
 
         // Last rows of the list
@@ -1101,38 +1124,48 @@ private fun EpisodeDetailContent(
     }
 }
 
+/**
+ * One row of season pills; tapping one switches [selectedSeason]. Horizontally scrollable so a
+ * long-running show's season count never wraps the row.
+ */
 @Composable
-private fun SeasonHeader(
-    season: SeasonInfo,
-    episodeCount: Int,
-    isExpanded: Boolean,
-    onToggle: () -> Unit,
+private fun SeasonTabs(
+    seasons: List<SeasonInfo>,
+    selectedSeason: Int?,
+    onSeasonSelected: (Int) -> Unit,
 ) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(role = Role.Button) { onToggle() }
+                // Opaque: this row is pinned via stickyHeader, so episode cards scroll in
+                // underneath it and need to actually be hidden, not show through.
+                .background(MaterialTheme.colorScheme.background)
+                .horizontalScroll(rememberScrollState())
                 .padding(vertical = CinemaSpacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
     ) {
-        Icon(
-            imageVector = if (isExpanded) CinemaIcons.KeyboardArrowUp else CinemaIcons.KeyboardArrowDown,
-            contentDescription = if (isExpanded) stringResource(R.string.common_collapse) else stringResource(R.string.common_expand),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = stringResource(R.string.series_season_name_format, season.seasonNumber),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            text = stringResource(R.string.series_total_episodes_format, episodeCount),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-        )
+        seasons.forEach { season ->
+            val isSelected = season.seasonNumber == selectedSeason
+            Text(
+                text = stringResource(R.string.series_season_name_format, season.seasonNumber),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color =
+                    if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+                    },
+                modifier =
+                    Modifier
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textLow) else Color.Transparent,
+                            RoundedCornerShape(CinemaCornerRadius.medium),
+                        ).clickable(role = Role.Button) { onSeasonSelected(season.seasonNumber) }
+                        .padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.sm),
+            )
+        }
     }
 }
 
