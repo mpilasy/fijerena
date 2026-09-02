@@ -76,5 +76,12 @@ fun EmbeddedPlayerSurface(
                 view.player = player
             }
         },
+        // The shared engine's ExoPlayer instance outlives this composable and keeps whatever
+        // SurfaceView/TextureView it was last bound to as its video output. Without detaching
+        // here, every leave-and-return (closing the player, or the Live TV preview pane
+        // unmounting as focus/layout changes) leaks the old PlayerView — and the Surface behind
+        // it, a SurfaceFlinger-tracked resource, not just Java heap — for the rest of the process
+        // lifetime.
+        onRelease = { view -> view.player = null },
     )
 }
