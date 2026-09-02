@@ -20,7 +20,9 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
+import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.network.NetworkModule
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 class FijerenaApplication :
@@ -63,7 +65,12 @@ class FijerenaApplication :
     // detail/search caches (see XtreamMediaProvider) grow for as long as the process lives —
     // nothing else ever shrinks them. RUNNING_LOW is the first level that reflects real system
     // pressure (below it, MODERATE only means "not foreground"), and every higher level implies
-    // it, so a single threshold check covers both foreground and background pressure.
+    // it, so this alone covers both foreground and background pressure.
+    //
+    // The OkHttp connection pool is a separate, more disruptive step: it's shared with the
+    // player's streaming DataSource, so evicting it mid-playback would tear down an active
+    // connection. It only runs once the app has actually left the foreground (UI_HIDDEN+), and
+    // only when nothing is playing — background/PIP audio keeps that pool legitimately in use.
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
@@ -71,6 +78,15 @@ class FijerenaApplication :
             SingletonImageLoader.get(this).memoryCache?.clear()
             AppContainer.getInstance(this).trimMemory()
         }
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN && !isPlaybackActive()) {
+            Log.i("FijerenaApplication", "onTrimMemory(level=$level): evicting idle connection pool")
+            NetworkModule.evictConnectionPool()
+        }
+    }
+
+    private fun isPlaybackActive(): Boolean {
+        val state = StreamingPlaybackService.getInstance()?.playbackState?.value ?: return false
+        return state is PlaybackState.Playing || state is PlaybackState.Buffering
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =
@@ -83,7 +99,10 @@ class FijerenaApplication :
             // Posters/thumbnails rarely change and there are thousands of them across a large
             // catalog — a generously sized disk cache means scrolling back through a category or
             // reopening a detail screen doesn't refetch images that were already downloaded.
-            .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.25).build() }
+            // The memory cache stays modest (largeHeap is on for both apps, so 25% of the app's
+            // heap on a Shield was easily 60-100MB+ of decoded bitmaps); onTrimMemory() above
+            // sweeps it under real pressure regardless.
+            .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.15).build() }
             .diskCache {
                 DiskCache
                     .Builder()
