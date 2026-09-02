@@ -123,6 +123,15 @@ class AppContainer(
         }
     }
 
+    /**
+     * Drops in-memory detail/search caches held by every live provider, without evicting the
+     * provider instances or repositories themselves (that would force a re-auth/reconnect).
+     * Called on system memory pressure — see [org.njarasoa.fijerena.core.ui.FijerenaApplication.onTrimMemory].
+     */
+    fun trimMemory() {
+        MediaProviderFactory.trimMemory()
+    }
+
     companion object {
         @Volatile
         private var instance: AppContainer? = null

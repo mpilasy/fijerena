@@ -95,6 +95,15 @@ object MediaProviderFactory {
         providerCache.clear()
     }
 
+    /**
+     * Tells every cached provider to drop its in-memory detail/search caches, without evicting
+     * the provider instances themselves (that would force a re-auth). Called on system memory
+     * pressure — see [org.njarasoa.fijerena.core.ui.FijerenaApplication.onTrimMemory].
+     */
+    fun trimMemory() {
+        providerCache.values.forEach { it.trimMemory() }
+    }
+
     private fun createXtream(
         entity: ProviderEntity,
         context: Context,
