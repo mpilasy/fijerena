@@ -282,6 +282,16 @@ fun MobilePlayerContent(
         }
     }
 
+    // Natural end of a movie/episode (never fires for live TV — handleStreamEndedOrError only
+    // emits Ended for !metadata.isLive) — leave the player rather than sit on a frozen last
+    // frame with no controls (see the `else` branch below that deliberately renders nothing
+    // for Ended).
+    LaunchedEffect(currentPs) {
+        if (currentPs is PlaybackState.Ended) {
+            onBack()
+        }
+    }
+
     // Auto-hide channel toast
     LaunchedEffect(showChannelToast, channelToastTick) {
         if (showChannelToast) {

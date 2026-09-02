@@ -213,6 +213,16 @@ fun PlayerScreen(
                 }
             }
 
+            // Natural end of a movie/episode (never fires for live TV — handleStreamEndedOrError
+            // only emits Ended for !metadata.isLive) — leave the player instead of waiting on a
+            // manual Back press. EndedContent below still renders for the brief window before
+            // this fires.
+            LaunchedEffect(currentPs) {
+                if (currentPs is PlaybackState.Ended) {
+                    onBack()
+                }
+            }
+
             when (val ps = currentPs) {
                 PlaybackState.Idle -> { /* Silent */ }
                 PlaybackState.Buffering -> {
