@@ -752,6 +752,13 @@ class XtreamMediaProvider(
 
     override fun getLastSearchDataSize(contentType: String): Long? = searchDataSizes[contentType]
 
+    override fun trimMemory() {
+        movieDetailCache.clear()
+        seriesDetailCache.clear()
+        tmdbOverviewCache.clear()
+        searchDataSizes.clear()
+    }
+
     override suspend fun getEpg(streamId: String): kotlin.Result<EpgResponse>? {
         val id =
             streamId.toIntOrNull() ?: return kotlin.Result.failure(

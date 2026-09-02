@@ -164,6 +164,13 @@ interface MediaProvider {
         positionMs: Long,
         durationMs: Long,
     ) {}
+
+    /**
+     * Drops whatever in-memory (not disk/DB) caches this provider holds, in response to the
+     * system signalling memory pressure ([android.content.ComponentCallbacks2.onTrimMemory]).
+     * No-op for providers that don't cache in memory.
+     */
+    fun trimMemory() {}
 }
 
 data class PlaybackStatus(

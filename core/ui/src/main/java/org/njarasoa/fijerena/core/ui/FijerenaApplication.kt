@@ -1,8 +1,10 @@
 package org.njarasoa.fijerena.core.ui
 
 import android.app.Application
+import android.content.ComponentCallbacks2
 import android.content.pm.ApplicationInfo
 import android.os.StrictMode
+import android.util.Log
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -19,6 +21,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
 import org.njarasoa.fijerena.core.player.network.NetworkModule
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 class FijerenaApplication :
     Application(),
@@ -53,6 +56,20 @@ class FijerenaApplication :
             // Drop the EPG sources the app used to create for itself — see
             // EpgIndexer.purgeXtreamApiSources().
             EpgIndexer.getInstance(this@FijerenaApplication).purgeXtreamApiSources()
+        }
+    }
+
+    // A busy day of browsing a large catalogue lets the poster memory cache and providers'
+    // detail/search caches (see XtreamMediaProvider) grow for as long as the process lives —
+    // nothing else ever shrinks them. RUNNING_LOW is the first level that reflects real system
+    // pressure (below it, MODERATE only means "not foreground"), and every higher level implies
+    // it, so a single threshold check covers both foreground and background pressure.
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            Log.i("FijerenaApplication", "onTrimMemory(level=$level): clearing image and provider caches")
+            SingletonImageLoader.get(this).memoryCache?.clear()
+            AppContainer.getInstance(this).trimMemory()
         }
     }
 
