@@ -71,6 +71,12 @@ class FijerenaApplication :
     // player's streaming DataSource, so evicting it mid-playback would tear down an active
     // connection. It only runs once the app has actually left the foreground (UI_HIDDEN+), and
     // only when nothing is playing — background/PIP audio keeps that pool legitimately in use.
+    //
+    // TRIM_MEMORY_RUNNING_LOW is deprecated as of API 34 (the OS stopped delivering the
+    // foreground RUNNING_* levels to apps targeting it) — the Shields this app actually ships
+    // to mostly run well below that, where it's still the only mid-session pressure signal, and
+    // on newer OS it's a harmless no-op: cache clearing simply happens later, at UI_HIDDEN.
+    @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
         if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
