@@ -338,7 +338,6 @@
     <string name="details_other_instances">Autres versions de ce titre</string>
     <string name="details_collection_fallback">Collection</string>
     <string name="details_more_like_this">Dans le même genre</string>
-    <string name="details_similar_titles">Titres similaires</string>
     <string name="details_no_link_handler">Aucune application de cet appareil ne peut ouvrir ce lien</string>
     <string name="movie_loading_details">Chargement des détails…</string>
     <string name="movie_error_loading">Erreur de chargement du film</string>

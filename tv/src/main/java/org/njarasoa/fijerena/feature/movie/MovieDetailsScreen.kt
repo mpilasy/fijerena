@@ -724,21 +724,11 @@ private fun MovieDetailsContent(
                 )
             }
         }
-        if (relatedTitles.recommended.isNotEmpty()) {
-            item(key = "related-recommended") {
+        if (relatedTitles.moreLikeThis.isNotEmpty()) {
+            item(key = "related-more-like-this") {
                 RelatedTitlesRow(
                     title = stringResource(R.string.details_more_like_this),
-                    items = relatedTitles.recommended,
-                    onItemClick = onRelatedTitleSelected,
-                    modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
-                )
-            }
-        }
-        if (relatedTitles.similar.isNotEmpty()) {
-            item(key = "related-similar") {
-                RelatedTitlesRow(
-                    title = stringResource(R.string.details_similar_titles),
-                    items = relatedTitles.similar,
+                    items = relatedTitles.moreLikeThis,
                     onItemClick = onRelatedTitleSelected,
                     modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
                 )

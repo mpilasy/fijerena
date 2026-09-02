@@ -1028,21 +1028,11 @@ private fun EpisodeListContent(
                 }
 
                 // Last rows of the list: Related titles
-                if (relatedTitles.recommended.isNotEmpty()) {
-                    item(key = "recommended", contentType = "related") {
+                if (relatedTitles.moreLikeThis.isNotEmpty()) {
+                    item(key = "more-like-this", contentType = "related") {
                         RelatedTitlesRow(
                             title = stringResource(R.string.details_more_like_this),
-                            items = relatedTitles.recommended,
-                            onItemClick = onRelatedTitleSelected,
-                            modifier = Modifier.padding(top = Spacing.md.scaled(scale)),
-                        )
-                    }
-                }
-                if (relatedTitles.similar.isNotEmpty()) {
-                    item(key = "similar", contentType = "related") {
-                        RelatedTitlesRow(
-                            title = stringResource(R.string.details_similar_titles),
-                            items = relatedTitles.similar,
+                            items = relatedTitles.moreLikeThis,
                             onItemClick = onRelatedTitleSelected,
                             modifier = Modifier.padding(top = Spacing.md.scaled(scale)),
                         )
