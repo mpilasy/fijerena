@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.navigation.TvNavHost
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -88,6 +89,17 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    // Unlike mobile, TV has no background-playback feature (PiP is mobile-only — see
+    // docs/RELEASE_NOTES.md) — leaving to the launcher has no reason to leave the stream, the
+    // decoder, and the wake lock running. isChangingConfigurations guards the (currently
+    // theoretical, TV is fixed-orientation) config-change case.
+    override fun onStop() {
+        super.onStop()
+        if (!isChangingConfigurations) {
+            StreamingPlaybackService.getInstance()?.stop()
         }
     }
 
