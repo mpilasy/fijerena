@@ -788,6 +788,7 @@ private fun EpisodeListContent(
                                             CinemaPrimaryButton(
                                                 onClick = {
                                                     anchorEpisode?.let { ep ->
+                                                        resumeEpisodeId = ep.id
                                                         onEpisodeSelected(ep.id, ep.title, ep.extension ?: "mp4", false)
                                                     }
                                                 },
@@ -797,6 +798,7 @@ private fun EpisodeListContent(
                                             CinemaSecondaryButton(
                                                 onClick = {
                                                     anchorEpisode?.let { ep ->
+                                                        resumeEpisodeId = ep.id
                                                         onEpisodeSelected(ep.id, ep.title, ep.extension ?: "mp4", true)
                                                     }
                                                 },
@@ -816,6 +818,7 @@ private fun EpisodeListContent(
                                             CinemaPrimaryButton(
                                                 onClick = {
                                                     anchorEpisode?.let { ep ->
+                                                        resumeEpisodeId = ep.id
                                                         onEpisodeSelected(ep.id, ep.title, ep.extension ?: "mp4", false)
                                                     }
                                                 },
