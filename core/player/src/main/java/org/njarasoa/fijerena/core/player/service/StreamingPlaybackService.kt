@@ -288,7 +288,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 delay(healthMonitor?.config?.evaluationIntervalMs ?: 5000L)
                 val player = getPlayer()
                 val metadata = _currentMetadata.value
-                if (player != null && metadata.streamUrl.isNotEmpty() && !isWithinSeekGrace()) {
+                if (player != null && metadata.streamUrl.isNotEmpty() && metadata.isLive && !isWithinSeekGrace()) {
                     val state = player.playbackState
                     if (state == Player.STATE_READY || state == Player.STATE_BUFFERING) {
                         val position = player.currentPosition
@@ -1300,11 +1300,12 @@ class StreamingPlaybackService : MediaSessionService() {
                 }
             }
             
-            // Feed health monitor on every state change. Skipped right after a seek (VOD
-            // scrubbing) — a seek briefly looks like a low-buffer degradation event otherwise.
+            // Feed health monitor on every state change for Live TV streams. Skipped for VOD
+            // and right after a seek.
             val service = instance
             val player = service?.getPlayer()
-            if (service != null && player != null && !service.isWithinSeekGrace()) {
+            val isLive = service?._currentMetadata?.value?.isLive == true
+            if (service != null && player != null && isLive && !service.isWithinSeekGrace()) {
                 service.healthMonitor?.updateMetrics(
                     bufferedDurationMs = player.bufferedPosition - player.currentPosition,
                     droppedFramesPerSecond = service._measuredDroppedFps.value, 
