@@ -30,8 +30,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -42,6 +44,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
+import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.player.ImmutableMediaList
@@ -249,13 +252,21 @@ private fun PlayerContent(
     // order so watching past the delay doesn't re-sort the list the viewer may have open.
     val publishedRecentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
     val recentStreams = rememberStableRecentOrder(publishedRecentStreams)
+    val scope = rememberCoroutineScope()
     PlayerScreen(
         viewModel = playbackViewModel,
         currentStreamId = data.streamId,
         onBack = {
-            finalizeSession(playbackViewModel.playbackState.value, loaderViewModel)
-            playbackViewModel.stop()
-            onBack()
+            // Awaited, not fire-and-forget: this is the explicit Back path, which navigates
+            // straight back to the episode-selection screen — its own watch-history read can
+            // otherwise win the race against an unawaited write and land on the wrong resume
+            // season. See finalizeSessionAndAwait's kdoc and
+            // docs/plans/episode-selection-fragility-plan.md.
+            scope.launch {
+                finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
+                playbackViewModel.stop()
+                onBack()
+            }
         },
         onNextChannel = { loaderViewModel.nextChannel() },
         onPreviousChannel = { loaderViewModel.prevChannel() },
