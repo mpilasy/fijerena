@@ -346,7 +346,17 @@ private fun EpisodeListContent(
     // the user already picked while the playback-position lookup was in flight. Also seeded true
     // when a resume season is already known, so the "next unwatched" guess below never overrides
     // the season the user actually asked to resume.
-    var hasManuallySelectedSeason by remember(seriesDetail.id) { mutableStateOf(resumeSeasonNumber != null) }
+    //
+    // Saveable, not plain remember: navigating to the player disposes this composable, and
+    // finalizeSession's position-save write (StreamLoaderViewModel.stopPlayback) runs on IO
+    // fire-and-forget — it isn't awaited before the back navigation completes. If this screen's
+    // recomposition and its watch-history read (the LaunchedEffect below) win that race, the
+    // just-played episode isn't in the DB yet, the "next unwatched" guess falls back to season
+    // 1, and — with a plain remember — this flag had already forgotten the user picked season 3
+    // by that same disposal, so nothing blocked the wrong guess from sticking. Saveable closes
+    // that gap: the fact "the user manually chose a season this session" now survives the same
+    // disposal the race happens across, independent of which side of the race wins.
+    var hasManuallySelectedSeason by rememberSaveable(seriesDetail.id) { mutableStateOf(resumeSeasonNumber != null) }
 
     val currentSeasonIndex = sortedSeasons.indexOfFirst { it.seasonNumber == selectedSeasonNumber }
     val previousSeason = if (currentSeasonIndex > 0) sortedSeasons[currentSeasonIndex - 1] else null
@@ -543,10 +553,27 @@ private fun EpisodeListContent(
     // Request focus on Play/Resume button when screen loads or anchor arrives — unless the user
     // has switched to an alternate stream at some point on this screen, in which case focus
     // stays on the stream name row so the D-pad doesn't silently land on Play.
+    //
+    // Skipped whenever there's a resume episode: the LaunchedEffect below this one scrolls the
+    // list down to it (animateScrollToItem), and on return from the player that target scroll
+    // offset is already restored (listState is itself saveable) before this effect's first
+    // frame — so the hero item, Play button included, never gets composed at all, or gets
+    // disposed moments after this claims it once the list settles. Either way focus doesn't
+    // stay claimed, and Compose's own recovery then hands it to whatever's nearest once the
+    // hero disposes — which was always the *first* season tab (Season 1), not necessarily the
+    // one actually selected. Every SeasonTab treats receiving focus as the user switching to it
+    // (see SeasonTab's focus-follow-select), so that stray handoff silently overwrote
+    // selectedSeasonNumber back to season 1 — the bug behind "back from a random season lands
+    // on season 1 episode 1". Focusing the resume card instead targets the item the list is
+    // actually resting on, so nothing scrolls it away out from under the claim.
     LaunchedEffect(resumeEpisodeId) {
         if (streamSwitchSignal == 0) {
             try {
-                playButtonFocusRequester.requestFocus()
+                if (resumeEpisodeId != null) {
+                    resumeCardFocusRequester.requestFocus()
+                } else {
+                    playButtonFocusRequester.requestFocus()
+                }
             } catch (_: IllegalStateException) {
             }
         }
