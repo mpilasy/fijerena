@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.MediaRepository
@@ -533,7 +534,13 @@ class StreamLoaderViewModel(
     }
 
     /**
-     * Call this when playback is stopped/exited to finalize session state.
+     * Call this when playback is stopped/exited to finalize session state. Fire-and-forget on
+     * IO, not awaited — the right choice for a caller that isn't about to navigate away and read
+     * this same data back (e.g. a `DisposableEffect.onDispose`, which has no coroutine scope that
+     * outlives it to await from anyway). A caller that back-navigates to a screen reading this
+     * write's result — the episode-selection screen's resume anchor — needs
+     * [stopPlaybackAwaited] instead: see its kdoc and
+     * docs/plans/episode-selection-fragility-plan.md.
      */
     fun stopPlayback(
         position: Long,
@@ -542,39 +549,49 @@ class StreamLoaderViewModel(
         subtitleTrackIndex: Int? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val currentState = _state.value as? StreamState.Success ?: return@launch
-            val repo = mediaRepository ?: return@launch
+            doStopPlayback(position, duration, audioTrackIndex, subtitleTrackIndex)
+        }
+    }
 
-            // Final save - Only for VOD/Series
-            if (contentType != ContentType.LIVE_TV) {
-                val progressPercent = if (duration > 0) (position.toFloat() / duration.toFloat()) * 100f else 0f
+    /**
+     * Same write as [stopPlayback], but suspends until it's actually committed instead of firing
+     * it off unawaited. Use this before navigating back to a screen that reads the result right
+     * back (the episode-selection screen's watch-history-derived resume anchor) — otherwise the
+     * screen's own read can win the race against this write, land on stale watch history, and
+     * silently reset to the wrong season/episode. See
+     * docs/plans/episode-selection-fragility-plan.md.
+     */
+    suspend fun stopPlaybackAwaited(
+        position: Long,
+        duration: Long,
+        audioTrackIndex: Int? = null,
+        subtitleTrackIndex: Int? = null,
+    ) {
+        withContext(Dispatchers.IO) {
+            doStopPlayback(position, duration, audioTrackIndex, subtitleTrackIndex)
+        }
+    }
 
-                // Final check to see if we reached threshold before exiting
-                if (progressPercent >= 2.0f) {
-                    repo.saveLastPlayedItem(
-                        categoryId = currentCategoryId,
-                        itemId = currentState.streamId,
-                        itemName = currentState.streamName,
-                        contentType = contentType,
-                        episodeId = episode,
-                        episodeExtension = episodeExtension,
-                        seriesId = series,
-                        seriesName = seriesName,
-                    )
-                }
+    private suspend fun doStopPlayback(
+        position: Long,
+        duration: Long,
+        audioTrackIndex: Int?,
+        subtitleTrackIndex: Int?,
+    ) {
+        val currentState = _state.value as? StreamState.Success ?: return
+        val repo = mediaRepository ?: return
 
-                // Metadata goes with every position write, not only the ones past the threshold
-                // above: this call creates the row for a session too short to reach it, and a row
-                // without it is an episode that cannot say which show it belongs to.
-                repo.savePlaybackPosition(
-                    currentState.streamId,
-                    currentState.streamName,
-                    currentCategoryId,
-                    contentType,
-                    position,
-                    duration,
-                    audioTrackIndex = audioTrackIndex,
-                    subtitleTrackIndex = subtitleTrackIndex,
+        // Final save - Only for VOD/Series
+        if (contentType != ContentType.LIVE_TV) {
+            val progressPercent = if (duration > 0) (position.toFloat() / duration.toFloat()) * 100f else 0f
+
+            // Final check to see if we reached threshold before exiting
+            if (progressPercent >= 2.0f) {
+                repo.saveLastPlayedItem(
+                    categoryId = currentCategoryId,
+                    itemId = currentState.streamId,
+                    itemName = currentState.streamName,
+                    contentType = contentType,
                     episodeId = episode,
                     episodeExtension = episodeExtension,
                     seriesId = series,
@@ -582,11 +599,77 @@ class StreamLoaderViewModel(
                 )
             }
 
-            // Final notification to provider (e.g. reportPlaybackStopped to Jellyfin/Xtream)
-            repo.onPlaybackStopped(currentState.streamId, position, duration)
+            // Metadata goes with every position write, not only the ones past the threshold
+            // above: this call creates the row for a session too short to reach it, and a row
+            // without it is an episode that cannot say which show it belongs to.
+            repo.savePlaybackPosition(
+                currentState.streamId,
+                currentState.streamName,
+                currentCategoryId,
+                contentType,
+                position,
+                duration,
+                audioTrackIndex = audioTrackIndex,
+                subtitleTrackIndex = subtitleTrackIndex,
+                episodeId = episode,
+                episodeExtension = episodeExtension,
+                seriesId = series,
+                seriesName = seriesName,
+            )
+        }
 
-            // Flush to disk immediately to ensure history is committed
-            repo.flushWatchHistory()
+        // Final notification to provider (e.g. reportPlaybackStopped to Jellyfin/Xtream)
+        repo.onPlaybackStopped(currentState.streamId, position, duration)
+
+        // Flush to disk immediately to ensure history is committed
+        repo.flushWatchHistory()
+    }
+}
+
+@OptIn(UnstableApi::class)
+private class FinalizeSessionSnapshot(
+    val position: Long,
+    val duration: Long,
+    val audioTrackIndex: Int?,
+    val subtitleTrackIndex: Int?,
+) {
+    companion object {
+        /**
+         * PlaybackState carries a snapshot taken the last time the player raised an event
+         * (state change, pause, seek, rebuffer). An uninterrupted stretch of playback raises
+         * none, so that snapshot can be many minutes behind by the time the user backs out —
+         * and writing it here would overwrite the fresher position the periodic save loop
+         * already stored. Ask the live player instead, and only fall back to the snapshot when
+         * it's gone (Ended tears the player down, so its position reads 0).
+         */
+        fun capture(playbackState: PlaybackState): FinalizeSessionSnapshot {
+            val service = StreamingPlaybackService.getInstance()
+            val livePosition =
+                service?.getPlayer()?.let { player ->
+                    val position = player.currentPosition
+                    val duration = player.duration
+                    if (position > 0L && duration > 0L) position to duration else null
+                }
+            val pos =
+                livePosition?.first
+                    ?: when (playbackState) {
+                        is PlaybackState.Playing -> playbackState.position
+                        is PlaybackState.Paused -> playbackState.position
+                        // Played to the end: report the full duration so the >95% rule marks it completed.
+                        is PlaybackState.Ended -> playbackState.duration
+                        else -> 0L
+                    }
+            val dur =
+                livePosition?.second
+                    ?: when (playbackState) {
+                        is PlaybackState.Playing -> playbackState.duration
+                        is PlaybackState.Paused -> playbackState.duration
+                        is PlaybackState.Ended -> playbackState.duration
+                        else -> 0L
+                    }
+            val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
+            val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
+            return FinalizeSessionSnapshot(pos, dur, audioIdx, subIdx)
         }
     }
 }
@@ -596,45 +679,33 @@ class StreamLoaderViewModel(
  * for the current session, so it's called identically whenever a player screen
  * leaves a stream (back, switching to a new stream, or the composable leaving
  * composition) rather than each call site re-deriving it slightly differently.
+ *
+ * Fire-and-forget (see [StreamLoaderViewModel.stopPlayback]) — use
+ * [finalizeSessionAndAwait] instead when the caller is about to navigate back to a screen
+ * that reads this write's result right away.
  */
 @OptIn(UnstableApi::class)
 fun finalizeSession(
     playbackState: PlaybackState,
     loaderViewModel: StreamLoaderViewModel,
 ) {
-    val service = StreamingPlaybackService.getInstance()
-    // PlaybackState carries a snapshot taken the last time the player raised an event
-    // (state change, pause, seek, rebuffer). An uninterrupted stretch of playback raises
-    // none, so that snapshot can be many minutes behind by the time the user backs out —
-    // and writing it here would overwrite the fresher position the periodic save loop
-    // already stored. Ask the live player instead, and only fall back to the snapshot when
-    // it's gone (Ended tears the player down, so its position reads 0).
-    val livePosition =
-        service?.getPlayer()?.let { player ->
-            val position = player.currentPosition
-            val duration = player.duration
-            if (position > 0L && duration > 0L) position to duration else null
-        }
-    val pos =
-        livePosition?.first
-            ?: when (playbackState) {
-                is PlaybackState.Playing -> playbackState.position
-                is PlaybackState.Paused -> playbackState.position
-                // Played to the end: report the full duration so the >95% rule marks it completed.
-                is PlaybackState.Ended -> playbackState.duration
-                else -> 0L
-            }
-    val dur =
-        livePosition?.second
-            ?: when (playbackState) {
-                is PlaybackState.Playing -> playbackState.duration
-                is PlaybackState.Paused -> playbackState.duration
-                is PlaybackState.Ended -> playbackState.duration
-                else -> 0L
-            }
-    val audioIdx = service?.getAudioTracks()?.indexOfFirst { it.isSelected }?.takeIf { it >= 0 }
-    val subIdx = service?.getSubtitleTracks()?.indexOfFirst { it.isSelected }?.let { if (it >= 0) it else -1 }
-    loaderViewModel.stopPlayback(pos, dur, audioIdx, subIdx)
+    val snapshot = FinalizeSessionSnapshot.capture(playbackState)
+    loaderViewModel.stopPlayback(snapshot.position, snapshot.duration, snapshot.audioTrackIndex, snapshot.subtitleTrackIndex)
+}
+
+/**
+ * [finalizeSession], but suspends until the write actually commits — see
+ * [StreamLoaderViewModel.stopPlaybackAwaited] and docs/plans/episode-selection-fragility-plan.md.
+ * Use this before navigating back to a screen (episode selection) whose own read of this same
+ * data can otherwise win the race against the unawaited version.
+ */
+@OptIn(UnstableApi::class)
+suspend fun finalizeSessionAndAwait(
+    playbackState: PlaybackState,
+    loaderViewModel: StreamLoaderViewModel,
+) {
+    val snapshot = FinalizeSessionSnapshot.capture(playbackState)
+    loaderViewModel.stopPlaybackAwaited(snapshot.position, snapshot.duration, snapshot.audioTrackIndex, snapshot.subtitleTrackIndex)
 }
 
 class StreamLoaderViewModelFactory(

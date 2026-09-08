@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -53,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
+import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.feature.player.components.AudioTrackSelectorDialog
 import org.njarasoa.fijerena.feature.player.components.ChannelToast
@@ -136,15 +139,23 @@ fun MobilePlayerScreen(
         }
     }
 
+    val scope = rememberCoroutineScope()
     MobilePlayerContent(
         viewModel = activityScopedViewModel,
         loaderViewModel = loaderViewModel,
         contentType = contentType,
         onBack = {
-            finalizeSession(activityScopedViewModel.playbackState.value, loaderViewModel)
-            activityScopedViewModel.stop()
-            StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
-            onBack()
+            // Awaited, not fire-and-forget: this is the explicit Back path, which navigates
+            // straight back to the episode-selection screen — its own watch-history read can
+            // otherwise win the race against an unawaited write and land on the wrong resume
+            // season. See finalizeSessionAndAwait's kdoc and
+            // docs/plans/episode-selection-fragility-plan.md.
+            scope.launch {
+                finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
+                activityScopedViewModel.stop()
+                StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
+                onBack()
+            }
         },
     )
 }
