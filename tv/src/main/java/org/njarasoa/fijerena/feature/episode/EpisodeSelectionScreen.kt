@@ -57,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -225,8 +226,11 @@ fun EpisodeSelectionScreen(
     }
 }
 
+// internal, not private: exercised directly by EpisodeSelectionScreenTest (androidTest) with a
+// fake SeriesDetail/MediaRepository, bypassing the ViewModel/DI it would otherwise need — see
+// docs/plans/episode-selection-fragility-plan.md.
 @Composable
-private fun EpisodeListContent(
+internal fun EpisodeListContent(
     seriesDetail: SeriesDetail,
     relatedTitles: RelatedTitles,
     tmdbTitle: String?,
@@ -640,7 +644,7 @@ private fun EpisodeListContent(
                 // top-down, before any descendant (including the focused Button) gets a look, so
                 // this always wins the race. Matches the same pattern TvDpadEscape.kt uses.
                 modifier =
-                    Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+                    Modifier.fillMaxSize().testTag("episode_list").onPreviewKeyEvent { event ->
                         if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
                             onBack()
                             true
@@ -1034,7 +1038,7 @@ private fun EpisodeListContent(
                                 }
                             } else {
                                 Modifier
-                            },
+                            }.testTag("episode_${episode.id}"),
                         onClick = {
                             selectedEpisode = episode
                         },
