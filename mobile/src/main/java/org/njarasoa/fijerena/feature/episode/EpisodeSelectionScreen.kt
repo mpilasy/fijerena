@@ -119,11 +119,23 @@ fun MobileEpisodeSelectionScreen(
     // Continue Watching resume episode below); arriving here never auto-opens it.
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
 
-    // Episode to come back to: the route's Continue Watching argument at first, then whichever
-    // episode was last sent to the player, or the one derived from watch history below.
-    // Saveable and hoisted above the list, because both the detail panel and the player dispose
-    // the list — plain remember would drop it and land the user back on season 1 at the top.
-    var resumeEpisodeId by rememberSaveable { mutableStateOf(initialEpisodeId) }
+    // Episode/season this screen is anchored on, and whether that season was the user's own
+    // pick — see EpisodeResumeState.kt. Hoisted above both EpisodeListContent and
+    // EpisodeDetailContent (both disposed by the other's toggle, and by navigating to the
+    // player) — a plain remember, or state scoped to just one of the two content composables,
+    // would drop it and land the user back on season 1 episode 1 at the top of the list.
+    // initialSeason is best-effort: seriesDetail is usually already cached and available by
+    // this first composition, but on a genuinely cold load it isn't yet, and this is a
+    // rememberSaveable initial value — evaluated once, never revisited once seriesDetail
+    // arrives. EpisodeListContent's own anchor effect (keyed on seriesDetail) corrects it
+    // shortly after in that rare case, same as it does for a series with no resume episode at
+    // all; the only cost is one frame showing season 1 first instead of the resume season.
+    val resumeState =
+        rememberEpisodeResumeState(
+            seriesId = seriesId,
+            initialEpisodeId = initialEpisodeId,
+            initialSeason = initialEpisodeId?.let { lastSuccess?.seriesDetail?.seasonNumberContaining(it) },
+        )
 
     // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {
@@ -194,7 +206,7 @@ fun MobileEpisodeSelectionScreen(
                         nextEpisode = nextEpisode,
                         onNavigate = { next -> selectedEpisode = next },
                         onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
-                            resumeEpisodeId = episodeId
+                            resumeState.setResumeEpisode(episodeId, season = null)
                             onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
                         },
                     )
@@ -212,14 +224,13 @@ fun MobileEpisodeSelectionScreen(
                             alternateStreams = alternateStreams,
                             seriesName = lastSuccess?.streamName ?: seriesName,
                             mediaRepository = viewModel.mediaRepository!!,
-                            resumeEpisodeId = resumeEpisodeId,
-                            onResumeEpisodeDerived = { resumeEpisodeId = it },
+                            resumeState = resumeState,
                             categoryName = lastSuccess?.categoryName,
                             logoUrl = logoUrl,
                             isFavorite = isFavorite,
                             onToggleFavorite = { viewModel.toggleFavorite(lastSuccess?.streamName ?: seriesName) },
                             onPlayEpisode = { episodeId, episodeTitle, extension, startFromBeginning ->
-                                resumeEpisodeId = episodeId
+                                resumeState.setResumeEpisode(episodeId, season = null)
                                 onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
                             },
                             onEpisodeSelected = { episode ->
@@ -247,8 +258,7 @@ private fun EpisodeListContent(
     alternateStreams: List<MediaItem>,
     seriesName: String,
     mediaRepository: MediaRepository,
-    resumeEpisodeId: String? = null,
-    onResumeEpisodeDerived: (String) -> Unit,
+    resumeState: EpisodeResumeState,
     categoryName: String?,
     logoUrl: String?,
     isFavorite: Boolean,
@@ -275,32 +285,7 @@ private fun EpisodeListContent(
         }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
-    val resumeSeasonNumber =
-        remember(seriesDetail, resumeEpisodeId) {
-            resumeEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
-        }
-
-    // One season visible at a time, switched via tabs or a horizontal swipe instead of an
-    // accordion — resume season wins on first load, same priority the accordion used to give it.
-    var selectedSeasonNumber by rememberSaveable(seriesDetail.id) {
-        mutableStateOf(resumeSeasonNumber ?: sortedSeasons.firstOrNull()?.seasonNumber)
-    }
-    // Set by a manual tab tap or swipe, so the auto-select effect below doesn't clobber a season
-    // the user already picked while the playback-position lookup was in flight. Seeded true when
-    // a resume season is already known, for the same reason the accordion seeded it.
-    //
-    // Saveable, not plain remember: navigating to the player disposes this composable, and
-    // finalizeSession's position-save write runs on IO fire-and-forget — it isn't awaited before
-    // the back navigation completes. If this screen's recomposition and its watch-history read
-    // (the LaunchedEffect below) win that race, the just-played episode isn't in the DB yet, the
-    // "next unwatched" guess falls back to season 1, and — with a plain remember — this flag had
-    // already forgotten the user picked another season by that same disposal, so nothing blocked
-    // the wrong guess from sticking. Saveable closes that gap: the fact "the user manually chose
-    // a season this session" now survives the same disposal the race happens across, independent
-    // of which side of the race wins. Mirrors TV's EpisodeSelectionScreen.
-    var hasManuallySelectedSeason by rememberSaveable(seriesDetail.id) { mutableStateOf(resumeSeasonNumber != null) }
-
-    val currentSeasonIndex = sortedSeasons.indexOfFirst { it.seasonNumber == selectedSeasonNumber }
+    val currentSeasonIndex = sortedSeasons.indexOfFirst { it.seasonNumber == resumeState.selectedSeason }
     val previousSeason = if (currentSeasonIndex > 0) sortedSeasons[currentSeasonIndex - 1] else null
     val nextSeason =
         if (currentSeasonIndex in sortedSeasons.indices && currentSeasonIndex < sortedSeasons.lastIndex) {
@@ -314,10 +299,10 @@ private fun EpisodeListContent(
     // Scroll to the resume episode, but only when it's actually the reason this season is
     // selected — a manual tab tap or swipe must never yank the list back to the resume spot (or
     // anywhere else); it stays exactly where the user left it.
-    LaunchedEffect(resumeEpisodeId) {
-        val targetId = resumeEpisodeId ?: return@LaunchedEffect
-        if (seriesDetail.seasonNumberContaining(targetId) != selectedSeasonNumber) return@LaunchedEffect
-        val seasonEpisodes = sortedEpisodesBySeason[selectedSeasonNumber?.toString()] ?: return@LaunchedEffect
+    LaunchedEffect(resumeState.resumeEpisodeId) {
+        val targetId = resumeState.resumeEpisodeId ?: return@LaunchedEffect
+        if (seriesDetail.seasonNumberContaining(targetId) != resumeState.selectedSeason) return@LaunchedEffect
+        val seasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: return@LaunchedEffect
         val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
         if (episodeIndex < 0) return@LaunchedEffect
         val headerItemCount = 1 + if (hasMultipleSeasons) 1 else 0
@@ -398,9 +383,9 @@ private fun EpisodeListContent(
             seriesDetail
                 .resumeAnchorEpisodeId(
                     sortedSeasons = sortedSeasons,
-                    lastPlayedEpisodeId = resumeEpisodeId ?: allWatched.maxByOrNull { it.value.timestamp }?.key,
+                    lastPlayedEpisodeId = resumeState.resumeEpisodeId ?: allWatched.maxByOrNull { it.value.timestamp }?.key,
                     isCompleted = { allWatched[it]?.isCompleted == true },
-                )?.also { if (it != resumeEpisodeId) onResumeEpisodeDerived(it) }
+                )?.also { resumeState.applyAnchor(episodeId = it, season = null) }
 
         if (!hasMultipleSeasons) return@LaunchedEffect
 
@@ -411,8 +396,8 @@ private fun EpisodeListContent(
                     episodesBySeason = sortedEpisodesBySeason,
                     isCompleted = { allWatched[it]?.isCompleted == true },
                 )
-        if (targetSeason != null && !hasManuallySelectedSeason) {
-            selectedSeasonNumber = targetSeason
+        if (targetSeason != null) {
+            resumeState.applyAnchor(episodeId = null, season = targetSeason)
         }
     }
 
@@ -422,8 +407,8 @@ private fun EpisodeListContent(
         }
 
     val anchorEpisode =
-        remember(flatEpisodes, resumeEpisodeId) {
-            flatEpisodes.firstOrNull { it.id == resumeEpisodeId } ?: flatEpisodes.firstOrNull()
+        remember(flatEpisodes, resumeState.resumeEpisodeId) {
+            flatEpisodes.firstOrNull { it.id == resumeState.resumeEpisodeId } ?: flatEpisodes.firstOrNull()
         }
     val anchorResumePosMs = anchorEpisode?.id?.let { episodePlaybackPositions[it] } ?: 0L
     val hasResume = anchorResumePosMs > 0L
@@ -446,11 +431,9 @@ private fun EpisodeListContent(
                         onDragStart = { dragAmount = 0f },
                         onDragEnd = {
                             if (dragAmount > EPISODE_SWIPE_THRESHOLD_PX && previousSeason != null) {
-                                hasManuallySelectedSeason = true
-                                selectedSeasonNumber = previousSeason.seasonNumber
+                                resumeState.selectSeason(previousSeason.seasonNumber)
                             } else if (dragAmount < -EPISODE_SWIPE_THRESHOLD_PX && nextSeason != null) {
-                                hasManuallySelectedSeason = true
-                                selectedSeasonNumber = nextSeason.seasonNumber
+                                resumeState.selectSeason(nextSeason.seasonNumber)
                             }
                         },
                         onHorizontalDrag = { change, delta ->
@@ -723,20 +706,17 @@ private fun EpisodeListContent(
             stickyHeader(key = "season_tabs", contentType = "header") {
                 SeasonTabs(
                     seasons = sortedSeasons,
-                    selectedSeason = selectedSeasonNumber,
-                    onSeasonSelected = {
-                        hasManuallySelectedSeason = true
-                        selectedSeasonNumber = it
-                    },
+                    selectedSeason = resumeState.selectedSeason,
+                    onSeasonSelected = { resumeState.selectSeason(it) },
                 )
             }
         }
 
-        val currentSeasonEpisodes = sortedEpisodesBySeason[selectedSeasonNumber?.toString()] ?: emptyList()
+        val currentSeasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: emptyList()
         items(currentSeasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
             EpisodeCard(
                 episode = episode,
-                isContinueWatching = episode.id == resumeEpisodeId,
+                isContinueWatching = episode.id == resumeState.resumeEpisodeId,
                 watchProgress = episodeProgress[episode.id] ?: 0f,
                 isWatched = episode.id in watchedEpisodeIds,
                 onClick = {
