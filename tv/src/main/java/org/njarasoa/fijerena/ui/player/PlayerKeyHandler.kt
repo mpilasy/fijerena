@@ -39,6 +39,11 @@ fun handlePlayerKeyEvent(
 
     return when (keyEvent.key) {
         Key.DirectionCenter, Key.Enter -> {
+            // Let D-pad OK activate whatever's focused inside an open modal (e.g. select a
+            // channel in the category/last-watched overlay) instead of revealing the OSD —
+            // mirrors the isModalOpen guard on Up/Down/Left/Right below.
+            if (state.isModalOpen) return false
+
             val now = System.currentTimeMillis()
             val isDoubleClick = now - state.lastOkClickTime < 350L
             state.lastOkClickTime = now
