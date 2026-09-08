@@ -2,6 +2,8 @@ package org.njarasoa.fijerena.feature.episode
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -19,6 +21,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
@@ -125,5 +129,69 @@ class EpisodeSelectionScreenTest {
         val continueWatchingLabel = context.getString(R.string.series_continue_watching_badge)
         composeTestRule.onNodeWithText(continueWatchingLabel).assertExists()
         composeTestRule.onNodeWithText("S2 Episode 2").assertExists()
+    }
+
+    /**
+     * Regression test for the streamSwitchSignal fix (commit adjacent to this one): switching to
+     * an alternate stream source intentionally moves focus off Play/the resume card and onto the
+     * stream-name row, and that must survive the same nav-disposal round trip as the resume
+     * anchor above — a plain `remember` forgot the switch across it and let the resumeEpisodeId
+     * effect steal focus back to Play the moment the composable was restored.
+     */
+    @Test
+    fun alternateStreamFocusSurvivesSimulatedNavigationDisposal() {
+        val restorationTester = StateRestorationTester(composeTestRule)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val mediaRepository =
+            MediaRepository(
+                context = context,
+                providerId = 999L,
+                watchStateDao = FakeWatchStateDao(),
+                episodeDao = FakeXtreamEpisodeDao(),
+            )
+        val alternate = MediaItem(id = "alt-1", name = "Alt Stream", mediaType = MediaType.SERIES, categoryId = "cat1")
+
+        restorationTester.setContent {
+            EpisodeListContent(
+                seriesDetail = seriesDetail,
+                relatedTitles = RelatedTitles(),
+                tmdbTitle = null,
+                logoUrl = null,
+                alternateStreams = listOf(alternate),
+                seriesName = "Test Series",
+                categoryId = "cat1",
+                mediaRepository = mediaRepository,
+                initialEpisodeId = null,
+                isFavorite = false,
+                categoryName = null,
+                isRefreshing = false,
+                onToggleFavorite = {},
+                onEpisodeSelected = { _, _, _, _ -> },
+                onCategorySelected = {},
+                onRefresh = {},
+                onBack = {},
+                onRelatedTitleSelected = {},
+                onAlternateStreamSelected = {},
+            )
+        }
+
+        // Open the stream-name dropdown and pick the alternate — same interaction as switching
+        // sources on a real device. Plain Modifier.clickable, so a raw touch tap (performClick)
+        // is enough, same as the season tab above.
+        composeTestRule.onNodeWithTag("stream_name_picker").performClick()
+        composeTestRule.onNodeWithText(alternate.name).performClick()
+
+        // The switch claims focus for the stream-name row, not Play — that's the whole point of
+        // streamSwitchSignal.
+        composeTestRule.onNodeWithTag("stream_name_picker").assertIsFocused()
+
+        // Simulates exactly what navigating to the player and coming back does: this composable
+        // disposed, then recomposed fresh from the same saved-state registry.
+        restorationTester.emulateSavedInstanceStateRestore()
+
+        // Bug behavior: streamSwitchSignal reset to 0, so the resumeEpisodeId effect saw "no
+        // switch happened" and stole focus back to Play.
+        composeTestRule.onNodeWithTag("stream_name_picker").assertIsFocused()
+        composeTestRule.onNodeWithTag("hero_play_button").assertIsNotFocused()
     }
 }
