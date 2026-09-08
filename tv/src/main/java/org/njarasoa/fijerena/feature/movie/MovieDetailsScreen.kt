@@ -48,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -247,7 +248,11 @@ private fun MovieDetailsContent(
     // first post-switch resumePositionMs change would leave a later one (e.g. a slow network
     // fetch resolving after a fast cache draw) free to steal focus back to Play. See the same
     // fix on EpisodeSelectionScreen's stream picker for the case that actually double-fires.
-    var streamSwitchSignal by remember { mutableStateOf(0) }
+    // rememberSaveable, not remember: this composable is disposed when Play navigates to the
+    // player and recomposed fresh on return, same as EpisodeSelectionScreen's identical signal —
+    // a plain remember forgot the switch across that trip and stole focus back to Play. See
+    // docs/plans/episode-selection-fragility-plan.md.
+    var streamSwitchSignal by rememberSaveable { mutableStateOf(0) }
 
     // Request focus on Play/Resume button when screen loads or resume data arrives — unless the
     // user has switched to an alternate stream at some point on this screen, in which case focus
