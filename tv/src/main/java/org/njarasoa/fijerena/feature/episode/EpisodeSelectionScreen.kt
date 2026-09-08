@@ -369,7 +369,11 @@ internal fun EpisodeListContent(
     // screen more than once for a single switch (and the network leg can take seconds, per
     // loadSeriesDetail's comment on the Law & Order case), so a single-shot flag consumed by the
     // first of those firings left the later one free to steal focus back to Play.
-    var streamSwitchSignal by remember { mutableStateOf(0) }
+    // rememberSaveable, not remember: this composable is disposed when Play navigates to the
+    // player and recomposed fresh on return, same disposal that hit resumeState above — a plain
+    // remember forgot the switch across that trip and stole focus back to Play/the resume card.
+    // See docs/plans/episode-selection-fragility-plan.md.
+    var streamSwitchSignal by rememberSaveable { mutableStateOf(0) }
 
     // D-pad focus target for the resume episode card — requested below once it's on screen, so
     // OK is immediately playable without the user having to navigate to it first.
