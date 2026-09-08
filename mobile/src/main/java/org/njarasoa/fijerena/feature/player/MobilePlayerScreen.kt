@@ -161,11 +161,6 @@ fun MobilePlayerContent(
     loaderViewModel: StreamLoaderViewModel,
     contentType: String,
     onBack: () -> Unit,
-    // When provided (by MobileCategoryListScreen, as a movableContentOf node), rendered instead
-    // of a fresh EmbeddedPlayerSurface — keeps the same underlying Android View/Surface alive
-    // across the dock<->full-screen promotion instead of swapping to a new one. Null for the
-    // standalone (MobilePlayerScreen) route, which has no dock to persist a surface from.
-    videoSurface: (@Composable () -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -523,13 +518,12 @@ fun MobilePlayerContent(
                             }
                         ),
             ) {
-                // Video surface — shared implementation with TV's full-screen/preview surfaces
-                // (core/ui/.../EmbeddedPlayerSurface.kt), bound to the same StreamingPlaybackService.
-                if (videoSurface != null) {
-                    videoSurface()
-                } else {
-                    EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
-                }
+                // SurfaceView (EmbeddedPlayerSurface's default), always — full-screen playback is
+                // composited independently of the UI thread by SurfaceFlinger, so OSD/flyout
+                // recomposition here never steals frames from the video. See
+                // MobileCategoryListScreen's videoSurface comment for why the dock needs the
+                // opposite (TextureView).
+                EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
 
                 // Reset PiP auto-enter when leaving the full-screen player. Finalizing the
                 // session and stopping playback is NOT done here — this composable is shared
