@@ -77,11 +77,6 @@ fun PlayerScreen(
     categoryStreams: ImmutableMediaList = ImmutableMediaList(),
     recentStreams: ImmutableMediaList = ImmutableMediaList(),
     onStreamSelected: ((MediaItem) -> Unit)? = null,
-    // When provided (by LiveTvSplitLayout, as a movableContentOf node), rendered instead of a
-    // fresh EmbeddedPlayerSurface — keeps the same underlying Android View/Surface alive across
-    // the preview<->full-screen promotion instead of swapping to a new one. Null for the
-    // standalone (TvPlayerScreen) route, which has no preview to persist a surface from.
-    videoSurface: (@Composable () -> Unit)? = null,
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
@@ -177,13 +172,11 @@ fun PlayerScreen(
                     )
                 },
     ) {
-        // Shared surface bound to the single playback engine (also used by the embedded
-        // Live TV preview pane / mobile dock).
-        if (videoSurface != null) {
-            videoSurface()
-        } else {
-            EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
-        }
+        // SurfaceView (EmbeddedPlayerSurface's default), always — full-screen playback is
+        // composited independently of the UI thread by SurfaceFlinger, so OSD/flyout
+        // recomposition here never steals frames from the video. See LiveTvSplitLayout's
+        // videoSurface comment for why the preview pane needs the opposite (TextureView).
+        EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
 
         // Loading/Error overlays (always show, except Idle which is handled silently)
         Box(

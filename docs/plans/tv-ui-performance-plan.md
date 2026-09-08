@@ -733,9 +733,19 @@ a WAL the size of the data.
   `RenderEffect` allocated inside the `graphicsLayer {}` lambda on every redraw, where
   `AmbientBackdrop.kt:100-125` correctly hoists its own) — but it only costs anything on the
   **Sony BRAVIA (API 31)**. Fix it when touching that file; it is not a Shield item.
-- **`TextureView` for the Live TV promoted player** (`LiveTvSplitLayout.kt:295`). GPU p90 is 3ms —
-  compositing is not the constraint. Do not touch this; the ANR it guards against is documented and
-  the saving is unmeasurable here.
+- ~~**`TextureView` for the Live TV promoted player**~~ — **reverted 2026-09-05.** This baseline was
+  measured 2026-08-26, before `d90b1dfe` (2026-08-29) added per-row shimmer placeholders
+  (`CinemaThumbnail`/`ShimmerPlaceholder`, continuous `rememberInfiniteTransition` per loading
+  thumbnail) to the category/recent flyouts rendered on top of the promoted player. That load
+  wasn't present when GPU p90 was measured at 3ms, and once it landed, TextureView's UI-thread
+  compositing turned every OSD/flyout interaction into visible stutter or a dropped frame on Live
+  TV (never on VOD, which already used the default SurfaceView). The promoted player now gets its
+  own SurfaceView-backed surface instead of sharing the preview pane's TextureView node
+  (`LiveTvSplitLayout.kt`) — the preview itself keeps TextureView, since the ANR it guards against
+  (SurfaceView next to a scrolling/recomposing list) is unrelated to this and still real. Tradeoff:
+  promote/demote now does a real detach/reattach, a one-frame glitch at that instant, in exchange
+  for no more continuous jank for the rest of the session. Mobile had the identical pattern
+  (`MobileCategoryListScreen.kt`'s dock, `MobilePlayerContent`) and got the same fix.
 - **`androidx.tv.foundation` lazy-list migration** (9 screens). Category-list focus churn measured
   2.95% jank / p99 22ms. The lists are not the problem. Leave the migration alone.
 
