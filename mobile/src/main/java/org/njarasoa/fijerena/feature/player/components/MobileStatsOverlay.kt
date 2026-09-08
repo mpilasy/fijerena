@@ -87,6 +87,7 @@ fun MobileStatsOverlay(
     var audioChannels by remember { mutableStateOf(naText) }
     var audioBitrate by remember { mutableStateOf(naText) }
 
+    var position by remember { mutableStateOf(0L) }
     var bufferedPosition by remember { mutableStateOf(0L) }
     var droppedFrames by remember { mutableStateOf(0L) }
     var networkSpeed by remember { mutableStateOf(naText) }
@@ -146,6 +147,7 @@ fun MobileStatsOverlay(
                 if (newDroppedFrames != droppedFrames) droppedFrames = newDroppedFrames
 
                 val currentPos = p.currentPosition
+                position = currentPos
                 val buffered = p.bufferedPosition
                 val newBufferHealth =
                     if (buffered > currentPos) {
@@ -276,12 +278,10 @@ fun MobileStatsOverlay(
         }
     }
 
-    val position =
-        when (playbackState) {
-            is PlaybackState.Playing -> playbackState.position
-            is PlaybackState.Paused -> playbackState.position
-            else -> 0L
-        }
+    // position above is live-polled by the LaunchedEffect ticker, not read off playbackState:
+    // PlaybackState.Playing.position is only a snapshot taken when that object was last
+    // (re)created — on a real ExoPlayer state transition — so during smooth, uninterrupted
+    // playback it never changes and this stat looked frozen despite playback actually advancing.
     val duration =
         when (playbackState) {
             is PlaybackState.Playing -> playbackState.duration
