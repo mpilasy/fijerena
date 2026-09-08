@@ -808,7 +808,7 @@ internal fun EpisodeListContent(
                                                     }
                                                 },
                                                 text = resumeButtonText,
-                                                modifier = Modifier.focusRequester(playButtonFocusRequester),
+                                                modifier = Modifier.testTag("hero_play_button").focusRequester(playButtonFocusRequester),
                                             )
                                             CinemaSecondaryButton(
                                                 onClick = {
@@ -838,7 +838,7 @@ internal fun EpisodeListContent(
                                                     }
                                                 },
                                                 text = playButtonText,
-                                                modifier = Modifier.focusRequester(playButtonFocusRequester),
+                                                modifier = Modifier.testTag("hero_play_button").focusRequester(playButtonFocusRequester),
                                             )
                                         }
                                         seriesDetail.metadata.trailerUrl?.let { trailer ->
@@ -1099,6 +1099,7 @@ private fun StreamNamePicker(
             verticalAlignment = Alignment.CenterVertically,
             modifier =
                 Modifier
+                    .testTag("stream_name_picker")
                     .background(
                         color = if (isFocused) CinemaAccent.copy(alpha = CinemaAlpha.tint) else Color.Transparent,
                         shape = RoundedCornerShape(CornerRadius.medium),
