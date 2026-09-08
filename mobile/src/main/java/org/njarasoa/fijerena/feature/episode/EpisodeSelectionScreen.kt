@@ -288,7 +288,17 @@ private fun EpisodeListContent(
     // Set by a manual tab tap or swipe, so the auto-select effect below doesn't clobber a season
     // the user already picked while the playback-position lookup was in flight. Seeded true when
     // a resume season is already known, for the same reason the accordion seeded it.
-    var hasManuallySelectedSeason by remember(seriesDetail.id) { mutableStateOf(resumeSeasonNumber != null) }
+    //
+    // Saveable, not plain remember: navigating to the player disposes this composable, and
+    // finalizeSession's position-save write runs on IO fire-and-forget — it isn't awaited before
+    // the back navigation completes. If this screen's recomposition and its watch-history read
+    // (the LaunchedEffect below) win that race, the just-played episode isn't in the DB yet, the
+    // "next unwatched" guess falls back to season 1, and — with a plain remember — this flag had
+    // already forgotten the user picked another season by that same disposal, so nothing blocked
+    // the wrong guess from sticking. Saveable closes that gap: the fact "the user manually chose
+    // a season this session" now survives the same disposal the race happens across, independent
+    // of which side of the race wins. Mirrors TV's EpisodeSelectionScreen.
+    var hasManuallySelectedSeason by rememberSaveable(seriesDetail.id) { mutableStateOf(resumeSeasonNumber != null) }
 
     val currentSeasonIndex = sortedSeasons.indexOfFirst { it.seasonNumber == selectedSeasonNumber }
     val previousSeason = if (currentSeasonIndex > 0) sortedSeasons[currentSeasonIndex - 1] else null
