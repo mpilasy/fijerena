@@ -326,43 +326,23 @@ internal fun EpisodeListContent(
         }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
-    // Episode to come back to: the route's Continue Watching argument at first, then whichever
-    // episode was last sent to the player from here. Saveable, because navigating to the player
-    // disposes this composable — a plain remember would drop it and land the user back on
-    // season 1 at the top of the list.
-    var resumeEpisodeId by rememberSaveable { mutableStateOf(initialEpisodeId) }
+    // Episode/season this screen is anchored on, and whether that season was the user's own
+    // pick — see EpisodeResumeState.kt. One season visible at a time, switched via tabs (D-pad
+    // left/right moves focus between them, which selects immediately — see SeasonTab below)
+    // instead of an accordion; resume season wins on first load, same priority the accordion
+    // used to give it.
+    val initialResumeSeason = initialEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
+    val resumeState =
+        rememberEpisodeResumeState(
+            seriesId = seriesDetail.id,
+            initialEpisodeId = initialEpisodeId,
+            initialSeason = initialResumeSeason ?: sortedSeasons.firstOrNull()?.seasonNumber,
+            // Only a real resume season counts as "manual" — not the plain "first season"
+            // fallback used when there's no resume episode at all.
+            initialManualSeason = initialResumeSeason != null,
+        )
 
-    // Season containing the resume episode, if any — takes priority over both the
-    // "first season" and "next unwatched" defaults below, so backing out of its detail panel
-    // (or out of the player) lands on that season expanded, everything else collapsed.
-    val resumeSeasonNumber =
-        remember(seriesDetail, resumeEpisodeId) {
-            resumeEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
-        }
-
-    // One season visible at a time, switched via tabs (D-pad left/right moves focus between
-    // them, which selects immediately — see SeasonTab below) instead of an accordion. Resume
-    // season wins on first load, same priority the accordion used to give it.
-    var selectedSeasonNumber by rememberSaveable(seriesDetail.id) {
-        mutableStateOf(resumeSeasonNumber ?: sortedSeasons.firstOrNull()?.seasonNumber)
-    }
-    // Set by a manual tab focus/click, so the auto-select effect below doesn't clobber a season
-    // the user already picked while the playback-position lookup was in flight. Also seeded true
-    // when a resume season is already known, so the "next unwatched" guess below never overrides
-    // the season the user actually asked to resume.
-    //
-    // Saveable, not plain remember: navigating to the player disposes this composable, and
-    // finalizeSession's position-save write (StreamLoaderViewModel.stopPlayback) runs on IO
-    // fire-and-forget — it isn't awaited before the back navigation completes. If this screen's
-    // recomposition and its watch-history read (the LaunchedEffect below) win that race, the
-    // just-played episode isn't in the DB yet, the "next unwatched" guess falls back to season
-    // 1, and — with a plain remember — this flag had already forgotten the user picked season 3
-    // by that same disposal, so nothing blocked the wrong guess from sticking. Saveable closes
-    // that gap: the fact "the user manually chose a season this session" now survives the same
-    // disposal the race happens across, independent of which side of the race wins.
-    var hasManuallySelectedSeason by rememberSaveable(seriesDetail.id) { mutableStateOf(resumeSeasonNumber != null) }
-
-    val currentSeasonIndex = sortedSeasons.indexOfFirst { it.seasonNumber == selectedSeasonNumber }
+    val currentSeasonIndex = sortedSeasons.indexOfFirst { it.seasonNumber == resumeState.selectedSeason }
     val previousSeason = if (currentSeasonIndex > 0) sortedSeasons[currentSeasonIndex - 1] else null
     val nextSeason =
         if (currentSeasonIndex in sortedSeasons.indices && currentSeasonIndex < sortedSeasons.lastIndex) {
@@ -416,7 +396,7 @@ internal fun EpisodeListContent(
     // as streamSwitchSignal above.
     var seasonSwitchedFromEpisodeList by remember { mutableStateOf(false) }
 
-    LaunchedEffect(selectedSeasonNumber) {
+    LaunchedEffect(resumeState.selectedSeason) {
         if (!seasonSwitchedFromEpisodeList) return@LaunchedEffect
         seasonSwitchedFromEpisodeList = false
         firstEpisodeFocusRequester.requestFocus()
@@ -426,10 +406,10 @@ internal fun EpisodeListContent(
     // to scroll to find it — but only when it's actually the reason this season is selected. A
     // manual tab focus/click must never yank the list back to the resume spot (or anywhere
     // else); it stays exactly where the user left it.
-    LaunchedEffect(resumeEpisodeId) {
-        val targetId = resumeEpisodeId ?: return@LaunchedEffect
-        if (seriesDetail.seasonNumberContaining(targetId) != selectedSeasonNumber) return@LaunchedEffect
-        val seasonEpisodes = sortedEpisodesBySeason[selectedSeasonNumber?.toString()] ?: return@LaunchedEffect
+    LaunchedEffect(resumeState.resumeEpisodeId) {
+        val targetId = resumeState.resumeEpisodeId ?: return@LaunchedEffect
+        if (seriesDetail.seasonNumberContaining(targetId) != resumeState.selectedSeason) return@LaunchedEffect
+        val seasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: return@LaunchedEffect
         val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
         if (episodeIndex < 0) return@LaunchedEffect
         val headerItemCount = 1 + if (hasMultipleSeasons) 1 else 0
@@ -521,23 +501,23 @@ internal fun EpisodeListContent(
         seriesDetail
             .resumeAnchorEpisodeId(
                 sortedSeasons = sortedSeasons,
-                lastPlayedEpisodeId = resumeEpisodeId ?: allWatched.maxByOrNull { it.value.timestamp }?.key,
+                lastPlayedEpisodeId = resumeState.resumeEpisodeId ?: allWatched.maxByOrNull { it.value.timestamp }?.key,
                 isCompleted = { allWatched[it]?.isCompleted == true },
-            )?.let { resumeEpisodeId = it }
+            )?.let { resumeState.applyAnchor(episodeId = it, season = null) }
 
         if (!hasMultipleSeasons) return@LaunchedEffect
 
         // The derived anchor's season beats the "first season with anything unwatched" guess:
         // a viewer mid-season 13 doesn't want season 1 opened because they skipped an episode.
         val targetSeason =
-            resumeEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
+            resumeState.resumeEpisodeId?.let { seriesDetail.seasonNumberContaining(it) }
                 ?: firstSeasonWithUnwatchedEpisode(
                     sortedSeasons = sortedSeasons,
                     episodesBySeason = sortedEpisodesBySeason,
                     isCompleted = { allWatched[it]?.isCompleted == true },
                 )
-        if (targetSeason != null && !hasManuallySelectedSeason) {
-            selectedSeasonNumber = targetSeason
+        if (targetSeason != null) {
+            resumeState.applyAnchor(episodeId = null, season = targetSeason)
         }
     }
 
@@ -548,8 +528,8 @@ internal fun EpisodeListContent(
         }
 
     val anchorEpisode =
-        remember(flatEpisodes, resumeEpisodeId) {
-            flatEpisodes.firstOrNull { it.id == resumeEpisodeId } ?: flatEpisodes.firstOrNull()
+        remember(flatEpisodes, resumeState.resumeEpisodeId) {
+            flatEpisodes.firstOrNull { it.id == resumeState.resumeEpisodeId } ?: flatEpisodes.firstOrNull()
         }
     val anchorResumePosMs = anchorEpisode?.id?.let { episodePlaybackPositions[it] } ?: 0L
     val hasResume = anchorResumePosMs > 0L
@@ -570,10 +550,10 @@ internal fun EpisodeListContent(
     // selectedSeasonNumber back to season 1 — the bug behind "back from a random season lands
     // on season 1 episode 1". Focusing the resume card instead targets the item the list is
     // actually resting on, so nothing scrolls it away out from under the claim.
-    LaunchedEffect(resumeEpisodeId) {
+    LaunchedEffect(resumeState.resumeEpisodeId) {
         if (streamSwitchSignal == 0) {
             try {
-                if (resumeEpisodeId != null) {
+                if (resumeState.resumeEpisodeId != null) {
                     resumeCardFocusRequester.requestFocus()
                 } else {
                     playButtonFocusRequester.requestFocus()
@@ -621,7 +601,7 @@ internal fun EpisodeListContent(
                 nextEpisode = nextEpisode,
                 onNavigate = { next -> selectedEpisode = next },
                 onPlay = { episodeId, episodeTitle, extension, startFromBeginning ->
-                    resumeEpisodeId = episodeId
+                    resumeState.setResumeEpisode(episodeId, season = null)
                     onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
                 },
                 onBack = { selectedEpisode = null },
@@ -819,7 +799,7 @@ internal fun EpisodeListContent(
                                             CinemaPrimaryButton(
                                                 onClick = {
                                                     anchorEpisode?.let { ep ->
-                                                        resumeEpisodeId = ep.id
+                                                        resumeState.setResumeEpisode(ep.id, season = null)
                                                         onEpisodeSelected(ep.id, ep.title, ep.extension ?: "mp4", false)
                                                     }
                                                 },
@@ -829,7 +809,7 @@ internal fun EpisodeListContent(
                                             CinemaSecondaryButton(
                                                 onClick = {
                                                     anchorEpisode?.let { ep ->
-                                                        resumeEpisodeId = ep.id
+                                                        resumeState.setResumeEpisode(ep.id, season = null)
                                                         onEpisodeSelected(ep.id, ep.title, ep.extension ?: "mp4", true)
                                                     }
                                                 },
@@ -849,7 +829,7 @@ internal fun EpisodeListContent(
                                             CinemaPrimaryButton(
                                                 onClick = {
                                                     anchorEpisode?.let { ep ->
-                                                        resumeEpisodeId = ep.id
+                                                        resumeState.setResumeEpisode(ep.id, season = null)
                                                         onEpisodeSelected(ep.id, ep.title, ep.extension ?: "mp4", false)
                                                     }
                                                 },
@@ -972,22 +952,21 @@ internal fun EpisodeListContent(
                     stickyHeader(key = "season_tabs", contentType = "header") {
                         SeasonTabs(
                             seasons = sortedSeasons,
-                            selectedSeason = selectedSeasonNumber,
+                            selectedSeason = resumeState.selectedSeason,
                             onSeasonSelected = {
-                                // Guarded: focus-follow-select (see SeasonTab) fires this the
-                                // instant D-pad focus *enters* the row, landing on the already-
-                                // selected tab — a no-op season change that used to still flip
-                                // hasManuallySelectedSeason and write selectedSeasonNumber to its
-                                // own value. That write was enough to recompose this row out from
-                                // under the very focus-search transaction bringing it in, which is
-                                // why the first Up/Down into the tabs always missed them and
-                                // landed on the episode list instead. Skipping the no-op leaves
-                                // that transaction undisturbed; a real season change (left/right
-                                // to a different tab) still goes through normally.
-                                if (it != selectedSeasonNumber) {
-                                    hasManuallySelectedSeason = true
-                                    selectedSeasonNumber = it
-                                }
+                                // EpisodeResumeState.selectSeason is itself guarded to a no-op
+                                // when `it` is already selected: focus-follow-select (see
+                                // SeasonTab) fires this the instant D-pad focus *enters* the row,
+                                // landing on the already-selected tab — a no-op season change that
+                                // used to still flip hasManuallySelectedSeason and write
+                                // selectedSeasonNumber to its own value. That write was enough to
+                                // recompose this row out from under the very focus-search
+                                // transaction bringing it in, which is why the first Up/Down into
+                                // the tabs always missed them and landed on the episode list
+                                // instead. Skipping the no-op leaves that transaction undisturbed;
+                                // a real season change (left/right to a different tab) still goes
+                                // through normally.
+                                resumeState.selectSeason(it)
                             },
                             entryFocusRequester = seasonTabsFocusRequester,
                         )
@@ -1000,9 +979,9 @@ internal fun EpisodeListContent(
                     }
                 }
 
-                val currentSeasonEpisodes = sortedEpisodesBySeason[selectedSeasonNumber?.toString()] ?: emptyList()
+                val currentSeasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: emptyList()
                 itemsIndexed(currentSeasonEpisodes, key = { _, episode -> episode.id }, contentType = { _, _ -> "episode" }) { index, episode ->
-                    val isContinueWatching = episode.id == resumeEpisodeId
+                    val isContinueWatching = episode.id == resumeState.resumeEpisodeId
                     EpisodeCard(
                         episode = episode,
                         cardStyle = episodeCardStyle,
@@ -1031,9 +1010,8 @@ internal fun EpisodeListContent(
                                             Key.DirectionRight -> nextSeason
                                             else -> null
                                         } ?: return@onPreviewKeyEvent false
-                                    hasManuallySelectedSeason = true
                                     seasonSwitchedFromEpisodeList = true
-                                    selectedSeasonNumber = targetSeason.seasonNumber
+                                    resumeState.selectSeason(targetSeason.seasonNumber)
                                     true
                                 }
                             } else {
@@ -1657,10 +1635,10 @@ private fun SeasonTab(
     // Focus-follow-select, not a separate OK press: the point of a tab row is to be as immediate
     // as the mobile swipe it stands in for. Deferred to a LaunchedEffect rather than called
     // straight from onFocusChanged below: onSelected mutates state as far up as
-    // EpisodeListContent (hasManuallySelectedSeason/selectedSeasonNumber), and doing that
-    // synchronously from inside the focus-change callback risks recomposing this row out from
-    // under Compose's own focus-transfer machinery mid-transaction. A LaunchedEffect runs after
-    // that transaction settles.
+    // EpisodeListContent's EpisodeResumeState, and doing that synchronously from inside the
+    // focus-change callback risks recomposing this row out from under Compose's own
+    // focus-transfer machinery mid-transaction. A LaunchedEffect runs after that transaction
+    // settles.
     LaunchedEffect(isFocused) {
         if (isFocused) onSelected()
     }
