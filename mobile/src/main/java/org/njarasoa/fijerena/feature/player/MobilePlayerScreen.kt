@@ -676,11 +676,12 @@ fun MobilePlayerContent(
                 )
             }
 
-            // Channel/program info — also shown while the category or last-watched panel is
-            // open (above them, since both cover most of the screen) so it's never hidden.
+            // Channel/program info toast — not shown while the category or last-watched panel is
+            // open; MobileChannelListSheet already highlights the current channel, so the toast
+            // would just be redundant on top of it (mirrors TV's PlayerScreen).
             Box(modifier = Modifier.fillMaxSize()) {
                 AnimatedVisibility(
-                    visible = !isInPipMode && (showChannelToast || showCategoryOverlay || showLastWatchedOverlay),
+                    visible = !isInPipMode && showChannelToast,
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier.align(Alignment.TopCenter),
