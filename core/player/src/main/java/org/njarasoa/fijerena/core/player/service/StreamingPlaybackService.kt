@@ -496,8 +496,15 @@ class StreamingPlaybackService : MediaSessionService() {
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
         _currentMetadata.value = metadata
 
-        // Ensure we are in fast-startup mode
+        // Ensure we are in fast-startup mode and buffer profile matches stream type
         setRecycling(false)
+        val expectedContentType =
+            if (metadata.isLive) {
+                PlayerConfigFactory.ContentType.LIVE_TV
+            } else {
+                PlayerConfigFactory.ContentType.VOD
+            }
+        adaptiveLoadControl?.updateContentType(expectedContentType)
 
         // DIAGNOSTIC (temporary, see conversation): split startup latency into
         // request-init -> first-byte -> STATE_READY so a slow provider/DNS can be told
