@@ -177,6 +177,7 @@ fun MobilePlayerContent(
     val activity = context as? Activity
     val appSettings = remember { AppSettings(context.applicationContext) }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
 
     // Observe app focus/lifecycle to pause on background and stop after timeout
     DisposableEffect(lifecycleOwner) {
@@ -622,6 +623,17 @@ fun MobilePlayerContent(
                         onQuality = { showQualitySelector = true },
                         onToggleFavorite = {
                             loaderViewModel.toggleFavorite()
+                        },
+                        nextEpisode = state.nextEpisode,
+                        onPlayNextEpisode = { nextEp ->
+                            // Awaited: playNextEpisode() flips loaderViewModel's state to Loading
+                            // in its own coroutine, which races an unawaited finalizeSession()'s
+                            // position-save read of that same state — see finalizeSessionAndAwait's
+                            // kdoc / docs/plans/episode-selection-fragility-plan.md.
+                            scope.launch {
+                                finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
+                                loaderViewModel.playNextEpisode(nextEp)
+                            }
                         },
                     )
                 }

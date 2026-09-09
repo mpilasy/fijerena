@@ -130,6 +130,9 @@ import androidx.compose.material.icons.sharp.Tune
 import androidx.compose.material.icons.sharp.Tv
 import androidx.compose.material.icons.sharp.Visibility
 import androidx.compose.material.icons.sharp.VisibilityOff
+import androidx.compose.material.icons.outlined.SkipNext
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.sharp.SkipNext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -313,4 +316,7 @@ object CinemaIcons {
 
     val Replay: ImageVector
         @Composable @ReadOnlyComposable get() = pick(Icons.Rounded.Replay, Icons.Outlined.Replay, Icons.Sharp.Replay)
+
+    val SkipNext: ImageVector
+        @Composable @ReadOnlyComposable get() = pick(Icons.Rounded.SkipNext, Icons.Outlined.SkipNext, Icons.Sharp.SkipNext)
 }
