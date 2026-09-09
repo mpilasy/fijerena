@@ -79,7 +79,7 @@ Both TV and Mobile share the identical `applicationId`: `org.njarasoa.fijerena`.
 
 > [!CAUTION]
 > **Strict Deployment Rules:**
-> 1. **Preserve User Data:** Never run `adb uninstall` or clear data to resolve deployment issues. Always use `adb install -r` to preserve Room databases, user credentials, favorites, and watch state.
+> 1. **Back Up Before Installing to Real Hardware — `install -r` is NOT a guaranteed data-safe operation.** Never run `adb uninstall` or clear data to resolve deployment issues. `adb install -r` *usually* preserves Room databases, credentials, favorites, and watch state — but a signing-key mismatch (or other cause) can make it install fresh with no warning, silently wiping everything. This happened for real on 2026-09-08 across 3 household TVs with zero warning from `adb` (it reported "Success" on every device). Before installing to any real device — not an emulator — back up `shared_prefs/*` and `providers.db*` first: `adb -s <serial> exec-out "run-as org.njarasoa.fijerena tar -c -C /data/data/org.njarasoa.fijerena shared_prefs databases/providers.db databases/providers.db-wal databases/providers.db-shm" > backup.tar`. Do this every time, unprompted — user permission to deploy is not permission to skip the backup.
 > 2. **Device Detection:** Always detect device type via `getprop ro.build.characteristics` (or inspect `product:`/`model:` in `adb devices -l`) before deploying. Never assume target identity from port numbers or IPs.
 > 3. **No Auto-Launch:** Never automatically launch the app (`am start` or monkey intents) after install. Let the user launch the app manually when ready.
 
