@@ -19,9 +19,12 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
+import org.njarasoa.fijerena.core.player.domain.sortedSeasons
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -38,8 +41,10 @@ class StreamLoaderViewModel(
     private val seriesName: String? = null,
     private val startFromBeginning: Boolean = false,
 ) : ViewModel() {
-    // Nav hands these over as plain strings; typed once here so nothing below can mix them up.
-    private val episode = episodeId?.let(::EpisodeId)
+    private var currentEpisodeId: String? = episodeId
+    private var currentEpisodeExtension: String? = episodeExtension
+    private val episode: EpisodeId?
+        get() = currentEpisodeId?.let(::EpisodeId)
     private val series = seriesId?.let(::SeriesId)
 
     sealed class StreamState {
@@ -68,6 +73,8 @@ class StreamLoaderViewModel(
             // TMDB's transparent-PNG wordmark art, for the OSD title treatment. Null for Live TV,
             // until the TMDB lookup finishes, or when TMDB has no logo for this title.
             val logoUrl: String? = null,
+            // Next episode in sequence for TV shows, if one exists.
+            val nextEpisode: EpisodeItem? = null,
         ) : StreamState()
 
         data class Error(
@@ -180,8 +187,8 @@ class StreamLoaderViewModel(
                 repo.resolvePlayableStream(
                     itemId = streamId,
                     contentType = contentType,
-                    episodeId = episodeId,
-                    extension = episodeExtension,
+                    episodeId = currentEpisodeId,
+                    extension = currentEpisodeExtension,
                 )
 
             result.fold(
@@ -267,7 +274,7 @@ class StreamLoaderViewModel(
                                     itemName = streamName,
                                     contentType = contentType,
                                     episodeId = episode,
-                                    episodeExtension = episodeExtension,
+                                    episodeExtension = currentEpisodeExtension,
                                     seriesId = series,
                                     seriesName = seriesName,
                                 )
@@ -327,21 +334,30 @@ class StreamLoaderViewModel(
         var description: String? = null
         var episodeLabel: String? = null
         var logoUrl: String? = null
+        var nextEpisode: EpisodeItem? = null
         if (contentType != ContentType.LIVE_TV) {
             val currentItem = currentStreams.find { it.id == streamId }
             description = currentItem?.metadata?.plot
 
-            if (episodeId != null && contentType == ContentType.TV_SHOWS && seriesId != null) {
+            val curEpisodeId = currentEpisodeId
+            if (curEpisodeId != null && contentType == ContentType.TV_SHOWS && seriesId != null) {
                 val seriesDetailResult = repo.getSeriesDetail(SeriesId(seriesId))
                 seriesDetailResult.getOrNull()?.let { detail ->
-                    val episode = detail.episodes.values.firstNotNullOfOrNull { seasonEpisodes ->
-                        seasonEpisodes.find { it.id == episodeId }
+                    val curEp = detail.episodes.values.firstNotNullOfOrNull { seasonEpisodes ->
+                        seasonEpisodes.find { it.id == curEpisodeId }
                     }
-                    description = episode?.metadata?.plot ?: detail.metadata.plot
-                    episode?.seasonNumber?.let { season ->
-                        episodeLabel = "S$season:E${episode.episodeNumber}"
+                    description = curEp?.metadata?.plot ?: detail.metadata.plot
+                    curEp?.seasonNumber?.let { season ->
+                        episodeLabel = "S$season:E${curEp.episodeNumber}"
                     }
                     logoUrl = repo.getTmdbLogoUrl(detail.metadata.tmdbId, contentType)
+
+                    val sorted = detail.sortedSeasons { num -> context.getString(R.string.series_season_name_format, num) }
+                    val flat = detail.flattenedEpisodes(sorted)
+                    val curIdx = flat.indexOfFirst { it.id == curEpisodeId }
+                    if (curIdx >= 0 && curIdx + 1 < flat.size) {
+                        nextEpisode = flat[curIdx + 1]
+                    }
                 }
             } else if (contentType == ContentType.MOVIES) {
                 val movieDetailResult = repo.getMovieDetail(streamId)
@@ -363,6 +379,7 @@ class StreamLoaderViewModel(
                     logoUrl = logoUrl,
                     description = description,
                     episodeLabel = episodeLabel,
+                    nextEpisode = nextEpisode,
                 )
         }
     }
@@ -408,6 +425,26 @@ class StreamLoaderViewModel(
                 } else {
                     currentStreamIndex = streamList.indexOfFirst { it.id == item.id }
                 }
+            }
+    }
+
+    /**
+     * Loads the specified next episode in sequence for TV shows.
+     */
+    fun playNextEpisode(nextEpisode: EpisodeItem) {
+        currentEpisodeId = nextEpisode.id
+        currentEpisodeExtension = nextEpisode.extension
+        requestedStreamId = nextEpisode.id
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                if (mediaRepository == null) return@launch
+                _state.value = StreamState.Loading
+                loadStreamInternal(
+                    streamId = nextEpisode.id,
+                    streamName = nextEpisode.title,
+                    currentStreams = emptyList(),
+                )
             }
     }
 
@@ -503,7 +540,7 @@ class StreamLoaderViewModel(
                         itemName = currentState.streamName,
                         contentType = contentType,
                         episodeId = episode,
-                        episodeExtension = episodeExtension,
+                        episodeExtension = currentEpisodeExtension,
                         seriesId = series,
                         seriesName = seriesName,
                     )
@@ -522,7 +559,7 @@ class StreamLoaderViewModel(
                     audioTrackIndex = audioTrackIndex,
                     subtitleTrackIndex = subtitleTrackIndex,
                     episodeId = episode,
-                    episodeExtension = episodeExtension,
+                    episodeExtension = currentEpisodeExtension,
                     seriesId = series,
                     seriesName = seriesName,
                 )
@@ -593,7 +630,7 @@ class StreamLoaderViewModel(
                     itemName = currentState.streamName,
                     contentType = contentType,
                     episodeId = episode,
-                    episodeExtension = episodeExtension,
+                    episodeExtension = currentEpisodeExtension,
                     seriesId = series,
                     seriesName = seriesName,
                 )
@@ -612,7 +649,7 @@ class StreamLoaderViewModel(
                 audioTrackIndex = audioTrackIndex,
                 subtitleTrackIndex = subtitleTrackIndex,
                 episodeId = episode,
-                episodeExtension = episodeExtension,
+                episodeExtension = currentEpisodeExtension,
                 seriesId = series,
                 seriesName = seriesName,
             )

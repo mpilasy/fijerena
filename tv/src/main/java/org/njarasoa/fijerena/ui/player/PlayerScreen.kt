@@ -40,6 +40,7 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -77,6 +78,8 @@ fun PlayerScreen(
     categoryStreams: ImmutableMediaList = ImmutableMediaList(),
     recentStreams: ImmutableMediaList = ImmutableMediaList(),
     onStreamSelected: ((MediaItem) -> Unit)? = null,
+    nextEpisode: EpisodeItem? = null,
+    onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
@@ -359,6 +362,8 @@ fun PlayerScreen(
                     viewModel.seekTo(target)
                     state.scrubPositionMs = null
                 },
+                nextEpisode = nextEpisode,
+                onPlayNextEpisode = onPlayNextEpisode,
             )
         }
 

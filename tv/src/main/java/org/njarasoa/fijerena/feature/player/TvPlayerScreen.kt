@@ -285,6 +285,16 @@ private fun PlayerContent(
         onToggleFavorite = {
             loaderViewModel.toggleFavorite()
         },
+        nextEpisode = data.nextEpisode,
+        onPlayNextEpisode = { nextEp ->
+            // Awaited: playNextEpisode() flips loaderViewModel's state to Loading in its own
+            // coroutine, which races an unawaited finalizeSession()'s position-save read of that
+            // same state — same hazard as onBack above, see finalizeSessionAndAwait's kdoc.
+            scope.launch {
+                finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
+                loaderViewModel.playNextEpisode(nextEp)
+            }
+        },
     )
 }
 

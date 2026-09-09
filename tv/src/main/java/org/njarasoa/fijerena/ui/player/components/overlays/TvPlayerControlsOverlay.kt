@@ -60,6 +60,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -109,6 +110,8 @@ fun TvPlayerControlsOverlay(
     seekSpeedLabel: String? = null,
     scrubPositionMs: Long? = null,
     onCommitScrub: (Long) -> Unit = {},
+    nextEpisode: EpisodeItem? = null,
+    onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
 ) {
     val isPaused = playbackState is PlaybackState.Paused
     val isLive = metadata.isLive
@@ -740,6 +743,24 @@ fun TvPlayerControlsOverlay(
                                 ),
                         ) {
                             Icon(CinemaIcons.BarChart, stringResource(R.string.player_stats))
+                        }
+
+                        // Next episode button (only for TV show episodes when progress >= 80% and a next episode exists)
+                        val progressRatio = if (liveDuration > 0) livePosition.toFloat() / liveDuration.toFloat() else 0f
+                        val isOver80Percent = progressRatio >= 0.80f
+                        if (isOver80Percent && nextEpisode != null && onPlayNextEpisode != null) {
+                            CinemaButton(
+                                onClick = { onPlayNextEpisode(nextEpisode) },
+                                colors =
+                                    ButtonDefaults.colors(
+                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
+                                        contentColor = CinemaTextPrimary,
+                                        focusedContainerColor = CinemaTextPrimary,
+                                        focusedContentColor = CinemaBackground,
+                                    ),
+                            ) {
+                                Icon(CinemaIcons.SkipNext, stringResource(R.string.player_next_episode))
+                            }
                         }
                     }
                 }

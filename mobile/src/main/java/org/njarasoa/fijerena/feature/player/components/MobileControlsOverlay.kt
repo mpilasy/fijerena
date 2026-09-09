@@ -55,6 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -101,6 +102,8 @@ fun MobileControlsOverlay(
     onToggleFavorite: () -> Unit,
     onFastForward: (() -> Unit)? = null,
     onRewind: (() -> Unit)? = null,
+    nextEpisode: EpisodeItem? = null,
+    onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
 ) {
     // Key on metadata so track counts update when a new stream is loaded
     val audioTrackCount = remember(metadata) { viewModel.getAudioTracks().size }
@@ -542,6 +545,22 @@ fun MobileControlsOverlay(
                                 icon = {
                                     Icon(CinemaIcons.Info, stringResource(R.string.player_info), tint = CinemaTextPrimary)
                                 }
+                            )
+                        }
+
+                        // Next episode button (only for TV show episodes when progress >= 80% and a next episode exists)
+                        val progressRatio = if (liveDuration > 0) livePosition.toFloat() / liveDuration.toFloat() else 0f
+                        val isOver80Percent = progressRatio >= 0.80f
+                        if (isOver80Percent && nextEpisode != null && onPlayNextEpisode != null) {
+                            CinemaIconButton(
+                                onClick = { onPlayNextEpisode(nextEpisode) },
+                                icon = {
+                                    Icon(
+                                        CinemaIcons.SkipNext,
+                                        contentDescription = stringResource(R.string.player_next_episode),
+                                        tint = CinemaTextPrimary,
+                                    )
+                                },
                             )
                         }
                     }
