@@ -1,7 +1,7 @@
 # TV Detail Screens — Hero Layout Uplift Plan
 
 **Date:** 2026-09-02 (updated 2026-09-02: Phase 5's blocker landed, see below)
-**Status:** Planned — nothing implemented
+**Status:** Phase 1 landed 2026-09-09 (backdrop plumbing — no UI change yet). Phases 2-5 not started.
 **Scope:** TV module detail screens only (`MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt`).
 Mobile untouched. Reference: four screenshots of another client (Silo series, Silo
 episode, The Godfather, The Martian) — used as a look-and-feel target, not a spec to
@@ -49,7 +49,25 @@ onto a flat background and looks unfinished.
 
 ---
 
-## Phase 1 — Backdrop plumbing (no UI change)
+## Phase 1 — Backdrop plumbing (no UI change) — **DONE 2026-09-09**
+
+Landed as written below, with two adjustments:
+
+- **Jellyfin's `BackdropImageTags` doesn't go through `getTmdbBackdropUrl`** — that
+  method only ever receives `(tmdbId, contentType)`, no local item id, so Jellyfin
+  can't build its image URL there. Instead `SeriesDetail` gained a `backdropUrl`
+  field (same shape as the existing `coverUrl`), and each provider fills it from its
+  own data at detail-build time — Xtream from `backdrop_path`, Jellyfin from
+  `BackdropImageTags` right next to where it already sets `coverUrl`. The ViewModel
+  fallback chain (item 5 below) reads this field, not a raw provider call.
+- **Found and fixed a pre-existing bug while adding `bestBackdropUrl` next to
+  `bestLogoUrl`:** both used `maxWithOrNull(compareByDescending { ... })`, which
+  actually selects the *lowest*-voted/narrowest image — `maxWithOrNull` returns the
+  comparator's greatest element, and a descending comparator inverts what "greatest"
+  means relative to the real values. Every logo TMDB has ever served this app was the
+  worst-ranked one available. Fixed on both functions (`compareBy`, ascending, not
+  `compareByDescending`); caught by the new parsing test's assertion order, not by
+  inspection.
 
 Cheapest correct source is TMDB, because it covers movies and series uniformly and
 needs no Room migration (a VOD backdrop column would mean `XtreamDatabase` v18 + a

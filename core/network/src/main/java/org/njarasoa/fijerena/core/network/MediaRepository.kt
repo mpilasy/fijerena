@@ -510,6 +510,12 @@ class MediaRepository(
         contentType: String,
     ): String? = provider?.getTmdbLogoUrl(tmdbId, contentType)
 
+    /** See [MediaProvider.getTmdbBackdropUrl]. */
+    suspend fun getTmdbBackdropUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? = provider?.getTmdbBackdropUrl(tmdbId, contentType)
+
     /** See [MediaProvider.getAlternateStreams]. */
     suspend fun getAlternateStreams(
         itemId: String,
