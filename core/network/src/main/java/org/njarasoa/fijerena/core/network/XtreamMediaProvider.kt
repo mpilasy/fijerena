@@ -12,6 +12,7 @@ import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
 import org.njarasoa.fijerena.core.network.tmdb.TitleMatcher
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.tmdb.TmdbImagesResponse
 import org.njarasoa.fijerena.core.network.xtream.SyncDelta
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
@@ -47,6 +48,11 @@ class XtreamMediaProvider(
     // assembled result so reopening the same title doesn't repeat that work.
     private val movieDetailCache = TtlCache<String, MovieDetail>(DETAIL_CACHE_TTL_MS)
     private val seriesDetailCache = TtlCache<String, SeriesDetail>(DETAIL_CACHE_TTL_MS)
+
+    // getTmdbLogoUrl and getTmdbBackdropUrl both read `/images`, which returns both in one
+    // response — cache it so a caller that wants both (the TV detail hero) makes one network
+    // round trip instead of two.
+    private val tmdbImagesCache = TtlCache<Pair<Int, String>, TmdbImagesResponse>(DETAIL_CACHE_TTL_MS)
 
 
     override val capabilities =
@@ -628,15 +634,37 @@ class XtreamMediaProvider(
         tmdbId: String?,
         contentType: String,
     ): String? {
+        val images = getTmdbImages(tmdbId, contentType) ?: return null
+        return TmdbApiService.bestLogoUrl(images.logos)
+    }
+
+    override suspend fun getTmdbBackdropUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? {
+        val images = getTmdbImages(tmdbId, contentType) ?: return null
+        return TmdbApiService.bestBackdropUrl(images.backdrops)
+    }
+
+    /** Shared by [getTmdbLogoUrl] and [getTmdbBackdropUrl] — both read the same `/images`
+     * response, cached so asking for both costs one network round trip, not two. */
+    private suspend fun getTmdbImages(
+        tmdbId: String?,
+        contentType: String,
+    ): TmdbImagesResponse? {
         if (!tmdb.hasApiKey()) return null
         val id = tmdbId?.toIntOrNull() ?: return null
         if (contentType != ContentType.MOVIES && contentType != ContentType.TV_SHOWS) return null
 
+        val cacheKey = id to contentType
+        tmdbImagesCache.get(cacheKey)?.let { return it }
+
         return try {
             val images = if (contentType == ContentType.MOVIES) tmdb.getMovieImages(id) else tmdb.getTvImages(id)
-            TmdbApiService.bestLogoUrl(images.logos)
+            tmdbImagesCache.put(cacheKey, images)
+            images
         } catch (e: Exception) {
-            Log.w("XtreamMediaProvider", "TMDB logo for $contentType $id: ${e.message}")
+            Log.w("XtreamMediaProvider", "TMDB images for $contentType $id: ${e.message}")
             null
         }
     }

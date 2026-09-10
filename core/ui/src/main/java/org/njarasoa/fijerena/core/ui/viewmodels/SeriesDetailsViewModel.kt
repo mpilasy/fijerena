@@ -75,12 +75,17 @@ class SeriesDetailsViewModel(
     private val _logoUrl = MutableStateFlow<String?>(null)
     val logoUrl: StateFlow<String?> = _logoUrl.asStateFlow()
 
+    /** TV detail hero background: TMDB's backdrop art, falling back to the provider's own
+     * backdrop, then the poster, then no image. See docs/plans/tv-detail-hero-ui-plan.md. */
+    private val _backdropUrl = MutableStateFlow<String?>(null)
+    val backdropUrl: StateFlow<String?> = _backdropUrl.asStateFlow()
+
     private var relatedTitlesJob: Job? = null
     private var relatedTitlesTmdbId: String? = null
     private var tmdbTitleJob: Job? = null
     private var tmdbTitleTmdbId: String? = null
-    private var logoUrlJob: Job? = null
-    private var logoUrlTmdbId: String? = null
+    private var artworkJob: Job? = null
+    private var artworkTmdbId: String? = null
 
     /** Other local catalogue entries for the same TMDB id — empty when there are none. */
     private val _alternateStreams = MutableStateFlow<List<MediaItem>>(emptyList())
@@ -140,9 +145,10 @@ class SeriesDetailsViewModel(
         tmdbTitleJob?.cancel()
         tmdbTitleJob = null
         _tmdbTitle.value = null
-        logoUrlJob?.cancel()
-        logoUrlJob = null
+        artworkJob?.cancel()
+        artworkJob = null
         _logoUrl.value = null
+        _backdropUrl.value = null
         alternateStreamsJob?.cancel()
         alternateStreamsJob = null
         _alternateStreams.value = emptyList()
@@ -167,7 +173,7 @@ class SeriesDetailsViewModel(
                     )
                 loadRelatedTitles(cached)
                 loadTmdbTitle(cached)
-                loadLogoUrl(cached)
+                loadArtwork(cached)
                 loadAlternateStreams(cached)
             } else if (!isSwitch) {
                 // A stream switch never flashes Loading — the previous stream's content stays on
@@ -189,7 +195,7 @@ class SeriesDetailsViewModel(
 
                     loadRelatedTitles(detail)
                     loadTmdbTitle(detail)
-                    loadLogoUrl(detail)
+                    loadArtwork(detail)
                     loadAlternateStreams(detail)
                 },
                 // A failed refresh must not blank a screen already drawn from the cache — the
@@ -242,18 +248,26 @@ class SeriesDetailsViewModel(
     /**
      * As [loadRelatedTitles]: the cached detail draws first and the fetched one follows with the
      * same TMDB id, so fetch only for the first of them.
+     *
+     * Sets both [logoUrl] and [backdropUrl] from one job: `getTmdbLogoUrl` and
+     * `getTmdbBackdropUrl` read the same TMDB `/images` response (cached in the provider), so
+     * fetching them back to back here costs one network round trip, not two. The backdrop falls
+     * back to the provider's own backdrop, then the poster, when TMDB has none — see
+     * docs/plans/tv-detail-hero-ui-plan.md.
      */
-    private fun loadLogoUrl(detail: SeriesDetail) {
+    private fun loadArtwork(detail: SeriesDetail) {
         val tmdbId = detail.metadata.tmdbId
-        if (logoUrlJob != null && tmdbId == logoUrlTmdbId) return
-        logoUrlJob?.cancel()
-        logoUrlTmdbId = tmdbId
-        logoUrlJob =
+        if (artworkJob != null && tmdbId == artworkTmdbId) return
+        artworkJob?.cancel()
+        artworkTmdbId = tmdbId
+        artworkJob =
             viewModelScope.launch(Dispatchers.IO) {
-                _logoUrl.value =
-                    runCatching {
-                        ensureRepo().getTmdbLogoUrl(tmdbId, "TV_SHOWS")
-                    }.getOrNull()
+                val repo = ensureRepo()
+                _logoUrl.value = runCatching { repo.getTmdbLogoUrl(tmdbId, "TV_SHOWS") }.getOrNull()
+                _backdropUrl.value =
+                    runCatching { repo.getTmdbBackdropUrl(tmdbId, "TV_SHOWS") }.getOrNull()
+                        ?: detail.backdropUrl
+                        ?: detail.coverUrl
             }
     }
 
