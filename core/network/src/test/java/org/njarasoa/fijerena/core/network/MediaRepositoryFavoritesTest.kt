@@ -156,15 +156,29 @@ class MediaRepositoryFavoritesTest {
         }
 
     @Test
-    fun `newest favorite is listed first`() =
+    fun `favorites are listed sorted by name, not insertion order`() =
         runBlocking {
-            repository.addFavorite("old", "Old", "cat1", ContentType.MOVIES)
-            repository.addFavorite("new", "New", "cat1", ContentType.MOVIES)
+            repository.addFavorite("z", "Zebra", "cat1", ContentType.MOVIES)
+            repository.addFavorite("a", "apple", "cat1", ContentType.MOVIES)
+            repository.addFavorite("m", "Mango", "cat1", ContentType.MOVIES)
             repository.awaitPendingWrites()
 
             assertEquals(
-                listOf("new", "old"),
+                listOf("a", "m", "z"),
                 repository.getFavoritesForContentType(ContentType.MOVIES).map { it.id },
+            )
+        }
+
+    @Test
+    fun `favorite categories are listed sorted by name, not insertion order`() =
+        runBlocking {
+            repository.addFavoriteCategory("z", "Zebra Category", ContentType.MOVIES)
+            repository.addFavoriteCategory("a", "apple Category", ContentType.MOVIES)
+            repository.awaitPendingWrites()
+
+            assertEquals(
+                listOf("a", "z"),
+                repository.getFavoriteCategoriesForContentType(ContentType.MOVIES).map { it.id },
             )
         }
 
