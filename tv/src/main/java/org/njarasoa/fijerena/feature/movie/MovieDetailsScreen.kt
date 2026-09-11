@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -80,11 +79,7 @@ import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.RatingBadge
-import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
-import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
+import org.njarasoa.fijerena.core.ui.components.ScoreChip
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -96,6 +91,7 @@ import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
+import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -142,6 +138,7 @@ fun MovieDetailsScreen(
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
+    val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
 
     // Provide UI scale for all child composables
@@ -162,6 +159,7 @@ fun MovieDetailsScreen(
                     relatedTitles = relatedTitles,
                     tmdbTitle = tmdbTitle,
                     logoUrl = logoUrl,
+                    backdropUrl = backdropUrl,
                     alternateStreams = alternateStreams,
                     movieId = state.movieDetail.id,
                     movieName = state.streamName,
@@ -190,6 +188,7 @@ private fun MovieDetailsContent(
     relatedTitles: RelatedTitles,
     tmdbTitle: String?,
     logoUrl: String?,
+    backdropUrl: String?,
     alternateStreams: List<MediaItem>,
     movieId: String,
     movieName: String,
@@ -220,14 +219,13 @@ private fun MovieDetailsContent(
     val extension = movieDetail.extension ?: "mp4"
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
+    // Only the leftover "diagnostics" block below the hero (provider name, stream picker,
+    // TMDB id, cast, director) still needs its own styles — the hero draws its own text
+    // directly off MaterialTheme.typography, matching TvDetailHero's contract.
     val scaledStyles =
         remember(scale, typography) {
             object {
-                val displaySmall = typography.displaySmall.copy(fontSize = typography.displaySmall.fontSize.scaled(scale))
                 val titleSmall = typography.titleSmall.copy(fontSize = typography.titleSmall.fontSize.scaled(scale))
-                val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-                val bodyMedium = typography.bodyMedium.copy(fontSize = typography.bodyMedium.fontSize.scaled(scale))
-                val bodyLarge = typography.bodyLarge.copy(fontSize = typography.bodyLarge.fontSize.scaled(scale))
                 val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
             }
         }
@@ -326,406 +324,321 @@ private fun MovieDetailsContent(
                 false
             }
         },
-        contentPadding =
-            PaddingValues(
-                horizontal = Spacing.tvSafeMarginHorizontal,
-                vertical = Spacing.tvSafeMarginVertical,
-            ),
+        // No horizontal margin here: the hero backdrop below must run edge to edge. Every other
+        // item applies Spacing.tvSafeMarginHorizontal to itself instead (see "details" below).
+        contentPadding = PaddingValues(bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
     ) {
-        // Header with back button
-        item(key = "header") {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-                ) {
-                    // TMDB's branded logo art when it has one, else TMDB's original title
-                    // falling back to the provider's own stream name (when TMDB has no match,
-                    // or the lookup hasn't come back yet).
-                    val titleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
-                    TitleLogoOrText(
-                        contentDescription = titleText,
-                        logoUrl = logoUrl,
-                        logoHeight = TvDimensions.osdLogoHeight.scaled(scale),
-                    ) {
-                        Text(
-                            text = titleText,
-                            style = scaledStyles.displaySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                    // Favorite button
+        item(key = "hero") {
+            // TMDB's branded logo art when it has one, else TMDB's original title falling back
+            // to the provider's own stream name (when TMDB has no match, or the lookup hasn't
+            // come back yet).
+            val titleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
+            val year = extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
+            val endsAtContext = LocalContext.current
+            val endsAtText =
+                remember(movieDetail.metadata.duration, resumePositionMs) {
+                    computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
+                }
+            val metaLine =
+                listOfNotNull(
+                    year?.toString(),
+                    movieDetail.metadata.contentRating,
+                    movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { formatDuration(it) },
+                    endsAtText?.let { stringResource(R.string.movie_ends_at_format, it) },
+                    movieDetail.metadata.genre,
+                )
+            val communityRatingLabel = stringResource(R.string.details_community_rating)
+            val hasResume = resumePositionMs > 0L
+
+            TvDetailHero(
+                title = titleText,
+                backdropUrl = backdropUrl,
+                logoUrl = logoUrl,
+                titleFallback = {
+                    Text(
+                        text = titleText,
+                        style = MaterialTheme.typography.displayLarge,
+                        color = CinemaTextPrimary,
+                    )
+                },
+                metaLine = metaLine,
+                scoreChips =
+                    movieDetail.metadata.rating?.let { rating ->
+                        { ScoreChip(value = formatRating(rating), label = communityRatingLabel) }
+                    },
+                plot = movieDetail.metadata.plot,
+            ) {
+                if (hasResume) {
+                    val resumeTimeText = formatTime(resumePositionMs)
+                    CinemaPrimaryButton(
+                        onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
+                        text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
+                        modifier = Modifier.focusRequester(playButtonFocusRequester),
+                    )
                     CinemaIconButton(
-                        onClick = onToggleFavorite,
+                        onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true) },
                         icon = {
                             Icon(
-                                imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
-                                tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                                imageVector = CinemaIcons.Replay,
+                                contentDescription = stringResource(R.string.movie_start_beginning),
+                                tint = CinemaTextPrimary,
                                 modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             )
-                        }
-                    )
-                    // Watched button (Phase 6, docs/plans/watch-state-durable-storage-plan.md)
-                    CinemaIconButton(
-                        onClick = onToggleWatched,
-                        icon = {
-                            Icon(
-                                imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                                contentDescription = if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
-                                tint = if (isWatched) CinemaAccent else CinemaTextPrimary,
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        }
-                    )
-                    // Refresh button
-                    CinemaIconButton(
-                        onClick = {
-                            refreshScope.launch {
-                                isRefreshing = true
-                                onRefresh()
-                                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
-                                isRefreshing = false
-                            }
                         },
-                        enabled = !isRefreshing,
+                    )
+                } else {
+                    CinemaPrimaryButton(
+                        onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
+                        text = stringResource(R.string.movie_play_action),
+                        modifier = Modifier.focusRequester(playButtonFocusRequester),
+                    )
+                }
+                CinemaIconButton(
+                    onClick = onToggleFavorite,
+                    icon = {
+                        Icon(
+                            imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                            contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
+                            tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                        )
+                    },
+                )
+                // Watched button (Phase 6, docs/plans/watch-state-durable-storage-plan.md)
+                CinemaIconButton(
+                    onClick = onToggleWatched,
+                    icon = {
+                        Icon(
+                            imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                            contentDescription = if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
+                            tint = if (isWatched) CinemaAccent else CinemaTextPrimary,
+                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                        )
+                    },
+                )
+                CinemaIconButton(
+                    onClick = {
+                        refreshScope.launch {
+                            isRefreshing = true
+                            onRefresh()
+                            kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
+                            isRefreshing = false
+                        }
+                    },
+                    enabled = !isRefreshing,
+                    icon = {
+                        Icon(
+                            imageVector = CinemaIcons.Refresh,
+                            contentDescription = stringResource(R.string.movie_refresh_info),
+                            modifier =
+                                Modifier
+                                    .size(TvDimensions.iconSmall.scaled(scale))
+                                    .rotate(rotation),
+                        )
+                    },
+                )
+                movieDetail.metadata.trailerUrl?.let { trailer ->
+                    val trailerContext = LocalContext.current
+                    CinemaIconButton(
+                        onClick = { openExternalUrl(trailerContext, trailer) },
                         icon = {
                             Icon(
-                                imageVector = CinemaIcons.Refresh,
-                                contentDescription = stringResource(R.string.movie_refresh_info),
-                                modifier =
-                                    Modifier
-                                        .size(TvDimensions.iconSmall.scaled(scale))
-                                        .rotate(rotation),
+                                imageVector = CinemaIcons.Movie,
+                                contentDescription = stringResource(R.string.details_watch_trailer_description),
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
                             )
-                        }
+                        },
+                    )
+                }
+                if (categoryName != null) {
+                    CinemaIconButton(
+                        onClick = onCategorySelected,
+                        icon = {
+                            Icon(
+                                imageVector = CinemaIcons.Folder,
+                                contentDescription = stringResource(R.string.details_category_format, categoryName),
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        },
                     )
                 }
             }
-            Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-            Text(
-                text = providerName,
-                style = scaledStyles.titleSmall,
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
-        }
         }
 
-        item(key = "content") {
-        Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
-        }
-
-        // Movie content: poster + metadata
-        item(key = "detail") {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
-        ) {
-            // Cover image
-            CinemaThumbnail(
-                url = movieDetail.coverUrl,
-                fallbackLetter = movieDetail.name.firstOrNull(),
-                contentType = ThumbnailContentType.MOVIE,
+        // Diagnostics, not headline facts — provider name and the stream picker especially are
+        // moving to a Details tab in Phase 4 (docs/plans/tv-detail-hero-ui-plan.md); until that
+        // tab shell exists they stay here as plain items, no GlassPanel (Phase 3 drops it — the
+        // hero's scrim was the only thing it did that a flat background still needs).
+        item(key = "details") {
+            Column(
                 modifier =
                     Modifier
-                        .width(TvDimensions.posterWidth.scaled(scale))
-                        .height(TvDimensions.posterHeightLarge.scaled(scale)),
-            )
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                        .padding(top = Spacing.xl.scaled(scale)),
+            ) {
+                Text(
+                    text = providerName,
+                    style = scaledStyles.titleSmall,
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                )
+                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                // The provider's own (often raw) stream name, now that the headline is TMDB's
+                // title. A dropdown when the local catalogue holds other instances of the same
+                // TMDB title.
+                StreamNamePicker(
+                    // The catalogue's raw name, not movieDetail.name — some providers'
+                    // detail API returns a cleaned-up name inconsistent with the raw name
+                    // alternates are listed under, so use the same source as alternates.
+                    currentName = movieName,
+                    alternates = alternateStreams,
+                    onSelect = {
+                        streamSwitchSignal++
+                        onAlternateStreamSelected(it)
+                    },
+                    textStyle = scaledStyles.bodySmall,
+                    focusRequester = streamNameFocusRequester,
+                    onFocusedChanged = { streamRowFocused = it },
+                )
+                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                Text(
+                    text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
+                    style = scaledStyles.bodySmall,
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                )
 
-            // Metadata in glass panel
-            GlassPanel(modifier = Modifier.weight(1f)) {
-                Column(modifier = Modifier.padding(Spacing.lg.scaled(scale))) {
-                    // Metadata header row: rating | year | duration | ends at
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        movieDetail.metadata.contentRating?.let { contentRating ->
-                            Text(
-                                text = contentRating,
-                                style = scaledStyles.titleMedium,
-                                color = CinemaTextSecondary,
-                                modifier =
-                                    Modifier
-                                        .background(
-                                            CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
-                                            RoundedCornerShape(CornerRadius.small),
-                                        ).padding(horizontal = Spacing.sm.scaled(scale), vertical = Spacing.xs.scaled(scale)),
-                            )
-                        }
-                        movieDetail.metadata.rating?.let { rating ->
-                            RatingBadge(
-                                rating = rating,
-                                style = scaledStyles.titleMedium,
-                                textColor = CinemaAccent,
-                            )
-                        }
-                        val year = extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
-                        year?.let {
-                            Text(
-                                text = "$it",
-                                style = scaledStyles.titleMedium,
-                                color = CinemaTextSecondary,
-                            )
-                        }
-                        movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
-                            Text(
-                                text = formatDuration(duration),
-                                style = scaledStyles.titleMedium,
-                                color = CinemaTextSecondary,
-                            )
-                        }
-                        // "Ends at" based on remaining duration
-                        val endsAtContext = LocalContext.current
-                        val endsAtText =
-                            remember(movieDetail.metadata.duration, resumePositionMs) {
-                                computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
-                            }
-                        if (endsAtText != null) {
-                            Text(
-                                text = stringResource(R.string.movie_ends_at_format, endsAtText),
-                                style = scaledStyles.titleMedium,
-                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
-                            )
-                        }
-                    }
+                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-                    // The provider's own (often raw) stream name, now that the headline is TMDB's
-                    // title. A dropdown when the local catalogue holds other instances of the same
-                    // TMDB title.
-                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-                    StreamNamePicker(
-                        // The catalogue's raw name, not movieDetail.name — some providers'
-                        // detail API returns a cleaned-up name inconsistent with the raw name
-                        // alternates are listed under, so use the same source as alternates.
-                        currentName = movieName,
-                        alternates = alternateStreams,
-                        onSelect = {
-                            streamSwitchSignal++
-                            onAlternateStreamSelected(it)
-                        },
-                        textStyle = scaledStyles.bodySmall,
-                        focusRequester = streamNameFocusRequester,
-                        onFocusedChanged = { streamRowFocused = it },
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                // Release date / year
+                val displayRelease = movieDetail.metadata.releaseDate
+                    ?: extractYear(movieDetail.metadata.year, null, movieDetail.name.ifBlank { movieName })?.toString()
+                displayRelease?.let { releaseInfo ->
                     Text(
-                        text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
+                        text = stringResource(R.string.movie_released_format, releaseInfo),
                         style = scaledStyles.bodySmall,
                         color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                     )
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                }
 
-                    // Genre tags
-                    movieDetail.metadata.genre?.let { genre ->
-                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        Text(
-                            text = genre,
-                            style = scaledStyles.bodyMedium,
-                            color = CinemaAccent,
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-
-                    // Play / Resume buttons
-                    val hasResume = resumePositionMs > 0L
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (hasResume) {
-                            val resumeTimeText = formatTime(resumePositionMs)
-                            CinemaPrimaryButton(
-                                onClick = {
-                                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
-                                },
-                                text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
-                                modifier =
-                                    Modifier
-                                        .focusRequester(playButtonFocusRequester),
-                            )
-                            CinemaSecondaryButton(
-                                onClick = {
-                                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true)
-                                },
-                                text = stringResource(R.string.movie_start_beginning),
-                            )
-                        } else {
-                            CinemaPrimaryButton(
-                                onClick = {
-                                    onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false)
-                                },
-                                text = stringResource(R.string.movie_play_action),
-                                modifier =
-                                    Modifier
-                                        .focusRequester(playButtonFocusRequester),
-                            )
-                        }
-                        movieDetail.metadata.trailerUrl?.let { trailer ->
-                            val trailerContext = LocalContext.current
-                            CinemaSecondaryButton(
-                                onClick = { openExternalUrl(trailerContext, trailer) },
-                                text = stringResource(R.string.details_watch_trailer),
-                            )
-                        }
-                    }
-
-                    // Plot/Description
-                    movieDetail.metadata.plot?.let { plot ->
-                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-                        Text(
-                            text = plot,
-                            style = scaledStyles.bodyLarge,
-                            color = CinemaTextPrimary,
-                            maxLines = 6,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-                    // Release date / year
-                    val displayRelease = movieDetail.metadata.releaseDate
-                        ?: extractYear(movieDetail.metadata.year, null, movieDetail.name.ifBlank { movieName })?.toString()
-                    displayRelease?.let { releaseInfo ->
-                        Text(
-                            text = stringResource(R.string.movie_released_format, releaseInfo),
-                            style = scaledStyles.bodySmall,
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                    }
-
-                    // Cast, Director
-                    movieDetail.metadata.cast?.let { cast ->
-                        Text(
-                            text = stringResource(R.string.movie_cast_format, cast),
-                            style = scaledStyles.bodySmall,
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                    }
-                    movieDetail.metadata.director?.let { director ->
-                        Text(
-                            text = stringResource(R.string.movie_director_format, director),
-                            style = scaledStyles.bodySmall,
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                    }
-                    // Technical stream info (Jellyfin-style labeled rows)
-                    val hasVideoInfo =
-                        movieDetail.videoInfo != null &&
-                            (movieDetail.videoInfo!!.width != null || movieDetail.videoInfo!!.codecName != null)
-                    if (hasVideoInfo ||
-                        movieDetail.audioTracks.isNotEmpty() ||
-                        movieDetail.subtitleTracks.isNotEmpty() ||
-                        movieDetail.extension != null
-                    ) {
-                        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-                        movieDetail.videoInfo?.let { video ->
-                            val videoText =
-                                video.displayTitle ?: run {
-                                    val parts = mutableListOf<String>()
-                                    video.width?.let { w ->
-                                        video.height?.let { h ->
-                                            parts.add(resolutionLabel(w, h))
-                                        }
+                // Cast, Director
+                movieDetail.metadata.cast?.let { cast ->
+                    Text(
+                        text = stringResource(R.string.movie_cast_format, cast),
+                        style = scaledStyles.bodySmall,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                }
+                movieDetail.metadata.director?.let { director ->
+                    Text(
+                        text = stringResource(R.string.movie_director_format, director),
+                        style = scaledStyles.bodySmall,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                }
+                // Technical stream info (Jellyfin-style labeled rows)
+                val hasVideoInfo =
+                    movieDetail.videoInfo != null &&
+                        (movieDetail.videoInfo!!.width != null || movieDetail.videoInfo!!.codecName != null)
+                if (hasVideoInfo ||
+                    movieDetail.audioTracks.isNotEmpty() ||
+                    movieDetail.subtitleTracks.isNotEmpty() ||
+                    movieDetail.extension != null
+                ) {
+                    Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+                    movieDetail.videoInfo?.let { video ->
+                        val videoText =
+                            video.displayTitle ?: run {
+                                val parts = mutableListOf<String>()
+                                video.width?.let { w ->
+                                    video.height?.let { h ->
+                                        parts.add(resolutionLabel(w, h))
                                     }
-                                    video.codecName?.let { codec -> parts.add(codec.uppercase()) }
-                                    video.videoRange?.let { range -> parts.add(range) }
-                                    video.width?.let { w ->
-                                        video.height?.let { h ->
-                                            parts.add("$w×$h")
-                                        }
+                                }
+                                video.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                                video.videoRange?.let { range -> parts.add(range) }
+                                video.width?.let { w ->
+                                    video.height?.let { h ->
+                                        parts.add("$w×$h")
                                     }
-                                    parts.joinToString(" · ")
                                 }
-                            if (videoText.isNotBlank()) {
-                                TechInfoRow(label = stringResource(R.string.tech_video_label), value = videoText)
+                                parts.joinToString(" · ")
                             }
-                        }
-                        if (movieDetail.audioTracks.isNotEmpty()) {
-                            val audioTexts =
-                                movieDetail.audioTracks.mapNotNull { audio ->
-                                    val text =
-                                        audio.displayTitle ?: run {
-                                            val parts = mutableListOf<String>()
-                                            audio.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
-                                            audio.codecName?.let { codec -> parts.add(codec.uppercase()) }
-                                            audio.channels?.let { ch ->
-                                                parts.add(
-                                                    channelLabel(
-                                                        ch,
-                                                        mono = context.getString(R.string.audio_channel_mono),
-                                                        stereo = context.getString(R.string.audio_channel_stereo),
-                                                        surround51 = context.getString(R.string.audio_channel_5_1),
-                                                        surround71 = context.getString(R.string.audio_channel_7_1),
-                                                        custom = { context.getString(R.string.audio_channel_custom, it) },
-                                                    ),
-                                                )
-                                            }
-                                            if (audio.isDefault) parts.add(stringResource(R.string.tech_default_label))
-                                            parts.joinToString(" · ")
-                                        }
-                                    text.ifBlank { null }
-                                }
-                            if (audioTexts.isNotEmpty()) {
-                                TechInfoRow(label = stringResource(R.string.tech_audio_label), value = audioTexts.joinToString("\n"))
-                            }
-                        }
-                        if (movieDetail.subtitleTracks.isNotEmpty()) {
-                            val subTexts =
-                                movieDetail.subtitleTracks.mapNotNull { sub ->
-                                    val text =
-                                        sub.displayTitle ?: run {
-                                            val parts = mutableListOf<String>()
-                                            sub.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
-                                            sub.codecName?.let { codec -> parts.add(codec.uppercase()) }
-                                            if (sub.isDefault) parts.add(stringResource(R.string.tech_default_label))
-                                            parts.joinToString(" · ")
-                                        }
-                                    text.ifBlank { null }
-                                }
-                            if (subTexts.isNotEmpty()) {
-                                TechInfoRow(label = stringResource(R.string.tech_subtitle_label), value = subTexts.joinToString("\n"))
-                            }
-                        }
-                        movieDetail.extension?.let { ext ->
-                            TechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
+                        if (videoText.isNotBlank()) {
+                            TechInfoRow(label = stringResource(R.string.tech_video_label), value = videoText)
                         }
                     }
-
-                    // Category this movie belongs to — OK opens its stream list
-                    if (categoryName != null) {
-                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-                        CinemaSecondaryButton(
-                            onClick = onCategorySelected,
-                            text = stringResource(R.string.details_category_format, categoryName),
-                        )
+                    if (movieDetail.audioTracks.isNotEmpty()) {
+                        val audioTexts =
+                            movieDetail.audioTracks.mapNotNull { audio ->
+                                val text =
+                                    audio.displayTitle ?: run {
+                                        val parts = mutableListOf<String>()
+                                        audio.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
+                                        audio.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                                        audio.channels?.let { ch ->
+                                            parts.add(
+                                                channelLabel(
+                                                    ch,
+                                                    mono = context.getString(R.string.audio_channel_mono),
+                                                    stereo = context.getString(R.string.audio_channel_stereo),
+                                                    surround51 = context.getString(R.string.audio_channel_5_1),
+                                                    surround71 = context.getString(R.string.audio_channel_7_1),
+                                                    custom = { context.getString(R.string.audio_channel_custom, it) },
+                                                ),
+                                            )
+                                        }
+                                        if (audio.isDefault) parts.add(stringResource(R.string.tech_default_label))
+                                        parts.joinToString(" · ")
+                                    }
+                                text.ifBlank { null }
+                            }
+                        if (audioTexts.isNotEmpty()) {
+                            TechInfoRow(label = stringResource(R.string.tech_audio_label), value = audioTexts.joinToString("\n"))
+                        }
                     }
-
-                } // GlassPanel Column
-            } // GlassPanel
-        } // Outer Row (poster + metadata)
+                    if (movieDetail.subtitleTracks.isNotEmpty()) {
+                        val subTexts =
+                            movieDetail.subtitleTracks.mapNotNull { sub ->
+                                val text =
+                                    sub.displayTitle ?: run {
+                                        val parts = mutableListOf<String>()
+                                        sub.language?.let { lang -> if (lang.isNotBlank()) parts.add(lang) }
+                                        sub.codecName?.let { codec -> parts.add(codec.uppercase()) }
+                                        if (sub.isDefault) parts.add(stringResource(R.string.tech_default_label))
+                                        parts.joinToString(" · ")
+                                    }
+                                text.ifBlank { null }
+                            }
+                        if (subTexts.isNotEmpty()) {
+                            TechInfoRow(label = stringResource(R.string.tech_subtitle_label), value = subTexts.joinToString("\n"))
+                        }
+                    }
+                    movieDetail.extension?.let { ext ->
+                        TechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
+                    }
+                }
+            }
         }
 
-        // Hoisted out of the GlassPanel above so they can be items in their own right, and so the
-        // one that is off-screen is never composed or measured until it is scrolled to.
+        // Hoisted out of the details column above so they can be items in their own right, and so
+        // the one that is off-screen is never composed or measured until it is scrolled to.
         if (relatedTitles.collection.isNotEmpty()) {
             item(key = "related-collection") {
                 RelatedTitlesRow(
                     title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
                     items = relatedTitles.collection,
                     onItemClick = onRelatedTitleSelected,
-                    modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                            .padding(top = Spacing.lg.scaled(scale)),
                 )
             }
         }
@@ -735,7 +648,10 @@ private fun MovieDetailsContent(
                     title = stringResource(R.string.details_more_like_this),
                     items = relatedTitles.moreLikeThis,
                     onItemClick = onRelatedTitleSelected,
-                    modifier = Modifier.padding(top = Spacing.lg.scaled(scale)),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                            .padding(top = Spacing.lg.scaled(scale)),
                 )
             }
         }
