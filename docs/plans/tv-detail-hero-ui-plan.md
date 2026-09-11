@@ -150,9 +150,9 @@ Landed as written below, plus one structural fix it required: the screen's `Lazy
 carried `contentPadding` (horizontal safe margin, on every item) so the hero would have
 inherited a margin on both sides — not full-bleed. Moved that horizontal padding onto
 each non-hero item individually (`details`, both related-title rows); the hero now runs
-edge to edge and everything else is unchanged. "Category" became an icon button with no
-visible label per the plan below, which does trade away the always-visible category name
-— accepted as written, not re-litigated here.
+edge to edge and everything else is unchanged. "Category" was tried as an icon button per the plan below, then reverted on request — it
+stays a labeled `CinemaSecondaryButton` below the tech info, same spot and shape as
+before this phase, not part of the action row.
 
 Verified on the TV emulator (`emulator-5556`), not a Shield, per house policy — hero
 renders correctly with a real backdrop/logo/score chip, the stream-switch focus dance
