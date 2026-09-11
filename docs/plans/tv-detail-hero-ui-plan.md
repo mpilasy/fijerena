@@ -1,7 +1,8 @@
 # TV Detail Screens — Hero Layout Uplift Plan
 
 **Date:** 2026-09-02 (updated 2026-09-02: Phase 5's blocker landed, see below)
-**Status:** Phase 1 landed 2026-09-09 (backdrop plumbing — no UI change yet). Phases 2-5 not started.
+**Status:** Phase 1 landed 2026-09-09 (backdrop plumbing — no UI change yet). Phase 2 landed
+2026-09-11 (`TvDetailHero`, new file, nothing wired in yet). Phases 3-5 not started.
 **Scope:** TV module detail screens only (`MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt`).
 Mobile untouched. Reference: four screenshots of another client (Silo series, Silo
 episode, The Godfather, The Martian) — used as a look-and-feel target, not a spec to
@@ -94,7 +95,15 @@ needs no Room migration (a VOD backdrop column would mean `XtreamDatabase` v18 +
 
 ---
 
-## Phase 2 — `TvDetailHero` shared composable
+## Phase 2 — `TvDetailHero` shared composable — **DONE 2026-09-11**
+
+Landed as written below, with one contract change: `scoreChips` and `actions` are both
+`@Composable RowScope.() -> Unit` content slots, not a `List<ScoreChip>` — a `data class`
+shaped like `ScoreChip`'s own `(value, label)` parameters would collide with the
+composable of the same name, and a slot lets a caller with nothing to show skip the row
+instead of building a one-element list. `title: String` was also added (not in the
+original sketch) purely as the logo image's accessibility description, since
+`titleFallback` draws its own text and TMDB's logo art carries none.
 
 New file `tv/.../ui/components/TvDetailHero.kt`. Both detail screens use it, so movie
 and series never drift apart the way the current two headers already have.
