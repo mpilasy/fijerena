@@ -48,7 +48,7 @@ class AppSettings(
         const val MAX_WATCH_DELAY_SECONDS = 120
         const val DEFAULT_FAVORITES_MAX_SIZE = 100
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
-        const val DEFAULT_UI_SCALE = 1.0f
+        const val DEFAULT_UI_SCALE = 0.8f
         const val DEFAULT_EPG_URL = ""
         const val DEFAULT_EPG_REFRESH_TIME = "02:00"
         const val DEFAULT_EPG_REFRESH_INTERVAL = 24
