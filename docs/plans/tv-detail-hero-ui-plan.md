@@ -2,7 +2,8 @@
 
 **Date:** 2026-09-02 (updated 2026-09-02: Phase 5's blocker landed, see below)
 **Status:** Phase 1 landed 2026-09-09 (backdrop plumbing — no UI change yet). Phase 2 landed
-2026-09-11 (`TvDetailHero`, new file, nothing wired in yet). Phases 3-5 not started.
+2026-09-11 (`TvDetailHero`, new file, nothing wired in yet). Phase 3 landed 2026-09-11
+(`MovieDetailsScreen` rebuilt on the hero, verified on the TV emulator). Phases 4-5 not started.
 **Scope:** TV module detail screens only (`MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt`).
 Mobile untouched. Reference: four screenshots of another client (Silo series, Silo
 episode, The Godfather, The Martian) — used as a look-and-feel target, not a spec to
@@ -143,7 +144,21 @@ treatment only.
 
 ---
 
-## Phase 3 — Movie details rebuild
+## Phase 3 — Movie details rebuild — **DONE 2026-09-11**
+
+Landed as written below, plus one structural fix it required: the screen's `LazyColumn`
+carried `contentPadding` (horizontal safe margin, on every item) so the hero would have
+inherited a margin on both sides — not full-bleed. Moved that horizontal padding onto
+each non-hero item individually (`details`, both related-title rows); the hero now runs
+edge to edge and everything else is unchanged. "Category" became an icon button with no
+visible label per the plan below, which does trade away the always-visible category name
+— accepted as written, not re-litigated here.
+
+Verified on the TV emulator (`emulator-5556`), not a Shield, per house policy — hero
+renders correctly with a real backdrop/logo/score chip, the stream-switch focus dance
+(switching to an alternate release of the same movie) lands focus back on the picker
+exactly as before, and Back navigation is unaffected. No crashes in logcat across the
+session.
 
 Rework `MovieDetailsContent` onto `TvDetailHero`:
 
