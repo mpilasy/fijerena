@@ -85,6 +85,7 @@ object XtreamMapper {
                     trailerUrl = trailerUrl(info?.youtubeTrailer),
                 ),
             coverUrl = info?.cover,
+            backdropUrl = info?.backdropPath?.firstOrNull { !it.isNullOrBlank() },
             seasons = seasons.map { it.toDomain() },
             episodes =
                 episodes.mapValues { (_, episodeList) ->

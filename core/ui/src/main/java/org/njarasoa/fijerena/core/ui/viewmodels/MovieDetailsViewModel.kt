@@ -63,6 +63,11 @@ class MovieDetailsViewModel(
     private val _logoUrl = MutableStateFlow<String?>(null)
     val logoUrl: StateFlow<String?> = _logoUrl.asStateFlow()
 
+    /** TV detail hero background: TMDB's backdrop art, falling back to the poster, then no
+     * image — movies have no other backdrop source. See docs/plans/tv-detail-hero-ui-plan.md. */
+    private val _backdropUrl = MutableStateFlow<String?>(null)
+    val backdropUrl: StateFlow<String?> = _backdropUrl.asStateFlow()
+
     /** Other local catalogue entries for the same TMDB id — empty when there are none. */
     private val _alternateStreams = MutableStateFlow<List<MediaItem>>(emptyList())
     val alternateStreams: StateFlow<List<MediaItem>> = _alternateStreams.asStateFlow()
@@ -110,6 +115,7 @@ class MovieDetailsViewModel(
         _relatedTitles.value = RelatedTitles()
         _tmdbTitle.value = null
         _logoUrl.value = null
+        _backdropUrl.value = null
         _alternateStreams.value = emptyList()
         try {
             val repo = getRepository()
@@ -144,7 +150,7 @@ class MovieDetailsViewModel(
 
                     loadRelatedTitles(detail)
                     loadTmdbTitle(detail)
-                    loadLogoUrl(detail)
+                    loadArtwork(detail)
                     loadAlternateStreams(detail)
                 },
                 onFailure = { e ->
@@ -177,12 +183,19 @@ class MovieDetailsViewModel(
         }
     }
 
-    private fun loadLogoUrl(detail: MovieDetail) {
+    /**
+     * Sets both [logoUrl] and [backdropUrl] from one job: `getTmdbLogoUrl` and
+     * `getTmdbBackdropUrl` read the same TMDB `/images` response (cached in the provider), so
+     * fetching them back to back here costs one network round trip, not two. The backdrop falls
+     * back to the poster when TMDB has none — see docs/plans/tv-detail-hero-ui-plan.md.
+     */
+    private fun loadArtwork(detail: MovieDetail) {
         viewModelScope.launch(Dispatchers.IO) {
-            _logoUrl.value =
-                runCatching {
-                    getRepository().getTmdbLogoUrl(detail.metadata.tmdbId, "MOVIES")
-                }.getOrNull()
+            val repo = getRepository()
+            val tmdbId = detail.metadata.tmdbId
+            _logoUrl.value = runCatching { repo.getTmdbLogoUrl(tmdbId, "MOVIES") }.getOrNull()
+            _backdropUrl.value =
+                runCatching { repo.getTmdbBackdropUrl(tmdbId, "MOVIES") }.getOrNull() ?: detail.coverUrl
         }
     }
 

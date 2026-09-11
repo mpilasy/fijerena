@@ -48,6 +48,24 @@ object TvDimensions {
     // Height of the TMDB logo art rendered in place of the OSD's big title text.
     val osdLogoHeight: Dp = 56.dp
 
+    // Detail hero (docs/plans/tv-detail-hero-ui-plan.md). The reference logo art reads much
+    // larger than the OSD's — a plain title-logo swap at osdLogoHeight looked undersized here.
+    val heroLogoHeight: Dp = 96.dp
+
+    // Fraction of the hero's width the text column occupies, left-aligned — stays inside the
+    // scrim's opaque region (see CinemaAlpha.heroScrimFadeStop) instead of running under the
+    // backdrop image, where legibility depends on what that frame happens to show.
+    const val heroContentWidthFraction: Float = 0.55f
+
+    // Height of the hero band as a fraction of its width (Modifier.aspectRatio) — the TV screen's
+    // own aspect ratio, so the "full-bleed" reference look reads as filling the viewport rather
+    // than a bounded strip above a visible page break.
+    const val heroBackdropAspect: Float = 16f / 9f
+
+    // Width of the hero's sideSlot (the series "Next Up" card) — wide enough for a thumbnail plus
+    // two lines of plot text without crowding the backdrop's opaque-to-transparent scrim.
+    val heroSideSlotWidth: Dp = 340.dp
+
     // Progress indicators
     val progressIndicator: Dp = 48.dp
     val progressBar: Dp = 6.dp

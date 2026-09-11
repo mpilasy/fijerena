@@ -21,11 +21,11 @@ object NetworkBufferProfile {
     const val WIFI_LIVE_REBUFFER_MS = 1_000
     const val WIFI_LIVE_BACK_BUFFER_MS = 0
 
-    // ── WiFi VOD (reduced for faster startup) ────────────────────────
-    const val WIFI_VOD_MIN_BUFFER_MS = 5_000
-    const val WIFI_VOD_MAX_BUFFER_MS = 50_000
-    const val WIFI_VOD_PLAYBACK_MS = 1_000
-    const val WIFI_VOD_REBUFFER_MS = 2_000
+    // ── WiFi VOD ────────────────────────────────────────────────────
+    const val WIFI_VOD_MIN_BUFFER_MS = 30_000
+    const val WIFI_VOD_MAX_BUFFER_MS = 120_000
+    const val WIFI_VOD_PLAYBACK_MS = 2_500
+    const val WIFI_VOD_REBUFFER_MS = 10_000
     const val WIFI_VOD_BACK_BUFFER_MS = 10_000
 
     // ── Cellular Live TV ────────────────────────────────────────────

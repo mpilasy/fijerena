@@ -68,6 +68,7 @@ data class StatsSnapshot(
     val audioSampleRate: String,
     val audioChannels: String,
     val audioBitrate: String,
+    val position: Long,
     val bufferedPosition: Long,
     val droppedFrames: Long,
     val networkSpeed: String,
@@ -109,6 +110,7 @@ fun TvStatsOverlay(
                 audioSampleRate = naText,
                 audioChannels = naText,
                 audioBitrate = naText,
+                position = 0L,
                 bufferedPosition = 0L,
                 droppedFrames = 0L,
                 networkSpeed = naText,
@@ -173,6 +175,7 @@ fun TvStatsOverlay(
         var curAudioChannels = naText
         var curAudioBitrate = naText
 
+        var curPosition = 0L
         var curBufferedPosition = 0L
         var curDroppedFrames = 0L
         var curNetworkSpeed = naText
@@ -187,6 +190,7 @@ fun TvStatsOverlay(
                 curDroppedFrames = newDroppedFrames
 
                 val currentPos = p.currentPosition
+                curPosition = currentPos
                 val buffered = p.bufferedPosition
                 curBufferHealth =
                     if (buffered > currentPos) {
@@ -304,6 +308,7 @@ fun TvStatsOverlay(
                     audioSampleRate = curAudioSampleRate,
                     audioChannels = curAudioChannels,
                     audioBitrate = curAudioBitrate,
+                    position = curPosition,
                     bufferedPosition = curBufferedPosition,
                     droppedFrames = curDroppedFrames,
                     networkSpeed = curNetworkSpeed,
@@ -367,12 +372,12 @@ fun TvStatsOverlay(
                         fontWeight = FontWeight.Bold,
                     )
 
-                    val position =
-                        when (playbackState) {
-                            is PlaybackState.Playing -> playbackState.position
-                            is PlaybackState.Paused -> playbackState.position
-                            else -> 0L
-                        }
+                    // Live-polled (stats.position, updated every tick by the LaunchedEffect above)
+                    // rather than read off playbackState itself: PlaybackState.Playing.position is
+                    // only a snapshot taken when the state object was last (re)created — on a real
+                    // ExoPlayer state transition — so during smooth, uninterrupted playback it
+                    // never changes and this stat looked frozen despite playback actually advancing.
+                    val position = stats.position
 
                     val duration =
                         when (playbackState) {

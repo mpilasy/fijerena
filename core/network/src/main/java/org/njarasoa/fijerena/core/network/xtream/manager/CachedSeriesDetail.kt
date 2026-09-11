@@ -40,6 +40,7 @@ internal fun buildCachedSeriesDetail(
                 trailerUrl = trailerUrl(series.youtubeTrailer),
             ),
         coverUrl = series.cover,
+        backdropUrl = series.backdropPath?.split(",")?.firstOrNull { it.isNotBlank() },
         episodes =
             episodes
                 .groupBy { (it.season ?: 0).toString() }

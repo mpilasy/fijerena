@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -281,21 +280,6 @@ internal fun LiveTvSplitLayout(
         favoriteStreamsLoading = false
     }
 
-    // One video surface, relocated (not recreated) between the small preview box and the
-    // full-screen PlayerScreen via movableContentOf — keeps the same Android View/Surface alive
-    // across promote/demote so ExoPlayer never has to detach/reattach. Earlier attempts at this
-    // (with and without a fresh-surface-per-channel key) rendered two channels simultaneously
-    // overlapping on a genuine channel switch — root-caused to StreamingPlaybackService.
-    // playStream() not fully releasing the outgoing decoder session before starting the next
-    // one (now fixed with an explicit player.stop() there), not to surface sharing itself. Both
-    // call sites must use TextureView, since the preview position (next to a
-    // scrolling/recomposing channel list) ANRs the main thread with a SurfaceView.
-    val videoSurface = remember {
-        movableContentOf {
-            EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
-        }
-    }
-
     val loader: StreamLoaderViewModel =
         viewModel(
             factory =
@@ -403,7 +387,6 @@ internal fun LiveTvSplitLayout(
         Box(modifier = Modifier.fillMaxSize()) {
             PlayerScreen(
                 viewModel = playback,
-                videoSurface = videoSurface,
                 onBack = { fullScreen = false },
                 isFavorite = favoriteIds.contains(target.id),
                 onToggleFavorite = {
@@ -455,7 +438,16 @@ internal fun LiveTvSplitLayout(
                             .clip(RoundedCornerShape(CornerRadius.medium))
                             .background(CinemaSurface),
                 ) {
-                    videoSurface()
+                    // TextureView (not the default SurfaceView): this box sits next to the
+                    // scrolling/recomposing channel list, and SurfaceView there stalls the main
+                    // thread and ANRs. Full-screen playback above uses PlayerScreen's own
+                    // default surface instead of sharing this one — promoting/demoting now does
+                    // a real detach/reattach (one frame's worth of glitch) rather than relocating
+                    // this node, but it stops every OSD/flyout interaction in full-screen from
+                    // janking the video for the rest of the session. See
+                    // docs/plans/tv-ui-performance-plan.md's dropped "do not touch" note on this
+                    // TextureView for why that tradeoff reverted.
+                    EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
                     // The preview surface has no controls/error UI of its own, so a stalled or
                     // watchdog-killed stream would otherwise look identical to a live frozen
                     // frame. Surface the state so it reads as "still loading", not "broken".

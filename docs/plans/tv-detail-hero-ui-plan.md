@@ -1,7 +1,14 @@
 # TV Detail Screens — Hero Layout Uplift Plan
 
 **Date:** 2026-09-02 (updated 2026-09-02: Phase 5's blocker landed, see below)
-**Status:** Planned — nothing implemented
+**Status:** Phase 1 landed 2026-09-09 (backdrop plumbing — no UI change yet). Phase 2 landed
+2026-09-11 (`TvDetailHero`, new file, nothing wired in yet). Phase 3 landed 2026-09-11
+(`MovieDetailsScreen` rebuilt on the hero, verified on the TV emulator). Phase 4 landed 2026-09-11
+(tabbed sections on the movie screen; series tabs deferred to Phase 5, which wires the hero there
+too). Phase 5 landed 2026-09-11 (Seasons/Episodes/Cast/Details/Similar tabs on
+`EpisodeSelectionScreen`, episode detail rebuilt on the hero; verified on the TV emulator). See its
+own section below for deviations and a real bug found during verification that's out of this
+phase's scope.
 **Scope:** TV module detail screens only (`MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt`).
 Mobile untouched. Reference: four screenshots of another client (Silo series, Silo
 episode, The Godfather, The Martian) — used as a look-and-feel target, not a spec to
@@ -49,7 +56,25 @@ onto a flat background and looks unfinished.
 
 ---
 
-## Phase 1 — Backdrop plumbing (no UI change)
+## Phase 1 — Backdrop plumbing (no UI change) — **DONE 2026-09-09**
+
+Landed as written below, with two adjustments:
+
+- **Jellyfin's `BackdropImageTags` doesn't go through `getTmdbBackdropUrl`** — that
+  method only ever receives `(tmdbId, contentType)`, no local item id, so Jellyfin
+  can't build its image URL there. Instead `SeriesDetail` gained a `backdropUrl`
+  field (same shape as the existing `coverUrl`), and each provider fills it from its
+  own data at detail-build time — Xtream from `backdrop_path`, Jellyfin from
+  `BackdropImageTags` right next to where it already sets `coverUrl`. The ViewModel
+  fallback chain (item 5 below) reads this field, not a raw provider call.
+- **Found and fixed a pre-existing bug while adding `bestBackdropUrl` next to
+  `bestLogoUrl`:** both used `maxWithOrNull(compareByDescending { ... })`, which
+  actually selects the *lowest*-voted/narrowest image — `maxWithOrNull` returns the
+  comparator's greatest element, and a descending comparator inverts what "greatest"
+  means relative to the real values. Every logo TMDB has ever served this app was the
+  worst-ranked one available. Fixed on both functions (`compareBy`, ascending, not
+  `compareByDescending`); caught by the new parsing test's assertion order, not by
+  inspection.
 
 Cheapest correct source is TMDB, because it covers movies and series uniformly and
 needs no Room migration (a VOD backdrop column would mean `XtreamDatabase` v18 + a
@@ -76,7 +101,15 @@ needs no Room migration (a VOD backdrop column would mean `XtreamDatabase` v18 +
 
 ---
 
-## Phase 2 — `TvDetailHero` shared composable
+## Phase 2 — `TvDetailHero` shared composable — **DONE 2026-09-11**
+
+Landed as written below, with one contract change: `scoreChips` and `actions` are both
+`@Composable RowScope.() -> Unit` content slots, not a `List<ScoreChip>` — a `data class`
+shaped like `ScoreChip`'s own `(value, label)` parameters would collide with the
+composable of the same name, and a slot lets a caller with nothing to show skip the row
+instead of building a one-element list. `title: String` was also added (not in the
+original sketch) purely as the logo image's accessibility description, since
+`titleFallback` draws its own text and TMDB's logo art carries none.
 
 New file `tv/.../ui/components/TvDetailHero.kt`. Both detail screens use it, so movie
 and series never drift apart the way the current two headers already have.
@@ -116,7 +149,21 @@ treatment only.
 
 ---
 
-## Phase 3 — Movie details rebuild
+## Phase 3 — Movie details rebuild — **DONE 2026-09-11**
+
+Landed as written below, plus one structural fix it required: the screen's `LazyColumn`
+carried `contentPadding` (horizontal safe margin, on every item) so the hero would have
+inherited a margin on both sides — not full-bleed. Moved that horizontal padding onto
+each non-hero item individually (`details`, both related-title rows); the hero now runs
+edge to edge and everything else is unchanged. "Category" was tried as an icon button per the plan below, then reverted on request — it
+stays a labeled `CinemaSecondaryButton` below the tech info, same spot and shape as
+before this phase, not part of the action row.
+
+Verified on the TV emulator (`emulator-5556`), not a Shield, per house policy — hero
+renders correctly with a real backdrop/logo/score chip, the stream-switch focus dance
+(switching to an alternate release of the same movie) lands focus back on the picker
+exactly as before, and Back navigation is unaffected. No crashes in logcat across the
+session.
 
 Rework `MovieDetailsContent` onto `TvDetailHero`:
 
@@ -136,7 +183,29 @@ Rework `MovieDetailsContent` onto `TvDetailHero`:
 
 ---
 
-## Phase 4 — Tabbed sections
+## Phase 4 — Tabbed sections — **DONE 2026-09-11 (movie screen only)**
+
+Landed on `MovieDetailsScreen` as written below: `TvSectionTabs` built once as a
+generic, label-only component (not `SeriesDetail`-specific), so Phase 5 reuses it for
+the series/episode tabs rather than rebuilding it. Series tabs (`Seasons`, `Episodes`,
+...) are **not** built yet — `EpisodeSelectionScreen` doesn't use `TvDetailHero` until
+Phase 5, and there's nowhere to hang a tab row without it.
+
+**A real bug, not just an implementation detail:** the Back-inside-a-section rule ("goes to the tab
+  row, not out of the screen") initially worked in the screenshot-verified case but
+  failed the very next test — a single Back press exited the screen straight past an
+  open tab section. Root cause, found by temporary logging: pressing Back measurably
+  clears focus (an `onFocusChanged` "false" event lands) *before* either of the
+  screen's two Back-handling paths (`BackHandler`, and the `LazyColumn`'s
+  `onPreviewKeyEvent`) gets to read that state — so both were reading a
+  freshly-and-spuriously-cleared flag and always took the "exit" branch. Same
+  "root cause unconfirmed" class of TV back-key flakiness this codebase already has two
+  other documented instances of (see `SeasonTab`'s category-button comment and this
+  screen's own original `LazyColumn` comment). Fixed by no longer trusting the `false`
+  transition at all: `focusInSection` is set `true` only by genuine focus-in events, and
+  set `false` only by the explicit "a tab just regained focus" event (`onTabSelected`),
+  never by a passive focus-loss observation. Verified on the TV emulator: Back once from
+  inside each of the four tabs' content returns to the tab row, Back again exits.
 
 New `tv/.../ui/components/TvSectionTabs.kt`, generalising the existing `SeasonTab`
 styling in `EpisodeSelectionScreen.kt` (focus/selected container + border rules are
@@ -185,6 +254,53 @@ already right — lift them, do not re-invent).
   bullet originally warned about no longer exists.
 - Episode detail (screenshot 2) is the series hero with the episode's own title, meta
   line, and plot swapped in; no new screen.
+
+**Landed 2026-09-11.** Deviations from the sketch above, and what verification found:
+
+- `Episodes` tab did **not** keep `EpisodeDetailPanel` untouched — the plan's own closing
+  bullet calls for the episode-detail hero swap, which is Phase 5 work, not a later
+  phase. Both landed together: `EpisodeDetailPanel` now opens on `TvDetailHero` (title,
+  season/episode/content-rating/duration/ends-at meta line, score chip, plot, actions —
+  Play/Resume, Prev/Next as icon buttons reusing `CinemaIcons.SkipPrevious`/`SkipNext`,
+  trailer), with a plain details block below (provider, TMDB id, cast, director,
+  container, air date, bitrate) — same shape as the series list and
+  `MovieDetailsScreen`'s own Details tab.
+- Full tab set landed for series, matching Phase 4's movie tabs exactly rather than a
+  bespoke shape: `Seasons` (only with >1 season) / `Episodes` / `Cast` (only when
+  `metadata.cast` is non-blank) / `Details` / `Similar` (only when `relatedTitles.moreLikeThis`
+  is non-empty). `Episodes` is the one tab not built as a single wrapped item — its
+  `stickyHeader` (season pills) + `itemsIndexed` (episode cards) emit directly into the
+  outer `LazyColumn`, so episode cards stay individually lazy instead of measuring all at
+  once inside a Box.
+- Seasons tab: a `LazyRow` of season posters (`SeasonInfo.coverUrl`, falls back to a
+  letter tile like every other thumbnail here) with episode counts; selecting one calls
+  `selectSeason` and flips the outer tab to `Episodes`, landing on that season already
+  selected in the (still-present) inner season-pill row.
+- Verified on the TV emulator (single-season and 7-season real catalog entries): all
+  five tabs render and switch correctly, Left/Right moves between tabs, Down from the
+  hero's action row lands on the tab row, Down from the tab row into a section and Back
+  out of one back to the tab row both work, a second Back from the tab row exits the
+  screen. Season-poster selection correctly jumps to Episodes with that season already
+  showing. Episode-detail Prev/Next correctly cross season boundaries and keep focus on
+  the pressed button; Back from episode detail returns to the list on the season it was
+  opened from.
+- **A real bug found during this verification, not introduced by this phase and not
+  fixed here:** `TvDetailHero`'s title (and, in severe cases, its meta line and score
+  chip too) can render entirely off the top of the screen. The `heightIn(min)` fix from
+  Phase 5's own predecessor work lets the hero grow taller than one screen for a long
+  plot/meta combination; initial focus landing on the Play/Resume button then makes
+  Compose's own focus-into-view scrolling scroll the list down to show that button,
+  carrying the top of the hero (the title) off-screen with it. Reproduced identically on
+  `MovieDetailsScreen` (untouched this phase) with an obscure title with no logo image,
+  so this is a `TvDetailHero`-wide issue, not a series/episode-only one — worth its own
+  follow-up plan, not a Phase 5 blocker.
+- **A second, separate, also pre-existing quirk observed:** the first Back press while a
+  focused TV `Button` has focus is sometimes swallowed before reaching either
+  `BackHandler` — same class of TV back-key flakiness this file already documents twice
+  over for the equivalent case on the series list and on `MovieDetailsScreen`; a second
+  press always works. `EpisodeDetailPanel` was never given its own `onPreviewKeyEvent`
+  interception (the list screen's `LazyColumn` has one; the detail panel doesn't), so
+  this isn't a regression — just not fixed by this phase either.
 
 ---
 

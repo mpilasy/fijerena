@@ -123,7 +123,8 @@ class TmdbApiService(
                 parameter("language", "en-US")
             }.body()
 
-    /** Backdrops/posters/logos for a movie. Only `logos` (transparent wordmark art) is used. */
+    /** Backdrops/posters/logos for a movie. `logos` (wordmark art) and `backdrops` (hero
+     * background) are used; posters come from the Xtream catalogue instead. */
     suspend fun getMovieImages(movieId: Int): TmdbImagesResponse =
         client.get("movie/$movieId/images") { authenticate() }.body()
 
@@ -155,6 +156,7 @@ class TmdbApiService(
         const val POSTER_SIZE_W342 = "w342"
         const val POSTER_SIZE_ORIGINAL = "original"
         const val LOGO_SIZE_W500 = "w500"
+        const val BACKDROP_SIZE_W1280 = "w1280"
 
         fun posterUrl(path: String?, size: String = POSTER_SIZE_W185): String? {
             val p = path?.trim()?.removePrefix("/") ?: return null
@@ -167,13 +169,32 @@ class TmdbApiService(
          * language tag at all — usually the studio's international art), then whatever else TMDB
          * has, each tier picking the widest/highest-voted first. Null when TMDB has none.
          */
-        fun bestLogoUrl(logos: List<TmdbLogo>, language: String = "en"): String? {
-            val ranked = compareByDescending<TmdbLogo> { it.voteAverage }.thenByDescending { it.width }
+        fun bestLogoUrl(logos: List<TmdbImage>, language: String = "en"): String? {
+            // Ascending comparator, `maxWithOrNull` below: compareByDescending here would have
+            // maxWithOrNull pick the *lowest*-voted/narrowest logo, since maxWithOrNull returns
+            // the comparator's greatest element and a descending comparator inverts what "greatest"
+            // means relative to the actual field values.
+            val ranked = compareBy<TmdbImage> { it.voteAverage }.thenBy { it.width }
             val best =
                 logos.filter { it.language == language }.maxWithOrNull(ranked)
                     ?: logos.filter { it.language.isNullOrBlank() }.maxWithOrNull(ranked)
                     ?: logos.maxWithOrNull(ranked)
             return posterUrl(best?.filePath, LOGO_SIZE_W500)
+        }
+
+        /**
+         * Best backdrop for the TV detail hero: prefer language-neutral art (almost all
+         * backdrops are — a plain scene carries no text), highest-voted/widest first, falling
+         * back to whatever else TMDB has. Null when TMDB has none.
+         */
+        fun bestBackdropUrl(backdrops: List<TmdbImage>): String? {
+            // See the comment on the equivalent line in bestLogoUrl: ascending comparator on
+            // purpose, not compareByDescending.
+            val ranked = compareBy<TmdbImage> { it.voteAverage }.thenBy { it.width }
+            val best =
+                backdrops.filter { it.language.isNullOrBlank() }.maxWithOrNull(ranked)
+                    ?: backdrops.maxWithOrNull(ranked)
+            return posterUrl(best?.filePath, BACKDROP_SIZE_W1280)
         }
     }
 }

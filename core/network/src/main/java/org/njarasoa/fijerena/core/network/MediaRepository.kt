@@ -510,6 +510,12 @@ class MediaRepository(
         contentType: String,
     ): String? = provider?.getTmdbLogoUrl(tmdbId, contentType)
 
+    /** See [MediaProvider.getTmdbBackdropUrl]. */
+    suspend fun getTmdbBackdropUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? = provider?.getTmdbBackdropUrl(tmdbId, contentType)
+
     /** See [MediaProvider.getAlternateStreams]. */
     suspend fun getAlternateStreams(
         itemId: String,
@@ -881,7 +887,8 @@ class MediaRepository(
                     mediaType = mediaType,
                     categoryId = fav.categoryId,
                 )
-            }.toList()
+            }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+            .toList()
     }
 
     fun isFavorite(
@@ -949,7 +956,8 @@ class MediaRepository(
                     name = fav.categoryName,
                     isVirtual = false,
                 )
-            }.toList()
+            }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+            .toList()
     }
 
     fun isFavoriteCategory(
@@ -1268,9 +1276,12 @@ class MediaRepository(
             if (usesServerUserData) {
                 provider?.getFavoriteItems(contentType)?.getOrNull() ?: emptyList()
             } else {
+                // Already name-sorted by getFavoritesForContentType — sorted again below anyway,
+                // since a server-backed provider's own order needs it too and both paths should
+                // read the same regardless of which one served them.
                 rehydrateThumbnails(getFavoritesForContentType(contentType), contentType)
             }
-        return result
+        return result.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
     }
 
     /**
