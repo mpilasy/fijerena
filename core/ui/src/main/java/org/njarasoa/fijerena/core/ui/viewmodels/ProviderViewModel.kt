@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.network.provider.ProviderCopyManager
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
@@ -138,6 +139,15 @@ class ProviderViewModel(
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
+    private val copyManager = ProviderCopyManager(context)
+
+    private val _copyResultMessage = MutableStateFlow<String?>(null)
+    val copyResultMessage: StateFlow<String?> = _copyResultMessage.asStateFlow()
+
+    fun clearCopyResultMessage() {
+        _copyResultMessage.value = null
+    }
+
     fun resetSaveState() {
         _saveState.value = SaveState.Idle
     }
@@ -227,6 +237,37 @@ class ProviderViewModel(
                 loadProviders()
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_delete_failed))
+            }
+        }
+    }
+
+    fun duplicateProvider(
+        sourceId: Long,
+        newName: String,
+    ) {
+        viewModelScope.launch {
+            try {
+                copyManager.duplicateProvider(sourceId, newName)
+                loadProviders()
+                _copyResultMessage.value = context.getString(R.string.provider_duplicate_result_format, newName)
+            } catch (e: Exception) {
+                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_update_failed))
+            }
+        }
+    }
+
+    fun copyProviderData(
+        sourceId: Long,
+        targetId: Long,
+        options: ProviderCopyManager.CopyOptions,
+    ) {
+        viewModelScope.launch {
+            try {
+                val result = copyManager.copyProviderData(sourceId, targetId, options)
+                loadProviders()
+                _copyResultMessage.value = result.toSummary(context)
+            } catch (e: Exception) {
+                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_update_failed))
             }
         }
     }

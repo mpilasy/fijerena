@@ -30,6 +30,13 @@
     <string name="settings_export_summary_updated">Settings updated</string>
     <string name="settings_export_summary_passwords_reentry_format">%1$s (Passwords must be re-entered)</string>
 
+    <!-- Provider copy/duplicate (ProviderCopyManager) -->
+    <string name="provider_copy_result_connection">Connection copied</string>
+    <string name="provider_copy_result_settings">Settings copied</string>
+    <string name="provider_copy_result_favorites_format">%1$d favorite(s) copied</string>
+    <string name="provider_copy_result_watch_state_format">%1$d watch history item(s) copied</string>
+    <string name="provider_copy_result_nothing">Nothing to copy</string>
+
     <!-- EPG freshness label (EpgBrowserModels) -->
     <string name="epg_freshness_no_sources">No EPG sources</string>
     <string name="epg_freshness_never_refreshed">Never refreshed</string>

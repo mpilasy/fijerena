@@ -30,6 +30,13 @@
     <string name="settings_export_summary_updated">Voavaozina ny fandrindrana</string>
     <string name="settings_export_summary_passwords_reentry_format">%1$s (tsy maintsy asiana indray ny tenimiafina)</string>
 
+    <!-- Provider copy/duplicate (ProviderCopyManager) -->
+    <string name="provider_copy_result_connection">Voadika ny fifandraisana</string>
+    <string name="provider_copy_result_settings">Voadika ny fandrindrana</string>
+    <string name="provider_copy_result_favorites_format">%1$d tiana voadika</string>
+    <string name="provider_copy_result_watch_state_format">%1$d tantaram-pijerena voadika</string>
+    <string name="provider_copy_result_nothing">Tsy misy azo adika</string>
+
     <!-- EPG freshness label -->
     <string name="epg_freshness_no_sources">Tsy misy fantsakana EPG</string>
     <string name="epg_freshness_never_refreshed">Mbola tsy navaozina</string>

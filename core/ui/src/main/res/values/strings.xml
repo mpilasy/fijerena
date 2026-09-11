@@ -309,6 +309,20 @@
     <string name="provider_delete_confirm_title">Delete Provider?</string>
     <string name="provider_delete_confirm_message">Delete \"%1$s\"? All cached data for this provider will be removed.</string>
     <string name="provider_active_label">Active</string>
+    <string name="provider_duplicate_button">Duplicate</string>
+    <string name="provider_duplicate_title">Duplicate Provider</string>
+    <string name="provider_duplicate_name_default_format">%1$s (copy)</string>
+    <string name="provider_duplicate_name_label">New provider name</string>
+    <string name="provider_copy_to_button">Copy to…</string>
+    <string name="provider_copy_to_title">Copy To Provider</string>
+    <string name="provider_copy_to_target_label">Target provider</string>
+    <string name="provider_copy_to_options_label">What to copy</string>
+    <string name="provider_copy_to_settings_label">Settings</string>
+    <string name="provider_copy_to_favorites_label">Favorites</string>
+    <string name="provider_copy_to_watch_history_label">Watch history</string>
+    <string name="provider_copy_to_connection_label">Connection &amp; credentials</string>
+    <string name="provider_copy_to_connection_warning_format">This overwrites \"%1$s\"\'s URL, username and password.</string>
+    <string name="provider_duplicate_result_format">Duplicated as \"%1$s\".</string>
 
     <!-- More Common -->
     <string name="common_select">Select</string>
