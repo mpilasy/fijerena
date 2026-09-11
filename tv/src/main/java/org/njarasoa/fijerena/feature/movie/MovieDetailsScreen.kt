@@ -451,19 +451,6 @@ private fun MovieDetailsContent(
                         },
                     )
                 }
-                if (categoryName != null) {
-                    CinemaIconButton(
-                        onClick = onCategorySelected,
-                        icon = {
-                            Icon(
-                                imageVector = CinemaIcons.Folder,
-                                contentDescription = stringResource(R.string.details_category_format, categoryName),
-                                tint = CinemaTextPrimary,
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        },
-                    )
-                }
             }
         }
 
@@ -623,6 +610,15 @@ private fun MovieDetailsContent(
                     movieDetail.extension?.let { ext ->
                         TechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
                     }
+                }
+
+                // Category this movie belongs to — OK opens its stream list
+                if (categoryName != null) {
+                    Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+                    CinemaSecondaryButton(
+                        onClick = onCategorySelected,
+                        text = stringResource(R.string.details_category_format, categoryName),
+                    )
                 }
             }
         }
