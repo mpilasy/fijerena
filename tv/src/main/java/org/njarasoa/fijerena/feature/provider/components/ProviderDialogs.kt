@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -44,6 +45,8 @@ import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.CategoryMatcher
 import org.njarasoa.fijerena.core.network.provider.FilterMode
 import org.njarasoa.fijerena.core.network.provider.MatchType
+import org.njarasoa.fijerena.core.network.provider.ProviderCopyManager
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.ui.R
@@ -60,6 +63,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.TvCheckRow
+import org.njarasoa.fijerena.ui.components.input.TvRadioRow
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -498,6 +502,156 @@ fun QuickConnectDialog(
             }
         },
         confirmButton = {},
+        dismissButton = {
+            CinemaDialogActionButton(
+                onClick = onDismiss,
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary,
+                    ),
+            ) { Text(stringResource(R.string.common_cancel)) }
+        },
+        containerColor = CinemaSurface,
+    )
+}
+
+/** Name-edit dialog for [ProviderCopyManager.duplicateProvider]. */
+@Composable
+fun DuplicateProviderDialog(
+    provider: ProviderEntity,
+    onConfirm: (newName: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val defaultName = stringResource(R.string.provider_duplicate_name_default_format, provider.name)
+    var name by remember(provider.id) { mutableStateOf(defaultName) }
+
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.provider_duplicate_title), color = CinemaTextPrimary) },
+        text = {
+            ReadOnlyFieldWithEdit(
+                value = name,
+                onValueChange = { name = it },
+                label = stringResource(R.string.provider_duplicate_name_label),
+            )
+        },
+        confirmButton = {
+            CinemaDialogActionButton(
+                onClick = { onConfirm(name.trim().ifBlank { defaultName }) },
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaAccent,
+                        contentColor = CinemaTextPrimary,
+                    ),
+            ) { Text(stringResource(R.string.provider_duplicate_button)) }
+        },
+        dismissButton = {
+            CinemaDialogActionButton(
+                onClick = onDismiss,
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary,
+                    ),
+            ) { Text(stringResource(R.string.common_cancel)) }
+        },
+        containerColor = CinemaSurface,
+    )
+}
+
+/** Target picker + option checkboxes for [ProviderCopyManager.copyProviderData]. */
+@Composable
+fun CopyProviderDialog(
+    source: ProviderEntity,
+    targets: List<ProviderEntity>,
+    onConfirm: (targetId: Long, options: ProviderCopyManager.CopyOptions) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var targetId by remember(source.id) { mutableStateOf(targets.firstOrNull()?.id) }
+    var copyConnection by remember { mutableStateOf(false) }
+    var copySettings by remember { mutableStateOf(true) }
+    var copyFavorites by remember { mutableStateOf(true) }
+    var copyWatchHistory by remember { mutableStateOf(true) }
+    val firstFocus = remember { FocusRequester() }
+
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.provider_copy_to_title), color = CinemaTextPrimary) },
+        text = {
+            Column(
+                modifier = Modifier.heightIn(max = TvDimensions.dialogWidth).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                Text(
+                    stringResource(R.string.provider_copy_to_target_label),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = CinemaTextPrimary,
+                )
+                targets.forEachIndexed { index, candidate ->
+                    TvRadioRow(
+                        selected = targetId == candidate.id,
+                        onClick = { targetId = candidate.id },
+                        label = candidate.name,
+                        modifier = if (index == 0) Modifier.focusRequester(firstFocus) else Modifier,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(Spacing.sm))
+
+                Text(
+                    stringResource(R.string.provider_copy_to_options_label),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = CinemaTextPrimary,
+                )
+                TvCheckRow(checked = copySettings, onCheckedChange = { copySettings = it }, label = stringResource(R.string.provider_copy_to_settings_label))
+                TvCheckRow(
+                    checked = copyFavorites,
+                    onCheckedChange = { copyFavorites = it },
+                    label = stringResource(R.string.provider_copy_to_favorites_label),
+                )
+                TvCheckRow(
+                    checked = copyWatchHistory,
+                    onCheckedChange = { copyWatchHistory = it },
+                    label = stringResource(R.string.provider_copy_to_watch_history_label),
+                )
+                TvCheckRow(
+                    checked = copyConnection,
+                    onCheckedChange = { copyConnection = it },
+                    label = stringResource(R.string.provider_copy_to_connection_label),
+                )
+                if (copyConnection) {
+                    val targetName = targets.firstOrNull { it.id == targetId }?.name.orEmpty()
+                    Text(
+                        stringResource(R.string.provider_copy_to_connection_warning_format, targetName),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CinemaError,
+                    )
+                }
+            }
+        },
+        initialFocus = firstFocus,
+        confirmButton = {
+            CinemaDialogActionButton(
+                onClick = {
+                    val resolvedTargetId = targetId ?: return@CinemaDialogActionButton
+                    onConfirm(
+                        resolvedTargetId,
+                        ProviderCopyManager.CopyOptions(
+                            copyConnection = copyConnection,
+                            copyProviderSettings = copySettings,
+                            copyFavorites = copyFavorites,
+                            copyWatchHistory = copyWatchHistory,
+                        ),
+                    )
+                },
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaAccent,
+                        contentColor = CinemaTextPrimary,
+                    ),
+            ) { Text(stringResource(R.string.provider_copy_to_button)) }
+        },
         dismissButton = {
             CinemaDialogActionButton(
                 onClick = onDismiss,

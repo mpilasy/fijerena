@@ -309,6 +309,20 @@
     <string name="provider_delete_confirm_title">Supprimer le fournisseur ?</string>
     <string name="provider_delete_confirm_message">Supprimer \"%1$s\" ? Toutes les données en cache seront supprimées.</string>
     <string name="provider_active_label">Actif</string>
+    <string name="provider_duplicate_button">Dupliquer</string>
+    <string name="provider_duplicate_title">Dupliquer le fournisseur</string>
+    <string name="provider_duplicate_name_default_format">%1$s (copie)</string>
+    <string name="provider_duplicate_name_label">Nom du nouveau fournisseur</string>
+    <string name="provider_copy_to_button">Copier vers…</string>
+    <string name="provider_copy_to_title">Copier vers un fournisseur</string>
+    <string name="provider_copy_to_target_label">Fournisseur cible</string>
+    <string name="provider_copy_to_options_label">Éléments à copier</string>
+    <string name="provider_copy_to_settings_label">Paramètres</string>
+    <string name="provider_copy_to_favorites_label">Favoris</string>
+    <string name="provider_copy_to_watch_history_label">Historique de visionnage</string>
+    <string name="provider_copy_to_connection_label">Connexion et identifiants</string>
+    <string name="provider_copy_to_connection_warning_format">Ceci écrase l\'URL, le nom d\'utilisateur et le mot de passe de \"%1$s\".</string>
+    <string name="provider_duplicate_result_format">Dupliqué sous « %1$s ».</string>
 
     <!-- More Common -->
     <string name="common_select">Séléctionner</string>

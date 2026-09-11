@@ -49,7 +49,9 @@ class ProviderRepository(
 
     /**
      * Add a new provider. Stores the password in a per-provider encrypted prefs file.
-     * Deactivates all other providers and activates this one.
+     * Deactivates all other providers and activates this one, unless [activate] is false — used
+     * by [ProviderCopyManager.duplicateProvider] so cloning a provider doesn't steal "active" away
+     * from whatever the user currently has selected.
      */
     suspend fun addProvider(
         name: String,
@@ -59,8 +61,9 @@ class ProviderRepository(
         type: String = "XTREAM",
         config: String = "",
         initialSettings: ProviderSettings = ProviderSettings.DEFAULT,
+        activate: Boolean = true,
     ): Long {
-        dao.deactivateAll()
+        if (activate) dao.deactivateAll()
         val settingsJson = json.encodeToString(initialSettings)
         val entity =
             ProviderEntity(
@@ -70,7 +73,7 @@ class ProviderRepository(
                 type = type,
                 config = config,
                 providerSettings = settingsJson,
-                isActive = true,
+                isActive = activate,
             )
         val id = dao.insertProvider(entity)
         savePassword(id, password)

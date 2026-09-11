@@ -39,6 +39,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
+import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
@@ -65,7 +67,10 @@ fun TvProviderSelectionScreen(
             factory = ProviderViewModelFactory(context),
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val copyResultMessage by viewModel.copyResultMessage.collectAsStateWithLifecycle()
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
+    var duplicateProvider by remember { mutableStateOf<ProviderEntity?>(null) }
+    var copyFromProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     val appSettings =
         remember {
             org.njarasoa.fijerena.core.network
@@ -148,6 +153,8 @@ fun TvProviderSelectionScreen(
                     onEdit = onEditProvider,
                     onManageEpg = onManageEpg,
                     onDelete = { deleteConfirmProvider = it },
+                    onDuplicate = { duplicateProvider = it },
+                    onCopyTo = { copyFromProvider = it },
                 )
             }
             is ProviderUiState.MultipleProviders -> {
@@ -157,6 +164,8 @@ fun TvProviderSelectionScreen(
                     onEdit = onEditProvider,
                     onManageEpg = onManageEpg,
                     onDelete = { deleteConfirmProvider = it },
+                    onDuplicate = { duplicateProvider = it },
+                    onCopyTo = { copyFromProvider = it },
                 )
             }
         }
@@ -208,6 +217,57 @@ fun TvProviderSelectionScreen(
             containerColor = CinemaSurface,
         )
     }
+
+    val allProviders =
+        when (val state = uiState) {
+            is ProviderUiState.SingleProvider -> listOf(state.provider)
+            is ProviderUiState.MultipleProviders -> state.providers
+            else -> emptyList()
+        }
+
+    duplicateProvider?.let { provider ->
+        DuplicateProviderDialog(
+            provider = provider,
+            onConfirm = { newName ->
+                viewModel.duplicateProvider(provider.id, newName)
+                duplicateProvider = null
+            },
+            onDismiss = { duplicateProvider = null },
+        )
+    }
+
+    copyFromProvider?.let { provider ->
+        CopyProviderDialog(
+            source = provider,
+            targets = allProviders.filter { it.id != provider.id },
+            onConfirm = { targetId, options ->
+                viewModel.copyProviderData(provider.id, targetId, options)
+                copyFromProvider = null
+            },
+            onDismiss = { copyFromProvider = null },
+        )
+    }
+
+    copyResultMessage?.let { message ->
+        CinemaAlertDialog(
+            onDismissRequest = { viewModel.clearCopyResultMessage() },
+            title = { Text(stringResource(R.string.provider_copy_to_title), color = MaterialTheme.colorScheme.onSurface) },
+            text = { Text(message, color = CinemaTextSecondary) },
+            confirmButton = {
+                CinemaButton(
+                    onClick = { viewModel.clearCopyResultMessage() },
+                    colors =
+                        androidx.tv.material3.ButtonDefaults.colors(
+                            containerColor = CinemaAccent,
+                            contentColor = CinemaTextPrimary,
+                        ),
+                ) {
+                    Text(stringResource(R.string.common_ok))
+                }
+            },
+            containerColor = CinemaSurface,
+        )
+    }
 }
 
 @Composable
@@ -217,6 +277,8 @@ private fun ProviderList(
     onEdit: (Long) -> Unit,
     onManageEpg: (Long) -> Unit,
     onDelete: (ProviderEntity) -> Unit,
+    onDuplicate: (ProviderEntity) -> Unit,
+    onCopyTo: (ProviderEntity) -> Unit,
 ) {
     val scale = LocalUiScale.current
     TvLazyColumn(
@@ -278,6 +340,28 @@ private fun ProviderList(
                                 Icon(
                                     CinemaIcons.LiveTv,
                                     contentDescription = stringResource(R.string.epg_data_manage_button),
+                                    tint = CinemaAccent
+                                )
+                            },
+                        )
+                    }
+                    CinemaIconButton(
+                        onClick = { onDuplicate(provider) },
+                        icon = {
+                            Icon(
+                                CinemaIcons.ContentCopy,
+                                contentDescription = stringResource(R.string.provider_duplicate_button),
+                                tint = CinemaAccent
+                            )
+                        },
+                    )
+                    if (providers.size > 1) {
+                        CinemaIconButton(
+                            onClick = { onCopyTo(provider) },
+                            icon = {
+                                Icon(
+                                    CinemaIcons.SwapHoriz,
+                                    contentDescription = stringResource(R.string.provider_copy_to_button),
                                     tint = CinemaAccent
                                 )
                             },

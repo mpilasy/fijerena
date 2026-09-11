@@ -30,6 +30,13 @@
     <string name="settings_export_summary_updated">Paramètres mis à jour</string>
     <string name="settings_export_summary_passwords_reentry_format">%1$s (les mots de passe doivent être ressaisis)</string>
 
+    <!-- Provider copy/duplicate (ProviderCopyManager) -->
+    <string name="provider_copy_result_connection">Connexion copiée</string>
+    <string name="provider_copy_result_settings">Paramètres copiés</string>
+    <string name="provider_copy_result_favorites_format">%1$d favori(s) copié(s)</string>
+    <string name="provider_copy_result_watch_state_format">%1$d élément(s) d\'historique copié(s)</string>
+    <string name="provider_copy_result_nothing">Rien à copier</string>
+
     <!-- EPG freshness label -->
     <string name="epg_freshness_no_sources">Aucune source EPG</string>
     <string name="epg_freshness_never_refreshed">Jamais actualisé</string>

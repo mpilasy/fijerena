@@ -20,6 +20,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
+import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
@@ -48,7 +50,10 @@ fun MobileProviderSelectionScreen(
             factory = ProviderViewModelFactory(context),
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val copyResultMessage by viewModel.copyResultMessage.collectAsStateWithLifecycle()
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
+    var duplicateProvider by remember { mutableStateOf<ProviderEntity?>(null) }
+    var copyFromProvider by remember { mutableStateOf<ProviderEntity?>(null) }
 
     // Refresh provider list when screen is shown (e.g., after adding a provider)
     LaunchedEffect(Unit) {
@@ -114,6 +119,8 @@ fun MobileProviderSelectionScreen(
                         onEdit = onEditProvider,
                         onManageEpg = onManageEpg,
                         onDelete = { deleteConfirmProvider = it },
+                        onDuplicate = { duplicateProvider = it },
+                        onCopyTo = { copyFromProvider = it },
                     )
                 }
                 is ProviderUiState.MultipleProviders -> {
@@ -123,6 +130,8 @@ fun MobileProviderSelectionScreen(
                         onEdit = onEditProvider,
                         onManageEpg = onManageEpg,
                         onDelete = { deleteConfirmProvider = it },
+                        onDuplicate = { duplicateProvider = it },
+                        onCopyTo = { copyFromProvider = it },
                     )
                 }
             }
@@ -155,6 +164,49 @@ fun MobileProviderSelectionScreen(
             },
         )
     }
+
+    val allProviders =
+        when (val state = uiState) {
+            is ProviderUiState.SingleProvider -> listOf(state.provider)
+            is ProviderUiState.MultipleProviders -> state.providers
+            else -> emptyList()
+        }
+
+    duplicateProvider?.let { provider ->
+        DuplicateProviderDialog(
+            provider = provider,
+            onDismiss = { duplicateProvider = null },
+            onConfirm = { newName ->
+                viewModel.duplicateProvider(provider.id, newName)
+                duplicateProvider = null
+            },
+        )
+    }
+
+    copyFromProvider?.let { provider ->
+        CopyProviderDialog(
+            source = provider,
+            targets = allProviders.filter { it.id != provider.id },
+            onDismiss = { copyFromProvider = null },
+            onConfirm = { targetId, options ->
+                viewModel.copyProviderData(provider.id, targetId, options)
+                copyFromProvider = null
+            },
+        )
+    }
+
+    copyResultMessage?.let { message ->
+        CinemaAlertDialog(
+            onDismissRequest = { viewModel.clearCopyResultMessage() },
+            title = { Text(stringResource(R.string.provider_copy_to_title)) },
+            text = { Text(message) },
+            confirmButton = {
+                CinemaDialogActionButton(onClick = { viewModel.clearCopyResultMessage() }) {
+                    Text(stringResource(R.string.common_ok))
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -164,6 +216,8 @@ private fun MobileProviderList(
     onEdit: (Long) -> Unit,
     onManageEpg: (Long) -> Unit,
     onDelete: (ProviderEntity) -> Unit,
+    onDuplicate: (ProviderEntity) -> Unit,
+    onCopyTo: (ProviderEntity) -> Unit,
 ) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
@@ -222,6 +276,22 @@ private fun MobileProviderList(
                                 Icon(
                                     CinemaIcons.LiveTv,
                                     contentDescription = stringResource(R.string.epg_data_manage_button),
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
+                        IconButton(onClick = { onDuplicate(provider) }) {
+                            Icon(
+                                CinemaIcons.ContentCopy,
+                                contentDescription = stringResource(R.string.provider_duplicate_button),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        if (providers.size > 1) {
+                            IconButton(onClick = { onCopyTo(provider) }) {
+                                Icon(
+                                    CinemaIcons.SwapHoriz,
+                                    contentDescription = stringResource(R.string.provider_copy_to_button),
                                     tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
