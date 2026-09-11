@@ -3,20 +3,24 @@ package org.njarasoa.fijerena.core.network.tmdb
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** `/movie/{id}/images` and `/tv/{id}/images`. Only `logos` is used — the transparent-PNG
- * wordmark art for the OSD title treatment; posters/backdrops come from the Xtream catalogue. */
+/** `/movie/{id}/images` and `/tv/{id}/images`. `logos` is the transparent-PNG wordmark art for
+ * the OSD title treatment and the TV detail hero headline; `backdrops` is the hero's full-bleed
+ * background — the Xtream catalogue's own backdrop (when it has one) is preferred over neither. */
 @Serializable
 data class TmdbImagesResponse(
     @SerialName("logos")
-    val logos: List<TmdbLogo> = emptyList(),
+    val logos: List<TmdbImage> = emptyList(),
+    @SerialName("backdrops")
+    val backdrops: List<TmdbImage> = emptyList(),
 )
 
+/** One entry from `logos` or `backdrops` — same shape either way. */
 @Serializable
-data class TmdbLogo(
+data class TmdbImage(
     @SerialName("file_path")
     val filePath: String,
-    // Null/blank means "language-neutral" (text-free or the studio's international mark) —
-    // TMDB's own preferred pick when a request's language has no logo of its own.
+    // Null/blank means "language-neutral" (text-free art, or a backdrop — most backdrops carry
+    // no language at all) — TMDB's own preferred pick when a request's language has none of its own.
     @SerialName("iso_639_1")
     val language: String? = null,
     @SerialName("width")

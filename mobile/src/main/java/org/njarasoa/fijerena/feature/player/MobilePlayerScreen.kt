@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -53,6 +55,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
+import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.feature.player.components.AudioTrackSelectorDialog
 import org.njarasoa.fijerena.feature.player.components.ChannelToast
@@ -136,15 +139,23 @@ fun MobilePlayerScreen(
         }
     }
 
+    val scope = rememberCoroutineScope()
     MobilePlayerContent(
         viewModel = activityScopedViewModel,
         loaderViewModel = loaderViewModel,
         contentType = contentType,
         onBack = {
-            finalizeSession(activityScopedViewModel.playbackState.value, loaderViewModel)
-            activityScopedViewModel.stop()
-            StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
-            onBack()
+            // Awaited, not fire-and-forget: this is the explicit Back path, which navigates
+            // straight back to the episode-selection screen — its own watch-history read can
+            // otherwise win the race against an unawaited write and land on the wrong resume
+            // season. See finalizeSessionAndAwait's kdoc and
+            // docs/plans/episode-selection-fragility-plan.md.
+            scope.launch {
+                finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
+                activityScopedViewModel.stop()
+                StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
+                onBack()
+            }
         },
     )
 }
@@ -161,16 +172,12 @@ fun MobilePlayerContent(
     loaderViewModel: StreamLoaderViewModel,
     contentType: String,
     onBack: () -> Unit,
-    // When provided (by MobileCategoryListScreen, as a movableContentOf node), rendered instead
-    // of a fresh EmbeddedPlayerSurface — keeps the same underlying Android View/Surface alive
-    // across the dock<->full-screen promotion instead of swapping to a new one. Null for the
-    // standalone (MobilePlayerScreen) route, which has no dock to persist a surface from.
-    videoSurface: (@Composable () -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
     val appSettings = remember { AppSettings(context.applicationContext) }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
 
     // Observe app focus/lifecycle to pause on background and stop after timeout
     DisposableEffect(lifecycleOwner) {
@@ -413,18 +420,19 @@ fun MobilePlayerContent(
         }
     }
 
-    // The series name / episode label / TMDB logo above resolve asynchronously (a series-detail
-    // and a TMDB lookup) well after the effect above already started playback with whatever was
-    // known at that instant — almost always still null. Patch them into the OSD's metadata as
-    // they land, without touching playback (see PlaybackViewModel.updateMetadata).
+    // The series name / episode label / TMDB logo / synopsis above resolve asynchronously (a
+    // series-detail and a TMDB lookup) well after the effect above already started playback with
+    // whatever was known at that instant — almost always still null. Patch them into the OSD's
+    // metadata as they land, without touching playback (see PlaybackViewModel.updateMetadata).
     val enrichedState = streamState as? StreamLoaderViewModel.StreamState.Success
-    LaunchedEffect(enrichedState?.seriesName, enrichedState?.episodeLabel, enrichedState?.logoUrl) {
+    LaunchedEffect(enrichedState?.seriesName, enrichedState?.episodeLabel, enrichedState?.logoUrl, enrichedState?.description) {
         if (enrichedState != null) {
             viewModel.updateMetadata(enrichedState.streamUrl) {
                 it.copy(
                     showTitle = enrichedState.seriesName,
                     episodeLabel = enrichedState.episodeLabel,
                     logoUrl = enrichedState.logoUrl,
+                    description = enrichedState.description,
                 )
             }
         }
@@ -523,13 +531,12 @@ fun MobilePlayerContent(
                             }
                         ),
             ) {
-                // Video surface — shared implementation with TV's full-screen/preview surfaces
-                // (core/ui/.../EmbeddedPlayerSurface.kt), bound to the same StreamingPlaybackService.
-                if (videoSurface != null) {
-                    videoSurface()
-                } else {
-                    EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
-                }
+                // SurfaceView (EmbeddedPlayerSurface's default), always — full-screen playback is
+                // composited independently of the UI thread by SurfaceFlinger, so OSD/flyout
+                // recomposition here never steals frames from the video. See
+                // MobileCategoryListScreen's videoSurface comment for why the dock needs the
+                // opposite (TextureView).
+                EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
 
                 // Reset PiP auto-enter when leaving the full-screen player. Finalizing the
                 // session and stopping playback is NOT done here — this composable is shared
@@ -618,6 +625,17 @@ fun MobilePlayerContent(
                         onToggleFavorite = {
                             loaderViewModel.toggleFavorite()
                         },
+                        nextEpisode = state.nextEpisode,
+                        onPlayNextEpisode = { nextEp ->
+                            // Awaited: playNextEpisode() flips loaderViewModel's state to Loading
+                            // in its own coroutine, which races an unawaited finalizeSession()'s
+                            // position-save read of that same state — see finalizeSessionAndAwait's
+                            // kdoc / docs/plans/episode-selection-fragility-plan.md.
+                            scope.launch {
+                                finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
+                                loaderViewModel.playNextEpisode(nextEp)
+                            }
+                        },
                     )
                 }
 
@@ -682,11 +700,12 @@ fun MobilePlayerContent(
                 )
             }
 
-            // Channel/program info — also shown while the category or last-watched panel is
-            // open (above them, since both cover most of the screen) so it's never hidden.
+            // Channel/program info toast — not shown while the category or last-watched panel is
+            // open; MobileChannelListSheet already highlights the current channel, so the toast
+            // would just be redundant on top of it (mirrors TV's PlayerScreen).
             Box(modifier = Modifier.fillMaxSize()) {
                 AnimatedVisibility(
-                    visible = !isInPipMode && (showChannelToast || showCategoryOverlay || showLastWatchedOverlay),
+                    visible = !isInPipMode && showChannelToast,
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier.align(Alignment.TopCenter),

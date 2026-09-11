@@ -209,27 +209,20 @@ class PlaybackViewModel(
     }
 
     fun seekRelative(offsetMs: Long) {
-        val state = _playbackState.value
-        val currentPos =
-            when (state) {
-                is PlaybackState.Playing -> state.position
-                is PlaybackState.Paused -> state.position
-                PlaybackState.Idle,
-                PlaybackState.Buffering,
-                is PlaybackState.Ended,
-                is PlaybackState.Error,
-                -> return
-            }
-        val duration =
-            when (state) {
-                is PlaybackState.Playing -> state.duration
-                is PlaybackState.Paused -> state.duration
-                PlaybackState.Idle,
-                PlaybackState.Buffering,
-                is PlaybackState.Ended,
-                is PlaybackState.Error,
-                -> return
-            }
+        // Only meaningful while actually playing/paused — bail on Idle/Buffering/Ended/Error.
+        when (_playbackState.value) {
+            is PlaybackState.Playing, is PlaybackState.Paused -> {}
+            else -> return
+        }
+        // Read the live player position/duration rather than the cached PlaybackState: that
+        // StateFlow only updates on discrete Player.Listener events (state/playWhenReady/
+        // isPlaying changes), so during steady playback it stays frozen at whatever it was
+        // when last set — often minutes stale. Seeking relative to it jumped to the wrong
+        // spot (the bug behind "fast forward/rewind fucked up").
+        val player = StreamingPlaybackService.getInstance()?.getPlayer() ?: return
+        val currentPos = player.currentPosition
+        val duration = player.duration.coerceAtLeast(0L)
+        if (duration <= 0L) return
         seekTo((currentPos + offsetMs).coerceIn(0L, duration))
     }
 

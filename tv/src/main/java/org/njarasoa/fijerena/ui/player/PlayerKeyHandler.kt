@@ -39,6 +39,11 @@ fun handlePlayerKeyEvent(
 
     return when (keyEvent.key) {
         Key.DirectionCenter, Key.Enter -> {
+            // Let D-pad OK activate whatever's focused inside an open modal (e.g. select a
+            // channel in the category/last-watched overlay) instead of revealing the OSD —
+            // mirrors the isModalOpen guard on Up/Down/Left/Right below.
+            if (state.isModalOpen) return false
+
             val now = System.currentTimeMillis()
             val isDoubleClick = now - state.lastOkClickTime < 350L
             state.lastOkClickTime = now
@@ -198,15 +203,20 @@ private fun stepScrubCursor(
     repeatCount: Int,
     forward: Boolean,
 ) {
-    val (position, duration) =
-        when (playbackState) {
-            is PlaybackState.Playing -> playbackState.position to playbackState.duration
-            is PlaybackState.Paused -> playbackState.position to playbackState.duration
-            else -> return
-        }
+    when (playbackState) {
+        is PlaybackState.Playing, is PlaybackState.Paused -> {}
+        else -> return
+    }
+    // Use the live-polled position/duration (state.livePosition/liveDuration, refreshed every
+    // 500ms in PlayerEffects), not playbackState.position/duration: that PlaybackState only
+    // updates on discrete Player.Listener events, so during steady playback it stays frozen at
+    // whatever it was minutes ago. Starting the scrub cursor from that stale value threw the
+    // seek destination off by however long playback had been running — the "rewind/fast
+    // forward fucked up" bug.
+    val duration = state.liveDuration
     if (duration <= 0L) return
 
-    val origin = state.scrubPositionMs ?: position
+    val origin = state.scrubPositionMs ?: state.livePosition
     val step =
         when {
             repeatCount < 5 -> 10_000L

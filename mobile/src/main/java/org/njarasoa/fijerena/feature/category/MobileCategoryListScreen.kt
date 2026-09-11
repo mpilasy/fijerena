@@ -52,7 +52,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -297,21 +296,6 @@ fun MobileCategoryListScreen(
         }
     }
 
-    // One video surface, relocated (not recreated) between the small dock box and the
-    // full-screen MobilePlayerContent via movableContentOf — keeps the same Android
-    // View/Surface alive across promote/demote so ExoPlayer never has to detach/reattach.
-    // Earlier attempt at this rendered two channels simultaneously overlapping on a genuine
-    // channel switch — root-caused to StreamingPlaybackService.playStream() not fully releasing
-    // the outgoing decoder session before starting the next one (now fixed there with an
-    // explicit player.stop()), not to surface sharing itself. Both call sites must use
-    // TextureView, since the dock position (next to a scrolling/recomposing channel list) ANRs
-    // the main thread with a SurfaceView.
-    val videoSurface = remember {
-        movableContentOf {
-            EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
-        }
-    }
-
     val dockLoader: StreamLoaderViewModel? =
         if (isLiveTv && target != null) {
             viewModel(
@@ -441,7 +425,6 @@ fun MobileCategoryListScreen(
             viewModel = dockPlayback,
             loaderViewModel = dockLoader,
             contentType = contentType,
-            videoSurface = videoSurface,
             onBack = { fullScreen = false },
         )
         return
@@ -736,7 +719,17 @@ fun MobileCategoryListScreen(
                                     ) {
                                         val videoHeight = (maxWidth * 9f / 16f).coerceAtMost(maxHeight)
                                         Box(modifier = Modifier.fillMaxWidth().height(videoHeight)) {
-                                            videoSurface()
+                                            // TextureView (not the default SurfaceView): this box
+                                            // sits next to the scrolling/recomposing channel list,
+                                            // and SurfaceView there stalls the main thread and
+                                            // ANRs. Full-screen playback (MobilePlayerContent) uses
+                                            // its own default surface instead of sharing this one —
+                                            // promoting/demoting does a real detach/reattach (one
+                                            // frame's glitch) rather than relocating this node, but
+                                            // it stops every OSD/flyout interaction in full-screen
+                                            // from janking the video for the rest of the session.
+                                            // Mirrors TV's LiveTvSplitLayout.
+                                            EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
 
                                             // The preview surface has no controls/error UI of its
                                             // own, so a stalled or watchdog-killed stream would
@@ -829,7 +822,8 @@ fun MobileCategoryListScreen(
                                                 // promoting needs no extra reload.
                                                 .clickable(onClick = { fullScreen = true }),
                                     ) {
-                                        videoSurface()
+                                        // TextureView — see the landscape dock box above.
+                                        EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
 
                                         IconButton(
                                             onClick = {

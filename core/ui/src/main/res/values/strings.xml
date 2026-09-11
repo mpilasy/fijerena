@@ -332,11 +332,17 @@
     <string name="movie_cast_format">Cast: %1$s</string>
     <string name="movie_director_format">Director: %1$s</string>
     <string name="details_watch_trailer">▶ Trailer</string>
+    <string name="details_watch_trailer_description">Watch trailer</string>
+    <string name="details_community_rating">Community Rating</string>
     <string name="details_tmdb_format">TMDB: %1$s</string>
     <string name="details_tmdb_none">None</string>
     <string name="details_stream_name_format">Stream name: %1$s</string>
     <string name="details_other_instances">Other instances of this title</string>
     <string name="details_collection_fallback">Collection</string>
+    <string name="details_tab_cast">Cast</string>
+    <string name="details_tab_details">Details</string>
+    <string name="details_tab_similar">Similar</string>
+    <string name="details_tab_seasons">Seasons</string>
     <string name="details_more_like_this">More Like This</string>
     <string name="details_no_link_handler">No app on this device can open that link</string>
     <string name="movie_loading_details">Loading movie details…</string>
@@ -365,6 +371,8 @@
     <string name="series_episode_label">Episode %1$d</string>
     <string name="series_continue_watching_badge">Continue Watching</string>
     <string name="series_present">ongoing</string>
+    <string name="series_next_up_title">Next Up</string>
+    <string name="series_remaining_format">%1$s remaining</string>
     <string name="content_watched_badge">Watched</string>
     <string name="content_untitled">Untitled</string>
 

@@ -40,6 +40,7 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -77,11 +78,8 @@ fun PlayerScreen(
     categoryStreams: ImmutableMediaList = ImmutableMediaList(),
     recentStreams: ImmutableMediaList = ImmutableMediaList(),
     onStreamSelected: ((MediaItem) -> Unit)? = null,
-    // When provided (by LiveTvSplitLayout, as a movableContentOf node), rendered instead of a
-    // fresh EmbeddedPlayerSurface — keeps the same underlying Android View/Surface alive across
-    // the preview<->full-screen promotion instead of swapping to a new one. Null for the
-    // standalone (TvPlayerScreen) route, which has no preview to persist a surface from.
-    videoSurface: (@Composable () -> Unit)? = null,
+    nextEpisode: EpisodeItem? = null,
+    onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
@@ -177,13 +175,11 @@ fun PlayerScreen(
                     )
                 },
     ) {
-        // Shared surface bound to the single playback engine (also used by the embedded
-        // Live TV preview pane / mobile dock).
-        if (videoSurface != null) {
-            videoSurface()
-        } else {
-            EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
-        }
+        // SurfaceView (EmbeddedPlayerSurface's default), always — full-screen playback is
+        // composited independently of the UI thread by SurfaceFlinger, so OSD/flyout
+        // recomposition here never steals frames from the video. See LiveTvSplitLayout's
+        // videoSurface comment for why the preview pane needs the opposite (TextureView).
+        EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
 
         // Loading/Error overlays (always show, except Idle which is handled silently)
         Box(
@@ -333,6 +329,44 @@ fun PlayerScreen(
             )
         }
 
+        // Modern unified controls overlay (mobile-style). Declared before the category/
+        // last-watched overlays below so that on the rare overlap (a channel-zap's showStreamInfo
+        // hasn't auto-hidden yet when the flyout opens) it renders underneath them, never on top —
+        // opening a flyout is never itself a reason to show this. hideTopBars still exists for
+        // that overlap case, so the compact top bars don't double up with the flyout's own title.
+        AnimatedVisibility(
+            visible = state.showControls || state.showStreamInfo,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            TvPlayerControlsOverlay(
+                playbackState = currentPs,
+                metadata = state.displayedMetadata,
+                viewModel = viewModel,
+                livePosition = state.livePosition,
+                liveDuration = state.liveDuration,
+                currentEpgProgram = currentEpgProgram,
+                nextEpgProgram = nextEpgProgram,
+                isFavorite = isFavorite,
+                onToggleFavorite = onToggleFavorite,
+                showFullControls = state.showControls,
+                hideTopBars = state.showCategoryOverlay || state.showLastWatchedOverlay,
+                onShowAudioTrackSelector = { state.showAudioTrackSelector = true },
+                onShowSubtitleSelector = { state.showSubtitleSelector = true },
+                onShowQualitySelector = { state.showQualitySelector = true },
+                onShowChapterSelector = { state.showChapterSelector = true },
+                onShowStats = { state.showStats = !state.showStats },
+                seekSpeedLabel = state.seekSpeedLabel,
+                scrubPositionMs = state.scrubPositionMs,
+                onCommitScrub = { target ->
+                    viewModel.seekTo(target)
+                    state.scrubPositionMs = null
+                },
+                nextEpisode = nextEpisode,
+                onPlayNextEpisode = onPlayNextEpisode,
+            )
+        }
+
         // Category streams overlay — slides in from the left
         AnimatedVisibility(
             visible = state.showCategoryOverlay,
@@ -368,41 +402,6 @@ fun PlayerScreen(
                     onStreamSelected?.invoke(item)
                 },
                 onDismiss = { state.showLastWatchedOverlay = false },
-            )
-        }
-
-        // Modern unified controls overlay (mobile-style). Also shown (in compact info-only
-        // mode, since showFullControls stays tied to state.showControls) while the category or
-        // last-watched overlay is open — and declared after them so it renders on top, since
-        // both overlays are full-height and would otherwise cover the channel/program info.
-        AnimatedVisibility(
-            visible = state.showControls || state.showStreamInfo || state.showCategoryOverlay || state.showLastWatchedOverlay,
-            enter = fadeIn(),
-            exit = fadeOut(),
-        ) {
-            TvPlayerControlsOverlay(
-                playbackState = currentPs,
-                metadata = state.displayedMetadata,
-                viewModel = viewModel,
-                livePosition = state.livePosition,
-                liveDuration = state.liveDuration,
-                currentEpgProgram = currentEpgProgram,
-                nextEpgProgram = nextEpgProgram,
-                isFavorite = isFavorite,
-                onToggleFavorite = onToggleFavorite,
-                showFullControls = state.showControls,
-                hideTopBars = state.showCategoryOverlay || state.showLastWatchedOverlay,
-                onShowAudioTrackSelector = { state.showAudioTrackSelector = true },
-                onShowSubtitleSelector = { state.showSubtitleSelector = true },
-                onShowQualitySelector = { state.showQualitySelector = true },
-                onShowChapterSelector = { state.showChapterSelector = true },
-                onShowStats = { state.showStats = !state.showStats },
-                seekSpeedLabel = state.seekSpeedLabel,
-                scrubPositionMs = state.scrubPositionMs,
-                onCommitScrub = { target ->
-                    viewModel.seekTo(target)
-                    state.scrubPositionMs = null
-                },
             )
         }
     }

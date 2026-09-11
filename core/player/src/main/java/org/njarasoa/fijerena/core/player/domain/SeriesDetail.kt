@@ -5,6 +5,10 @@ data class SeriesDetail(
     val name: String,
     val metadata: MediaMetadata = MediaMetadata(),
     val coverUrl: String? = null,
+    /** The provider's own backdrop art, if it has one (Xtream's `backdrop_path`, Jellyfin's
+     * `BackdropImageTags`) — the fallback the TV detail hero uses when TMDB has none. Null for
+     * providers with no such concept (SMB, Local, Remote M3U). */
+    val backdropUrl: String? = null,
     val seasons: List<SeasonInfo> = emptyList(),
     val episodes: Map<String, List<EpisodeItem>> = emptyMap(),
 )

@@ -96,6 +96,17 @@ interface MediaProvider {
     ): String? = null
 
     /**
+     * TMDB's full-bleed backdrop art for [tmdbId], for the TV detail hero background. Null for
+     * every reason it should simply not show: no TMDB id, no API key, a failed call, or TMDB has
+     * no backdrop for this title — callers fall back to whatever backdrop the catalogue itself
+     * carries, then to no image at all.
+     */
+    suspend fun getTmdbBackdropUrl(
+        tmdbId: String?,
+        contentType: String,
+    ): String? = null
+
+    /**
      * Other entries in this provider's local catalogue carrying the same TMDB id as [itemId] —
      * different rips/languages of the same movie or show, for the "other instances" picker next
      * to the stream name. Empty for every reason it should simply not show: no TMDB id, or

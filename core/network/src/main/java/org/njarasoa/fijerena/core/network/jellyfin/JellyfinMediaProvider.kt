@@ -272,6 +272,12 @@ class JellyfinMediaProvider(
                         } else {
                             null
                         },
+                    backdropUrl =
+                        if (seriesItem.backdropImageTags.isNotEmpty()) {
+                            api.buildImageUrl(seriesId, "Backdrop")
+                        } else {
+                            null
+                        },
                     seasons =
                         seasons.map { season ->
                             SeasonInfo(
