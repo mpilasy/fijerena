@@ -10,7 +10,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.resumeProgress
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -25,6 +27,8 @@ class CategoryViewModel(
     private val contentType: String,
     private val initialCategoryId: String? = null,
 ) : ViewModel() {
+    private val appSettings = AppSettings(context.applicationContext)
+
     companion object {
         const val RECENT_CATEGORY_ID = "recent"
         const val FAVORITES_CATEGORY_ID = "favorites"
@@ -200,7 +204,13 @@ class CategoryViewModel(
         if (!repository.isConnected()) {
             val connectResult = repository.connect()
             if (connectResult.isFailure) {
-                val reason = connectResult.exceptionOrNull()?.message ?: context.getString(R.string.error_generic_unknown)
+                // Raw text here used to be a Room/HTTP/serialization exception's own message
+                // (e.g. a JSON parse error dumped straight from an EOF response body) shown to
+                // every user verbatim — friendlyErrorMessage maps it to something a viewer can
+                // act on, with the raw text appended only in dev mode.
+                val reason =
+                    connectResult.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                        ?: context.getString(R.string.error_generic_unknown)
                 _uiState.value = UiState.Error(context.getString(R.string.category_error_connection_failed_format, reason))
                 return
             }
