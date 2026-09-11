@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
@@ -211,7 +212,17 @@ private fun MovieDetailsContent(
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    val providerName by remember { mutableStateOf(appSettings.providerName) }
+    var providerName by remember { mutableStateOf(appSettings.providerName) }
+    // AppSettings.providerName is the legacy single-provider key and is never written once a
+    // provider lives in Room — it stays "My Provider" (its hardcoded default) for every provider
+    // added since. Same fix as TwoColumnLayout.kt's category grid: read the actual active
+    // provider's name from the DB and use that instead.
+    LaunchedEffect(Unit) {
+        val repo =
+            org.njarasoa.fijerena.core.network.provider
+                .ProviderRepository(context.applicationContext)
+        repo.getActiveProvider()?.let { providerName = it.name }
+    }
     val extension = movieDetail.extension ?: "mp4"
     val scale = LocalUiScale.current
     val typography = MaterialTheme.typography
@@ -347,7 +358,9 @@ private fun MovieDetailsContent(
     // Titles row paid its full layout cost while sitting entirely off-screen — 85ms of a 215ms
     // measure pass on every rebuild of this screen, which is why backing out of the player was
     // slow. EpisodeSelectionScreen already builds these same rows as LazyColumn items.
+    val movieListState = rememberLazyListState()
     LazyColumn(
+        state = movieListState,
         // Confirmed on a real Shield (logcat): the first Back press while a focused TV Button
         // has focus reaches Compose's key dispatch fine (a non-consuming onPreviewKeyEvent here
         // logs it), but something between here and the BackHandler/OnBackPressedDispatcher
@@ -430,16 +443,30 @@ private fun MovieDetailsContent(
                             false
                         }
                     }
+                // D-pad Up from the hero action row — same fix, same reason as
+                // EpisodeSelectionScreen's identical addition: these buttons are the topmost
+                // focusable in the screen, so default focus search has nowhere to go and the
+                // LazyColumn never scrolls back up once a tall plot has pushed the title above
+                // the viewport. Force it back to the top explicitly instead.
+                val upScrollToTop =
+                    Modifier.onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
+                            refreshScope.launch { movieListState.animateScrollToItem(0) }
+                            true
+                        } else {
+                            false
+                        }
+                    }
                 if (hasResume) {
                     val resumeTimeText = formatTime(resumePositionMs)
                     CinemaPrimaryButton(
                         onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
                         text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
-                        modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow),
+                        modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow).then(upScrollToTop),
                     )
                     CinemaIconButton(
                         onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true) },
-                        modifier = downToTabRow,
+                        modifier = downToTabRow.then(upScrollToTop),
                         icon = {
                             Icon(
                                 imageVector = CinemaIcons.Replay,
@@ -453,12 +480,12 @@ private fun MovieDetailsContent(
                     CinemaPrimaryButton(
                         onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
                         text = stringResource(R.string.movie_play_action),
-                        modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow),
+                        modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow).then(upScrollToTop),
                     )
                 }
                 CinemaIconButton(
                     onClick = onToggleFavorite,
-                    modifier = downToTabRow,
+                    modifier = downToTabRow.then(upScrollToTop),
                     icon = {
                         Icon(
                             imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
@@ -471,7 +498,7 @@ private fun MovieDetailsContent(
                 // Watched button (Phase 6, docs/plans/watch-state-durable-storage-plan.md)
                 CinemaIconButton(
                     onClick = onToggleWatched,
-                    modifier = downToTabRow,
+                    modifier = downToTabRow.then(upScrollToTop),
                     icon = {
                         Icon(
                             imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
@@ -491,7 +518,7 @@ private fun MovieDetailsContent(
                         }
                     },
                     enabled = !isRefreshing,
-                    modifier = downToTabRow,
+                    modifier = downToTabRow.then(upScrollToTop),
                     icon = {
                         Icon(
                             imageVector = CinemaIcons.Refresh,
@@ -507,7 +534,7 @@ private fun MovieDetailsContent(
                     val trailerContext = LocalContext.current
                     CinemaIconButton(
                         onClick = { openExternalUrl(trailerContext, trailer) },
-                        modifier = downToTabRow,
+                        modifier = downToTabRow.then(upScrollToTop),
                         icon = {
                             Icon(
                                 imageVector = CinemaIcons.Movie,
