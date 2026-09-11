@@ -62,6 +62,10 @@ object TvDimensions {
     // than a bounded strip above a visible page break.
     const val heroBackdropAspect: Float = 16f / 9f
 
+    // Width of the hero's sideSlot (the series "Next Up" card) — wide enough for a thumbnail plus
+    // two lines of plot text without crowding the backdrop's opaque-to-transparent scrim.
+    val heroSideSlotWidth: Dp = 340.dp
+
     // Progress indicators
     val progressIndicator: Dp = 48.dp
     val progressBar: Dp = 6.dp

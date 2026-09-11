@@ -3,15 +3,14 @@ package org.njarasoa.fijerena.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -68,101 +67,122 @@ fun TvDetailHero(
 ) {
     val palette = CinemaThemeHolder.current
 
-    Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .aspectRatio(TvDimensions.heroBackdropAspect)
-                .background(palette.background),
-    ) {
-        if (backdropUrl != null) {
-            AsyncImage(
-                model = backdropUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.CenterEnd,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+    // BoxWithConstraints, not a fixed aspectRatio: aspectRatio at heroBackdropAspect works out to
+    // exactly full screen height on a 16:9 TV (screen width / (16/9) == screen height), so
+    // bottom-aligned content taller than that (a 3-line plot, a longer meta line) overflowed
+    // above the top edge with nothing to scroll it into view, hiding the title entirely.
+    // heightIn(min = ...) keeps the full-bleed look when content fits and grows the hero instead
+    // of clipping when it doesn't — measured here, not from LocalConfiguration.screenWidthDp,
+    // because that reads the platform density while this app applies its own UI-scale density
+    // override (see LocalUiScale/UiScale.kt); the two disagreeing silently reproduced the exact
+    // same overflow this was meant to fix.
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val heroMinHeight = remember(maxWidth) { maxWidth / TvDimensions.heroBackdropAspect }
 
-        // Opaque at the left edge, transparent past heroScrimFadeStop: the text column always
-        // sits on solid ground, whatever the backdrop looks like there.
-        val scrimBrush =
-            remember(palette.background) {
-                Brush.horizontalGradient(
-                    0f to palette.background,
-                    CinemaAlpha.heroScrimFadeStop to palette.background.copy(alpha = 0f),
-                )
-            }
-        Box(modifier = Modifier.fillMaxSize().background(scrimBrush))
-
-        // Bottom scrim: keeps the action row legible over whatever is directly behind it,
-        // independent of the horizontal one above.
-        GradientOverlay(modifier = Modifier.fillMaxSize())
-
-        Column(
+        Box(
             modifier =
                 Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(TvDimensions.heroContentWidthFraction)
-                    .padding(horizontal = TvDimensions.safeMarginHorizontal, vertical = TvDimensions.safeMarginVertical),
-            verticalArrangement = Arrangement.Bottom,
+                    .fillMaxWidth()
+                    .heightIn(min = heroMinHeight)
+                    .background(palette.background),
         ) {
-            TitleLogoOrText(
-                contentDescription = title,
-                logoUrl = logoUrl,
-                logoHeight = TvDimensions.heroLogoHeight,
-                fallback = titleFallback,
-            )
-
-            val meta = remember(metaLine) { metaLine.filter { it.isNotBlank() }.joinToString(" · ") }
-            if (meta.isNotBlank()) {
-                Spacer(Modifier.height(Spacing.sm))
-                Text(text = meta, style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
+            // matchParentSize, not fillMaxSize: this Box is sized by its content (heightIn(min)
+            // above, growing for a plot/meta line taller than the aspect-ratio minimum) — inside
+            // a LazyColumn item, the incoming height constraint is unbounded, so a plain
+            // fillMaxSize() child sizes itself off that raw incoming constraint instead of the
+            // Box's own resolved size. matchParentSize() is Box's own two-pass mechanism for
+            // exactly this "background matches content-determined size" shape; using fillMaxSize
+            // here silently reproduced the pre-fix full-screen-height overflow bug even with the
+            // heightIn(min) fix in place, since the visible clipped area was still bounded by the
+            // Column's own height instead of the (now taller) Box's.
+            if (backdropUrl != null) {
+                AsyncImage(
+                    model = backdropUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.CenterEnd,
+                    modifier = Modifier.matchParentSize(),
+                )
             }
 
-            if (scoreChips != null) {
-                Spacer(Modifier.height(Spacing.md))
+            // Opaque at the left edge, transparent past heroScrimFadeStop: the text column
+            // always sits on solid ground, whatever the backdrop looks like there.
+            val scrimBrush =
+                remember(palette.background) {
+                    Brush.horizontalGradient(
+                        0f to palette.background,
+                        CinemaAlpha.heroScrimFadeStop to palette.background.copy(alpha = 0f),
+                    )
+                }
+            Box(modifier = Modifier.matchParentSize().background(scrimBrush))
+
+            // Bottom scrim: keeps the action row legible over whatever is directly behind it,
+            // independent of the horizontal one above.
+            GradientOverlay(modifier = Modifier.matchParentSize())
+
+            Column(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth(TvDimensions.heroContentWidthFraction)
+                        .padding(horizontal = TvDimensions.safeMarginHorizontal, vertical = TvDimensions.safeMarginVertical),
+            ) {
+                TitleLogoOrText(
+                    contentDescription = title,
+                    logoUrl = logoUrl,
+                    logoHeight = TvDimensions.heroLogoHeight,
+                    fallback = titleFallback,
+                )
+
+                val meta = remember(metaLine) { metaLine.filter { it.isNotBlank() }.joinToString(" · ") }
+                if (meta.isNotBlank()) {
+                    Spacer(Modifier.height(Spacing.sm))
+                    Text(text = meta, style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
+                }
+
+                if (scoreChips != null) {
+                    Spacer(Modifier.height(Spacing.md))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        scoreChips()
+                    }
+                }
+
+                if (!tagline.isNullOrBlank()) {
+                    Spacer(Modifier.height(Spacing.md))
+                    Text(
+                        text = tagline,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontStyle = FontStyle.Italic,
+                        color = CinemaTextSecondary,
+                    )
+                }
+
+                if (!plot.isNullOrBlank()) {
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        text = plot,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CinemaTextPrimary,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                Spacer(Modifier.height(Spacing.lg))
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    scoreChips()
+                    actions()
                 }
             }
 
-            if (!tagline.isNullOrBlank()) {
-                Spacer(Modifier.height(Spacing.md))
-                Text(
-                    text = tagline,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontStyle = FontStyle.Italic,
-                    color = CinemaTextSecondary,
-                )
-            }
-
-            if (!plot.isNullOrBlank()) {
-                Spacer(Modifier.height(Spacing.xs))
-                Text(
-                    text = plot,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaTextPrimary,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            Spacer(Modifier.height(Spacing.lg))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                actions()
-            }
-        }
-
-        if (sideSlot != null) {
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(horizontal = TvDimensions.safeMarginHorizontal, vertical = TvDimensions.safeMarginVertical),
-            ) {
-                sideSlot()
+            if (sideSlot != null) {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(horizontal = TvDimensions.safeMarginHorizontal, vertical = TvDimensions.safeMarginVertical),
+                ) {
+                    sideSlot()
+                }
             }
         }
     }

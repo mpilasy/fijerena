@@ -342,6 +342,7 @@
     <string name="details_tab_cast">Cast</string>
     <string name="details_tab_details">Details</string>
     <string name="details_tab_similar">Similar</string>
+    <string name="details_tab_seasons">Seasons</string>
     <string name="details_more_like_this">More Like This</string>
     <string name="details_no_link_handler">No app on this device can open that link</string>
     <string name="movie_loading_details">Loading movie details…</string>
@@ -370,6 +371,8 @@
     <string name="series_episode_label">Episode %1$d</string>
     <string name="series_continue_watching_badge">Continue Watching</string>
     <string name="series_present">ongoing</string>
+    <string name="series_next_up_title">Next Up</string>
+    <string name="series_remaining_format">%1$s remaining</string>
     <string name="content_watched_badge">Watched</string>
     <string name="content_untitled">Untitled</string>
 

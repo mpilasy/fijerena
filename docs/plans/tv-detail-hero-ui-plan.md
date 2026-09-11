@@ -5,7 +5,10 @@
 2026-09-11 (`TvDetailHero`, new file, nothing wired in yet). Phase 3 landed 2026-09-11
 (`MovieDetailsScreen` rebuilt on the hero, verified on the TV emulator). Phase 4 landed 2026-09-11
 (tabbed sections on the movie screen; series tabs deferred to Phase 5, which wires the hero there
-too). Phase 5 not started.
+too). Phase 5 landed 2026-09-11 (Seasons/Episodes/Cast/Details/Similar tabs on
+`EpisodeSelectionScreen`, episode detail rebuilt on the hero; verified on the TV emulator). See its
+own section below for deviations and a real bug found during verification that's out of this
+phase's scope.
 **Scope:** TV module detail screens only (`MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt`).
 Mobile untouched. Reference: four screenshots of another client (Silo series, Silo
 episode, The Godfather, The Martian) — used as a look-and-feel target, not a spec to
@@ -251,6 +254,53 @@ already right — lift them, do not re-invent).
   bullet originally warned about no longer exists.
 - Episode detail (screenshot 2) is the series hero with the episode's own title, meta
   line, and plot swapped in; no new screen.
+
+**Landed 2026-09-11.** Deviations from the sketch above, and what verification found:
+
+- `Episodes` tab did **not** keep `EpisodeDetailPanel` untouched — the plan's own closing
+  bullet calls for the episode-detail hero swap, which is Phase 5 work, not a later
+  phase. Both landed together: `EpisodeDetailPanel` now opens on `TvDetailHero` (title,
+  season/episode/content-rating/duration/ends-at meta line, score chip, plot, actions —
+  Play/Resume, Prev/Next as icon buttons reusing `CinemaIcons.SkipPrevious`/`SkipNext`,
+  trailer), with a plain details block below (provider, TMDB id, cast, director,
+  container, air date, bitrate) — same shape as the series list and
+  `MovieDetailsScreen`'s own Details tab.
+- Full tab set landed for series, matching Phase 4's movie tabs exactly rather than a
+  bespoke shape: `Seasons` (only with >1 season) / `Episodes` / `Cast` (only when
+  `metadata.cast` is non-blank) / `Details` / `Similar` (only when `relatedTitles.moreLikeThis`
+  is non-empty). `Episodes` is the one tab not built as a single wrapped item — its
+  `stickyHeader` (season pills) + `itemsIndexed` (episode cards) emit directly into the
+  outer `LazyColumn`, so episode cards stay individually lazy instead of measuring all at
+  once inside a Box.
+- Seasons tab: a `LazyRow` of season posters (`SeasonInfo.coverUrl`, falls back to a
+  letter tile like every other thumbnail here) with episode counts; selecting one calls
+  `selectSeason` and flips the outer tab to `Episodes`, landing on that season already
+  selected in the (still-present) inner season-pill row.
+- Verified on the TV emulator (single-season and 7-season real catalog entries): all
+  five tabs render and switch correctly, Left/Right moves between tabs, Down from the
+  hero's action row lands on the tab row, Down from the tab row into a section and Back
+  out of one back to the tab row both work, a second Back from the tab row exits the
+  screen. Season-poster selection correctly jumps to Episodes with that season already
+  showing. Episode-detail Prev/Next correctly cross season boundaries and keep focus on
+  the pressed button; Back from episode detail returns to the list on the season it was
+  opened from.
+- **A real bug found during this verification, not introduced by this phase and not
+  fixed here:** `TvDetailHero`'s title (and, in severe cases, its meta line and score
+  chip too) can render entirely off the top of the screen. The `heightIn(min)` fix from
+  Phase 5's own predecessor work lets the hero grow taller than one screen for a long
+  plot/meta combination; initial focus landing on the Play/Resume button then makes
+  Compose's own focus-into-view scrolling scroll the list down to show that button,
+  carrying the top of the hero (the title) off-screen with it. Reproduced identically on
+  `MovieDetailsScreen` (untouched this phase) with an obscure title with no logo image,
+  so this is a `TvDetailHero`-wide issue, not a series/episode-only one — worth its own
+  follow-up plan, not a Phase 5 blocker.
+- **A second, separate, also pre-existing quirk observed:** the first Back press while a
+  focused TV `Button` has focus is sometimes swallowed before reaching either
+  `BackHandler` — same class of TV back-key flakiness this file already documents twice
+  over for the equivalent case on the series list and on `MovieDetailsScreen`; a second
+  press always works. `EpisodeDetailPanel` was never given its own `onPreviewKeyEvent`
+  interception (the list screen's `LazyColumn` has one; the detail panel doesn't), so
+  this isn't a regression — just not fixed by this phase either.
 
 ---
 
