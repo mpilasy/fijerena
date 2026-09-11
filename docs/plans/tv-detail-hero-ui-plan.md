@@ -3,7 +3,9 @@
 **Date:** 2026-09-02 (updated 2026-09-02: Phase 5's blocker landed, see below)
 **Status:** Phase 1 landed 2026-09-09 (backdrop plumbing — no UI change yet). Phase 2 landed
 2026-09-11 (`TvDetailHero`, new file, nothing wired in yet). Phase 3 landed 2026-09-11
-(`MovieDetailsScreen` rebuilt on the hero, verified on the TV emulator). Phases 4-5 not started.
+(`MovieDetailsScreen` rebuilt on the hero, verified on the TV emulator). Phase 4 landed 2026-09-11
+(tabbed sections on the movie screen; series tabs deferred to Phase 5, which wires the hero there
+too). Phase 5 not started.
 **Scope:** TV module detail screens only (`MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt`).
 Mobile untouched. Reference: four screenshots of another client (Silo series, Silo
 episode, The Godfather, The Martian) — used as a look-and-feel target, not a spec to
@@ -178,7 +180,29 @@ Rework `MovieDetailsContent` onto `TvDetailHero`:
 
 ---
 
-## Phase 4 — Tabbed sections
+## Phase 4 — Tabbed sections — **DONE 2026-09-11 (movie screen only)**
+
+Landed on `MovieDetailsScreen` as written below: `TvSectionTabs` built once as a
+generic, label-only component (not `SeriesDetail`-specific), so Phase 5 reuses it for
+the series/episode tabs rather than rebuilding it. Series tabs (`Seasons`, `Episodes`,
+...) are **not** built yet — `EpisodeSelectionScreen` doesn't use `TvDetailHero` until
+Phase 5, and there's nowhere to hang a tab row without it.
+
+**A real bug, not just an implementation detail:** the Back-inside-a-section rule ("goes to the tab
+  row, not out of the screen") initially worked in the screenshot-verified case but
+  failed the very next test — a single Back press exited the screen straight past an
+  open tab section. Root cause, found by temporary logging: pressing Back measurably
+  clears focus (an `onFocusChanged` "false" event lands) *before* either of the
+  screen's two Back-handling paths (`BackHandler`, and the `LazyColumn`'s
+  `onPreviewKeyEvent`) gets to read that state — so both were reading a
+  freshly-and-spuriously-cleared flag and always took the "exit" branch. Same
+  "root cause unconfirmed" class of TV back-key flakiness this codebase already has two
+  other documented instances of (see `SeasonTab`'s category-button comment and this
+  screen's own original `LazyColumn` comment). Fixed by no longer trusting the `false`
+  transition at all: `focusInSection` is set `true` only by genuine focus-in events, and
+  set `false` only by the explicit "a tab just regained focus" event (`onTabSelected`),
+  never by a passive focus-loss observation. Verified on the TV emulator: Back once from
+  inside each of the four tabs' content returns to the tab row, Back again exits.
 
 New `tv/.../ui/components/TvSectionTabs.kt`, generalising the existing `SeasonTab`
 styling in `EpisodeSelectionScreen.kt` (focus/selected container + border rules are
