@@ -5,6 +5,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -82,6 +83,7 @@ class EpisodeSelectionScreenTest {
                 relatedTitles = RelatedTitles(),
                 tmdbTitle = null,
                 logoUrl = null,
+                backdropUrl = null,
                 alternateStreams = emptyList(),
                 seriesName = "Test Series",
                 categoryId = "cat1",
@@ -101,10 +103,14 @@ class EpisodeSelectionScreenTest {
         }
 
         // Manually pick season 2 and play one of its episodes — the exact interaction that broke:
-        // a season the user picked in-session, not one named by a route argument. The episode
-        // card sits below the hero section, off-screen until scrolled — LazyColumn only composes
-        // what's near the viewport, so it has to be scrolled to before it can be clicked.
+        // a season the user picked in-session, not one named by a route argument. The season tab
+        // row sits below the hero (docs/plans/tv-detail-hero-ui-plan.md Phase 5) and the episode
+        // card below that, both off-screen until scrolled — LazyColumn only composes what's near
+        // the viewport, so each has to be scrolled to before it can be clicked.
         val season2Label = context.getString(R.string.series_season_label, 2)
+        composeTestRule
+            .onNodeWithTag("episode_list")
+            .performScrollToNode(hasText(season2Label))
         composeTestRule.onNodeWithText(season2Label).performClick()
         composeTestRule
             .onNodeWithTag("episode_list")
@@ -157,6 +163,7 @@ class EpisodeSelectionScreenTest {
                 relatedTitles = RelatedTitles(),
                 tmdbTitle = null,
                 logoUrl = null,
+                backdropUrl = null,
                 alternateStreams = listOf(alternate),
                 seriesName = "Test Series",
                 categoryId = "cat1",
@@ -174,6 +181,12 @@ class EpisodeSelectionScreenTest {
                 onAlternateStreamSelected = {},
             )
         }
+
+        // The stream-name row sits below the hero (docs/plans/tv-detail-hero-ui-plan.md Phase 5)
+        // — off-screen until scrolled, same reasoning as the episode card in the test above.
+        composeTestRule
+            .onNodeWithTag("episode_list")
+            .performScrollToNode(hasTestTag("stream_name_picker"))
 
         // Open the stream-name dropdown and pick the alternate — same interaction as switching
         // sources on a real device. Plain Modifier.clickable, so a raw touch tap (performClick)
