@@ -999,8 +999,14 @@ internal fun EpisodeListContent(
                                 // below, always the current season's first episode regardless of
                                 // resume state.
                                 additionalFocusRequester = if (index == 0) firstEpisodeFocusRequester else null,
+                                // Parenthesised deliberately: with a bare `if / else if / else`
+                                // chain the trailing .padding().onFocusChanged().testTag() binds
+                                // to the inner if-expression, so the hasMultipleSeasons branch
+                                // silently lost all three — episode cards rendered edge to edge
+                                // with no TV-safe margin and stopped setting focusInSection.
                                 modifier =
-                                    if (hasMultipleSeasons) {
+                                    (
+                                        if (hasMultipleSeasons) {
                                         // Left/Right switches season from anywhere in the episode
                                         // list, the D-pad equivalent of the mobile swipe — same
                                         // explicit-intercept approach as the season tabs' own entry
@@ -1032,14 +1038,15 @@ internal fun EpisodeListContent(
                                             resumeState.selectSeason(targetSeason.seasonNumber)
                                             true
                                         }
-                                    } else if (index == 0) {
-                                        // No season tabs above this row when there's only one
-                                        // season — this card is the section's topmost focusable,
-                                        // so it needs the same Up-to-tab-row fix directly.
-                                        upToTabRow
-                                    } else {
-                                        Modifier
-                                    }.padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                                        } else if (index == 0) {
+                                            // No season tabs above this row when there's only one
+                                            // season — this card is the section's topmost focusable,
+                                            // so it needs the same Up-to-tab-row fix directly.
+                                            upToTabRow
+                                        } else {
+                                            Modifier
+                                        }
+                                    ).padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
                                         .onFocusChanged { if (it.hasFocus) focusInSection = true }
                                         .testTag("episode_${episode.id}"),
                                 onClick = {
