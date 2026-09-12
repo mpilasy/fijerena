@@ -226,7 +226,11 @@ class StreamingPlaybackService : MediaSessionService() {
         // black screen stuck in Idle forever, with no diagnostic trail.
         instance = this
         instanceReady.complete(this)
-        acquireWakeLock()
+        // Not acquired here: the service can be created well before any stream is requested
+        // (e.g. StreamingPlaybackService.awaitInstance() callers racing service startup), and a
+        // PARTIAL_WAKE_LOCK held during that idle stretch outlasts nothing useful. PlayerListener
+        // already acquires it itself the moment playback actually goes active — see
+        // onWakeLockRequired below, fired from onIsPlayingChanged/onPlayWhenReadyChanged.
         observeNetworkChanges()
     }
 
