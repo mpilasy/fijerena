@@ -428,6 +428,11 @@ class EpgFileManager private constructor(
                                     dbQueryAndProcess()
                                     onComplete?.invoke()
                                     return // Success
+                                } catch (e: CancellationException) {
+                                    // Not a failure — the caller cancelled this job. Retrying it
+                                    // would keep the coroutine (and its scheduled delay) alive
+                                    // past the cancellation instead of stopping.
+                                    throw e
                                 } catch (e: Exception) {
                                     lastException = e
                                     currentAttempt++
@@ -743,7 +748,6 @@ class EpgFileManager private constructor(
                     totalProgrammes = totalProgrammes,
                     totalDownloadBytes = totalBytes,
                 )
-            indexer.endBulkIngestion()
 
             // `unchanged` stats carry forward the last known counts (so UI totals don't collapse
             // to zero) \u2014 they must not count as "ingested" here, or a run where every source was
@@ -795,6 +799,16 @@ class EpgFileManager private constructor(
                     Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 }
             }
+
+            // Restore the FTS sync triggers dropped in beginBulkIngestion() only now, after both
+            // the staging→primary swap and the full FTS rebuild — not before. 'rebuild' above
+            // repopulates FTS by scanning epg_programme directly and doesn't need the triggers at
+            // all, so leaving them off through the swap means executeSwapToMain()'s bulk
+            // INSERT…SELECT no longer fires an AFTER_INSERT trigger per row, only to have the
+            // very next step throw all of that away and rebuild from scratch anyway. Still
+            // unconditional (not inside `if (anyIngested)`): a run where nothing changed still
+            // needs its triggers back for the next incremental write.
+            indexer.endBulkIngestion()
         } catch (e: Exception) {
             Log.e(TAG, "processAllSources failed: ${e.message}", e)
             withContext(NonCancellable) {
@@ -952,7 +966,6 @@ class EpgFileManager private constructor(
                     totalProgrammes = stats.programmesIngested,
                     totalDownloadBytes = stats.downloadBytes,
                 )
-            indexer.endBulkIngestion()
 
             // Perform Atomic Swap before FTS rebuild (only if staging was used). `unchanged` must
             // be excluded here \u2014 staging has nothing for a skipped source, so swapping it would
@@ -998,6 +1011,11 @@ class EpgFileManager private constructor(
                     Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 }
             }
+
+            // Restore FTS sync triggers only now — see the identical comment in
+            // processAllSourcesInternal for why this must come after the swap and rebuild, not
+            // before. Still unconditional: an unchanged/skipped source still needs them back.
+            indexer.endBulkIngestion()
         } catch (e: Exception) {
             Log.e(TAG, "processSingleSource failed: ${e.message}", e)
             withContext(NonCancellable) {
@@ -1305,7 +1323,22 @@ class EpgFileManager private constructor(
             val fileSize = downloaded.tmpFile.length()
             val countingStream = CountingInputStream(downloaded.tmpFile.inputStream())
             val bufferedStream = BufferedInputStream(countingStream, STREAM_BUFFER_SIZE)
-            val stream = if (isGzip) GZIPInputStream(bufferedStream, STREAM_BUFFER_SIZE) else bufferedStream
+            val stream =
+                if (isGzip) {
+                    try {
+                        GZIPInputStream(bufferedStream, STREAM_BUFFER_SIZE)
+                    } catch (e: Exception) {
+                        // GZIPInputStream's constructor reads and validates the magic bytes
+                        // before this assignment completes — on a corrupt/non-gzip file it
+                        // throws here, before `stream.use { }` below ever gets a stream to
+                        // close. Without this, bufferedStream (and the raw FileInputStream it
+                        // wraps) leaks a file descriptor.
+                        bufferedStream.close()
+                        throw e
+                    }
+                } else {
+                    bufferedStream
+                }
 
             val ingestionStats =
                 stream.use {

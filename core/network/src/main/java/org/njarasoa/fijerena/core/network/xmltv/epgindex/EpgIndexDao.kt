@@ -41,23 +41,35 @@ interface EpgIndexDao {
         clearStagingChannels()
     }
 
-    @Query("INSERT INTO epg_channel (xmltv_id, display_name, icon_url, source_id) SELECT xmltv_id, display_name, icon_url, source_id FROM epg_channel_staging")
-    suspend fun transferChannelsFromStaging()
+    // Scoped to :sourceIds, not a blanket copy: staging can hold rows for a source that isn't in
+    // this swap at all — e.g. one source of a multi-source sync failed partway and left its own
+    // partial rows behind while others succeeded. An unfiltered SELECT would carry that source's
+    // incomplete guide into primary even though deleteBySourceIds() below never touched its
+    // (untouched, still-good) existing primary rows.
+    @Query(
+        "INSERT INTO epg_channel (xmltv_id, display_name, icon_url, source_id) " +
+            "SELECT xmltv_id, display_name, icon_url, source_id FROM epg_channel_staging WHERE source_id IN (:sourceIds)",
+    )
+    suspend fun transferChannelsFromStaging(sourceIds: List<Long>)
 
-    @Query("INSERT INTO epg_programme (channel_id, title, title_lowercase, description, category, start_epoch, end_epoch, source_id) SELECT channel_id, title, title_lowercase, description, category, start_epoch, end_epoch, source_id FROM epg_programme_staging")
-    suspend fun transferProgrammesFromStaging()
+    @Query(
+        "INSERT INTO epg_programme (channel_id, title, title_lowercase, description, category, start_epoch, end_epoch, source_id) " +
+            "SELECT channel_id, title, title_lowercase, description, category, start_epoch, end_epoch, source_id " +
+            "FROM epg_programme_staging WHERE source_id IN (:sourceIds)",
+    )
+    suspend fun transferProgrammesFromStaging(sourceIds: List<Long>)
 
     /**
      * Performs the atomic swap:
      * 1. Deletes existing data for the specified sources in the primary tables.
-     * 2. Moves everything from staging to primary.
+     * 2. Moves staging rows for those same sources to primary.
      * 3. Clears staging.
      */
     @Transaction
     suspend fun executeSwap(sourceIds: List<Long>) {
         deleteBySourceIds(sourceIds)
-        transferChannelsFromStaging()
-        transferProgrammesFromStaging()
+        transferChannelsFromStaging(sourceIds)
+        transferProgrammesFromStaging(sourceIds)
         clearStaging()
     }
 

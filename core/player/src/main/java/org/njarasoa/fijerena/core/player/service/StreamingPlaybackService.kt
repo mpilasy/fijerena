@@ -981,6 +981,11 @@ class StreamingPlaybackService : MediaSessionService() {
         adaptiveLoadControl = null
         NetworkMonitor.release()
         instance = null
+        // Any caller already suspended in awaitInstance() holds a reference to *this* deferred,
+        // not the field below — reassigning the field alone leaves them awaiting an object
+        // nobody will ever complete again if the service doesn't restart. completeExceptionally
+        // is a no-op if something already completed it normally, so this is safe either way.
+        instanceReady.completeExceptionally(kotlinx.coroutines.CancellationException("StreamingPlaybackService destroyed"))
         // If Android recreates this service later in the same process (e.g. after
         // reclaiming it during long standby), the next onCreate() needs a fresh,
         // not-yet-completed deferred to publish into — instanceReady.complete() is a
