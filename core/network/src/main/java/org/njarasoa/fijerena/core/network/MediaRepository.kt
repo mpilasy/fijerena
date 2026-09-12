@@ -74,9 +74,13 @@ data class WatchedItem(
  * exactly what the detail screen offers a Resume button for.
  */
 fun WatchedItem.resumeProgress(): Float? {
-    if (isCompleted || playbackPosition <= 0L || duration <= 0L) return null
-    val fraction = playbackPosition.toFloat() / duration.toFloat()
-    return if (fraction * 100f in 2.0..95.0) fraction else null
+    val fraction =
+        if (isCompleted || playbackPosition <= 0L || duration <= 0L) {
+            null
+        } else {
+            playbackPosition.toFloat() / duration.toFloat()
+        }
+    return fraction?.takeIf { it * 100f in 2.0..95.0 }
 }
 
 /**
@@ -808,18 +812,18 @@ class MediaRepository(
         contentType: String,
     ): Boolean = synchronized(favoriteLock) {
         val favorites = getFavoriteItems().toMutableList()
-        if (favorites.any { it.itemId == itemId && it.contentType == contentType }) {
-            return false
+        val alreadyFavorite = favorites.any { it.itemId == itemId && it.contentType == contentType }
+        if (!alreadyFavorite) {
+            val item = FavoriteItem(itemId, itemName, categoryId, contentType)
+            // No take(favoritesMaxSize) here any more: the cap is what silently evicted the oldest
+            // favourite once the list filled up. Rows are unbounded — see
+            // docs/plans/favorites-durable-storage-plan.md.
+            favorites.add(0, item)
+            cachedFavorites = favorites
+            favoriteIdSet = null
+            writeScope.launch { favoriteStateDao.upsert(item.toEntity(providerId)) }
         }
-        val item = FavoriteItem(itemId, itemName, categoryId, contentType)
-        // No take(favoritesMaxSize) here any more: the cap is what silently evicted the oldest
-        // favourite once the list filled up. Rows are unbounded — see
-        // docs/plans/favorites-durable-storage-plan.md.
-        favorites.add(0, item)
-        cachedFavorites = favorites
-        favoriteIdSet = null
-        writeScope.launch { favoriteStateDao.upsert(item.toEntity(providerId)) }
-        return true
+        return !alreadyFavorite
     }
 
     fun removeFavorite(
@@ -828,11 +832,12 @@ class MediaRepository(
     ): Boolean = synchronized(favoriteLock) {
         val favorites = getFavoriteItems().toMutableList()
         val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
-        if (!removed) return false
-        cachedFavorites = favorites
-        favoriteIdSet = null
-        writeScope.launch { favoriteStateDao.delete(providerId, itemId, contentType, FavoriteKind.STREAM) }
-        return true
+        if (removed) {
+            cachedFavorites = favorites
+            favoriteIdSet = null
+            writeScope.launch { favoriteStateDao.delete(providerId, itemId, contentType, FavoriteKind.STREAM) }
+        }
+        return removed
     }
 
     /**
@@ -1382,9 +1387,13 @@ class MediaRepository(
         seriesId: SeriesId,
         contentType: String,
     ): Pair<Int?, Int?>? {
-        if (usesServerUserData) return null
-        val row = watchStateDao.getLatestSeriesTrackPrefs(providerId, seriesId.raw, contentType) ?: return null
-        return row.audioTrackIndex to row.subtitleTrackIndex
+        val row =
+            if (usesServerUserData) {
+                null
+            } else {
+                watchStateDao.getLatestSeriesTrackPrefs(providerId, seriesId.raw, contentType)
+            }
+        return row?.let { it.audioTrackIndex to it.subtitleTrackIndex }
     }
 
     suspend fun getPlaybackPositionsSuspend(

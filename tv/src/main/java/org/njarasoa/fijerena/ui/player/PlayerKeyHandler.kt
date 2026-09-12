@@ -19,9 +19,9 @@ fun handlePlayerKeyEvent(
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
 ): Boolean {
-    // suppressNextCenterKeyUp is only ever set true from the Center/Enter KeyDown branch below,
-    // which itself returns early (`if (state.isModalOpen) return false`) whenever a modal is
-    // already open — so it can never be set true while isModalOpen is already true. Observing
+    // suppressNextCenterKeyUp is only ever set true from the Center/Enter KeyDown branch in
+    // handleKeyDown, which is gated on `!state.isModalOpen` — so it can never be set true while
+    // a modal is already open. Observing
     // both true at once here means a dialog/overlay opened *between* that KeyDown and its own
     // KeyUp arriving: that KeyUp went to the new modal's own focus target instead of back here,
     // so nothing would ever clear the flag — leaving it to silently eat the next legitimate
@@ -32,66 +32,79 @@ fun handlePlayerKeyEvent(
         state.suppressNextCenterKeyUp = false
     }
 
-    // KeyUp: no-op for scrub mode (we only act on KeyDown to step the cursor and on Center to
-    // commit) — except a Center/Enter KeyUp that must be consumed because its own KeyDown just
-    // revealed the OSD (see suppressNextCenterKeyUp's kdoc). Un-consumed, it falls through to
-    // the button focus just landed on and activates it — a single press should only open the
-    // OSD, never also toggle favourite or pause.
-    if (keyEvent.type == KeyEventType.KeyUp) {
-        return if ((keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter) && state.suppressNextCenterKeyUp) {
-            state.suppressNextCenterKeyUp = false
-            true
-        } else {
-            false
+    val handled =
+        when {
+            // KeyUp: no-op for scrub mode (we only act on KeyDown to step the cursor and on Center
+            // to commit) — except a Center/Enter KeyUp that must be consumed because its own
+            // KeyDown just revealed the OSD (see suppressNextCenterKeyUp's kdoc). Un-consumed, it
+            // falls through to the button focus just landed on and activates it — a single press
+            // should only open the OSD, never also toggle favourite or pause.
+            keyEvent.type == KeyEventType.KeyUp ->
+                if ((keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter) && state.suppressNextCenterKeyUp) {
+                    state.suppressNextCenterKeyUp = false
+                    true
+                } else {
+                    false
+                }
+            keyEvent.type != KeyEventType.KeyDown -> false
+            else -> handleKeyDown(keyEvent, state, viewModel, playbackState, currentMetadata, onNextChannel, onPreviousChannel)
         }
-    }
+    return handled
+}
 
-    if (keyEvent.type != KeyEventType.KeyDown) {
-        return false
-    }
-
-    return when (keyEvent.key) {
+private fun handleKeyDown(
+    keyEvent: KeyEvent,
+    state: PlayerScreenState,
+    viewModel: PlaybackViewModel,
+    playbackState: PlaybackState,
+    currentMetadata: PlayerMetadata,
+    onNextChannel: () -> Unit,
+    onPreviousChannel: () -> Unit,
+): Boolean {
+    val handled = when (keyEvent.key) {
         Key.DirectionCenter, Key.Enter -> {
             // Let D-pad OK activate whatever's focused inside an open modal (e.g. select a
             // channel in the category/last-watched overlay) instead of revealing the OSD —
             // mirrors the isModalOpen guard on Up/Down/Left/Right below.
-            if (state.isModalOpen) return false
-
-            val now = System.currentTimeMillis()
-            val isDoubleClick = now - state.lastOkClickTime < 350L
-            state.lastOkClickTime = now
-
-            val pendingScrub = state.scrubPositionMs
-            if (pendingScrub != null && !currentMetadata.isLive) {
-                // Commit scrub: seek to the cursor position and exit scrub mode
-                viewModel.seekTo(pendingScrub)
-                state.scrubPositionMs = null
-                state.showStreamInfo = true
-                true
-            } else if (isDoubleClick && state.showStats) {
-                // Double-click ONLY dismisses stats if they are already showing
-                state.showStats = false
-                true
-            } else if (state.showStats) {
-                // Single-click while stats are showing: pass to player/controls
-                if (state.showControls) {
-                    false
-                } else {
-                    state.showControls = true
-                    state.showStreamInfo = true
-                    state.suppressNextCenterKeyUp = true
-                    true
-                }
+            if (state.isModalOpen) {
+                false
             } else {
-                // Single-click (or double-click when stats are NOT showing):
-                // Let it pass if controls are visible, or show controls if not
-                if (state.showControls) {
-                    false
-                } else {
-                    state.showControls = true
+                val now = System.currentTimeMillis()
+                val isDoubleClick = now - state.lastOkClickTime < 350L
+                state.lastOkClickTime = now
+
+                val pendingScrub = state.scrubPositionMs
+                if (pendingScrub != null && !currentMetadata.isLive) {
+                    // Commit scrub: seek to the cursor position and exit scrub mode
+                    viewModel.seekTo(pendingScrub)
+                    state.scrubPositionMs = null
                     state.showStreamInfo = true
-                    state.suppressNextCenterKeyUp = true
                     true
+                } else if (isDoubleClick && state.showStats) {
+                    // Double-click ONLY dismisses stats if they are already showing
+                    state.showStats = false
+                    true
+                } else if (state.showStats) {
+                    // Single-click while stats are showing: pass to player/controls
+                    if (state.showControls) {
+                        false
+                    } else {
+                        state.showControls = true
+                        state.showStreamInfo = true
+                        state.suppressNextCenterKeyUp = true
+                        true
+                    }
+                } else {
+                    // Single-click (or double-click when stats are NOT showing):
+                    // Let it pass if controls are visible, or show controls if not
+                    if (state.showControls) {
+                        false
+                    } else {
+                        state.showControls = true
+                        state.showStreamInfo = true
+                        state.suppressNextCenterKeyUp = true
+                        true
+                    }
                 }
             }
         }
@@ -203,6 +216,7 @@ fun handlePlayerKeyEvent(
         }
         else -> false
     }
+    return handled
 }
 
 /**
@@ -216,10 +230,11 @@ private fun stepScrubCursor(
     repeatCount: Int,
     forward: Boolean,
 ) {
-    when (playbackState) {
-        is PlaybackState.Playing, is PlaybackState.Paused -> {}
-        else -> return
-    }
+    val isScrubbableState =
+        when (playbackState) {
+            is PlaybackState.Playing, is PlaybackState.Paused -> true
+            else -> false
+        }
     // Use the live-polled position/duration (state.livePosition/liveDuration, refreshed every
     // 500ms in PlayerEffects), not playbackState.position/duration: that PlaybackState only
     // updates on discrete Player.Listener events, so during steady playback it stays frozen at
@@ -227,17 +242,18 @@ private fun stepScrubCursor(
     // seek destination off by however long playback had been running — the "rewind/fast
     // forward fucked up" bug.
     val duration = state.liveDuration
-    if (duration <= 0L) return
 
-    val origin = state.scrubPositionMs ?: state.livePosition
-    val step =
-        when {
-            repeatCount < 5 -> 10_000L
-            repeatCount < 15 -> 30_000L
-            repeatCount < 30 -> 60_000L
-            else -> 120_000L
-        }
-    val delta = if (forward) step else -step
-    state.scrubPositionMs = (origin + delta).coerceIn(0L, duration)
-    state.showStreamInfo = true
+    if (isScrubbableState && duration > 0L) {
+        val origin = state.scrubPositionMs ?: state.livePosition
+        val step =
+            when {
+                repeatCount < 5 -> 10_000L
+                repeatCount < 15 -> 30_000L
+                repeatCount < 30 -> 60_000L
+                else -> 120_000L
+            }
+        val delta = if (forward) step else -step
+        state.scrubPositionMs = (origin + delta).coerceIn(0L, duration)
+        state.showStreamInfo = true
+    }
 }

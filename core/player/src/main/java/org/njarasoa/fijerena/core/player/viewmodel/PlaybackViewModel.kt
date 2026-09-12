@@ -209,21 +209,22 @@ class PlaybackViewModel(
     }
 
     fun seekRelative(offsetMs: Long) {
-        // Only meaningful while actually playing/paused — bail on Idle/Buffering/Ended/Error.
-        when (_playbackState.value) {
-            is PlaybackState.Playing, is PlaybackState.Paused -> {}
-            else -> return
-        }
+        // Only meaningful while actually playing/paused — do nothing on Idle/Buffering/Ended/Error.
+        val isSeekableState =
+            when (_playbackState.value) {
+                is PlaybackState.Playing, is PlaybackState.Paused -> true
+                else -> false
+            }
         // Read the live player position/duration rather than the cached PlaybackState: that
         // StateFlow only updates on discrete Player.Listener events (state/playWhenReady/
         // isPlaying changes), so during steady playback it stays frozen at whatever it was
         // when last set — often minutes stale. Seeking relative to it jumped to the wrong
         // spot (the bug behind "fast forward/rewind fucked up").
-        val player = StreamingPlaybackService.getInstance()?.getPlayer() ?: return
-        val currentPos = player.currentPosition
-        val duration = player.duration.coerceAtLeast(0L)
-        if (duration <= 0L) return
-        seekTo((currentPos + offsetMs).coerceIn(0L, duration))
+        val player = if (isSeekableState) StreamingPlaybackService.getInstance()?.getPlayer() else null
+        val duration = player?.duration?.coerceAtLeast(0L) ?: 0L
+        if (player != null && duration > 0L) {
+            seekTo((player.currentPosition + offsetMs).coerceIn(0L, duration))
+        }
     }
 
     fun setPlaybackSpeed(speed: Float) {
@@ -341,12 +342,10 @@ class PlaybackViewModel(
      * Returns a list sorted by resolution (highest first).
      */
     fun getVideoQualities(): List<VideoQualityInfo> {
-        val controller = _controller.value ?: return emptyList()
-        val tracks = controller.currentTracks
         val qualities = mutableListOf<VideoQualityInfo>()
+        val groups = _controller.value?.currentTracks?.groups.orEmpty()
 
-        for (groupIndex in 0 until tracks.groups.size) {
-            val group = tracks.groups[groupIndex]
+        groups.forEachIndexed { groupIndex, group ->
             if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {
                 for (trackIndex in 0 until group.length) {
                     val format = group.getTrackFormat(trackIndex)
@@ -394,24 +393,27 @@ class PlaybackViewModel(
      * Jellyfin stores chapters in mediaMetadata.extras as parallel arrays.
      */
     fun getChapters(): List<ChapterInfo> {
-        val controller = _controller.value ?: return emptyList()
-        val extras = controller.mediaMetadata.extras ?: return emptyList()
+        val controller = _controller.value
+        val extras = controller?.mediaMetadata?.extras
+        val titles = extras?.getStringArrayList("chapterTitles")
+        val startTimesMs = extras?.getLongArray("chapterStartTimesMs")
 
-        val titles = extras.getStringArrayList("chapterTitles") ?: return emptyList()
-        val startTimesMs = extras.getLongArray("chapterStartTimesMs") ?: return emptyList()
-
-        if (titles.size != startTimesMs.size) return emptyList()
-
-        val duration = controller.duration.coerceAtLeast(0L)
-        return titles.mapIndexed { index, title ->
-            val startMs = startTimesMs[index]
-            val endMs = if (index + 1 < startTimesMs.size) startTimesMs[index + 1] else duration
-            ChapterInfo(
-                title = title.ifEmpty { context.getString(R.string.player_chapter_fallback_format, index + 1) },
-                startTimeMs = startMs,
-                endTimeMs = endMs,
-            )
-        }
+        val chapters =
+            if (controller == null || titles == null || startTimesMs == null || titles.size != startTimesMs.size) {
+                emptyList()
+            } else {
+                val duration = controller.duration.coerceAtLeast(0L)
+                titles.mapIndexed { index, title ->
+                    val startMs = startTimesMs[index]
+                    val endMs = if (index + 1 < startTimesMs.size) startTimesMs[index + 1] else duration
+                    ChapterInfo(
+                        title = title.ifEmpty { context.getString(R.string.player_chapter_fallback_format, index + 1) },
+                        startTimeMs = startMs,
+                        endTimeMs = endMs,
+                    )
+                }
+            }
+        return chapters
     }
 
     /**
