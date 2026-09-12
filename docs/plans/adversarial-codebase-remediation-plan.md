@@ -28,7 +28,7 @@ surrounding code made a difference (P3, M2).
 | P4 | `Regex("[A-Z]+")` misfires on capitalized queries | ✅ Applied as described |
 | U1 | `suppressNextCenterKeyUp` leak | ✅ Applied — narrower, reactive fix instead of per-transition resets |
 | U2 | Hardcoded spacing/typography literals | ⏸ Not done — deferred, style only |
-| U3 | Multi-return function style | ⏸ Not done — deferred, style only |
+| U3 | Multi-return function style | 🔄 In progress — see note below |
 
 **C2 detail:** `MediaRepository.loadFavoriteSnapshotLocked()`'s `runBlocking(Dispatchers.IO)` is
 memoized (only runs cold) and already has an async warm-up in `setProvider()`. Its own doc comment
@@ -67,6 +67,28 @@ added one guard at the top of `handlePlayerKeyEvent`: `suppressNextCenterKeyUp` 
 set true while `isModalOpen` is false (the branch that sets it returns early when a modal is
 already open), so observing both true at once is proof a modal opened between the Center/Enter
 KeyDown and its own KeyUp — exactly the leak case — and is cleared there.
+
+**U3 detail:** User later directed a full single-return sweep, not just this doc's flagged
+examples. Done so far: the functions named in this doc, plus `core/ui`, `tv`, `mobile` modules in
+full (staged by UI-change risk, lowest first). Remaining: `core/player` (~33 functions flagged by
+heuristic scan, real count lower — un-audited), `core/network` (~145 flagged, same caveat; highest
+risk, thin instrumented coverage, deferred last on purpose).
+
+One refactor in this sweep (`EpisodeSelectionScreen.kt`, the episode-card modifier chain) caused a
+real regression: an `else if` branch added to an `if/else-if/else` silently dropped a trailing
+`.padding()/.onFocusChanged()/.testTag()` chain from the true-branch due to Kotlin's chain-binding
+behavior on if-expressions. Caught only by running the actual instrumented test
+(`EpisodeSelectionScreenTest`) on-device, not by diff review or unit tests — diff review alone had
+already (wrongly) cleared it. Root-caused via git bisect + Compose semantics-tree dump, fixed by
+parenthesizing the if/else-if/else before the chain. Lesson recorded: for this codebase's
+low-coverage UI modules, "unit tests pass + diff looks right" is not sufficient verification —
+instrumented on-device runs are required before calling a refactor safe.
+
+Separately, while investigating why that regression test could even run: `tv/build.gradle.kts`
+was missing `testInstrumentationRunner` in `defaultConfig` — the other four instrumented modules
+(`mobile`, `core/player`, `core/data`, `core/navigation`) all declare it, `tv` didn't. It worked by
+accident (runner got merged in from a test dependency's manifest), not by configuration. Fixed:
+added the same `androidx.test.runner.AndroidJUnitRunner` line to `tv/build.gradle.kts`.
 
 ---
 
