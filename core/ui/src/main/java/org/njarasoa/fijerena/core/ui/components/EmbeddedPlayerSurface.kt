@@ -58,6 +58,11 @@ fun EmbeddedPlayerSurface(
                 useController = false
                 keepScreenOn = true
                 setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                // PlayerView itself is transparent by default, so whatever sits behind it (the
+                // app's themed background, e.g. a dark navy, not black) shows through the
+                // letterbox/pillarbox bars RESIZE_MODE_FIT leaves around content whose aspect
+                // ratio doesn't match the view's. Cinema bars read as black regardless of theme.
+                setBackgroundColor(android.graphics.Color.BLACK)
                 this.resizeMode = resizeMode
                 // Block all native focus so the surface never steals D-pad focus from the list.
                 isFocusable = false
