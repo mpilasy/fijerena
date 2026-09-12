@@ -615,20 +615,39 @@ class StreamLoaderViewModel(
         audioTrackIndex: Int?,
         subtitleTrackIndex: Int?,
     ) {
-        val currentState = _state.value as? StreamState.Success ?: return
-        val repo = mediaRepository ?: return
+        val currentState = _state.value as? StreamState.Success
+        val repo = mediaRepository
+        if (currentState != null && repo != null) {
+            // Final save - Only for VOD/Series
+            if (contentType != ContentType.LIVE_TV) {
+                val progressPercent = if (duration > 0) (position.toFloat() / duration.toFloat()) * 100f else 0f
 
-        // Final save - Only for VOD/Series
-        if (contentType != ContentType.LIVE_TV) {
-            val progressPercent = if (duration > 0) (position.toFloat() / duration.toFloat()) * 100f else 0f
+                // Final check to see if we reached threshold before exiting
+                if (progressPercent >= 2.0f) {
+                    repo.saveLastPlayedItem(
+                        categoryId = currentCategoryId,
+                        itemId = currentState.streamId,
+                        itemName = currentState.streamName,
+                        contentType = contentType,
+                        episodeId = episode,
+                        episodeExtension = currentEpisodeExtension,
+                        seriesId = series,
+                        seriesName = seriesName,
+                    )
+                }
 
-            // Final check to see if we reached threshold before exiting
-            if (progressPercent >= 2.0f) {
-                repo.saveLastPlayedItem(
-                    categoryId = currentCategoryId,
-                    itemId = currentState.streamId,
-                    itemName = currentState.streamName,
-                    contentType = contentType,
+                // Metadata goes with every position write, not only the ones past the threshold
+                // above: this call creates the row for a session too short to reach it, and a row
+                // without it is an episode that cannot say which show it belongs to.
+                repo.savePlaybackPosition(
+                    currentState.streamId,
+                    currentState.streamName,
+                    currentCategoryId,
+                    contentType,
+                    position,
+                    duration,
+                    audioTrackIndex = audioTrackIndex,
+                    subtitleTrackIndex = subtitleTrackIndex,
                     episodeId = episode,
                     episodeExtension = currentEpisodeExtension,
                     seriesId = series,
@@ -636,30 +655,12 @@ class StreamLoaderViewModel(
                 )
             }
 
-            // Metadata goes with every position write, not only the ones past the threshold
-            // above: this call creates the row for a session too short to reach it, and a row
-            // without it is an episode that cannot say which show it belongs to.
-            repo.savePlaybackPosition(
-                currentState.streamId,
-                currentState.streamName,
-                currentCategoryId,
-                contentType,
-                position,
-                duration,
-                audioTrackIndex = audioTrackIndex,
-                subtitleTrackIndex = subtitleTrackIndex,
-                episodeId = episode,
-                episodeExtension = currentEpisodeExtension,
-                seriesId = series,
-                seriesName = seriesName,
-            )
+            // Final notification to provider (e.g. reportPlaybackStopped to Jellyfin/Xtream)
+            repo.onPlaybackStopped(currentState.streamId, position, duration)
+
+            // Flush to disk immediately to ensure history is committed
+            repo.flushWatchHistory()
         }
-
-        // Final notification to provider (e.g. reportPlaybackStopped to Jellyfin/Xtream)
-        repo.onPlaybackStopped(currentState.streamId, position, duration)
-
-        // Flush to disk immediately to ensure history is committed
-        repo.flushWatchHistory()
     }
 }
 

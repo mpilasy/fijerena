@@ -201,44 +201,52 @@ class CategoryViewModel(
                 UiState.Loading
             }
 
-        if (!repository.isConnected()) {
-            val connectResult = repository.connect()
-            if (connectResult.isFailure) {
-                // Raw text here used to be a Room/HTTP/serialization exception's own message
-                // (e.g. a JSON parse error dumped straight from an EOF response body) shown to
-                // every user verbatim — friendlyErrorMessage maps it to something a viewer can
-                // act on, with the raw text appended only in dev mode.
-                val reason =
-                    connectResult.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
-                        ?: context.getString(R.string.error_generic_unknown)
-                _uiState.value = UiState.Error(context.getString(R.string.category_error_connection_failed_format, reason))
-                return
-            }
-        }
-
-        _supportsNativeEpg.value = repository.getCapabilities()?.supportsEpg == true
-
-        val result = repository.getFilteredCategories(contentType)
-
-        result.fold(
-            onSuccess = { fetchedCategories ->
-                // Retry once if provider returned no categories (server session may not be ready)
-                if (fetchedCategories.isEmpty() && !categoriesRetried) {
-                    categoriesRetried = true
-                    delay(1500)
-                    val retryResult = repository.getFilteredCategories(contentType)
-                    retryResult.fold(
-                        onSuccess = { buildAndShowCategories(it) },
-                        onFailure = { buildAndShowCategories(emptyList()) },
-                    )
-                    return
+        val connectError =
+            if (repository.isConnected()) {
+                null
+            } else {
+                val connectResult = repository.connect()
+                if (connectResult.isFailure) {
+                    // Raw text here used to be a Room/HTTP/serialization exception's own message
+                    // (e.g. a JSON parse error dumped straight from an EOF response body) shown to
+                    // every user verbatim — friendlyErrorMessage maps it to something a viewer can
+                    // act on, with the raw text appended only in dev mode.
+                    val reason =
+                        connectResult.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                            ?: context.getString(R.string.error_generic_unknown)
+                    context.getString(R.string.category_error_connection_failed_format, reason)
+                } else {
+                    null
                 }
-                buildAndShowCategories(fetchedCategories)
-            },
-            onFailure = { error ->
-                _uiState.value = UiState.Error(error.message ?: context.getString(R.string.category_error_load_failed))
-            },
-        )
+            }
+
+        if (connectError != null) {
+            _uiState.value = UiState.Error(connectError)
+        } else {
+            _supportsNativeEpg.value = repository.getCapabilities()?.supportsEpg == true
+
+            val result = repository.getFilteredCategories(contentType)
+
+            result.fold(
+                onSuccess = { fetchedCategories ->
+                    // Retry once if provider returned no categories (server session may not be ready)
+                    if (fetchedCategories.isEmpty() && !categoriesRetried) {
+                        categoriesRetried = true
+                        delay(1500)
+                        val retryResult = repository.getFilteredCategories(contentType)
+                        retryResult.fold(
+                            onSuccess = { buildAndShowCategories(it) },
+                            onFailure = { buildAndShowCategories(emptyList()) },
+                        )
+                    } else {
+                        buildAndShowCategories(fetchedCategories)
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(error.message ?: context.getString(R.string.category_error_load_failed))
+                },
+            )
+        }
     }
 
     private fun buildAndShowCategories(fetchedCategories: List<MediaCategory>) {
@@ -323,16 +331,16 @@ class CategoryViewModel(
         }
 
         // Handle virtual categories
-        when (categoryId) {
+        val handledVirtual = when (categoryId) {
             RECENT_CATEGORY_ID -> {
                 emitStreams(repository.refreshRecentItems(contentType))
                 loadNowPlaying(currentStreams)
-                return
+                true
             }
             FAVORITES_CATEGORY_ID -> {
                 emitStreams(repository.getFavoritesForContentTypeSuspend(contentType))
                 loadNowPlaying(currentStreams)
-                return
+                true
             }
             FAVORITE_CATEGORIES_ID -> {
                 val favCategories = repository.getFavoriteCategoriesForContentType(contentType)
@@ -347,7 +355,7 @@ class CategoryViewModel(
                         )
                     },
                 )
-                return
+                true
             }
             RECENTLY_VIEWED_CATEGORIES_ID -> {
                 val recentCategories = repository.getRecentlyViewedCategories(contentType)
@@ -362,40 +370,43 @@ class CategoryViewModel(
                         )
                     },
                 )
-                return
+                true
             }
+            else -> false
         }
 
-        // Track non-virtual category views
-        val categoryName = categories.firstOrNull { it.id == categoryId }?.name
-        if (categoryName != null) {
-            repository.addToCategoryHistory(categoryId, categoryName, contentType)
+        if (!handledVirtual) {
+            // Track non-virtual category views
+            val categoryName = categories.firstOrNull { it.id == categoryId }?.name
+            if (categoryName != null) {
+                repository.addToCategoryHistory(categoryId, categoryName, contentType)
+            }
+
+            val result = repository.getItems(categoryId, contentType)
+
+            result.fold(
+                onSuccess = { items ->
+                    emitStreams(items, getPayloadSize(categoryId))
+                    loadNowPlaying(items)
+                    // Retry once if initial load returned empty for a non-virtual category
+                    if (isRetryEnabled && isInitialLoad && items.isEmpty() && !initialLoadRetried) {
+                        initialLoadRetried = true
+                        delay(1500)
+                        loadStreamsInternal(categoryId, isRetryEnabled = true)
+                    }
+                    isInitialLoad = false
+                },
+                onFailure = {
+                    emitStreams(emptyList(), getPayloadSize(categoryId))
+                    // Retry once on initial load failure after a short delay
+                    if (isRetryEnabled && isInitialLoad && !initialLoadRetried) {
+                        initialLoadRetried = true
+                        delay(2000)
+                        loadStreamsInternal(categoryId, isRetryEnabled = true)
+                    }
+                },
+            )
         }
-
-        val result = repository.getItems(categoryId, contentType)
-
-        result.fold(
-            onSuccess = { items ->
-                emitStreams(items, getPayloadSize(categoryId))
-                loadNowPlaying(items)
-                // Retry once if initial load returned empty for a non-virtual category
-                if (isRetryEnabled && isInitialLoad && items.isEmpty() && !initialLoadRetried) {
-                    initialLoadRetried = true
-                    delay(1500)
-                    loadStreamsInternal(categoryId, isRetryEnabled = true)
-                }
-                isInitialLoad = false
-            },
-            onFailure = {
-                emitStreams(emptyList(), getPayloadSize(categoryId))
-                // Retry once on initial load failure after a short delay
-                if (isRetryEnabled && isInitialLoad && !initialLoadRetried) {
-                    initialLoadRetried = true
-                    delay(2000)
-                    loadStreamsInternal(categoryId, isRetryEnabled = true)
-                }
-            },
-        )
     }
 
     private fun loadNowPlaying(items: List<MediaItem>) {
@@ -695,10 +706,12 @@ class CategoryViewModel(
      * Favorites fetch, bypassing [uiState] the same way — for the same Live TV preview panel,
      * toggling between the two without disturbing the selected/browsed category.
      */
-    suspend fun getFavoritesSnapshot(): List<MediaItem> {
-        if (!::repository.isInitialized) return emptyList()
-        return repository.getFavoritesForContentTypeSuspend(contentType)
-    }
+    suspend fun getFavoritesSnapshot(): List<MediaItem> =
+        if (::repository.isInitialized) {
+            repository.getFavoritesForContentTypeSuspend(contentType)
+        } else {
+            emptyList()
+        }
 }
 
 /** Splits into (virtual, regular) categories — single pass instead of two filters. */

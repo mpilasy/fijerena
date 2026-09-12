@@ -83,28 +83,22 @@ private class BounceMarqueeNode(
         // Cache velocity in px/sec for animation calculations
         velocityPxPerSec = velocity.toPx()
 
-        // Pass through if already in infinite-width context
-        if (constraints.maxWidth == Constraints.Infinity) {
-            val placeable = measurable.measure(constraints)
-            updateOverflow(0)
-            return layout(placeable.width, placeable.height) {
-                placeable.place(0, 0)
-            }
-        }
-
+        // Pass through if already in infinite-width context, otherwise measure the content
+        // without a width constraint to get its natural width — 5x container width, capped
+        // conservatively to avoid Constraints overflow.
+        val isInfiniteWidth = constraints.maxWidth == Constraints.Infinity
         val containerWidth = constraints.maxWidth
-
-        // Measure content without width constraint to get its natural width.
-        // Use 5x container width, capped conservatively to avoid Constraints overflow.
-        val wideMax = (containerWidth.toLong() * 5).coerceAtMost(65_535L).toInt()
         val placeable =
-            measurable.measure(
-                constraints.copy(minWidth = 0, maxWidth = wideMax),
-            )
+            if (isInfiniteWidth) {
+                measurable.measure(constraints)
+            } else {
+                val wideMax = (containerWidth.toLong() * 5).coerceAtMost(65_535L).toInt()
+                measurable.measure(constraints.copy(minWidth = 0, maxWidth = wideMax))
+            }
 
-        updateOverflow((placeable.width - containerWidth).coerceAtLeast(0))
+        updateOverflow(if (isInfiniteWidth) 0 else (placeable.width - containerWidth).coerceAtLeast(0))
 
-        return layout(containerWidth, placeable.height) {
+        return layout(if (isInfiniteWidth) placeable.width else containerWidth, placeable.height) {
             placeable.place(0, 0)
         }
     }
