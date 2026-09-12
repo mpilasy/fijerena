@@ -627,11 +627,13 @@ private enum class PreviewListSource { RECENT, FAVORITES }
  * keeps in sync with what's actually on screen.
  */
 private fun neighborChannel(streams: ImmutableMediaList?, currentId: String, direction: Int): MediaItem? {
-    val list = streams ?: return null
-    if (list.isEmpty()) return null
-    val currentIndex = list.indexOfFirst { it.id == currentId }.takeIf { it != -1 } ?: 0
-    val nextIndex = (currentIndex + direction).mod(list.size)
-    return list[nextIndex]
+    val list = streams?.takeIf { it.isNotEmpty() }
+    val neighbor =
+        list?.let {
+            val currentIndex = it.indexOfFirst { item -> item.id == currentId }.takeIf { index -> index != -1 } ?: 0
+            it[(currentIndex + direction).mod(it.size)]
+        }
+    return neighbor
 }
 
 /** The channel list pane, shared between the "no preview yet" and "split" render paths. */

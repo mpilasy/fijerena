@@ -91,7 +91,7 @@ class FijerenaApplication :
     }
 
     private fun isPlaybackActive(): Boolean {
-        val state = StreamingPlaybackService.getInstance()?.playbackState?.value ?: return false
+        val state = StreamingPlaybackService.getInstance()?.playbackState?.value
         return state is PlaybackState.Playing || state is PlaybackState.Buffering
     }
 

@@ -581,8 +581,11 @@ class EpgBrowserViewModel(
     )
 
     private fun applyChannelMatching(dateGroups: List<EpgBrowserDateGroup>): List<EpgBrowserDateGroup> {
-        val matcher = channelMatcher ?: return dateGroups
-        return dateGroups
+        val matcher = channelMatcher
+        return if (matcher == null) {
+            dateGroups
+        } else {
+            dateGroups
             .map { group ->
                 group.copy(
                     programs =
@@ -612,9 +615,10 @@ class EpgBrowserViewModel(
                                 program.copy(airings = sorted)
                             }
                             .filter { it.airings.isNotEmpty() },
-                )
-            }
-            .filter { it.programs.isNotEmpty() }
+                    )
+                }
+                .filter { it.programs.isNotEmpty() }
+        }
     }
 
     private fun groupByDate(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {

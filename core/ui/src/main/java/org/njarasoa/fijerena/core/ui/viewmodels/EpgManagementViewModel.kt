@@ -542,31 +542,32 @@ class EpgManagementViewModel(
 
     companion object {
         private fun calculateNextRefreshTime(anchorTime: String, intervalHours: Int): Long {
-            if (intervalHours <= 0) return 0L
-
-            val now = java.util.Calendar.getInstance()
-            val anchor = java.util.Calendar.getInstance()
             val parts = anchorTime.split(":")
-            if (parts.size != 2) return 0L
-            val hour = parts[0].toInt()
-            val minute = parts[1].toInt()
+            var next = 0L
 
-            anchor.set(java.util.Calendar.HOUR_OF_DAY, hour)
-            anchor.set(java.util.Calendar.MINUTE, minute)
-            anchor.set(java.util.Calendar.SECOND, 0)
-            anchor.set(java.util.Calendar.MILLISECOND, 0)
+            if (intervalHours > 0 && parts.size == 2) {
+                val now = java.util.Calendar.getInstance()
+                val anchor = java.util.Calendar.getInstance()
+                val hour = parts[0].toInt()
+                val minute = parts[1].toInt()
 
-            val intervalMs = intervalHours.toLong() * 3600 * 1000
-            var next = anchor.timeInMillis
+                anchor.set(java.util.Calendar.HOUR_OF_DAY, hour)
+                anchor.set(java.util.Calendar.MINUTE, minute)
+                anchor.set(java.util.Calendar.SECOND, 0)
+                anchor.set(java.util.Calendar.MILLISECOND, 0)
 
-            if (next < now.timeInMillis) {
-                val diff = now.timeInMillis - next
-                val numIntervals = (diff / intervalMs) + 1
-                next += numIntervals * intervalMs
-            } else {
-                val diff = next - now.timeInMillis
-                val numIntervals = diff / intervalMs
-                next -= numIntervals * intervalMs
+                val intervalMs = intervalHours.toLong() * 3600 * 1000
+                next = anchor.timeInMillis
+
+                if (next < now.timeInMillis) {
+                    val diff = now.timeInMillis - next
+                    val numIntervals = (diff / intervalMs) + 1
+                    next += numIntervals * intervalMs
+                } else {
+                    val diff = next - now.timeInMillis
+                    val numIntervals = diff / intervalMs
+                    next -= numIntervals * intervalMs
+                }
             }
 
             return next

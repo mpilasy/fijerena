@@ -69,27 +69,32 @@ private fun isDarkLogo(bitmap: Bitmap): Boolean {
     // it. Bitmap.copy() is the supported way to pull a hardware bitmap's pixels onto the CPU.
     val readable =
         if (bitmap.config == Bitmap.Config.HARDWARE) {
-            bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: return false
+            // A hardware bitmap that won't copy leaves nothing readable to judge — treat as light.
+            bitmap.copy(Bitmap.Config.ARGB_8888, false)
         } else {
             bitmap
         }
-    val sample = Bitmap.createScaledBitmap(readable, 16, 16, true)
-    if (readable !== bitmap) readable.recycle()
-    var totalLuminance = 0.0
-    var opaquePixels = 0
-    for (x in 0 until sample.width) {
-        for (y in 0 until sample.height) {
-            val pixel = sample.getPixel(x, y)
-            val alpha = (pixel ushr 24) and 0xFF
-            if (alpha < 32) continue
-            val r = (pixel ushr 16) and 0xFF
-            val g = (pixel ushr 8) and 0xFF
-            val b = pixel and 0xFF
-            totalLuminance += 0.299 * r + 0.587 * g + 0.114 * b
-            opaquePixels++
+    var isDark = false
+    if (readable != null) {
+        val sample = Bitmap.createScaledBitmap(readable, 16, 16, true)
+        if (readable !== bitmap) readable.recycle()
+        var totalLuminance = 0.0
+        var opaquePixels = 0
+        for (x in 0 until sample.width) {
+            for (y in 0 until sample.height) {
+                val pixel = sample.getPixel(x, y)
+                val alpha = (pixel ushr 24) and 0xFF
+                if (alpha >= 32) {
+                    val r = (pixel ushr 16) and 0xFF
+                    val g = (pixel ushr 8) and 0xFF
+                    val b = pixel and 0xFF
+                    totalLuminance += 0.299 * r + 0.587 * g + 0.114 * b
+                    opaquePixels++
+                }
+            }
         }
+        if (sample !== bitmap) sample.recycle()
+        isDark = opaquePixels > 0 && (totalLuminance / opaquePixels) < 128
     }
-    if (sample !== bitmap) sample.recycle()
-    if (opaquePixels == 0) return false
-    return (totalLuminance / opaquePixels) < 128
+    return isDark
 }

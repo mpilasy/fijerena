@@ -37,43 +37,48 @@ data class ParsedUrlCredentials(
  * Returns null if no credentials were found in the URL.
  */
 fun parseUrlCredentials(input: String): ParsedUrlCredentials? {
-    if ('?' !in input) return null
-    try {
-        val uri = input.toUri()
-        if (uri.queryParameterNames.isNullOrEmpty()) return null
+    val parsed =
+        if ('?' !in input) {
+            null
+        } else {
+            try {
+                val uri = input.toUri()
+                val username =
+                    (
+                        uri.getQueryParameter("username")
+                            ?: uri.getQueryParameter("user")
+                    )?.takeIf { it.isNotEmpty() }
+                val password =
+                    (
+                        uri.getQueryParameter("password")
+                            ?: uri.getQueryParameter("pass")
+                    )?.takeIf { it.isNotEmpty() }
 
-        val username =
-            (
-                uri.getQueryParameter("username")
-                    ?: uri.getQueryParameter("user")
-            )?.takeIf { it.isNotEmpty() }
-        val password =
-            (
-                uri.getQueryParameter("password")
-                    ?: uri.getQueryParameter("pass")
-            )?.takeIf { it.isNotEmpty() }
+                if (uri.queryParameterNames.isNullOrEmpty() || (username == null && password == null)) {
+                    null
+                } else {
+                    val streamOutputFormat = uri.getQueryParameter("output")?.takeIf { it.isNotEmpty() }
+                    val playlistType = uri.getQueryParameter("type")?.takeIf { it.isNotEmpty() }
 
-        if (username == null && password == null) return null
+                    val builder = uri.buildUpon().clearQuery().fragment(null)
 
-        val streamOutputFormat = uri.getQueryParameter("output")?.takeIf { it.isNotEmpty() }
-        val playlistType = uri.getQueryParameter("type")?.takeIf { it.isNotEmpty() }
+                    // Strip known API endpoint paths (e.g., /get.php, /player_api.php)
+                    val path = uri.path
+                    if (path != null && path.endsWith(".php")) {
+                        val lastSlash = path.lastIndexOf('/')
+                        val strippedPath = if (lastSlash > 0) path.substring(0, lastSlash) else ""
+                        builder.path(strippedPath)
+                    }
 
-        val builder = uri.buildUpon().clearQuery().fragment(null)
+                    val baseUrl = builder.build().toString().trimEnd('/')
 
-        // Strip known API endpoint paths (e.g., /get.php, /player_api.php)
-        val path = uri.path
-        if (path != null && path.endsWith(".php")) {
-            val lastSlash = path.lastIndexOf('/')
-            val strippedPath = if (lastSlash > 0) path.substring(0, lastSlash) else ""
-            builder.path(strippedPath)
+                    ParsedUrlCredentials(baseUrl, username, password, streamOutputFormat, playlistType)
+                }
+            } catch (_: Exception) {
+                null
+            }
         }
-
-        val baseUrl = builder.build().toString().trimEnd('/')
-
-        return ParsedUrlCredentials(baseUrl, username, password, streamOutputFormat, playlistType)
-    } catch (_: Exception) {
-        return null
-    }
+    return parsed
 }
 
 sealed interface ProviderUiState {
@@ -180,17 +185,16 @@ class ProviderViewModel(
      * Only runs if no providers exist in Room but legacy credentials are stored.
      */
     suspend fun migrateIfNeeded() {
-        val count = providerRepository.getProviderCount()
-        if (count > 0) return // Already migrated
+        val alreadyMigrated = providerRepository.getProviderCount() > 0
+        val legacyCreds = if (alreadyMigrated) null else accountManager.exportForMigration()
+        if (legacyCreds != null) {
+            val (url, username, password) = legacyCreds
+            val name = appSettings.providerName
+            providerRepository.addProvider(name, url, username, password)
 
-        val legacyCreds = accountManager.exportForMigration() ?: return
-        val (url, username, password) = legacyCreds
-
-        val name = appSettings.providerName
-        providerRepository.addProvider(name, url, username, password)
-
-        // Reload state after migration
-        loadProviders()
+            // Reload state after migration
+            loadProviders()
+        }
     }
 
     fun addProvider(
@@ -384,12 +388,17 @@ class ProviderViewModel(
      * sync — while the first one is still running.
      */
     fun observeRunningSync(providerId: Long) {
-        if (_syncState.value is SyncState.Syncing) return
         val deferred =
-            org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
-                .getInstance(context)
-                .inFlightSync(providerId) ?: return
-        awaitSync(deferred)
+            if (_syncState.value is SyncState.Syncing) {
+                null
+            } else {
+                org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
+                    .getInstance(context)
+                    .inFlightSync(providerId)
+            }
+        if (deferred != null) {
+            awaitSync(deferred)
+        }
     }
 
     private fun awaitSync(deferred: kotlinx.coroutines.Deferred<org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager.SyncResult>) {

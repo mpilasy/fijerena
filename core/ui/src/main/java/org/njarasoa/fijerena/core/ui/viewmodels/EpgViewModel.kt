@@ -95,55 +95,49 @@ class EpgViewModel(
         val hasExternalEpg = repository.hasIndexedEpgData()
         if (capabilities != null && !capabilities.supportsEpg && !hasExternalEpg) {
             _uiState.value = UiState.Error(context.getString(R.string.epg_error_not_supported))
-            return
-        }
+        } else {
+            // Get items for category
+            val itemsResult = repository.getItems(categoryId, ContentType.LIVE_TV)
+            val items = itemsResult.getOrNull()?.take(50)
 
-        // Get items for category
-        val itemsResult = repository.getItems(categoryId, ContentType.LIVE_TV)
-        val items =
-            itemsResult
-                .getOrElse {
-                    _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_channels_format, it.message))
-                    return
-                }.take(50)
+            if (items == null) {
+                val reason = itemsResult.exceptionOrNull()?.message
+                _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_channels_format, reason))
+            } else if (items.isEmpty()) {
+                _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_channels_in_category))
+            } else {
+                // Get EPG for all items (uses XMLTV if configured, falls back to provider EPG)
+                val epgResult = repository.getEpgBulkForItems(items)
+                val epgData = epgResult.getOrNull()
 
-        if (items.isEmpty()) {
-            _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_channels_in_category))
-            return
-        }
+                if (epgData == null) {
+                    val reason = epgResult.exceptionOrNull()?.message
+                    _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_data_format, reason))
+                } else if (epgData.isEmpty()) {
+                    _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_data_for_channels))
+                } else {
+                    // Pre-sort listings once so buildChannelRows can use binary search
+                    val sortedEpgData =
+                        epgData.mapValues { (_, response) ->
+                            EpgResponse(response.listings.sortedBy { it.startTime })
+                        }
+                    val channelRows = buildChannelRows(items, sortedEpgData, date)
+                    val timeSlots = generateTimeSlots(date)
+                    val currentSlot = calculateCurrentTimeSlot(timeSlots)
+                    val elapsed = System.currentTimeMillis() - startTime
 
-        // Get EPG for all items (uses XMLTV if configured, falls back to provider EPG)
-        val epgResult = repository.getEpgBulkForItems(items)
-        val epgData =
-            epgResult.getOrElse {
-                _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_data_format, it.message))
-                return
+                    _uiState.value =
+                        UiState.Success(
+                            channelRows = channelRows,
+                            timeSlots = timeSlots,
+                            currentTimeSlot = currentSlot,
+                            selectedDate = date,
+                            epgLoadTime = "${elapsed}ms",
+                            epgMatchInfo = "${epgData.size}/${items.size} channels matched",
+                        )
+                }
             }
-
-        if (epgData.isEmpty()) {
-            _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_data_for_channels))
-            return
         }
-
-        // Pre-sort listings once so buildChannelRows can use binary search
-        val sortedEpgData =
-            epgData.mapValues { (_, response) ->
-                EpgResponse(response.listings.sortedBy { it.startTime })
-            }
-        val channelRows = buildChannelRows(items, sortedEpgData, date)
-        val timeSlots = generateTimeSlots(date)
-        val currentSlot = calculateCurrentTimeSlot(timeSlots)
-        val elapsed = System.currentTimeMillis() - startTime
-
-        _uiState.value =
-            UiState.Success(
-                channelRows = channelRows,
-                timeSlots = timeSlots,
-                currentTimeSlot = currentSlot,
-                selectedDate = date,
-                epgLoadTime = "${elapsed}ms",
-                epgMatchInfo = "${epgData.size}/${items.size} channels matched",
-            )
     }
 
     fun forceRefresh() {

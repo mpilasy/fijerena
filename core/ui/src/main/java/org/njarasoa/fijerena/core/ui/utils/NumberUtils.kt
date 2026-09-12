@@ -22,11 +22,14 @@ object NumberUtils {
      * Format a duration in milliseconds to a human-readable string.
      */
     fun formatDuration(durationMs: Long): String {
-        if (durationMs < 10_000) return "${durationMs}ms"
         val totalSeconds = durationMs / 1000
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
-        return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s"
+        return when {
+            durationMs < 10_000 -> "${durationMs}ms"
+            minutes > 0 -> "${minutes}m ${seconds}s"
+            else -> "${seconds}s"
+        }
     }
 
     /**
