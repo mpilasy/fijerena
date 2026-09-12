@@ -31,6 +31,12 @@ class XmltvSearchService(
 
         // Pre-compiled regex — avoid recompiling on every search call
         private val WHITESPACE_REGEX = Regex("\\s+")
+
+        // FTS4's actual reserved boolean operators, as whole words — not "any capital letter",
+        // which matched an ordinary capitalized query (a channel name like "CNN" or "HBO", or
+        // just "Movie") and mistook it for hand-written FTS syntax, silently dropping the prefix
+        // wildcard below and returning only exact-term matches.
+        private val FTS_OPERATOR_REGEX = Regex("\\b(AND|OR|NOT|NEAR)\\b")
     }
 
     /**
@@ -187,7 +193,7 @@ class XmltvSearchService(
      */
     private fun buildRawFtsQuery(query: String): String {
         val trimmed = query.trim()
-        val finalQuery = if (trimmed.contains(Regex("[A-Z]+")) || trimmed.contains("\"")) {
+        val finalQuery = if (FTS_OPERATOR_REGEX.containsMatchIn(trimmed) || trimmed.contains("\"")) {
             // User likely provided manual FTS syntax
             trimmed
         } else {

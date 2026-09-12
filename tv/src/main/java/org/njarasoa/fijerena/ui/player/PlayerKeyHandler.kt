@@ -19,6 +19,19 @@ fun handlePlayerKeyEvent(
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
 ): Boolean {
+    // suppressNextCenterKeyUp is only ever set true from the Center/Enter KeyDown branch below,
+    // which itself returns early (`if (state.isModalOpen) return false`) whenever a modal is
+    // already open — so it can never be set true while isModalOpen is already true. Observing
+    // both true at once here means a dialog/overlay opened *between* that KeyDown and its own
+    // KeyUp arriving: that KeyUp went to the new modal's own focus target instead of back here,
+    // so nothing would ever clear the flag — leaving it to silently eat the next legitimate
+    // center click once the modal closes. Checked on every event, not just Center/Enter KeyUp,
+    // so it clears as soon as anything else reaches this handler instead of staying stuck for
+    // the rest of the session.
+    if (state.suppressNextCenterKeyUp && state.isModalOpen) {
+        state.suppressNextCenterKeyUp = false
+    }
+
     // KeyUp: no-op for scrub mode (we only act on KeyDown to step the cursor and on Center to
     // commit) — except a Center/Enter KeyUp that must be consumed because its own KeyDown just
     // revealed the OSD (see suppressNextCenterKeyUp's kdoc). Un-consumed, it falls through to

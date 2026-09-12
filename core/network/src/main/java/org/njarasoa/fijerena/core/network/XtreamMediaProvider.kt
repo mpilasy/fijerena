@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.network
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -734,20 +735,36 @@ class XtreamMediaProvider(
         taken: MutableSet<String>,
         minCount: Int = MIN_RELATED_TITLES,
     ): List<MediaItem> {
+        // The FTS lookup per title is independent and read-only — dispatched concurrently
+        // (index-aligned with `results`) so up to ~40 TMDB titles cost one round trip's worth of
+        // wall-clock time instead of N sequential ones. Only the accept/reject decision below
+        // depends on `taken`, which is built up as matches are accepted — fetching ahead of that
+        // can waste a query on a title that turns out to already be claimed (by an earlier entry
+        // in this same list, or an earlier matchToCatalogue call), never on correctness.
+        val candidatesByIndex =
+            coroutineScope {
+                results
+                    .map { result ->
+                        async {
+                            val title = result.displayTitle ?: return@async null
+                            val ftsQuery = buildFtsQuery(title) ?: return@async null
+                            try {
+                                repository.searchByFts(contentType, ftsQuery, includeExcluded = false)
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+                    }.awaitAll()
+            }
+
         val matches = mutableListOf<MediaItem>()
-        for (result in results) {
+        for ((index, result) in results.withIndex()) {
             val title = result.displayTitle ?: continue
             val key = TitleMatcher.normalize(title).text
             // Providers list the same film in several categories and qualities; one row each.
             if (key.isBlank() || key in taken) continue
 
-            val ftsQuery = buildFtsQuery(title) ?: continue
-            val candidates =
-                try {
-                    repository.searchByFts(contentType, ftsQuery, includeExcluded = false)
-                } catch (e: Exception) {
-                    continue
-                }
+            val candidates = candidatesByIndex[index] ?: continue
             val hit =
                 candidates.firstOrNull { candidate ->
                     candidate.streamId.toString() != itemId &&
