@@ -84,6 +84,15 @@ parenthesizing the if/else-if/else before the chain. Lesson recorded: for this c
 low-coverage UI modules, "unit tests pass + diff looks right" is not sufficient verification —
 instrumented on-device runs are required before calling a refactor safe.
 
+The other pre-existing instrumented failure in this file,
+`alternateStreamFocusSurvivesSimulatedNavigationDisposal`, turned out to be unrelated to any of
+this session's work: stale test, not a product bug. The stream-name-picker row it drives moved
+into a separate "Details" tab when the series screen adopted `TvDetailHero` with tabs (commit
+`89bf9f41`), and the test was never updated to switch tabs first — it tried to scroll straight to
+`stream_name_picker` while still on the default Episodes tab, where that node doesn't exist.
+Fixed by scrolling to and clicking the Details tab (by its label text — `TvSectionTabs` has no
+per-tab testTag) before scrolling to the picker. Both tests in the file pass now.
+
 Separately, while investigating why that regression test could even run: `tv/build.gradle.kts`
 was missing `testInstrumentationRunner` in `defaultConfig` — the other four instrumented modules
 (`mobile`, `core/player`, `core/data`, `core/navigation`) all declare it, `tv` didn't. It worked by
