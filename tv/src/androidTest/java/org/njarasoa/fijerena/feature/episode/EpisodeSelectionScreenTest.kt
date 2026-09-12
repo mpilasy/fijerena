@@ -182,8 +182,16 @@ class EpisodeSelectionScreenTest {
             )
         }
 
-        // The stream-name row sits below the hero (docs/plans/tv-detail-hero-ui-plan.md Phase 5)
-        // — off-screen until scrolled, same reasoning as the episode card in the test above.
+        // The stream-name row moved into the Details tab (docs/plans/tv-detail-hero-ui-plan.md
+        // Phase 5) — it's not on the Episodes tab shown by default, and the tab row itself is
+        // below the hero, off-screen (fixed test viewport) until scrolled into view.
+        val detailsTabLabel = context.getString(R.string.details_tab_details)
+        composeTestRule
+            .onNodeWithTag("episode_list")
+            .performScrollToNode(hasText(detailsTabLabel))
+        composeTestRule.onNodeWithText(detailsTabLabel).performClick()
+
+        // Off-screen until scrolled, same reasoning as the episode card in the test above.
         composeTestRule
             .onNodeWithTag("episode_list")
             .performScrollToNode(hasTestTag("stream_name_picker"))
