@@ -58,10 +58,12 @@ class EpisodeResumeState(
      * on the tab that's already current doesn't churn state. Returns whether it actually changed.
      */
     fun selectSeason(season: Int): Boolean {
-        if (season == selectedSeason) return false
-        hasManuallySelectedSeason = true
-        selectedSeason = season
-        return true
+        val changed = season != selectedSeason
+        if (changed) {
+            hasManuallySelectedSeason = true
+            selectedSeason = season
+        }
+        return changed
     }
 
     /**
