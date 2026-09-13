@@ -585,7 +585,12 @@ internal fun EpisodeListContent(
                 isCompleted = { allWatched[it]?.isCompleted == true },
             )?.let { resumeState.applyAnchor(episodeId = it, season = null) }
 
-        if (!hasMultipleSeasons) return@LaunchedEffect
+        if (!hasMultipleSeasons) {
+            // Only one season, so no "which season" guess needed — still must seed
+            // selectedSeason or the episode list below stays keyed off null forever.
+            sortedSeasons.firstOrNull()?.let { resumeState.applyAnchor(episodeId = null, season = it.seasonNumber) }
+            return@LaunchedEffect
+        }
 
         // The derived anchor's season beats the "first season with anything unwatched" guess:
         // a viewer mid-season 13 doesn't want season 1 opened because they skipped an episode.

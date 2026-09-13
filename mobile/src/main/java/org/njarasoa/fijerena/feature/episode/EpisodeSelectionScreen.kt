@@ -387,7 +387,12 @@ private fun EpisodeListContent(
                     isCompleted = { allWatched[it]?.isCompleted == true },
                 )?.also { resumeState.applyAnchor(episodeId = it, season = null) }
 
-        if (!hasMultipleSeasons) return@LaunchedEffect
+        if (!hasMultipleSeasons) {
+            // Only one season, so no "which season" guess needed — still must seed
+            // selectedSeason or the episode list below stays keyed off null forever.
+            sortedSeasons.firstOrNull()?.let { resumeState.applyAnchor(episodeId = null, season = it.seasonNumber) }
+            return@LaunchedEffect
+        }
 
         val targetSeason =
             derivedAnchor?.let { seriesDetail.seasonNumberContaining(it) }
