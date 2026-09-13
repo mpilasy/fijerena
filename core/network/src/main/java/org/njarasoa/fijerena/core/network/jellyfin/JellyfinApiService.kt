@@ -18,6 +18,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.jvm.javaio.toInputStream
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.addJsonObject
@@ -139,6 +140,8 @@ class JellyfinApiService(
                     "Server error (${e.response.status.value}). Check that the server URL is correct."
                 }
             Result.failure(Exception(message, e))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Auth failed", e)
             Result.failure(e)
@@ -154,6 +157,8 @@ class JellyfinApiService(
             postCapabilities()
             // Return a synthetic auth response so callers don't need to change
             Result.success(JellyfinAuthResponse(user = user, accessToken = apiKey))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             accessToken = null
             userId = null
@@ -175,6 +180,8 @@ class JellyfinApiService(
                 contentType(ContentType.Application.Json)
                 setBody(JellyfinClientCapabilities())
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "Failed to post capabilities (non-fatal)", e)
         }
@@ -210,6 +217,8 @@ class JellyfinApiService(
                         setBody(request)
                     }.body<JellyfinPlaybackInfoResponse>()
             Result.success(response)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "PlaybackInfo request failed for $itemId", e)
             Result.failure(e)
@@ -224,6 +233,8 @@ class JellyfinApiService(
                     .get("$serverUrl/Users/$userId/Views")
                     .body<JellyfinItemsResponse>()
             Result.success(response.items)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -252,6 +263,8 @@ class JellyfinApiService(
                         Result.success(result.items)
                     }
                 }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -294,6 +307,8 @@ class JellyfinApiService(
                         parameter("UserId", userId)
                     }.body<JellyfinItemsResponse>()
             Result.success(response.items)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -311,6 +326,8 @@ class JellyfinApiService(
                         parameter("Fields", "Overview,MediaSources,UserData")
                     }.body<JellyfinItemsResponse>()
             Result.success(response.items)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -323,6 +340,8 @@ class JellyfinApiService(
                         parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData,RemoteTrailers,ProviderIds")
                     }.body<JellyfinItem>()
             Result.success(response)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -347,6 +366,8 @@ class JellyfinApiService(
                         Result.success(result.items)
                     }
                 }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -396,6 +417,8 @@ class JellyfinApiService(
                     ),
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             android.util.Log.e("JellyfinApiService", "Failed to report playback progress", e)
         }
@@ -419,6 +442,8 @@ class JellyfinApiService(
                     ),
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             android.util.Log.e("JellyfinApiService", "Failed to report playback start", e)
         }
@@ -444,6 +469,8 @@ class JellyfinApiService(
                     ),
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             android.util.Log.e("JellyfinApiService", "Failed to report playback stopped", e)
         }
@@ -453,6 +480,8 @@ class JellyfinApiService(
         try {
             client.post("$serverUrl/Users/$userId/FavoriteItems/$itemId")
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -461,6 +490,8 @@ class JellyfinApiService(
         try {
             client.delete("$serverUrl/Users/$userId/FavoriteItems/$itemId")
             Result.success(Unit)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -482,6 +513,8 @@ class JellyfinApiService(
                         parameter("Recursive", true)
                     }.body<JellyfinItemsResponse>()
             Result.success(response.items)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -503,6 +536,8 @@ class JellyfinApiService(
                         parameter("Recursive", true)
                     }.body<JellyfinItemsResponse>()
             Result.success(response.items)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -524,6 +559,8 @@ class JellyfinApiService(
                         parameter("Recursive", true)
                     }.body<JellyfinItemsResponse>()
             Result.success(response.items)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -543,6 +580,8 @@ class JellyfinApiService(
                         contentType(ContentType.Application.Json)
                     }.body<JellyfinQuickConnectResult>()
             Result.success(result)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Quick Connect initiate failed")
             Result.failure(e)
@@ -560,6 +599,8 @@ class JellyfinApiService(
                         parameter("secret", secret)
                     }.body<JellyfinQuickConnectResult>()
             Result.success(result)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Quick Connect poll failed")
             Result.failure(e)
@@ -582,6 +623,8 @@ class JellyfinApiService(
             serverId = response.serverId
             postCapabilities()
             Result.success(response)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Quick Connect auth failed")
             Result.failure(e)

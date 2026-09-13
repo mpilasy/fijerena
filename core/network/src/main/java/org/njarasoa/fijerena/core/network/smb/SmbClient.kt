@@ -10,8 +10,10 @@ import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.connection.Connection
 import com.hierynomus.smbj.session.Session
 import com.hierynomus.smbj.share.DiskShare
+import com.hierynomus.smbj.share.File as SmbFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.FilterInputStream
 import java.io.InputStream
 import java.util.EnumSet
 
@@ -94,6 +96,16 @@ class SmbClient(
                 SMB2CreateDisposition.FILE_OPEN,
                 null,
             )
-        return file.inputStream
+        return SmbFileInputStream(file)
+    }
+}
+
+/** Closes the underlying SMB [File] handle (not released by closing its stream alone). */
+private class SmbFileInputStream(
+    private val file: SmbFile,
+) : FilterInputStream(file.inputStream) {
+    override fun close() {
+        super.close()
+        file.close()
     }
 }

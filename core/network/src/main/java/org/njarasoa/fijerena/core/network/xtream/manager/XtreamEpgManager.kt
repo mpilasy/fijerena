@@ -120,7 +120,7 @@ class XtreamEpgManager(
                 val cached = getCachedEpg(streamId)
                 if (cached != null) {
                     // Refresh in background
-                    CoroutineScope(Dispatchers.IO).launch {
+                    writeScope.launch {
                         try {
                             val fresh = service.getEpgForStream(streamId)
                             cacheEpg(streamId, fresh)
