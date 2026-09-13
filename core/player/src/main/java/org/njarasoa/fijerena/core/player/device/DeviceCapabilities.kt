@@ -34,7 +34,7 @@ object DeviceDetector {
         val deviceType = detectDeviceType()
         val supportsHevc = supportsCodec("video/hevc")
         val supportsAv1 = supportsCodec("video/av01")
-        val supports4K = supportsCodec("video/hevc") && supportsCodec("video/av01")
+        val supports4K = supportsHevc || supportsAv1
 
         val maxResolution =
             when (deviceType) {
