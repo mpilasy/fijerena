@@ -28,6 +28,8 @@ sealed class FavoriteMenuTarget {
          * docs/plans/watch-state-durable-storage-plan.md Phase 6.
          */
         val isWatched: Boolean? = null,
+        val isInRecent: Boolean = false,
+        val seriesId: String? = null,
     ) : FavoriteMenuTarget()
 }
 
@@ -41,6 +43,7 @@ fun FavoriteMenuTarget.nameAndFavoriteState(): Pair<String, Boolean> =
 fun MediaItem.toFavoriteMenuTarget(
     contentType: String,
     favoriteIds: ImmutableStringSet,
+    isInRecent: Boolean = false,
 ): FavoriteMenuTarget.Stream =
     FavoriteMenuTarget.Stream(
         itemId = id,
@@ -52,6 +55,8 @@ fun MediaItem.toFavoriteMenuTarget(
         // isWatchableContentType. A caller that needs a real watched lookup should use the other
         // overload below.
         isWatched = null,
+        isInRecent = isInRecent,
+        seriesId = seriesId,
     )
 
 /**
@@ -64,6 +69,7 @@ fun MediaItem.toFavoriteMenuTarget(
     isFavorite: (itemId: String) -> Boolean,
     isFavoriteCategory: (categoryId: String) -> Boolean,
     isWatched: (itemId: String) -> Boolean = { false },
+    isInRecent: Boolean = false,
 ): FavoriteMenuTarget {
     val categoryRef = target as? BrowseTarget.CategoryRef
     return if (categoryRef != null) {
@@ -81,6 +87,8 @@ fun MediaItem.toFavoriteMenuTarget(
             contentType = contentType,
             isFavorite = isFavorite(id),
             isWatched = if (isWatchableContentType(contentType)) isWatched(id) else null,
+            isInRecent = isInRecent,
+            seriesId = seriesId,
         )
     }
 }

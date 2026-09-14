@@ -136,6 +136,14 @@ internal fun LiveTvSplitLayout(
                 }
             },
             onDismiss = { favoriteMenuTarget = null },
+            onRemoveFromRecent =
+                (target as? FavoriteMenuTarget.Stream)?.let { stream ->
+                    if (categoryViewModel.supportsRemoveFromRecent && stream.isInRecent) {
+                        { categoryViewModel.removeFromRecent(stream.itemId, stream.contentType, stream.seriesId) }
+                    } else {
+                        null
+                    }
+                },
         )
     }
 
@@ -240,7 +248,14 @@ internal fun LiveTvSplitLayout(
                 onCategorySelected = onCategorySelected,
                 onStreamSelected = onStreamSelected,
                 onStreamPromote = { },
-                onStreamLongPress = { item -> favoriteMenuTarget = item.toFavoriteMenuTarget(contentType, favoriteIds) },
+                onStreamLongPress = { item ->
+                    favoriteMenuTarget =
+                        item.toFavoriteMenuTarget(
+                            contentType = contentType,
+                            favoriteIds = favoriteIds,
+                            isInRecent = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID,
+                        )
+                },
                 onStreamFocused = { item -> focusedItemFlow.value = item },
                 onRefreshStreams = onRefreshStreams,
                 modifier = Modifier.weight(0.34f).fillMaxHeight(),
@@ -585,7 +600,14 @@ internal fun LiveTvSplitLayout(
                     loader.loadStream(item)
                     fullScreen = true
                 },
-                onStreamLongPress = { item -> favoriteMenuTarget = item.toFavoriteMenuTarget(contentType, favoriteIds) },
+                onStreamLongPress = { item ->
+                    favoriteMenuTarget =
+                        item.toFavoriteMenuTarget(
+                            contentType = contentType,
+                            favoriteIds = favoriteIds,
+                            isInRecent = listSource == PreviewListSource.RECENT,
+                        )
+                },
                 onStreamFocused = { item -> focusedItemFlow.value = item },
                 modifier =
                     Modifier

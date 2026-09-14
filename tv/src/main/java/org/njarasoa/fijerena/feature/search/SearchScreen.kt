@@ -82,6 +82,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
+import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -160,7 +161,7 @@ fun SearchScreen(
     val longPressScope = rememberCoroutineScope()
 
     favoriteMenuTarget?.let { target ->
-        SearchFavoriteDialog(
+        FavoriteContextMenuDialog(
             target = target,
             onConfirm = {
                 when (target) {
@@ -1030,69 +1031,6 @@ private fun SearchResultItem(
             }
         }
     }
-}
-
-@Composable
-private fun SearchFavoriteDialog(
-    target: FavoriteMenuTarget,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    onToggleWatched: (() -> Unit)? = null,
-) {
-    val (itemName, isFavorite) = target.nameAndFavoriteState()
-    val isWatched = (target as? FavoriteMenuTarget.Stream)?.isWatched
-    val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
-    val watchedActionText =
-        if (isWatched == true) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark)
-
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            androidx.tv.material3.Text(
-                text = itemName,
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
-                maxLines = 2,
-            )
-        },
-        // Watched toggle (Phase 6, docs/plans/watch-state-durable-storage-plan.md), beside the
-        // favorite action below — null onToggleWatched/isWatched (Live TV) omits the row.
-        text =
-            if (onToggleWatched != null && isWatched != null) {
-                {
-                    Column {
-                        CinemaPrimaryButton(
-                            onClick = {
-                                onToggleWatched()
-                                onDismiss()
-                            },
-                            text = watchedActionText,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-            } else {
-                null
-            },
-        confirmButton = {
-            CinemaPrimaryButton(
-                onClick = {
-                    onConfirm()
-                    onDismiss()
-                },
-                text = actionText,
-            )
-        },
-        dismissButton = {
-            CinemaSecondaryButton(
-                onClick = onDismiss,
-                text = stringResource(R.string.common_cancel),
-            )
-        },
-        containerColor = CinemaSurface,
-        titleContentColor = CinemaTextPrimary,
-        textContentColor = CinemaTextSecondary,
-    )
 }
 
 /**

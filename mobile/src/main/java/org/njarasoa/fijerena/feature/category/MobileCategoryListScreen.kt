@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -46,8 +47,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -113,6 +117,7 @@ import org.njarasoa.fijerena.core.ui.model.toFavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -192,33 +197,7 @@ fun MobileCategoryListScreen(
 
     // Long-press favorite menu state
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
-
-    // Show the context menu dialog when a target is set
-    favoriteMenuTarget?.let { target ->
-        MobileFavoriteContextMenuDialog(
-            target = target,
-            onConfirm = {
-                when (target) {
-                    is FavoriteMenuTarget.Category -> {
-                        viewModel.toggleFavoriteCategory(
-                            target.categoryId,
-                            target.categoryName,
-                            target.contentType,
-                        )
-                    }
-                    is FavoriteMenuTarget.Stream -> {
-                        viewModel.toggleFavoriteStream(
-                            target.itemId,
-                            target.itemName,
-                            target.categoryId,
-                            target.contentType,
-                        )
-                    }
-                }
-            },
-            onDismiss = { favoriteMenuTarget = null },
-        )
-    }
+    var pendingFavoriteRemoval by remember { mutableStateOf<MediaItem?>(null) }
 
     // --- Live TV docked mini-player ---
     // Tap-driven equivalent of TV's focus-driven preview pane (tv/.../LiveTvSplitLayout.kt): a
@@ -294,6 +273,66 @@ fun MobileCategoryListScreen(
             favoriteStreams = viewModel.getFavoritesSnapshot()
             favoriteStreamsLoading = false
         }
+    }
+
+    pendingFavoriteRemoval?.let { item ->
+        RemoveFromFavoritesConfirmDialog(
+            itemName = item.name,
+            onConfirm = {
+                val toRemove = item
+                pendingFavoriteRemoval = null
+                viewModel.toggleFavoriteStream(
+                    itemId = toRemove.id,
+                    itemName = toRemove.name,
+                    categoryId = toRemove.categoryId,
+                    contentType = contentType,
+                )
+                if (target == null) {
+                    viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
+                } else {
+                    composableScope.launch {
+                        favoriteStreams = viewModel.getFavoritesSnapshot()
+                    }
+                }
+            },
+            onDismiss = { pendingFavoriteRemoval = null },
+        )
+    }
+
+    // Show the context menu dialog when a target is set
+    favoriteMenuTarget?.let { menuTarget ->
+        MobileFavoriteContextMenuDialog(
+            target = menuTarget,
+            onConfirm = {
+                when (menuTarget) {
+                    is FavoriteMenuTarget.Category -> {
+                        viewModel.toggleFavoriteCategory(
+                            menuTarget.categoryId,
+                            menuTarget.categoryName,
+                            menuTarget.contentType,
+                        )
+                    }
+                    is FavoriteMenuTarget.Stream -> {
+                        viewModel.toggleFavoriteStream(
+                            menuTarget.itemId,
+                            menuTarget.itemName,
+                            menuTarget.categoryId,
+                            menuTarget.contentType,
+                        )
+                        // Refresh either way — toggleFavoriteStream flips the state whether this
+                        // was an add or a remove, and both must be reflected in the Favorites list.
+                        if (dockTarget == null) {
+                            viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
+                        } else {
+                            composableScope.launch {
+                                favoriteStreams = viewModel.getFavoritesSnapshot()
+                            }
+                        }
+                    }
+                }
+            },
+            onDismiss = { favoriteMenuTarget = null },
+        )
     }
 
     val dockLoader: StreamLoaderViewModel? =
@@ -676,6 +715,15 @@ fun MobileCategoryListScreen(
                                                 isFavorite = { viewModel.isFavorite(it, contentType) },
                                                 isFavoriteCategory = { viewModel.isFavoriteCategory(it, contentType) },
                                             )
+                                    },
+                                    onRemoveItem =
+                                        if (viewModel.supportsRemoveFromRecent) {
+                                            { item -> viewModel.removeFromRecent(item.id, contentType, item.seriesId) }
+                                        } else {
+                                            null
+                                        },
+                                    onRequestRemoveFavorite = { item ->
+                                        pendingFavoriteRemoval = item
                                     },
                                 )
                             }
@@ -1114,6 +1162,8 @@ private fun StreamsList(
     panelTitle: String? = null,
     onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
     onItemLongPress: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
+    onRemoveItem: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
+    onRequestRemoveFavorite: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
 
@@ -1199,6 +1249,8 @@ private fun StreamsList(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                val isRecentList = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID
+                val isFavoritesList = selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f),
@@ -1206,31 +1258,122 @@ private fun StreamsList(
                     verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing),
                 ) {
                     itemsIndexed(items, key = { _, item -> item.id }, contentType = { _, _ -> "stream" }) { index, item ->
-                        StreamCard(
-                            item = item,
-                            nowPlayingProgram = nowPlaying[item.id],
-                            isCurrentlyPlaying = item.id == currentlyPlayingId,
-                            isWatched = item.id in watchedIds,
-                            watchProgress = watchProgress[item.id] ?: 0f,
-                            cardColors = streamCardColors,
-                            onClick = {
-                                onItemSelected(item.id, item.name, item.categoryId)
-                            },
-                            onLongClick = { onItemLongPress(item) },
-                            modifier =
-                                // See the chip rows above — remember-scoped so recomposition can't
-                                // cancel the entrance animation mid-flight.
-                                if (remember(item.id) { enteredStreamIds.add(item.id) }) {
-                                    Modifier.staggeredEntrance(index)
-                                } else {
-                                    Modifier
+                        val cardModifier =
+                            if (remember(item.id) { enteredStreamIds.add(item.id) }) {
+                                Modifier.staggeredEntrance(index)
+                            } else {
+                                Modifier
+                            }
+
+                        val streamCard = @Composable { modifier: Modifier ->
+                            StreamCard(
+                                item = item,
+                                nowPlayingProgram = nowPlaying[item.id],
+                                isCurrentlyPlaying = item.id == currentlyPlayingId,
+                                isWatched = item.id in watchedIds,
+                                watchProgress = watchProgress[item.id] ?: 0f,
+                                cardColors = streamCardColors,
+                                onClick = {
+                                    onItemSelected(item.id, item.name, item.categoryId)
                                 },
-                        )
+                                onLongClick = { onItemLongPress(item) },
+                                modifier = modifier,
+                            )
+                        }
+
+                        val canSwipeDismiss = (isRecentList && onRemoveItem != null) || (isFavoritesList && onRequestRemoveFavorite != null)
+                        if (canSwipeDismiss) {
+                            val dismissState =
+                                rememberSwipeToDismissBoxState(
+                                    confirmValueChange = { value ->
+                                        val isDismissed = value == SwipeToDismissBoxValue.EndToStart
+                                        if (isDismissed) {
+                                            if (isRecentList) {
+                                                onRemoveItem?.invoke(item)
+                                            } else {
+                                                onRequestRemoveFavorite?.invoke(item)
+                                            }
+                                        }
+                                        isDismissed && isRecentList
+                                    },
+                                )
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                enableDismissFromEndToStart = true,
+                                modifier = cardModifier,
+                                backgroundContent = {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(CinemaCornerRadius.medium))
+                                                .background(CinemaError.copy(alpha = CinemaAlpha.overlayMedium))
+                                                .padding(horizontal = CinemaSpacing.md),
+                                        contentAlignment = Alignment.CenterEnd,
+                                    ) {
+                                        Icon(
+                                            imageVector = CinemaIcons.Delete,
+                                            contentDescription =
+                                                stringResource(
+                                                    if (isRecentList) R.string.recent_remove else R.string.favorite_remove,
+                                                ),
+                                            tint = CinemaTextPrimary,
+                                            modifier = Modifier.size(MobileDimensions.iconDefault),
+                                        )
+                                    }
+                                },
+                            ) {
+                                streamCard(Modifier)
+                            }
+                        } else {
+                            streamCard(cardModifier)
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * "Remove from Favorites?" confirmation — shared by the swipe-to-dismiss path and
+ * [MobileFavoriteContextMenuDialog]'s own remove confirmation so the two can't drift.
+ */
+@Composable
+private fun RemoveFromFavoritesConfirmDialog(
+    itemName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.favorite_remove_confirm_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.favorite_remove_confirm_message, itemName),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            CinemaDialogActionButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+            ) {
+                Text(stringResource(R.string.favorite_remove))
+            }
+        },
+        dismissButton = {
+            CinemaDialogTextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+    )
 }
 
 /**
@@ -1243,34 +1386,56 @@ private fun MobileFavoriteContextMenuDialog(
     onDismiss: () -> Unit,
 ) {
     val (itemName, isFavorite) = target.nameAndFavoriteState()
+    var showConfirmDialog by remember { mutableStateOf(false) }
 
-    val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
+    if (showConfirmDialog) {
+        RemoveFromFavoritesConfirmDialog(
+            itemName = itemName,
+            onConfirm = {
+                onConfirm()
+                onDismiss()
+            },
+            onDismiss = onDismiss,
+        )
+    } else {
+        val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
 
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = itemName,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-            )
-        },
-        confirmButton = {
-            CinemaDialogActionButton(
-                onClick = {
-                    onConfirm()
-                    onDismiss()
-                },
-            ) {
-                Text(actionText)
-            }
-        },
-        dismissButton = {
-            CinemaDialogTextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
-    )
+        CinemaAlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text(
+                    text = itemName,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                )
+            },
+            confirmButton = {
+                CinemaDialogActionButton(
+                    onClick = {
+                        if (isFavorite) {
+                            showConfirmDialog = true
+                        } else {
+                            onConfirm()
+                            onDismiss()
+                        }
+                    },
+                    colors =
+                        if (isFavorite) {
+                            ButtonDefaults.buttonColors(containerColor = CinemaError)
+                        } else {
+                            ButtonDefaults.buttonColors()
+                        },
+                ) {
+                    Text(actionText)
+                }
+            },
+            dismissButton = {
+                CinemaDialogTextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
