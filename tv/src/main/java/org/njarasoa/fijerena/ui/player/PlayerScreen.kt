@@ -190,19 +190,24 @@ fun PlayerScreen(
             val isRecycling by (service?.isRecyclingFlow ?: kotlinx.coroutines.flow.MutableStateFlow(false))
                 .collectAsStateWithLifecycle()
 
-            // Failsafe Truth: High-frequency poll of player status to clear stuck UI
+            // Failsafe Truth: High-frequency poll of player status to clear stuck UI.
+            // `currentPosition` doesn't reset when buffering mid-stream, so comparing it against
+            // a threshold (e.g. > 0L) is always true the instant any playback has occurred —
+            // track actual progression against the previous sample instead.
             var isActuallyMoving by remember { mutableStateOf(false) }
             LaunchedEffect(currentPs, isRecycling) {
                 if (currentPs is PlaybackState.Buffering && !isRecycling) {
+                    var lastPos = StreamingPlaybackService.getInstance()?.getPlayer()?.currentPosition ?: 0L
                     while (true) {
+                        delay(500)
                         val player = StreamingPlaybackService.getInstance()?.getPlayer()
                         val pos = player?.currentPosition ?: 0L
                         val playing = player?.isPlaying == true
-                        if (playing || pos > 0L) {
+                        if (playing || pos > lastPos) {
                             isActuallyMoving = true
                             break
                         }
-                        delay(500)
+                        lastPos = pos
                     }
                 } else {
                     isActuallyMoving = false

@@ -12,8 +12,10 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -50,7 +52,14 @@ class FijerenaApplication :
         ProviderSyncManager.getInstance(this).initialize()
         // One-time rewrite of any provider settings still storing the legacy category-filter
         // prefix shape — see ProviderRepository.migrateLegacyCategoryFilterPrefixes().
-        CoroutineScope(Dispatchers.IO).launch {
+        // SupervisorJob + handler: an uncaught exception in a bare CoroutineScope(Dispatchers.IO)
+        // propagates to the thread's uncaught-exception handler and can crash the process on
+        // cold boot; log and swallow instead.
+        val startupExceptionHandler =
+            CoroutineExceptionHandler { _, throwable ->
+                Log.e("FijerenaApplication", "Startup coroutine failed", throwable)
+            }
+        CoroutineScope(SupervisorJob() + Dispatchers.IO + startupExceptionHandler).launch {
             ProviderRepository(this@FijerenaApplication).migrateLegacyCategoryFilterPrefixes()
             // Build the encrypted credential store off the main thread, before the nav host's
             // session-restore effect asks for it from the main dispatcher.
