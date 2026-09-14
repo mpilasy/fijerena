@@ -137,6 +137,14 @@ internal fun TwoColumnLayout(
                 (target as? FavoriteMenuTarget.Stream)?.let { stream ->
                     { categoryViewModel.toggleWatchedStream(stream.itemId, stream.contentType) }
                 },
+            onRemoveFromRecent =
+                (target as? FavoriteMenuTarget.Stream)?.let { stream ->
+                    if (categoryViewModel.supportsRemoveFromRecent && stream.isInRecent) {
+                        { categoryViewModel.removeFromRecent(stream.itemId, stream.contentType, stream.seriesId) }
+                    } else {
+                        null
+                    }
+                },
         )
     }
 
@@ -290,6 +298,7 @@ internal fun TwoColumnLayout(
                             isFavorite = { categoryViewModel.isFavorite(it, contentType) },
                             isFavoriteCategory = { categoryViewModel.isFavoriteCategory(it, contentType) },
                             isWatched = { watchedIds.contains(it) },
+                            isInRecent = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID,
                         )
                 },
                 onRefreshStreams = onRefreshStreams,

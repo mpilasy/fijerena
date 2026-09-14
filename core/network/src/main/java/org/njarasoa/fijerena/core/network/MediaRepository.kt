@@ -86,8 +86,11 @@ fun WatchedItem.resumeProgress(): Float? {
 /**
  * `watch_state` row as a [WatchedItem], for callers that still speak the blob-era shape.
  * `timestamp` becomes `lastPlayedAt` — the value [EpisodeSelectionScreen]'s "most recently played"
- * lookup and the Recent row both actually mean — falling back to `updatedAt` for a Phase 6 row
- * whose completion was set without ever playing anything.
+ * lookup and the Recent row both actually mean — falling back to `updatedAt` only for a genuine
+ * Phase 6 row whose completion was set without ever playing anything (no position/duration ever
+ * recorded, per [markWatched][org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
+ * .markWatched]'s insert). A row `removeFromRecent` cleared instead falls to 0 — `updatedAt` there
+ * is just "removed just now" and must not outrank a genuinely recently-played row.
  */
 private fun WatchStateEntity.toWatchedItem(): WatchedItem =
     WatchedItem(
@@ -95,7 +98,7 @@ private fun WatchStateEntity.toWatchedItem(): WatchedItem =
         itemName = itemName,
         categoryId = categoryId,
         contentType = contentType,
-        timestamp = lastPlayedAt ?: updatedAt,
+        timestamp = lastPlayedAt ?: (if (positionMs <= 0L && durationMs <= 0L) updatedAt else 0L),
         playbackPosition = positionMs,
         duration = durationMs,
         isCompleted = isCompleted,
@@ -262,6 +265,9 @@ class MediaRepository(
 
     private val usesServerUserData: Boolean
         get() = provider?.capabilities?.supportsServerUserData == true
+
+    val supportsRemoveFromRecent: Boolean
+        get() = !usesServerUserData
 
     fun setProvider(mediaProvider: MediaProvider) {
         provider = mediaProvider
@@ -1475,6 +1481,27 @@ class MediaRepository(
                 }
             }
         }
+    }
+
+    /**
+     * Removes an item (or all episodes of a series) from the Recent list by clearing its
+     * [WatchStateEntity.lastPlayedAt] timestamp in `watch_state`, preserving any saved position
+     * and completion status. Refreshes the published [recentItems] StateFlow upon completion.
+     *
+     * Server-backed providers own their own recency list and don't support removal — see
+     * [supportsRemoveFromRecent]. Callers must check that before offering this action; this
+     * returns `false` without touching anything if they don't.
+     */
+    suspend fun removeFromRecent(
+        itemId: String,
+        contentType: String,
+        seriesId: String? = null,
+    ): Boolean {
+        if (usesServerUserData) return false
+        val now = System.currentTimeMillis()
+        watchStateDao.clearRecentSeries(providerId, seriesId ?: itemId, contentType, now)
+        refreshRecentItems(contentType)
+        return true
     }
 
     fun getAppSettings(): AppSettings = appSettings

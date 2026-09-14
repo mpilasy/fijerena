@@ -157,6 +157,9 @@
     <!-- Favorites -->
     <string name="favorite_add">Ajouter aux favoris</string>
     <string name="favorite_remove">Retirer des favoris</string>
+    <string name="favorite_remove_confirm_title">Retirer des favoris\u00A0?</string>
+    <string name="favorite_remove_confirm_message">Voulez-vous vraiment retirer \'%1$s\' de vos favoris\u00A0?</string>
+    <string name="recent_remove">Retirer des récents</string>
     <string name="watched_mark">Marquer comme vu</string>
     <string name="watched_unmark">Marquer comme non vu</string>
 

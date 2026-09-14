@@ -106,6 +106,22 @@ class FakeWatchStateDao : WatchStateDao {
         rows[k] = existing.copy(isCompleted = false, updatedAt = now)
     }
 
+    override suspend fun clearRecentSeries(
+        providerId: Long,
+        seriesId: String,
+        contentType: String,
+        now: Long,
+    ) {
+        for ((k, existing) in rows.entries) {
+            if (existing.providerId == providerId &&
+                existing.contentType == contentType &&
+                (existing.seriesId == seriesId || existing.itemId == seriesId)
+            ) {
+                rows[k] = existing.copy(lastPlayedAt = null, updatedAt = now)
+            }
+        }
+    }
+
     override fun upsertRecency(
         providerId: Long,
         itemId: String,
