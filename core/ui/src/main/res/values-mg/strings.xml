@@ -157,6 +157,9 @@
     <!-- Favorites -->
     <string name="favorite_add">Add to Favorites</string>
     <string name="favorite_remove">Remove from Favorites</string>
+    <string name="favorite_remove_confirm_title">Esory amin\'ny ankafizina?</string>
+    <string name="favorite_remove_confirm_message">Tena te-hesorina amin\'ny ankafizina ve i \'%1$s\'?</string>
+    <string name="recent_remove">Esory amin\'ny vao haingana</string>
     <string name="watched_mark">Mark as watched</string>
     <string name="watched_unmark">Mark as unwatched</string>
 

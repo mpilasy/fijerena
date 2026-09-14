@@ -184,4 +184,37 @@ class MediaRepositoryRecentItemsTest {
         assertEquals(listOf("s1"), repository.fetchRecent(ContentType.TV_SHOWS).map { it.id })
         assertEquals(listOf("bbc"), repository.fetchRecent(ContentType.LIVE_TV).map { it.id })
     }
+
+    @Test
+    fun removeFromRecentClearsItemFromRecentList() {
+        val repository = repositoryWith(
+            movie("film1", position = 50L, duration = 100L),
+            movie("film2", position = 60L, duration = 100L),
+        )
+
+        assertEquals(listOf("film1", "film2"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
+
+        runBlocking {
+            repository.removeFromRecent("film2", ContentType.MOVIES)
+        }
+
+        assertEquals(listOf("film1"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
+    }
+
+    @Test
+    fun removeFromRecentClearsSeriesEpisodesFromRecentList() {
+        val repository = repositoryWith(
+            episode("s1e1", seriesId = "s1"),
+            episode("s1e2", seriesId = "s1"),
+            episode("s2e1", seriesId = "s2"),
+        )
+
+        assertEquals(listOf("s1", "s2"), repository.fetchRecent(ContentType.TV_SHOWS).map { it.id })
+
+        runBlocking {
+            repository.removeFromRecent("s1", ContentType.TV_SHOWS, seriesId = "s1")
+        }
+
+        assertEquals(listOf("s2"), repository.fetchRecent(ContentType.TV_SHOWS).map { it.id })
+    }
 }
