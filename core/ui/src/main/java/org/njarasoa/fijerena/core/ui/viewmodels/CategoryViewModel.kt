@@ -128,6 +128,9 @@ class CategoryViewModel(
     private val _recentItems = MutableStateFlow<List<MediaItem>?>(null)
     val recentItems: StateFlow<List<MediaItem>?> = _recentItems.asStateFlow()
 
+    val supportsRemoveFromRecent: Boolean
+        get() = if (::repository.isInitialized) repository.supportsRemoveFromRecent else true
+
     // Pre-computed per-item data — avoids calling ViewModel methods inline per visible item
     private val _favoriteIds = MutableStateFlow<Set<String>>(emptySet())
     val favoriteIds: StateFlow<Set<String>> = _favoriteIds.asStateFlow()
@@ -570,6 +573,28 @@ class CategoryViewModel(
         viewModelScope.launch {
             repository.setWatched(itemId, contentType, nowWatched)
             refreshPerItemData()
+        }
+    }
+
+    /**
+     * Removes an item (or all episodes of a series) from the Recent list.
+     * Updates the local UI state streams list if the current category is RECENT_CATEGORY_ID.
+     */
+    fun removeFromRecent(
+        itemId: String,
+        contentType: String,
+        seriesId: String? = null,
+    ) {
+        viewModelScope.launch {
+            repository.removeFromRecent(itemId, contentType, seriesId)
+            val currentState = _uiState.value
+            if (currentState is UiState.Success && currentState.selectedCategoryId == RECENT_CATEGORY_ID) {
+                val updatedStreams = repository.recentItems(contentType).value
+                _uiState.value = currentState.copy(
+                    streams = updatedStreams,
+                    streamsLoading = false,
+                )
+            }
         }
     }
 

@@ -141,6 +141,23 @@ interface WatchStateDao {
         now: Long,
     )
 
+    /**
+     * Clear lastPlayedAt, removing a row from the Recent list — an individual item (movie, live
+     * channel, or a lone episode) when [seriesId] is its own itemId, or every episode of a series
+     * at once when it's a real series id. `seriesId` is null on every non-series row, so the OR
+     * already collapses to plain `itemId = :seriesId` for those; one query serves both callers.
+     */
+    @Query(
+        "UPDATE watch_state SET lastPlayedAt = NULL, updatedAt = :now " +
+            "WHERE providerId = :providerId AND (seriesId = :seriesId OR itemId = :seriesId) AND contentType = :contentType",
+    )
+    suspend fun clearRecentSeries(
+        providerId: Long,
+        seriesId: String,
+        contentType: String,
+        now: Long,
+    )
+
     /** Tier 2: every row for the content type, uncapped. Position/completion are stream attributes, not history. */
     @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND contentType = :contentType")
     suspend fun getByContentType(

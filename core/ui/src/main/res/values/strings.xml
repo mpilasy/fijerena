@@ -157,6 +157,9 @@
     <!-- Favorites -->
     <string name="favorite_add">Add to Favorites</string>
     <string name="favorite_remove">Remove from Favorites</string>
+    <string name="favorite_remove_confirm_title">Remove from Favorites?</string>
+    <string name="favorite_remove_confirm_message">Are you sure you want to remove \'%1$s\' from your favorites?</string>
+    <string name="recent_remove">Remove from Recent</string>
     <string name="watched_mark">Mark as watched</string>
     <string name="watched_unmark">Mark as unwatched</string>
 
