@@ -123,15 +123,13 @@ fun TvPlayerScreen(
         lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
     }
 
-    // Stop playback when leaving the player screen
+    // Stop and fully release playback when leaving the player screen. TV has no
+    // background-playback/PiP feature, so the service (and its native decoder/renderer
+    // buffers) has no reason to outlive this screen — see stopAndRelease's kdoc.
     DisposableEffect(Unit) {
         onDispose {
             finalizeSession(playbackViewModel.playbackState.value, loaderViewModel)
-            playbackViewModel.stop()
-            // Service outlives this screen — drop the listener so it doesn't keep
-            // this loaderViewModel (and everything it references) pinned in memory
-            // until the next player screen overwrites it.
-            StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
+            playbackViewModel.stopAndRelease()
         }
     }
 
@@ -265,7 +263,7 @@ private fun PlayerContent(
             // docs/plans/episode-selection-fragility-plan.md.
             scope.launch {
                 finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
-                playbackViewModel.stop()
+                playbackViewModel.stopAndRelease()
                 onBack()
             }
         },
