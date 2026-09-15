@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.asString
+import org.njarasoa.fijerena.core.network.normalizeTmdbId
 import org.njarasoa.fijerena.core.network.toJsonPrimitive
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
@@ -371,7 +372,7 @@ class XtreamContentManager(
                             duration = it.duration.asString(),
                             youtubeTrailer = it.youtubeTrailer,
                             excluded = categoryExcluded,
-                            tmdbId = it.tmdb.asString(),
+                            tmdbId = it.tmdb.asString().normalizeTmdbId(),
                         )
                     },
                 )
@@ -431,7 +432,7 @@ class XtreamContentManager(
                             episodeRunTime = it.episodeRunTime.asString(),
                             categoryId = it.categoryId,
                             excluded = categoryExcluded,
-                            tmdbId = it.tmdb.asString(),
+                            tmdbId = it.tmdb.asString().normalizeTmdbId(),
                         )
                     },
                 )
@@ -578,7 +579,7 @@ class XtreamContentManager(
 
                             val onStreamItem: suspend (XtreamStream) -> Unit = { it ->
                                 val itemExcluded = allowedCategoryIds != null && it.categoryId !in allowedCategoryIds
-                                val tmdbId = it.tmdb.asString()
+                                val tmdbId = it.tmdb.asString().normalizeTmdbId()
                                 val contentHash =
                                     XtreamStreamEntity.computeHash(
                                         streamId = it.streamId,
@@ -715,7 +716,7 @@ class XtreamContentManager(
 
                             service.getSeriesStreaming(null) { it ->
                                 val itemExcluded = allowedCategoryIds != null && it.categoryId !in allowedCategoryIds
-                                val tmdbId = it.tmdb.asString()
+                                val tmdbId = it.tmdb.asString().normalizeTmdbId()
                                 val contentHash =
                                     XtreamSeriesEntity.computeHash(
                                         seriesId = it.seriesId,
@@ -868,7 +869,7 @@ class XtreamContentManager(
                                 bitrate = ep.info?.bitrate,
                                 rating = ep.info?.rating.asString(),
                                 movieImage = ep.info?.movieImage ?: ep.info?.coverBig,
-                                tmdbId = ep.info?.tmdbId,
+                                tmdbId = ep.info?.tmdbId.normalizeTmdbId(),
                             ),
                         )
                     }
