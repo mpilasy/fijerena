@@ -731,9 +731,10 @@ private fun CastTabContent(cast: String) {
 
 /**
  * Details tab: everything that was diagnostics rather than headline facts on the old header —
- * provider name, the stream-name picker (with its hard-won stream-switch focus dance, moved here
- * unchanged), TMDB id, release date, director, technical stream info, and the category button.
- * Cast lives in its own tab now (see [CastTabContent]), not repeated here.
+ * provider name, release date, director, technical stream info, then the stream-name picker (with
+ * its hard-won stream-switch focus dance, moved here unchanged) and TMDB id right below the
+ * container row, and finally the category button. Cast lives in its own tab now (see
+ * [CastTabContent]), not repeated here.
  */
 @Composable
 private fun DetailsTabContent(
@@ -757,27 +758,6 @@ private fun DetailsTabContent(
             style = titleSmallStyle,
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
         )
-        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-        // The provider's own (often raw) stream name, now that the headline is TMDB's title. A
-        // dropdown when the local catalogue holds other instances of the same TMDB title.
-        StreamNamePicker(
-            // The catalogue's raw name, not movieDetail.name — some providers' detail API
-            // returns a cleaned-up name inconsistent with the raw name alternates are listed
-            // under, so use the same source as alternates.
-            currentName = movieName,
-            alternates = alternateStreams,
-            onSelect = onStreamSelected,
-            textStyle = bodySmallStyle,
-            focusRequester = streamNameFocusRequester,
-            onFocusedChanged = onStreamFocusedChanged,
-        )
-        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-        Text(
-            text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
-            style = bodySmallStyle,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-        )
-
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
         // Release date / year
@@ -882,6 +862,28 @@ private fun DetailsTabContent(
                 TechInfoRow(label = stringResource(R.string.tech_container_label), value = ext.uppercase())
             }
         }
+
+        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+
+        // The provider's own (often raw) stream name, now that the headline is TMDB's title. A
+        // dropdown when the local catalogue holds other instances of the same TMDB title.
+        StreamNamePicker(
+            // The catalogue's raw name, not movieDetail.name — some providers' detail API
+            // returns a cleaned-up name inconsistent with the raw name alternates are listed
+            // under, so use the same source as alternates.
+            currentName = movieName,
+            alternates = alternateStreams,
+            onSelect = onStreamSelected,
+            textStyle = bodySmallStyle,
+            focusRequester = streamNameFocusRequester,
+            onFocusedChanged = onStreamFocusedChanged,
+        )
+        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+        Text(
+            text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
+            style = bodySmallStyle,
+            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+        )
 
         // Category this movie belongs to — OK opens its stream list
         if (categoryName != null) {
