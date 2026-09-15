@@ -169,6 +169,15 @@ class PlaybackViewModel(
         }
     }
 
+    /** TV-only wrapper for [StreamingPlaybackService.stopAndRelease] — see its kdoc. */
+    fun stopAndRelease() {
+        isInErrorState = false
+        onFocusRegained()
+        viewModelScope.launch {
+            StreamingPlaybackService.awaitInstance().stopAndRelease()
+        }
+    }
+
     /**
      * Called when the app loses focus (e.g. backgrounded).
      * Pauses playback and starts a 30s timer to stop playback completely.

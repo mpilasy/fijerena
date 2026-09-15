@@ -95,11 +95,13 @@ class MainActivity : ComponentActivity() {
     // Unlike mobile, TV has no background-playback feature (PiP is mobile-only — see
     // docs/RELEASE_NOTES.md) — leaving to the launcher has no reason to leave the stream, the
     // decoder, and the wake lock running. isChangingConfigurations guards the (currently
-    // theoretical, TV is fixed-orientation) config-change case.
+    // theoretical, TV is fixed-orientation) config-change case. stopAndRelease (not stop) fully
+    // tears down the native player/decoder buffers instead of just halting playback — see its
+    // kdoc for why leaving them resident caused freezes browsing categories afterward.
     override fun onStop() {
         super.onStop()
         if (!isChangingConfigurations) {
-            StreamingPlaybackService.getInstance()?.stop()
+            StreamingPlaybackService.getInstance()?.stopAndRelease()
         }
     }
 

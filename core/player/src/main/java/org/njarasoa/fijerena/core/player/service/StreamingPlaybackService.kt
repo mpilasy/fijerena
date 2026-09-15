@@ -688,6 +688,20 @@ class StreamingPlaybackService : MediaSessionService() {
         acquireWakeLock()
     }
 
+    /**
+     * TV-only: stop playback and fully tear down the player (decoder, renderer buffers, the
+     * service itself) via [stopSelf], which triggers [onDestroy]'s existing release logic.
+     * Unlike [stop], nothing survives this call. TV has no background-playback/PiP feature (see
+     * `c4c337bc`), so once the user leaves the player there's no reason to keep the native
+     * player resources resident — on a 512MB heap ceiling they were competing with subsequent
+     * category browsing for memory, causing GC/swap pressure and multi-second UI freezes.
+     * Mobile must keep using [stop] to preserve PiP/background-audio resume.
+     */
+    fun stopAndRelease() {
+        stop()
+        stopSelf()
+    }
+
     fun stop() {
         cancelPendingRetry()
         // A pending autonomous recycle (StreamHealthMonitor) must not be allowed to silently
