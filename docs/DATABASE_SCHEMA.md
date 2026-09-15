@@ -286,9 +286,18 @@ construction; other providers have no catalogue table to join against and degrad
 
 ### Virtual Table: `xtream_streams_fts` (FTS4, added v10)
 Full-text search over `xtream_streams.name`. Content table: `xtream_streams`. Tokenizer: `unicode61`.
+Room auto-generates `room_fts_content_sync_xtream_streams_fts_*` triggers (AFTER INSERT/UPDATE,
+BEFORE UPDATE/DELETE) for the `@Fts4(contentEntity = ...)` entity, which keep the index in sync on
+every insert/update/delete — no manual rebuild call is needed or should be added (a redundant
+`INSERT INTO xtream_streams_fts(xtream_streams_fts) VALUES('rebuild')` used to run after every
+stream sync; it duplicated what Room's triggers already did and, on this catalog's row count, held
+SQLite's single writer connection for 30-60+ seconds, blocking every other write in the app — removed
+in `XtreamContentManager.syncStreams`).
 
 ### Virtual Table: `xtream_series_fts` (FTS4, added v10)
 Full-text search over `xtream_series.name`. Content table: `xtream_series`. Tokenizer: `unicode61`.
+Same Room-generated trigger sync as `xtream_streams_fts` above; the redundant post-sync rebuild was
+removed from `XtreamContentManager.syncSeries` for the same reason.
 
 ---
 

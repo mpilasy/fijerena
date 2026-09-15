@@ -675,8 +675,6 @@ class XtreamContentManager(
                             }
                             addDelta(SyncDelta(inserted = inserted, updated = updated, deleted = toDelete.size))
 
-                            streamDao.rebuildFts()
-
                             commitAsync { putLong(KEY_STREAMS_TIMESTAMP_PREFIX + type, System.currentTimeMillis()) }
                         }
                     } catch (e: Exception) {
@@ -795,8 +793,6 @@ class XtreamContentManager(
                                 }
                             }
                             addDelta(SyncDelta(inserted = inserted, updated = updated, deleted = toDelete.size))
-
-                            seriesDao.rebuildFts()
 
                             commitAsync { putLong(KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES", System.currentTimeMillis()) }
                         }

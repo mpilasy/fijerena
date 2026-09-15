@@ -101,10 +101,7 @@ interface XtreamSeriesDao {
         query: String,
     ): Int
 
-    @Query("INSERT INTO xtream_series_fts(xtream_series_fts) VALUES('rebuild')")
-    fun rebuildFts()
-
-    @Query("DELETE FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId")
+@Query("DELETE FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId")
     fun deleteByCategoryId(
         providerId: Long,
         categoryId: String,
