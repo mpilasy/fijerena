@@ -408,8 +408,13 @@ class EpgIndexer private constructor(
                     val currentProgrammeCount = dao.getProgrammeCount()
                     _state.value = EpgIndexState.Optimizing(currentChannelCount, currentProgrammeCount)
 
-                    // Checkpoint WAL to reduce contention during rebuild
-                    sdb.execPragma("PRAGMA wal_checkpoint(TRUNCATE)")
+                    // Checkpoint WAL to reduce contention during rebuild. PASSIVE, not TRUNCATE:
+                    // TRUNCATE needs exclusive access to the whole database and blocks every other
+                    // reader/writer (e.g. "now playing" lookups elsewhere in the app) until it
+                    // finishes, on top of the rebuild statement's own lock below — that's what was
+                    // freezing the UI for tens of seconds on every EPG sync. PASSIVE flushes
+                    // opportunistically and never blocks another connection.
+                    sdb.execPragma("PRAGMA wal_checkpoint(PASSIVE)")
 
                     // Optimize rebuild speed
                     sdb.execSQL("PRAGMA synchronous = OFF")
