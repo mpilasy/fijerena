@@ -367,8 +367,12 @@ internal fun LiveTvSplitLayout(
         }
     }
 
-    // Pause when this screen isn't RESUMED; resume on return. Stop entirely on final disposal
-    // (leaving Live TV altogether).
+    // Pause when this screen isn't RESUMED; resume on return. Release entirely on final disposal
+    // (leaving Live TV altogether) — stopAndRelease, not stop: this preview player runs
+    // continuously as long as any Live TV screen is on-screen (that's the whole point of the
+    // preview), so this is the one place that actually tears it down. Leaving it on plain stop()
+    // kept the native decoder/renderer buffers resident indefinitely after leaving Live TV,
+    // verified on-device: service still alive, memory unchanged, after fully backing out to home.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -382,7 +386,7 @@ internal fun LiveTvSplitLayout(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            playback.stop()
+            playback.stopAndRelease()
         }
     }
 
