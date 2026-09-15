@@ -221,7 +221,7 @@ class XtreamMediaProvider(
                 // again. Without this the season fetches below repeat on every cold start, since
                 // their in-memory cache dies with the process.
                 val detail = result.value.toDomain(rawSeriesId).withPlots(repository.getPersistedEpisodePlots(id))
-                val tmdbSeriesId = result.value.info?.tmdb.asString()?.toIntOrNull()
+                val tmdbSeriesId = result.value.info?.tmdb.asString().normalizeTmdbId()?.toIntOrNull()
                 var enriched = detail
                 if (tmdb.hasApiKey() && tmdbSeriesId != null) {
                     if (detail.hasEpisodeWithoutPlot()) {
