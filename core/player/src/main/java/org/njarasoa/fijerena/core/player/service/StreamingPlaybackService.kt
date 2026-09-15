@@ -689,16 +689,18 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     /**
-     * TV-only: stop playback and fully tear down the player (decoder, renderer buffers, the
-     * service itself) via [stopSelf], which triggers [onDestroy]'s existing release logic.
-     * Unlike [stop], nothing survives this call. TV has no background-playback/PiP feature (see
-     * `c4c337bc`), so once the user leaves the player there's no reason to keep the native
-     * player resources resident — on a 512MB heap ceiling they were competing with subsequent
-     * category browsing for memory, causing GC/swap pressure and multi-second UI freezes.
-     * Mobile must keep using [stop] to preserve PiP/background-audio resume.
+     * TV-only: stop playback and fully tear down the player (decoder, renderer buffers) via
+     * [releasePlayerAndSession] — called directly, not via [stopSelf], because
+     * [androidx.media3.session.MediaSessionService] does not reliably call [onDestroy] just
+     * because [stopSelf] was requested (verified on-device: service stayed resident with zero
+     * active binds). Unlike [stop], nothing survives this call. TV has no background-playback/PiP
+     * feature (see `c4c337bc`), so once the user leaves the player there's no reason to keep the
+     * native player resources resident — on a 512MB heap ceiling they were competing with
+     * subsequent category browsing for memory, causing GC/swap pressure and multi-second UI
+     * freezes. Mobile must keep using [stop] to preserve PiP/background-audio resume.
      */
     fun stopAndRelease() {
-        stop()
+        releasePlayerAndSession()
         stopSelf()
     }
 
@@ -974,9 +976,22 @@ class StreamingPlaybackService : MediaSessionService() {
         }
     }
 
-    override fun onDestroy() {
+    /**
+     * The actual resource teardown — player, session, wake lock, scopes — factored out of
+     * [onDestroy] so [stopAndRelease] can run it directly. [stopSelf] alone does not reliably
+     * trigger [onDestroy] on a [androidx.media3.session.MediaSessionService]: the framework has
+     * its own session-lifecycle bookkeeping (independent of ordinary bindService connections —
+     * confirmed on-device with zero active binds yet the service still resident) that can keep
+     * treating the service as "needed" until the session itself is released, so waiting for
+     * onDestroy to do the release is a chicken-and-egg deadlock. Calling this directly frees the
+     * native decoder/renderer memory immediately and deterministically either way. Safe to call
+     * twice (from here and then again if onDestroy does eventually fire): mediaSession is null
+     * the second time, so the `?.run` blocks below are no-ops.
+     */
+    private fun releasePlayerAndSession() {
         cancelPendingRetry()
         mainHandler.removeCallbacks(recycleHandler)
+        _playbackState.value = PlaybackState.Idle
         mediaSession?.player?.let {
             if (it.isPlaying || it.playbackState == Player.STATE_READY) {
                 onPositionSaveListener?.invoke(it.currentPosition, it.duration, !it.isPlaying, null, null)
@@ -1010,6 +1025,10 @@ class StreamingPlaybackService : MediaSessionService() {
         // silent no-op once already completed, so without this reset awaitInstance()
         // would hand out this now-destroyed instance forever.
         instanceReady = kotlinx.coroutines.CompletableDeferred()
+    }
+
+    override fun onDestroy() {
+        releasePlayerAndSession()
         super.onDestroy()
     }
 
