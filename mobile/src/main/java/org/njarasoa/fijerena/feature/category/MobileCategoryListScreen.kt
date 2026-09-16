@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -206,9 +207,8 @@ fun MobileCategoryListScreen(
         }
     }
 
-    // Long-press favorite menu state
+    // Long-press favorite menu state (category tiles only — stream items favorite/unfavorite via swipe)
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
-    var pendingFavoriteRemoval by remember { mutableStateOf<MediaItem?>(null) }
 
     // --- Live TV docked mini-player ---
     // Tap-driven equivalent of TV's focus-driven preview pane (tv/.../LiveTvSplitLayout.kt): a
@@ -284,30 +284,6 @@ fun MobileCategoryListScreen(
             favoriteStreams = viewModel.getFavoritesSnapshot()
             favoriteStreamsLoading = false
         }
-    }
-
-    pendingFavoriteRemoval?.let { item ->
-        RemoveFromFavoritesConfirmDialog(
-            itemName = item.name,
-            onConfirm = {
-                val toRemove = item
-                pendingFavoriteRemoval = null
-                viewModel.toggleFavoriteStream(
-                    itemId = toRemove.id,
-                    itemName = toRemove.name,
-                    categoryId = toRemove.categoryId,
-                    contentType = contentType,
-                )
-                if (target == null) {
-                    viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
-                } else {
-                    composableScope.launch {
-                        favoriteStreams = viewModel.getFavoritesSnapshot()
-                    }
-                }
-            },
-            onDismiss = { pendingFavoriteRemoval = null },
-        )
     }
 
     // Show the context menu dialog when a target is set
@@ -683,6 +659,21 @@ fun MobileCategoryListScreen(
                                 },
                                 modifier = Modifier.fillMaxSize().then(listSourceSwipeModifier),
                             ) {
+                                val toggleFavorite: (MediaItem) -> Unit = { toggled ->
+                                    viewModel.toggleFavoriteStream(
+                                        itemId = toggled.id,
+                                        itemName = toggled.name,
+                                        categoryId = toggled.categoryId,
+                                        contentType = contentType,
+                                    )
+                                    if (target == null) {
+                                        viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
+                                    } else {
+                                        composableScope.launch {
+                                            favoriteStreams = viewModel.getFavoritesSnapshot()
+                                        }
+                                    }
+                                }
                                 StreamsList(
                                     items = displayedStreams,
                                     streamsLoading = displayedStreamsLoading,
@@ -721,21 +712,7 @@ fun MobileCategoryListScreen(
                                     },
                                     contentType = contentType,
                                     favoriteIds = favoriteIds,
-                                    onToggleFavorite = { toggled ->
-                                        viewModel.toggleFavoriteStream(
-                                            itemId = toggled.id,
-                                            itemName = toggled.name,
-                                            categoryId = toggled.categoryId,
-                                            contentType = contentType,
-                                        )
-                                        if (target == null) {
-                                            viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
-                                        } else {
-                                            composableScope.launch {
-                                                favoriteStreams = viewModel.getFavoritesSnapshot()
-                                            }
-                                        }
-                                    },
+                                    onToggleFavorite = toggleFavorite,
                                     onToggleWatched = { toggled ->
                                         viewModel.toggleWatchedStream(toggled.id, contentType)
                                     },
@@ -745,9 +722,7 @@ fun MobileCategoryListScreen(
                                         } else {
                                             null
                                         },
-                                    onRequestRemoveFavorite = { item ->
-                                        pendingFavoriteRemoval = item
-                                    },
+                                    onRemoveFavorite = toggleFavorite,
                                 )
                             }
                         }
@@ -1189,7 +1164,7 @@ private fun StreamsList(
     onToggleFavorite: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     onToggleWatched: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     onRemoveItem: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
-    onRequestRemoveFavorite: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
+    onRemoveFavorite: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -1308,19 +1283,14 @@ private fun StreamsList(
                             )
                         }
 
-                        val canSwipeDismiss = (isRecentList && onRemoveItem != null) || (isFavoritesList && onRequestRemoveFavorite != null)
+                        val canSwipeDismiss = (isRecentList && onRemoveItem != null) || (isFavoritesList && onRemoveFavorite != null)
                         val isFavorite = item.id in favoriteIds
                         val isWatchedItem = item.id in watchedIds
                         val dismissState =
                             rememberSwipeToDismissBoxState(
                                 confirmValueChange = { value ->
                                     when (value) {
-                                        SwipeToDismissBoxValue.EndToStart -> {
-                                            if (canSwipeDismiss && !isRecentList) {
-                                                onRequestRemoveFavorite?.invoke(item)
-                                            }
-                                            canSwipeDismiss && isRecentList
-                                        }
+                                        SwipeToDismissBoxValue.EndToStart -> canSwipeDismiss
                                         else -> true
                                     }
                                 },
@@ -1338,6 +1308,12 @@ private fun StreamsList(
                                                 .fillMaxSize()
                                                 .clip(RoundedCornerShape(CinemaCornerRadius.medium))
                                                 .background(CinemaError.copy(alpha = CinemaAlpha.overlayMedium))
+                                                .clickable(
+                                                    indication = null,
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                ) {
+                                                    scope.launch { dismissState.reset() }
+                                                }
                                                 .padding(horizontal = CinemaSpacing.md),
                                         contentAlignment = Alignment.CenterEnd,
                                     ) {
@@ -1352,10 +1328,10 @@ private fun StreamsList(
                                                 Modifier
                                                     .size(MobileDimensions.iconDefault)
                                                     .then(
-                                                        if (isRecentList) {
-                                                            Modifier.clickable { onRemoveItem?.invoke(item) }
-                                                        } else {
-                                                            Modifier
+                                                        when {
+                                                            isRecentList -> Modifier.clickable { onRemoveItem?.invoke(item) }
+                                                            isFavoritesList -> Modifier.clickable { onRemoveFavorite?.invoke(item) }
+                                                            else -> Modifier
                                                         },
                                                     ),
                                         )
@@ -1367,6 +1343,12 @@ private fun StreamsList(
                                                 .fillMaxSize()
                                                 .clip(RoundedCornerShape(CinemaCornerRadius.medium))
                                                 .background(CinemaSuccess.copy(alpha = CinemaAlpha.overlayMedium))
+                                                .clickable(
+                                                    indication = null,
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                ) {
+                                                    scope.launch { dismissState.reset() }
+                                                }
                                                 .padding(horizontal = CinemaSpacing.md),
                                         contentAlignment = Alignment.CenterStart,
                                     ) {
@@ -1419,8 +1401,8 @@ private fun StreamsList(
 }
 
 /**
- * "Remove from Favorites?" confirmation — shared by the swipe-to-dismiss path and
- * [MobileFavoriteContextMenuDialog]'s own remove confirmation so the two can't drift.
+ * "Remove from Favorites?" confirmation for unfavoriting a category via long-press
+ * ([MobileFavoriteContextMenuDialog]) — streams unfavorite directly via swipe, no confirmation.
  */
 @Composable
 private fun RemoveFromFavoritesConfirmDialog(
