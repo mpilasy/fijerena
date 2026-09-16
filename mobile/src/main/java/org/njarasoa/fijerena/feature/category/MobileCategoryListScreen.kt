@@ -1331,20 +1331,20 @@ private fun StreamsList(
                                 MobileDimensions.swipeActionCircleSize * greenIconCount +
                                 CinemaSpacing.sm * (greenIconCount - 1)
                         val deleteRevealWidth = CinemaSpacing.sm * 2 + MobileDimensions.swipeActionCircleSize
-                        val anchors =
+                        val revealState =
                             remember(canSwipeDismiss, favoriteRevealWidth, deleteRevealWidth) {
-                                with(density) {
-                                    DraggableAnchors {
-                                        SwipeReveal.CLOSED at 0f
-                                        SwipeReveal.FAVORITE_ACTIONS at favoriteRevealWidth.toPx()
-                                        if (canSwipeDismiss) {
-                                            SwipeReveal.DELETE_ACTION at -deleteRevealWidth.toPx()
+                                val anchors =
+                                    with(density) {
+                                        DraggableAnchors {
+                                            SwipeReveal.CLOSED at 0f
+                                            SwipeReveal.FAVORITE_ACTIONS at favoriteRevealWidth.toPx()
+                                            if (canSwipeDismiss) {
+                                                SwipeReveal.DELETE_ACTION at -deleteRevealWidth.toPx()
+                                            }
                                         }
                                     }
-                                }
+                                AnchoredDraggableState(initialValue = SwipeReveal.CLOSED, anchors = anchors)
                             }
-                        val revealState = remember { AnchoredDraggableState(initialValue = SwipeReveal.CLOSED) }
-                        LaunchedEffect(anchors) { revealState.updateAnchors(anchors) }
 
                         Box(modifier = cardModifier) {
                             Box(
