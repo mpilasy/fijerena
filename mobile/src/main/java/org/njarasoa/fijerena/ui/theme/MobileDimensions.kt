@@ -46,6 +46,9 @@ object MobileDimensions {
     /** Thickness of the resume-progress bar along the bottom of stream and episode rows. */
     val resumeBarHeight: Dp = 5.dp
 
+    /** Diameter of a swipe-reveal action button (see stream row swipe actions). */
+    val swipeActionCircleSize: Dp = 40.dp
+
     // Poster / Thumbnail
     val posterWidth: Dp = 72.dp
     val posterHeight: Dp = 40.dp
