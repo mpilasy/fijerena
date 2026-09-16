@@ -478,6 +478,41 @@ checking first, all of which emit into the list after it is already on screen: `
 (`_favoriteIds`, `_watchProgress`, `_watchedIds`), and the preview's `loadStreamLight` EPG fetch.
 Guessing further without that attribution has already cost two wrong theories.
 
+**Re-measured 2026-09-16, on darcy, real data (no injection).** Skipped `tracing-perfetto` in favor
+of temporary `Log.d` markers (VM identity + `SystemClock.elapsedRealtime()`) at `CategoryViewModel`
+init, `emitStreams`, `refreshPerItemData` entry/exit/each StateFlow write, `loadNowPlaying`
+entry/each emission, and a `SideEffect` recomposition counter in `StreamList` — cheaper than wiring
+Perfetto and sufficient to answer the question. Provider 1 ("Bears Club"), Recent list at 25 rows
+(the same worst-case size as the original measurement).
+
+Two distinct findings, not one:
+
+1. **Real bug, unrelated to back-out specifically: `refreshPerItemData()` runs twice on every fresh
+   entry into a category.** The reactive `_uiState` collector fires it once for the initial list
+   load (correct). `TvCategoryGridScreen`'s (and `MobileCategoryListScreen`'s) `LaunchedEffect {
+   repeatOnLifecycle(RESUMED) { ... refreshWatchStateOnResume() } }` fires it a second time,
+   back-to-back — `repeatOnLifecycle` runs its block on the *first* RESUMED too, not just a genuine
+   return from elsewhere, so the resume-refresh (meant to catch a favorite/watched change made on a
+   different screen) redundantly repeats the exact query set the fresh load just ran:
+   `isFavorite`/`isFavoriteCategory` per item, the bulk `getPlaybackPositions`, and for Movies
+   `getSiblingCompletedMovieIds`. Doubles that DB work, and adds one extra `StreamList`
+   recomposition, on every single category entry. **Fixed:** an `isFirstResume` guard skips the
+   resume-refresh on the first RESUMED only; a genuine return from another screen still triggers it
+   normally.
+2. **The literal "Live TV full-screen → Back" transition on this repro no longer reproduces the
+   storm.** Isolating just the promote-to-fullscreen and the back-out (clearing logcat around each
+   step) showed *zero* `CategoryViewModel` activity on promoting to fullscreen, and exactly **one**
+   clean `StreamList` recomposition on back — no repeated `refreshPerItemData`, no repeated
+   `loadNowPlaying`. `dumpsys gfxinfo` cumulative since launch sat at 1.99% janky, 95th percentile
+   7ms. This does not match the original 9–15 slow frames / 846–1120ms tail at all. Two commits
+   landed after the original 2026-08-26 measurement and before this one — `fa41ff5d` ("actually
+   release the Live TV preview player on exit") and `80f1c72e` ("fully release player/service on
+   exit, not just stop()") — either plausibly removed whatever contention was driving this, though
+   that's inference, not something re-measured against a pre-fix build. **If this is still
+   reproducing for you on real hardware, it needs the exact flow that triggers it** (which screen,
+   which provider, warm vs. cold image cache, Shield vs. Bravia) — this session's repro no longer
+   shows it.
+
 Harness for any retry: inject N rows into `watch_history_v3` per `reference_history_row_injection`,
 back up `shared_prefs/media_cache_<providerId>.xml` first and restore it after; measure with a
 temporary `FrameMetrics` listener, since `dumpsys gfxinfo framestats` cannot see this flow.
