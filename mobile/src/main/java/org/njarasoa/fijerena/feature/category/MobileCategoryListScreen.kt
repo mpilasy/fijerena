@@ -7,6 +7,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,6 +34,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -48,11 +55,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -67,11 +71,14 @@ import androidx.compose.ui.draw.clip
 import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -79,6 +86,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -981,6 +989,35 @@ fun MobileCategoryListScreen(
 /** Which list the docked Live TV preview's channel panel is showing, toggled via swipe left/right. */
 private enum class PreviewListSource { RECENT, FAVORITES }
 
+/** Anchor values for a stream row's swipe-reveal action strip (see [StreamsList]). */
+private enum class SwipeReveal { CLOSED, FAVORITE_ACTIONS, DELETE_ACTION }
+
+/** A single circular icon button inside a swipe-reveal action strip. */
+@Composable
+private fun SwipeActionButton(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(MobileDimensions.swipeActionCircleSize)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = CinemaAlpha.overlayMedium))
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(MobileDimensions.iconDefault),
+        )
+    }
+}
+
 /**
  * One-time hint pointing at the long-press-to-favorite gesture, which otherwise has zero
  * on-screen affordance. See [MobileCategoryListScreen] and `AppSettings.hasSeenFavoriteHint`.
@@ -1143,6 +1180,7 @@ private fun CategoryChipRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun StreamsList(
     items: List<org.njarasoa.fijerena.core.player.domain.MediaItem>?,
@@ -1286,112 +1324,112 @@ private fun StreamsList(
                         val canSwipeDismiss = (isRecentList && onRemoveItem != null) || (isFavoritesList && onRemoveFavorite != null)
                         val isFavorite = item.id in favoriteIds
                         val isWatchedItem = item.id in watchedIds
-                        val dismissState =
-                            rememberSwipeToDismissBoxState(
-                                confirmValueChange = { value ->
-                                    when (value) {
-                                        SwipeToDismissBoxValue.EndToStart -> canSwipeDismiss
-                                        else -> true
-                                    }
-                                },
-                            )
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = true,
-                            enableDismissFromEndToStart = canSwipeDismiss,
-                            modifier = cardModifier,
-                            backgroundContent = {
-                                if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxSize()
-                                                .clip(RoundedCornerShape(CinemaCornerRadius.medium))
-                                                .background(CinemaError.copy(alpha = CinemaAlpha.overlayMedium))
-                                                .clickable(
-                                                    indication = null,
-                                                    interactionSource = remember { MutableInteractionSource() },
-                                                ) {
-                                                    scope.launch { dismissState.reset() }
-                                                }
-                                                .padding(horizontal = CinemaSpacing.md),
-                                        contentAlignment = Alignment.CenterEnd,
-                                    ) {
-                                        Icon(
-                                            imageVector = CinemaIcons.Delete,
-                                            contentDescription =
-                                                stringResource(
-                                                    if (isRecentList) R.string.recent_remove else R.string.favorite_remove,
-                                                ),
-                                            tint = CinemaTextPrimary,
-                                            modifier =
-                                                Modifier
-                                                    .size(MobileDimensions.iconDefault)
-                                                    .then(
-                                                        when {
-                                                            isRecentList -> Modifier.clickable { onRemoveItem?.invoke(item) }
-                                                            isFavoritesList -> Modifier.clickable { onRemoveFavorite?.invoke(item) }
-                                                            else -> Modifier
-                                                        },
-                                                    ),
-                                        )
-                                    }
-                                } else {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxSize()
-                                                .clip(RoundedCornerShape(CinemaCornerRadius.medium))
-                                                .background(CinemaSuccess.copy(alpha = CinemaAlpha.overlayMedium))
-                                                .clickable(
-                                                    indication = null,
-                                                    interactionSource = remember { MutableInteractionSource() },
-                                                ) {
-                                                    scope.launch { dismissState.reset() }
-                                                }
-                                                .padding(horizontal = CinemaSpacing.md),
-                                        contentAlignment = Alignment.CenterStart,
-                                    ) {
-                                        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.lg)) {
-                                            Icon(
-                                                imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                                contentDescription =
-                                                    stringResource(
-                                                        if (isFavorite) R.string.favorite_remove else R.string.favorite_add,
-                                                    ),
-                                                tint = CinemaTextPrimary,
-                                                modifier =
-                                                    Modifier
-                                                        .size(MobileDimensions.iconDefault)
-                                                        .clickable {
-                                                            onToggleFavorite(item)
-                                                            scope.launch { dismissState.reset() }
-                                                        },
-                                            )
-                                            if (isWatchable) {
-                                                Icon(
-                                                    imageVector =
-                                                        if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
-                                                    contentDescription =
-                                                        stringResource(
-                                                            if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark,
-                                                        ),
-                                                    tint = CinemaTextPrimary,
-                                                    modifier =
-                                                        Modifier
-                                                            .size(MobileDimensions.iconDefault)
-                                                            .clickable {
-                                                                onToggleWatched(item)
-                                                                scope.launch { dismissState.reset() }
-                                                            },
-                                                )
-                                            }
+                        val density = LocalDensity.current
+                        val greenIconCount = if (isWatchable) 2 else 1
+                        val favoriteRevealWidth =
+                            CinemaSpacing.sm * 2 +
+                                MobileDimensions.swipeActionCircleSize * greenIconCount +
+                                CinemaSpacing.sm * (greenIconCount - 1)
+                        val deleteRevealWidth = CinemaSpacing.sm * 2 + MobileDimensions.swipeActionCircleSize
+                        val anchors =
+                            remember(canSwipeDismiss, favoriteRevealWidth, deleteRevealWidth) {
+                                with(density) {
+                                    DraggableAnchors {
+                                        SwipeReveal.CLOSED at 0f
+                                        SwipeReveal.FAVORITE_ACTIONS at favoriteRevealWidth.toPx()
+                                        if (canSwipeDismiss) {
+                                            SwipeReveal.DELETE_ACTION at -deleteRevealWidth.toPx()
                                         }
                                     }
                                 }
-                            },
-                        ) {
-                            streamCard(Modifier)
+                            }
+                        val revealState = remember { AnchoredDraggableState(initialValue = SwipeReveal.CLOSED) }
+                        LaunchedEffect(anchors) { revealState.updateAnchors(anchors) }
+
+                        Box(modifier = cardModifier) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.CenterStart)
+                                        .width(favoriteRevealWidth)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(CinemaCornerRadius.medium))
+                                        .background(CinemaSurface)
+                                        .clickable(
+                                            indication = null,
+                                            interactionSource = remember { MutableInteractionSource() },
+                                        ) {
+                                            scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                        },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                                    SwipeActionButton(
+                                        icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                        contentDescription =
+                                            stringResource(
+                                                if (isFavorite) R.string.favorite_remove else R.string.favorite_add,
+                                            ),
+                                        tint = CinemaSuccess,
+                                        onClick = {
+                                            onToggleFavorite(item)
+                                            scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                        },
+                                    )
+                                    if (isWatchable) {
+                                        SwipeActionButton(
+                                            icon = if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                            contentDescription =
+                                                stringResource(
+                                                    if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark,
+                                                ),
+                                            tint = CinemaAccent,
+                                            onClick = {
+                                                onToggleWatched(item)
+                                                scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (canSwipeDismiss) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .align(Alignment.CenterEnd)
+                                            .width(deleteRevealWidth)
+                                            .fillMaxHeight()
+                                            .clip(RoundedCornerShape(CinemaCornerRadius.medium))
+                                            .background(CinemaSurface)
+                                            .clickable(
+                                                indication = null,
+                                                interactionSource = remember { MutableInteractionSource() },
+                                            ) {
+                                                scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                            },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    SwipeActionButton(
+                                        icon = CinemaIcons.Delete,
+                                        contentDescription =
+                                            stringResource(
+                                                if (isRecentList) R.string.recent_remove else R.string.favorite_remove,
+                                            ),
+                                        tint = CinemaError,
+                                        onClick = {
+                                            if (isRecentList) onRemoveItem?.invoke(item) else onRemoveFavorite?.invoke(item)
+                                            scope.launch { revealState.animateTo(SwipeReveal.CLOSED) }
+                                        },
+                                    )
+                                }
+                            }
+
+                            streamCard(
+                                Modifier
+                                    .offset { IntOffset(revealState.requireOffset().roundToInt(), 0) }
+                                    .anchoredDraggable(revealState, Orientation.Horizontal),
+                            )
                         }
                     }
                 }
