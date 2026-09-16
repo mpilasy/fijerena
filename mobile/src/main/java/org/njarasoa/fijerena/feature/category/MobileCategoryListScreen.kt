@@ -187,11 +187,20 @@ fun MobileCategoryListScreen(
     // Refresh last played item when returning from player
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
+        // The first RESUMED is this screen's own initial composition, which just ran the load
+        // that populates uiState/favoriteIds/watchProgress/watchedIds from scratch — re-running
+        // the same per-item refresh here duplicates that work (confirmed via logcat, TV side: two
+        // full refreshPerItemData passes back to back on every entry). Only a *later* RESUMED means
+        // an actual return from elsewhere, which is what this refresh exists for.
+        var isFirstResume = true
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            viewModel.refreshLastPlayedItem()
-            // A watched/favorite mark made on a screen this ViewModel doesn't own (movie details,
-            // an episode list, search) has no way back to this instance's cache otherwise.
-            viewModel.refreshWatchStateOnResume()
+            if (!isFirstResume) {
+                viewModel.refreshLastPlayedItem()
+                // A watched/favorite mark made on a screen this ViewModel doesn't own (movie details,
+                // an episode list, search) has no way back to this instance's cache otherwise.
+                viewModel.refreshWatchStateOnResume()
+            }
+            isFirstResume = false
         }
     }
 
