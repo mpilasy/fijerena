@@ -176,6 +176,8 @@ fun MobileCategoryListScreen(
     val supportsNativeEpg by viewModel.supportsNativeEpg.collectAsStateWithLifecycle()
     val watchedIdsSet by viewModel.watchedIds.collectAsStateWithLifecycle()
     val watchedIds = remember(watchedIdsSet) { ImmutableStringSet(watchedIdsSet) }
+    val favoriteIdsSet by viewModel.favoriteIds.collectAsStateWithLifecycle()
+    val favoriteIds = remember(favoriteIdsSet) { ImmutableStringSet(favoriteIdsSet) }
     val watchProgressMap by viewModel.watchProgress.collectAsStateWithLifecycle()
     val watchProgress = remember(watchProgressMap) { ImmutableWatchProgress(watchProgressMap) }
     val favoriteCategoryIdsSet by viewModel.favoriteCategoryIds.collectAsStateWithLifecycle()
@@ -717,13 +719,25 @@ fun MobileCategoryListScreen(
                                             else -> onStreamSelected(itemId, itemName, categoryId, contentType, selected)
                                         }
                                     },
-                                    onItemLongPress = { item ->
-                                        favoriteMenuTarget =
-                                            item.toFavoriteMenuTarget(
-                                                contentType = contentType,
-                                                isFavorite = { viewModel.isFavorite(it, contentType) },
-                                                isFavoriteCategory = { viewModel.isFavoriteCategory(it, contentType) },
-                                            )
+                                    contentType = contentType,
+                                    favoriteIds = favoriteIds,
+                                    onToggleFavorite = { toggled ->
+                                        viewModel.toggleFavoriteStream(
+                                            itemId = toggled.id,
+                                            itemName = toggled.name,
+                                            categoryId = toggled.categoryId,
+                                            contentType = contentType,
+                                        )
+                                        if (target == null) {
+                                            viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
+                                        } else {
+                                            composableScope.launch {
+                                                favoriteStreams = viewModel.getFavoritesSnapshot()
+                                            }
+                                        }
+                                    },
+                                    onToggleWatched = { toggled ->
+                                        viewModel.toggleWatchedStream(toggled.id, contentType)
                                     },
                                     onRemoveItem =
                                         if (viewModel.supportsRemoveFromRecent) {
@@ -1169,12 +1183,17 @@ private fun StreamsList(
     // after a swipe. Left null everywhere else: normal browsing already shows the selected
     // chip.
     panelTitle: String? = null,
+    contentType: String,
+    favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     onItemSelected: (itemId: String, itemName: String, categoryId: String) -> Unit,
-    onItemLongPress: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
+    onToggleFavorite: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
+    onToggleWatched: (org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit = {},
     onRemoveItem: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
     onRequestRemoveFavorite: ((org.njarasoa.fijerena.core.player.domain.MediaItem) -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val isWatchable = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
 
     // Built once per list composition rather than once per row. CardDefaults.cardColors is
     // @Composable, so it can't be wrapped in remember — hoisting the call out of the item body
@@ -1285,33 +1304,34 @@ private fun StreamsList(
                                 onClick = {
                                     onItemSelected(item.id, item.name, item.categoryId)
                                 },
-                                onLongClick = { onItemLongPress(item) },
                                 modifier = modifier,
                             )
                         }
 
                         val canSwipeDismiss = (isRecentList && onRemoveItem != null) || (isFavoritesList && onRequestRemoveFavorite != null)
-                        if (canSwipeDismiss) {
-                            val dismissState =
-                                rememberSwipeToDismissBoxState(
-                                    confirmValueChange = { value ->
-                                        val isDismissed = value == SwipeToDismissBoxValue.EndToStart
-                                        if (isDismissed) {
-                                            if (isRecentList) {
-                                                onRemoveItem?.invoke(item)
-                                            } else {
+                        val isFavorite = item.id in favoriteIds
+                        val isWatchedItem = item.id in watchedIds
+                        val dismissState =
+                            rememberSwipeToDismissBoxState(
+                                confirmValueChange = { value ->
+                                    when (value) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            if (canSwipeDismiss && !isRecentList) {
                                                 onRequestRemoveFavorite?.invoke(item)
                                             }
+                                            canSwipeDismiss && isRecentList
                                         }
-                                        isDismissed && isRecentList
-                                    },
-                                )
-                            SwipeToDismissBox(
-                                state = dismissState,
-                                enableDismissFromStartToEnd = false,
-                                enableDismissFromEndToStart = true,
-                                modifier = cardModifier,
-                                backgroundContent = {
+                                        else -> true
+                                    }
+                                },
+                            )
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            enableDismissFromStartToEnd = true,
+                            enableDismissFromEndToStart = canSwipeDismiss,
+                            modifier = cardModifier,
+                            backgroundContent = {
+                                if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                                     Box(
                                         modifier =
                                             Modifier
@@ -1328,15 +1348,68 @@ private fun StreamsList(
                                                     if (isRecentList) R.string.recent_remove else R.string.favorite_remove,
                                                 ),
                                             tint = CinemaTextPrimary,
-                                            modifier = Modifier.size(MobileDimensions.iconDefault),
+                                            modifier =
+                                                Modifier
+                                                    .size(MobileDimensions.iconDefault)
+                                                    .then(
+                                                        if (isRecentList) {
+                                                            Modifier.clickable { onRemoveItem?.invoke(item) }
+                                                        } else {
+                                                            Modifier
+                                                        },
+                                                    ),
                                         )
                                     }
-                                },
-                            ) {
-                                streamCard(Modifier)
-                            }
-                        } else {
-                            streamCard(cardModifier)
+                                } else {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(CinemaCornerRadius.medium))
+                                                .background(CinemaSuccess.copy(alpha = CinemaAlpha.overlayMedium))
+                                                .padding(horizontal = CinemaSpacing.md),
+                                        contentAlignment = Alignment.CenterStart,
+                                    ) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.lg)) {
+                                            Icon(
+                                                imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                                contentDescription =
+                                                    stringResource(
+                                                        if (isFavorite) R.string.favorite_remove else R.string.favorite_add,
+                                                    ),
+                                                tint = CinemaTextPrimary,
+                                                modifier =
+                                                    Modifier
+                                                        .size(MobileDimensions.iconDefault)
+                                                        .clickable {
+                                                            onToggleFavorite(item)
+                                                            scope.launch { dismissState.reset() }
+                                                        },
+                                            )
+                                            if (isWatchable) {
+                                                Icon(
+                                                    imageVector =
+                                                        if (isWatchedItem) CinemaIcons.VisibilityOff else CinemaIcons.Visibility,
+                                                    contentDescription =
+                                                        stringResource(
+                                                            if (isWatchedItem) R.string.watched_unmark else R.string.watched_mark,
+                                                        ),
+                                                    tint = CinemaTextPrimary,
+                                                    modifier =
+                                                        Modifier
+                                                            .size(MobileDimensions.iconDefault)
+                                                            .clickable {
+                                                                onToggleWatched(item)
+                                                                scope.launch { dismissState.reset() }
+                                                            },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                        ) {
+                            streamCard(Modifier)
                         }
                     }
                 }
