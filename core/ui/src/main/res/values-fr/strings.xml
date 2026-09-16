@@ -744,7 +744,7 @@
     <string name="player_stats_build_format">Build : %1$s (%2$s)</string>
     <string name="player_stats_device_type_format">Appareil : %1$s | Type : %2$s</string>
     <string name="epg_browser_index_stats_format">Index EPG : %1$s</string>
-    <string name="category_favorite_hint_mobile">Appui long sur une chaîne ou catégorie pour l\'ajouter aux favoris</string>
+    <string name="category_favorite_hint_mobile">Balayez une chaîne pour la mettre en favori ou la marquer comme vue. Appui long sur une catégorie pour l\'ajouter aux favoris</string>
     <string name="category_now_playing_badge">▶ Lecture en cours</string>
     <string name="category_of_total_format">sur %1$d</string>
     <string name="settings_ui_scale_section_title">Échelle Catégorie/Grille</string>
