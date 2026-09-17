@@ -18,6 +18,11 @@ cd "$ROOT_DIR"
 
 adb connect "$TARGET" >/dev/null 2>&1 || true
 
+if [ "$(adb -s "$TARGET" get-state 2>/dev/null)" != "device" ]; then
+    echo "Device $TARGET not reachable — skipping build. Check it's powered on and on the network." >&2
+    exit 1
+fi
+
 # Check if the app is currently running and actively playing a media stream
 IS_STREAMING=false
 if adb -s "$TARGET" shell pidof org.njarasoa.fijerena >/dev/null 2>&1; then
