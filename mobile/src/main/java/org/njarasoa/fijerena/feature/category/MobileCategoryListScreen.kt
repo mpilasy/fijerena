@@ -41,7 +41,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -109,20 +108,13 @@ import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.LanguageBadge
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
-import org.njarasoa.fijerena.core.ui.components.rememberFavoriteHintVisible
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
-import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
-import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
-import org.njarasoa.fijerena.core.ui.model.toFavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -215,9 +207,6 @@ fun MobileCategoryListScreen(
         }
     }
 
-    // Long-press favorite menu state (category tiles only — stream items favorite/unfavorite via swipe)
-    var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
-
     // --- Live TV docked mini-player ---
     // Tap-driven equivalent of TV's focus-driven preview pane (tv/.../LiveTvSplitLayout.kt): a
     // small always-playing mini-player docked above the channel list, promotable to full screen
@@ -235,11 +224,6 @@ fun MobileCategoryListScreen(
     // the device rotates.
     val isLandscape =
         LocalConfiguration.current.let { it.screenWidthDp > it.screenHeightDp }
-
-    // One-time "long-press to favorite" hint — favoriting has no other visible affordance here.
-    // Safe to render unconditionally below: the full-screen player path returns early above
-    // (line ~365), so this composition is only ever reached while browsing/docked.
-    val showFavoriteHint = rememberFavoriteHintVisible()
 
     BackHandler(enabled = isLiveTv && fullScreen) { fullScreen = false }
     // Dock auto-seeds on entry (below), so without this, Back from a docked preview would skip
@@ -292,42 +276,6 @@ fun MobileCategoryListScreen(
             favoriteStreams = viewModel.getFavoritesSnapshot()
             favoriteStreamsLoading = false
         }
-    }
-
-    // Show the context menu dialog when a target is set
-    favoriteMenuTarget?.let { menuTarget ->
-        MobileFavoriteContextMenuDialog(
-            target = menuTarget,
-            onConfirm = {
-                when (menuTarget) {
-                    is FavoriteMenuTarget.Category -> {
-                        viewModel.toggleFavoriteCategory(
-                            menuTarget.categoryId,
-                            menuTarget.categoryName,
-                            menuTarget.contentType,
-                        )
-                    }
-                    is FavoriteMenuTarget.Stream -> {
-                        viewModel.toggleFavoriteStream(
-                            menuTarget.itemId,
-                            menuTarget.itemName,
-                            menuTarget.categoryId,
-                            menuTarget.contentType,
-                        )
-                        // Refresh either way — toggleFavoriteStream flips the state whether this
-                        // was an add or a remove, and both must be reflected in the Favorites list.
-                        if (dockTarget == null) {
-                            viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
-                        } else {
-                            composableScope.launch {
-                                favoriteStreams = viewModel.getFavoritesSnapshot()
-                            }
-                        }
-                    }
-                }
-            },
-            onDismiss = { favoriteMenuTarget = null },
-        )
     }
 
     val dockLoader: StreamLoaderViewModel? =
@@ -582,15 +530,6 @@ fun MobileCategoryListScreen(
                                 categoryViewModel = viewModel,
                                 onCategorySelected = { categoryId ->
                                     viewModel.loadStreams(categoryId)
-                                },
-                                onCategoryLongPress = { category ->
-                                    favoriteMenuTarget =
-                                        FavoriteMenuTarget.Category(
-                                            categoryId = category.id,
-                                            categoryName = category.name,
-                                            contentType = contentType,
-                                            isFavorite = viewModel.isFavoriteCategory(category.id, contentType),
-                                        )
                                 },
                             )
 
@@ -975,14 +914,6 @@ fun MobileCategoryListScreen(
         }
     }
 
-    if (showFavoriteHint) {
-        FavoriteHintBanner(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = Spacing.xxl),
-        )
-    }
     }
 }
 
@@ -1005,35 +936,17 @@ private fun SwipeActionButton(
             Modifier
                 .size(MobileDimensions.swipeActionCircleSize)
                 .clip(CircleShape)
-                .background(tint.copy(alpha = CinemaAlpha.overlayMedium))
+                .background(tint)
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = tint,
+            // Contrasts against the tinted circle behind it — using `tint` here too (as before)
+            // put a same-hue icon on a same-hue background, which was all but invisible.
+            tint = CinemaTextPrimary,
             modifier = Modifier.size(MobileDimensions.iconDefault),
-        )
-    }
-}
-
-/**
- * One-time hint pointing at the long-press-to-favorite gesture, which otherwise has zero
- * on-screen affordance. See [MobileCategoryListScreen] and `AppSettings.hasSeenFavoriteHint`.
- */
-@Composable
-private fun FavoriteHintBanner(modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        color = CinemaSurface.copy(alpha = 0.92f),
-        shape = RoundedCornerShape(CinemaCornerRadius.large),
-    ) {
-        Text(
-            text = stringResource(R.string.category_favorite_hint_mobile),
-            style = MaterialTheme.typography.bodyMedium,
-            color = CinemaTextPrimary,
-            modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.sm),
         )
     }
 }
@@ -1047,7 +960,6 @@ private fun CategoryChipRow(
     favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
     categoryViewModel: CategoryViewModel,
     onCategorySelected: (String) -> Unit,
-    onCategoryLongPress: (org.njarasoa.fijerena.core.player.domain.MediaCategory) -> Unit = {},
 ) {
     val (virtualCategories, regularCategories) =
         remember(categories) {
@@ -1141,12 +1053,6 @@ private fun CategoryChipRow(
                             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            if (isFavCat) {
-                                Text(
-                                    text = "\u2605",
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                            }
                             Text(
                                 text = category.name,
                                 maxLines = 1,
@@ -1159,20 +1065,34 @@ private fun CategoryChipRow(
                                         Modifier
                                     },
                             )
+                            // Long-press was unreliable here (a horizontally scrolling LazyRow
+                            // reads any sideways jitter during the hold as a scroll attempt and
+                            // cancels it) — an always-visible, independently tappable icon sidesteps
+                            // that entirely, same fix as the TV category reveal.
+                            Icon(
+                                imageVector = if (isFavCat) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                contentDescription =
+                                    stringResource(if (isFavCat) R.string.favorite_remove else R.string.favorite_add),
+                                tint = if (isFavCat) MaterialTheme.colorScheme.primary else CinemaTextSecondary,
+                                modifier =
+                                    Modifier
+                                        .size(MobileDimensions.iconSmall)
+                                        .clickable(
+                                            indication = null,
+                                            interactionSource = remember { MutableInteractionSource() },
+                                        ) {
+                                            categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
+                                        },
+                            )
                         }
                     },
                     modifier =
-                        (
-                            // See above — remember-scoped so recomposition can't cancel it.
-                            if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
-                                Modifier.staggeredEntrance(index)
-                            } else {
-                                Modifier
-                            }
-                        ).combinedClickable(
-                            onClick = { onCategorySelected(category.id) },
-                            onLongClick = { onCategoryLongPress(category) },
-                        ),
+                        // See above — remember-scoped so recomposition can't cancel it.
+                        if (remember(category.id) { enteredCategoryIds.add(category.id) }) {
+                            Modifier.staggeredEntrance(index)
+                        } else {
+                            Modifier
+                        },
                     colors = chipColors,
                 )
             }
@@ -1435,108 +1355,6 @@ private fun StreamsList(
                 }
             }
         }
-    }
-}
-
-/**
- * "Remove from Favorites?" confirmation for unfavoriting a category via long-press
- * ([MobileFavoriteContextMenuDialog]) — streams unfavorite directly via swipe, no confirmation.
- */
-@Composable
-private fun RemoveFromFavoritesConfirmDialog(
-    itemName: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(R.string.favorite_remove_confirm_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-        },
-        text = {
-            Text(
-                text = stringResource(R.string.favorite_remove_confirm_message, itemName),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            CinemaDialogActionButton(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-            ) {
-                Text(stringResource(R.string.favorite_remove))
-            }
-        },
-        dismissButton = {
-            CinemaDialogTextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
-    )
-}
-
-/**
- * Themed context menu dialog for favoriting categories/streams on mobile.
- */
-@Composable
-private fun MobileFavoriteContextMenuDialog(
-    target: FavoriteMenuTarget,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val (itemName, isFavorite) = target.nameAndFavoriteState()
-    var showConfirmDialog by remember { mutableStateOf(false) }
-
-    if (showConfirmDialog) {
-        RemoveFromFavoritesConfirmDialog(
-            itemName = itemName,
-            onConfirm = {
-                onConfirm()
-                onDismiss()
-            },
-            onDismiss = onDismiss,
-        )
-    } else {
-        val actionText = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add)
-
-        CinemaAlertDialog(
-            onDismissRequest = onDismiss,
-            title = {
-                Text(
-                    text = itemName,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                )
-            },
-            confirmButton = {
-                CinemaDialogActionButton(
-                    onClick = {
-                        if (isFavorite) {
-                            showConfirmDialog = true
-                        } else {
-                            onConfirm()
-                            onDismiss()
-                        }
-                    },
-                    colors =
-                        if (isFavorite) {
-                            ButtonDefaults.buttonColors(containerColor = CinemaError)
-                        } else {
-                            ButtonDefaults.buttonColors()
-                        },
-                ) {
-                    Text(actionText)
-                }
-            },
-            dismissButton = {
-                CinemaDialogTextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
-        )
     }
 }
 
