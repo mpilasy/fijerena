@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.foundation.lazy.list.TvLazyColumn
@@ -88,7 +94,6 @@ internal fun CategoryList(
     favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
     onCategorySelected: (String) -> Unit,
     onRefreshCategories: () -> Unit,
-    onCategoryLongPress: (MediaCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val (virtualCategories, regularCategories) =
@@ -231,7 +236,6 @@ internal fun CategoryList(
                                 cardStyle = cardStyle,
                                 isFavorite = false,
                                 onClick = { onCategorySelected(category.id) },
-                                onLongPress = {},
                                 focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() },
                             )
                         }
@@ -268,7 +272,9 @@ internal fun CategoryList(
                             cardStyle = cardStyle,
                             isFavorite = category.id in favoriteCategoryIds,
                             onClick = { onCategorySelected(category.id) },
-                            onLongPress = { onCategoryLongPress(category) },
+                            onToggleFavorite = {
+                                categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
+                            },
                             focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() },
                             modifier =
                                 // See StreamList: remember-scoped so recomposition of a visible row
@@ -347,7 +353,7 @@ private fun CategoryItem(
     cardStyle: CategoryCardStyle,
     isFavorite: Boolean = false,
     onClick: () -> Unit,
-    onLongPress: () -> Unit = {},
+    onToggleFavorite: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -364,49 +370,98 @@ private fun CategoryItem(
     // loop running. At rest the two look identical: fraction is 0, so the node draws the same
     // clipped text a plain Text does.
     var isFocused by remember { mutableStateOf(false) }
+    // Same D-pad-native reveal pattern as StreamList's StreamItem — DPAD Right from the card
+    // reaches the favorite toggle, DPAD Left returns; no long-press, no dialog. Virtual
+    // categories pass onToggleFavorite = null, so no icon is ever composed/reachable for them.
+    var rowHasFocus by remember { mutableStateOf(false) }
+    val internalCardFocusRequester = remember { FocusRequester() }
+    val cardFocusRequester = focusRequester ?: internalCardFocusRequester
+    val actionsFocusRequester = remember { FocusRequester() }
 
-    Card(
-        onClick = onClick,
+    Row(
         modifier =
             modifier
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
-                .onFocusChanged { isFocused = it.isFocused }
-                .tvLongPress(onLongPress)
-                .then(
-                    if (focusRequester != null) {
-                        Modifier.focusRequester(focusRequester)
-                    } else {
-                        Modifier
-                    },
-                ),
-        colors = if (isSelected) cardStyle.selectedColors else cardStyle.colors,
-        shape = cardStyle.shape,
-        scale = cardStyle.cardScale,
-        glow = cardStyle.glow,
+                .focusGroup()
+                .onFocusChanged { rowHasFocus = it.hasFocus },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
     ) {
-        Row(
+        Card(
+            onClick = onClick,
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .padding(Spacing.md.scaled(scale)),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                    .weight(1f)
+                    .onFocusChanged { isFocused = it.isFocused }
+                    .focusRequester(cardFocusRequester)
+                    .then(
+                        if (onToggleFavorite != null) {
+                            Modifier.onPreviewKeyEvent { event ->
+                                if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionRight) {
+                                    return@onPreviewKeyEvent false
+                                }
+                                actionsFocusRequester.requestFocus()
+                                true
+                            }
+                        } else {
+                            Modifier
+                        },
+                    ),
+            colors = if (isSelected) cardStyle.selectedColors else cardStyle.colors,
+            shape = cardStyle.shape,
+            scale = cardStyle.cardScale,
+            glow = cardStyle.glow,
         ) {
-            if (isFavorite) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.md.scaled(scale)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+            ) {
+                if (isFavorite) {
+                    Text(
+                        text = "\u2605",
+                        style = scaledTitleMedium,
+                        color = CinemaAccent,
+                    )
+                }
                 Text(
-                    text = "\u2605",
+                    text = category.name,
                     style = scaledTitleMedium,
-                    color = CinemaAccent,
+                    color = CinemaTextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
                 )
             }
-            Text(
-                text = category.name,
-                style = scaledTitleMedium,
-                color = CinemaTextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
+        }
+
+        if (rowHasFocus && onToggleFavorite != null) {
+            CinemaIconButton(
+                onClick = onToggleFavorite,
+                size = TvDimensions.iconLarge.scaled(scale),
+                modifier =
+                    Modifier
+                        .focusRequester(actionsFocusRequester)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionLeft) {
+                                return@onPreviewKeyEvent false
+                            }
+                            cardFocusRequester.requestFocus()
+                            true
+                        },
+                icon = {
+                    Icon(
+                        imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                        contentDescription =
+                            stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
+                        tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                    )
+                },
             )
         }
     }

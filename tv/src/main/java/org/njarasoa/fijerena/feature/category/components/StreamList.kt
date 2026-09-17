@@ -4,6 +4,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
@@ -49,6 +55,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.browseTarget
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -68,6 +75,7 @@ import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
@@ -144,7 +152,6 @@ internal fun StreamList(
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
     watchedIds: ImmutableStringSet = ImmutableStringSet(),
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
-    onStreamLongPress: (MediaItem) -> Unit = {},
     onStreamFocused: (MediaItem) -> Unit = {},
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -173,6 +180,8 @@ internal fun StreamList(
 
     val scale = LocalUiScale.current
     val cardStyle = streamCardStyle(scale)
+    val isRecentList = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID
+    val isWatchable = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
 
     // Auto-scroll and focus on last played item (on initial load and when returning from player).
     // Keyed to selectedCategoryId so switching list context (e.g. the Live TV preview panel's
@@ -336,9 +345,20 @@ internal fun StreamList(
                                 isFavorite = item.id in favoriteIds,
                                 watchProgress = watchProgress[item.id] ?: 0f,
                                 isWatched = item.id in watchedIds,
+                                isWatchable = isWatchable,
+                                isRecentList = isRecentList,
                                 nowPlayingProgram = nowPlaying[item.id],
                                 onClick = { onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType)) },
-                                onLongPress = { onStreamLongPress(item) },
+                                onToggleFavorite = {
+                                    categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
+                                },
+                                onToggleWatched = { categoryViewModel.toggleWatchedStream(item.id, contentType) },
+                                onRemoveFromRecent =
+                                    if (isRecentList && categoryViewModel.supportsRemoveFromRecent) {
+                                        { categoryViewModel.removeFromRecent(item.id, contentType, item.seriesId) }
+                                    } else {
+                                        null
+                                    },
                                 onFocused = { onStreamFocused(item) },
                                 // Only the last-played item gets a focus requester for auto-scroll
                                 focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null,
@@ -370,9 +390,13 @@ private fun StreamItem(
     isFavorite: Boolean = false,
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
+    isWatchable: Boolean = false,
+    isRecentList: Boolean = false,
     nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit,
-    onLongPress: () -> Unit = {},
+    onToggleFavorite: () -> Unit = {},
+    onToggleWatched: () -> Unit = {},
+    onRemoveFromRecent: (() -> Unit)? = null,
     onFocused: () -> Unit = {},
     focusRequester: FocusRequester? = null,
     thumbnailScale: Float = 1f,
@@ -380,6 +404,16 @@ private fun StreamItem(
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
+    // Action row (favorite/watched/remove-from-recent) reveals on focus and is reachable via
+    // DPAD Right from the card — the D-pad-native equivalent of mobile's swipe reveal, replacing
+    // the old press-and-hold context menu for individual streams (category long-press is
+    // unaffected). rowHasFocus (not just the card's own isFocused) keeps the row composed while
+    // focus is on one of its action buttons, since it would otherwise vanish the instant focus
+    // leaves the card.
+    var rowHasFocus by remember { mutableStateOf(false) }
+    val internalCardFocusRequester = remember { FocusRequester() }
+    val cardFocusRequester = focusRequester ?: internalCardFocusRequester
+    val actionsFocusRequester = remember { FocusRequester() }
     // Marquee only while focused. BounceMarqueeNode runs a withFrameNanos loop that invalidates
     // draw every frame for as long as its text overflows, and IPTV channel names overflow
     // constantly — with it applied unconditionally, every visible row kept two such loops running
@@ -396,121 +430,186 @@ private fun StreamItem(
             }
         }
 
-    Card(
-        onClick = onClick,
+    Row(
         modifier =
             modifier
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
-                .onFocusChanged {
-                    isFocused = it.isFocused
-                    if (it.isFocused) onFocused()
-                }
-                .tvLongPress(onLongPress)
-                .then(
-                    if (focusRequester != null) {
-                        Modifier.focusRequester(focusRequester)
-                    } else {
-                        Modifier
-                    },
-                ),
-        colors = cardStyle.colors,
-        shape = cardStyle.shape,
-        scale = cardStyle.cardScale,
-        glow = cardStyle.glow,
+                .focusGroup()
+                .onFocusChanged { rowHasFocus = it.hasFocus },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
     ) {
-        Column {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(Spacing.sm.scaled(scale)),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-            ) {
-                // Poster thumbnail
-                CinemaThumbnail(
-                    url = item.thumbnailUrl,
-                    fallbackLetter = item.name.firstOrNull(),
-                    contentType = ThumbnailContentType.DEFAULT,
-                    overlayGradient = true,
-                    modifier =
-                        Modifier
-                            .size(
-                                width = (TvDimensions.posterWidth * thumbnailScale).scaled(scale),
-                                height = (TvDimensions.posterHeight * thumbnailScale).scaled(scale),
-                            ),
-                )
-
-                // Text info
-                val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (isFavorite) {
-                            Text(
-                                text = "\u2605",
-                                style = scaledStyles.titleMedium,
-                                color = CinemaAccent,
-                            )
-                        }
-
-                        if (isWatched) {
-                            Icon(
-                                imageVector = CinemaIcons.CheckCircle,
-                                contentDescription = stringResource(R.string.content_watched_badge),
-                                tint = CinemaSuccess,
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        }
-
-                        parsedTitle.badge?.let { LanguageBadge(it) }
-
-                        Text(
-                            // See mobile's StreamCard — provider data occasionally sends a blank
-                            // name (e.g. "EN -  (US)" with nothing between the dashes).
-                            text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
-                            style = scaledStyles.titleMedium,
-                            color = CinemaTextPrimary,
-                            maxLines = 1,
-                            modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
-                        )
+        Card(
+            onClick = onClick,
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .onFocusChanged {
+                        isFocused = it.isFocused
+                        if (it.isFocused) onFocused()
                     }
-                    // Rating (e.g. "7.9 | PG-13")
-                    item.metadata.rating?.let { rating ->
-                        RatingBadge(
-                            rating = rating,
-                            textColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
-                            style = scaledStyles.bodySmall,
-                        )
-                    }
-                    // "What's On Now" for Live TV
-                    nowPlayingProgram?.let { program ->
-                        Text(
-                            text = stringResource(R.string.epg_now_prefix, program.title),
-                            style = scaledStyles.bodySmall,
-                            color = CinemaOrangeLight,
-                            maxLines = 1,
-                            modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
-                        )
-                    }
-                }
-            }
-
-            // Progress bar
-            if (watchProgress > 0f) {
-                androidx.compose.material3.LinearProgressIndicator(
-                    progress = { watchProgress },
+                    .focusRequester(cardFocusRequester)
+                    .onPreviewKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionRight) return@onPreviewKeyEvent false
+                        actionsFocusRequester.requestFocus()
+                        true
+                    },
+            colors = cardStyle.colors,
+            shape = cardStyle.shape,
+            scale = cardStyle.cardScale,
+            glow = cardStyle.glow,
+        ) {
+            Column {
+                Row(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(bottom = TvDimensions.borderFocused.scaled(scale))
-                            .height(TvDimensions.resumeBarHeight.scaled(scale)),
-                    color = CinemaAccent,
-                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
+                            .padding(Spacing.sm.scaled(scale)),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                ) {
+                    // Poster thumbnail
+                    CinemaThumbnail(
+                        url = item.thumbnailUrl,
+                        fallbackLetter = item.name.firstOrNull(),
+                        contentType = ThumbnailContentType.DEFAULT,
+                        overlayGradient = true,
+                        modifier =
+                            Modifier
+                                .size(
+                                    width = (TvDimensions.posterWidth * thumbnailScale).scaled(scale),
+                                    height = (TvDimensions.posterHeight * thumbnailScale).scaled(scale),
+                                ),
+                    )
+
+                    // Text info
+                    val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (isFavorite) {
+                                Text(
+                                    text = "\u2605",
+                                    style = scaledStyles.titleMedium,
+                                    color = CinemaAccent,
+                                )
+                            }
+
+                            if (isWatched) {
+                                Icon(
+                                    imageVector = CinemaIcons.CheckCircle,
+                                    contentDescription = stringResource(R.string.content_watched_badge),
+                                    tint = CinemaSuccess,
+                                    modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                )
+                            }
+
+                            parsedTitle.badge?.let { LanguageBadge(it) }
+
+                            Text(
+                                // See mobile's StreamCard — provider data occasionally sends a blank
+                                // name (e.g. "EN -  (US)" with nothing between the dashes).
+                                text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
+                                style = scaledStyles.titleMedium,
+                                color = CinemaTextPrimary,
+                                maxLines = 1,
+                                modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
+                            )
+                        }
+                        // Rating (e.g. "7.9 | PG-13")
+                        item.metadata.rating?.let { rating ->
+                            RatingBadge(
+                                rating = rating,
+                                textColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
+                                style = scaledStyles.bodySmall,
+                            )
+                        }
+                        // "What's On Now" for Live TV
+                        nowPlayingProgram?.let { program ->
+                            Text(
+                                text = stringResource(R.string.epg_now_prefix, program.title),
+                                style = scaledStyles.bodySmall,
+                                color = CinemaOrangeLight,
+                                maxLines = 1,
+                                modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
+                            )
+                        }
+                    }
+                }
+
+                // Progress bar
+                if (watchProgress > 0f) {
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { watchProgress },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = TvDimensions.borderFocused.scaled(scale))
+                                .height(TvDimensions.resumeBarHeight.scaled(scale)),
+                        color = CinemaAccent,
+                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
+                    )
+                }
+            }
+        }
+
+        if (rowHasFocus) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+                CinemaIconButton(
+                    onClick = onToggleFavorite,
+                    size = TvDimensions.iconLarge.scaled(scale),
+                    modifier =
+                        Modifier
+                            .focusRequester(actionsFocusRequester)
+                            .onPreviewKeyEvent { event ->
+                                if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionLeft) {
+                                    return@onPreviewKeyEvent false
+                                }
+                                cardFocusRequester.requestFocus()
+                                true
+                            },
+                    icon = {
+                        Icon(
+                            imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                            contentDescription =
+                                stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
+                            tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                        )
+                    },
                 )
+                if (isWatchable) {
+                    CinemaIconButton(
+                        onClick = onToggleWatched,
+                        size = TvDimensions.iconLarge.scaled(scale),
+                        icon = {
+                            Icon(
+                                imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                                contentDescription =
+                                    stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
+                                tint = if (isWatched) CinemaAccent else CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        },
+                    )
+                }
+                if (onRemoveFromRecent != null) {
+                    CinemaIconButton(
+                        onClick = onRemoveFromRecent,
+                        size = TvDimensions.iconLarge.scaled(scale),
+                        icon = {
+                            Icon(
+                                imageVector = CinemaIcons.Delete,
+                                contentDescription = stringResource(R.string.recent_remove),
+                                tint = CinemaError,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        },
+                    )
+                }
             }
         }
     }
