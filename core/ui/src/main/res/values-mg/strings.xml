@@ -637,7 +637,6 @@
     <!-- TV Category/Search misc -->
     <string name="category_refresh_description">Havaozy ny sokajy</string>
     <string name="category_refresh_streams_description">Havaozy ny fandaharana</string>
-    <string name="category_favorite_hint_tv">Tazomy ny OK amin\'ny fantsakana na sokajy iray mba hanampiana azy amin\'ny tiana indrindra</string>
     <string name="content_search_all_description">Tadiavo daholo</string>
     <string name="content_type_live_tv_subtitle_short">Jereo ny fandaharana mivantana</string>
     <string name="common_edit_field_description_format">Ovay %1$s</string>
@@ -671,7 +670,6 @@
     <string name="player_stats_build_format">Build: %1$s (%2$s)</string>
     <string name="player_stats_device_type_format">Fitaovana: %1$s | Karazany: %2$s</string>
     <string name="epg_browser_index_stats_format">EPG Index: %1$s</string>
-    <string name="category_favorite_hint_mobile">Tsindrio ela ny fantsakana na sokajy iray hanampiana azy amin\'ny tiana indrindra</string>
     <string name="category_now_playing_badge">▶ Mandeha</string>
     <string name="category_of_total_format">amin\'ny %1$d</string>
     <string name="settings_ui_scale_section_title">Refin\'ny sokajy/tabilao</string>

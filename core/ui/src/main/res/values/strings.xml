@@ -729,7 +729,6 @@
     <!-- TV Category/Search misc -->
     <string name="category_refresh_description">Refresh categories</string>
     <string name="category_refresh_streams_description">Refresh streams</string>
-    <string name="category_favorite_hint_tv">Hold OK on a channel or category to add it to Favorites</string>
     <string name="content_search_all_description">Search All</string>
     <string name="content_type_live_tv_subtitle_short">Watch live channels</string>
     <string name="common_edit_field_description_format">Edit %1$s</string>
@@ -763,7 +762,6 @@
     <string name="player_stats_build_format">Build: %1$s (%2$s)</string>
     <string name="player_stats_device_type_format">Device: %1$s | Type: %2$s</string>
     <string name="epg_browser_index_stats_format">EPG Index: %1$s</string>
-    <string name="category_favorite_hint_mobile">Swipe a channel to favorite or mark watched. Long-press a category to add it to Favorites</string>
     <string name="category_now_playing_badge">▶ Playing</string>
     <string name="category_of_total_format">of %1$d</string>
     <string name="settings_ui_scale_section_title">Category/Grid UI Scale</string>

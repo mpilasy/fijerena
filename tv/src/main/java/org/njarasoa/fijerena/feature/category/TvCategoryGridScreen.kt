@@ -31,7 +31,6 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
-import org.njarasoa.fijerena.core.ui.components.rememberFavoriteHintVisible
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.ErrorScreen
@@ -164,9 +163,6 @@ private fun CategoryGridContent(
                 vertical = Spacing.tvSafeMarginVertical,
             )
 
-    // One-time "hold to favorite" hint — favoriting has no other visible affordance on TV.
-    val showFavoriteHint = rememberFavoriteHintVisible()
-
     // 5% padding for TV overscan safety — applied per-branch rather than around the whole
     // `when`, since LiveTvSplitLayout's promoted full-screen player must NOT inherit it (it
     // renders inside this same composable, in place, to avoid a second PlaybackViewModel/ANR —
@@ -258,38 +254,5 @@ private fun CategoryGridContent(
                 }
             }
         }
-
-        // Skip the LiveTvSplitLayout branch — its promoted full-screen player renders in this
-        // same Box (see comment above), and the hint must never draw over live video.
-        val isLiveTvSplitPane = contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV && showPreviewPane
-        if (showFavoriteHint && uiState is CategoryViewModel.UiState.Success && !isLiveTvSplitPane) {
-            FavoriteHintBanner(
-                modifier =
-                    Modifier
-                        .align(androidx.compose.ui.Alignment.BottomCenter)
-                        .padding(bottom = Spacing.xxl.scaled(scale)),
-            )
-        }
-    }
-}
-
-/**
- * One-time hint pointing at the hold-to-favorite gesture, which otherwise has zero on-screen
- * affordance. See [TvCategoryGridScreen] and `AppSettings.hasSeenFavoriteHint`.
- */
-@Composable
-private fun FavoriteHintBanner(modifier: Modifier = Modifier) {
-    val scale = LocalUiScale.current
-    org.njarasoa.fijerena.core.ui.components.GlassPanel(modifier = modifier) {
-        androidx.tv.material3.Text(
-            text = stringResource(R.string.category_favorite_hint_tv),
-            style = androidx.tv.material3.MaterialTheme.typography.bodyMedium,
-            color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-            modifier =
-                Modifier.padding(
-                    horizontal = Spacing.lg.scaled(scale),
-                    vertical = Spacing.sm.scaled(scale),
-                ),
-        )
     }
 }
