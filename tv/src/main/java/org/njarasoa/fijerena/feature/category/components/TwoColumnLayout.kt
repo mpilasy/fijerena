@@ -33,8 +33,6 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
-import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
-import org.njarasoa.fijerena.core.ui.model.toFavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -102,50 +100,8 @@ internal fun TwoColumnLayout(
             }
         }
 
-    // Long-press favorite menu state
-    var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
-
     val categoryMap = remember(categories) {
         categories.associateBy { it.id }
-    }
-
-    // Show the context menu dialog when a target is set
-    favoriteMenuTarget?.let { target ->
-        FavoriteContextMenuDialog(
-            target = target,
-            onConfirm = {
-                when (target) {
-                    is FavoriteMenuTarget.Category -> {
-                        categoryViewModel.toggleFavoriteCategory(
-                            target.categoryId,
-                            target.categoryName,
-                            target.contentType,
-                        )
-                    }
-                    is FavoriteMenuTarget.Stream -> {
-                        categoryViewModel.toggleFavoriteStream(
-                            target.itemId,
-                            target.itemName,
-                            target.categoryId,
-                            target.contentType,
-                        )
-                    }
-                }
-            },
-            onDismiss = { favoriteMenuTarget = null },
-            onToggleWatched =
-                (target as? FavoriteMenuTarget.Stream)?.let { stream ->
-                    { categoryViewModel.toggleWatchedStream(stream.itemId, stream.contentType) }
-                },
-            onRemoveFromRecent =
-                (target as? FavoriteMenuTarget.Stream)?.let { stream ->
-                    if (categoryViewModel.supportsRemoveFromRecent && stream.isInRecent) {
-                        { categoryViewModel.removeFromRecent(stream.itemId, stream.contentType, stream.seriesId) }
-                    } else {
-                        null
-                    }
-                },
-        )
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -254,15 +210,6 @@ internal fun TwoColumnLayout(
                 favoriteCategoryIds = favoriteCategoryIds,
                 onCategorySelected = onCategorySelected,
                 onRefreshCategories = onRefreshCategories,
-                onCategoryLongPress = { category ->
-                    favoriteMenuTarget =
-                        FavoriteMenuTarget.Category(
-                            categoryId = category.id,
-                            categoryName = category.name,
-                            contentType = contentType,
-                            isFavorite = categoryViewModel.isFavoriteCategory(category.id, contentType),
-                        )
-                },
                 modifier =
                     Modifier
                         .weight(0.3f)
@@ -290,16 +237,6 @@ internal fun TwoColumnLayout(
                     } else {
                         onStreamSelected(streamId, streamName, categoryId, target)
                     }
-                },
-                onStreamLongPress = { item ->
-                    favoriteMenuTarget =
-                        item.toFavoriteMenuTarget(
-                            contentType = contentType,
-                            isFavorite = { categoryViewModel.isFavorite(it, contentType) },
-                            isFavoriteCategory = { categoryViewModel.isFavoriteCategory(it, contentType) },
-                            isWatched = { watchedIds.contains(it) },
-                            isInRecent = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID,
-                        )
                 },
                 onRefreshStreams = onRefreshStreams,
                 modifier =

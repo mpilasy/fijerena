@@ -62,8 +62,6 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
-import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
-import org.njarasoa.fijerena.core.ui.model.toFavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -119,33 +117,6 @@ internal fun LiveTvSplitLayout(
 ) {
     val context = LocalContext.current
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
-
-    // Long-press context menu (favorite add/remove), same as TwoColumnLayout.
-    var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
-    favoriteMenuTarget?.let { target ->
-        FavoriteContextMenuDialog(
-            target = target,
-            onConfirm = {
-                if (target is FavoriteMenuTarget.Stream) {
-                    categoryViewModel.toggleFavoriteStream(
-                        target.itemId,
-                        target.itemName,
-                        target.categoryId,
-                        target.contentType,
-                    )
-                }
-            },
-            onDismiss = { favoriteMenuTarget = null },
-            onRemoveFromRecent =
-                (target as? FavoriteMenuTarget.Stream)?.let { stream ->
-                    if (categoryViewModel.supportsRemoveFromRecent && stream.isInRecent) {
-                        { categoryViewModel.removeFromRecent(stream.itemId, stream.contentType, stream.seriesId) }
-                    } else {
-                        null
-                    }
-                },
-        )
-    }
 
     // Focus-driven, debounced preview: the highlighted channel becomes the preview target only
     // after focus settles (~600ms), so scrolling the list doesn't machine-gun the tuner or leave a
@@ -248,14 +219,6 @@ internal fun LiveTvSplitLayout(
                 onCategorySelected = onCategorySelected,
                 onStreamSelected = onStreamSelected,
                 onStreamPromote = { },
-                onStreamLongPress = { item ->
-                    favoriteMenuTarget =
-                        item.toFavoriteMenuTarget(
-                            contentType = contentType,
-                            favoriteIds = favoriteIds,
-                            isInRecent = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID,
-                        )
-                },
                 onStreamFocused = { item -> focusedItemFlow.value = item },
                 onRefreshStreams = onRefreshStreams,
                 modifier = Modifier.weight(0.34f).fillMaxHeight(),
@@ -604,14 +567,6 @@ internal fun LiveTvSplitLayout(
                     loader.loadStream(item)
                     fullScreen = true
                 },
-                onStreamLongPress = { item ->
-                    favoriteMenuTarget =
-                        item.toFavoriteMenuTarget(
-                            contentType = contentType,
-                            favoriteIds = favoriteIds,
-                            isInRecent = listSource == PreviewListSource.RECENT,
-                        )
-                },
                 onStreamFocused = { item -> focusedItemFlow.value = item },
                 modifier =
                     Modifier
@@ -680,7 +635,6 @@ private fun LiveTvChannelList(
     onCategorySelected: (String) -> Unit,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onStreamPromote: (MediaItem) -> Unit,
-    onStreamLongPress: (MediaItem) -> Unit,
     onStreamFocused: (MediaItem) -> Unit,
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -712,7 +666,6 @@ private fun LiveTvChannelList(
                 }
             }
         },
-        onStreamLongPress = onStreamLongPress,
         onStreamFocused = onStreamFocused,
         onRefreshStreams = onRefreshStreams,
         modifier = modifier,
