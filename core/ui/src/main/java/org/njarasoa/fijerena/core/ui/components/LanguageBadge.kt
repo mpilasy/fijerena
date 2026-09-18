@@ -18,6 +18,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 
+import androidx.compose.runtime.remember
+
 /**
  * Shared badge primitive used for status indicators, codecs, ratings, and tags.
  */
@@ -29,13 +31,15 @@ fun CinemaBadge(
     textColor: Color = CinemaTextSecondary,
     style: TextStyle = MaterialTheme.typography.labelSmall,
 ) {
+    val radius = CinemaCornerRadius.small
+    val shape = remember(radius) { RoundedCornerShape(radius) }
     Text(
         text = text,
         style = style,
         color = textColor,
         modifier =
             modifier
-                .clip(RoundedCornerShape(CinemaCornerRadius.small))
+                .clip(shape)
                 .background(backgroundColor)
                 .padding(horizontal = CinemaSpacing.xs, vertical = CinemaSpacing.xxs),
     )

@@ -473,16 +473,18 @@ class CategoryViewModel(
             val cats = categories
 
             withContext(Dispatchers.Default) {
-                // Build favorite IDs set
+                // Build favorite IDs set using single-lock batch lookup
+                val favItemIds = repository.getFavoriteItemIds(ct)
                 _favoriteIds.value =
                     streams
-                        .filter { repository.isFavorite(it.id, ct) }
+                        .filter { it.id in favItemIds }
                         .mapTo(HashSet()) { it.id }
 
-                // Build favorite category IDs set
+                // Build favorite category IDs set using single-lock batch lookup
+                val favCatIds = repository.getFavoriteCategoryIds(ct)
                 _favoriteCategoryIds.value =
                     cats
-                        .filter { repository.isFavoriteCategory(it.id, ct) }
+                        .filter { it.id in favCatIds }
                         .mapTo(HashSet()) { it.id }
 
                 // Build watch progress map (optimized bulk lookup)

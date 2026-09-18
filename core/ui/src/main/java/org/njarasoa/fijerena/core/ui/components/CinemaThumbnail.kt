@@ -69,7 +69,8 @@ fun CinemaThumbnail(
     overlayGradient: Boolean = false,
     contentDescription: String? = null,
 ) {
-    val shape = RoundedCornerShape(CinemaCornerRadius.medium)
+    val radius = CinemaCornerRadius.medium
+    val shape = remember(radius) { RoundedCornerShape(radius) }
     val context = LocalContext.current
 
     // Track measured size so Coil decodes at display resolution, not full source resolution

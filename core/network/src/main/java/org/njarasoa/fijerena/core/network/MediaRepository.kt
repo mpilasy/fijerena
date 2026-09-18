@@ -913,6 +913,20 @@ class MediaRepository(
         return (itemId to contentType) in set
     }
 
+    fun getFavoriteItemIds(contentType: String): Set<String> = synchronized(favoriteLock) {
+        val set =
+            favoriteIdSet ?: getFavoriteItems()
+                .mapTo(HashSet()) { it.itemId to it.contentType }
+                .also { favoriteIdSet = it }
+        val matching = HashSet<String>(set.size)
+        for ((id, type) in set) {
+            if (type == contentType) {
+                matching.add(id)
+            }
+        }
+        matching
+    }
+
     /** Streams only — both "Clear All Favorites" dialogs say "favorited streams". */
     fun clearFavorites() = synchronized(favoriteLock) {
         cachedFavorites = emptyList()
@@ -980,6 +994,20 @@ class MediaRepository(
                 .mapTo(HashSet()) { it.categoryId to it.contentType }
                 .also { favoriteCategoryIdSet = it }
         return (categoryId to contentType) in set
+    }
+
+    fun getFavoriteCategoryIds(contentType: String): Set<String> = synchronized(favoriteLock) {
+        val set =
+            favoriteCategoryIdSet ?: getFavoriteCategoryItems()
+                .mapTo(HashSet()) { it.categoryId to it.contentType }
+                .also { favoriteCategoryIdSet = it }
+        val matching = HashSet<String>(set.size)
+        for ((id, type) in set) {
+            if (type == contentType) {
+                matching.add(id)
+            }
+        }
+        matching
     }
 
     fun clearFavoriteCategories() = synchronized(favoriteLock) {

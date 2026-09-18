@@ -39,6 +39,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.foundation.lazy.list.rememberTvLazyListState
@@ -106,12 +107,25 @@ private data class StreamCardStyle(
     val cardScale: CardScale,
     val glow: CardGlow,
     val shape: CardShape,
+    val titleMedium: TextStyle,
+    val bodySmall: TextStyle,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun streamCardStyle(scale: Float): StreamCardStyle =
-    StreamCardStyle(
+private fun streamCardStyle(
+    scale: Float,
+    typography: androidx.tv.material3.Typography = MaterialTheme.typography,
+): StreamCardStyle {
+    val scaledTitleMedium =
+        remember(scale, typography) {
+            typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+        }
+    val scaledBodySmall =
+        remember(scale, typography) {
+            typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
+        }
+    return StreamCardStyle(
         colors =
             CardDefaults.colors(
                 containerColor = CinemaSurface,
@@ -134,7 +148,10 @@ private fun streamCardStyle(scale: Float): StreamCardStyle =
                     ),
             ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
+        titleMedium = scaledTitleMedium,
+        bodySmall = scaledBodySmall,
     )
+}
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -421,14 +438,6 @@ private fun StreamItem(
     // competing with the scroll itself. At rest the two look identical: fraction is 0, so the
     // node draws the same clipped text a plain Text does.
     var isFocused by remember { mutableStateOf(false) }
-    val typography = MaterialTheme.typography
-    val scaledStyles =
-        remember(scale, typography) {
-            object {
-                val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-            }
-        }
 
     Row(
         modifier =
@@ -493,7 +502,7 @@ private fun StreamItem(
                             if (isFavorite) {
                                 Text(
                                     text = "\u2605",
-                                    style = scaledStyles.titleMedium,
+                                    style = cardStyle.titleMedium,
                                     color = CinemaAccent,
                                 )
                             }
@@ -513,7 +522,7 @@ private fun StreamItem(
                                 // See mobile's StreamCard — provider data occasionally sends a blank
                                 // name (e.g. "EN -  (US)" with nothing between the dashes).
                                 text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
-                                style = scaledStyles.titleMedium,
+                                style = cardStyle.titleMedium,
                                 color = CinemaTextPrimary,
                                 maxLines = 1,
                                 modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
@@ -524,14 +533,14 @@ private fun StreamItem(
                             RatingBadge(
                                 rating = rating,
                                 textColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
-                                style = scaledStyles.bodySmall,
+                                style = cardStyle.bodySmall,
                             )
                         }
                         // "What's On Now" for Live TV
                         nowPlayingProgram?.let { program ->
                             Text(
                                 text = stringResource(R.string.epg_now_prefix, program.title),
-                                style = scaledStyles.bodySmall,
+                                style = cardStyle.bodySmall,
                                 color = CinemaOrangeLight,
                                 maxLines = 1,
                                 modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
