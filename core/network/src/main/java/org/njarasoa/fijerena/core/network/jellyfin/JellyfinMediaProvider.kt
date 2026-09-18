@@ -23,6 +23,7 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.SubtitleTechInfo
 import org.njarasoa.fijerena.core.player.domain.VideoTechInfo
 import org.njarasoa.fijerena.core.player.domain.trailerUrl
+import java.util.concurrent.ConcurrentHashMap
 
 class JellyfinMediaProvider(
     override val providerId: Long,
@@ -45,10 +46,12 @@ class JellyfinMediaProvider(
 
     private val SUPPORTED_CONTAINERS = arrayOf("mp4", "mkv", "avi", "mov", "webm", "ts", "m3u8", "mpd")
 
-    // PlaySessionId per item, used for transcoding session reporting
-    private val playSessionIds = mutableMapOf<String, String>()
-    private val mediaSourceIds = mutableMapOf<String, String>()
-    private val playMethods = mutableMapOf<String, String>()
+    // PlaySessionId per item, used for transcoding session reporting. ConcurrentHashMap: written
+    // during playback setup, read during periodic progress reports, and removed on stop, each
+    // potentially on a different coroutine.
+    private val playSessionIds = ConcurrentHashMap<String, String>()
+    private val mediaSourceIds = ConcurrentHashMap<String, String>()
+    private val playMethods = ConcurrentHashMap<String, String>()
 
     // Movie/series detail (plot, cast, genre, rating, contentRating, episodes) rarely changes —
     // cache the assembled result so reopening the same title doesn't re-hit the server.

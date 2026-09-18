@@ -41,6 +41,20 @@ interface EpgIndexDao {
         clearStagingChannels()
     }
 
+    @Query("DELETE FROM epg_programme_staging WHERE source_id IN (:sourceIds)")
+    suspend fun clearStagingProgrammesForSources(sourceIds: List<Long>)
+
+    @Query("DELETE FROM epg_channel_staging WHERE source_id IN (:sourceIds)")
+    suspend fun clearStagingChannelsForSources(sourceIds: List<Long>)
+
+    // Scoped variant of clearStaging(): a blanket DELETE would also wipe staging rows for any
+    // other source concurrently being parsed by a separate refresh, or a still-pending retry.
+    @Transaction
+    suspend fun clearStagingForSources(sourceIds: List<Long>) {
+        clearStagingProgrammesForSources(sourceIds)
+        clearStagingChannelsForSources(sourceIds)
+    }
+
     // Scoped to :sourceIds, not a blanket copy: staging can hold rows for a source that isn't in
     // this swap at all — e.g. one source of a multi-source sync failed partway and left its own
     // partial rows behind while others succeeded. An unfiltered SELECT would carry that source's
@@ -70,7 +84,7 @@ interface EpgIndexDao {
         deleteBySourceIds(sourceIds)
         transferChannelsFromStaging(sourceIds)
         transferProgrammesFromStaging(sourceIds)
-        clearStaging()
+        clearStagingForSources(sourceIds)
     }
 
     // --------------- Stale data cleanup (Clear and Load strategy) ---------------

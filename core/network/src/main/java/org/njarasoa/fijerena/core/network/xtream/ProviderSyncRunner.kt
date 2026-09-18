@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.xtream
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -82,6 +83,11 @@ object ProviderSyncRunner {
                 EpgChannelMatcher.warmCache(provider.id, streams)
 
                 return Outcome.Success(delta)
+            } catch (e: CancellationException) {
+                // Worker stopped or timed out — not a sync failure. Recording it as one would
+                // flag the provider as permanently broken in providers.db for what's really just
+                // a pause.
+                throw e
             } catch (e: Exception) {
                 val transient = isTransient(e)
                 if (transient && attempt < MAX_ATTEMPTS) {

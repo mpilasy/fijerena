@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network.queue
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -119,6 +120,12 @@ object RefreshQueue {
                         try {
                             queuedTask.task.execute()
                             queuedTask.deferred.complete(Unit)
+                        } catch (e: CancellationException) {
+                            // Not a task failure — the queue's scope was cancelled (e.g.
+                            // cancelAll()) or the task itself was cancelled. Logging it as an
+                            // error would misreport a normal pause as a pipeline failure.
+                            queuedTask.deferred.cancel(e)
+                            throw e
                         } catch (e: Exception) {
                             android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
                             queuedTask.deferred.completeExceptionally(e)
