@@ -17,12 +17,13 @@ data class StoredCredentials(
 
 class AccountManager(
     context: Context,
+    private val providerId: Long = 0L,
 ) {
     // Lazy on purpose: keystore unlock + crypto + disk cost ~340ms, and the nav hosts construct
     // an AccountManager during composition while only reading from it inside coroutines. Built
     // eagerly it blocked the first frame; deferred, the cost lands on whichever caller reads
     // first — so [warmUp] exists to make that caller a background one.
-    private val prefs: SharedPreferences by lazy { encryptedPrefs(context) }
+    private val prefs: SharedPreferences by lazy { encryptedPrefs(context, providerId) }
 
     private val json =
         Json {
@@ -33,15 +34,23 @@ class AccountManager(
     companion object {
         // Process-wide, not per instance: EncryptedSharedPreferences.create rebuilds the master
         // key and the crypto each call, so an AccountManager constructed per screen would pay the
-        // full cost every time instead of sharing one store.
-        @Volatile
-        private var sharedPrefs: SharedPreferences? = null
+        // full cost every time instead of sharing one store. Keyed by providerId: providerId 0
+        // is the legacy pre-multi-provider file (kept for migration and single-account flows);
+        // every real provider gets its own file so a background sync of provider B can never
+        // clobber the credentials provider A's session restore is about to read.
+        private val sharedPrefs = java.util.concurrent.ConcurrentHashMap<Long, SharedPreferences>()
+
+        private fun fileName(providerId: Long) =
+            if (providerId <= 0L) "xtream_secure_credentials" else "xtream_secure_credentials_$providerId"
 
         @Suppress("DEPRECATION")
-        private fun createEncryptedPrefs(context: Context): SharedPreferences =
+        private fun createEncryptedPrefs(
+            context: Context,
+            name: String,
+        ): SharedPreferences =
             EncryptedSharedPreferences.create(
                 context.applicationContext,
-                "xtream_secure_credentials",
+                name,
                 MasterKey
                     .Builder(context.applicationContext)
                     .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -53,19 +62,25 @@ class AccountManager(
         // Jetpack Security Crypto is deprecated as of its first stable release (1.1.0). Still the
         // credential store; replacing it is tracked in docs/plans/secret-store-migration-plan.md.
         @Suppress("DEPRECATION")
-        private fun encryptedPrefs(context: Context): SharedPreferences =
-            sharedPrefs ?: synchronized(this) {
-                sharedPrefs ?: try {
-                    createEncryptedPrefs(context)
-                } catch (_: Exception) {
-                    val appContext = context.applicationContext
-                    appContext.deleteSharedPreferences("xtream_secure_credentials")
+        private fun encryptedPrefs(
+            context: Context,
+            providerId: Long,
+        ): SharedPreferences =
+            sharedPrefs[providerId] ?: synchronized(this) {
+                sharedPrefs[providerId] ?: run {
+                    val name = fileName(providerId)
                     try {
-                        createEncryptedPrefs(appContext)
+                        createEncryptedPrefs(context, name)
                     } catch (_: Exception) {
-                        appContext.getSharedPreferences("xtream_secure_credentials", Context.MODE_PRIVATE)
+                        val appContext = context.applicationContext
+                        appContext.deleteSharedPreferences(name)
+                        try {
+                            createEncryptedPrefs(appContext, name)
+                        } catch (_: Exception) {
+                            appContext.getSharedPreferences(name, Context.MODE_PRIVATE)
+                        }
                     }
-                }.also { sharedPrefs = it }
+                }.also { sharedPrefs[providerId] = it }
             }
 
         private const val KEY_URL = "url"

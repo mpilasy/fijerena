@@ -20,7 +20,7 @@ class LoginViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
-            val accountManager = AccountManager(context.applicationContext)
+            val accountManager = AccountManager(context.applicationContext, providerId)
             val repository = XtreamRepository(accountManager, context.applicationContext, providerId)
             return LoginViewModel(repository, context.applicationContext) as T
         }
