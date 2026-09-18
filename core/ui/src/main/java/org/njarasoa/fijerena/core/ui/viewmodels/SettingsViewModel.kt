@@ -83,7 +83,7 @@ class SettingsViewModel(
 
             // Xtream-specific subscription info
             if (activeProvider?.type == "XTREAM") {
-                val accountManager = AccountManager(context.applicationContext)
+                val accountManager = AccountManager(context.applicationContext, activeProvider.id)
                 accountManager.getAuthResponse()?.userInfo?.let { info ->
                     newState =
                         newState.copy(

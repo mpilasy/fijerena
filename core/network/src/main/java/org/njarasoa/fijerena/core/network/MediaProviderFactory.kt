@@ -109,7 +109,7 @@ object MediaProviderFactory {
         context: Context,
         password: String,
     ): MediaProvider {
-        val accountManager = AccountManager(context.applicationContext)
+        val accountManager = AccountManager(context.applicationContext, entity.id)
         val providerSettings = parseProviderSettings(entity.providerSettings)
 
         // Store credentials so XtreamRepository.restoreSession() can find them
