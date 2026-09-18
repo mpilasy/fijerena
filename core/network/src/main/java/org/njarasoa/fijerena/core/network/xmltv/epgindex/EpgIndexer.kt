@@ -416,10 +416,13 @@ class EpgIndexer private constructor(
                     // opportunistically and never blocks another connection.
                     sdb.execPragma("PRAGMA wal_checkpoint(PASSIVE)")
 
-                    // Optimize rebuild speed
+                    // Optimize rebuild speed. cache_size capped at 16MB (not the 64MB this used to
+                    // request) — XMLTV files with millions of programmes were pushing native RSS
+                    // over 150MB during rebuild, risking the Low Memory Killer on 1-2GB Android TV
+                    // devices.
                     sdb.execSQL("PRAGMA synchronous = OFF")
                     sdb.execSQL("PRAGMA temp_store = MEMORY")
-                    sdb.execSQL("PRAGMA cache_size = -64000")
+                    sdb.execSQL("PRAGMA cache_size = -16000")
 
                     Log.d(TAG, "rebuildFtsAndUpdateState: executing FTS rebuild")
                     // 'rebuild' scans the content table (epg_programme) and repopulates FTS from
