@@ -22,6 +22,9 @@ class SeriesDetailsViewModel(
     private var categoryId: String,
     private var seriesName: String,
 ) : ViewModel() {
+    // Written from Dispatchers.IO in ensureRepo(), read on Main via mediaRepository by
+    // EpisodeSelectionScreen — @Volatile guarantees the write is visible across threads.
+    @Volatile
     private var repository: MediaRepository? = null
 
     /** The repository used to load this series, once loaded — needed by episode-list children. */
