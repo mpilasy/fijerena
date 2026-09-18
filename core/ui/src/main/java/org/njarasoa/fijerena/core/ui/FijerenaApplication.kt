@@ -111,6 +111,7 @@ class FijerenaApplication :
                 // Reuse the shared OkHttpClient for image loading to prevent memory leaks and OOM
                 add(OkHttpNetworkFetcherFactory(NetworkModule.okHttpClient))
             }
+            .coroutineContext(Dispatchers.IO)
             // Posters/thumbnails rarely change and there are thousands of them across a large
             // catalog — a generously sized disk cache means scrolling back through a category or
             // reopening a detail screen doesn't refetch images that were already downloaded.
@@ -123,6 +124,7 @@ class FijerenaApplication :
                     .Builder()
                     .directory(cacheDir.resolve("image_cache"))
                     .maxSizeBytes(512L * 1024 * 1024) // 512 MB
+                    .cleanupCoroutineContext(Dispatchers.IO)
                     .build()
             }.build()
 }

@@ -41,6 +41,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
@@ -168,6 +169,8 @@ internal fun CategoryList(
     val enteredCategoryIds = remember(categories) { mutableSetOf<String>() }
 
     val palette = LocalCinemaTheme.current
+    val panelRadius = CornerRadius.small
+    val panelShape = remember(panelRadius) { RoundedCornerShape(panelRadius) }
     val borderBrush =
         remember(palette) {
             androidx.compose.ui.graphics.Brush.verticalGradient(
@@ -215,11 +218,11 @@ internal fun CategoryList(
                     .fillMaxSize()
                     .background(
                         color = CinemaGlassBackground,
-                        shape = RoundedCornerShape(CornerRadius.small),
+                        shape = panelShape,
                     ).border(
                         width = TvDimensions.borderDefault,
                         brush = borderBrush,
-                        shape = RoundedCornerShape(CornerRadius.small),
+                        shape = panelShape,
                     ),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -308,12 +311,20 @@ private data class CategoryCardStyle(
     val cardScale: CardScale,
     val glow: CardGlow,
     val shape: CardShape,
+    val titleMedium: TextStyle,
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun categoryCardStyle(scale: Float): CategoryCardStyle =
-    CategoryCardStyle(
+private fun categoryCardStyle(
+    scale: Float,
+    typography: androidx.tv.material3.Typography = MaterialTheme.typography,
+): CategoryCardStyle {
+    val scaledTitleMedium =
+        remember(scale, typography) {
+            typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
+        }
+    return CategoryCardStyle(
         colors =
             CardDefaults.colors(
                 containerColor = CinemaSurface,
@@ -343,7 +354,9 @@ private fun categoryCardStyle(scale: Float): CategoryCardStyle =
                     ),
             ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(CornerRadius.medium.scaled(scale))),
+        titleMedium = scaledTitleMedium,
     )
+}
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -358,11 +371,7 @@ private fun CategoryItem(
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val scaledTitleMedium =
-        remember(scale, typography) {
-            typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-        }
+    val scaledTitleMedium = cardStyle.titleMedium
 
     // Marquee only while focused — same reasoning as StreamItem: BounceMarqueeNode runs a
     // withFrameNanos loop that invalidates draw every frame for as long as its text overflows, and

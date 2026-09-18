@@ -197,6 +197,9 @@ internal fun LiveTvSplitLayout(
             .fillMaxSize()
             .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical)
 
+    val previewRadius = CornerRadius.medium
+    val previewPaneShape = remember(previewRadius) { RoundedCornerShape(previewRadius) }
+
     val target = previewTarget
     if (target == null) {
         // Nothing focused/settled yet (e.g. streams still loading) — show the list only.
@@ -417,7 +420,7 @@ internal fun LiveTvSplitLayout(
                         Modifier
                             .fillMaxWidth()
                             .aspectRatio(16f / 9f)
-                            .clip(RoundedCornerShape(CornerRadius.medium))
+                            .clip(previewPaneShape)
                             .background(CinemaSurface),
                 ) {
                     // TextureView (not the default SurfaceView): this box sits next to the

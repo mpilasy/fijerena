@@ -44,6 +44,21 @@ fun GlassPanel(
             }
         }
 
+    val composeRenderEffect =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            remember(blurRadius) {
+                @Suppress("NewApi")
+                android.graphics.RenderEffect
+                    .createBlurEffect(
+                        blurRadius,
+                        blurRadius,
+                        android.graphics.Shader.TileMode.CLAMP,
+                    ).asComposeRenderEffect()
+            }
+        } else {
+            null
+        }
+
     Box(
         modifier =
             modifier
@@ -60,16 +75,9 @@ fun GlassPanel(
                 Modifier
                     .matchParentSize()
                     .then(
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            @Suppress("NewApi")
+                        if (composeRenderEffect != null) {
                             Modifier.graphicsLayer {
-                                renderEffect =
-                                    android.graphics.RenderEffect
-                                        .createBlurEffect(
-                                            blurRadius,
-                                            blurRadius,
-                                            android.graphics.Shader.TileMode.CLAMP,
-                                        ).asComposeRenderEffect()
+                                renderEffect = composeRenderEffect
                             }
                         } else {
                             Modifier
