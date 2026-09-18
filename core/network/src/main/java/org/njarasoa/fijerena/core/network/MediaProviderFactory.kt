@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network
 
 import android.content.Context
 import android.provider.Settings
+import java.util.concurrent.ConcurrentHashMap
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.serialization.json.Json
@@ -27,7 +28,9 @@ object MediaProviderFactory {
 
     // Cache of provider instances by provider ID
     // Prevents multiple auth sessions that can invalidate each other
-    private val providerCache = mutableMapOf<Long, MediaProvider>()
+    // ConcurrentHashMap: create() is called from background workers, IO dispatchers, and
+    // composables, while trimMemory()/clearCache() mutate/iterate it from other threads.
+    private val providerCache = ConcurrentHashMap<Long, MediaProvider>()
 
     /**
      * Get or create a [MediaProvider] for the given [ProviderEntity].
@@ -55,9 +58,10 @@ object MediaProviderFactory {
                 else -> createXtream(entity, context, password)
             }
 
-        // Cache the provider instance
-        providerCache[entity.id] = provider
-        return provider
+        // Cache the provider instance. putIfAbsent instead of a plain set: if another thread
+        // raced us and created one first, discard ours and return the one already cached, so
+        // callers never end up with two authenticated sessions for the same provider ID.
+        return providerCache.putIfAbsent(entity.id, provider) ?: provider
     }
 
     /**
