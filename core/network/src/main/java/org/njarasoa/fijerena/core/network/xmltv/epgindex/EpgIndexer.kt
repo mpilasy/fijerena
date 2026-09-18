@@ -657,7 +657,7 @@ class EpgIndexer private constructor(
                             EpgIndexState.NotIndexed
                         }
 
-                    incrementalVacuum()
+                    incrementalVacuumLocked()
                     deleted
                 }
             } catch (e: Exception) {
@@ -685,7 +685,20 @@ class EpgIndexer private constructor(
             }
         }
 
-    fun incrementalVacuum() {
+    /**
+     * Reclaim free pages left by delete-heavy operations. Acquires [writeMutex] itself — callers
+     * outside this class must go through this, not [incrementalVacuumLocked], since it runs
+     * `PRAGMA wal_checkpoint(TRUNCATE)`, which needs exclusive database access and would
+     * otherwise race any concurrent writeMutex-protected write elsewhere in this class.
+     */
+    suspend fun incrementalVacuum() =
+        withContext(Dispatchers.IO) {
+            writeMutex.withLock {
+                incrementalVacuumLocked()
+            }
+        }
+
+    private fun incrementalVacuumLocked() {
         try {
             val sdb = EpgIndexDatabase.getInstance(context).openHelper.writableDatabase
             var remaining = freelistCount(sdb)
@@ -694,7 +707,8 @@ class EpgIndexer private constructor(
             // transaction — on a database that has accumulated over a million of them that is a
             // multi-minute write with the DB locked throughout. Walking it in chunks gives readers
             // a gap between each batch and keeps any one transaction small.
-            while (remaining > 0) {
+            var progressing = true
+            while (remaining > 0 && progressing) {
                 sdb.execPragma("PRAGMA incremental_vacuum($VACUUM_CHUNK_PAGES)")
                 var left = freelistCount(sdb)
                 if (left >= remaining) {
@@ -707,8 +721,8 @@ class EpgIndexer private constructor(
                     sdb.execPragma("PRAGMA wal_checkpoint(TRUNCATE)")
                     sdb.execPragma("PRAGMA incremental_vacuum($VACUUM_CHUNK_PAGES)")
                     left = freelistCount(sdb)
-                    if (left >= remaining) break
                 }
+                progressing = left < remaining
                 remaining = left
             }
             if (started > 0) {

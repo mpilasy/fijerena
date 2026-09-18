@@ -10,6 +10,7 @@ import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.CancellationException
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 
@@ -56,6 +57,9 @@ class EpgFtsRebuildWorker(
             indexer.incrementalVacuum()
             Log.i(TAG, "doWork: FTS rebuild complete")
             Result.success()
+        } catch (e: CancellationException) {
+            // WorkManager stopped this run — not a rebuild failure.
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "doWork: FTS rebuild failed — ${e.message}", e)
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()

@@ -32,17 +32,21 @@ import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.EpgResponse
+import java.util.concurrent.ConcurrentHashMap
 
 class XtreamMediaProvider(
     override val providerId: Long,
     private val repository: XtreamRepository,
     private val tmdb: TmdbApiService = TmdbApiService(BuildConfig.TMDB_API_KEY),
 ) : MediaProvider {
-    private val searchDataSizes = mutableMapOf<String, Long>()
+    // ConcurrentHashMap: this provider instance is shared across background sync workers,
+    // catalog search coroutines, and UI viewmodels, all of which can read/write these
+    // concurrently on different dispatchers.
+    private val searchDataSizes = ConcurrentHashMap<String, Long>()
 
     // Cache: tmdbSeriesId -> (season, episodeNumber) -> overview.
     // Keeps reopens cheap without hitting TMDB again this session.
-    private val tmdbOverviewCache = mutableMapOf<Int, Map<Pair<Int, Int>, String>>()
+    private val tmdbOverviewCache = ConcurrentHashMap<Int, Map<Pair<Int, Int>, String>>()
 
     // Full movie/series detail (plot, cast, genre, rating, contentRating, episodes, etc.) rarely
     // changes, but assembling it costs a live Xtream call plus TMDB enrichment — cache the fully

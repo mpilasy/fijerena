@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -537,6 +538,10 @@ class XtreamContentManager(
                         if (key.isNotEmpty()) {
                             commitAsync { putLong(key, System.currentTimeMillis()) }
                         }
+                    } catch (e: CancellationException) {
+                        // Not a sync failure — let RefreshQueue see the real cancellation instead
+                        // of this task silently completing as if it had succeeded.
+                        throw e
                     } catch (e: Exception) {
                         android.util.Log.e("XtreamContentManager", "Error syncing data", e)
                     }
@@ -678,6 +683,8 @@ class XtreamContentManager(
 
                             commitAsync { putLong(KEY_STREAMS_TIMESTAMP_PREFIX + type, System.currentTimeMillis()) }
                         }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         android.util.Log.e("XtreamContentManager", "Error syncing streams", e)
                     }
@@ -797,6 +804,8 @@ class XtreamContentManager(
 
                             commitAsync { putLong(KEY_STREAMS_TIMESTAMP_PREFIX + "SERIES", System.currentTimeMillis()) }
                         }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         android.util.Log.e("XtreamContentManager", "Error syncing series", e)
                     }

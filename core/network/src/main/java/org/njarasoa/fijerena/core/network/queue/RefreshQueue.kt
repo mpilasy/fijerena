@@ -95,55 +95,61 @@ object RefreshQueue {
     }
 
     private suspend fun processAvailable() {
-        while (true) {
-            val queuedTask =
+        var hasMore = true
+        while (hasMore) {
+            // Dequeue, launch, and register the real Job in activeTasks all inside one lock
+            // acquisition. A prior version registered a disconnected placeholder Job() here and
+            // swapped in the real one after launching — a cancelAll() landing in that window
+            // cancelled the placeholder (a no-op) and cleared activeTasks, then the real job got
+            // re-inserted afterward, uncancelled and untouched by the cancellation it should have
+            // seen.
+            hasMore =
                 queueMutex.withLock {
-                    val task = queue.poll()
-                    if (task != null) {
+                    val queuedTask = queue.poll()
+                    if (queuedTask != null) {
                         _queuedTaskIds.value = queue.map { it.task.id }.toSet()
-                        activeTasks[task.task.id] = ActiveTask(Job(), task.deferred)
+                        val job = scope.launch { runTask(queuedTask) }
+                        activeTasks[queuedTask.task.id] = ActiveTask(job, queuedTask.deferred)
                     }
-                    task
-                } ?: break
+                    queuedTask != null
+                }
+        }
+    }
 
-            // Launch each task in its own coroutine, governed by the semaphore
-            val job =
-                scope.launch {
-                    semaphore.withPermit {
-                        // All _activeTaskIds/_isProcessing transitions go through queueMutex so
-                        // concurrent completions can't race a read-modify-write on the StateFlow
-                        // and strand an ID (see RefreshQueue finding in the concurrency audit).
-                        queueMutex.withLock {
-                            _activeTaskIds.value = _activeTaskIds.value + queuedTask.task.id
-                            _isProcessing.value = true
-                        }
-                        try {
-                            queuedTask.task.execute()
-                            queuedTask.deferred.complete(Unit)
-                        } catch (e: CancellationException) {
-                            // Not a task failure — the queue's scope was cancelled (e.g.
-                            // cancelAll()) or the task itself was cancelled. Logging it as an
-                            // error would misreport a normal pause as a pipeline failure.
-                            queuedTask.deferred.cancel(e)
-                            throw e
-                        } catch (e: Exception) {
-                            android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
-                            queuedTask.deferred.completeExceptionally(e)
-                        } finally {
-                            queueMutex.withLock {
-                                activeTasks.remove(queuedTask.task.id)
-                                _activeTaskIds.value = _activeTaskIds.value - queuedTask.task.id
-                                _isProcessing.value = _activeTaskIds.value.isNotEmpty()
-                            }
-                        }
+    private suspend fun runTask(queuedTask: QueuedTask) {
+        semaphore.withPermit {
+            // All _activeTaskIds/_isProcessing transitions go through queueMutex so concurrent
+            // completions can't race a read-modify-write on the StateFlow and strand an ID (see
+            // RefreshQueue finding in the concurrency audit).
+            queueMutex.withLock {
+                _activeTaskIds.value = _activeTaskIds.value + queuedTask.task.id
+                _isProcessing.value = true
+            }
+            try {
+                queuedTask.task.execute()
+                queuedTask.deferred.complete(Unit)
+            } catch (e: CancellationException) {
+                // Not a task failure — the queue's scope was cancelled (e.g. cancelAll()) or the
+                // task itself was cancelled. Logging it as an error would misreport a normal
+                // pause as a pipeline failure.
+                queuedTask.deferred.cancel(e)
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
+                queuedTask.deferred.completeExceptionally(e)
+            } finally {
+                // NonCancellable: this task's own coroutine may already be in the process of
+                // cancelling here (the catch block above rethrows), and queueMutex.withLock is a
+                // suspending call — without this, acquiring a contended lock while cancelling
+                // would throw immediately and skip the cleanup below, leaving the ID stranded in
+                // activeTaskIds and _isProcessing stuck true, the exact bug this is fixing.
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    queueMutex.withLock {
+                        activeTasks.remove(queuedTask.task.id)
+                        _activeTaskIds.value = _activeTaskIds.value - queuedTask.task.id
+                        _isProcessing.value = _activeTaskIds.value.isNotEmpty()
                     }
                 }
-
-            // Registered as active immediately, in the same dequeue step — not after the
-            // semaphore permit is acquired — so a task waiting on a full semaphore is still
-            // covered by submit()'s de-dup check, with no gap where it's in neither place.
-            queueMutex.withLock {
-                activeTasks[queuedTask.task.id] = ActiveTask(job, queuedTask.deferred)
             }
         }
     }
@@ -166,6 +172,10 @@ object RefreshQueue {
         queueMutex.withLock {
             activeTasks.values.forEach { it.job.cancel() }
             activeTasks.clear()
+            // Otherwise the sync spinner stays stuck on and stranded IDs block re-submission
+            // until each cancelled task's own coroutine gets scheduled to run its finally block.
+            _activeTaskIds.value = emptySet()
+            _isProcessing.value = false
         }
         clear()
     }

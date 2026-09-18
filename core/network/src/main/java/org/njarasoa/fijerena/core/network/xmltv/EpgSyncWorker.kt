@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -104,6 +105,11 @@ class EpgSyncWorker(
                     Result.success()
                 }
             }
+        } catch (e: CancellationException) {
+            // WorkManager stopped this run (constraints lost, timeout, replaced) — not a sync
+            // failure. Let it propagate so WorkManager sees a genuine cancellation rather than a
+            // logged failure headed for retry/failure classification.
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "doWork: failed — ${e.message}", e)
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
