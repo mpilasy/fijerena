@@ -51,6 +51,12 @@ class EpgChannelMatcher(
             cachedProviderId = providerId
             cachedInstance = matcher
         }
+
+        // Bounds native/JVM heap for very large or noisy XMLTV guides (many distinct channelId/
+        // channelName combinations). A full clear rather than real LRU eviction: hitting this cap
+        // is rare, entries are cheap to recompute, and it stays safe under concurrent access
+        // without hand-rolling a thread-safe LRU.
+        private const val MAX_MEMOIZED_MATCHES = 5_000
     }
 
     // Level 1: exact epgChannelId -> stream
@@ -103,6 +109,9 @@ class EpgChannelMatcher(
         channelName: String,
     ): EpgBrowserMatchedStream? {
         val key = MatchKey(channelId, channelName)
+        if (memoizedMatches.size >= MAX_MEMOIZED_MATCHES && !memoizedMatches.containsKey(key)) {
+            memoizedMatches.clear()
+        }
         return memoizedMatches.getOrPut(key) {
             MatchResult(doMatch(channelId, channelName))
         }.result
@@ -112,41 +121,42 @@ class EpgChannelMatcher(
         channelId: String,
         channelName: String,
     ): EpgBrowserMatchedStream? {
-        // 1. Exact epgChannelId == XMLTV channelId
-        byEpgId[channelId]?.let { return it.toMatched() }
-
-        // 2. Case-insensitive epgChannelId
-        byEpgIdLower[channelId.lowercase()]?.let { return it.toMatched() }
-
-        // 3. Exact stream name == channel name
-        byName[channelName]?.let { return it.toMatched() }
-
         val normalizedChannelName = ChannelNameNormalizer.normalize(channelName)
-        if (normalizedChannelName.isEmpty()) return null
-
-        // 4. Normalized name equality
-        byNormalized[normalizedChannelName]?.let { return it.toMatched() }
 
         // 5. Contains match (min 4 chars, pre-filter by length)
-        if (normalizedChannelName.length >= 4) {
-            val chanLen = normalizedChannelName.length
-            val names = normalizedNames
-            val streams = normalizedStreams
-            // Use traditional indexed for loop which compiles to highly optimized JVM bytecode
-            for (i in names.indices) {
-                val norm = names[i]
-                val normLen = norm.length
-
-                // Only check contains when needle ≤ haystack length
-                if (chanLen >= normLen) {
-                    if (normalizedChannelName.contains(norm)) return streams[i].toMatched()
-                } else {
-                    if (norm.contains(normalizedChannelName)) return streams[i].toMatched()
+        val containsMatch =
+            if (normalizedChannelName.length >= 4) {
+                val chanLen = normalizedChannelName.length
+                var found: XtreamStreamEntity? = null
+                // Use traditional indexed for loop which compiles to highly optimized JVM bytecode
+                for (i in normalizedNames.indices) {
+                    val norm = normalizedNames[i]
+                    val normLen = norm.length
+                    // Only check contains when needle ≤ haystack length
+                    val isMatch =
+                        if (chanLen >= normLen) normalizedChannelName.contains(norm) else norm.contains(normalizedChannelName)
+                    if (isMatch) {
+                        found = normalizedStreams[i]
+                        break
+                    }
                 }
+                found
+            } else {
+                null
             }
-        }
 
-        return null
+        val matchedStream =
+            // 1. Exact epgChannelId == XMLTV channelId
+            byEpgId[channelId]
+                // 2. Case-insensitive epgChannelId
+                ?: byEpgIdLower[channelId.lowercase()]
+                // 3. Exact stream name == channel name
+                ?: byName[channelName]
+                // 4. Normalized name equality
+                ?: (if (normalizedChannelName.isNotEmpty()) byNormalized[normalizedChannelName] else null)
+                ?: containsMatch
+
+        return matchedStream?.toMatched()
     }
 
     private fun XtreamStreamEntity.toMatched() =

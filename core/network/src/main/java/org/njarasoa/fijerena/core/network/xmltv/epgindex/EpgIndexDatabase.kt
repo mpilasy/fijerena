@@ -93,8 +93,12 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                                 // before the first table exists, and this callback runs after Room
                                 // has created the schema. See [CreationPragmaFactory].
                                 db.execSQL("PRAGMA synchronous = NORMAL")
-                                db.execSQL("PRAGMA cache_size = -64000") // 64MB cache
-                                db.execSQL("PRAGMA temp_store = MEMORY")
+                                // Baseline for every pooled connection, held for its lifetime (not
+                                // a temporary bump like EpgIndexer's rebuild/bulk-ingest PRAGMAs,
+                                // which reset afterward) — 64MB × several pooled connections was
+                                // reserving 200MB+ of native RAM on 1-2GB Android TV devices.
+                                db.execSQL("PRAGMA cache_size = -8000") // 8MB cache
+
                                 // journal_size_limit echoes its new value — Requery rejects execSQL
                                 // for any statement that produces rows, so it goes through
                                 // execPragma, which steps the cursor so the statement actually runs.

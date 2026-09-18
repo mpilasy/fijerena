@@ -130,11 +130,18 @@ class AdaptiveLoadControl(
                     }
             }
 
+        val targetBufferBytes =
+            when (contentType) {
+                PlayerConfigFactory.ContentType.LIVE_TV -> NetworkBufferProfile.LIVE_TARGET_BUFFER_BYTES
+                PlayerConfigFactory.ContentType.VOD -> NetworkBufferProfile.VOD_TARGET_BUFFER_BYTES
+            }
+
         return DefaultLoadControl.Builder()
             .setAllocator(sharedAllocator)
             .setBufferDurationsMs(durations.minBufferMs, durations.maxBufferMs, durations.playbackMs, durations.rebufferMs)
+            .setTargetBufferBytes(targetBufferBytes)
             .setBackBuffer(durations.backBufferMs, true)
-            .setPrioritizeTimeOverSizeThresholds(true)
+            .setPrioritizeTimeOverSizeThresholds(false)
             .build()
     }
 
@@ -179,6 +186,10 @@ class AdaptiveLoadControl(
     }
 
     override fun onReleased(playerId: PlayerId) {
+        // Otherwise these keep pinning the released player's TrackGroupArray/ExoTrackSelection
+        // object graph until this AdaptiveLoadControl itself is discarded.
+        lastPreparedPlayerId = null
+        lastTracksSelected = null
         delegate.onReleased(playerId)
     }
 

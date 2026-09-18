@@ -23,7 +23,7 @@ object NetworkBufferProfile {
 
     // ── WiFi VOD ────────────────────────────────────────────────────
     const val WIFI_VOD_MIN_BUFFER_MS = 30_000
-    const val WIFI_VOD_MAX_BUFFER_MS = 120_000
+    const val WIFI_VOD_MAX_BUFFER_MS = 60_000
     const val WIFI_VOD_PLAYBACK_MS = 2_500
     const val WIFI_VOD_REBUFFER_MS = 10_000
     const val WIFI_VOD_BACK_BUFFER_MS = 10_000
@@ -54,6 +54,15 @@ object NetworkBufferProfile {
     const val WIFI_READ_TIMEOUT_MS = 30_000
     const val CELLULAR_CONNECT_TIMEOUT_MS = 45_000
     const val CELLULAR_READ_TIMEOUT_MS = 30_000
+
+    // ── Target buffer byte caps ────────────────────────────────────
+    // DefaultLoadControl's automatic byte-size default (a few MB, independent of the stream's
+    // actual bitrate) combined with prioritizeTimeOverSizeThresholds(true) let a high-bitrate
+    // 4K VOD stream keep buffering well past it while chasing the time-based target, risking
+    // hundreds of MB of native allocation on 1-2GB Android TV devices. An explicit cap bounds
+    // worst-case memory regardless of stream bitrate.
+    const val VOD_TARGET_BUFFER_BYTES = 64 * 1024 * 1024
+    const val LIVE_TARGET_BUFFER_BYTES = 16 * 1024 * 1024
 
     // ── Cellular buffer multiplier functions ─────────────────────────
     // Apply multiplier to cellular buffers (WiFi always uses 1.0x)
