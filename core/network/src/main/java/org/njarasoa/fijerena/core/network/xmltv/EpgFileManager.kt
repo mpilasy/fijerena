@@ -1186,6 +1186,7 @@ class EpgFileManager private constructor(
                         continue
                     }
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     lastError = e.message ?: "unknown error"
                     lastException = e
                     Log.w(TAG, "EPG download error (attempt $attempt): $lastError", e)
@@ -1233,6 +1234,7 @@ class EpgFileManager private constructor(
                 contentSha256 = computedSha256, etag = responseEtag, lastModifiedHeader = responseLastModified,
             )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error downloading source: $label", e)
             sourceDao.markError(source.id, friendlyErrorMessage(e, context, appSettings.isDevMode))
             tmpFile.delete()
@@ -1389,6 +1391,7 @@ class EpgFileManager private constructor(
                 programmesIngested = ingestionStats.programmesIngested,
             )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Error ingesting source: $label", e)
             val display = friendlyErrorMessage(e, context, appSettings.isDevMode)
             sourceDao.markError(source.id, display)

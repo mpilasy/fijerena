@@ -73,6 +73,10 @@ class MovieDetailsViewModel(
     val alternateStreams: StateFlow<List<MediaItem>> = _alternateStreams.asStateFlow()
 
     private var relatedTitlesJob: Job? = null
+
+    // Each viewModelScope.launch(Dispatchers.IO) call may run on a different pool thread, so a
+    // write here has no guaranteed visibility to the next one without @Volatile.
+    @Volatile
     private var mediaRepository: MediaRepository? = null
     private val appSettings = AppSettings(context)
 
