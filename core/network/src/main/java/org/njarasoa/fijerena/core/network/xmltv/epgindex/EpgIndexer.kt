@@ -494,6 +494,18 @@ class EpgIndexer private constructor(
     }
 
     /**
+     * Clear staging rows for just [sourceIds], leaving any other source's in-flight or
+     * pending-retry staging data untouched.
+     */
+    suspend fun clearStagingForSources(sourceIds: List<Long>) = withContext(Dispatchers.IO) {
+        val db = EpgIndexDatabase.getInstance(context)
+        val dao = db.epgIndexDao()
+        writeMutex.withLock {
+            dao.clearStagingForSources(sourceIds)
+        }
+    }
+
+    /**
      * Prepare the database for a bulk ingestion session:
      *  - Drop Room's per-row FTS sync triggers so that millions of inserts don't
      *    each update the FTS shadow table. A single rebuild() at the end is far

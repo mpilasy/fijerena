@@ -687,8 +687,11 @@ class MediaRepository(
 
     // --- Recent Categories ---
 
-    // In-memory cache for recent categories — avoids JSON deserialization from SharedPreferences on every call
-    private var cachedRecentCategories: MutableMap<String, List<RecentCategory>> = mutableMapOf()
+    // In-memory cache for recent categories — avoids JSON deserialization from SharedPreferences
+    // on every call. ConcurrentHashMap: addToCategoryHistory() writes from Dispatchers.IO while
+    // getRecentlyViewedCategories() reads synchronously from the UI thread, and clearCache() can
+    // clear it from either.
+    private val cachedRecentCategories: MutableMap<String, List<RecentCategory>> = ConcurrentHashMap()
 
     fun addToCategoryHistory(
         categoryId: String,
