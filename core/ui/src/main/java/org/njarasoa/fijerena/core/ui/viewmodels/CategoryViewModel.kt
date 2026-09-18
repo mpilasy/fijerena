@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -156,6 +157,11 @@ class CategoryViewModel(
     private var initialLoadRetried = false
     private var categoriesRetried = false
 
+    // Guards against category-switch races (rapid D-pad/tap navigation launching overlapping
+    // queries): each new load cancels whatever's still in flight for the previous category.
+    private var loadStreamsJob: Job? = null
+    private var nowPlayingJob: Job? = null
+
     init {
         viewModelScope.launch {
             repository = AppContainer.getInstance(context).getMediaRepository()
@@ -285,9 +291,12 @@ class CategoryViewModel(
     }
 
     fun loadStreams(categoryId: String) {
-        viewModelScope.launch {
-            loadStreamsInternal(categoryId, isRetryEnabled = true)
-        }
+        loadStreamsJob?.cancel()
+        nowPlayingJob?.cancel()
+        loadStreamsJob =
+            viewModelScope.launch {
+                loadStreamsInternal(categoryId, isRetryEnabled = true)
+            }
     }
 
     /**
@@ -319,18 +328,22 @@ class CategoryViewModel(
             streams: List<MediaItem>,
             payloadSize: String? = null,
         ) {
-            currentStreams = streams
-            _uiState.value =
-                UiState.Success(
-                    categories = categories,
-                    selectedCategoryId = categoryId,
-                    streams = streams,
-                    streamsLoading = false,
-                    categoriesRefreshing = false,
-                    lastPlayedItemId = lastItemId,
-                    categoriesPayloadSize = getCategoriesPayloadSize(),
-                    streamsPayloadSize = payloadSize,
-                )
+            // A slower query for a category the user has since navigated away from must not
+            // clobber the state of whatever is now selected.
+            if (categoryId == currentCategoryId) {
+                currentStreams = streams
+                _uiState.value =
+                    UiState.Success(
+                        categories = categories,
+                        selectedCategoryId = categoryId,
+                        streams = streams,
+                        streamsLoading = false,
+                        categoriesRefreshing = false,
+                        lastPlayedItemId = lastItemId,
+                        categoriesPayloadSize = getCategoriesPayloadSize(),
+                        streamsPayloadSize = payloadSize,
+                    )
+            }
         }
 
         // Handle virtual categories
@@ -414,42 +427,44 @@ class CategoryViewModel(
 
     private fun loadNowPlaying(items: List<MediaItem>) {
         if (contentType != ContentType.LIVE_TV) return
-        viewModelScope.launch {
-            // Phase 1: Fast SQLite query for indexed channels
-            val indexResult = repository.getNowPlayingFromIndex(items.take(50))
-            if (indexResult.isNotEmpty()) {
-                _nowPlaying.value = indexResult
-            }
-
-            // Phase 2: Xtream API fallback for unmatched items
-            val caps = repository.getCapabilities()
-            if (caps?.supportsEpg != true) return@launch
-
-            val unmatchedItems = items.take(50).filter { it.id !in indexResult }
-            if (unmatchedItems.isEmpty()) return@launch
-
-            val now = System.currentTimeMillis() / 1000
-            // Accumulate across chunks and emit once. Emitting per chunk published a fresh map up
-            // to five times per list load (50 items / 10 per request), and every one of those is a
-            // new ImmutableNowPlaying that recomposes the whole channel list — interleaved with the
-            // network waits between chunks, so the list churned for as long as the fallback ran.
-            val collected = mutableMapOf<String, EpgProgram>()
-            for (chunk in unmatchedItems.chunked(10)) {
-                val streamIds = chunk.map { it.id }
-                val epgResult = repository.getEpgBulk(streamIds)?.getOrNull() ?: continue
-                for ((itemId, resp) in epgResult) {
-                    val airing = resp.listings.firstOrNull { now in it.startTime..it.endTime }
-                    if (airing != null) collected[itemId] = airing
+        nowPlayingJob?.cancel()
+        nowPlayingJob =
+            viewModelScope.launch {
+                // Phase 1: Fast SQLite query for indexed channels
+                val indexResult = repository.getNowPlayingFromIndex(items.take(50))
+                if (indexResult.isNotEmpty()) {
+                    _nowPlaying.value = indexResult
                 }
-            }
-            if (collected.isNotEmpty()) {
-                _nowPlaying.value = _nowPlaying.value + collected
-            }
 
-            // The catalogue-wide EPG ingest used to be fired off here. It is EpgSyncWorker's job
-            // now — running it from a list load meant a whole-catalogue fetch competing with
-            // video decode in the same process, which stuttered playback and eventually ANR'd.
-        }
+                // Phase 2: Xtream API fallback for unmatched items
+                val caps = repository.getCapabilities()
+                if (caps?.supportsEpg != true) return@launch
+
+                val unmatchedItems = items.take(50).filter { it.id !in indexResult }
+                if (unmatchedItems.isEmpty()) return@launch
+
+                val now = System.currentTimeMillis() / 1000
+                // Accumulate across chunks and emit once. Emitting per chunk published a fresh map up
+                // to five times per list load (50 items / 10 per request), and every one of those is a
+                // new ImmutableNowPlaying that recomposes the whole channel list — interleaved with the
+                // network waits between chunks, so the list churned for as long as the fallback ran.
+                val collected = mutableMapOf<String, EpgProgram>()
+                for (chunk in unmatchedItems.chunked(10)) {
+                    val streamIds = chunk.map { it.id }
+                    val epgResult = repository.getEpgBulk(streamIds)?.getOrNull() ?: continue
+                    for ((itemId, resp) in epgResult) {
+                        val airing = resp.listings.firstOrNull { now in it.startTime..it.endTime }
+                        if (airing != null) collected[itemId] = airing
+                    }
+                }
+                if (collected.isNotEmpty()) {
+                    _nowPlaying.value = _nowPlaying.value + collected
+                }
+
+                // The catalogue-wide EPG ingest used to be fired off here. It is EpgSyncWorker's job
+                // now — running it from a list load meant a whole-catalogue fetch competing with
+                // video decode in the same process, which stuttered playback and eventually ANR'd.
+            }
     }
 
     fun isFavorite(
@@ -713,9 +728,12 @@ class CategoryViewModel(
     }
 
     fun refreshStreams(categoryId: String) {
-        viewModelScope.launch {
-            loadStreamsInternal(categoryId, isRetryEnabled = false)
-        }
+        loadStreamsJob?.cancel()
+        nowPlayingJob?.cancel()
+        loadStreamsJob =
+            viewModelScope.launch {
+                loadStreamsInternal(categoryId, isRetryEnabled = false)
+            }
     }
 
     /**
