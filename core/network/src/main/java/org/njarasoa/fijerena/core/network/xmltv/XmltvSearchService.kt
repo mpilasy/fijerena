@@ -16,6 +16,13 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSearchResultRow
 import java.util.Locale
 
 /**
+ * Thrown when a search hits the FTS index while it's marked stale (mid-ingest or mid-rebuild).
+ * Distinct from a genuine "no results" so callers can tell the user to wait instead of
+ * silently reporting nothing found.
+ */
+class EpgIndexBusyException : Exception("EPG index optimizing, please wait...")
+
+/**
  * Searches programme titles in the SQLite FTS index.
  * All I/O is local — no network calls, no XML files on disk.
  */
@@ -121,6 +128,8 @@ class XmltvSearchService(
 
         return try {
             searchFromIndex(query, now, futureSixDays)
+        } catch (e: EpgIndexBusyException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "SQLite search failed", e)
             null
@@ -150,7 +159,7 @@ class XmltvSearchService(
         if (sourceIds.isEmpty()) {
             result = rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
         } else if (indexer.isFtsStale()) {
-            throw IllegalStateException("Index optimizing, please wait...")
+            throw EpgIndexBusyException()
         } else {
             // 1. Try Raw FTS Query (Supports OR, NEAR, etc.)
             val rawFtsQuery = buildRawFtsQuery(query)

@@ -141,7 +141,9 @@ fun TvEpgBrowserScreen(
     val isRefreshing =
         processingState is EpgFileManager.MultiSourceState.Pending ||
             processingState is EpgFileManager.MultiSourceState.Processing ||
-            processingState is EpgFileManager.MultiSourceState.Finalizing
+            processingState is EpgFileManager.MultiSourceState.Finalizing ||
+            indexState is EpgIndexState.Indexing ||
+            indexState is EpgIndexState.Optimizing
 
     val nowEpoch = rememberNowEpochSeconds()
     val scale = LocalUiScale.current
