@@ -109,8 +109,13 @@ object RefreshQueue {
             val job =
                 scope.launch {
                     semaphore.withPermit {
-                        _activeTaskIds.value = _activeTaskIds.value + queuedTask.task.id
-                        _isProcessing.value = true
+                        // All _activeTaskIds/_isProcessing transitions go through queueMutex so
+                        // concurrent completions can't race a read-modify-write on the StateFlow
+                        // and strand an ID (see RefreshQueue finding in the concurrency audit).
+                        queueMutex.withLock {
+                            _activeTaskIds.value = _activeTaskIds.value + queuedTask.task.id
+                            _isProcessing.value = true
+                        }
                         try {
                             queuedTask.task.execute()
                             queuedTask.deferred.complete(Unit)
@@ -118,9 +123,11 @@ object RefreshQueue {
                             android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
                             queuedTask.deferred.completeExceptionally(e)
                         } finally {
-                            queueMutex.withLock { activeTasks.remove(queuedTask.task.id) }
-                            _activeTaskIds.value = _activeTaskIds.value - queuedTask.task.id
-                            _isProcessing.value = _activeTaskIds.value.isNotEmpty()
+                            queueMutex.withLock {
+                                activeTasks.remove(queuedTask.task.id)
+                                _activeTaskIds.value = _activeTaskIds.value - queuedTask.task.id
+                                _isProcessing.value = _activeTaskIds.value.isNotEmpty()
+                            }
                         }
                     }
                 }
