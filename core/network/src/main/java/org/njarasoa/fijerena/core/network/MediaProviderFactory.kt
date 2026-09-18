@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.remote.RemoteM3uMediaProvider
 import org.njarasoa.fijerena.core.network.smb.SmbClient
 import org.njarasoa.fijerena.core.network.smb.SmbMediaProvider
+import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 
 /**
@@ -90,6 +91,7 @@ object MediaProviderFactory {
      */
     fun clearCache(providerId: Long) {
         providerCache.remove(providerId)
+        EpgChannelMatcher.clearCache()
     }
 
     /**
@@ -97,15 +99,20 @@ object MediaProviderFactory {
      */
     fun clearAllCaches() {
         providerCache.clear()
+        EpgChannelMatcher.clearCache()
     }
 
     /**
      * Tells every cached provider to drop its in-memory detail/search caches, without evicting
      * the provider instances themselves (that would force a re-auth). Called on system memory
      * pressure — see [org.njarasoa.fijerena.core.ui.FijerenaApplication.onTrimMemory].
+     *
+     * Also drops EpgChannelMatcher's cached lookup maps (30-60MB for large providers) — it has
+     * no other eviction hook and previously stayed pinned for the life of the process.
      */
     fun trimMemory() {
         providerCache.values.forEach { it.trimMemory() }
+        EpgChannelMatcher.clearCache()
     }
 
     private fun createXtream(

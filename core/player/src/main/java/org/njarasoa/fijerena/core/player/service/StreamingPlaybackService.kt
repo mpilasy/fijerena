@@ -1012,7 +1012,9 @@ class StreamingPlaybackService : MediaSessionService() {
         serviceScope?.cancel()
         serviceScope = null
         adaptiveLoadControl = null
-        NetworkMonitor.release()
+        // NetworkMonitor.release() used to run here, but it's a process-wide singleton other
+        // components (EPG sync, provider loading) depend on for live connectivity callbacks —
+        // tearing it down on every playback stop cut those off until the next playback started.
         instance = null
         // Any caller already suspended in awaitInstance() holds a reference to *this* deferred,
         // not the field below — reassigning the field alone leaves them awaiting an object

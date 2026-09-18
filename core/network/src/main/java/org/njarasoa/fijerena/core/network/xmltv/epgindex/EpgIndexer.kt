@@ -424,13 +424,20 @@ class EpgIndexer private constructor(
                     sdb.execSQL("PRAGMA temp_store = MEMORY")
                     sdb.execSQL("PRAGMA cache_size = -16000")
 
-                    Log.d(TAG, "rebuildFtsAndUpdateState: executing FTS rebuild")
-                    // 'rebuild' scans the content table (epg_programme) and repopulates FTS from
-                    // scratch. Required after bulk ingestion because FTS triggers are dropped during
-                    // bulk — 'optimize' only merges existing segments and cannot restore missing entries.
-                    sdb.execSQL("INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')")
-
-                    sdb.execSQL("PRAGMA synchronous = NORMAL")
+                    try {
+                        Log.d(TAG, "rebuildFtsAndUpdateState: executing FTS rebuild")
+                        // 'rebuild' scans the content table (epg_programme) and repopulates FTS from
+                        // scratch. Required after bulk ingestion because FTS triggers are dropped during
+                        // bulk — 'optimize' only merges existing segments and cannot restore missing entries.
+                        sdb.execSQL("INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')")
+                    } finally {
+                        // Room pools this connection, so anything left set here stays set for the
+                        // life of the process — reset even if the rebuild above throws, not just
+                        // on success.
+                        sdb.execSQL("PRAGMA synchronous = NORMAL")
+                        sdb.execSQL("PRAGMA cache_size = -2000")
+                        sdb.execSQL("PRAGMA temp_store = DEFAULT")
+                    }
 
                     val now = System.currentTimeMillis()
                     val finalChannelCount = dao.getChannelCount()
