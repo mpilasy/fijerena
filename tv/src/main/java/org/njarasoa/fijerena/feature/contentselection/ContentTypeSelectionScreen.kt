@@ -72,11 +72,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -163,11 +163,16 @@ fun ContentTypeSelectionScreen(
                     providerName = activeProvider.name
                     providerType = activeProvider.type
                     activeProviderId = activeProvider.id
-                    val password = providerRepo.getPassword(activeProvider.id) ?: ""
-                    val mediaProvider = MediaProviderFactory.create(activeProvider, context.applicationContext, password)
-                    supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
-                    mediaProviderRef = mediaProvider
-                    mediaProvider.capabilities.supportedContentTypes
+                    // Reuse the app-wide managed repository/provider instead of creating an
+                    // unmanaged standalone one: same cached auth session, and connect() has
+                    // already been run for it.
+                    val repo = AppContainer.getInstance(context.applicationContext).getMediaRepository(activeProvider.id)
+                    val mediaProvider = repo.getProvider()
+                    if (mediaProvider != null) {
+                        supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
+                        mediaProviderRef = mediaProvider
+                    }
+                    mediaProvider?.capabilities?.supportedContentTypes
                 } else {
                     providerName = appSettings.providerName
                     null
