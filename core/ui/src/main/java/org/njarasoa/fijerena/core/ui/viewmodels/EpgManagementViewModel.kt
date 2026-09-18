@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -87,11 +88,16 @@ class EpgManagementViewModel(
     private val _selectedIds = MutableStateFlow<Set<Long>>(emptySet())
     val selectedIds: StateFlow<Set<Long>> = _selectedIds.asStateFlow()
 
-    // Flow that emits latest programme end times for all sources
+    // Flow that emits latest programme end times for all sources. Keyed off the set of source
+    // IDs, not the full `sources` list: during an active sync, `sources` re-emits on every
+    // progress field update (lastIngestedAtMs, lastError, ...), which used to restart this
+    // flatMapLatest and re-run a MAX(end_epoch) full scan per source on every one of those
+    // emissions. `_dbGeneration` (bumped below on sync completion, and on a full DB wipe) is
+    // what actually signals new data to query for.
     val latestProgrammeTimes: StateFlow<Map<Long, Long>> =
         sources
+            .distinctUntilChangedBy { list -> list.map { it.id } }
             .flatMapLatest { list ->
-                // Re-query whenever sources change or DB generation increments
                 _dbGeneration.map { gen ->
                     withContext(Dispatchers.IO) {
                         list.associate { source ->
@@ -210,6 +216,13 @@ class EpgManagementViewModel(
     init {
         refreshDbStats()
         refreshMaintenanceState()
+        viewModelScope.launch {
+            processingState.collect { state ->
+                if (state is EpgFileManager.MultiSourceState.Completed) {
+                    _dbGeneration.value++
+                }
+            }
+        }
     }
 
     fun refreshMaintenanceState() {

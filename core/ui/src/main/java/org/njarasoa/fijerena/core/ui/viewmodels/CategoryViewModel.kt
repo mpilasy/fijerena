@@ -76,6 +76,7 @@ class CategoryViewModel(
     }
 
     fun getPayloadSize(categoryId: String): String? {
+        if (!::repository.isInitialized) return null
         val key =
             when {
                 categoryId.startsWith("vod_") -> "category_$categoryId"
@@ -87,15 +88,18 @@ class CategoryViewModel(
         return repository.getPayloadSize(key)
     }
 
-    fun getCategoriesPayloadSize(): String? =
-        when (contentType) {
+    fun getCategoriesPayloadSize(): String? {
+        if (!::repository.isInitialized) return null
+        return when (contentType) {
             ContentType.LIVE_TV -> repository.getPayloadSize("live_categories")
             ContentType.MOVIES -> repository.getPayloadSize("vod_categories")
             ContentType.TV_SHOWS -> repository.getPayloadSize("series_categories")
             else -> null
         }
+    }
 
     fun getFetchTime(categoryId: String): String? {
+        if (!::repository.isInitialized) return null
         val key =
             when {
                 categoryId.startsWith("vod_") -> "category_$categoryId"
@@ -107,13 +111,15 @@ class CategoryViewModel(
         return repository.getFetchTimeFormatted(key)
     }
 
-    fun getCategoriesFetchTime(): String? =
-        when (contentType) {
+    fun getCategoriesFetchTime(): String? {
+        if (!::repository.isInitialized) return null
+        return when (contentType) {
             ContentType.LIVE_TV -> repository.getFetchTimeFormatted("live_categories")
             ContentType.MOVIES -> repository.getFetchTimeFormatted("vod_categories")
             ContentType.TV_SHOWS -> repository.getFetchTimeFormatted("series_categories")
             else -> null
         }
+    }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
