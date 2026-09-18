@@ -124,8 +124,9 @@ object NetworkModule {
         }
 
         private fun isIpAddress(hostname: String): Boolean =
-            hostname.matches(Regex("""^(\d{1,3}\.){3}\d{1,3}$""")) || hostname.contains(":")
+            hostname.matches(IPV4_REGEX) || hostname.contains(":")
 
         private const val TAG = "NetworkModule"
+        private val IPV4_REGEX = Regex("""^(\d{1,3}\.){3}\d{1,3}$""")
     }
 }

@@ -66,12 +66,13 @@ class SmbClient(
 
     fun isConnected(): Boolean = share != null
 
-    fun listDirectory(path: String): List<FileIdBothDirectoryInformation> {
-        val diskShare = share ?: throw IllegalStateException("Not connected")
-        return diskShare.list(path).filter {
-            it.fileName != "." && it.fileName != ".."
+    fun listDirectory(path: String): List<FileIdBothDirectoryInformation> =
+        synchronized(this) {
+            val diskShare = share ?: throw IllegalStateException("Not connected")
+            diskShare.list(path).filter {
+                it.fileName != "." && it.fileName != ".."
+            }
         }
-    }
 
     fun isDirectory(path: String): Boolean {
         val diskShare = share ?: return false
@@ -85,19 +86,20 @@ class SmbClient(
         }
     }
 
-    fun openInputStream(path: String): InputStream {
-        val diskShare = share ?: throw IllegalStateException("Not connected")
-        val file =
-            diskShare.openFile(
-                path,
-                EnumSet.of(AccessMask.GENERIC_READ),
-                null,
-                EnumSet.of(SMB2ShareAccess.FILE_SHARE_READ),
-                SMB2CreateDisposition.FILE_OPEN,
-                null,
-            )
-        return SmbFileInputStream(file)
-    }
+    fun openInputStream(path: String): InputStream =
+        synchronized(this) {
+            val diskShare = share ?: throw IllegalStateException("Not connected")
+            val file =
+                diskShare.openFile(
+                    path,
+                    EnumSet.of(AccessMask.GENERIC_READ),
+                    null,
+                    EnumSet.of(SMB2ShareAccess.FILE_SHARE_READ),
+                    SMB2CreateDisposition.FILE_OPEN,
+                    null,
+                )
+            SmbFileInputStream(file)
+        }
 }
 
 /** Closes the underlying SMB [File] handle (not released by closing its stream alone). */
