@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.EpgIndexBusyException
 import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
@@ -484,6 +485,9 @@ class EpgBrowserViewModel(
                 } catch (e: OutOfMemoryError) {
                     System.gc()
                     _uiState.value = UiState.Error(context.getString(R.string.epg_error_file_too_large))
+                } catch (e: EpgIndexBusyException) {
+                    // Index is being rebuilt (mid-sync) — not "no results", tell the user to wait.
+                    _uiState.value = UiState.Indexing(progressPercent = 0, programmesIndexed = 0)
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     _uiState.value = UiState.Error(e.message ?: context.getString(R.string.search_error_failed))

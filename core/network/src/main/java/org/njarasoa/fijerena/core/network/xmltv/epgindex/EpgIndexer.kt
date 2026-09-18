@@ -388,9 +388,9 @@ class EpgIndexer private constructor(
     /**
      * Rebuild FTS index and update metadata/state from current DB contents.
      *
-     * Marks FTS stale at entry so the old index is banned only for the duration
-     * of the actual rebuild, not for the scheduling gap before this function runs.
-     * Marks FTS clean on success so callers don't need to.
+     * Marks FTS stale at entry (redundant with the mark already set by beginBulkIngestion()
+     * for the ingestion path, but required when this is called standalone, e.g. by the
+     * crash-recovery worker). Marks FTS clean on success so callers don't need to.
      */
     suspend fun rebuildFtsAndUpdateState() =
         withContext(Dispatchers.IO) {
@@ -401,7 +401,7 @@ class EpgIndexer private constructor(
                 val dao = db.epgIndexDao()
 
                 writeMutex.withLock {
-                    markFtsStale() // Only mark stale when actually starting the FTS rebuild
+                    markFtsStale()
                     val sdb = db.openHelper.writableDatabase
 
                     val currentChannelCount = dao.getChannelCount()
@@ -508,6 +508,13 @@ class EpgIndexer private constructor(
                     if (sdb.isReadOnly) {
                         Log.w(TAG, "beginBulkIngestion: connection is read-only, attempting to modify might fail")
                     }
+
+                    // FTS sync triggers are dropped below, so from this point on writes to
+                    // epg_programme (direct on low-storage devices, or via the staging swap
+                    // otherwise) no longer keep the FTS shadow table in sync. Mark stale now,
+                    // not just when rebuildFtsAndUpdateState() later runs, so a search mid-ingest
+                    // gets "still updating" instead of silently querying a mismatched index.
+                    markFtsStale()
 
                     FTS_TRIGGER_NAMES.forEach { name ->
                         sdb.execSQL("DROP TRIGGER IF EXISTS `$name`")

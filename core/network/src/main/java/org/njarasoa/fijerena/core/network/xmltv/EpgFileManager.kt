@@ -754,6 +754,13 @@ class EpgFileManager private constructor(
             // confirmed unchanged would still trigger a swap and an FTS rebuild for nothing.
             val anyIngested = allStats.any { it.error == null && !it.unchanged && (it.channelsIngested > 0 || it.programmesIngested > 0) }
 
+            // beginBulkIngestion() marked FTS stale defensively before we knew whether anything
+            // would actually change. Nothing did — the triggers dropped during bulk are the only
+            // thing that could have desynced FTS, and no write happened, so it's still consistent.
+            if (!anyIngested) {
+                indexer.markFtsClean()
+            }
+
             // Perform Atomic Swap before FTS rebuild
             if (anyIngested && useStaging) {
                 _state.value = MultiSourceState.Finalizing(
