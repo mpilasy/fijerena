@@ -1,6 +1,6 @@
 # Concurrency, Memory Pressure & Stability Remediation Plan
 
-**Status:** Proposed  
+**Status:** Done — all 5 phases implemented 2026-09-18  
 **Date:** 2026-09-18  
 **Scope:** `core:ui`, `core:network`, `core:player`, `tv`, `mobile`
 
@@ -123,7 +123,7 @@ graph TD
     Phase4 --> Phase5[Phase 5: EPG Memory Tuning & SMB Thread Safety]
 ```
 
-### Phase 1: CategoryViewModel Concurrency Guards (P0 - Immediate)
+### Phase 1: CategoryViewModel Concurrency Guards (P0 - Immediate) — DONE
 * **Goal:** Eliminate split-pane state clobbering during rapid TV D-pad scrolling.
 * **Tasks:**
   1. Add `private var loadStreamsJob: Job? = null` and `private var nowPlayingJob: Job? = null` in `CategoryViewModel`.
@@ -131,28 +131,28 @@ graph TD
   3. In `loadNowPlaying(items)`: cancel `nowPlayingJob` before launching.
 * **Verification:** Rapid D-pad scrolling across category lists on TV emulator; verify selected category streams always match header.
 
-### Phase 2: Cache Thread-Safety & Mobile Lifecycle Fixes (P0 - Immediate)
+### Phase 2: Cache Thread-Safety & Mobile Lifecycle Fixes (P0 - Immediate) — DONE
 * **Goal:** Prevent `ConcurrentModificationException` during memory pressure and eliminate zombie viewmodel teardown.
 * **Tasks:**
   1. In `MediaProviderFactory.kt`, replace `mutableMapOf` with `ConcurrentHashMap<Long, MediaProvider>()` and guard mutations with a synchronized block.
   2. In `mobile/.../MobilePlayerScreen.kt`, remove the default argument `viewModel: PlaybackViewModel = viewModel()` and use `activityScopedViewModel` directly.
 * **Verification:** Verify mobile player enters and exits cleanly without stopping playback prematurely or dropping frames.
 
-### Phase 3: Cancellation Propagation & Field Volatility (P1)
+### Phase 3: Cancellation Propagation & Field Volatility (P1) — DONE
 * **Goal:** Ensure cooperative coroutine cancellation and safe cross-thread memory visibility.
 * **Tasks:**
   1. In `EpgFileManager.kt`, add `if (e is CancellationException) throw e` to catch blocks in `downloadSource` and `ingestDownloadedSource`.
   2. Annotate `SeriesDetailsViewModel.repository` and `MovieDetailsViewModel.mediaRepository` with `@Volatile`.
 * **Verification:** Cancel an in-flight EPG refresh; verify sources are not marked as errored in the database.
 
-### Phase 4: Content Selection AppContainer Alignment (P1)
+### Phase 4: Content Selection AppContainer Alignment (P1) — DONE
 * **Goal:** Prevent duplicate unmanaged provider instances on screen launch.
 * **Tasks:**
   1. Refactor TV and mobile `ContentTypeSelectionScreen.kt` to obtain providers via `AppContainer.getMediaRepository()`.
   2. Verify backdrop and category count queries execute against cached repository state.
 * **Verification:** Verify no duplicate network sessions or OkHttp clients created on screen entry.
 
-### Phase 5: EPG Memory Tuning & SMB Synchronization (P2)
+### Phase 5: EPG Memory Tuning & SMB Synchronization (P2) — DONE
 * **Goal:** Reduce native memory footprint during FTS indexing and eliminate SMB disconnect crashes.
 * **Tasks:**
   1. In `EpgIndexer.rebuildFtsAndUpdateState()`, adjust `PRAGMA temp_store` and reduce page cache allocation to 16MB.
@@ -169,3 +169,14 @@ Every phase must satisfy:
 2. `./gradlew testDebugUnitTest` — 199+ unit tests pass.
 3. `./gradlew assembleDebug` — successful compilation for both mobile and TV targets.
 4. Single-return statement adherence and token-based styling.
+
+---
+
+## 5. Implementation Record
+
+All 5 phases implemented and verified against the gates above on 2026-09-18:
+
+- Phase 1 + 2 (Findings 1-3): commit `9486396d`
+- Phase 3 (Findings 4-5): commit `79b57ad4`
+- Phase 4 (Finding 6): commit `67dbfe85`
+- Phase 5 (Findings 7-9): commit `e26c6fca`
