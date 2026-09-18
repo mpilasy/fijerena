@@ -817,12 +817,15 @@ class EpgFileManager private constructor(
             // needs its triggers back for the next incremental write.
             indexer.endBulkIngestion()
         } catch (e: Exception) {
-            Log.e(TAG, "processAllSources failed: ${e.message}", e)
             withContext(NonCancellable) {
                 EpgIndexer.getInstance(context).endBulkIngestion()
             }
-            _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
+            // Checked before logging/setting Error state: a cancelled run isn't a processing
+            // failure, and flashing a red error onto the EPG management screen for a normal
+            // cancellation (e.g. leaving the screen mid-refresh) is misleading.
             if (e is CancellationException) throw e
+            Log.e(TAG, "processAllSources failed: ${e.message}", e)
+            _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
         }
     }
 
@@ -1024,12 +1027,12 @@ class EpgFileManager private constructor(
             // before. Still unconditional: an unchanged/skipped source still needs them back.
             indexer.endBulkIngestion()
         } catch (e: Exception) {
-            Log.e(TAG, "processSingleSource failed: ${e.message}", e)
             withContext(NonCancellable) {
                 EpgIndexer.getInstance(context).endBulkIngestion()
             }
-            _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
             if (e is CancellationException) throw e
+            Log.e(TAG, "processSingleSource failed: ${e.message}", e)
+            _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
         }
     }
 
@@ -1057,9 +1060,14 @@ class EpgFileManager private constructor(
         scope.launch {
             try {
                 RefreshQueue.cancelAll()
-                // Small delay to let cancelled tasks finish their catch blocks
-                delay(100)
-                EpgIndexer.getInstance(context).clearAll()
+                // ingestMutex.withLock (not a fixed delay) actually waits for a still-running
+                // processAllSourcesInternal/processSingleSourceInternal to reach its next
+                // suspension point and release the lock after cancellation — a fixed delay was a
+                // guess that could lose the race against a large in-flight batch write, letting
+                // clearAll() run concurrently with it.
+                ingestMutex.withLock {
+                    EpgIndexer.getInstance(context).clearAll()
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Clear all data failed: ${e.message}", e)
             } finally {
