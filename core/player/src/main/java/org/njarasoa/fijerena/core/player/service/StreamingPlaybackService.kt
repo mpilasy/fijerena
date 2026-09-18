@@ -1009,6 +1009,10 @@ class StreamingPlaybackService : MediaSessionService() {
         wakeLock = null
         playerListener = null
         analyticsListener = null
+        // Otherwise the closure set by the last screen's setPositionSaveListener() call (which
+        // captures that screen's ViewModel, and transitively its Activity context) stays pinned
+        // on this long-lived singleton until the next screen overwrites it.
+        onPositionSaveListener = null
         serviceScope?.cancel()
         serviceScope = null
         adaptiveLoadControl = null
@@ -1403,6 +1407,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private const val SEEK_HEALTH_GRACE_MS = 6000L
         private const val SEAMLESS_RECYCLE_GRACE_MS = 7000L
         private const val POSITION_SAVE_INTERVAL_MS = 10_000L
+        private const val AWAIT_INSTANCE_TIMEOUT_MS = 10_000L
 
         @Volatile
         private var instance: StreamingPlaybackService? = null
@@ -1412,7 +1417,10 @@ class StreamingPlaybackService : MediaSessionService() {
 
         fun getInstance(): StreamingPlaybackService? = instance
 
-        suspend fun awaitInstance(): StreamingPlaybackService = instanceReady.await()
+        // Bounded so a caller can never suspend forever if the service fails to start
+        // (e.g. startService() silently refused, or Android never gets around to onCreate()).
+        suspend fun awaitInstance(): StreamingPlaybackService =
+            kotlinx.coroutines.withTimeout(AWAIT_INSTANCE_TIMEOUT_MS) { instanceReady.await() }
 
         fun getPlaybackState(service: StreamingPlaybackService): StateFlow<PlaybackState> = service.playbackState
 

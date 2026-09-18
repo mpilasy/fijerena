@@ -74,13 +74,30 @@ class PlaybackViewModel(
             }
         }
 
+    private var observeStateJob: Job? = null
+
     init {
         // connectToService() never returns (it collects a connection flow that stays open
         // for the life of the controller), so it must run in its own coroutine. Otherwise it
         // blocks observeServiceState() from ever starting, leaving playbackState stuck at Idle.
         startService()
         viewModelScope.launch { connectToService() }
-        viewModelScope.launch { observeServiceState() }
+        observeStateJob = viewModelScope.launch { observeServiceState() }
+    }
+
+    /**
+     * Re-subscribes to the service if it died since this ViewModel was created. It's common
+     * for one PlaybackViewModel to outlive several playback sessions (e.g. TV's embedded
+     * preview panel), but observeServiceState() only ever awaits and collects from a single
+     * service instance — once that instance is torn down by stopAndRelease(), a *new* service
+     * starting later is never subscribed to, leaving playbackState/currentMetadata frozen even
+     * though playback is actually working again. Call before starting a fresh stream.
+     */
+    private fun ensureServiceRunning() {
+        if (StreamingPlaybackService.getInstance() != null) return
+        startService()
+        observeStateJob?.cancel()
+        observeStateJob = viewModelScope.launch { observeServiceState() }
     }
 
     private suspend fun observeServiceState() {
@@ -127,13 +144,18 @@ class PlaybackViewModel(
         // Reset error state on new stream
         isInErrorState = false
         onFocusRegained()
+        ensureServiceRunning()
         // DO NOT set _playbackState.value = Buffering here!
         // Let the service handle the state transitions.
 
         viewModelScope.launch {
-            val service = StreamingPlaybackService.awaitInstance()
-            _currentMetadata.value = metadata
-            service.playStream(metadata, resumeFromPosition)
+            try {
+                val service = StreamingPlaybackService.awaitInstance()
+                _currentMetadata.value = metadata
+                service.playStream(metadata, resumeFromPosition)
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                _playbackState.value = PlaybackState.Error(context.getString(R.string.player_error_occurred))
+            }
         }
     }
 
