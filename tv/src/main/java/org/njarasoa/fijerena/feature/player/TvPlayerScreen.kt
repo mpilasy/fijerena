@@ -78,7 +78,7 @@ fun TvPlayerScreen(
         viewModel(
             factory =
                 StreamLoaderViewModelFactory(
-                    context = LocalContext.current,
+                    context = LocalContext.current.applicationContext,
                     initialStreamId = streamId,
                     initialStreamName = streamName,
                     categoryId = categoryId,
@@ -129,6 +129,10 @@ fun TvPlayerScreen(
     DisposableEffect(Unit) {
         onDispose {
             finalizeSession(playbackViewModel.playbackState.value, loaderViewModel)
+            // stopAndRelease() clears this too, but it's async (awaits the service instance
+            // first) — clearing synchronously here closes the window where the closure (and the
+            // ViewModel/context it captures) stays reachable from the still-alive service.
+            StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
             playbackViewModel.stopAndRelease()
         }
     }

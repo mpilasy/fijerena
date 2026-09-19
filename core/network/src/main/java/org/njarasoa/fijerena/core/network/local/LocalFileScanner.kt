@@ -109,7 +109,9 @@ object LocalFileScanner {
 
         rootFile.listFiles()?.forEach { file ->
             if (file.isDirectory) {
-                val catId = "local_dir_${categories.size}"
+                // Derived from the directory name, not scan order, so watch state and favorites
+                // (keyed on this id) survive the tree gaining or losing folders.
+                val catId = "local_dir_${file.name.hashCode()}"
                 categories.add(MediaCategory(id = catId, name = file.name))
                 scanFileSubdirectory(file, catId, items)
             } else if (file.isFile && isVideoFile(file.name)) {
@@ -117,7 +119,7 @@ object LocalFileScanner {
                     categories.add(0, MediaCategory(id = rootCategoryId, name = "Uncategorized"))
                     hasRootFiles = true
                 }
-                items.add(createFileMediaItem(file, rootCategoryId, items.size))
+                items.add(createFileMediaItem(file, rootCategoryId))
             }
         }
         return Pair(categories, items)
@@ -130,7 +132,7 @@ object LocalFileScanner {
     ) {
         directory.listFiles()?.forEach { file ->
             if (file.isFile && isVideoFile(file.name)) {
-                items.add(createFileMediaItem(file, categoryId, items.size))
+                items.add(createFileMediaItem(file, categoryId))
             } else if (file.isDirectory) {
                 scanFileSubdirectory(file, categoryId, items)
             }
@@ -140,10 +142,11 @@ object LocalFileScanner {
     private fun createFileMediaItem(
         file: File,
         categoryId: String,
-        index: Int,
     ): MediaItem =
         MediaItem(
-            id = "local_file_${index}_${file.name.hashCode()}",
+            // Full path, not just the file name: this function is called for both root-level
+            // and nested files, and two different subdirectories can share a file name.
+            id = "local_file_${file.path.hashCode()}",
             name = file.name.substringBeforeLast('.'),
             mediaType = MediaType.VIDEO_FILE,
             categoryId = categoryId,
@@ -275,7 +278,9 @@ object LocalFileScanner {
 
         rootDoc.listFiles().forEach { file ->
             if (file.isDirectory) {
-                val catId = "local_dir_${categories.size}"
+                // Derived from the SAF document URI, not scan order, so watch state and
+                // favorites (keyed on this id) survive the tree gaining or losing folders.
+                val catId = "local_dir_${file.uri.toString().hashCode()}"
                 val dirName = file.name ?: "Unknown Folder"
                 categories.add(
                     MediaCategory(
@@ -289,7 +294,7 @@ object LocalFileScanner {
                     categories.add(0, MediaCategory(id = rootCategoryId, name = "Uncategorized"))
                     hasRootFiles = true
                 }
-                items.add(documentFileToMediaItem(context, file, rootCategoryId, items.size))
+                items.add(documentFileToMediaItem(context, file, rootCategoryId))
             }
         }
 
@@ -304,7 +309,7 @@ object LocalFileScanner {
     ) {
         directory.listFiles().forEach { file ->
             if (file.isFile && isVideoFile(file.name)) {
-                items.add(documentFileToMediaItem(context, file, categoryId, items.size))
+                items.add(documentFileToMediaItem(context, file, categoryId))
             }
             // Flatten nested directories into the same category
             if (file.isDirectory) {
@@ -317,10 +322,11 @@ object LocalFileScanner {
         context: Context,
         file: DocumentFile,
         categoryId: String,
-        index: Int,
     ): MediaItem =
         MediaItem(
-            id = "local_file_$index",
+            // Derived from the SAF document URI, not scan order, so watch state and favorites
+            // (keyed on this id) survive the folder gaining or losing files.
+            id = "local_file_${file.uri.toString().hashCode()}",
             name = file.name?.substringBeforeLast('.') ?: "Unknown",
             mediaType = MediaType.VIDEO_FILE,
             categoryId = categoryId,

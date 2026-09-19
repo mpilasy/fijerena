@@ -129,7 +129,9 @@ class SmbMediaProvider(
                 for (entry in rootEntries) {
                     val fileName = entry.fileName
                     if (smbClient.isDirectory(fileName)) {
-                        val catId = "smb_dir_${catList.size}"
+                        // Derived from the directory name, not list position, so watch state and
+                        // favorites (keyed on this id) survive the share gaining or losing entries.
+                        val catId = "smb_dir_${fileName.hashCode()}"
                         catList.add(MediaCategory(id = catId, name = fileName))
                         scanDirectory(fileName, catId, itemList)
                     } else if (isVideoFile(fileName)) {
@@ -139,7 +141,7 @@ class SmbMediaProvider(
                         }
                         itemList.add(
                             MediaItem(
-                                id = "smb_file_${itemList.size}",
+                                id = "smb_file_${fileName.hashCode()}",
                                 name = fileName.substringBeforeLast('.'),
                                 mediaType = MediaType.VIDEO_FILE,
                                 categoryId = rootCategoryId,
@@ -172,7 +174,7 @@ class SmbMediaProvider(
                 } else if (isVideoFile(fileName)) {
                     itemList.add(
                         MediaItem(
-                            id = "smb_file_${itemList.size}",
+                            id = "smb_file_${fullPath.hashCode()}",
                             name = fileName.substringBeforeLast('.'),
                             mediaType = MediaType.VIDEO_FILE,
                             categoryId = categoryId,
