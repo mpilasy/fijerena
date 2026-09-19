@@ -304,7 +304,9 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/secret-store-migration-plan.md](docs/plans/secret-store-migration-plan.md) | Not started, deferred deliberately |
 | [docs/plans/ui-look-feel-uplift-plan.md](docs/plans/ui-look-feel-uplift-plan.md) | **Complete** - all four phases landed (2026-08-29) |
 | [docs/plans/codebase-robustness-plan.md](docs/plans/codebase-robustness-plan.md) | Proposed (2026-09-14) |
-| [docs/plans/concurrency-memory-stability-plan.md](docs/plans/concurrency-memory-stability-plan.md) | Proposed (2026-09-18) |
+| [docs/plans/concurrency-memory-stability-plan.md](docs/plans/concurrency-memory-stability-plan.md) | **Complete** - all five phases landed (2026-09-18) |
+| [docs/plans/concurrency-memory-stability-round2-plan.md](docs/plans/concurrency-memory-stability-round2-plan.md) | **Complete** - all four phases landed (2026-09-18); hardware/unit-test verification outstanding |
+| [docs/plans/systemic-concurrency-memory-stability-plan.md](docs/plans/systemic-concurrency-memory-stability-plan.md) | **Mostly complete** - Phases 1-3 and 3/4 of Phase 4 landed (2026-09-18); `LiveTvSplitLayout` early-return item deliberately skipped, hardware/unit-test verification outstanding |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 
