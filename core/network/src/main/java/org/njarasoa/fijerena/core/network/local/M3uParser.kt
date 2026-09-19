@@ -97,12 +97,15 @@ object M3uParser {
         val categoryMap = mutableMapOf<String, MediaCategory>()
         val items = mutableListOf<MediaItem>()
 
-        parse(reader).forEachIndexed { index, entry ->
+        parse(reader).forEach { entry ->
             val category =
                 categoryMap.getOrPut(entry.groupTitle) {
                     val newCat =
                         MediaCategory(
-                            id = "${idPrefix}_cat_${categories.size}",
+                            // Derived from the group name, not insertion order, so watch state
+                            // and favorites (keyed on this id) survive the playlist being
+                            // reordered or gaining/losing entries.
+                            id = "${idPrefix}_cat_${entry.groupTitle.hashCode()}",
                             name = entry.groupTitle,
                         )
                     categories.add(newCat)
@@ -111,7 +114,7 @@ object M3uParser {
 
             items.add(
                 MediaItem(
-                    id = "${idPrefix}_m3u_$index",
+                    id = "${idPrefix}_m3u_${entry.url.hashCode()}",
                     name = entry.name,
                     mediaType = if (entry.isLive) MediaType.LIVE_CHANNEL else MediaType.VIDEO_FILE,
                     categoryId = category.id,
@@ -134,9 +137,9 @@ object M3uParser {
         entries
             .map { it.groupTitle }
             .distinct()
-            .mapIndexed { index, group ->
+            .map { group ->
                 MediaCategory(
-                    id = "${idPrefix}_cat_$index",
+                    id = "${idPrefix}_cat_${group.hashCode()}",
                     name = group,
                 )
             }
@@ -147,10 +150,10 @@ object M3uParser {
         idPrefix: String = "local",
     ): List<MediaItem> {
         val categoryMap = categories.associateBy { it.name }
-        return entries.mapIndexed { index, entry ->
+        return entries.map { entry ->
             val category = categoryMap[entry.groupTitle]
             MediaItem(
-                id = "${idPrefix}_m3u_$index",
+                id = "${idPrefix}_m3u_${entry.url.hashCode()}",
                 name = entry.name,
                 mediaType = if (entry.isLive) MediaType.LIVE_CHANNEL else MediaType.VIDEO_FILE,
                 categoryId = category?.id ?: "local_cat_0",
