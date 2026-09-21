@@ -1,6 +1,6 @@
 # Adversarial Review Findings & Stability Plan
 
-**Status:** Phase 2 complete; Phases 1, 3, 4, 5 outstanding
+**Status:** Phases 1, 2 complete; Phases 3, 4, 5 outstanding
 **Scope:** `core:player`, `core:network`, `core:ui`, `scripts`
 
 ---
@@ -133,9 +133,10 @@ Nine defects across Xtream session lifecycle, playback teardown, network client 
 
 Ordered for implementation — do these in sequence, not in parallel; each phase is scoped to compile and verify independently before starting the next.
 
-### Phase 1 — Deploy script safety (Finding 8)
-Zero code dependency, highest real-world risk, blocks nothing else. Add the device-type check and mandatory `run-as tar` backup to `scripts/deploy-tv-ip.sh` before any other phase touches app code that might need a test deploy.
+### Phase 1 — Deploy script safety (Finding 8) — Done
+Zero code dependency, highest real-world risk, blocks nothing else. Added the device-type check and mandatory `run-as tar` backup to `scripts/deploy-tv-ip.sh` before any other phase touches app code that might need a test deploy.
 * **Files:** `scripts/deploy-tv-ip.sh`
+* **As implemented:** the reachability loop now also reads `getprop ro.build.characteristics` per target and skips (not aborts) any device that doesn't report `tv`, so a stray phone on the network can't get the TV APK. Each parallel install is now preceded, inside the same backgrounded subshell, by a `pm path` check — no existing install means nothing to protect, so it proceeds straight to install; an existing install requires the `run-as tar` backup (`shared_prefs` + `providers.db*`, matching the documented backup/restore procedure) to succeed and be non-empty, and aborts *that device's* install (not the whole run) if it doesn't, rather than risk an unprotected wipe. Backups land in `backups/<device>-<timestamp>.tar` at the repo root, now gitignored. Verified: `bash -n` syntax check, and the `getprop`/`pm path`/backup-tar commands dry-run read-only against both connected Shields (mdarcy, darcy) — both report `tv`, both have an existing install, and the backup command produced a valid non-empty tar for one of them. The install step itself was not run — no code changed here.
 
 ### Phase 2 — Xtream session & provider-cache cleanup (Findings 1, 2) — Done
 Same area as the lifecycle work already landed on `XtreamSessionManager`/`XtreamApiService` — closed the exception-path gap left open there, and extended the same close-on-teardown discipline to `MediaProviderFactory`'s eviction paths.
