@@ -7,8 +7,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 import org.njarasoa.fijerena.core.ui.R
 
@@ -26,6 +28,7 @@ class LoginViewModel(
     private val repository: XtreamRepository,
     private val context: Context,
 ) : ViewModel() {
+    private val appSettings = AppSettings(context)
     /**
      * UI state sealed class representing all possible login states.
      */
@@ -100,7 +103,10 @@ class LoginViewModel(
                             result.message?.contains("not active", ignoreCase = true) == true ->
                                 result.message ?: context.getString(R.string.login_error_account_inactive)
                             else ->
-                                context.getString(R.string.login_error_generic_format, result.message ?: context.getString(R.string.error_generic_unknown))
+                                context.getString(
+                                    R.string.login_error_generic_format,
+                                    friendlyErrorMessage(result.exception, context, appSettings.isDevMode),
+                                )
                         }
                     _uiState.value = UiState.Error(errorMessage)
                 }

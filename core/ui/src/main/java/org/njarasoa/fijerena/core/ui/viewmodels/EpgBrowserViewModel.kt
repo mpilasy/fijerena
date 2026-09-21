@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
@@ -490,7 +491,7 @@ class EpgBrowserViewModel(
                     _uiState.value = UiState.Indexing(progressPercent = 0, programmesIndexed = 0)
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
-                    _uiState.value = UiState.Error(e.message ?: context.getString(R.string.search_error_failed))
+                    _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
                 }
             }
     }

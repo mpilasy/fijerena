@@ -10,7 +10,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesId
@@ -22,6 +24,8 @@ class SeriesDetailsViewModel(
     private var categoryId: String,
     private var seriesName: String,
 ) : ViewModel() {
+    private val appSettings = AppSettings(context)
+
     // Written from Dispatchers.IO in ensureRepo(), read on Main via mediaRepository by
     // EpisodeSelectionScreen — @Volatile guarantees the write is visible across threads.
     @Volatile
@@ -301,13 +305,11 @@ class SeriesDetailsViewModel(
 
     private fun reportFailure(e: Throwable) {
         if (_uiState.value is UiState.Success) return
-        _uiState.value =
-            UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.series_error_load_failed))
+        _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
     }
 
     private fun reportSwitchFailure(e: Throwable) {
-        _uiState.value =
-            UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.series_error_load_failed))
+        _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
     }
 
     fun toggleFavorite(seriesName: String) {

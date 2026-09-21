@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.ParsedQuery
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.SearchUtils
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
@@ -358,7 +359,7 @@ class SearchViewModel(
                 )
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            _uiState.value = UiState.Error(e.message ?: context.getString(R.string.search_error_failed))
+            _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
         }
     }
 
