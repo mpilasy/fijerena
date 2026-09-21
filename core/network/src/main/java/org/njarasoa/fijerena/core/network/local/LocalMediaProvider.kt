@@ -1,6 +1,8 @@
 package org.njarasoa.fijerena.core.network.local
 import android.content.Context
 import androidx.core.net.toUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.BaseM3uMediaProvider
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -30,40 +32,45 @@ class LocalMediaProvider(
             supportsProgressSync = false,
         )
 
+    // Callers (e.g. CategoryViewModel.init via viewModelScope.launch, no dispatcher of its own)
+    // don't reliably run this on a background thread, and ContentResolver stream reads plus
+    // LocalFileScanner's directory recursion would otherwise execute on Main.
     override suspend fun connect(): Result<Unit> =
-        try {
-            val cats = mutableListOf<MediaCategory>()
-            val its = mutableListOf<MediaItem>()
+        withContext(Dispatchers.IO) {
+            try {
+                val cats = mutableListOf<MediaCategory>()
+                val its = mutableListOf<MediaItem>()
 
-            // Parse M3U if configured
-            if (config.m3uPath != null) {
-                val m3uUri = config.m3uPath.toUri()
-                val m3uData =
-                    context.contentResolver
-                        .openInputStream(m3uUri)
-                        ?.bufferedReader()
-                        ?.use { M3uParser.processEntries(it) }
+                // Parse M3U if configured
+                if (config.m3uPath != null) {
+                    val m3uUri = config.m3uPath.toUri()
+                    val m3uData =
+                        context.contentResolver
+                            .openInputStream(m3uUri)
+                            ?.bufferedReader()
+                            ?.use { M3uParser.processEntries(it) }
 
-                if (m3uData != null) {
-                    val (m3uCategories, m3uItems) = m3uData
-                    cats.addAll(m3uCategories)
-                    its.addAll(m3uItems)
+                    if (m3uData != null) {
+                        val (m3uCategories, m3uItems) = m3uData
+                        cats.addAll(m3uCategories)
+                        its.addAll(m3uItems)
+                    }
                 }
-            }
 
-            // Scan local directories
-            for (rootPath in config.rootPaths) {
-                val rootUri = rootPath.toUri()
-                val (dirCategories, dirItems) = LocalFileScanner.scanDirectory(context, rootUri)
-                cats.addAll(dirCategories)
-                its.addAll(dirItems)
-            }
+                // Scan local directories
+                for (rootPath in config.rootPaths) {
+                    val rootUri = rootPath.toUri()
+                    val (dirCategories, dirItems) = LocalFileScanner.scanDirectory(context, rootUri)
+                    cats.addAll(dirCategories)
+                    its.addAll(dirItems)
+                }
 
-            categories = cats
-            items = its
-            connected = true
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
+                categories = cats
+                items = its
+                connected = true
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
         }
 }

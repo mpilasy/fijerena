@@ -155,7 +155,7 @@ class EpgBrowserViewModel(
 
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
-    private var channelMatcher: EpgChannelMatcher? = null
+    @Volatile private var channelMatcher: EpgChannelMatcher? = null
 
     @Volatile private var lastMatcherProviderId: Long? = null
 

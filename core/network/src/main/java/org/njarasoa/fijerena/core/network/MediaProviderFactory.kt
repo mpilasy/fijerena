@@ -45,11 +45,13 @@ object MediaProviderFactory {
         entity: ProviderEntity,
         context: Context,
         password: String,
-    ): MediaProvider {
-        // Return cached provider if available
-        providerCache[entity.id]?.let { return it }
-
-        val provider =
+    ): MediaProvider =
+        // computeIfAbsent is atomic per key on ConcurrentHashMap: only one caller's block ever
+        // runs for a given provider id, even under concurrent access. The previous check-then-act
+        // (get, build, putIfAbsent) left a window where two racing callers could each build a
+        // full provider — including a real authenticated session — before only one got cached and
+        // the other silently discarded.
+        providerCache.computeIfAbsent(entity.id) {
             when (entity.type) {
                 "XTREAM" -> createXtream(entity, context, password)
                 "JELLYFIN" -> createJellyfin(entity, password, context)
@@ -58,12 +60,7 @@ object MediaProviderFactory {
                 "REMOTE_M3U" -> createRemoteM3u(entity, context)
                 else -> createXtream(entity, context, password)
             }
-
-        // Cache the provider instance. putIfAbsent instead of a plain set: if another thread
-        // raced us and created one first, discard ours and return the one already cached, so
-        // callers never end up with two authenticated sessions for the same provider ID.
-        return providerCache.putIfAbsent(entity.id, provider) ?: provider
-    }
+        }
 
     /**
      * Whether a provider carries live TV channels, and can therefore have an XMLTV EPG

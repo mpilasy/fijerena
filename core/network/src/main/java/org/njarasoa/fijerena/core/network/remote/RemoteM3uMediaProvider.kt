@@ -2,7 +2,9 @@ package org.njarasoa.fijerena.core.network.remote
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.BaseM3uMediaProvider
 import org.njarasoa.fijerena.core.network.local.M3uParser
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -38,24 +40,29 @@ class RemoteM3uMediaProvider(
 
     private val cacheFile = File(context.cacheDir, "remote_m3u_$providerId.m3u")
 
-    override suspend fun connect(): Result<Unit> {
-        return try {
-            val file = loadM3uContent()
-            val (cats, its) =
-                file.bufferedReader().use { reader ->
-                    M3uParser.processEntries(reader, ID_PREFIX)
+    // Callers (e.g. CategoryViewModel.init via viewModelScope.launch, no dispatcher of its own)
+    // don't reliably run this on a background thread, and the raw HttpURLConnection I/O below
+    // would otherwise throw NetworkOnMainThreadException on Main.
+    override suspend fun connect(): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val file = loadM3uContent()
+                val (cats, its) =
+                    file.bufferedReader().use { reader ->
+                        M3uParser.processEntries(reader, ID_PREFIX)
+                    }
+                if (its.isEmpty()) {
+                    Result.failure(IllegalStateException("No valid entries found in M3U playlist"))
+                } else {
+                    categories = cats
+                    items = its
+                    connected = true
+                    Result.success(Unit)
                 }
-            if (its.isEmpty()) {
-                return Result.failure(IllegalStateException("No valid entries found in M3U playlist"))
+            } catch (e: Exception) {
+                Result.failure(e)
             }
-            categories = cats
-            items = its
-            connected = true
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
         }
-    }
 
     private suspend fun loadM3uContent(): File {
         // Check cache
