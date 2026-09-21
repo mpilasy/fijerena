@@ -60,7 +60,24 @@ done
 
 ./gradlew clean :tv:assembleDebug
 
+# Installs run in parallel — safe now that the build (the part that was actually racing before,
+# via a shared output directory) has already finished: each install only reads the finished APK
+# and targets its own device serial, so there's no shared mutable state between them.
+PIDS=()
 for TARGET in "${REACHABLE[@]}"; do
-    adb -s "$TARGET" install -r tv/build/outputs/apk/debug/tv-debug.apk
-    echo "Installed on $TARGET"
+    (
+        adb -s "$TARGET" install -r tv/build/outputs/apk/debug/tv-debug.apk
+        echo "Installed on $TARGET"
+    ) &
+    PIDS+=("$!")
 done
+
+FAILED=0
+for PID in "${PIDS[@]}"; do
+    wait "$PID" || FAILED=1
+done
+
+if [ "$FAILED" -eq 1 ]; then
+    echo "One or more installs failed." >&2
+    exit 1
+fi
