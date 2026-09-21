@@ -14,7 +14,7 @@ object FavoriteKind {
  *
  * Replaces the `favorites_v2` and `favorite_categories` SharedPreferences blobs, which were capped
  * at `providerSettings.favoritesMaxSize` and truncated on every write, silently evicting the oldest
- * entry once the cap was reached — see `docs/plans/favorites-durable-storage-plan.md`. Not
+ * entry once the cap was reached — see `docs/plans/20260828_favorites-durable-storage-plan.md`. Not
  * `xtream_`-prefixed, for the same reason as `watch_state`: `MediaRepository` backs SMB, Local and
  * Remote M3U through it too, not only Xtream.
  *

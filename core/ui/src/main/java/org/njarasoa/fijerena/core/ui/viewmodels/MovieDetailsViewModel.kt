@@ -64,7 +64,7 @@ class MovieDetailsViewModel(
     val logoUrl: StateFlow<String?> = _logoUrl.asStateFlow()
 
     /** TV detail hero background: TMDB's backdrop art, falling back to the poster, then no
-     * image — movies have no other backdrop source. See docs/plans/tv-detail-hero-ui-plan.md. */
+     * image — movies have no other backdrop source. See docs/plans/20260902_tv-detail-hero-ui-plan.md. */
     private val _backdropUrl = MutableStateFlow<String?>(null)
     val backdropUrl: StateFlow<String?> = _backdropUrl.asStateFlow()
 
@@ -191,7 +191,7 @@ class MovieDetailsViewModel(
      * Sets both [logoUrl] and [backdropUrl] from one job: `getTmdbLogoUrl` and
      * `getTmdbBackdropUrl` read the same TMDB `/images` response (cached in the provider), so
      * fetching them back to back here costs one network round trip, not two. The backdrop falls
-     * back to the poster when TMDB has none — see docs/plans/tv-detail-hero-ui-plan.md.
+     * back to the poster when TMDB has none — see docs/plans/20260902_tv-detail-hero-ui-plan.md.
      */
     private fun loadArtwork(detail: MovieDetail) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -230,7 +230,7 @@ class MovieDetailsViewModel(
                 durationMs = watched.duration
             }
         }
-        // TMDB dedup (Phase 5, docs/plans/watch-state-durable-storage-plan.md): a different catalogue
+        // TMDB dedup (Phase 5, docs/plans/20260828_watch-state-durable-storage-plan.md): a different catalogue
         // entry for the same title (a second language track, a 4K re-rip) completed under its own
         // id still has to show this one watched — otherwise the grid checks it (CategoryViewModel
         // does this same union) while its own details page contradicts that.
@@ -261,7 +261,7 @@ class MovieDetailsViewModel(
     }
 
     /**
-     * Manual watched/unwatched mark (Phase 6, docs/plans/watch-state-durable-storage-plan.md). Marking
+     * Manual watched/unwatched mark (Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md). Marking
      * watched leaves the stored position in `watch_state` alone — a rewatch still resumes — but
      * hides this screen's own resume bar immediately rather than waiting for a reload, matching
      * `WatchedItem.resumeProgress()`'s rule that a completed item never offers one. Marking

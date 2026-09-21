@@ -295,23 +295,23 @@ Each plan states its own status at the top - trust that over any summary here.
 
 | Plan | Status |
 |------|--------|
-| [docs/plans/watch-state-durable-storage-plan.md](docs/plans/watch-state-durable-storage-plan.md) | **Complete** - all six phases landed; kept, see below |
-| [docs/plans/refresh-change-detection-plan.md](docs/plans/refresh-change-detection-plan.md) | Phases 0-3 and 5 landed; Phase 4 outstanding |
-| [docs/plans/codebase-audit-fix-plan.md](docs/plans/codebase-audit-fix-plan.md) | 29/29 complete (T1-T4) |
-| [docs/plans/tv-ui-performance-plan.md](docs/plans/tv-ui-performance-plan.md) | Partially landed; baseline measured on hardware 2026-08-26 |
-| [docs/plans/xtream-multi-device-sync-plan.md](docs/plans/xtream-multi-device-sync-plan.md) | Not started; backend option undecided |
-| [docs/plans/favorites-durable-storage-plan.md](docs/plans/favorites-durable-storage-plan.md) | **Complete** - all four phases landed |
-| [docs/plans/secret-store-migration-plan.md](docs/plans/secret-store-migration-plan.md) | Not started, deferred deliberately |
-| [docs/plans/ui-look-feel-uplift-plan.md](docs/plans/ui-look-feel-uplift-plan.md) | **Complete** - all four phases landed (2026-08-29) |
-| [docs/plans/codebase-robustness-plan.md](docs/plans/codebase-robustness-plan.md) | Proposed (2026-09-14) |
-| [docs/plans/concurrency-memory-stability-plan.md](docs/plans/concurrency-memory-stability-plan.md) | **Complete** - all five phases landed (2026-09-18) |
-| [docs/plans/concurrency-memory-stability-round2-plan.md](docs/plans/concurrency-memory-stability-round2-plan.md) | **Complete** - all four phases landed (2026-09-18); hardware/unit-test verification outstanding |
-| [docs/plans/systemic-concurrency-memory-stability-plan.md](docs/plans/systemic-concurrency-memory-stability-plan.md) | **Mostly complete** - Phases 1-3 and 3/4 of Phase 4 landed (2026-09-18); `LiveTvSplitLayout` early-return item deliberately skipped, hardware/unit-test verification outstanding |
-| [docs/plans/systemic-concurrency-memory-deep-dive-plan.md](docs/plans/systemic-concurrency-memory-deep-dive-plan.md) | Proposed (2026-09-19) |
-| [docs/plans/xtream-concurrency-fixes-plan.md](docs/plans/xtream-concurrency-fixes-plan.md) | **Complete** - both phases landed (2026-09-21) |
+| [docs/plans/20260828_watch-state-durable-storage-plan.md](docs/plans/20260828_watch-state-durable-storage-plan.md) | **Complete** - all six phases landed; kept, see below |
+| [docs/plans/20260827_refresh-change-detection-plan.md](docs/plans/20260827_refresh-change-detection-plan.md) | Phases 0-3 and 5 landed; Phase 4 outstanding |
+| [docs/plans/20260824_codebase-audit-fix-plan.md](docs/plans/20260824_codebase-audit-fix-plan.md) | 29/29 complete (T1-T4) |
+| [docs/plans/20260826_tv-ui-performance-plan.md](docs/plans/20260826_tv-ui-performance-plan.md) | Partially landed; baseline measured on hardware 2026-08-26 |
+| [docs/plans/20260809_xtream-multi-device-sync-plan.md](docs/plans/20260809_xtream-multi-device-sync-plan.md) | Not started; backend option undecided |
+| [docs/plans/20260828_favorites-durable-storage-plan.md](docs/plans/20260828_favorites-durable-storage-plan.md) | **Complete** - all four phases landed |
+| [docs/plans/20260828_secret-store-migration-plan.md](docs/plans/20260828_secret-store-migration-plan.md) | Not started, deferred deliberately |
+| [docs/plans/20260829_ui-look-feel-uplift-plan.md](docs/plans/20260829_ui-look-feel-uplift-plan.md) | **Complete** - all four phases landed (2026-08-29) |
+| [docs/plans/20260914_codebase-robustness-plan.md](docs/plans/20260914_codebase-robustness-plan.md) | Proposed (2026-09-14) |
+| [docs/plans/20260918_concurrency-memory-stability-plan.md](docs/plans/20260918_concurrency-memory-stability-plan.md) | **Complete** - all five phases landed (2026-09-18) |
+| [docs/plans/20260918_concurrency-memory-stability-round2-plan.md](docs/plans/20260918_concurrency-memory-stability-round2-plan.md) | **Complete** - all four phases landed (2026-09-18); hardware/unit-test verification outstanding |
+| [docs/plans/20260918_systemic-concurrency-memory-stability-plan.md](docs/plans/20260918_systemic-concurrency-memory-stability-plan.md) | **Mostly complete** - Phases 1-3 and 3/4 of Phase 4 landed (2026-09-18); `LiveTvSplitLayout` early-return item deliberately skipped, hardware/unit-test verification outstanding |
+| [docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md](docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md) | Proposed (2026-09-19) |
+| [docs/plans/20260920_xtream-concurrency-fixes-plan.md](docs/plans/20260920_xtream-concurrency-fixes-plan.md) | **Complete** - both phases landed (2026-09-21) |
 | [docs/plans/adversarial-review-findings-plan.md](docs/plans/adversarial-review-findings-plan.md) | Proposed (2026-09-21) |
 
-Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
+Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 
 **A complete plan is not automatically deletable.** `23d2ced3` set the precedent of dropping finished plans rather than archiving them, and `docs/RELEASE_NOTES.md` is the durable record of what shipped. But a plan that source comments cite is load-bearing documentation: the comments say *which* phase a piece of code implements and the plan says *why* that design was chosen, so deleting it turns those references into dead paths and strands the reasoning.
 

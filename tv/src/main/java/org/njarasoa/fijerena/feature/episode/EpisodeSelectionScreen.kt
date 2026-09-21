@@ -238,7 +238,7 @@ fun EpisodeSelectionScreen(
 
 // internal, not private: exercised directly by EpisodeSelectionScreenTest (androidTest) with a
 // fake SeriesDetail/MediaRepository, bypassing the ViewModel/DI it would otherwise need — see
-// docs/plans/episode-selection-fragility-plan.md.
+// docs/plans/20260908_episode-selection-fragility-plan.md.
 @Composable
 internal fun EpisodeListContent(
     seriesDetail: SeriesDetail,
@@ -295,7 +295,7 @@ internal fun EpisodeListContent(
     // Continue Watching resume episode below); arriving here never auto-opens it.
     var selectedEpisode by remember { mutableStateOf<DomainEpisodeItem?>(null) }
 
-    // Phase 5 tab shell (docs/plans/tv-detail-hero-ui-plan.md), same shape as
+    // Phase 5 tab shell (docs/plans/20260902_tv-detail-hero-ui-plan.md), same shape as
     // MovieDetailsScreen's Phase 4 one: one FocusRequester, attached by the outer TvSectionTabs
     // to whichever tab is currently selected, serves both directions — D-pad Down from the
     // action row into the tab row, and Back from inside the open section back to the tab row
@@ -378,7 +378,7 @@ internal fun EpisodeListContent(
         }
     val hasMultipleSeasons = sortedSeasons.size > 1
 
-    // Tabbed sections (Phase 5, docs/plans/tv-detail-hero-ui-plan.md): built from what this
+    // Tabbed sections (Phase 5, docs/plans/20260902_tv-detail-hero-ui-plan.md): built from what this
     // series actually has, never a fixed list — same rule MovieDetailsScreen's Phase 4 tabs
     // follow. No separate Seasons tab: picking a season there did nothing but jump straight to
     // Episodes with that season selected — exactly what the season pills atop the Episodes tab
@@ -448,7 +448,7 @@ internal fun EpisodeListContent(
     // rememberSaveable, not remember: this composable is disposed when Play navigates to the
     // player and recomposed fresh on return, same disposal that hit resumeState above — a plain
     // remember forgot the switch across that trip and stole focus back to Play/the resume card.
-    // See docs/plans/episode-selection-fragility-plan.md.
+    // See docs/plans/20260908_episode-selection-fragility-plan.md.
     var streamSwitchSignal by rememberSaveable { mutableStateOf(0) }
 
     // D-pad focus target for the resume episode card — requested below once it's on screen, so
@@ -1059,7 +1059,7 @@ internal fun EpisodeListContent(
                                 },
                                 onLongPress = {
                                     // Manual watched/unwatched mark (Phase 6,
-                                    // docs/plans/watch-state-durable-storage-plan.md). Optimistic:
+                                    // docs/plans/20260828_watch-state-durable-storage-plan.md). Optimistic:
                                     // flips this episode's own badge immediately rather than
                                     // waiting on the write; the full re-read after it lands is what
                                     // catches a TMDB sibling this mark just completed too (Phase 5)
@@ -1152,7 +1152,7 @@ internal fun EpisodeListContent(
 /** Direction the viewer stepped through episodes in, so focus can stay on that button. */
 private enum class EpisodeStep { PREVIOUS, NEXT }
 
-/** Phase 5 tab shell (docs/plans/tv-detail-hero-ui-plan.md) — mirrors MovieDetailTab. */
+/** Phase 5 tab shell (docs/plans/20260902_tv-detail-hero-ui-plan.md) — mirrors MovieDetailTab. */
 private enum class SeriesDetailTab { EPISODES, CAST, DETAILS, SIMILAR }
 
 @Composable
@@ -1251,7 +1251,7 @@ private fun SeriesDetailsTabContent(
 }
 
 /**
- * The hero's top-right "Next Up" card (Phase 5, docs/plans/tv-detail-hero-ui-plan.md): a
+ * The hero's top-right "Next Up" card (Phase 5, docs/plans/20260902_tv-detail-hero-ui-plan.md): a
  * re-presentation of the same continue-watching state the episode list's own resume card and
  * progress bars already show, not new behaviour. Deliberately non-focusable/non-clickable —
  * [episode] is already one D-pad press away via the hero's own Play/Resume button, so this adds
@@ -1539,7 +1539,7 @@ private fun EpisodeDetailPanel(
                 .focusable(),
     ) {
         // Full-bleed, edge to edge — the series' own backdrop, since an episode has no backdrop
-        // art of its own (docs/plans/tv-detail-hero-ui-plan.md Phase 5: "no new screen").
+        // art of its own (docs/plans/20260902_tv-detail-hero-ui-plan.md Phase 5: "no new screen").
         TvDetailHero(
             title = episode.title,
             backdropUrl = backdropUrl,

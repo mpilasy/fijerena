@@ -36,7 +36,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 /**
  * Themed context menu dialog for a long-pressed category/stream: favorite toggle always, watched
  * toggle too when [onToggleWatched] is given — `target.isWatched == null` (Live TV, categories)
- * is what keeps callers from passing one. See docs/plans/watch-state-durable-storage-plan.md Phase 6.
+ * is what keeps callers from passing one. See docs/plans/20260828_watch-state-durable-storage-plan.md Phase 6.
  * Two independent actions rather than an AlertDialog's usual confirm/cancel pair: each row commits
  * immediately, `onDismiss` alone closes the menu.
  */

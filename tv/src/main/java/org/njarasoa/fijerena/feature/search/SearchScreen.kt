@@ -247,7 +247,7 @@ fun SearchScreen(
                             },
                             onResultLongPress = { result ->
                                 // Manual watched/unwatched mark (Phase 6,
-                                // docs/plans/watch-state-durable-storage-plan.md). Unlike isFavorite,
+                                // docs/plans/20260828_watch-state-durable-storage-plan.md). Unlike isFavorite,
                                 // there is no synchronous in-memory cache for watch_state — the
                                 // menu target has to wait on one suspend fetch before it opens.
                                 val isWatchable =

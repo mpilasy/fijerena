@@ -12,7 +12,7 @@ favouriting the 101st item silently evicts the oldest.
 
 `favorites_v2` and `favorite_categories` are JSON blobs in `media_cache_<providerId>`. Three
 defects, the same three watch state had before
-[watch-state-durable-storage-plan.md](watch-state-durable-storage-plan.md):
+[20260828_watch-state-durable-storage-plan.md](20260828_watch-state-durable-storage-plan.md):
 
 1. **Truncation.** `addFavorite` does `favorites.take(providerSettings.favoritesMaxSize)` on every
    write. Nothing warns; the oldest favourite is simply gone.

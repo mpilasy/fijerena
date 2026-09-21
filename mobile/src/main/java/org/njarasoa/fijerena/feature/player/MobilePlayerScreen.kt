@@ -148,7 +148,7 @@ fun MobilePlayerScreen(
             // straight back to the episode-selection screen — its own watch-history read can
             // otherwise win the race against an unawaited write and land on the wrong resume
             // season. See finalizeSessionAndAwait's kdoc and
-            // docs/plans/episode-selection-fragility-plan.md.
+            // docs/plans/20260908_episode-selection-fragility-plan.md.
             scope.launch {
                 finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
                 activityScopedViewModel.stop()
@@ -629,7 +629,7 @@ fun MobilePlayerContent(
                             // Awaited: playNextEpisode() flips loaderViewModel's state to Loading
                             // in its own coroutine, which races an unawaited finalizeSession()'s
                             // position-save read of that same state — see finalizeSessionAndAwait's
-                            // kdoc / docs/plans/episode-selection-fragility-plan.md.
+                            // kdoc / docs/plans/20260908_episode-selection-fragility-plan.md.
                             scope.launch {
                                 finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
                                 loaderViewModel.playNextEpisode(nextEp)

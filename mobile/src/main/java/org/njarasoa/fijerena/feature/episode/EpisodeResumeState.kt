@@ -18,7 +18,7 @@ import androidx.compose.runtime.saveable.listSaver
  * with the "don't clobber a manual pick" rule re-implemented at each one. Collecting them into one
  * object with named transitions instead of ad hoc assignments means that rule lives in exactly one
  * place, and there's no second, independently-declared field free to drift out of sync with the
- * rest — see docs/plans/episode-selection-fragility-plan.md. Mirrors TV's identical
+ * rest — see docs/plans/20260908_episode-selection-fragility-plan.md. Mirrors TV's identical
  * EpisodeResumeState.kt (this app's screens are separate per platform, not shared, same as the
  * rest of feature/episode/).
  */

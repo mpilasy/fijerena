@@ -272,7 +272,7 @@ class XtreamSessionManager(
      * Dispatcher and ConnectionPool (not the app-wide shared ones — see its constructor), so
      * closing it here can't affect Jellyfin/TMDB/EPG/playback traffic; without this, every
      * login/reconnect/logout left the previous instance's HttpClient (and the coroutine Ktor
-     * parks on it internally) running forever. See docs/plans/xtream-concurrency-fixes-plan.md.
+     * parks on it internally) running forever. See docs/plans/20260920_xtream-concurrency-fixes-plan.md.
      */
     private fun replaceApiService(newService: XtreamApiService?) {
         apiService?.close()

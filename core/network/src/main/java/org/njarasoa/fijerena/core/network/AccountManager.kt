@@ -60,7 +60,7 @@ class AccountManager(
             )
 
         // Jetpack Security Crypto is deprecated as of its first stable release (1.1.0). Still the
-        // credential store; replacing it is tracked in docs/plans/secret-store-migration-plan.md.
+        // credential store; replacing it is tracked in docs/plans/20260828_secret-store-migration-plan.md.
         @Suppress("DEPRECATION")
         private fun encryptedPrefs(
             context: Context,

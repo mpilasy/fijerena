@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-Following the completion of the Round 1 stability audit (Phases 1–5 in `docs/plans/concurrency-memory-stability-plan.md`), a forensic re-verification against HEAD was performed across concurrency primitives, coroutine hierarchies, SQLite transaction boundaries, and memory allocations.
+Following the completion of the Round 1 stability audit (Phases 1–5 in `docs/plans/20260918_concurrency-memory-stability-plan.md`), a forensic re-verification against HEAD was performed across concurrency primitives, coroutine hierarchies, SQLite transaction boundaries, and memory allocations.
 
 Spot-checks against the current codebase confirmed that two earlier hypotheses were already resolved by prior commits:
 - Former Finding 1 (`CategoryViewModel` stream clobbering) was resolved in `9486396d` by `loadStreamsJob`/`nowPlayingJob` cancellation and category match guards.

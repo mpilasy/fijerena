@@ -79,7 +79,7 @@ class SeriesDetailsViewModel(
     val logoUrl: StateFlow<String?> = _logoUrl.asStateFlow()
 
     /** TV detail hero background: TMDB's backdrop art, falling back to the provider's own
-     * backdrop, then the poster, then no image. See docs/plans/tv-detail-hero-ui-plan.md. */
+     * backdrop, then the poster, then no image. See docs/plans/20260902_tv-detail-hero-ui-plan.md. */
     private val _backdropUrl = MutableStateFlow<String?>(null)
     val backdropUrl: StateFlow<String?> = _backdropUrl.asStateFlow()
 
@@ -256,7 +256,7 @@ class SeriesDetailsViewModel(
      * `getTmdbBackdropUrl` read the same TMDB `/images` response (cached in the provider), so
      * fetching them back to back here costs one network round trip, not two. The backdrop falls
      * back to the provider's own backdrop, then the poster, when TMDB has none — see
-     * docs/plans/tv-detail-hero-ui-plan.md.
+     * docs/plans/20260902_tv-detail-hero-ui-plan.md.
      */
     private fun loadArtwork(detail: SeriesDetail) {
         val tmdbId = detail.metadata.tmdbId

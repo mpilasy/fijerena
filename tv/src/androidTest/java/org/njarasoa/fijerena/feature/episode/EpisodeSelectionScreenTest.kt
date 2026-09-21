@@ -32,7 +32,7 @@ import org.njarasoa.fijerena.feature.episode.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.feature.episode.fixtures.FakeXtreamEpisodeDao
 
 /**
- * Regression test for docs/plans/episode-selection-fragility-plan.md: playing an episode from a
+ * Regression test for docs/plans/20260908_episode-selection-fragility-plan.md: playing an episode from a
  * season other than the first, then navigating back, used to silently reset the season tab (and
  * scroll position) to season 1 — twice, both times only caught by a live device repro + logcat,
  * never by a test. [StateRestorationTester] reproduces the exact mechanism (this composable
@@ -104,7 +104,7 @@ class EpisodeSelectionScreenTest {
 
         // Manually pick season 2 and play one of its episodes — the exact interaction that broke:
         // a season the user picked in-session, not one named by a route argument. The season tab
-        // row sits below the hero (docs/plans/tv-detail-hero-ui-plan.md Phase 5) and the episode
+        // row sits below the hero (docs/plans/20260902_tv-detail-hero-ui-plan.md Phase 5) and the episode
         // card below that, both off-screen until scrolled — LazyColumn only composes what's near
         // the viewport, so each has to be scrolled to before it can be clicked.
         val season2Label = context.getString(R.string.series_season_label, 2)
@@ -182,7 +182,7 @@ class EpisodeSelectionScreenTest {
             )
         }
 
-        // The stream-name row moved into the Details tab (docs/plans/tv-detail-hero-ui-plan.md
+        // The stream-name row moved into the Details tab (docs/plans/20260902_tv-detail-hero-ui-plan.md
         // Phase 5) — it's not on the Episodes tab shown by default, and the tab row itself is
         // below the hero, off-screen (fixed test viewport) until scrolled into view.
         val detailsTabLabel = context.getString(R.string.details_tab_details)

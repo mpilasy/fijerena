@@ -87,7 +87,7 @@ Nine defects across Xtream session lifecycle, playback teardown, network client 
 #### Finding 6: Isolated dispatcher leak in `TmdbApiService`
 * **Severity:** P2 — Medium
 * **Location:** [`core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt#L34-L49)
-* **Mechanism:** `TmdbApiService` configures `engine { preconfigured = NetworkModule.okHttpClient }`. Ktor's `OkHttpEngine` always builds its own `Dispatcher` per instance regardless of `preconfigured` (see `docs/plans/xtream-concurrency-fixes-plan.md`, Finding 2) — only the `ConnectionPool` is actually inherited. `TmdbApiService` has no `close()` method, and one instance is held per `XtreamMediaProvider`.
+* **Mechanism:** `TmdbApiService` configures `engine { preconfigured = NetworkModule.okHttpClient }`. Ktor's `OkHttpEngine` always builds its own `Dispatcher` per instance regardless of `preconfigured` (see `docs/plans/20260920_xtream-concurrency-fixes-plan.md`, Finding 2) — only the `ConnectionPool` is actually inherited. `TmdbApiService` has no `close()` method, and one instance is held per `XtreamMediaProvider`.
 * **Remediation:** make `TmdbApiService` a process-wide singleton — it takes only a fixed `BuildConfig.TMDB_API_KEY` and holds no provider state, so nothing about it needs to be per-provider — or give it its own `ConnectionPool` (as `XtreamApiService` now has) plus an explicit `close()`.
 
 #### Finding 7: Missing `trimMemory()` in `BaseM3uMediaProvider`

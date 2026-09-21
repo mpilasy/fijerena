@@ -808,7 +808,7 @@ its new data source.
 - ~~**Favorites have the identical defect.**~~ **Fixed 2026-08-28** — same prefs file, same
   whole-blob rewrite, same `catch { emptyList() }` wipe path, capped at 100. Ported to a
   `favorite_state` table on the same pattern; see
-  [favorites-durable-storage-plan.md](favorites-durable-storage-plan.md).
+  [20260828_favorites-durable-storage-plan.md](20260828_favorites-durable-storage-plan.md).
 - ~~**`XtreamUserDataManager` keeps its own parallel blob** in `xtream_cache_$providerId`.~~
   **Deleted 2026-08-28.** Its unversioned `watch_history` of `List<WatchedStream>` was keyed on
   **int** stream ids against `MediaRepository`'s String ids, and held a stale copy of the same flags
@@ -858,7 +858,7 @@ its new data source.
 
 ## Interaction with the sync plan
 
-`docs/plans/xtream-multi-device-sync-plan.md` specifies a server-side
+`docs/plans/20260809_xtream-multi-device-sync-plan.md` specifies a server-side
 `watch_history(profile_id, item_id, content_type, position_ms, duration_ms, is_completed, ...)`
 table with `PRIMARY KEY (profile_id, item_id, content_type)`. The local schema above is that shape
 with `providerId` in place of `profile_id`, which makes the eventual outbox a column mapping rather

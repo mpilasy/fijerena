@@ -264,7 +264,7 @@ private fun PlayerContent(
             // straight back to the episode-selection screen — its own watch-history read can
             // otherwise win the race against an unawaited write and land on the wrong resume
             // season. See finalizeSessionAndAwait's kdoc and
-            // docs/plans/episode-selection-fragility-plan.md.
+            // docs/plans/20260908_episode-selection-fragility-plan.md.
             scope.launch {
                 finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
                 playbackViewModel.stopAndRelease()

@@ -21,7 +21,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
  * A detail-screen score, TV hero treatment: a dark rounded chip with the number over its label
  * (e.g. "8.7" over "Community Rating"). [RatingBadge] stays as-is for list rows — this is only
  * for the hero, and for any second score source (Rotten Tomatoes, say) should one ever exist.
- * See docs/plans/tv-detail-hero-ui-plan.md Phase 2.
+ * See docs/plans/20260902_tv-detail-hero-ui-plan.md Phase 2.
  */
 @Composable
 fun ScoreChip(

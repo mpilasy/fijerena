@@ -577,7 +577,7 @@ class StreamLoaderViewModel(
      * outlives it to await from anyway). A caller that back-navigates to a screen reading this
      * write's result — the episode-selection screen's resume anchor — needs
      * [stopPlaybackAwaited] instead: see its kdoc and
-     * docs/plans/episode-selection-fragility-plan.md.
+     * docs/plans/20260908_episode-selection-fragility-plan.md.
      */
     fun stopPlayback(
         position: Long,
@@ -596,7 +596,7 @@ class StreamLoaderViewModel(
      * back (the episode-selection screen's watch-history-derived resume anchor) — otherwise the
      * screen's own read can win the race against this write, land on stale watch history, and
      * silently reset to the wrong season/episode. See
-     * docs/plans/episode-selection-fragility-plan.md.
+     * docs/plans/20260908_episode-selection-fragility-plan.md.
      */
     suspend fun stopPlaybackAwaited(
         position: Long,
@@ -733,7 +733,7 @@ fun finalizeSession(
 
 /**
  * [finalizeSession], but suspends until the write actually commits — see
- * [StreamLoaderViewModel.stopPlaybackAwaited] and docs/plans/episode-selection-fragility-plan.md.
+ * [StreamLoaderViewModel.stopPlaybackAwaited] and docs/plans/20260908_episode-selection-fragility-plan.md.
  * Use this before navigating back to a screen (episode selection) whose own read of this same
  * data can otherwise win the race against the unawaited version.
  */
