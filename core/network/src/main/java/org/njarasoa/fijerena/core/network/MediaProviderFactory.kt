@@ -5,6 +5,9 @@ import android.provider.Settings
 import java.util.concurrent.ConcurrentHashMap
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -87,16 +90,35 @@ object MediaProviderFactory {
      * Clear cached provider for a specific ID (e.g., when credentials change).
      */
     fun clearCache(providerId: Long) {
-        providerCache.remove(providerId)
+        val removed = providerCache.remove(providerId)
         EpgChannelMatcher.clearCache()
+        if (removed != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    removed.disconnect()
+                } catch (_: Exception) {
+                }
+            }
+        }
     }
 
     /**
      * Clear all cached providers (e.g., on logout or provider switch).
      */
     fun clearAllCaches() {
+        val removed = providerCache.values.toList()
         providerCache.clear()
         EpgChannelMatcher.clearCache()
+        if (removed.isNotEmpty()) {
+            CoroutineScope(Dispatchers.IO).launch {
+                removed.forEach { provider ->
+                    try {
+                        provider.disconnect()
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        }
     }
 
     /**

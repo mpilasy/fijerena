@@ -36,29 +36,37 @@ class XtreamSessionManager(
     ): Result<XtreamAuthResponse> =
         withContext(Dispatchers.IO) {
             suspendResultOf {
+                var serviceAssigned = false
                 val service = XtreamApiService(url, username, password, streamOutputFormat)
-                val authResponse = service.authenticate()
+                try {
+                    val authResponse = service.authenticate()
 
-                // Validate authentication response
-                if (authResponse.userInfo.auth != 1) {
-                    throw Exception("Authentication failed: Invalid credentials")
+                    // Validate authentication response
+                    if (authResponse.userInfo.auth != 1) {
+                        throw Exception("Authentication failed: Invalid credentials")
+                    }
+
+                    if (authResponse.userInfo.status != "Active") {
+                        throw Exception("Account is not active: ${authResponse.userInfo.status}")
+                    }
+
+                    // Save credentials
+                    accountManager.saveCredentials(url, username, password, authResponse, rememberMe)
+
+                    // Store the API service for future use, closing whatever it replaces so its
+                    // HttpClient (own Dispatcher + ConnectionPool, see XtreamApiService) doesn't leak.
+                    replaceApiService(service)
+                    serviceAssigned = true
+
+                    // Auto-discover and add XMLTV source
+                    ensureXmltvSourceAdded(url, username, password)
+
+                    authResponse
+                } finally {
+                    if (!serviceAssigned) {
+                        service.close()
+                    }
                 }
-
-                if (authResponse.userInfo.status != "Active") {
-                    throw Exception("Account is not active: ${authResponse.userInfo.status}")
-                }
-
-                // Save credentials
-                accountManager.saveCredentials(url, username, password, authResponse, rememberMe)
-
-                // Store the API service for future use, closing whatever it replaces so its
-                // HttpClient (own Dispatcher + ConnectionPool, see XtreamApiService) doesn't leak.
-                replaceApiService(service)
-
-                // Auto-discover and add XMLTV source
-                ensureXmltvSourceAdded(url, username, password)
-
-                authResponse
             }
         }
 
@@ -73,43 +81,51 @@ class XtreamSessionManager(
                     credentials.password
                         ?: throw Exception("Password not stored. Please login again.")
 
+                var serviceAssigned = false
                 val service = XtreamApiService(credentials.url, credentials.username, password, streamOutputFormat)
-                Log.d(TAG, "Attempting to authenticate with ${credentials.url}")
-                val authResponse =
-                    try {
-                        service.authenticate()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Authentication failed for ${credentials.url}", e)
-                        throw e
+                try {
+                    Log.d(TAG, "Attempting to authenticate with ${credentials.url}")
+                    val authResponse =
+                        try {
+                            service.authenticate()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Authentication failed for ${credentials.url}", e)
+                            throw e
+                        }
+
+                    // Validate authentication response
+                    if (authResponse.userInfo.auth != 1) {
+                        accountManager.clearCredentials()
+                        throw Exception("Stored credentials are invalid")
                     }
 
-                // Validate authentication response
-                if (authResponse.userInfo.auth != 1) {
-                    accountManager.clearCredentials()
-                    throw Exception("Stored credentials are invalid")
+                    if (authResponse.userInfo.status != "Active") {
+                        accountManager.clearCredentials()
+                        throw Exception("Account is not active: ${authResponse.userInfo.status}")
+                    }
+
+                    // Update stored auth response
+                    accountManager.saveCredentials(
+                        credentials.url,
+                        credentials.username,
+                        password,
+                        authResponse,
+                        rememberMe = true,
+                    )
+
+                    // Store the API service for future use
+                    replaceApiService(service)
+                    serviceAssigned = true
+
+                    // Auto-discover and add XMLTV source
+                    ensureXmltvSourceAdded(credentials.url, credentials.username, password)
+
+                    authResponse
+                } finally {
+                    if (!serviceAssigned) {
+                        service.close()
+                    }
                 }
-
-                if (authResponse.userInfo.status != "Active") {
-                    accountManager.clearCredentials()
-                    throw Exception("Account is not active: ${authResponse.userInfo.status}")
-                }
-
-                // Update stored auth response
-                accountManager.saveCredentials(
-                    credentials.url,
-                    credentials.username,
-                    password,
-                    authResponse,
-                    rememberMe = true,
-                )
-
-                // Store the API service for future use
-                replaceApiService(service)
-
-                // Auto-discover and add XMLTV source
-                ensureXmltvSourceAdded(credentials.url, credentials.username, password)
-
-                authResponse
             }
         }
 
@@ -131,38 +147,46 @@ class XtreamSessionManager(
                 // Update URL in storage
                 accountManager.updateUrl(newUrl)
 
+                var serviceAssigned = false
                 // Create new API service with updated URL
                 val service = XtreamApiService(newUrl, credentials.username, password, streamOutputFormat)
-                val authResponse = service.authenticate()
+                try {
+                    val authResponse = service.authenticate()
 
-                // Validate authentication response
-                if (authResponse.userInfo.auth != 1) {
-                    throw Exception("Authentication failed with new URL")
+                    // Validate authentication response
+                    if (authResponse.userInfo.auth != 1) {
+                        throw Exception("Authentication failed with new URL")
+                    }
+
+                    if (authResponse.userInfo.status != "Active") {
+                        throw Exception("Account is not active: ${authResponse.userInfo.status}")
+                    }
+
+                    // Save updated credentials with new URL
+                    accountManager.saveCredentials(
+                        newUrl,
+                        credentials.username,
+                        password,
+                        authResponse,
+                        rememberMe = true,
+                    )
+
+                    // Clear all cached data since it's from the old provider
+                    onClearCache()
+
+                    // Update the API service
+                    replaceApiService(service)
+                    serviceAssigned = true
+
+                    // Auto-discover and add XMLTV source
+                    ensureXmltvSourceAdded(newUrl, credentials.username, password)
+
+                    authResponse
+                } finally {
+                    if (!serviceAssigned) {
+                        service.close()
+                    }
                 }
-
-                if (authResponse.userInfo.status != "Active") {
-                    throw Exception("Account is not active: ${authResponse.userInfo.status}")
-                }
-
-                // Save updated credentials with new URL
-                accountManager.saveCredentials(
-                    newUrl,
-                    credentials.username,
-                    password,
-                    authResponse,
-                    rememberMe = true,
-                )
-
-                // Clear all cached data since it's from the old provider
-                onClearCache()
-
-                // Update the API service
-                replaceApiService(service)
-
-                // Auto-discover and add XMLTV source
-                ensureXmltvSourceAdded(newUrl, credentials.username, password)
-
-                authResponse
             }
         }
 
@@ -172,29 +196,29 @@ class XtreamSessionManager(
         pass: String,
     ) {
         // EPG sources belong to a provider - without a real provider id there is nothing to attach to.
-        if (providerId <= 0) return
+        if (providerId > 0) {
+            try {
+                val normalizedUrl = baseUrl.trimEnd('/')
+                val xmltvUrl = "$normalizedUrl/xmltv.php?username=$user&password=$pass"
+                val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
 
-        try {
-            val normalizedUrl = baseUrl.trimEnd('/')
-            val xmltvUrl = "$normalizedUrl/xmltv.php?username=$user&password=$pass"
-            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-
-            val existing = sourceDao.getSourceByUrl(xmltvUrl, providerId)
-            if (existing == null) {
-                val label = EpgFileManager.extractLabel(baseUrl) + " (Bulk)"
-                sourceDao.insertSource(
-                    EpgSourceEntity(
-                        url = xmltvUrl,
-                        label = label,
-                        enabled = true,
-                        providerId = providerId,
-                    ),
-                )
-                // Trigger an immediate background refresh if the index is empty
-                EpgFileManager.getInstance(context).refreshOutdatedSources(providerId)
+                val existing = sourceDao.getSourceByUrl(xmltvUrl, providerId)
+                if (existing == null) {
+                    val label = EpgFileManager.extractLabel(baseUrl) + " (Bulk)"
+                    sourceDao.insertSource(
+                        EpgSourceEntity(
+                            url = xmltvUrl,
+                            label = label,
+                            enabled = true,
+                            providerId = providerId,
+                        ),
+                    )
+                    // Trigger an immediate background refresh if the index is empty
+                    EpgFileManager.getInstance(context).refreshOutdatedSources(providerId)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("XtreamSessionManager", "Failed to auto-add XMLTV source", e)
             }
-        } catch (e: Exception) {
-            android.util.Log.e("XtreamSessionManager", "Failed to auto-add XMLTV source", e)
         }
     }
 
@@ -208,19 +232,27 @@ class XtreamSessionManager(
     ): Result<XtreamAuthResponse> =
         withContext(Dispatchers.IO) {
             suspendResultOf {
+                var serviceAssigned = false
                 val service = XtreamApiService(url, username, password, streamOutputFormat)
-                val authResponse = service.authenticate()
+                try {
+                    val authResponse = service.authenticate()
 
-                if (authResponse.userInfo.auth != 1) {
-                    throw Exception("Authentication failed: Invalid credentials")
+                    if (authResponse.userInfo.auth != 1) {
+                        throw Exception("Authentication failed: Invalid credentials")
+                    }
+
+                    if (authResponse.userInfo.status != "Active") {
+                        throw Exception("Account is not active: ${authResponse.userInfo.status}")
+                    }
+
+                    replaceApiService(service)
+                    serviceAssigned = true
+                    authResponse
+                } finally {
+                    if (!serviceAssigned) {
+                        service.close()
+                    }
                 }
-
-                if (authResponse.userInfo.status != "Active") {
-                    throw Exception("Account is not active: ${authResponse.userInfo.status}")
-                }
-
-                replaceApiService(service)
-                authResponse
             }
         }
 

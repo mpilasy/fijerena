@@ -79,6 +79,7 @@ class XtreamMediaProvider(
         }
 
     override suspend fun disconnect() {
+        trimMemory()
         repository.logout()
     }
 
@@ -805,6 +806,7 @@ class XtreamMediaProvider(
         movieDetailCache.clear()
         seriesDetailCache.clear()
         tmdbOverviewCache.clear()
+        tmdbImagesCache.clear()
         searchDataSizes.clear()
     }
 
