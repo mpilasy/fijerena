@@ -747,7 +747,7 @@ suspend fun finalizeSessionAndAwait(
 }
 
 class StreamLoaderViewModelFactory(
-    private val context: Context,
+    context: Context,
     private val initialStreamId: String,
     private val initialStreamName: String,
     private val categoryId: String,
@@ -758,11 +758,14 @@ class StreamLoaderViewModelFactory(
     private val seriesName: String? = null,
     private val startFromBeginning: Boolean = false,
 ) : ViewModelProvider.Factory {
+    // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
+    private val appContext = context.applicationContext
+
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(StreamLoaderViewModel::class.java)) {
             return StreamLoaderViewModel(
-                context.applicationContext,
+                appContext,
                 initialStreamId,
                 initialStreamName,
                 categoryId,
