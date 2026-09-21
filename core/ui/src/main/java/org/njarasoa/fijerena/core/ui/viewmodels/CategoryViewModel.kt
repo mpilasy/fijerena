@@ -258,7 +258,10 @@ class CategoryViewModel(
                     }
                 },
                 onFailure = { error ->
-                    _uiState.value = UiState.Error(error.message ?: context.getString(R.string.category_error_load_failed))
+                    // Same reasoning as the connect-failure branch above: raw exception text
+                    // (e.g. "executor rejected", a Room/HTTP internal) is meaningless to a user
+                    // and must go through friendlyErrorMessage, not straight to the UI.
+                    _uiState.value = UiState.Error(friendlyErrorMessage(error, context, appSettings.isDevMode))
                 },
             )
         }

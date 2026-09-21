@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
@@ -158,13 +159,11 @@ class MovieDetailsViewModel(
                     loadAlternateStreams(detail)
                 },
                 onFailure = { e ->
-                    _uiState.value =
-                        UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.movie_error_loading))
+                    _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
                 },
             )
         } catch (e: Exception) {
-            _uiState.value =
-                UiState.Error(e.message ?: context.getString(org.njarasoa.fijerena.core.ui.R.string.movie_error_loading))
+            _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
         }
     }
 

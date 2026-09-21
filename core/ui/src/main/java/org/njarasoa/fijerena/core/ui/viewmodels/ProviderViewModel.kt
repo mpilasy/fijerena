@@ -212,7 +212,7 @@ class ProviderViewModel(
                 loadProviders()
                 onComplete()
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_add_failed))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
         }
     }
@@ -224,7 +224,7 @@ class ProviderViewModel(
                 _activeProvider.value = providerRepository.getProviderById(id)
                 loadProviders()
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_select_failed))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
         }
     }
@@ -240,7 +240,7 @@ class ProviderViewModel(
                 }
                 loadProviders()
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_delete_failed))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
         }
     }
@@ -255,7 +255,7 @@ class ProviderViewModel(
                 loadProviders()
                 _copyResultMessage.value = context.getString(R.string.provider_duplicate_result_format, newName)
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_update_failed))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
         }
     }
@@ -271,7 +271,7 @@ class ProviderViewModel(
                 loadProviders()
                 _copyResultMessage.value = result.toSummary(context)
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_update_failed))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
         }
     }
@@ -292,7 +292,7 @@ class ProviderViewModel(
                 loadProviders()
                 onComplete()
             } catch (e: Exception) {
-                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_update_failed))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
         }
     }
@@ -366,7 +366,7 @@ class ProviderViewModel(
                 onComplete()
             } catch (e: Exception) {
                 _saveState.value = SaveState.Idle
-                _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_save_failed))
+                _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
         }
     }
@@ -441,7 +441,7 @@ class ProviderViewModel(
             onComplete()
         } catch (e: Exception) {
             _saveState.value = SaveState.Idle
-            _uiState.value = ProviderUiState.Error(e.message ?: context.getString(R.string.provider_error_save_failed))
+            _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
         }
     }
 

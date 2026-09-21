@@ -40,6 +40,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.CategoryMatcher
@@ -391,6 +393,7 @@ fun QuickConnectDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
+    val appSettings = remember { AppSettings(context) }
     val scale = LocalUiScale.current
     var qcCode by remember { mutableStateOf("") }
     var qcSecret by remember { mutableStateOf("") }
@@ -413,7 +416,8 @@ fun QuickConnectDialog(
         val api = JellyfinApiService(url.trimEnd('/'), deviceId)
         val initResult = api.initiateQuickConnect()
         if (initResult.isFailure) {
-            qcError = initResult.exceptionOrNull()?.message ?: initFailedText
+            val e = initResult.exceptionOrNull()
+            qcError = e?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) } ?: initFailedText
             return@LaunchedEffect
         }
         val init = initResult.getOrThrow()
@@ -424,13 +428,15 @@ fun QuickConnectDialog(
             delay(3_000)
             val poll = api.pollQuickConnect(qcSecret)
             if (poll.isFailure) {
-                qcError = String.format(pollFailedFormat, poll.exceptionOrNull()?.message)
+                val pollError = poll.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                qcError = String.format(pollFailedFormat, pollError)
                 return@LaunchedEffect
             }
             if (poll.getOrThrow().authenticated) {
                 val authResult = api.authenticateWithQuickConnect(qcSecret)
                 if (authResult.isFailure) {
-                    qcError = String.format(authFailedFormat, authResult.exceptionOrNull()?.message)
+                    val authError = authResult.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                    qcError = String.format(authFailedFormat, authError)
                     return@LaunchedEffect
                 }
                 val auth = authResult.getOrThrow()

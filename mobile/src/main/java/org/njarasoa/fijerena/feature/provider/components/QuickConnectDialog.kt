@@ -10,10 +10,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
@@ -39,6 +42,7 @@ fun QuickConnectDialog(
     onSuccess: () -> Unit
 ) {
     if (showQuickConnectDialog) {
+        val appSettings = remember { AppSettings(context) }
         LaunchedEffect(Unit) {
             onQcCodeChange("")
             onQcSecretChange("")
@@ -51,7 +55,8 @@ fun QuickConnectDialog(
             val api = JellyfinApiService(url.trimEnd('/'), deviceId)
             val initResult = api.initiateQuickConnect()
             if (initResult.isFailure) {
-                onQcErrorChange(initResult.exceptionOrNull()?.message ?: context.getString(R.string.provider_qc_init_failed))
+                val e = initResult.exceptionOrNull()
+                onQcErrorChange(e?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) } ?: context.getString(R.string.provider_qc_init_failed))
                 return@LaunchedEffect
             }
             val init = initResult.getOrThrow()
@@ -62,13 +67,15 @@ fun QuickConnectDialog(
                 delay(3_000)
                 val poll = api.pollQuickConnect(init.secret)
                 if (poll.isFailure) {
-                    onQcErrorChange(context.getString(R.string.provider_qc_poll_failed, poll.exceptionOrNull()?.message))
+                    val pollError = poll.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                    onQcErrorChange(context.getString(R.string.provider_qc_poll_failed, pollError))
                     return@LaunchedEffect
                 }
                 if (poll.getOrThrow().authenticated) {
                     val authResult = api.authenticateWithQuickConnect(init.secret)
                     if (authResult.isFailure) {
-                        onQcErrorChange(context.getString(R.string.provider_qc_auth_failed, authResult.exceptionOrNull()?.message))
+                        val authError = authResult.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                        onQcErrorChange(context.getString(R.string.provider_qc_auth_failed, authError))
                         return@LaunchedEffect
                     }
                     val auth = authResult.getOrThrow()
