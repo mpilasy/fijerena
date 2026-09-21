@@ -8,6 +8,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -100,22 +101,30 @@ class PlaybackViewModel(
         observeStateJob = viewModelScope.launch { observeServiceState() }
     }
 
-    private suspend fun observeServiceState() {
-        val service = StreamingPlaybackService.awaitInstance()
+    private suspend fun observeServiceState() =
+        coroutineScope {
+            // launch on this coroutineScope, not viewModelScope: that makes both collectors
+            // structural children of observeStateJob, so ensureServiceRunning()'s
+            // observeStateJob?.cancel() actually tears them down. Launching on viewModelScope
+            // directly (as this used to) made them siblings of observeStateJob instead — the
+            // outer suspend function returned as soon as both launches fired, so the job was
+            // already completed by the time cancel() ran, and every service restart leaked two
+            // more collectors bound to the old service's now-dead flows.
+            val service = StreamingPlaybackService.awaitInstance()
 
-        viewModelScope.launch {
-            service.playbackState.collect { state ->
-                android.util.Log.d("PlaybackViewModel", "observeServiceState: received state=$state")
-                _playbackState.value = state
+            launch {
+                service.playbackState.collect { state ->
+                    android.util.Log.d("PlaybackViewModel", "observeServiceState: received state=$state")
+                    _playbackState.value = state
+                }
+            }
+
+            launch {
+                service.currentMetadata.collect { metadata ->
+                    _currentMetadata.value = metadata
+                }
             }
         }
-
-        viewModelScope.launch {
-            service.currentMetadata.collect { metadata ->
-                _currentMetadata.value = metadata
-            }
-        }
-    }
 
     private fun startService() {
         // See serviceStartRequested doc. compareAndSet ensures only the first caller across all
