@@ -18,11 +18,19 @@ fun friendlyErrorMessage(
     e: Throwable,
     context: Context,
 ): String =
-    when (e) {
-        is UnknownHostException -> context.getString(R.string.error_no_internet)
-        is SocketTimeoutException -> context.getString(R.string.error_timeout)
-        is SSLException -> context.getString(R.string.error_ssl)
-        is IOException -> context.getString(R.string.error_network)
+    when {
+        // OkHttp's own message when a client's Dispatcher.executorService has already been
+        // shut down (e.g. closed while still in use) and something tries to submit one more
+        // call through it. It's an InterruptedIOException, so it would otherwise fall into the
+        // generic network-error bucket below — but it has nothing to do with the user's
+        // connection, and telling them to "check your connection" for an internal lifecycle bug
+        // sends them chasing the wrong thing. No connectivity check would ever fix this.
+        e.message?.contains("executor rejected", ignoreCase = true) == true ->
+            context.getString(R.string.error_generic)
+        e is UnknownHostException -> context.getString(R.string.error_no_internet)
+        e is SocketTimeoutException -> context.getString(R.string.error_timeout)
+        e is SSLException -> context.getString(R.string.error_ssl)
+        e is IOException -> context.getString(R.string.error_network)
         else -> {
             val msg = e.message.orEmpty()
             when {
