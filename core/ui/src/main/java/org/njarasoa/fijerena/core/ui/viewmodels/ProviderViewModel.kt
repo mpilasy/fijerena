@@ -455,8 +455,8 @@ class ProviderViewModel(
         withContext(Dispatchers.IO) {
             when (type) {
                 "XTREAM" -> {
+                    val service = XtreamApiService(url, username, password)
                     try {
-                        val service = XtreamApiService(url, username, password)
                         val response = service.authenticate()
                         if (response.userInfo.auth != 1) {
                             Result.failure(Exception(context.getString(R.string.provider_error_invalid_credentials)))
@@ -467,6 +467,8 @@ class ProviderViewModel(
                         }
                     } catch (e: Exception) {
                         Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
+                    } finally {
+                        service.close()
                     }
                 }
                 "REMOTE_M3U" -> {

@@ -1,6 +1,6 @@
 # Xtream Concurrency & Resource Fixes Plan
 
-**Status:** Phase 1 complete (2026-09-20); Phase 2 outstanding
+**Status:** Complete (2026-09-21) — both phases landed
 **Date:** 2026-09-20
 **Scope:** Xtream-only — `core/network/xtream/*`, `core/network/XtreamMediaProvider.kt`, `core/player/api/XtreamApiService.kt`, `core/ui/viewmodels/ProviderViewModel.kt`
 
@@ -86,10 +86,12 @@ This is the exact failure class already found and fixed for `EpgSyncWorker` (see
 ### Phase 1: `XtreamSyncWorker` foreground fix (P1) — standalone, no dependencies — Done
 - Ported the `setForeground()` pattern from `EpgSyncWorker` into `XtreamSyncWorker.doWork()`: new `getForegroundInfo()` override, own notification channel (`xtream_sync`) and id, `setForeground()` called at the top of `doWork()`. New strings (`xtream_sync_notification_channel`/`_title`) added in `values`, `values-fr`, `values-mg`. No manifest changes needed — `FOREGROUND_SERVICE_DATA_SYNC` is already declared app-wide for `EpgSyncWorker`. Verified with `ktlintCheck` + `compileDebugKotlin` for `core:network`, `:tv`, `:mobile`.
 
-### Phase 2: `XtreamApiService` lifecycle fix (P1, depends on resolving Finding 3 first)
-- Decide: dedicated non-shared `Dispatcher`/`ConnectionPool` for `XtreamApiService` vs. reusing one long-lived instance per provider/session instead of constructing throwaway ones.
-- Wire `close()` (or the chosen alternative) into `XtreamSessionManager`'s four construction sites and `ProviderViewModel.testConnection()`.
-- Re-verify `NetworkModule`'s "shared thread pool" doc comment against reality once resolved — update or correct it, since it's currently inaccurate for every Ktor consumer, not just Xtream.
+### Phase 2: `XtreamApiService` lifecycle fix (P1, depends on resolving Finding 3 first) — Done
+- Went with a combined fix rather than picking one option: gave `XtreamApiService` its own `ConnectionPool` (`engine { config { connectionPool(ConnectionPool(5, 5, 5min)) } }`, layered on top of `preconfigured` so DNS/timeout/redirect settings are still inherited from `NetworkModule.okHttpClient`) so `close()` is now safe from any call site — it can never evict the shared pool or affect Jellyfin/TMDB/EPG/playback traffic. Ktor's `OkHttpEngine` already gives every instance its own `Dispatcher` regardless (Finding 2), so this was the only piece actually needing isolation.
+- `XtreamSessionManager` now routes every assignment to `apiService` through a new private `replaceApiService()` that closes the outgoing instance first — wired into `login()`, `restoreSession()`, `updateProviderUrl()`, `reinitialize()`, and `logout()` (previously just dropped the reference with no close).
+- `ProviderViewModel.testConnection()`'s one-off Xtream probe now closes its `service` in a `finally` block.
+- `NetworkModule`'s doc comment was left as-is — it's still accurate for direct `OkHttpClient.newBuilder()` consumers (the streaming clients it defines itself); the inaccuracy is specific to Ktor's `preconfigured` path, which is now called out in `XtreamApiService`'s own comment instead of rewriting a comment on a class this plan didn't otherwise touch.
+- Verified: `ktlintCheck` + `compileDebugKotlin` for `core:player`, `core:network`, `core:ui`, `:tv`, `:mobile`, plus existing `*Xtream*` unit tests in `core:player` and `core:network` all green.
 
 ## Verification
 - Manual: repeatedly hit "Test Connection" with bad Xtream credentials in Settings, watch thread count (`adb shell dumpsys | grep Thread` or Android Studio Profiler) — should not grow unbounded after the fix.

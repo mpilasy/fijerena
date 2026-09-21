@@ -17,6 +17,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.decodeToSequence
+import okhttp3.ConnectionPool
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
@@ -25,6 +26,7 @@ import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
 import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
 
 /**
  * Xtream IPTV API service for fetching categories and streams.
@@ -65,11 +67,17 @@ class XtreamApiService(
             }
 
             engine {
+                // `preconfigured` only inherits DNS/timeout/redirect settings from the shared
+                // client — Ktor's OkHttpEngine always builds a fresh Dispatcher regardless, and
+                // the ConnectionPool below is overridden explicitly (own pool, not the shared
+                // one). Both are then owned solely by this instance, so close() is safe to call:
+                // it can never evict connections or shut down threads any other service depends
+                // on. See docs/plans/xtream-concurrency-fixes-plan.md, Finding 3.
                 preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
                 config {
-                    // Additional configuration on top of shared client
                     followRedirects(true)
                     followSslRedirects(true)
+                    connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
                 }
             }
         }
