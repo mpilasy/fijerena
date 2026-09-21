@@ -476,12 +476,18 @@ class CategoryViewModel(
     fun isFavorite(
         itemId: String,
         contentType: String,
-    ) = repository.isFavorite(itemId, contentType)
+    ): Boolean {
+        if (!::repository.isInitialized) return false
+        return repository.isFavorite(itemId, contentType)
+    }
 
     fun isFavoriteCategory(
         categoryId: String,
         contentType: String,
-    ) = repository.isFavoriteCategory(categoryId, contentType)
+    ): Boolean {
+        if (!::repository.isInitialized) return false
+        return repository.isFavoriteCategory(categoryId, contentType)
+    }
 
     /**
      * Refresh pre-computed per-item data (favorites, watch progress) for current streams.
@@ -555,6 +561,7 @@ class CategoryViewModel(
         categoryName: String,
         contentType: String,
     ) {
+        if (!::repository.isInitialized) return
         if (repository.isFavoriteCategory(categoryId, contentType)) {
             repository.removeFavoriteCategory(categoryId, contentType)
         } else {
@@ -571,6 +578,7 @@ class CategoryViewModel(
         categoryId: String,
         contentType: String,
     ) {
+        if (!::repository.isInitialized) return
         if (repository.isFavorite(itemId, contentType)) {
             repository.removeFavorite(itemId, contentType)
         } else {
@@ -594,6 +602,7 @@ class CategoryViewModel(
     ) {
         val nowWatched = itemId !in _watchedIds.value
         viewModelScope.launch {
+            if (!::repository.isInitialized) return@launch
             repository.setWatched(itemId, contentType, nowWatched)
             refreshPerItemData()
         }
@@ -609,6 +618,11 @@ class CategoryViewModel(
         seriesId: String? = null,
     ) {
         viewModelScope.launch {
+            // The Recent row (unlike category streams) can be visible before loadCategories()
+            // has run — e.g. the Live TV preview panel shows it regardless of what was browsed
+            // into — so repository isn't guaranteed initialized here the way it is for
+            // stream/category actions gated behind a real load.
+            if (!::repository.isInitialized) return@launch
             repository.removeFromRecent(itemId, contentType, seriesId)
             val currentState = _uiState.value
             if (currentState is UiState.Success && currentState.selectedCategoryId == RECENT_CATEGORY_ID) {
