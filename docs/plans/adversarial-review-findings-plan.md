@@ -1,6 +1,6 @@
 # Adversarial Review Findings & Stability Plan
 
-**Status:** Phases 1, 2 complete; Phases 3, 4, 5 outstanding
+**Status:** Phases 1, 2, 3 complete; Phases 4, 5 outstanding
 **Scope:** `core:player`, `core:network`, `core:ui`, `scripts`
 
 ---
@@ -147,13 +147,18 @@ Same area as the lifecycle work already landed on `XtreamSessionManager`/`Xtream
   3. Clear `tmdbImagesCache` in `XtreamMediaProvider.trimMemory()`; hook `trimMemory()` into `disconnect()`.
 * **As implemented:** each of the four `XtreamSessionManager` methods wraps its body in try/finally with a `serviceAssigned` flag, closing the constructed `XtreamApiService` on any exit that doesn't reach `replaceApiService()`. `MediaProviderFactory` captures the evicted instance(s) before clearing the map and dispatches `disconnect()` on IO with exceptions swallowed. Verified: `ktlintCheck` + `compileDebugKotlin` for `core:network`, `:tv`, `:mobile`, plus existing Xtream/`MediaProviderFactory` unit tests, all green. Two accepted trade-offs, not blocking: the eviction dispatch uses an untracked `CoroutineScope(Dispatchers.IO)` rather than a shared scope, and disconnecting an evicted provider can surface a caught "Not authenticated" error on a request that was already in flight against it — every call site already null-checks and friendly-error-maps this, so it degrades to a toast, not a crash.
 
-### Phase 3 — Playback teardown & cancellation robustness (Findings 3, 4, 5)
+### Phase 3 — Playback teardown & cancellation robustness (Findings 3, 4, 5) — Done
 Independent domain from Phase 2 — playback service lifecycle and its ViewModel's cancellation handling.
 * **Files:** `core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt`, `core/player/src/main/java/org/njarasoa/fijerena/core/player/viewmodel/PlaybackViewModel.kt`
 * **Tasks:**
   1. Synchronize `releasePlayerAndSession()`'s teardown-state update and deferred recreation so a racing `awaitInstance()` can't catch the stale deferred.
   2. Catch or recover from service-destruction `CancellationException` in `playStream()`.
   3. Skip the 10-second `awaitInstance()` wait in `stopAndRelease()` when `getInstance()` is already null.
+* **As implemented:**
+  - Task 1: added `instanceLock`, synchronized around both the `instance`/`instanceReady` publication in `onCreate()` and the four-field teardown in `releasePlayerAndSession()`, and `awaitInstance()` now snapshots `instanceReady` under the same lock before awaiting outside it. Correction found while implementing: every current call site of `awaitInstance()`/`releasePlayerAndSession()` runs on Main (Service lifecycle callbacks, `viewModelScope`'s default `Main.immediate`), and since none of the teardown statements suspend, the described race can't actually interleave today — Main-thread execution is single-threaded between suspension points. That's an implicit invariant, not an enforced one, so the fix stands: it removes the dependency on "everything stays on Main forever" rather than leaving that as an unstated assumption a future `Dispatchers.IO` caller could quietly break.
+  - Task 2: the teardown was throwing a plain `CancellationException`, which is structurally indistinguishable from a real coroutine cancellation — the root problem, not just an uncaught branch. Replaced it with a new `ServiceDestroyedException` (plain `Exception`, not a `CancellationException` subtype) so it can be caught as the real failure it is. `PlaybackViewModel.playStream()` now catches `TimeoutCancellationException` and `ServiceDestroyedException` (both set `PlaybackState.Error`) and explicitly rethrows any other `CancellationException` — a real structured-concurrency cancellation (e.g. the ViewModel being cleared) is not swallowed into an error state nobody will see, following the same don't-swallow-cancellation convention already established elsewhere in this codebase.
+  - Task 3: `stopAndRelease()` now calls `StreamingPlaybackService.getInstance()?.stopAndRelease()` directly. Neither that nor the service's own `stopAndRelease()` suspends, so the `viewModelScope.launch` wrapper was removed entirely, not just the `awaitInstance()` call inside it.
+  - Verified: `ktlintCheck` + `compileDebugKotlin` for `core:player`, `core:network`, `core:ui`, `:tv`, `:mobile`, plus existing `core:player` unit tests, all green.
 
 ### Phase 4 — Movie detail latency (Finding 9)
 Standalone, user-reported, no dependency on the earlier phases.

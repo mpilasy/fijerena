@@ -34,6 +34,14 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 
+/**
+ * Thrown by [StreamingPlaybackService.awaitInstance] when the service was torn down while a
+ * caller was waiting on it. Deliberately not a [kotlinx.coroutines.CancellationException]: it
+ * represents a real playback failure a caller should react to (e.g. show an error), not a
+ * structured-concurrency cancellation that should silently propagate and skip error handling.
+ */
+class ServiceDestroyedException(message: String) : Exception(message)
+
 @androidx.media3.common.util.UnstableApi
 class StreamingPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
@@ -224,8 +232,10 @@ class StreamingPlaybackService : MediaSessionService() {
         // still null. Those callers silently no-op on null (`?: return`, `?.`) with no log, so
         // the previous early-publish made failures invisible — playStream()'s case produced a
         // black screen stuck in Idle forever, with no diagnostic trail.
-        instance = this
-        instanceReady.complete(this)
+        synchronized(instanceLock) {
+            instance = this
+            instanceReady.complete(this)
+        }
         // Not acquired here: the service can be created well before any stream is requested
         // (e.g. StreamingPlaybackService.awaitInstance() callers racing service startup), and a
         // PARTIAL_WAKE_LOCK held during that idle stretch outlasts nothing useful. PlayerListener
@@ -1024,24 +1034,28 @@ class StreamingPlaybackService : MediaSessionService() {
         // NetworkMonitor.release() used to run here, but it's a process-wide singleton other
         // components (EPG sync, provider loading) depend on for live connectivity callbacks —
         // tearing it down on every playback stop cut those off until the next playback started.
-        // Reset the start-claim before nulling instance, not after: instance is the @Volatile
-        // write other threads synchronize on, so anything written before it (this reset
-        // included) is guaranteed visible to a thread that observes instance == null afterward.
-        // Reset in the other order would let a reader see instance == null while still racing
-        // the claim's own (unordered w.r.t. that reader) write.
-        serviceStartRequested.set(false)
-        instance = null
-        // Any caller already suspended in awaitInstance() holds a reference to *this* deferred,
-        // not the field below — reassigning the field alone leaves them awaiting an object
-        // nobody will ever complete again if the service doesn't restart. completeExceptionally
-        // is a no-op if something already completed it normally, so this is safe either way.
-        instanceReady.completeExceptionally(kotlinx.coroutines.CancellationException("StreamingPlaybackService destroyed"))
-        // If Android recreates this service later in the same process (e.g. after
-        // reclaiming it during long standby), the next onCreate() needs a fresh,
-        // not-yet-completed deferred to publish into — instanceReady.complete() is a
-        // silent no-op once already completed, so without this reset awaitInstance()
-        // would hand out this now-destroyed instance forever.
-        instanceReady = kotlinx.coroutines.CompletableDeferred()
+        // The whole publication step is synchronized on instanceLock (see its kdoc) so a
+        // concurrent awaitInstance() can never snapshot a mid-teardown state: it sees either
+        // the pre-teardown instance/deferred or the fully-reset post-teardown ones, never both
+        // halves mixed.
+        synchronized(instanceLock) {
+            serviceStartRequested.set(false)
+            instance = null
+            // Any caller already suspended in awaitInstance() holds a reference to *this*
+            // deferred, not the field below — reassigning the field alone leaves them awaiting
+            // an object nobody will ever complete again if the service doesn't restart.
+            // completeExceptionally is a no-op if something already completed it normally, so
+            // this is safe either way. ServiceDestroyedException, not CancellationException —
+            // see its kdoc: this needs to reach callers as a catchable failure, not vanish into
+            // structured-concurrency cancellation handling.
+            instanceReady.completeExceptionally(ServiceDestroyedException("StreamingPlaybackService destroyed"))
+            // If Android recreates this service later in the same process (e.g. after
+            // reclaiming it during long standby), the next onCreate() needs a fresh,
+            // not-yet-completed deferred to publish into — instanceReady.complete() is a
+            // silent no-op once already completed, so without this reset awaitInstance()
+            // would hand out this now-destroyed instance forever.
+            instanceReady = kotlinx.coroutines.CompletableDeferred()
+        }
     }
 
     override fun onDestroy() {
@@ -1420,6 +1434,17 @@ class StreamingPlaybackService : MediaSessionService() {
         private const val POSITION_SAVE_INTERVAL_MS = 10_000L
         private const val AWAIT_INSTANCE_TIMEOUT_MS = 10_000L
 
+        // Guards `instance`/`instanceReady` publication as one atomic unit. Every current call
+        // site happens to run on Main (Service lifecycle callbacks, viewModelScope's default
+        // Main.immediate), which alone would already serialize these reads/writes — but that's
+        // an implicit invariant nothing enforces, and violating it (e.g. a future caller awaiting
+        // the instance from a Dispatchers.IO coroutine) would open a real window: a reader could
+        // capture the old, about-to-fail `instanceReady` right as teardown swaps it out, failing
+        // with a stale ServiceDestroyedException instead of awaiting the fresh deferred a
+        // concurrent restart is about to complete. Synchronizing removes the dependency on that
+        // invariant instead of relying on it silently holding forever.
+        private val instanceLock = Any()
+
         @Volatile
         private var instance: StreamingPlaybackService? = null
 
@@ -1443,8 +1468,14 @@ class StreamingPlaybackService : MediaSessionService() {
 
         // Bounded so a caller can never suspend forever if the service fails to start
         // (e.g. startService() silently refused, or Android never gets around to onCreate()).
-        suspend fun awaitInstance(): StreamingPlaybackService =
-            kotlinx.coroutines.withTimeout(AWAIT_INSTANCE_TIMEOUT_MS) { instanceReady.await() }
+        // The deferred is snapshotted under instanceLock before awaiting outside it — a lock
+        // can't be held across a suspension point — so this always awaits either the deferred
+        // that's about to complete normally or the fresh one a concurrent restart just created,
+        // never a stale one caught mid-teardown-swap.
+        suspend fun awaitInstance(): StreamingPlaybackService {
+            val deferred = synchronized(instanceLock) { instanceReady }
+            return kotlinx.coroutines.withTimeout(AWAIT_INSTANCE_TIMEOUT_MS) { deferred.await() }
+        }
 
         fun getPlaybackState(service: StreamingPlaybackService): StateFlow<PlaybackState> = service.playbackState
 
