@@ -26,6 +26,15 @@ class SmbClient(
 ) {
     private val TAG = "SmbClient"
 
+    // Separate monitor from `this`, held only for brief field reads/writes/swaps — never across
+    // blocking socket I/O. See connect()/disconnect() for why: the old code ran the entire
+    // 30-60s connect handshake inside `synchronized(this)`, so a Main-thread disconnect() call
+    // (e.g. leaving the SMB screen while it's still connecting) blocked on that same monitor for
+    // the full timeout — an ANR.
+    private val lock = Any()
+
+    @Volatile private var generation = 0L
+
     private var client: SMBClient? = null
     private var connection: Connection? = null
     private var session: Session? = null
@@ -33,41 +42,83 @@ class SmbClient(
 
     suspend fun connect(): Result<Unit> =
         withContext(Dispatchers.IO) {
-            synchronized(this@SmbClient) {
-                try {
-                    client = SMBClient()
-                    connection = client!!.connect(host)
-                    val authContext =
-                        if (username != null && password != null) {
-                            AuthenticationContext(username, password.toCharArray(), domain)
+            val myGeneration = synchronized(lock) { ++generation }
+            try {
+                // The slow handshake runs entirely outside the lock, building fully independent
+                // local objects — nothing here can block a concurrent disconnect().
+                val newClient = SMBClient()
+                val newConnection = newClient.connect(host)
+                val authContext =
+                    if (username != null && password != null) {
+                        AuthenticationContext(username, password.toCharArray(), domain)
+                    } else {
+                        AuthenticationContext.anonymous()
+                    }
+                val newSession = newConnection.authenticate(authContext)
+                val newShare = newSession.connectShare(shareName) as DiskShare
+
+                // Publish is the only part under the lock, and it's a pure field swap — no I/O.
+                // If disconnect() (or a newer connect()) ran while we were handshaking, our
+                // generation is stale: discard what we just built instead of resurrecting a
+                // connection the caller already asked to tear down.
+                val superseded =
+                    synchronized(lock) {
+                        if (generation != myGeneration) {
+                            true
                         } else {
-                            AuthenticationContext.anonymous()
+                            client = newClient
+                            connection = newConnection
+                            session = newSession
+                            share = newShare
+                            false
                         }
-                    session = connection!!.authenticate(authContext)
-                    share = session!!.connectShare(shareName) as DiskShare
+                    }
+                if (superseded) {
+                    closeQuietly(newShare, newSession, newConnection, newClient)
+                    Result.failure(IllegalStateException("Connection superseded by a concurrent disconnect()"))
+                } else {
                     Result.success(Unit)
-                } catch (e: Exception) {
-                    disconnect()
-                    Result.failure(e)
                 }
+            } catch (e: Exception) {
+                Result.failure(e)
             }
         }
 
-    fun disconnect() = synchronized(this) {
+    fun disconnect() {
+        var oldShare: DiskShare?
+        var oldSession: Session?
+        var oldConnection: Connection?
+        var oldClient: SMBClient?
+        synchronized(lock) {
+            generation++
+            oldShare = share
+            oldSession = session
+            oldConnection = connection
+            oldClient = client
+            share = null
+            session = null
+            connection = null
+            client = null
+        }
+        closeQuietly(oldShare, oldSession, oldConnection, oldClient)
+    }
+
+    private fun closeQuietly(
+        share: DiskShare?,
+        session: Session?,
+        connection: Connection?,
+        client: SMBClient?,
+    ) {
         try { share?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close share", e) }
         try { session?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close session", e) }
         try { connection?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close connection", e) }
         try { client?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close client", e) }
-        share = null
-        session = null
-        connection = null
-        client = null
     }
 
-    fun isConnected(): Boolean = share != null
+    fun isConnected(): Boolean = synchronized(lock) { share != null }
 
     fun listDirectory(path: String): List<FileIdBothDirectoryInformation> =
-        synchronized(this) {
+        synchronized(lock) {
             val diskShare = share ?: throw IllegalStateException("Not connected")
             diskShare.list(path).filter {
                 it.fileName != "." && it.fileName != ".."
@@ -75,7 +126,7 @@ class SmbClient(
         }
 
     fun isDirectory(path: String): Boolean {
-        val diskShare = share ?: return false
+        val diskShare = synchronized(lock) { share } ?: return false
         return try {
             val info = diskShare.getFileInformation(path)
             val attrs = info.basicInformation.fileAttributes
@@ -87,7 +138,7 @@ class SmbClient(
     }
 
     fun openInputStream(path: String): InputStream =
-        synchronized(this) {
+        synchronized(lock) {
             val diskShare = share ?: throw IllegalStateException("Not connected")
             val file =
                 diskShare.openFile(

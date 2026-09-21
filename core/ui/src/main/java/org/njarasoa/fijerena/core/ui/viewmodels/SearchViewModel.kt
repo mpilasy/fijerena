@@ -24,7 +24,7 @@ class SearchViewModel(
     private val context: android.content.Context,
     private val contentType: String,
 ) : ViewModel() {
-    private var repository: org.njarasoa.fijerena.core.network.MediaRepository? = null
+    @Volatile private var repository: org.njarasoa.fijerena.core.network.MediaRepository? = null
 
     private suspend fun ensureRepo(): org.njarasoa.fijerena.core.network.MediaRepository {
         val repo = repository ?: AppContainer.getInstance(context).getMediaRepository().also { repository = it }
@@ -145,6 +145,8 @@ class SearchViewModel(
                                 semaphore.withPermit {
                                     try {
                                         repo.getItemsForSearch(category.id, type)
+                                    } catch (e: kotlinx.coroutines.CancellationException) {
+                                        throw e
                                     } catch (e: Exception) {
                                         android.util.Log.e("SearchViewModel", "Failed to get items for search category ${category.id}", e)
                                     }

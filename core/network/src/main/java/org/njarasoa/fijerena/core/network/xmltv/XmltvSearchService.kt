@@ -167,6 +167,12 @@ class XmltvSearchService(
                 withTimeoutOrNull(FTS_TIMEOUT_MS) {
                     dao.searchByTitleFts(rawFtsQuery, sourceIds, windowStart, windowEnd)
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // A newer keystroke cancelled this search — not a query failure. Rethrowing
+                // (rather than falling through to null, which the fallback path below treats as
+                // "no results, try the safe query") stops a second, equally pointless FTS query
+                // from running against an already-cancelled search.
+                throw e
             } catch (e: Exception) {
                 // Catches SQLite syntax errors if user provided malformed FTS tokens
                 null
@@ -181,6 +187,8 @@ class XmltvSearchService(
                     withTimeoutOrNull(FTS_TIMEOUT_MS) {
                         dao.searchByTitleFts(safeFtsQuery, sourceIds, windowStart, windowEnd)
                     }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     null
                 }
