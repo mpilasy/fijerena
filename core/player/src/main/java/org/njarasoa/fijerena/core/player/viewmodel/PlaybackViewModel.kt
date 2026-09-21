@@ -97,21 +97,16 @@ class PlaybackViewModel(
      */
     private fun ensureServiceRunning() {
         if (StreamingPlaybackService.getInstance() == null) {
-            // serviceStartRequested is only ever reset in onCleared() — a service that dies via
-            // stopAndRelease() (TV backgrounding, LiveTvSplitLayout losing its preview target)
-            // while this ViewModel itself survives leaves the flag permanently true, so a later
-            // startService() call here would silently no-op forever. getInstance() == null just
-            // proved no service is actually running, so it's always safe to clear it here — but
-            // the reset and startService()'s own compareAndSet must happen as one atomic step.
-            // Done separately, two PlaybackViewModel instances racing this same path (e.g. the
-            // preview panel and a full-screen promotion both reacting to the same service death)
-            // could interleave: A resets and wins the claim, B's reset then wipes A's claim back
-            // to false before B's own claim, and both end up calling startService() — exactly
-            // the redundant onStartCommand/SharedPreferences-flush ANR risk this flag prevents.
-            synchronized(serviceStartLock) {
-                serviceStartRequested.set(false)
-                startService()
-            }
+            // The start-claim (StreamingPlaybackService.tryClaimStart()) is owned and reset by
+            // the service itself, exactly when it actually tears down — not guessed here from
+            // getInstance() == null, which is also true during Android's normal, harmless
+            // startService() -> onCreate() gap (tens to hundreds of ms). A caller-side reset
+            // keyed on that observation can't tell "starting" from "just died" apart, and two
+            // ViewModels racing this path during the starting gap could each reset and reclaim,
+            // both issuing a redundant startService() call. startService() below just attempts
+            // the claim; if it's already held (by a start in flight or a live instance), it's a
+            // no-op.
+            startService()
             observeStateJob?.cancel()
             observeStateJob = viewModelScope.launch { observeServiceState() }
             // connectToService() rebinds _controller to a fresh MediaController for the new
@@ -149,11 +144,13 @@ class PlaybackViewModel(
         }
 
     private fun startService() {
-        // See serviceStartRequested doc. compareAndSet ensures only the first caller across all
-        // PlaybackViewModel instances actually issues the (ANR-risky) startService() call.
-        if (!serviceStartRequested.compareAndSet(false, true)) return
-        val intent = Intent(context, StreamingPlaybackService::class.java)
-        context.startService(intent)
+        // tryClaimStart() ensures only the first caller across all PlaybackViewModel instances
+        // (and across restarts — see its own doc) actually issues the (ANR-risky) startService()
+        // call.
+        if (StreamingPlaybackService.tryClaimStart()) {
+            val intent = Intent(context, StreamingPlaybackService::class.java)
+            context.startService(intent)
+        }
     }
 
     private suspend fun connectToService() {
@@ -516,21 +513,9 @@ class PlaybackViewModel(
         }
         StreamingPlaybackService.getInstance()?.stop()
         serviceConnection.disconnect()
-        serviceStartRequested.set(false)
-    }
-
-    companion object {
-        // Guards startService() against being called more than once. getInstance() alone isn't
-        // enough: it only becomes non-null after the Service's onCreate() completes, so two
-        // PlaybackViewModel instances created close together (e.g. an embedded preview and the
-        // full-screen player) can both observe null and both call startService(). Every such call
-        // delivers a fresh onStartCommand, and Android synchronously flushes all pending
-        // SharedPreferences writes on the main thread before dispatching it — a real ANR risk.
-        // Set synchronously at call time, unlike the instance reference.
-        private val serviceStartRequested = java.util.concurrent.atomic.AtomicBoolean(false)
-
-        // Guards ensureServiceRunning()'s reset-then-claim sequence as one atomic step — see its
-        // call site for why splitting those into two separate operations is unsafe.
-        private val serviceStartLock = Any()
+        // The start-claim itself is no longer this ViewModel's to clear — see
+        // StreamingPlaybackService.tryClaimStart()'s doc. .stop() above doesn't tear the service
+        // down (unlike stopAndRelease()), so the service may still be alive and its claim still
+        // legitimately held after this ViewModel is cleared.
     }
 }

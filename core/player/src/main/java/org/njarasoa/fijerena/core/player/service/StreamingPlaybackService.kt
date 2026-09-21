@@ -1024,6 +1024,12 @@ class StreamingPlaybackService : MediaSessionService() {
         // NetworkMonitor.release() used to run here, but it's a process-wide singleton other
         // components (EPG sync, provider loading) depend on for live connectivity callbacks —
         // tearing it down on every playback stop cut those off until the next playback started.
+        // Reset the start-claim before nulling instance, not after: instance is the @Volatile
+        // write other threads synchronize on, so anything written before it (this reset
+        // included) is guaranteed visible to a thread that observes instance == null afterward.
+        // Reset in the other order would let a reader see instance == null while still racing
+        // the claim's own (unordered w.r.t. that reader) write.
+        serviceStartRequested.set(false)
         instance = null
         // Any caller already suspended in awaitInstance() holds a reference to *this* deferred,
         // not the field below — reassigning the field alone leaves them awaiting an object
@@ -1420,7 +1426,20 @@ class StreamingPlaybackService : MediaSessionService() {
         @Volatile
         private var instanceReady = kotlinx.coroutines.CompletableDeferred<StreamingPlaybackService>()
 
+        // Guards startService() against being called more than once for the same "generation"
+        // of the service. Owned here, not by callers: getInstance() == null is ambiguous
+        // between "never started", "starting" (Android's startService() -> onCreate() gap is
+        // real, tens to hundreds of ms), and "just died" — a caller resetting this flag on its
+        // own observation of getInstance() == null can't tell those apart, and a caller doing so
+        // during the starting gap re-arms the claim for a second, redundant startService() call
+        // racing the first. Only this class knows the true moment a start-claim should be
+        // released: exactly when releasePlayerAndSession() tears the instance down.
+        private val serviceStartRequested = java.util.concurrent.atomic.AtomicBoolean(false)
+
         fun getInstance(): StreamingPlaybackService? = instance
+
+        /** Atomically claims the right to call startService(). Returns false if already claimed. */
+        fun tryClaimStart(): Boolean = serviceStartRequested.compareAndSet(false, true)
 
         // Bounded so a caller can never suspend forever if the service fails to start
         // (e.g. startService() silently refused, or Android never gets around to onCreate()).
