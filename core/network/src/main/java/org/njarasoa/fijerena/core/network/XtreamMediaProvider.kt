@@ -419,11 +419,20 @@ class XtreamMediaProvider(
                 var enriched = detail
                 var tmdbPosterPath: String? = null
                 if (tmdb.hasApiKey() && tmdbMovieId != null) {
-                    val certification = fetchMovieCertification(tmdbMovieId)
+                    // Independent TMDB calls (neither reads the other's result) — run them
+                    // concurrently instead of stacking two full network round-trips on top of
+                    // get_vod_info. Sequential timeouts here were traced to a real ~60s UI
+                    // freeze on Shield when switching between a movie's alternate stream
+                    // versions, which always misses movieDetailCache/the persisted cache.
+                    val (certification, tmdbDetails) =
+                        coroutineScope {
+                            val certificationDeferred = async { fetchMovieCertification(tmdbMovieId) }
+                            val detailsDeferred = async { runCatching { tmdb.getMovieDetails(tmdbMovieId) }.getOrNull() }
+                            certificationDeferred.await() to detailsDeferred.await()
+                        }
                     if (certification != null) {
                         enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
                     }
-                    val tmdbDetails = runCatching { tmdb.getMovieDetails(tmdbMovieId) }.getOrNull()
                     tmdbPosterPath = tmdbDetails?.posterPath
                     if (tmdbDetails != null) {
                         val newReleaseDate = enriched.metadata.releaseDate ?: tmdbDetails.releaseDate

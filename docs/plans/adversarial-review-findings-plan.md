@@ -1,6 +1,6 @@
 # Adversarial Review Findings & Stability Plan
 
-**Status:** Phases 1, 2, 3 complete; Phases 4, 5 outstanding
+**Status:** Phases 1, 2, 3, 4 complete; Phase 5 outstanding
 **Scope:** `core:player`, `core:network`, `core:ui`, `scripts`
 
 ---
@@ -160,11 +160,12 @@ Independent domain from Phase 2 — playback service lifecycle and its ViewModel
   - Task 3: `stopAndRelease()` now calls `StreamingPlaybackService.getInstance()?.stopAndRelease()` directly. Neither that nor the service's own `stopAndRelease()` suspends, so the `viewModelScope.launch` wrapper was removed entirely, not just the `awaitInstance()` call inside it.
   - Verified: `ktlintCheck` + `compileDebugKotlin` for `core:player`, `core:network`, `core:ui`, `:tv`, `:mobile`, plus existing `core:player` unit tests, all green.
 
-### Phase 4 — Movie detail latency (Finding 9)
+### Phase 4 — Movie detail latency (Finding 9) — Done
 Standalone, user-reported, no dependency on the earlier phases.
 * **Files:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/XtreamMediaProvider.kt`
 * **Tasks:**
   1. Parallelize `fetchMovieCertification` and `tmdb.getMovieDetails` in `getMovieDetail()` via `coroutineScope { async { ... } }`.
+* **As implemented:** exactly as scoped — both calls launched as `async` inside a `coroutineScope`, results collected via `awaitAll`-equivalent (`certificationDeferred.await() to detailsDeferred.await()`), replacing the two sequential calls. `get_vod_info` is untouched — it still runs first since it's what produces `tmdbMovieId`. This removes the guaranteed two-timeout stack on a cache miss; it doesn't by itself confirm this was the sole cause of the reported freeze (see the finding's own caveat about `MediaRepository`'s synchronous favorite-lock as an alternative/contributing factor — that remains unconfirmed without an ANR trace). Verified: `ktlintCheck` + `compileDebugKotlin` for `core:network`, `:tv`, `:mobile`, plus existing Xtream unit tests, all green.
 
 ### Phase 5 — TMDB client lifecycle & M3U memory trim (Findings 6, 7)
 Lowest severity, self-contained cleanup — do last.
