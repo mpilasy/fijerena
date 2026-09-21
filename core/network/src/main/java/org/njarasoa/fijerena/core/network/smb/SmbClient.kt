@@ -117,40 +117,45 @@ class SmbClient(
 
     fun isConnected(): Boolean = synchronized(lock) { share != null }
 
-    fun listDirectory(path: String): List<FileIdBothDirectoryInformation> =
-        synchronized(lock) {
-            val diskShare = share ?: throw IllegalStateException("Not connected")
-            diskShare.list(path).filter {
-                it.fileName != "." && it.fileName != ".."
-            }
-        }
-
-    fun isDirectory(path: String): Boolean {
-        val diskShare = synchronized(lock) { share } ?: return false
-        return try {
-            val info = diskShare.getFileInformation(path)
-            val attrs = info.basicInformation.fileAttributes
-            attrs and 0x10L != 0L // FILE_ATTRIBUTE_DIRECTORY
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to check if directory: $path", e)
-            false
+    fun listDirectory(path: String): List<FileIdBothDirectoryInformation> {
+        // Copy the reference out from under the lock rather than holding it for the network
+        // round-trip below — same reasoning as connect()/disconnect(): a slow/unresponsive host
+        // here would otherwise block a concurrent disconnect() waiting on this same lock.
+        val diskShare = synchronized(lock) { share } ?: throw IllegalStateException("Not connected")
+        return diskShare.list(path).filter {
+            it.fileName != "." && it.fileName != ".."
         }
     }
 
-    fun openInputStream(path: String): InputStream =
-        synchronized(lock) {
-            val diskShare = share ?: throw IllegalStateException("Not connected")
-            val file =
-                diskShare.openFile(
-                    path,
-                    EnumSet.of(AccessMask.GENERIC_READ),
-                    null,
-                    EnumSet.of(SMB2ShareAccess.FILE_SHARE_READ),
-                    SMB2CreateDisposition.FILE_OPEN,
-                    null,
-                )
-            SmbFileInputStream(file)
+    fun isDirectory(path: String): Boolean {
+        val diskShare = synchronized(lock) { share }
+        return if (diskShare == null) {
+            false
+        } else {
+            try {
+                val info = diskShare.getFileInformation(path)
+                val attrs = info.basicInformation.fileAttributes
+                attrs and 0x10L != 0L // FILE_ATTRIBUTE_DIRECTORY
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to check if directory: $path", e)
+                false
+            }
         }
+    }
+
+    fun openInputStream(path: String): InputStream {
+        val diskShare = synchronized(lock) { share } ?: throw IllegalStateException("Not connected")
+        val file =
+            diskShare.openFile(
+                path,
+                EnumSet.of(AccessMask.GENERIC_READ),
+                null,
+                EnumSet.of(SMB2ShareAccess.FILE_SHARE_READ),
+                SMB2CreateDisposition.FILE_OPEN,
+                null,
+            )
+        return SmbFileInputStream(file)
+    }
 }
 
 /** Closes the underlying SMB [File] handle (not released by closing its stream alone). */

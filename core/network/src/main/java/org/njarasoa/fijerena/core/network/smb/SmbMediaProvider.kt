@@ -57,11 +57,15 @@ class SmbMediaProvider(
         return result
     }
 
-    override suspend fun disconnect() {
-        smbClient.disconnect()
-        categories = emptyList()
-        items = emptyList()
-    }
+    override suspend fun disconnect() =
+        withContext(Dispatchers.IO) {
+            // SmbClient.disconnect() itself no longer blocks on the lock a slow connect() might
+            // hold, but it still does real socket-close syscalls — suspend alone doesn't move
+            // those off whatever dispatcher the caller happens to be on.
+            smbClient.disconnect()
+            categories = emptyList()
+            items = emptyList()
+        }
 
     override fun isConnected(): Boolean = smbClient.isConnected()
 

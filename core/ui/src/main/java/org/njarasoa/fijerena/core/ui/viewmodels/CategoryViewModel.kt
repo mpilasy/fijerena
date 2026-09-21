@@ -314,120 +314,126 @@ class CategoryViewModel(
         categoryId: String,
         isRetryEnabled: Boolean,
     ) {
-        currentCategoryId = categoryId
-        val lastItemId = repository.getLastItemId(contentType)
+        // Every current call path reaches this only after loadCategoriesInternal() has already
+        // set repository (categories can't render, and so can't be clicked into, before that) —
+        // this guard is defense-in-depth against a future caller breaking that invariant, not a
+        // condition that's reachable today.
+        if (::repository.isInitialized) {
+            currentCategoryId = categoryId
+            val lastItemId = repository.getLastItemId(contentType)
 
-        _uiState.value =
-            UiState.Success(
-                categories = categories,
-                selectedCategoryId = categoryId,
-                streams = null,
-                streamsLoading = true,
-                categoriesRefreshing = false,
-                lastPlayedItemId = lastItemId,
-                categoriesPayloadSize = getCategoriesPayloadSize(),
-                streamsPayloadSize = null,
-            )
+            _uiState.value =
+                UiState.Success(
+                    categories = categories,
+                    selectedCategoryId = categoryId,
+                    streams = null,
+                    streamsLoading = true,
+                    categoriesRefreshing = false,
+                    lastPlayedItemId = lastItemId,
+                    categoriesPayloadSize = getCategoriesPayloadSize(),
+                    streamsPayloadSize = null,
+                )
 
-        // Helper to emit a success state with the given streams
-        fun emitStreams(
-            streams: List<MediaItem>,
-            payloadSize: String? = null,
-        ) {
-            // A slower query for a category the user has since navigated away from must not
-            // clobber the state of whatever is now selected.
-            if (categoryId == currentCategoryId) {
-                currentStreams = streams
-                _uiState.value =
-                    UiState.Success(
-                        categories = categories,
-                        selectedCategoryId = categoryId,
-                        streams = streams,
-                        streamsLoading = false,
-                        categoriesRefreshing = false,
-                        lastPlayedItemId = lastItemId,
-                        categoriesPayloadSize = getCategoriesPayloadSize(),
-                        streamsPayloadSize = payloadSize,
+            // Helper to emit a success state with the given streams
+            fun emitStreams(
+                streams: List<MediaItem>,
+                payloadSize: String? = null,
+            ) {
+                // A slower query for a category the user has since navigated away from must not
+                // clobber the state of whatever is now selected.
+                if (categoryId == currentCategoryId) {
+                    currentStreams = streams
+                    _uiState.value =
+                        UiState.Success(
+                            categories = categories,
+                            selectedCategoryId = categoryId,
+                            streams = streams,
+                            streamsLoading = false,
+                            categoriesRefreshing = false,
+                            lastPlayedItemId = lastItemId,
+                            categoriesPayloadSize = getCategoriesPayloadSize(),
+                            streamsPayloadSize = payloadSize,
+                        )
+                }
+            }
+
+            // Handle virtual categories
+            val handledVirtual = when (categoryId) {
+                RECENT_CATEGORY_ID -> {
+                    emitStreams(repository.refreshRecentItems(contentType))
+                    loadNowPlaying(currentStreams)
+                    true
+                }
+                FAVORITES_CATEGORY_ID -> {
+                    emitStreams(repository.getFavoritesForContentTypeSuspend(contentType))
+                    loadNowPlaying(currentStreams)
+                    true
+                }
+                FAVORITE_CATEGORIES_ID -> {
+                    val favCategories = repository.getFavoriteCategoriesForContentType(contentType)
+                    emitStreams(
+                        favCategories.map { cat ->
+                            MediaItem(
+                                id = "fav_cat_${cat.id}",
+                                name = cat.name,
+                                mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
+                                categoryId = FAVORITE_CATEGORIES_ID,
+                                target = BrowseTarget.CategoryRef(cat.id),
+                            )
+                        },
                     )
+                    true
+                }
+                RECENTLY_VIEWED_CATEGORIES_ID -> {
+                    val recentCategories = repository.getRecentlyViewedCategories(contentType)
+                    emitStreams(
+                        recentCategories.map { recent ->
+                            MediaItem(
+                                id = "recent_cat_${recent.categoryId}",
+                                name = recent.categoryName,
+                                mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
+                                categoryId = RECENTLY_VIEWED_CATEGORIES_ID,
+                                target = BrowseTarget.CategoryRef(recent.categoryId),
+                            )
+                        },
+                    )
+                    true
+                }
+                else -> false
             }
-        }
 
-        // Handle virtual categories
-        val handledVirtual = when (categoryId) {
-            RECENT_CATEGORY_ID -> {
-                emitStreams(repository.refreshRecentItems(contentType))
-                loadNowPlaying(currentStreams)
-                true
-            }
-            FAVORITES_CATEGORY_ID -> {
-                emitStreams(repository.getFavoritesForContentTypeSuspend(contentType))
-                loadNowPlaying(currentStreams)
-                true
-            }
-            FAVORITE_CATEGORIES_ID -> {
-                val favCategories = repository.getFavoriteCategoriesForContentType(contentType)
-                emitStreams(
-                    favCategories.map { cat ->
-                        MediaItem(
-                            id = "fav_cat_${cat.id}",
-                            name = cat.name,
-                            mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
-                            categoryId = FAVORITE_CATEGORIES_ID,
-                            target = BrowseTarget.CategoryRef(cat.id),
-                        )
+            if (!handledVirtual) {
+                // Track non-virtual category views
+                val categoryName = categories.firstOrNull { it.id == categoryId }?.name
+                if (categoryName != null) {
+                    repository.addToCategoryHistory(categoryId, categoryName, contentType)
+                }
+
+                val result = repository.getItems(categoryId, contentType)
+
+                result.fold(
+                    onSuccess = { items ->
+                        emitStreams(items, getPayloadSize(categoryId))
+                        loadNowPlaying(items)
+                        // Retry once if initial load returned empty for a non-virtual category
+                        if (isRetryEnabled && isInitialLoad && items.isEmpty() && !initialLoadRetried) {
+                            initialLoadRetried = true
+                            delay(1500)
+                            loadStreamsInternal(categoryId, isRetryEnabled = true)
+                        }
+                        isInitialLoad = false
+                    },
+                    onFailure = {
+                        emitStreams(emptyList(), getPayloadSize(categoryId))
+                        // Retry once on initial load failure after a short delay
+                        if (isRetryEnabled && isInitialLoad && !initialLoadRetried) {
+                            initialLoadRetried = true
+                            delay(2000)
+                            loadStreamsInternal(categoryId, isRetryEnabled = true)
+                        }
                     },
                 )
-                true
             }
-            RECENTLY_VIEWED_CATEGORIES_ID -> {
-                val recentCategories = repository.getRecentlyViewedCategories(contentType)
-                emitStreams(
-                    recentCategories.map { recent ->
-                        MediaItem(
-                            id = "recent_cat_${recent.categoryId}",
-                            name = recent.categoryName,
-                            mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
-                            categoryId = RECENTLY_VIEWED_CATEGORIES_ID,
-                            target = BrowseTarget.CategoryRef(recent.categoryId),
-                        )
-                    },
-                )
-                true
-            }
-            else -> false
-        }
-
-        if (!handledVirtual) {
-            // Track non-virtual category views
-            val categoryName = categories.firstOrNull { it.id == categoryId }?.name
-            if (categoryName != null) {
-                repository.addToCategoryHistory(categoryId, categoryName, contentType)
-            }
-
-            val result = repository.getItems(categoryId, contentType)
-
-            result.fold(
-                onSuccess = { items ->
-                    emitStreams(items, getPayloadSize(categoryId))
-                    loadNowPlaying(items)
-                    // Retry once if initial load returned empty for a non-virtual category
-                    if (isRetryEnabled && isInitialLoad && items.isEmpty() && !initialLoadRetried) {
-                        initialLoadRetried = true
-                        delay(1500)
-                        loadStreamsInternal(categoryId, isRetryEnabled = true)
-                    }
-                    isInitialLoad = false
-                },
-                onFailure = {
-                    emitStreams(emptyList(), getPayloadSize(categoryId))
-                    // Retry once on initial load failure after a short delay
-                    if (isRetryEnabled && isInitialLoad && !initialLoadRetried) {
-                        initialLoadRetried = true
-                        delay(2000)
-                        loadStreamsInternal(categoryId, isRetryEnabled = true)
-                    }
-                },
-            )
         }
     }
 
@@ -476,18 +482,22 @@ class CategoryViewModel(
     fun isFavorite(
         itemId: String,
         contentType: String,
-    ): Boolean {
-        if (!::repository.isInitialized) return false
-        return repository.isFavorite(itemId, contentType)
-    }
+    ): Boolean =
+        if (!::repository.isInitialized) {
+            false
+        } else {
+            repository.isFavorite(itemId, contentType)
+        }
 
     fun isFavoriteCategory(
         categoryId: String,
         contentType: String,
-    ): Boolean {
-        if (!::repository.isInitialized) return false
-        return repository.isFavoriteCategory(categoryId, contentType)
-    }
+    ): Boolean =
+        if (!::repository.isInitialized) {
+            false
+        } else {
+            repository.isFavoriteCategory(categoryId, contentType)
+        }
 
     /**
      * Refresh pre-computed per-item data (favorites, watch progress) for current streams.
@@ -561,15 +571,16 @@ class CategoryViewModel(
         categoryName: String,
         contentType: String,
     ) {
-        if (!::repository.isInitialized) return
-        if (repository.isFavoriteCategory(categoryId, contentType)) {
-            repository.removeFavoriteCategory(categoryId, contentType)
-        } else {
-            repository.addFavoriteCategory(categoryId, categoryName, contentType)
+        if (::repository.isInitialized) {
+            if (repository.isFavoriteCategory(categoryId, contentType)) {
+                repository.removeFavoriteCategory(categoryId, contentType)
+            } else {
+                repository.addFavoriteCategory(categoryId, categoryName, contentType)
+            }
+            viewModelScope.launch { refreshPerItemData() }
+            // Local rebuild only — no network fetch needed for a local favorite change
+            refreshCategoriesLocal()
         }
-        viewModelScope.launch { refreshPerItemData() }
-        // Local rebuild only — no network fetch needed for a local favorite change
-        refreshCategoriesLocal()
     }
 
     fun toggleFavoriteStream(
@@ -578,15 +589,16 @@ class CategoryViewModel(
         categoryId: String,
         contentType: String,
     ) {
-        if (!::repository.isInitialized) return
-        if (repository.isFavorite(itemId, contentType)) {
-            repository.removeFavorite(itemId, contentType)
-        } else {
-            repository.addFavorite(itemId, itemName, categoryId, contentType)
+        if (::repository.isInitialized) {
+            if (repository.isFavorite(itemId, contentType)) {
+                repository.removeFavorite(itemId, contentType)
+            } else {
+                repository.addFavorite(itemId, itemName, categoryId, contentType)
+            }
+            viewModelScope.launch { refreshPerItemData() }
+            // Local rebuild only — no network fetch needed for a local favorite change
+            refreshCategoriesLocal()
         }
-        viewModelScope.launch { refreshPerItemData() }
-        // Local rebuild only — no network fetch needed for a local favorite change
-        refreshCategoriesLocal()
     }
 
     /**
@@ -602,9 +614,10 @@ class CategoryViewModel(
     ) {
         val nowWatched = itemId !in _watchedIds.value
         viewModelScope.launch {
-            if (!::repository.isInitialized) return@launch
-            repository.setWatched(itemId, contentType, nowWatched)
-            refreshPerItemData()
+            if (::repository.isInitialized) {
+                repository.setWatched(itemId, contentType, nowWatched)
+                refreshPerItemData()
+            }
         }
     }
 
@@ -622,15 +635,16 @@ class CategoryViewModel(
             // has run — e.g. the Live TV preview panel shows it regardless of what was browsed
             // into — so repository isn't guaranteed initialized here the way it is for
             // stream/category actions gated behind a real load.
-            if (!::repository.isInitialized) return@launch
-            repository.removeFromRecent(itemId, contentType, seriesId)
-            val currentState = _uiState.value
-            if (currentState is UiState.Success && currentState.selectedCategoryId == RECENT_CATEGORY_ID) {
-                val updatedStreams = repository.recentItems(contentType).value
-                _uiState.value = currentState.copy(
-                    streams = updatedStreams,
-                    streamsLoading = false,
-                )
+            if (::repository.isInitialized) {
+                repository.removeFromRecent(itemId, contentType, seriesId)
+                val currentState = _uiState.value
+                if (currentState is UiState.Success && currentState.selectedCategoryId == RECENT_CATEGORY_ID) {
+                    val updatedStreams = repository.recentItems(contentType).value
+                    _uiState.value = currentState.copy(
+                        streams = updatedStreams,
+                        streamsLoading = false,
+                    )
+                }
             }
         }
     }

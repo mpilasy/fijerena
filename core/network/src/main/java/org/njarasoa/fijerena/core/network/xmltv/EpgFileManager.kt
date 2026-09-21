@@ -222,7 +222,13 @@ class EpgFileManager private constructor(
             return if (interval <= 0) {
                 24L * 3600 * 1000 // 24h if disabled or "Never"
             } else {
-                interval.toLong() * 3600 * 1000
+                // Half the configured interval, not the full interval (see AGENTS.md's Stale
+                // Threshold contract): WorkManager's periodic sync has its own scheduling
+                // jitter, so a source considered stale only once it's already a full interval
+                // old can miss a cycle entirely if the worker fires a few minutes early — it
+                // reads as still-fresh, skips, and the guide goes stale for a second full
+                // interval before the next chance to refresh.
+                interval.toLong() * 3600 * 1000 / 2
             }
         }
 
