@@ -76,13 +76,14 @@ class PlaybackViewModel(
         }
 
     private var observeStateJob: Job? = null
+    private var connectStateJob: Job? = null
 
     init {
         // connectToService() never returns (it collects a connection flow that stays open
         // for the life of the controller), so it must run in its own coroutine. Otherwise it
         // blocks observeServiceState() from ever starting, leaving playbackState stuck at Idle.
         startService()
-        viewModelScope.launch { connectToService() }
+        connectStateJob = viewModelScope.launch { connectToService() }
         observeStateJob = viewModelScope.launch { observeServiceState() }
     }
 
@@ -95,16 +96,31 @@ class PlaybackViewModel(
      * though playback is actually working again. Call before starting a fresh stream.
      */
     private fun ensureServiceRunning() {
-        if (StreamingPlaybackService.getInstance() != null) return
-        // serviceStartRequested is only ever reset in onCleared() — a service that dies via
-        // stopAndRelease() (TV backgrounding, LiveTvSplitLayout losing its preview target) while
-        // this ViewModel itself survives leaves the flag permanently true, so a later
-        // startService() call here would silently no-op forever. getInstance() == null just
-        // proved no service is actually running, so it's always safe to clear it here.
-        serviceStartRequested.set(false)
-        startService()
-        observeStateJob?.cancel()
-        observeStateJob = viewModelScope.launch { observeServiceState() }
+        if (StreamingPlaybackService.getInstance() == null) {
+            // serviceStartRequested is only ever reset in onCleared() — a service that dies via
+            // stopAndRelease() (TV backgrounding, LiveTvSplitLayout losing its preview target)
+            // while this ViewModel itself survives leaves the flag permanently true, so a later
+            // startService() call here would silently no-op forever. getInstance() == null just
+            // proved no service is actually running, so it's always safe to clear it here — but
+            // the reset and startService()'s own compareAndSet must happen as one atomic step.
+            // Done separately, two PlaybackViewModel instances racing this same path (e.g. the
+            // preview panel and a full-screen promotion both reacting to the same service death)
+            // could interleave: A resets and wins the claim, B's reset then wipes A's claim back
+            // to false before B's own claim, and both end up calling startService() — exactly
+            // the redundant onStartCommand/SharedPreferences-flush ANR risk this flag prevents.
+            synchronized(serviceStartLock) {
+                serviceStartRequested.set(false)
+                startService()
+            }
+            observeStateJob?.cancel()
+            observeStateJob = viewModelScope.launch { observeServiceState() }
+            // connectToService() rebinds _controller to a fresh MediaController for the new
+            // service instance. Without this, callers reading _controller (getAudioTracks(),
+            // getChapters()) keep whatever controller — possibly none — was bound to the service
+            // that just died.
+            connectStateJob?.cancel()
+            connectStateJob = viewModelScope.launch { connectToService() }
+        }
     }
 
     private suspend fun observeServiceState() =
@@ -512,5 +528,9 @@ class PlaybackViewModel(
         // SharedPreferences writes on the main thread before dispatching it — a real ANR risk.
         // Set synchronously at call time, unlike the instance reference.
         private val serviceStartRequested = java.util.concurrent.atomic.AtomicBoolean(false)
+
+        // Guards ensureServiceRunning()'s reset-then-claim sequence as one atomic step — see its
+        // call site for why splitting those into two separate operations is unsafe.
+        private val serviceStartLock = Any()
     }
 }
