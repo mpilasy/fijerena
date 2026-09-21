@@ -67,16 +67,27 @@ class XtreamApiService(
             }
 
             engine {
-                // `preconfigured` only inherits DNS/timeout/redirect settings from the shared
-                // client — Ktor's OkHttpEngine always builds a fresh Dispatcher regardless, and
-                // the ConnectionPool below is overridden explicitly (own pool, not the shared
-                // one). Both are then owned solely by this instance, so close() is safe to call:
-                // it can never evict connections or shut down threads any other service depends
-                // on. See docs/plans/20260920_xtream-concurrency-fixes-plan.md, Finding 3.
+                // CORRECTION (2026-09-21): the comment this replaced claimed Ktor's OkHttpEngine
+                // "always builds a fresh Dispatcher regardless" of `preconfigured`. That was true
+                // for ktor-client-okhttp 3.4.0, which is what got read at the time, but this repo
+                // resolves 3.5.2, whose createOkHttpClient() only builds a fresh Dispatcher() when
+                // `preconfigured == null`:
+                //   val builder = (config.preconfigured ?: okHttpClientPrototype).newBuilder()
+                //   if (config.preconfigured == null) { builder.dispatcher(Dispatcher()) }
+                // Since `preconfigured` IS set below, the built client silently inherited
+                // NetworkModule.okHttpClient's actual Dispatcher object — meaning close() on any
+                // XtreamApiService shut down the app-wide shared executor, breaking Xtream,
+                // Jellyfin, TMDB, EPG downloads, and ExoPlayer streaming simultaneously and
+                // permanently (an executor, once shut down, never comes back). This was the real
+                // cause of the "executor rejected" reports on 2026-09-21, not a session race.
+                // Fix: set our own Dispatcher explicitly here, same as the ConnectionPool below,
+                // so this client owns both regardless of what a given Ktor version does by
+                // default. `preconfigured` is kept only for DNS/timeout/redirect inheritance.
                 preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
                 config {
                     followRedirects(true)
                     followSslRedirects(true)
+                    dispatcher(okhttp3.Dispatcher())
                     connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
                 }
             }

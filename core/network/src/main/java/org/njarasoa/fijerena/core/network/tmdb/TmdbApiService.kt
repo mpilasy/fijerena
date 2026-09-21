@@ -40,13 +40,20 @@ class TmdbApiService(
 
     private val client: HttpClient by lazy {
         HttpClient(OkHttp) {
-            // `preconfigured` inherits DNS/timeout/redirect settings from the shared client, but
-            // Ktor's OkHttpEngine always builds its own Dispatcher regardless and only inherits
-            // the ConnectionPool — see the xtream-concurrency-fixes-plan finding above. Being a
-            // singleton (via getInstance()) means that per-instance Dispatcher only ever exists
-            // once for the whole app, rather than once per XtreamMediaProvider.
+            // CORRECTION (2026-09-21): `preconfigured` does NOT guarantee an isolated Dispatcher.
+            // ktor-client-okhttp 3.5.2 (the version actually resolved here) only builds a fresh
+            // Dispatcher() when `preconfigured == null` — when it's set, the built client shares
+            // NetworkModule.okHttpClient's real Dispatcher object. This client has no close()
+            // today, so it isn't actively triggering it, but see
+            // core/player/api/XtreamApiService.kt's engine block for the incident this exact
+            // pattern caused there once its close() calls landed. Own Dispatcher + ConnectionPool
+            // set explicitly below so this stays safe if a close() is ever added.
             engine {
                 preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
+                config {
+                    dispatcher(okhttp3.Dispatcher())
+                    connectionPool(okhttp3.ConnectionPool(5, 5, java.util.concurrent.TimeUnit.MINUTES))
+                }
             }
             install(ContentNegotiation) { json(json) }
             install(ContentEncoding) {

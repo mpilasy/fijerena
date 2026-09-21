@@ -197,4 +197,28 @@ The credential-wiping side effect follows from the same race by a different path
 **Lesson for future phases like this one:** a fix that only makes a single call path correct isn't enough when the surrounding code has multiple independent entry points into the same shared, mutable state — that's exactly what unit tests and a solo manual smoke test both miss, and only concurrent real-world usage exposes.
 
 * **Files:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamSessionManager.kt`
-* **Verified:** `ktlintCheck` + `compileDebugKotlin` for `core:network`, `:tv`, `:mobile`, plus existing Xtream unit tests, all green. Not yet verified on hardware — pending redeploy.
+* **Verified:** `ktlintCheck` + `compileDebugKotlin` for `core:network`, `:tv`, `:mobile`, plus existing Xtream unit tests, all green.
+
+**This was wrong. §6 has what was actually happening.** After deploying the mutex fix, `executor rejected` recurred immediately — on the very first `authenticate()` call of a brand-new, single-use `XtreamApiService`, not under any contention. That's impossible under the theory above (a fresh instance can't race a sibling it has no relationship to), which is what forced the deeper look in §6. The mutex fix stays — it closes a real hole (two callers *can* legitimately overlap on the same session) — but it was never the fix for `executor rejected`. Kept here, uncut, as the record of the wrong turn: the reasoning was internally consistent and matched every symptom *available at the time*, which is exactly why it doesn't get deleted.
+
+## 6. The Actual Root Cause: A Ktor Version Ktor Assumption That Didn't Hold
+
+**Everything in §5's "root cause" and the original plan's Finding 3 rests on one claim: "Ktor's OkHttpEngine always builds a fresh Dispatcher, regardless of `preconfigured`."** That claim was verified once, against `ktor-client-okhttp-jvm:3.4.0`'s sources (a jar that happened to be sitting in the local Gradle cache), and then trusted for every subsequent finding without re-checking it against what this project actually resolves. Running `./gradlew :core:player:dependencies --configuration debugRuntimeClasspath` shows the real answer: **3.5.2**.
+
+3.5.2's `OkHttpEngine.createOkHttpClient()`:
+```kotlin
+val builder = (config.preconfigured ?: okHttpClientPrototype).newBuilder()
+if (config.preconfigured == null) {
+    builder.dispatcher(Dispatcher())
+}
+```
+3.4.0 did this unconditionally. 3.5.2 only does it when `preconfigured` is null. Every one of `XtreamApiService`, `JellyfinApiService`, and `TmdbApiService` sets `preconfigured = NetworkModule.okHttpClient` — so on the version actually running, all three silently share `NetworkModule.okHttpClient`'s real `Dispatcher` object. Ktor's engine `close()` runs `client.dispatcher.executorService.shutdown()` on whatever `Dispatcher` the built client holds. For these three services, that dispatcher **is** the app-wide shared one — used directly by `EpgFileManager`'s downloader and by `NetworkModule`'s own ExoPlayer streaming clients, and indirectly by every other Ktor client here for the same reason. `shutdown()` is irreversible: the first `close()` call on any of these three, anywhere in the app, permanently kills networking for everything, until process restart.
+
+Phase 2 of this plan added the first `XtreamApiService.close()` calls this codebase had ever made on this pattern (fixing a real leak — the class had a `close()` no one called). Every subsequent report on 2026-09-21 — playback failing, categories not loading, `ProviderViewModel.testConnection()` failing on "Update Provider", credentials getting wiped by a `restoreSession()` that read a broken response as invalid — was this one mechanism firing from a different call site, not four separate bugs.
+
+**Fix:** `XtreamApiService`'s `engine { config { } }` block now sets `dispatcher(okhttp3.Dispatcher())` explicitly, alongside the `ConnectionPool` override already there — its own `close()` can now never touch shared state, on any Ktor version, regardless of what a given release does with `preconfigured` by default. `JellyfinApiService` and `TmdbApiService` got the same explicit `Dispatcher()` + `ConnectionPool` defensively: neither has a `close()` call site today, so neither was actively firing this, but both were one added `close()` away from reproducing it exactly. `EpgFileManager`'s derived client was checked and left alone — it's raw `OkHttpClient` via `.newBuilder()`, which has no `close()` method at all, so there's no call site that could ever trigger this for it.
+
+**Lesson, for real this time:** a claim about a third-party library's internals is only as good as the version it was checked against, and a library-internals claim that goes unverified against `./gradlew :module:dependencies` propagates into every finding built on top of it. §5 was a legitimate, real bug, found through legitimate reasoning — it just wasn't *this* bug, and the way to have caught that sooner was checking the resolved version before trusting a cached jar's source.
+
+* **Files:** `core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt`, `core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinApiService.kt`, `core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt`
+* **Verified:** confirmed resolved version via `./gradlew :core:player:dependencies`; `ktlintCheck` + `compileDebugKotlin` for `core:player`, `core:network`, `:tv`, `:mobile`; full `./gradlew test` suite, all green.
