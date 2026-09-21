@@ -51,8 +51,9 @@ class XtreamSessionManager(
                 // Save credentials
                 accountManager.saveCredentials(url, username, password, authResponse, rememberMe)
 
-                // Store the API service for future use
-                apiService = service
+                // Store the API service for future use, closing whatever it replaces so its
+                // HttpClient (own Dispatcher + ConnectionPool, see XtreamApiService) doesn't leak.
+                replaceApiService(service)
 
                 // Auto-discover and add XMLTV source
                 ensureXmltvSourceAdded(url, username, password)
@@ -103,7 +104,7 @@ class XtreamSessionManager(
                 )
 
                 // Store the API service for future use
-                apiService = service
+                replaceApiService(service)
 
                 // Auto-discover and add XMLTV source
                 ensureXmltvSourceAdded(credentials.url, credentials.username, password)
@@ -156,7 +157,7 @@ class XtreamSessionManager(
                 onClearCache()
 
                 // Update the API service
-                apiService = service
+                replaceApiService(service)
 
                 // Auto-discover and add XMLTV source
                 ensureXmltvSourceAdded(newUrl, credentials.username, password)
@@ -218,7 +219,7 @@ class XtreamSessionManager(
                     throw Exception("Account is not active: ${authResponse.userInfo.status}")
                 }
 
-                apiService = service
+                replaceApiService(service)
                 authResponse
             }
         }
@@ -229,10 +230,22 @@ class XtreamSessionManager(
         withContext(Dispatchers.IO) {
             resultOf {
                 accountManager.clearCredentials()
-                apiService = null
+                replaceApiService(null)
                 onClearCache()
             }
         }
+
+    /**
+     * Swaps in [newService], closing whatever it replaces. `XtreamApiService` owns its own
+     * Dispatcher and ConnectionPool (not the app-wide shared ones — see its constructor), so
+     * closing it here can't affect Jellyfin/TMDB/EPG/playback traffic; without this, every
+     * login/reconnect/logout left the previous instance's HttpClient (and the coroutine Ktor
+     * parks on it internally) running forever. See docs/plans/xtream-concurrency-fixes-plan.md.
+     */
+    private fun replaceApiService(newService: XtreamApiService?) {
+        apiService?.close()
+        apiService = newService
+    }
 
     fun getCurrentUrl(): String? = accountManager.getCredentials()?.url
 
