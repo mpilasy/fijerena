@@ -33,6 +33,12 @@ class TmdbApiService(
 
     private val client: HttpClient by lazy {
         HttpClient(OkHttp) {
+            // Reuse the app-wide OkHttpClient (see JellyfinApiService) instead of letting Ktor
+            // build its own — a second OkHttpClient means a second connection pool and a second
+            // Dispatcher thread pool that duplicate, not share, the app's network resources.
+            engine {
+                preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
+            }
             install(ContentNegotiation) { json(json) }
             install(ContentEncoding) {
                 gzip()

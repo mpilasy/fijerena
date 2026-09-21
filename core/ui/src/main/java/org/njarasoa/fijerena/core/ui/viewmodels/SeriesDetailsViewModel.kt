@@ -327,12 +327,15 @@ class SeriesDetailsViewModel(
 }
 
 class SeriesDetailsViewModelFactory(
-    private val context: Context,
+    context: Context,
     private val seriesId: String,
     private val categoryId: String,
     private val seriesName: String,
 ) : ViewModelProvider.Factory {
+    // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
+    private val appContext = context.applicationContext
+
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SeriesDetailsViewModel(context.applicationContext, seriesId, categoryId, seriesName) as T
+        SeriesDetailsViewModel(appContext, seriesId, categoryId, seriesName) as T
 }

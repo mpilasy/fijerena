@@ -14,15 +14,18 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
  * For dependency injection (Hilt/Koin), use @HiltViewModel instead.
  */
 class LoginViewModelFactory(
-    private val context: Context,
+    context: Context,
     private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
+    // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
+    private val appContext = context.applicationContext
+
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
-            val accountManager = AccountManager(context.applicationContext, providerId)
-            val repository = XtreamRepository(accountManager, context.applicationContext, providerId)
-            return LoginViewModel(repository, context.applicationContext) as T
+            val accountManager = AccountManager(appContext, providerId)
+            val repository = XtreamRepository(accountManager, appContext, providerId)
+            return LoginViewModel(repository, appContext) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

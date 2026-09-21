@@ -8,16 +8,19 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 class ProviderViewModelFactory(
-    private val context: Context,
+    context: Context,
 ) : ViewModelProvider.Factory {
+    // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
+    private val appContext = context.applicationContext
+
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ProviderViewModel::class.java)) {
-            val container = AppContainer.getInstance(context.applicationContext)
+            val container = AppContainer.getInstance(appContext)
             val providerRepository = container.providerRepository
-            val accountManager = AccountManager(context.applicationContext)
-            val appSettings = AppSettings(context.applicationContext)
-            return ProviderViewModel(providerRepository, accountManager, appSettings, context.applicationContext) as T
+            val accountManager = AccountManager(appContext)
+            val appSettings = AppSettings(appContext)
+            return ProviderViewModel(providerRepository, accountManager, appSettings, appContext) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }

@@ -286,12 +286,15 @@ class MovieDetailsViewModel(
 }
 
 class MovieDetailsViewModelFactory(
-    private val context: Context,
+    context: Context,
     private val movieId: String,
     private val categoryId: String,
     private val movieName: String,
 ) : ViewModelProvider.Factory {
+    // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
+    private val appContext = context.applicationContext
+
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        MovieDetailsViewModel(context.applicationContext, movieId, categoryId, movieName) as T
+        MovieDetailsViewModel(appContext, movieId, categoryId, movieName) as T
 }

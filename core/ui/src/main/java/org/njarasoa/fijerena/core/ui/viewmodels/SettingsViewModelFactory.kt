@@ -8,32 +8,34 @@ import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 
 class SettingsViewModelFactory(
-    private val context: Context,
+    context: Context,
     private val contentType: String = "ALL",
     // EPG is provider-scoped: the EPG management screen is opened for one specific provider.
     private val providerId: Long = 0L,
 ) : ViewModelProvider.Factory {
+    // Store only the application context, not the raw parameter — see CategoryViewModelFactory.
+    private val appContext = context.applicationContext
+
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
         when {
             modelClass.isAssignableFrom(EpgManagementViewModel::class.java) -> {
-                EpgManagementViewModel(context.applicationContext, providerId) as T
+                EpgManagementViewModel(appContext, providerId) as T
             }
             modelClass.isAssignableFrom(EpgBrowserViewModel::class.java) -> {
-                val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context.applicationContext)
-                EpgBrowserViewModel(context.applicationContext, container.providerRepository) as T
+                val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(appContext)
+                EpgBrowserViewModel(appContext, container.providerRepository) as T
             }
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
-                val appCtx = context.applicationContext
                 SettingsViewModel(
-                    context = appCtx,
-                    appSettings = AppSettings(appCtx),
-                    providerRepo = ProviderRepository(appCtx),
-                    exportManager = SettingsExportManager(appCtx),
+                    context = appContext,
+                    appSettings = AppSettings(appContext),
+                    providerRepo = ProviderRepository(appContext),
+                    exportManager = SettingsExportManager(appContext),
                 ) as T
             }
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
-                SearchViewModel(context.applicationContext, contentType) as T
+                SearchViewModel(appContext, contentType) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }

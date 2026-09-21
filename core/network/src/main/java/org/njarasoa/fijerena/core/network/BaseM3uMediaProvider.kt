@@ -12,8 +12,19 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 
 abstract class BaseM3uMediaProvider : MediaProvider {
     protected var categories = emptyList<MediaCategory>()
+
+    // Custom setter keeps itemsByCategory in sync automatically, so subclasses (which just
+    // assign `items = its` after parsing/scanning) don't need to know this index exists.
+    // getItems() used to linear-scan the full list on every category open — a no-op for a
+    // typical playlist, but a real per-navigation cost on a 50k-100k entry IPTV catalog.
     protected var items = emptyList<MediaItem>()
+        set(value) {
+            field = value
+            itemsByCategory = value.groupBy { it.categoryId }
+        }
     protected var connected = false
+
+    private var itemsByCategory: Map<String, List<MediaItem>> = emptyMap()
 
     override suspend fun disconnect() {
         connected = false
@@ -58,8 +69,7 @@ abstract class BaseM3uMediaProvider : MediaProvider {
             val connectResult = connect()
             if (connectResult.isFailure) return kotlin.Result.failure(connectResult.exceptionOrNull() ?: Exception("Connect failed"))
         }
-        val filtered = items.filter { it.categoryId == categoryId }
-        return kotlin.Result.success(filtered)
+        return kotlin.Result.success(itemsByCategory[categoryId].orEmpty())
     }
 
     override suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> =
