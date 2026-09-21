@@ -94,7 +94,6 @@ class EpgFileManager private constructor(
 
         fun refreshSelectedTaskId(providerId: Long): String = "epg_refresh_selected_$providerId"
         private const val RETRY_DELAY_MS = 5000L
-        private const val SCHEDULED_REFRESH_AGE_MS = 3_600_000L // scheduled runs refresh if data is older than 1 hour
         // A content-hash match skips ingestion (see canSkipIngest) unless the last real ingest is
         // older than this — ingestFromStream's programme window is wall-clock relative, so a
         // static file left un-ingested longer than this would fall behind regardless of content.
@@ -1432,7 +1431,7 @@ class EpgFileManager private constructor(
         val now = System.currentTimeMillis()
         val staleSources =
             sources.filter { source ->
-                source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > SCHEDULED_REFRESH_AGE_MS
+                source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > staleThresholdMs
             }
 
         return if (staleSources.isNotEmpty()) {
@@ -1467,7 +1466,7 @@ class EpgFileManager private constructor(
         if (sources.isEmpty()) return emptyList()
         val now = System.currentTimeMillis()
         return sources.filter { source ->
-            source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > SCHEDULED_REFRESH_AGE_MS
+            source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > staleThresholdMs
         }
     }
 
