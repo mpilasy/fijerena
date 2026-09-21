@@ -17,6 +17,13 @@ import kotlinx.serialization.json.Json
  * Minimal TMDB v3 client. Used to enrich Xtream series episodes with overviews,
  * since most Xtream providers only include a TMDB episode id and poster URL —
  * not the episode synopsis itself.
+ *
+ * Construct via [getInstance], not directly: the API key is a fixed, app-wide
+ * `BuildConfig` constant with no per-provider variation, so there's nothing to gain from a
+ * separate instance per [org.njarasoa.fijerena.core.network.XtreamMediaProvider] — only a
+ * separate `HttpClient` (and the Ktor-internal `Dispatcher`/coroutine that comes with it, see
+ * `docs/plans/20260920_xtream-concurrency-fixes-plan.md`, Finding 2) to leak if it's ever
+ * discarded without being closed, which nothing here does.
  */
 class TmdbApiService(
     private val apiKey: String,
@@ -33,9 +40,11 @@ class TmdbApiService(
 
     private val client: HttpClient by lazy {
         HttpClient(OkHttp) {
-            // Reuse the app-wide OkHttpClient (see JellyfinApiService) instead of letting Ktor
-            // build its own — a second OkHttpClient means a second connection pool and a second
-            // Dispatcher thread pool that duplicate, not share, the app's network resources.
+            // `preconfigured` inherits DNS/timeout/redirect settings from the shared client, but
+            // Ktor's OkHttpEngine always builds its own Dispatcher regardless and only inherits
+            // the ConnectionPool — see the xtream-concurrency-fixes-plan finding above. Being a
+            // singleton (via getInstance()) means that per-instance Dispatcher only ever exists
+            // once for the whole app, rather than once per XtreamMediaProvider.
             engine {
                 preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
             }
@@ -157,6 +166,15 @@ class TmdbApiService(
     fun hasApiKey(): Boolean = apiKey.isNotBlank()
 
     companion object {
+        @Volatile
+        private var instance: TmdbApiService? = null
+
+        /** The single, process-wide [TmdbApiService] — see the class kdoc for why. */
+        fun getInstance(apiKey: String): TmdbApiService =
+            instance ?: synchronized(this) {
+                instance ?: TmdbApiService(apiKey).also { instance = it }
+            }
+
         const val IMAGE_BASE_URL = "https://image.tmdb.org/t/p/"
         const val POSTER_SIZE_W185 = "w185"
         const val POSTER_SIZE_W342 = "w342"

@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap
 class XtreamMediaProvider(
     override val providerId: Long,
     private val repository: XtreamRepository,
-    private val tmdb: TmdbApiService = TmdbApiService(BuildConfig.TMDB_API_KEY),
+    private val tmdb: TmdbApiService = TmdbApiService.getInstance(BuildConfig.TMDB_API_KEY),
 ) : MediaProvider {
     // ConcurrentHashMap: this provider instance is shared across background sync workers,
     // catalog search coroutines, and UI viewmodels, all of which can read/write these

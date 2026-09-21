@@ -47,4 +47,20 @@ class BaseM3uMediaProviderTest {
         assertEquals("Dune Part Two", matches[0].name)
         assertEquals("Dune", matches[1].name)
     }
+
+    @Test
+    fun trimMemory_dropsItemsAndMarksDisconnected() = runTest {
+        val sampleItems = listOf(
+            MediaItem(id = "1", name = "Dune Part Two", mediaType = MediaType.VIDEO_FILE, categoryId = "cat1"),
+        )
+        val provider = TestM3uProvider(sampleItems)
+
+        provider.trimMemory()
+
+        // Marking disconnected is what makes this transparent: getCategories()/getItems() only
+        // re-scan when !connected, so a trimmed provider must fall back into that path on next
+        // use instead of permanently looking empty.
+        assertTrue(!provider.isConnected())
+        assertTrue(provider.search("dune", ContentType.MOVIES).getOrNull()!!.isEmpty())
+    }
 }
