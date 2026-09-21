@@ -1,6 +1,6 @@
 # Adversarial Review Findings & Stability Plan
 
-**Status:** Complete — all 5 phases landed
+**Status:** Complete — all 5 phases landed. Post-landing correction: Phase 2's fix for Finding 1 had its own concurrency bug in production (real device, mobile) — see §5.
 **Scope:** `core:player`, `core:network`, `core:ui`, `scripts`
 
 ---
@@ -181,3 +181,20 @@ Lowest severity, self-contained cleanup — do last.
 ## 4. Verification
 
 Each phase: `ktlintCheck` + `compileDebugKotlin` for every touched module plus `:tv`/`:mobile`, and existing unit tests for touched files, before moving to the next phase. Hardware verification (ANR traces, actual deploy dry-run, playback teardown under real Doze/backgrounding) stays outstanding until phases land — none of this has been run on a device yet.
+
+## 5. Post-Landing Correction: Phase 2's Fix Had Its Own Race
+
+Found on real hardware (mobile), not caught by `ktlintCheck`/`compileDebugKotlin`/unit tests, none of which exercise concurrent calls.
+
+**Symptom:** on mobile only (Shield unaffected), category loading and VOD playback both failed with `executor rejected` (`java.io.InterruptedIOException`, from `okhttp3.Dispatcher.promoteAndExecute` → `RealCall$AsyncCall.failRejected`) — meaning some `OkHttpClient`'s `Dispatcher.executorService` had been shut down mid-use. Confirmed not a stale-build artifact (reproduced after a clean rebuild from the exact commit already verified working on Shield) and not a signing/keystore issue (confirmed all builds come from one machine via the project's deploy scripts). Also observed: `restoreSession()`'s `accountManager.clearCredentials()` fired for several providers, wiping their saved login — a real, if secondary, side effect once the mechanism below is understood.
+
+**Root cause:** Phase 2's fix made `replaceApiService()` close the outgoing `XtreamApiService` on every reassignment — correct in isolation, but `replaceApiService()` itself was never made safe against *concurrent* callers. `login()`, `restoreSession()`, `updateProviderUrl()`, and `reinitialize()` can all be triggered independently and around the same time on the one cached `XtreamSessionManager` per provider (`AppContainer`'s initial `connect()`, a screen's own `CategoryViewModel.connect()`, and `SearchViewModel.connect()` are three separate call sites that all resolve to the same instance). When two calls overlap, each builds its own `XtreamApiService` and authenticates; whichever finishes second calls `replaceApiService()` and closes the first one's client — while the first caller may still be using that same client to fetch categories or resolve a stream. That in-flight request then fails with `executor rejected` against its own, now-closed, isolated `Dispatcher`. Mobile reproduces this far more reliably than TV because its screens fire more of these `connect()` calls concurrently (Shield's navigation structure apparently doesn't overlap them the same way) — this was never a shared-dispatcher bug, despite that being the first (wrong) theory chased on the way to the real cause.
+
+The credential-wiping side effect follows from the same race by a different path: if a *concurrent* call's `authenticate()` happens to return a coerced-default response (the JSON parser here uses `coerceInputValues = true`, so a truncated/interrupted body doesn't necessarily throw — it can parse into defaults) while its sibling call is mid-close, `restoreSession()`'s `auth != 1` branch reads that default and calls `accountManager.clearCredentials()`, deleting a login that was actually fine.
+
+**Fix:** added `sessionMutex: Mutex` to `XtreamSessionManager`, wrapping the full body of `login()`, `restoreSession()`, `updateProviderUrl()`, `reinitialize()`, and `logout()` in `sessionMutex.withLock { }`. A second concurrent caller now simply waits for the first to finish and reuses the session it set up, instead of racing to tear down a client the first caller is actively using.
+
+**Lesson for future phases like this one:** a fix that only makes a single call path correct isn't enough when the surrounding code has multiple independent entry points into the same shared, mutable state — that's exactly what unit tests and a solo manual smoke test both miss, and only concurrent real-world usage exposes.
+
+* **Files:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamSessionManager.kt`
+* **Verified:** `ktlintCheck` + `compileDebugKotlin` for `core:network`, `:tv`, `:mobile`, plus existing Xtream unit tests, all green. Not yet verified on hardware — pending redeploy.
