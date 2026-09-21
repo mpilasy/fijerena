@@ -307,6 +307,8 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/concurrency-memory-stability-plan.md](docs/plans/concurrency-memory-stability-plan.md) | **Complete** - all five phases landed (2026-09-18) |
 | [docs/plans/concurrency-memory-stability-round2-plan.md](docs/plans/concurrency-memory-stability-round2-plan.md) | **Complete** - all four phases landed (2026-09-18); hardware/unit-test verification outstanding |
 | [docs/plans/systemic-concurrency-memory-stability-plan.md](docs/plans/systemic-concurrency-memory-stability-plan.md) | **Mostly complete** - Phases 1-3 and 3/4 of Phase 4 landed (2026-09-18); `LiveTvSplitLayout` early-return item deliberately skipped, hardware/unit-test verification outstanding |
+| [docs/plans/systemic-concurrency-memory-deep-dive-plan.md](docs/plans/systemic-concurrency-memory-deep-dive-plan.md) | Proposed (2026-09-19) |
+| [docs/plans/xtream-concurrency-fixes-plan.md](docs/plans/xtream-concurrency-fixes-plan.md) | Proposed (2026-09-20) |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 
