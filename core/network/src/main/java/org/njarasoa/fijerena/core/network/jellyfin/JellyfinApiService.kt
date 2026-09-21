@@ -59,7 +59,16 @@ class JellyfinApiService(
             engine {
                 preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
                 config {
-                    // Additional configuration on top of shared client
+                    // Own Dispatcher and ConnectionPool, not the shared ones: ktor-client-okhttp
+                    // 3.5.2's createOkHttpClient() only builds a fresh Dispatcher when
+                    // `preconfigured == null`, so leaving this unset means an OkHttpClient built
+                    // here silently shares NetworkModule.okHttpClient's actual Dispatcher object.
+                    // This client has no close() today, but the moment one gets added, calling it
+                    // would shut down the app-wide shared executor — see
+                    // core/player/api/XtreamApiService.kt's engine block for the incident this
+                    // caused there on 2026-09-21.
+                    dispatcher(okhttp3.Dispatcher())
+                    connectionPool(okhttp3.ConnectionPool(5, 5, java.util.concurrent.TimeUnit.MINUTES))
                 }
             }
             install(ContentNegotiation) {
