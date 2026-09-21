@@ -1,6 +1,6 @@
 # Adversarial Review Findings & Stability Plan
 
-**Status:** Phases 1, 2, 3, 4 complete; Phase 5 outstanding
+**Status:** Complete — all 5 phases landed
 **Scope:** `core:player`, `core:network`, `core:ui`, `scripts`
 
 ---
@@ -167,12 +167,16 @@ Standalone, user-reported, no dependency on the earlier phases.
   1. Parallelize `fetchMovieCertification` and `tmdb.getMovieDetails` in `getMovieDetail()` via `coroutineScope { async { ... } }`.
 * **As implemented:** exactly as scoped — both calls launched as `async` inside a `coroutineScope`, results collected via `awaitAll`-equivalent (`certificationDeferred.await() to detailsDeferred.await()`), replacing the two sequential calls. `get_vod_info` is untouched — it still runs first since it's what produces `tmdbMovieId`. This removes the guaranteed two-timeout stack on a cache miss; it doesn't by itself confirm this was the sole cause of the reported freeze (see the finding's own caveat about `MediaRepository`'s synchronous favorite-lock as an alternative/contributing factor — that remains unconfirmed without an ANR trace). Verified: `ktlintCheck` + `compileDebugKotlin` for `core:network`, `:tv`, `:mobile`, plus existing Xtream unit tests, all green.
 
-### Phase 5 — TMDB client lifecycle & M3U memory trim (Findings 6, 7)
+### Phase 5 — TMDB client lifecycle & M3U memory trim (Findings 6, 7) — Done
 Lowest severity, self-contained cleanup — do last.
-* **Files:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt`, `core/network/src/main/java/org/njarasoa/fijerena/core/network/BaseM3uMediaProvider.kt`
+* **Files:** `core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt`, `core/network/src/main/java/org/njarasoa/fijerena/core/network/XtreamMediaProvider.kt`, `core/network/src/main/java/org/njarasoa/fijerena/core/network/BaseM3uMediaProvider.kt`
 * **Tasks:**
   1. Make `TmdbApiService` a process-wide singleton (or give it its own `ConnectionPool` + `close()`).
   2. Implement `trimMemory()` in `BaseM3uMediaProvider` to drop `items`/`categories`/`itemsByCategory` under memory pressure.
+* **As implemented:**
+  - Task 1: went with the singleton, not a `ConnectionPool`+`close()` — the API key is a fixed `BuildConfig` constant with no per-provider variation, so there's nothing a second instance would ever legitimately need. Added a `getInstance(apiKey)` double-checked-lock accessor to the existing companion object; `XtreamMediaProvider`'s one construction site (`TmdbApiService(BuildConfig.TMDB_API_KEY)`) now calls it instead. No `close()` needed: there's only ever one instance for the process lifetime. Confirmed it was the only construction site in the repo (no test seams depend on constructing a custom instance), so this didn't require touching anything else.
+  - Task 2: `trimMemory()` now resets `items`/`categories` to empty, mirroring `disconnect()` — and, same as `disconnect()`, also resets `connected = false`. That reset is required, not optional: `getCategories()`/`getItems()` only re-scan when `!connected`, so dropping the lists without it would leave a trimmed provider looking permanently empty instead of transparently re-populating on next use. Added a unit test (`BaseM3uMediaProviderTest`) confirming both the reset and the empty-items outcome.
+  - Verified: `ktlintCheck` + `compileDebugKotlin` for `core:network`, `:tv`, `:mobile`, plus `core:network`/`core:player` unit tests including the new one, all green.
 
 ## 4. Verification
 
