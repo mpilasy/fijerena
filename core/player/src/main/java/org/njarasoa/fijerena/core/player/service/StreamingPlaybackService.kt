@@ -999,8 +999,13 @@ class StreamingPlaybackService : MediaSessionService() {
         }
 
         mediaSession?.run {
-            player.removeListener(playerListener!!)
-            (player as? androidx.media3.exoplayer.ExoPlayer)?.removeAnalyticsListener(analyticsListener!!)
+            // mediaSession is assigned before playerListener/analyticsListener in
+            // initializePlayer(), so a re-entrant/concurrent releasePlayerAndSession() landing in
+            // that window would see a non-null mediaSession but a still-null listener — the old
+            // !! would NPE right here and abort every cleanup line below it (wake lock release,
+            // scope cancellation), leaking both.
+            playerListener?.let { player.removeListener(it) }
+            analyticsListener?.let { (player as? androidx.media3.exoplayer.ExoPlayer)?.removeAnalyticsListener(it) }
             player.release()
             release()
         }
