@@ -202,6 +202,11 @@ abstract class XtreamDatabase : RoomDatabase() {
                         MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
+                    // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC
+                    // silently falls back to TRUNCATE (readers block on writes) on any device
+                    // ActivityManager reports as low-RAM, which several of this app's actual
+                    // Android TV targets plausibly are.
+                    .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                     .build()
                     .also { INSTANCE = it }
             }
