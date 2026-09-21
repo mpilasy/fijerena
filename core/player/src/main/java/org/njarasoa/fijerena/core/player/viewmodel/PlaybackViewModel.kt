@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.SubtitleTrackInfo
 import org.njarasoa.fijerena.core.player.model.VideoQualityInfo
 import org.njarasoa.fijerena.core.player.service.PlaybackServiceConnection
+import org.njarasoa.fijerena.core.player.service.ServiceDestroyedException
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 
 class PlaybackViewModel(
@@ -182,7 +183,18 @@ class PlaybackViewModel(
                 _currentMetadata.value = metadata
                 service.playStream(metadata, resumeFromPosition)
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                // awaitInstance() gave up after AWAIT_INSTANCE_TIMEOUT_MS — the service never
+                // came up in time.
                 _playbackState.value = PlaybackState.Error(context.getString(R.string.player_error_occurred))
+            } catch (e: ServiceDestroyedException) {
+                // The service was torn down while we were waiting on it — a real failure to
+                // surface, not the coroutine's own cancellation (see the exception's kdoc).
+                _playbackState.value = PlaybackState.Error(context.getString(R.string.player_error_occurred))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // A genuine structured-concurrency cancellation (e.g. this ViewModel being
+                // cleared) — propagate it rather than swallowing it into an error state nobody
+                // will see.
+                throw e
             }
         }
     }
@@ -223,9 +235,11 @@ class PlaybackViewModel(
     fun stopAndRelease() {
         isInErrorState = false
         onFocusRegained()
-        viewModelScope.launch {
-            StreamingPlaybackService.awaitInstance().stopAndRelease()
-        }
+        // getInstance(), not awaitInstance(): there's nothing to release if the service is
+        // already dead, and awaiting a service that will never start just pays the full
+        // 10-second AWAIT_INSTANCE_TIMEOUT_MS for no reason. Neither this nor stopAndRelease()
+        // itself suspends, so no coroutine is needed here at all.
+        StreamingPlaybackService.getInstance()?.stopAndRelease()
     }
 
     /**
