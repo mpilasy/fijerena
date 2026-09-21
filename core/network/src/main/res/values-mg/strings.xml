@@ -5,6 +5,10 @@
     <string name="epg_sync_notification_title">Manavao ny fandaharana</string>
     <string name="epg_fts_rebuild_notification_title">Manangana indray ny fikarohan\'ny fandaharana</string>
 
+    <!-- Xtream catalog sync foreground-service notifications -->
+    <string name="xtream_sync_notification_channel">Fanavaozana ny lisitry ny Xtream</string>
+    <string name="xtream_sync_notification_title">Manavao ny fantsona sy ny votoaty</string>
+
     <!-- Friendly error messages -->
     <string name="error_no_internet">Tsy tratra ny mpizara. Jereo ny fifandraisanao amin\'ny internet.</string>
     <string name="error_timeout">Ela loatra ny valin\'ny mpizara. Andramo indray.</string>

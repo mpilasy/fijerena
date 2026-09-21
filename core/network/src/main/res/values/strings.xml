@@ -5,6 +5,10 @@
     <string name="epg_sync_notification_title">Refreshing TV guide</string>
     <string name="epg_fts_rebuild_notification_title">Rebuilding TV guide index</string>
 
+    <!-- Xtream catalog sync foreground-service notifications -->
+    <string name="xtream_sync_notification_channel">Xtream Catalog Sync</string>
+    <string name="xtream_sync_notification_title">Syncing channels &amp; content</string>
+
     <!-- Friendly error messages (FriendlyError.kt) -->
     <string name="error_no_internet">Can\'t reach the server. Check your internet connection.</string>
     <string name="error_timeout">The server took too long to respond. Please try again.</string>
