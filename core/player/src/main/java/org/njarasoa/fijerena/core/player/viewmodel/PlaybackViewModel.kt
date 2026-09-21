@@ -96,6 +96,12 @@ class PlaybackViewModel(
      */
     private fun ensureServiceRunning() {
         if (StreamingPlaybackService.getInstance() != null) return
+        // serviceStartRequested is only ever reset in onCleared() — a service that dies via
+        // stopAndRelease() (TV backgrounding, LiveTvSplitLayout losing its preview target) while
+        // this ViewModel itself survives leaves the flag permanently true, so a later
+        // startService() call here would silently no-op forever. getInstance() == null just
+        // proved no service is actually running, so it's always safe to clear it here.
+        serviceStartRequested.set(false)
         startService()
         observeStateJob?.cancel()
         observeStateJob = viewModelScope.launch { observeServiceState() }
