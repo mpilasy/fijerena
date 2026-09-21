@@ -5,6 +5,10 @@
     <string name="epg_sync_notification_title">Actualisation du guide TV</string>
     <string name="epg_fts_rebuild_notification_title">Reconstruction de l\'index du guide TV</string>
 
+    <!-- Xtream catalog sync foreground-service notifications -->
+    <string name="xtream_sync_notification_channel">Synchronisation du catalogue Xtream</string>
+    <string name="xtream_sync_notification_title">Synchronisation des chaînes et contenus</string>
+
     <!-- Friendly error messages -->
     <string name="error_no_internet">Impossible de joindre le serveur. Vérifiez votre connexion internet.</string>
     <string name="error_timeout">Le serveur a mis trop de temps à répondre. Veuillez réessayer.</string>
