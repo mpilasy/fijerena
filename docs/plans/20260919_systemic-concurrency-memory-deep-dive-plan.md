@@ -7,7 +7,7 @@
 **Verification note (2026-09-20):** every finding below was spot-checked against HEAD before implementation, not trusted as written — two corrections came out of that pass:
 - **Finding 2** was already fixed by a separate, unrelated commit (`f1341a99`) before Phase 1 of this plan started; no action needed here.
 - **Finding 5** is a false positive: `MediaRepository.loadFavoriteSnapshotLocked()`'s `runBlocking(Dispatchers.IO)` under `favoriteLock` is deliberate, documented behavior (Compose calls `isFavorite()` synchronously; Room throws without it), not an oversight. Its own kdoc explains a prior outage this exact code fixed. Left untouched.
-- **Finding 11**'s suggested remediation (`SoftReference`) would be a downgrade from what an earlier plan (`docs/plans/concurrency-memory-stability-round2-plan.md`) already shipped — `EpgChannelMatcher.clearCache()` wired into `trimMemory()`/provider switch/delete. The "never cleared" problem this finding describes is already solved; no further action.
+- **Finding 11**'s suggested remediation (`SoftReference`) would be a downgrade from what an earlier plan (`docs/plans/20260918_concurrency-memory-stability-round2-plan.md`) already shipped — `EpgChannelMatcher.clearCache()` wired into `trimMemory()`/provider switch/delete. The "never cleared" problem this finding describes is already solved; no further action.
 - **Finding 1** required a correction to an earlier (wrong) claim made mid-conversation that it was already fixed — it was not; see Phase 1.
 
 ---
@@ -426,7 +426,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
   - `core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt`
   - `core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt`
 * **Tasks:**
-  1. In `CategoryViewModel.kt` and `EpgViewModel.kt`, add safe checks and fallbacks to all synchronous methods (`isFavorite`, `isFavoriteCategory`, `toggleFavoriteCategory`, `loadCategories`) to eliminate `UninitializedPropertyAccessException`. Confirmed on HEAD: `isFavorite()`/`isFavoriteCategory()` specifically lack the `::repository.isInitialized` guard that other `CategoryViewModel` helpers already got in an earlier plan (`docs/plans/concurrency-memory-stability-round2-plan.md` Phase 4) — this is a real gap that plan missed, not a duplicate.
+  1. In `CategoryViewModel.kt` and `EpgViewModel.kt`, add safe checks and fallbacks to all synchronous methods (`isFavorite`, `isFavoriteCategory`, `toggleFavoriteCategory`, `loadCategories`) to eliminate `UninitializedPropertyAccessException`. Confirmed on HEAD: `isFavorite()`/`isFavoriteCategory()` specifically lack the `::repository.isInitialized` guard that other `CategoryViewModel` helpers already got in an earlier plan (`docs/plans/20260918_concurrency-memory-stability-round2-plan.md` Phase 4) — this is a real gap that plan missed, not a duplicate.
   2. In `EpgFileManager.kt`, align `getStaleSources()` and `refreshOutdatedSources()` to use `staleThresholdMs` instead of hardcoded `SCHEDULED_REFRESH_AGE_MS`. Confirmed real and inconsistent (`launchRefreshStale()` right next to it already does this correctly) — but `SCHEDULED_REFRESH_AGE_MS`'s own comment ("scheduled runs refresh if data is older than 1 hour") suggests this might be an intentional background-minimum-cadence floor rather than an oversight. Needs a product decision before touching it, not a blind fix.
 
 ---

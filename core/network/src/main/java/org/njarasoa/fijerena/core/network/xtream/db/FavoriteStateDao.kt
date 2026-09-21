@@ -12,7 +12,7 @@ import androidx.room.Query
  * `setProvider()`, which runs on `Dispatchers.IO`.
  *
  * There is no cap and no trim query. That is the point of the table — see
- * `docs/plans/favorites-durable-storage-plan.md`.
+ * `docs/plans/20260828_favorites-durable-storage-plan.md`.
  */
 @Dao
 interface FavoriteStateDao {

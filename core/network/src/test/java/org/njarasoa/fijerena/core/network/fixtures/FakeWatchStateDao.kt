@@ -7,7 +7,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 
 /**
  * In-memory stand-in for [WatchStateDao], reproducing the upsert/query semantics from
- * docs/plans/watch-state-durable-storage-plan.md without a real Room/SQLite instance — this module's
+ * docs/plans/20260828_watch-state-durable-storage-plan.md without a real Room/SQLite instance — this module's
  * unit tests run on plain JVM, with no Robolectric to back a real database.
  */
 class FakeWatchStateDao : WatchStateDao {

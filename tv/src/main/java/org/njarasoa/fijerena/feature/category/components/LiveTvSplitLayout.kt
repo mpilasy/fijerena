@@ -430,7 +430,7 @@ internal fun LiveTvSplitLayout(
                     // a real detach/reattach (one frame's worth of glitch) rather than relocating
                     // this node, but it stops every OSD/flyout interaction in full-screen from
                     // janking the video for the rest of the session. See
-                    // docs/plans/tv-ui-performance-plan.md's dropped "do not touch" note on this
+                    // docs/plans/20260826_tv-ui-performance-plan.md's dropped "do not touch" note on this
                     // TextureView for why that tradeoff reverted.
                     EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
                     // The preview surface has no controls/error UI of its own, so a stalled or

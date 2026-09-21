@@ -18,7 +18,7 @@ import androidx.compose.runtime.saveable.listSaver
  * the "don't clobber a manual pick" rule re-implemented at each one. One of the three used plain
  * `remember` instead of `rememberSaveable`, silently forgetting the user's manual pick across the
  * exact disposal (navigating to the player) that rule exists to survive — see
- * docs/plans/episode-selection-fragility-plan.md. Collecting them into one object with named
+ * docs/plans/20260908_episode-selection-fragility-plan.md. Collecting them into one object with named
  * transitions instead of ad hoc assignments means that rule lives in exactly one place, and there's
  * no second, independently-declared field free to drift out of sync with the rest.
  */

@@ -43,7 +43,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
  * One row of section-tab pills (Cast / Details / Similar / ...), TV detail screens' equivalent of
  * [EpisodeSelectionScreen][org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen]'s season
  * tabs — same focus/selection shape, generalised to plain labels instead of `SeasonInfo`. See
- * docs/plans/tv-detail-hero-ui-plan.md Phase 4.
+ * docs/plans/20260902_tv-detail-hero-ui-plan.md Phase 4.
  *
  * D-pad left/right moves focus between tabs via Compose's default focus search inside this Row —
  * each tab selects as soon as it receives focus, so movement alone switches the visible section.

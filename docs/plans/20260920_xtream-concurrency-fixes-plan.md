@@ -4,7 +4,7 @@
 **Date:** 2026-09-20
 **Scope:** Xtream-only — `core/network/xtream/*`, `core/network/XtreamMediaProvider.kt`, `core/player/api/XtreamApiService.kt`, `core/ui/viewmodels/ProviderViewModel.kt`
 
-This is a focused follow-up to the systemic audits already landed (`docs/plans/systemic-concurrency-memory-deep-dive-plan.md` and predecessors), which covered `core:player`, `core:network`, `core:ui`, `tv`, `mobile` broadly but did not scope `XtreamApiService`'s HTTP client lifecycle or `XtreamSyncWorker` specifically. All four findings below are new — verified against HEAD, not carried over from prior plans.
+This is a focused follow-up to the systemic audits already landed (`docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md` and predecessors), which covered `core:player`, `core:network`, `core:ui`, `tv`, `mobile` broadly but did not scope `XtreamApiService`'s HTTP client lifecycle or `XtreamSyncWorker` specifically. All four findings below are new — verified against HEAD, not carried over from prior plans.
 
 ---
 
@@ -47,7 +47,7 @@ Verified in `OkHttpEngine.createOkHttpClient()`:
 val builder = (config.preconfigured ?: okHttpClientPrototype).newBuilder()
 builder.dispatcher(Dispatcher())   // <-- always overrides the inherited dispatcher
 ```
-Ktor unconditionally replaces the dispatcher with a brand new one. Only the `ConnectionPool` and other builder state (TLS config, interceptors, timeouts) are actually inherited via `newBuilder()`. So "reuse `NetworkModule.okHttpClient`" — the exact fix already prescribed for `TmdbApiService` in the still-open Phase 4 of `systemic-concurrency-memory-deep-dive-plan.md` — only prevents duplicate connection pools, not duplicate thread pools, for any Ktor-based service (Xtream, Jellyfin, and Tmdb once "fixed" the same way).
+Ktor unconditionally replaces the dispatcher with a brand new one. Only the `ConnectionPool` and other builder state (TLS config, interceptors, timeouts) are actually inherited via `newBuilder()`. So "reuse `NetworkModule.okHttpClient`" — the exact fix already prescribed for `TmdbApiService` in the still-open Phase 4 of `20260919_systemic-concurrency-memory-deep-dive-plan.md` — only prevents duplicate connection pools, not duplicate thread pools, for any Ktor-based service (Xtream, Jellyfin, and Tmdb once "fixed" the same way).
 
 **Impact:** every `XtreamApiService` instance carries its own live thread pool no matter what, so Finding 1's leak is a full thread-pool leak per instance, not just a lightweight object leak.
 

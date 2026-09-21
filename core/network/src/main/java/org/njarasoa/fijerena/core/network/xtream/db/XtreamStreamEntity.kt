@@ -12,7 +12,7 @@ import androidx.room.Index
         // Composite index covering getStreamsByCategory query (providerId + type + categoryId)
         Index(value = ["providerId", "type", "categoryId"]),
         Index(value = ["providerId", "type", "categoryId", "excluded"]),
-        // Serves Phase 5 TMDB dedup lookups (see watch-state-durable-storage-plan.md)
+        // Serves Phase 5 TMDB dedup lookups (see 20260828_watch-state-durable-storage-plan.md)
         Index(value = ["providerId", "tmdbId"]),
     ],
 )

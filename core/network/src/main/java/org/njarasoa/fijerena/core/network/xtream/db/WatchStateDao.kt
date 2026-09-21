@@ -6,7 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 /**
- * See `docs/plans/watch-state-durable-storage-plan.md`. Statements mirror the plan's Write path /
+ * See `docs/plans/20260828_watch-state-durable-storage-plan.md`. Statements mirror the plan's Write path /
  * read-query sections exactly rather than re-deriving SQL at each call site.
  */
 @Dao

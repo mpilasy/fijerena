@@ -28,7 +28,7 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.*
 
 /**
- * Data-hygiene guard, demoted from Phase 5 dedup (docs/plans/watch-state-durable-storage-plan.md) to a
+ * Data-hygiene guard, demoted from Phase 5 dedup (docs/plans/20260828_watch-state-durable-storage-plan.md) to a
  * standalone one after an on-device check showed episode-`tmdbId`-based dedup couldn't work at all
  * — the real duplication lives across separate `xtream_series` rows (see
  * [org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao.getSiblingCompletedEpisodeIds]),

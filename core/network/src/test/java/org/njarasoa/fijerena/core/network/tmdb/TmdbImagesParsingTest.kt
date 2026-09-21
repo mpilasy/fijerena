@@ -8,7 +8,7 @@ import org.junit.Test
 
 /**
  * `/movie/{id}/images` and `/tv/{id}/images` parsing, and the logo/backdrop selection rules
- * built on top of it. See docs/plans/tv-detail-hero-ui-plan.md Phase 1.
+ * built on top of it. See docs/plans/20260902_tv-detail-hero-ui-plan.md Phase 1.
  */
 class TmdbImagesParsingTest {
     private val json =

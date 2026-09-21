@@ -36,7 +36,7 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
  * Shared header for the TV movie and series detail screens: full-bleed backdrop, one left-aligned
  * text column, an action row, and an optional top-right side slot (the series "Next Up" card in
  * Phase 5). Both screens build on this so their headers can't drift apart the way the current two
- * hand-rolled ones already have. See docs/plans/tv-detail-hero-ui-plan.md Phase 2.
+ * hand-rolled ones already have. See docs/plans/20260902_tv-detail-hero-ui-plan.md Phase 2.
  *
  * Meant as one non-focusable item in the screen's existing `LazyColumn` — it takes no focus and
  * intercepts no input itself, so the screen's own D-pad handling is untouched by adding it.

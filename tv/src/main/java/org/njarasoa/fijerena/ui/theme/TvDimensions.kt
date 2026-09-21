@@ -48,7 +48,7 @@ object TvDimensions {
     // Height of the TMDB logo art rendered in place of the OSD's big title text.
     val osdLogoHeight: Dp = 56.dp
 
-    // Detail hero (docs/plans/tv-detail-hero-ui-plan.md). The reference logo art reads much
+    // Detail hero (docs/plans/20260902_tv-detail-hero-ui-plan.md). The reference logo art reads much
     // larger than the OSD's — a plain title-logo swap at osdLogoHeight looked undersized here.
     val heroLogoHeight: Dp = 96.dp
 

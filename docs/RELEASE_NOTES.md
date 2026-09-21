@@ -3,7 +3,7 @@
 ## Version: UI Look & Feel Uplift (Phases 1–4) & Durable Favorites
 **Release Date:** 2026-08-29
 
-### UI Look & Feel Uplift (`docs/plans/ui-look-feel-uplift-plan.md`)
+### UI Look & Feel Uplift (`docs/plans/20260829_ui-look-feel-uplift-plan.md`)
 - **Language / Region Badges (Phase 1a):** Cleaned up title rendering by stripping raw provider prefixes (`EN -`, `FR -`, `NP:`) and suffixes (`(US)`, `(GB)`) via `parseDisplayTitle()` into a unified `LanguageBadge` pill.
 - **Thumbnail Scrim & List Row Depth (Phases 1b, 1c):** Added subtle bottom-gradient scrims to protect title legibility on uneven poster art and enhanced list card elevation and contrast tokens across mobile and TV.
 - **Mobile Player Controls Cluster & Scrubber (Phases 2a, 2b):** Modernized touch scrubber and player control overlay buttons with standard glass paneling and cohesive spacing tokens.
@@ -13,7 +13,7 @@
 - **Badge & Rating Consistency Pass (Phase 4c):** Introduced `CinemaBadge` and `RatingBadge` standardizing the `"★ ${formatRating(rating)}"` and codec/resolution pill presentation across all screens.
 - **Original Title Presentation:** Updated Movie and Series detail pages to consistently display the original provider stream/series name.
 
-### Durable Favorites Storage (`docs/plans/favorites-durable-storage-plan.md`)
+### Durable Favorites Storage (`docs/plans/20260828_favorites-durable-storage-plan.md`)
 - **`favorite_state` table (`xtream_v2.db` v16):** Migrated favorite items and categories out of SharedPreferences JSON blobs into durable Room storage.
 
 ---
@@ -21,7 +21,7 @@
 ## Version: Durable Watch State, EPG Change Detection & TV Back Fixes
 **Release Date:** 2026-08-28
 
-### Durable Watch State (`docs/plans/watch-state-durable-storage-plan.md`, Phases 1–6)
+### Durable Watch State (`docs/plans/20260828_watch-state-durable-storage-plan.md`, Phases 1–6)
 - **`watch_state` table (`xtream_v2.db` v15):** Playback position and completion moved out of the `watch_history_v3` SharedPreferences blob, which truncated to `watchHistorySize` on every write and silently evicted anything older. Rows are now kept forever; `watchHistorySize` bounds only the length of the Recent row. On the first `setProvider()` after upgrade, `MediaRepository.backfillAndPurgeWatchState()` copies the blob in, sets a **per-provider** `watch_state_migrated_v1` flag, then removes both legacy keys — backfill always runs before purge, so a provider not opened between the dual-write and purge releases can't lose history.
 - **Eviction bug fixed on read flip:** Reads moved to `watch_state` in Phase 3; `getPlaybackPositions(contentType)` is now one indexed query returning a Map, replacing the per-item linear scan of the blob.
 - **TMDB dedup across catalogue variants:** A title watched under one language/quality variant now reads as watched under all of them. Movies join `xtream_streams` on a shared `tmdbId`.
@@ -29,7 +29,7 @@
 - **Manual mark watched/unwatched (Phase 6):** `MediaRepository.setWatched(itemId, contentType, watched)` replaces the dead `clearPlaybackPosition`. A manual mark leaves `lastPlayedAt` null so it never enters the Recent row, and `setWatched` no-ops for server-backed providers (Jellyfin owns that state). `upsertProgress`'s `isCompleted` is now sticky (`MAX(existing, new)`) — only an explicit unmark clears it. Unmarking spreads across TMDB siblings, mirroring the dedup read. UI follows each surface's existing affordance: an icon beside the favorite toggle on movie details, a second action row in the TV favorite/search context menus, long-press on TV episode cards, and the mobile episode watched badge as its own tap target.
 - **Track restoration:** `audioTrackIndex`/`subtitleTrackIndex` persist per row with a series-level fallback, fixing TV never restoring a saved audio/subtitle track.
 
-### EPG Refresh Change Detection (`docs/plans/refresh-change-detection-plan.md`)
+### EPG Refresh Change Detection (`docs/plans/20260827_refresh-change-detection-plan.md`)
 - **Conditional requests + content hash (`providers.db` v10):** `downloadSource` sends `If-None-Match`/`If-Modified-Since` from the source's stored `etag`/`last_modified_header`; a `304` short-circuits with no body read. Otherwise a SHA-256 of the payload is compared to `last_content_sha256` — computed in the download read pass for plain sources, and after decompression for `.gz` (gzip's mtime header taints the raw bytes even when content is identical).
 - **Skip guards:** An unchanged source skips `ingestFromStream` entirely and is excluded from `executeSwapToMain`'s id list at every call site — including it would delete its primary rows and transfer nothing back, since staging was never populated. Counts carry forward via `EpgSourceDao.markUnchanged` instead of resetting to zero. A hash match only skips within 24h of the last real ingest, because ingestion windows programmes against wall-clock time and a byte-identical static file must still be re-ingested to keep the guide window moving.
 - **Truncated downloads detected:** `read()` returning -1 can't distinguish a clean EOF from a cut connection; a flaky CDN's short read was surfacing much later as an `XmlPullParserException` deep in ingestion. `totalRead` is now checked against `Content-Length` and a mismatch takes the normal retry path.

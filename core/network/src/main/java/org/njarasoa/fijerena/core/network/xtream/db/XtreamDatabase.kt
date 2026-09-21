@@ -126,14 +126,14 @@ abstract class XtreamDatabase : RoomDatabase() {
         /**
          * Migration 14→15: durable watch state (position + completion), replacing the
          * `watch_history_v3` SharedPreferences blob that truncated on every write.
-         * See `docs/plans/watch-state-durable-storage-plan.md`. Nothing reads or writes this table
+         * See `docs/plans/20260828_watch-state-durable-storage-plan.md`. Nothing reads or writes this table
          * yet — it ships dark until Phase 2.
          */
         /**
          * Migration 15→16: durable favourites, replacing the `favorites_v2` and
          * `favorite_categories` SharedPreferences blobs that truncated at
          * `providerSettings.favoritesMaxSize` on every write.
-         * See `docs/plans/favorites-durable-storage-plan.md`.
+         * See `docs/plans/20260828_favorites-durable-storage-plan.md`.
          */
         private val MIGRATION_15_16 =
             object : Migration(15, 16) {

@@ -72,7 +72,7 @@ class XtreamApiService(
                 // the ConnectionPool below is overridden explicitly (own pool, not the shared
                 // one). Both are then owned solely by this instance, so close() is safe to call:
                 // it can never evict connections or shut down threads any other service depends
-                // on. See docs/plans/xtream-concurrency-fixes-plan.md, Finding 3.
+                // on. See docs/plans/20260920_xtream-concurrency-fixes-plan.md, Finding 3.
                 preconfigured = org.njarasoa.fijerena.core.player.network.NetworkModule.okHttpClient
                 config {
                     followRedirects(true)

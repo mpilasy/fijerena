@@ -254,7 +254,7 @@ Per-stream EPG payload cache table.
 ### Table: `watch_state` (added v15)
 Durable playback position and completion state, kept forever. Replaces the `watch_history_v3`
 SharedPreferences blob, which truncated to `providerSettings.watchHistorySize` on every write and
-silently evicted anything older. See `docs/plans/watch-state-durable-storage-plan.md`.
+silently evicted anything older. See `docs/plans/20260828_watch-state-durable-storage-plan.md`.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -305,7 +305,7 @@ removed from `XtreamContentManager.syncSeries` for the same reason.
 Durable favourites, kept forever. Replaces the `favorites_v2` and `favorite_categories`
 SharedPreferences blobs, which were capped at `providerSettings.favoritesMaxSize` (default 100) and
 truncated on every write, silently evicting the oldest entry. See
-`docs/plans/favorites-durable-storage-plan.md`.
+`docs/plans/20260828_favorites-durable-storage-plan.md`.
 
 One table serves both blobs; `kind` discriminates. For `CATEGORY` rows, `itemId` **is** the category
 id and `parentCategoryId` is NULL.

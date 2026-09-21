@@ -36,7 +36,7 @@ object CinemaAlpha {
     const val heroSheen = 0.12f // Diagonal gloss highlight over a hero card's gradient fill
     const val heroChipBackground = 0.18f // Frosted chip behind a hero card's icon or count
 
-    // TV detail hero backdrop (docs/plans/tv-detail-hero-ui-plan.md)
+    // TV detail hero backdrop (docs/plans/20260902_tv-detail-hero-ui-plan.md)
     // Horizontal scrim over the backdrop: opaque at the left edge (0f), fading to fully
     // transparent by this fraction of the hero's width, so the text column always sits on solid
     // ground regardless of what the image behind it looks like.

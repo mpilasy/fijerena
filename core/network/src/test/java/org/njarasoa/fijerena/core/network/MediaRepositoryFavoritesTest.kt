@@ -21,7 +21,7 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 
 /**
- * Favourites on `favorite_state` — see `docs/plans/favorites-durable-storage-plan.md`.
+ * Favourites on `favorite_state` — see `docs/plans/20260828_favorites-durable-storage-plan.md`.
  *
  * The defect these exist for: the old blob did `take(providerSettings.favoritesMaxSize)` on every
  * write, so favouriting past the cap silently evicted the oldest entry.
