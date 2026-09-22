@@ -421,7 +421,10 @@ class EpgIndexer private constructor(
                     // over 150MB during rebuild, risking the Low Memory Killer on 1-2GB Android TV
                     // devices.
                     sdb.execSQL("PRAGMA synchronous = OFF")
-                    sdb.execSQL("PRAGMA temp_store = MEMORY")
+                    // FILE, not MEMORY — see beginBulkIngestion()'s identical note. The FTS
+                    // rebuild's own temp B-trees are exactly the ones that were spiking native
+                    // RSS past the Low Memory Killer's tolerance on this rebuild specifically.
+                    sdb.execSQL("PRAGMA temp_store = FILE")
                     sdb.execSQL("PRAGMA cache_size = -16000")
 
                     try {
@@ -471,11 +474,17 @@ class EpgIndexer private constructor(
 
     /**
      * Perform the atomic swap from staging to primary tables.
+     *
+     * Marks FTS stale here, not in [beginBulkIngestion] — this is the actual moment
+     * `epg_programme` (and therefore the FTS shadow table) is mutated on the staging path;
+     * ingestion itself only ever wrote to the staging tables. Marking earlier blocked search for
+     * the entire download+ingest window even though the live guide hadn't changed yet.
      */
     suspend fun executeSwapToMain(sourceIds: List<Long>) = withContext(Dispatchers.IO) {
         val db = EpgIndexDatabase.getInstance(context)
         val dao = db.epgIndexDao()
         writeMutex.withLock {
+            markFtsStale()
             Log.i(TAG, "executeSwapToMain: swapping staging to primary for sources: $sourceIds")
             dao.executeSwap(sourceIds)
             Log.i(TAG, "executeSwapToMain: swap complete")
@@ -512,12 +521,19 @@ class EpgIndexer private constructor(
      *    cheaper than incremental maintenance.
      *  - Set synchronous=OFF to skip WAL fsync overhead during ingestion.
      *    Safe because EPG data is re-downloadable on crash.
+     *  - Drop the query-only indexes on `epg_programme` — but only when [useStaging] is false.
+     *    On the staging path, ingestion writes go to `epg_programme_staging`, not
+     *    `epg_programme` — the live guide keeps querying the untouched primary table through
+     *    the whole download+ingest window, so dropping its indexes here bought nothing but a
+     *    full table scan on 2M+ rows for every guide lookup until [endBulkIngestion] restored
+     *    them.
      *
-     * Always call endBulkIngestion() in a finally block to restore state.
+     * Always call endBulkIngestion() in a finally block to restore state, with the same
+     * [useStaging] value this was called with.
      */
-    suspend fun beginBulkIngestion() =
+    suspend fun beginBulkIngestion(useStaging: Boolean) =
         withContext(Dispatchers.IO) {
-            Log.i(TAG, "beginBulkIngestion: setting up database for bulk ingest")
+            Log.i(TAG, "beginBulkIngestion: setting up database for bulk ingest (useStaging=$useStaging)")
             val startMs = System.currentTimeMillis()
             try {
                 writeMutex.withLock {
@@ -528,21 +544,29 @@ class EpgIndexer private constructor(
                         Log.w(TAG, "beginBulkIngestion: connection is read-only, attempting to modify might fail")
                     }
 
-                    // FTS sync triggers are dropped below, so from this point on writes to
-                    // epg_programme (direct on low-storage devices, or via the staging swap
-                    // otherwise) no longer keep the FTS shadow table in sync. Mark stale now,
-                    // not just when rebuildFtsAndUpdateState() later runs, so a search mid-ingest
-                    // gets "still updating" instead of silently querying a mismatched index.
-                    markFtsStale()
+                    if (!useStaging) {
+                        // FTS sync triggers are dropped below, so from this point on writes to
+                        // epg_programme (direct ingestion — the only way it's touched on this
+                        // path) no longer keep the FTS shadow table in sync. Mark stale now, not
+                        // just when rebuildFtsAndUpdateState() later runs, so a search mid-ingest
+                        // gets "still updating" instead of silently querying a mismatched index.
+                        // The staging path marks stale later instead — see executeSwapToMain().
+                        markFtsStale()
+                    }
 
                     FTS_TRIGGER_NAMES.forEach { name ->
                         sdb.execSQL("DROP TRIGGER IF EXISTS `$name`")
                     }
-                    BULK_DROP_INDEX_NAMES.forEach { name ->
-                        sdb.execSQL("DROP INDEX IF EXISTS `$name`")
+                    if (!useStaging) {
+                        BULK_DROP_INDEX_NAMES.forEach { name ->
+                            sdb.execSQL("DROP INDEX IF EXISTS `$name`")
+                        }
                     }
                     sdb.execSQL("PRAGMA synchronous = OFF")
-                    sdb.execSQL("PRAGMA temp_store = MEMORY")
+                    // FILE, not MEMORY: temp B-trees for a large XMLTV ingest were pushing native
+                    // RSS past what the Android Low Memory Killer tolerates on 1-2GB TV devices —
+                    // MEMORY keeps every temp structure off disk entirely regardless of size.
+                    sdb.execSQL("PRAGMA temp_store = FILE")
                     sdb.execSQL("PRAGMA cache_size = -32000") // 32 MB during bulk
                 }
                 Log.i(TAG, "beginBulkIngestion: setup complete in ${System.currentTimeMillis() - startMs}ms")
@@ -555,25 +579,31 @@ class EpgIndexer private constructor(
     /**
      * Restore the database after a bulk ingestion session:
      *  - Recreate the Room FTS sync triggers that were dropped in beginBulkIngestion().
+     *  - Recreate the query indexes dropped in beginBulkIngestion() — only if [useStaging] is
+     *    false, matching whatever that call actually dropped; recreating indexes that were never
+     *    dropped is a harmless but pointless `CREATE INDEX IF NOT EXISTS`, kept conditional
+     *    anyway so this mirrors beginBulkIngestion() exactly.
      *  - Restore synchronous=NORMAL.
      *
      * Call this before rebuildFtsAndUpdateState() so the triggers are in place
      * for all incremental updates after the session completes.
      */
-    suspend fun endBulkIngestion() =
+    suspend fun endBulkIngestion(useStaging: Boolean) =
         withContext(Dispatchers.IO) {
-            Log.i(TAG, "endBulkIngestion: restoring database state after bulk ingest")
+            Log.i(TAG, "endBulkIngestion: restoring database state after bulk ingest (useStaging=$useStaging)")
             val startMs = System.currentTimeMillis()
             try {
                 writeMutex.withLock {
                     val db = EpgIndexDatabase.getInstance(context)
                     val sdb = db.openHelper.writableDatabase
-                    
+
                     // Rebuild query indexes before restoring normal mode
-                    BULK_DROP_INDEX_DDL.forEach { ddl ->
-                        val indexStart = System.currentTimeMillis()
-                        sdb.execSQL(ddl)
-                        Log.d(TAG, "endBulkIngestion: recreated index in ${System.currentTimeMillis() - indexStart}ms")
+                    if (!useStaging) {
+                        BULK_DROP_INDEX_DDL.forEach { ddl ->
+                            val indexStart = System.currentTimeMillis()
+                            sdb.execSQL(ddl)
+                            Log.d(TAG, "endBulkIngestion: recreated index in ${System.currentTimeMillis() - indexStart}ms")
+                        }
                     }
                     sdb.execSQL("PRAGMA synchronous = NORMAL")
                     sdb.execSQL("PRAGMA temp_store = DEFAULT")
