@@ -191,6 +191,11 @@ class StreamingPlaybackService : MediaSessionService() {
             transferListener = bandwidthMeter,
         ) ?: run {
             Log.w(TAG, "performSeamlessRecycle: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
+            // setRecycling(true) above already fired — without resetting it here, isRecycling()
+            // stays permanently true (nothing else ever clears it but a Playing state this failed
+            // attempt will never reach), which silently blocks every future attemptStreamRetry()
+            // ("seamless recycle already in progress") forever. Dead player, no retry, no error.
+            setRecycling(false)
             return
         }
 
