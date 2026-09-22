@@ -113,17 +113,23 @@ abstract class EpgIndexDatabase : RoomDatabase() {
         /**
          * Destroy the database instance and delete the file.
          * Used before re-indexing to start fresh.
+         *
+         * File deletion happens inside the same `synchronized(this)` block as the
+         * close()/INSTANCE=null step, not after it — releasing the lock in between left a window
+         * for a racing [getInstance] to see `INSTANCE == null`, build a fresh database at this
+         * same path, and then have its brand-new file deleted out from under it by the deletes
+         * below, silently orphaning whatever it had already written.
          */
         suspend fun destroy(context: Context) {
             synchronized(this) {
                 INSTANCE?.close()
                 INSTANCE = null
+                val dbFile = context.applicationContext.getDatabasePath(DB_NAME)
+                dbFile.delete()
+                // Also delete WAL and SHM files
+                java.io.File(dbFile.path + "-wal").delete()
+                java.io.File(dbFile.path + "-shm").delete()
             }
-            val dbFile = context.applicationContext.getDatabasePath(DB_NAME)
-            dbFile.delete()
-            // Also delete WAL and SHM files
-            java.io.File(dbFile.path + "-wal").delete()
-            java.io.File(dbFile.path + "-shm").delete()
         }
     }
 }
