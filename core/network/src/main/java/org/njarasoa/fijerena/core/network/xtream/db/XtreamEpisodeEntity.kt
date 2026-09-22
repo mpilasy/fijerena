@@ -9,6 +9,10 @@ import androidx.room.Index
     indices = [
         Index(value = ["seriesId", "providerId"]),
         Index(value = ["providerId"]),
+        // Backs the sibling-episode joins in XtreamEpisodeDao (matching by (season, episodeNum)
+        // across sibling series sharing a tmdbId) — those filter/join on this triple with no
+        // covering index today.
+        Index(value = ["providerId", "season", "episodeNum"]),
     ],
 )
 data class XtreamEpisodeEntity(
