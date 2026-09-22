@@ -11,6 +11,7 @@ android {
     compileSdk = 36
     defaultConfig {
         minSdk = 30
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val tmdbApiKey =
             runCatching {
@@ -33,6 +34,20 @@ android {
             // "Method getLooper in android.os.HandlerThread not mocked" and every test in
             // MediaRepositoryTest fails before reaching its assertions.
             isReturnDefaultValues = true
+        }
+    }
+    packaging {
+        resources {
+            // The Google API client / Apache httpcomponents dependency chain (Google Drive API,
+            // for settings sync) ships several duplicate META-INF metadata files across its jars.
+            // Only surfaces once androidTest packaging actually runs, since it wasn't exercised
+            // before this module had an androidTest source set.
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/NOTICE.txt"
         }
     }
 }
@@ -81,4 +96,10 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // Instrumented: Room migration verification (MigrationTestHelper needs a real SQLite via
+    // instrumentation — no JVM/Robolectric equivalent covers actual on-device migration behavior).
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.room.testing)
 }
