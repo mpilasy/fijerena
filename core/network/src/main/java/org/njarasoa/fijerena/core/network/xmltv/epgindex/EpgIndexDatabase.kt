@@ -18,7 +18,7 @@ import io.requery.android.database.sqlite.RequerySQLiteOpenHelperFactory
         EpgProgrammeFts::class,
         EpgIndexMetadata::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = false,
 )
 abstract class EpgIndexDatabase : RoomDatabase() {
