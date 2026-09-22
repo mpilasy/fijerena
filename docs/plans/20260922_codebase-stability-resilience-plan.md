@@ -1,6 +1,6 @@
 # Codebase Stability & Resilience Plan: Modular Remediation
 
-**Status:** In Progress — Batches 0, 1, 3, 4 complete; F-02 code landed, hardware verification pending (2026-09-22)  
+**Status:** All in-scope work complete except F-02's hardware gate — Batches 0, 1, 3, 4, 5, 6 done; F-02 code landed, Shield TV 4K verification still pending (2026-09-22)  
 **Scope note (2026-09-22):** remaining work narrowed to general (provider-agnostic) and Xtream-specific findings only, per direction — F-11 (Jellyfin), F-13 (SMB), and F-14 (M3U/LOCAL parsing) are out of scope going forward. F-12 (OkHttp dispatcher leak) touches both Xtream and Jellyfin `ApiService`; if picked up, scope it to the Xtream half only.  
 **Date:** 2026-09-22  
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`
@@ -120,42 +120,47 @@
 ---
 
 ### Category 5: Network Protocols & Client Lifecycle (P2)
-- **F-10 (`core:player`): Unchecked HTTP status codes mask errors as JSON parser crashes**
+- **F-10 (`core:player`): Unchecked HTTP status codes mask errors as JSON parser crashes** — ✅ **DONE** (commit `7adba1e2`)
   - *Location:* [`XtreamApiService.kt:102-125`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt#L102-L125)
   - *Mechanism:* HTML error responses (401, 403, 429, 502) are passed directly to `decodeFromString`, throwing `SerializationException: Unexpected token '<'`.
   - *Fix:* Validate `response.status` and throw typed `HttpException`.
-- **F-11 (`core:network`): Missing Mutex in `JellyfinMediaProvider.withAutoReconnect`**
+  - *Landed:* Simpler than the planned fix — `expectSuccess = true` on the Ktor client (same pattern `JellyfinApiService` already uses) rejects any non-2xx before body parsing runs, no per-call-site `HttpException` type needed. `friendlyErrorMessage()`'s existing 401/403 string-matching, previously unreachable for Xtream, now works.
+- **F-11 (`core:network`): Missing Mutex in `JellyfinMediaProvider.withAutoReconnect`** — ⏭️ **OUT OF SCOPE** (Jellyfin, dropped 2026-09-22)
   - *Location:* [`JellyfinMediaProvider.kt:558-574`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinMediaProvider.kt#L558-L574)
   - *Mechanism:* Concurrent 401s launch parallel re-auths; null `userId` produces `/Users/null/Items` requests.
   - *Fix:* Add `Mutex` around re-authentication; prevent wiping credentials for Quick Connect.
-- **F-12 (`core:network`): OkHttp dispatcher and connection pool leak on API service close**
+- **F-12 (`core:network`): OkHttp dispatcher and connection pool leak on API service close** — ⏭️ **OUT OF SCOPE** (downgraded to Medium in initial review — not a true leak, OkHttp's default dispatcher/pool self-reclaim; the far worse shared-dispatcher variant was already fixed in `d073b145` before this plan started)
   - *Location:* [`XtreamApiService.kt:86`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt#L86), [`JellyfinApiService.kt:56`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinApiService.kt#L56)
   - *Mechanism:* Custom OkHttp `Dispatcher` and `ConnectionPool` are not closed when Ktor engine uses `preconfigured`.
   - *Fix:* Explicitly shut down dispatcher executor and evict connection pool in `close()`.
-- **F-13 (`core:network`): SMB directory scan executes 1,000 blocking RPCs**
+- **F-13 (`core:network`): SMB directory scan executes 1,000 blocking RPCs** — ⏭️ **OUT OF SCOPE** (SMB, dropped 2026-09-22)
   - *Location:* [`SmbMediaProvider.kt:124-194`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbMediaProvider.kt#L124-L194)
   - *Mechanism:* Calls `isDirectory(path)` for every entry, issuing individual network RPCs over SMB.
   - *Fix:* Read directory flag from `entry.fileAttributes` directly in directory listing.
 
 ---
 
-### Category 6: UI, Lifecycle & Navigation Resilience (P2/P3)
-- **F-25 (`tv`): Black screen on return from TV screensaver / HDMI switch**
+### Category 6: UI, Lifecycle & Navigation Resilience (P2/P3) — ✅ **ALL IN-SCOPE ITEMS DONE** (2026-09-22)
+- **F-25 (`tv`): Black screen on return from TV screensaver / HDMI switch** — ✅ **DONE** (commit `383789c3`)
   - *Location:* [`TvPlayerScreen.kt:105-110`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/player/TvPlayerScreen.kt#L105-L110)
   - *Mechanism:* `MainActivity.onStop()` releases player; `TvPlayerScreen` on `ON_RESUME` cancels focus timer but never restarts playback.
   - *Fix:* If `playbackState is Idle` and stream state was `Success`, re-trigger `playStream()` on resume.
-- **F-26 (`core:ui`): `lateinit var repository` initialization race in `CategoryViewModel`**
+  - *Landed:* Fixed as scoped — resumes with the same metadata/`resumePosition` the existing manual back-out-and-reenter recovery already used, so this isn't new behavior, just automating what already worked manually.
+- **F-26 (`core:ui`): `lateinit var repository` initialization race in `CategoryViewModel`** — ✅ **DONE** (commit `23275fdc`)
   - *Location:* [`CategoryViewModel.kt:157`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt#L157)
   - *Mechanism:* Uninitialized repository silently drops `loadStreams()` and favorite actions.
   - *Fix:* Use async `awaitRepository()` suspend pattern and wrap calls in `runCatching`.
-- **F-27 (`tv`): D-pad focus trap in empty `StreamList`**
+  - *Landed:* `CompletableDeferred<MediaRepository>` + `awaitRepository()` for all ~10 suspend call sites (properly waits instead of dropping); a `repositoryOrNull` for the ~7 synchronous Compose-read accessors that can't suspend (same graceful-degrade-to-default as before, not `runCatching` — nothing there throws, it was always a flag check). Found two call sites with no guard at all previously (`refreshLastPlayedItem()`, `refreshCategoriesLocal()`) — latent crash risk, now safe.
+- **F-27 (`tv`): D-pad focus trap in empty `StreamList`** — ✅ **DONE** (commit `3a5ad287`)
   - *Location:* [`StreamList.kt:332-348`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/category/components/StreamList.kt#L332-L348)
   - *Mechanism:* Zero focusable elements in empty state; removing last favorite drops focus to window root.
   - *Fix:* Add a focusable action button (e.g. "Refresh" or "Back to Categories") in empty state.
-- **F-28 (`mobile`): Mobile Live TV Picture-in-Picture broken**
+  - *Landed:* Added a Refresh button wired to the existing `onRefreshStreams` callback, with an explicit focus claim on compose (a sibling header refresh button already existed, but Compose doesn't auto-redirect lost focus onto a sibling when the focused item is removed).
+- **F-28 (`mobile`): Mobile Live TV Picture-in-Picture broken** — ✅ **DONE** (commit `132eed41`)
   - *Location:* [`MainActivity.kt:91`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/MainActivity.kt#L91), [`MobileCategoryListScreen.kt:252`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/category/MobileCategoryListScreen.kt#L252)
   - *Mechanism:* Mini-player uses nav-scoped ViewModel; `MainActivity` queries Activity-scoped ViewModel.
   - *Fix:* Scope docked Live TV `PlaybackViewModel` to the Activity.
+  - *Landed:* Fixed as scoped, plus a second, independent break the audit didn't catch: `setAutoEnterEnabled` was hardcoded `false` at Activity creation and never turned back on anywhere, so PiP couldn't trigger on any Android 12+ device regardless of the ViewModel-scoping fix. Wired it to the dock's live `playbackState`.
 
 ---
 
@@ -206,18 +211,18 @@ flowchart TD
         B4_4["PR 4B: EpgFileManager completion order and cancellation fix (F-23..24) [9482bb7e]"]
     end
 
-    subgraph Network["PR Batch 5: Provider & Network Resilience"]
-        B5_1["PR 5A: Validate HTTP status codes in XtreamApiService (F-10)"]
-        B5_2["PR 5B: Mutex in Jellyfin withAutoReconnect (F-11)"]
-        B5_3["PR 5C: Shutdown OkHttp Dispatchers in API services (F-12)"]
-        B5_4["PR 5D: SMB scanDirectory attribute optimization (F-13)"]
+    subgraph Network["PR Batch 5: Provider & Network Resilience — F-10 DONE, F-11/12/13 OUT OF SCOPE"]
+        B5_1["PR 5A: Validate HTTP status codes in XtreamApiService (F-10) [7adba1e2]"]
+        B5_2["PR 5B: Mutex in Jellyfin withAutoReconnect (F-11) — dropped, Jellyfin"]
+        B5_3["PR 5C: Shutdown OkHttp Dispatchers in API services (F-12) — dropped, downgraded to Medium"]
+        B5_4["PR 5D: SMB scanDirectory attribute optimization (F-13) — dropped, SMB"]
     end
 
-    subgraph UI["PR Batch 6: UI, Lifecycle & Focus Resilience"]
-        B6_1["PR 6A: TV Player screen auto-resume on HDMI/screensaver (F-25)"]
-        B6_2["PR 6B: Eliminate CategoryViewModel lateinit repository race (F-26)"]
-        B6_3["PR 6C: Focusable fallback in empty TV StreamList (F-27)"]
-        B6_4["PR 6D: Activity-scoped ViewModel for mobile Live TV PiP (F-28)"]
+    subgraph UI["PR Batch 6: UI, Lifecycle & Focus Resilience — DONE"]
+        B6_1["PR 6A: TV Player screen auto-resume on HDMI/screensaver (F-25) [383789c3]"]
+        B6_2["PR 6B: Eliminate CategoryViewModel lateinit repository race (F-26) [23275fdc]"]
+        B6_3["PR 6C: Focusable fallback in empty TV StreamList (F-27) [3a5ad287]"]
+        B6_4["PR 6D: Activity-scoped ViewModel + auto-enter wiring for mobile Live TV PiP (F-28) [132eed41]"]
     end
 
     subgraph Polish["PR Batch 7: Low-Priority Sweeps & Polish"]
@@ -249,7 +254,8 @@ flowchart TD
    - Shipped PR 3A (`69bc4469`, F-16/17/18 + SCHEMA doc), 3C (`772ec345`, F-19), 3D (`d7dc5a6a`, F-15). PR 3B (EpgIndexDatabase staging indices) deferred — it's actually part of the F-20/21 EPG-staging cluster, not this batch; will land with Batch 4.
 5. **Batch 4 (EPG Pipeline):** ✅ **DONE (2026-09-22)**
    - Shipped PR 4A (`b42a64f0`, F-20/21/22), 4B (`9482bb7e`, F-23/24), and the recovered orphaned staging-index finding (`bd4000c6`, PR 3B). No hardware needed — verified by compile + ktlint only, same as the rest of this batch; the reasoning (index/PRAGMA/state-ordering correctness) doesn't need a device to confirm the way the Room schema-validation risk did.
-6. **Batch 5 & 6 (Network & UI):**
-   - Narrowed scope (2026-09-22): F-11 (Jellyfin) and F-13 (SMB) dropped. F-12 (OkHttp leak), if picked up, scoped to the Xtream `ApiService` half only. F-10 (Xtream HTTP status codes) and the UI-resilience items (F-25/26/27/28) remain in scope.
+6. **Batch 5 & 6 (Network & UI):** ✅ **ALL IN-SCOPE ITEMS DONE (2026-09-22)**
+   - Batch 5: shipped F-10 (`7adba1e2`); F-11 (Jellyfin) and F-13 (SMB) dropped, F-12 dropped (downgraded to Medium — not a true leak, see its *Landed* note).
+   - Batch 6: shipped F-25 (`383789c3`), F-26 (`23275fdc`), F-27 (`3a5ad287`), F-28 (`132eed41`).
 7. **Batch 7 (Sweeps):**
    - Execute broad refactor sweeps only after all functional defects are resolved. F-14 (M3U BOM) dropped from scope entirely (LOCAL/REMOTE_M3U-only).
