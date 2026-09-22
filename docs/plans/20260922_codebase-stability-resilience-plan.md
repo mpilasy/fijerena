@@ -1,6 +1,6 @@
 # Codebase Stability & Resilience Plan: Modular Remediation
 
-**Status:** In Progress — Batches 0, 1, 3 complete; F-02 code landed, hardware verification pending (2026-09-22)  
+**Status:** In Progress — Batches 0, 1, 3, 4 complete; F-02 code landed, hardware verification pending (2026-09-22)  
 **Scope note (2026-09-22):** remaining work narrowed to general (provider-agnostic) and Xtream-specific findings only, per direction — F-11 (Jellyfin), F-13 (SMB), and F-14 (M3U/LOCAL parsing) are out of scope going forward. F-12 (OkHttp dispatcher leak) touches both Xtream and Jellyfin `ApiService`; if picked up, scope it to the Xtream half only.  
 **Date:** 2026-09-22  
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`
@@ -95,23 +95,27 @@
 
 ---
 
-### Category 4: EPG Ingestion, Memory Pressure & Query Contention (P1/P2)
-- **F-20 (`core:network`): Dropping query indices on active guide during staged ingestion**
+### Category 4: EPG Ingestion, Memory Pressure & Query Contention (P1/P2) — ✅ **ALL DONE** (2026-09-22)
+- **F-20 (`core:network`): Dropping query indices on active guide during staged ingestion** — ✅ **DONE** (commit `b42a64f0`)
   - *Location:* [`EpgIndexer.kt:542-543`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt#L542-L543)
   - *Mechanism:* Query indices on `epg_programme` are dropped at start of ingest even when writes target `epg_programme_staging`. Live TV guide queries perform full table scans across 2M+ rows.
   - *Fix:* Only drop indices if `!useStaging`.
-- **F-21 (`core:network`): SQLite `PRAGMA temp_store = MEMORY` triggers Android TV LMK kill**
+  - *Landed:* Fixed as scoped. `beginBulkIngestion()`/`endBulkIngestion()` both take a new `useStaging: Boolean` param, threaded through both call sites in `EpgFileManager.kt`. FTS triggers still drop unconditionally in both paths — the staging swap itself always bulk-writes into `epg_programme`, so per-row trigger firing during that swap is still worth avoiding regardless of staging.
+- **F-21 (`core:network`): SQLite `PRAGMA temp_store = MEMORY` triggers Android TV LMK kill** — ✅ **DONE** (commit `b42a64f0`)
   - *Location:* [`EpgIndexer.kt:424, 545`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt#L424)
   - *Mechanism:* In-memory B-tree merge tables during FTS rebuild on large XMLs push native RSS over 150MB, causing OS to kill process.
   - *Fix:* Change to `PRAGMA temp_store = FILE`.
-- **F-22 (`core:network`): Premature FTS lock blocks search during download**
+  - *Landed:* Fixed at both sites exactly as scoped (`beginBulkIngestion()` and `rebuildFtsAndUpdateState()`).
+- **F-22 (`core:network`): Premature FTS lock blocks search during download** — ✅ **DONE** (commit `b42a64f0`)
   - *Location:* [`EpgIndexer.kt:536`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexer.kt#L536), [`XmltvSearchService.kt:161`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/XmltvSearchService.kt#L161)
   - *Mechanism:* `markFtsStale()` called at download start rather than swap start, throwing `EpgIndexBusyException` for 15+ minutes.
   - *Fix:* Defer `markFtsStale()` until `executeSwapToMain()` runs.
-- **F-23 & F-24 (`core:network`): EPG state machine completion and cancellation races**
+  - *Landed:* Fixed as scoped — `markFtsStale()` moved into `executeSwapToMain()` for the staging path only; the non-staging path still marks stale at `beginBulkIngestion()` since it writes `epg_programme` directly during ingest, where the plan's fix would have been wrong to apply unconditionally.
+- **F-23 & F-24 (`core:network`): EPG state machine completion and cancellation races** — ✅ **DONE** (commit `9482bb7e`)
   - *Location:* [`EpgFileManager.kt:800, 824`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt#L800)
   - *Mechanism:* `Completed` emitted before FTS index finishes; `CancellationException` rethrown without resetting `Processing` state.
   - *Fix:* Emit `Completed` after post-processing completes; reset to `Idle` on cancellation.
+  - *Landed:* Both bugs were duplicated across two near-identical functions the audit only cited one of — `processAllSourcesInternal()` (multi-source refresh) and `processSingleSourceInternal()` (single-source refresh). Fixed identically in both.
 
 ---
 
@@ -192,16 +196,14 @@ flowchart TD
 
     subgraph DB["PR Batch 3: Database Migrations & Integrity — DONE"]
         B3_1["PR 3A: XtreamDatabase v17->18 (indices + PRAGMAs) + SCHEMA doc (F-16..18) [69bc4469]"]
-        B3_2["PR 3B: EpgIndexDatabase v16->17 (staging indices) + SCHEMA doc — moved to Batch 4, belongs with F-20/21"]
+        B3_2["PR 3B: EpgIndexDatabase v16->17 (staging indices) + SCHEMA doc — landed in Batch 4 [bd4000c6]"]
         B3_3["PR 3C: EpgIndexDatabase destroy() mutex synchronization (F-19) [772ec345]"]
         B3_4["PR 3D: Protect watch history write via NonCancellable (F-15) [d7dc5a6a]"]
     end
 
-    subgraph EPG["PR Batch 4: EPG Pipeline & Native Memory"]
-        B4_1["PR 4A: Preserve active query indices during staged ingest (F-20)"]
-        B4_2["PR 4B: Defer markFtsStale() until atomic swap (F-22)"]
-        B4_3["PR 4C: Set PRAGMA temp_store = FILE in EpgIndexer (F-21)"]
-        B4_4["PR 4D: EpgFileManager completion order and cancellation fix (F-23..24)"]
+    subgraph EPG["PR Batch 4: EPG Pipeline & Native Memory — DONE"]
+        B4_1["PR 4A: Staging-aware index drop, PRAGMA temp_store=FILE, deferred markFtsStale (F-20/21/22) [b42a64f0]"]
+        B4_4["PR 4B: EpgFileManager completion order and cancellation fix (F-23..24) [9482bb7e]"]
     end
 
     subgraph Network["PR Batch 5: Provider & Network Resilience"]
@@ -245,8 +247,8 @@ flowchart TD
    - Scoped the fix to `LIVE_TV` only (see F-02's *Landed* note — a global flip would have reopened a documented VOD memory-safety tradeoff). Do not merge/rely on until verified on physical NVIDIA Shield hardware streaming a 4K/60fps channel continuously for 15 minutes — holding until you say go.
 4. **Batch 3 (Room Migrations):** ✅ **DONE (2026-09-22)**
    - Shipped PR 3A (`69bc4469`, F-16/17/18 + SCHEMA doc), 3C (`772ec345`, F-19), 3D (`d7dc5a6a`, F-15). PR 3B (EpgIndexDatabase staging indices) deferred — it's actually part of the F-20/21 EPG-staging cluster, not this batch; will land with Batch 4.
-5. **Batch 4 (EPG Pipeline):**
-   - Ship PR 4A through 4D to eliminate native RSS bloat and guide browsing freezes. Next up.
+5. **Batch 4 (EPG Pipeline):** ✅ **DONE (2026-09-22)**
+   - Shipped PR 4A (`b42a64f0`, F-20/21/22), 4B (`9482bb7e`, F-23/24), and the recovered orphaned staging-index finding (`bd4000c6`, PR 3B). No hardware needed — verified by compile + ktlint only, same as the rest of this batch; the reasoning (index/PRAGMA/state-ordering correctness) doesn't need a device to confirm the way the Room schema-validation risk did.
 6. **Batch 5 & 6 (Network & UI):**
    - Narrowed scope (2026-09-22): F-11 (Jellyfin) and F-13 (SMB) dropped. F-12 (OkHttp leak), if picked up, scoped to the Xtream `ApiService` half only. F-10 (Xtream HTTP status codes) and the UI-resilience items (F-25/26/27/28) remain in scope.
 7. **Batch 7 (Sweeps):**
