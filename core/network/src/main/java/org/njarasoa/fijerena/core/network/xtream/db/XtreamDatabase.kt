@@ -197,7 +197,9 @@ abstract class XtreamDatabase : RoomDatabase() {
          * kdoc. Names match Room's default `index_<table>_<col1>_<col2>...` convention exactly,
          * or Room's schema validation flags them as unexpected on the next open.
          */
-        private val MIGRATION_17_18 =
+        // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest) —
+        // MigrationTestHelper needs the actual Migration object, not a re-implementation of it.
+        internal val MIGRATION_17_18 =
             object : Migration(17, 18) {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL(
