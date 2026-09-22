@@ -128,7 +128,16 @@ class PlaybackViewModel(
             // outer suspend function returned as soon as both launches fired, so the job was
             // already completed by the time cancel() ran, and every service restart leaked two
             // more collectors bound to the old service's now-dead flows.
-            val service = StreamingPlaybackService.awaitInstance()
+            val service =
+                try {
+                    StreamingPlaybackService.awaitInstance()
+                } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                    // Service never came up in time — nothing to observe.
+                    return@coroutineScope
+                } catch (e: ServiceDestroyedException) {
+                    // Service was torn down while we were waiting on it — nothing to observe.
+                    return@coroutineScope
+                }
 
             launch {
                 service.playbackState.collect { state ->
@@ -199,36 +208,47 @@ class PlaybackViewModel(
         }
     }
 
+    /**
+     * Runs [action] against the running service once it's up, swallowing the failure if the
+     * service never came up or was torn down while we were waiting on it (see [ServiceDestroyedException]'s
+     * kdoc) — these are fire-and-forget control actions with nothing left to act on in that case,
+     * not a failure worth surfacing as a player error. A genuine structured-concurrency
+     * cancellation (e.g. this ViewModel being cleared) still propagates.
+     */
+    private fun launchServiceAction(action: suspend (StreamingPlaybackService) -> Unit) {
+        viewModelScope.launch {
+            try {
+                action(StreamingPlaybackService.awaitInstance())
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                // no-op: service never came up in time
+            } catch (e: ServiceDestroyedException) {
+                // no-op: service died mid-wait or mid-call
+            }
+        }
+    }
+
     /** See [StreamingPlaybackService.updateMetadata]. */
     fun updateMetadata(
         streamUrl: String,
         update: (PlayerMetadata) -> PlayerMetadata,
     ) {
-        viewModelScope.launch {
-            StreamingPlaybackService.awaitInstance().updateMetadata(streamUrl, update)
-        }
+        launchServiceAction { it.updateMetadata(streamUrl, update) }
     }
 
     fun pause() {
-        viewModelScope.launch {
-            StreamingPlaybackService.awaitInstance().pause()
-        }
+        launchServiceAction { it.pause() }
     }
 
     fun resume() {
         onFocusRegained()
-        viewModelScope.launch {
-            StreamingPlaybackService.awaitInstance().resume()
-        }
+        launchServiceAction { it.resume() }
     }
 
     fun stop() {
         // Reset error state when user goes back
         isInErrorState = false
         onFocusRegained()
-        viewModelScope.launch {
-            StreamingPlaybackService.awaitInstance().stop()
-        }
+        launchServiceAction { it.stop() }
     }
 
     /** TV-only wrapper for [StreamingPlaybackService.stopAndRelease] — see its kdoc. */
@@ -276,9 +296,7 @@ class PlaybackViewModel(
     }
 
     fun seekTo(position: Long) {
-        viewModelScope.launch {
-            StreamingPlaybackService.awaitInstance().seekTo(position)
-        }
+        launchServiceAction { it.seekTo(position) }
     }
 
     fun seekRelative(offsetMs: Long) {
@@ -301,9 +319,7 @@ class PlaybackViewModel(
     }
 
     fun setPlaybackSpeed(speed: Float) {
-        viewModelScope.launch {
-            StreamingPlaybackService.awaitInstance().setPlaybackSpeed(speed)
-        }
+        launchServiceAction { it.setPlaybackSpeed(speed) }
     }
 
     /**
@@ -348,10 +364,7 @@ class PlaybackViewModel(
         groupIndex: Int,
         trackIndex: Int,
     ) {
-        viewModelScope.launch {
-            val service = StreamingPlaybackService.awaitInstance()
-            service.selectAudioTrack(groupIndex, trackIndex)
-        }
+        launchServiceAction { it.selectAudioTrack(groupIndex, trackIndex) }
     }
 
     /**
@@ -394,20 +407,14 @@ class PlaybackViewModel(
         groupIndex: Int,
         trackIndex: Int,
     ) {
-        viewModelScope.launch {
-            val service = StreamingPlaybackService.awaitInstance()
-            service.selectSubtitleTrack(groupIndex, trackIndex)
-        }
+        launchServiceAction { it.selectSubtitleTrack(groupIndex, trackIndex) }
     }
 
     /**
      * Disable all subtitle tracks.
      */
     fun disableSubtitles() {
-        viewModelScope.launch {
-            val service = StreamingPlaybackService.awaitInstance()
-            service.disableSubtitles()
-        }
+        launchServiceAction { it.disableSubtitles() }
     }
 
     /**
@@ -496,20 +503,14 @@ class PlaybackViewModel(
         groupIndex: Int,
         trackIndex: Int,
     ) {
-        viewModelScope.launch {
-            val service = StreamingPlaybackService.awaitInstance()
-            service.selectVideoQuality(groupIndex, trackIndex)
-        }
+        launchServiceAction { it.selectVideoQuality(groupIndex, trackIndex) }
     }
 
     /**
      * Enable automatic quality selection (adaptive bitrate).
      */
     fun enableAutoQuality() {
-        viewModelScope.launch {
-            val service = StreamingPlaybackService.awaitInstance()
-            service.enableAutoQuality()
-        }
+        launchServiceAction { it.enableAutoQuality() }
     }
 
     fun updatePictureInPictureMode(inPip: Boolean) {
