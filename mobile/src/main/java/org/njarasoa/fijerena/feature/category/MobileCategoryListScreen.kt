@@ -88,6 +88,7 @@ import kotlinx.coroutines.flow.first
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import androidx.activity.ComponentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -249,7 +250,30 @@ fun MobileCategoryListScreen(
     }
 
     val target = dockTarget
-    val dockPlayback: PlaybackViewModel? = if (isLiveTv && target != null) viewModel() else null
+    // Activity-scoped, not the default nav-scoped viewModel(): MainActivity's
+    // onPictureInPictureModeChanged()/onUserLeaveHint() resolve PlaybackViewModel via
+    // ViewModelProvider(this) (Activity-scoped) to decide whether to auto-enter PiP. A
+    // default-scoped viewModel() here resolved to a *different* instance tied to this
+    // destination's back-stack entry, so MainActivity was always checking a viewmodel that
+    // never actually played anything — PiP could never trigger.
+    val dockPlayback: PlaybackViewModel? =
+        if (isLiveTv && target != null) viewModel(viewModelStoreOwner = context as ComponentActivity) else null
+
+    // Auto-enter PiP (Android 12+) was hardcoded off at Activity creation and never turned back
+    // on — MainActivity.onUserLeaveHint()'s manual fallback only runs below SDK 31, so without
+    // this, leaving the app (Home button, app-switch) while the mini-player was actively playing
+    // never entered PiP on any S+ device at all.
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        val dockPlaybackState = dockPlayback?.playbackState?.collectAsStateWithLifecycle()?.value
+        LaunchedEffect(dockPlaybackState) {
+            val isPlaying = dockPlaybackState is PlaybackState.Playing || dockPlaybackState is PlaybackState.Buffering
+            (context as ComponentActivity).setPictureInPictureParams(
+                android.app.PictureInPictureParams.Builder()
+                    .setAutoEnterEnabled(isPlaying)
+                    .build(),
+            )
+        }
+    }
 
     // While a preview is docked, the list below defaults to the shared Recent list — regardless
     // of which category/tab (if any) was actually browsed to get here — with the currently
