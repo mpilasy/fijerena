@@ -50,6 +50,12 @@ class StreamingPlaybackService : MediaSessionService() {
     private var analyticsListener: PerformanceAnalyticsListener? = null
     private var mediaSourceFactory: StreamingMediaSourceFactory? = null
 
+    // Guards releasePlayerAndSession() against running twice on the same instance —
+    // stopAndRelease() calls it directly, then onDestroy() (fired later by stopSelf(), or by the
+    // system independently) calls it again. See releasePlayerAndSession()'s kdoc for why a second
+    // run is more than just redundant cleanup.
+    private var isReleased = false
+
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
@@ -999,11 +1005,20 @@ class StreamingPlaybackService : MediaSessionService() {
      * confirmed on-device with zero active binds yet the service still resident) that can keep
      * treating the service as "needed" until the session itself is released, so waiting for
      * onDestroy to do the release is a chicken-and-egg deadlock. Calling this directly frees the
-     * native decoder/renderer memory immediately and deterministically either way. Safe to call
-     * twice (from here and then again if onDestroy does eventually fire): mediaSession is null
-     * the second time, so the `?.run` blocks below are no-ops.
+     * native decoder/renderer memory immediately and deterministically either way.
+     *
+     * Safe to call twice (from here and then again if onDestroy does eventually fire): [isReleased]
+     * makes the second call a no-op outright, rather than relying on mediaSession already being
+     * null — that null check alone let a second call still reach the companion `instance`/
+     * `instanceReady` mutation below and, if a newer instance had since started and published
+     * itself, null out and fail *that* instance's deferred, permanently orphaning every future
+     * awaitInstance() caller even though playback was alive and well. The `instance === this`
+     * check there is the other half of that same fix, for the case where a *different* stale
+     * instance (not this one) races a teardown against a newer one.
      */
     private fun releasePlayerAndSession() {
+        if (isReleased) return
+        isReleased = true
         cancelPendingRetry()
         mainHandler.removeCallbacks(recycleHandler)
         _playbackState.value = PlaybackState.Idle
@@ -1044,22 +1059,26 @@ class StreamingPlaybackService : MediaSessionService() {
         // the pre-teardown instance/deferred or the fully-reset post-teardown ones, never both
         // halves mixed.
         synchronized(instanceLock) {
-            serviceStartRequested.set(false)
-            instance = null
-            // Any caller already suspended in awaitInstance() holds a reference to *this*
-            // deferred, not the field below — reassigning the field alone leaves them awaiting
-            // an object nobody will ever complete again if the service doesn't restart.
-            // completeExceptionally is a no-op if something already completed it normally, so
-            // this is safe either way. ServiceDestroyedException, not CancellationException —
-            // see its kdoc: this needs to reach callers as a catchable failure, not vanish into
-            // structured-concurrency cancellation handling.
-            instanceReady.completeExceptionally(ServiceDestroyedException("StreamingPlaybackService destroyed"))
-            // If Android recreates this service later in the same process (e.g. after
-            // reclaiming it during long standby), the next onCreate() needs a fresh,
-            // not-yet-completed deferred to publish into — instanceReady.complete() is a
-            // silent no-op once already completed, so without this reset awaitInstance()
-            // would hand out this now-destroyed instance forever.
-            instanceReady = kotlinx.coroutines.CompletableDeferred()
+            if (instance === this) {
+                serviceStartRequested.set(false)
+                instance = null
+                // Any caller already suspended in awaitInstance() holds a reference to *this*
+                // deferred, not the field below — reassigning the field alone leaves them awaiting
+                // an object nobody will ever complete again if the service doesn't restart.
+                // completeExceptionally is a no-op if something already completed it normally, so
+                // this is safe either way. ServiceDestroyedException, not CancellationException —
+                // see its kdoc: this needs to reach callers as a catchable failure, not vanish into
+                // structured-concurrency cancellation handling.
+                instanceReady.completeExceptionally(ServiceDestroyedException("StreamingPlaybackService destroyed"))
+                // If Android recreates this service later in the same process (e.g. after
+                // reclaiming it during long standby), the next onCreate() needs a fresh,
+                // not-yet-completed deferred to publish into — instanceReady.complete() is a
+                // silent no-op once already completed, so without this reset awaitInstance()
+                // would hand out this now-destroyed instance forever.
+                instanceReady = kotlinx.coroutines.CompletableDeferred()
+            }
+            // else: a newer instance has already published itself — this stale teardown must not
+            // touch its instance/instanceReady (see this function's kdoc).
         }
     }
 
