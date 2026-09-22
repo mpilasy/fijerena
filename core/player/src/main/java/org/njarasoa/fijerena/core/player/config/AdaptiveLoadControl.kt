@@ -136,12 +136,22 @@ class AdaptiveLoadControl(
                 PlayerConfigFactory.ContentType.VOD -> NetworkBufferProfile.VOD_TARGET_BUFFER_BYTES
             }
 
+        // VOD deliberately prioritizes the size cap over the time target (see
+        // NetworkBufferProfile.VOD_TARGET_BUFFER_BYTES's kdoc) to bound native memory on a
+        // high-bitrate 4K VOD stream — keep that as-is. LIVE_TV needs the opposite: its time
+        // targets (15-50s depending on network) are what a smooth live handover actually depends
+        // on, but the same false setting let its much smaller byte cap cut buffering short well
+        // before those targets on high-bitrate streams (16MB fills in ~3-5s at 25-40Mbps 4K),
+        // repeatedly stalling and eventually exhausting recovery. Prioritizing time for LIVE_TV
+        // only, plus the larger cap below, fixes that without reopening the VOD memory risk.
+        val prioritizeTimeOverSize = contentType == PlayerConfigFactory.ContentType.LIVE_TV
+
         return DefaultLoadControl.Builder()
             .setAllocator(sharedAllocator)
             .setBufferDurationsMs(durations.minBufferMs, durations.maxBufferMs, durations.playbackMs, durations.rebufferMs)
             .setTargetBufferBytes(targetBufferBytes)
             .setBackBuffer(durations.backBufferMs, true)
-            .setPrioritizeTimeOverSizeThresholds(false)
+            .setPrioritizeTimeOverSizeThresholds(prioritizeTimeOverSize)
             .build()
     }
 
