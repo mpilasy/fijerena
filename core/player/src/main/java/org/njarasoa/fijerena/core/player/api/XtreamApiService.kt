@@ -53,6 +53,16 @@ class XtreamApiService(
 
     private val client: HttpClient =
         HttpClient(OkHttp) {
+            // Without this, a non-2xx response (401/403/429/502...) — often an HTML error page,
+            // not JSON — went straight into decodeFromString/decodeFromStream/decodeToSequence
+            // below, surfacing as a confusing SerializationException ("Unexpected token '<'")
+            // instead of a catchable, status-carrying exception (ClientRequestException /
+            // ServerResponseException). Same fix JellyfinApiService already uses. Both are still
+            // ordinary Exceptions, so every existing generic `catch (e: Exception)` call site
+            // here keeps working unchanged — they just see a clearer failure now, and
+            // friendlyErrorMessage()'s existing 401/403 string-matching (which never had anything
+            // to match against for Xtream before this) becomes reachable.
+            expectSuccess = true
             install(ContentNegotiation) {
                 json(json)
             }
