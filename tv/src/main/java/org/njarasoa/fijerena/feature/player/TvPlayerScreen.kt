@@ -94,6 +94,19 @@ fun TvPlayerScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
 
+    val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
+    val playbackState by playbackViewModel.playbackState.collectAsStateWithLifecycle()
+
+    // Remember the last successful stream so a channel change can keep PlayerScreen mounted
+    // (and the old video visible) through the Loading window instead of unmounting to a
+    // full-screen spinner. The LaunchedEffect below still checks live streamState, not this.
+    // Also what the lifecycle observer below resumes onto after a long screensaver/HDMI-switch
+    // absence — declared before it for that reason.
+    var lastSuccessState by remember { mutableStateOf<StreamLoaderViewModel.StreamState.Success?>(null) }
+    if (streamState is StreamLoaderViewModel.StreamState.Success) {
+        lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
+    }
+
     // Observe app focus/lifecycle to pause on background and stop after timeout
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -102,7 +115,32 @@ fun TvPlayerScreen(
                     Lifecycle.Event.ON_PAUSE -> {
                         playbackViewModel.onFocusLost(false)
                     }
-                    Lifecycle.Event.ON_RESUME -> playbackViewModel.onFocusRegained()
+                    Lifecycle.Event.ON_RESUME -> {
+                        playbackViewModel.onFocusRegained()
+                        // A long absence (TV screensaver, HDMI input switch) lets onFocusLost's
+                        // 30s timer fire stop() while we were away, tearing playback down to Idle
+                        // with nothing bringing it back — the screen stayed mounted showing a
+                        // black frame forever. Resume with the last known-good stream if that's
+                        // what happened; a short absence never reaches Idle, so this is a no-op
+                        // then.
+                        val success = lastSuccessState
+                        if (playbackViewModel.playbackState.value is PlaybackState.Idle && success != null) {
+                            playbackViewModel.playStream(
+                                PlayerMetadata(
+                                    title = success.streamName,
+                                    channelName = success.streamName,
+                                    description = success.description,
+                                    streamUrl = success.streamUrl,
+                                    isLive = success.isLive,
+                                    headers = success.streamHeaders,
+                                    showTitle = success.seriesName,
+                                    episodeLabel = success.episodeLabel,
+                                    logoUrl = success.logoUrl,
+                                ),
+                                success.resumePosition,
+                            )
+                        }
+                    }
                     else -> {}
                 }
             }
@@ -110,17 +148,6 @@ fun TvPlayerScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
-    }
-
-    val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
-    val playbackState by playbackViewModel.playbackState.collectAsStateWithLifecycle()
-
-    // Remember the last successful stream so a channel change can keep PlayerScreen mounted
-    // (and the old video visible) through the Loading window instead of unmounting to a
-    // full-screen spinner. The LaunchedEffect below still checks live streamState, not this.
-    var lastSuccessState by remember { mutableStateOf<StreamLoaderViewModel.StreamState.Success?>(null) }
-    if (streamState is StreamLoaderViewModel.StreamState.Success) {
-        lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
     }
 
     // Stop and fully release playback when leaving the player screen. TV has no
