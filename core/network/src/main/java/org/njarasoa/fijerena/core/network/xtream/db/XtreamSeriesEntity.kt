@@ -10,6 +10,10 @@ import androidx.room.Index
         Index(value = ["providerId"]),
         Index(value = ["categoryId", "providerId"]),
         Index(value = ["providerId", "categoryId", "excluded"]),
+        // Backs XtreamSeriesDao.getByTmdbId() and the sibling-series lookups in
+        // XtreamEpisodeDao (getSiblingCompletedEpisodeIds/getSiblingCompletedCountsBySeries/
+        // clearGroupCompletion) — none of the existing indices cover tmdbId at all.
+        Index(value = ["providerId", "tmdbId"]),
     ],
 )
 data class XtreamSeriesEntity(

@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
 
 @Database(
     entities = [
@@ -19,7 +20,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WatchStateEntity::class,
         FavoriteStateEntity::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -190,6 +191,26 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 17→18: composite indices for series/episode sibling lookups by tmdbId
+         * (`xtream_series`) and (season, episodeNum) (`xtream_episodes`) — see the entities'
+         * kdoc. Names match Room's default `index_<table>_<col1>_<col2>...` convention exactly,
+         * or Room's schema validation flags them as unexpected on the next open.
+         */
+        private val MIGRATION_17_18 =
+            object : Migration(17, 18) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_xtream_series_providerId_tmdbId` " +
+                            "ON `xtream_series` (`providerId`, `tmdbId`)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_xtream_episodes_providerId_season_episodeNum` " +
+                            "ON `xtream_episodes` (`providerId`, `season`, `episodeNum`)",
+                    )
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -200,6 +221,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                     ).addMigrations(
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
                         MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
+                        MIGRATION_17_18,
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC
@@ -207,6 +229,24 @@ abstract class XtreamDatabase : RoomDatabase() {
                     // ActivityManager reports as low-RAM, which several of this app's actual
                     // Android TV targets plausibly are.
                     .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+                    .addCallback(
+                        object : RoomDatabase.Callback() {
+                            override fun onOpen(db: SupportSQLiteDatabase) {
+                                // NORMAL is safe under WAL (only FULL protects against an OS
+                                // crash, not an app crash, and this is WAL — see SQLite docs) and
+                                // avoids an fsync on every transaction. journal_size_limit caps
+                                // how large the WAL file is allowed to grow before SQLite
+                                // truncates it back down after a checkpoint, instead of the file
+                                // growing unbounded across this catalogue's frequent syncs.
+                                try {
+                                    db.execSQL("PRAGMA synchronous = NORMAL")
+                                    db.execPragma("PRAGMA journal_size_limit = 10485760") // 10MB
+                                } catch (e: Exception) {
+                                    android.util.Log.w("XtreamDatabase", "Failed to run DB maintenance", e)
+                                }
+                            }
+                        },
+                    )
                     .build()
                     .also { INSTANCE = it }
             }

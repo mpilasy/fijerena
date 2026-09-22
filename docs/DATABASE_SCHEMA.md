@@ -127,14 +127,22 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 17
+**Version:** 18
 
 Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
 `watch_state` and `favorite_state` tables. (v10 added FTS4 search tables for streams/series; v11
 added `excluded` flags and indexes; v12 added TMDB detail fields; v13 added `xtream_epg_cache` table;
 v14 added `plotFetchedAt` for TMDB synopses; v15 added `watch_state` and an index on
 `xtream_streams(providerId, tmdbId)`; v16 added `favorite_state`; v17 added `posterPath` on
-`xtream_streams` and `xtream_series` for TMDB poster art caching.)
+`xtream_streams` and `xtream_series` for TMDB poster art caching; v18 added indices on
+`xtream_series(providerId, tmdbId)` and `xtream_episodes(providerId, season, episodeNum)` for the
+TMDB sibling-dedup joins below, which had no covering index on either table.)
+
+Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
+(10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
+FULL gives against an OS-level crash (not an app crash) for throughput under WAL; journal_size_limit
+caps how large the WAL file is allowed to sit at after a checkpoint instead of growing unbounded
+across this catalogue's frequent syncs.
 
 Despite the file name, neither `watch_state` nor `favorite_state` is Xtream-only — `MediaRepository`
 backs Xtream, SMB, Local, and Remote M3U through them. They live here because this is the database
@@ -215,7 +223,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 | `posterPath` | TEXT | Sourced TMDB poster path (added v17) |
 
-**Indices:** `(providerId)`, `(categoryId, providerId)`, `(providerId, categoryId, excluded)`
+**Indices:** `(providerId)`, `(categoryId, providerId)`, `(providerId, categoryId, excluded)`, `(providerId, tmdbId)` (added v18, for the TMDB sibling-dedup joins below)
 
 ### Table: `xtream_episodes`
 | Column | Type | Description |
@@ -239,7 +247,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `plotFetchedAt` | INTEGER | Timestamp of TMDB synopsis fetch (added v14) |
 | `contentHash` | INTEGER | For stale data detection |
 
-**Indices:** `(seriesId, providerId)`, `(providerId)`
+**Indices:** `(seriesId, providerId)`, `(providerId)`, `(providerId, season, episodeNum)` (added v18, for the sibling-episode joins below)
 
 ### Table: `xtream_epg_cache` (added v13)
 Per-stream EPG payload cache table.
