@@ -278,6 +278,19 @@ class XtreamSessionManager(
 
     fun isAuthenticated(): Boolean = apiService != null && accountManager.hasStoredCredentials()
 
+    /**
+     * Tears down the network client only — unlike [logout], keeps stored credentials and the
+     * local catalog cache intact. For a provider that's merely being backgrounded/deselected
+     * (switching to another provider, a settings screen closing), not one the user actually
+     * logged out of or deleted.
+     */
+    suspend fun disconnect() =
+        withContext(Dispatchers.IO) {
+            sessionMutex.withLock {
+                replaceApiService(null)
+            }
+        }
+
     suspend fun logout(): Result<Unit> =
         withContext(Dispatchers.IO) {
             sessionMutex.withLock {

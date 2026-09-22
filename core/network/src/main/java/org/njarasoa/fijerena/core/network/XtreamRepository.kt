@@ -90,6 +90,8 @@ class XtreamRepository(
 
     suspend fun logout(): Result<Unit> = sessionManager.logout()
 
+    suspend fun disconnect() = sessionManager.disconnect()
+
     fun getCurrentUrl(): String? = sessionManager.getCurrentUrl()
 
     fun getCurrentUsername(): String? = sessionManager.getCurrentUsername()
