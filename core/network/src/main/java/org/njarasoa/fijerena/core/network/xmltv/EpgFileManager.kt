@@ -577,6 +577,9 @@ class EpgFileManager private constructor(
         val startTime = System.currentTimeMillis()
         val fixedDevice = isFixedDevice()
         val batchSize = if (fixedDevice) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
+        // Declared before the try block (not inside it, as before) so the catch block's cleanup
+        // call can pass the same value beginBulkIngestion() was actually called with.
+        val useStaging = shouldUseStaging()
         try {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val indexer = EpgIndexer.getInstance(context)
@@ -592,7 +595,6 @@ class EpgFileManager private constructor(
             val ingestionQueue = Channel<DownloadedSource>(Channel.UNLIMITED)
             val sourceStartTimeMap = ConcurrentHashMap<Long, Long>()
 
-            val useStaging = shouldUseStaging()
             indexer.setIndexing()
             if (useStaging) {
                 indexer.clearStaging()
@@ -611,7 +613,7 @@ class EpgFileManager private constructor(
                         // Start bulk setup in parallel with downloads — downloads write to cache files
                         // and never touch the DB, so there is no ordering constraint here.
                         // Consumers await this before touching the DB.
-                        val bulkReady = async(Dispatchers.IO) { indexer.beginBulkIngestion() }
+                        val bulkReady = async(Dispatchers.IO) { indexer.beginBulkIngestion(useStaging) }
 
                         // Consumer: ingest downloaded files in parallel (SQLite handles locking)
                         val ingestionJobs =
@@ -785,21 +787,6 @@ class EpgFileManager private constructor(
                 invalidateXmltvCache(sources, allStats)
             }
 
-            val endTime = System.currentTimeMillis()
-            val finalState =
-                MultiSourceState.Completed(
-                    sourcesProcessed = sources.size,
-                    errors = allStats.count { it.error != null },
-                    sourceStats = allStats.associateBy { it.sourceId },
-                    totalChannels = totalChannels,
-                    totalProgrammes = totalProgrammes,
-                    totalDownloadBytes = totalBytes,
-                    updatedAtMs = endTime,
-                    durationMs = endTime - startTime,
-                )
-            _state.value = finalState
-            updateLastPipelineStats(finalState)
-
             // FTS rebuild runs in the caller's coroutine so the WorkManager wake lock
             // covers the full operation. Killing the process mid-rebuild leaves fts_stale=true
             // persisted to prefs, which on Shield causes permanent LIKE fallback via Doze.
@@ -820,15 +807,40 @@ class EpgFileManager private constructor(
             // very next step throw all of that away and rebuild from scratch anyway. Still
             // unconditional (not inside `if (anyIngested)`): a run where nothing changed still
             // needs its triggers back for the next incremental write.
-            indexer.endBulkIngestion()
+            indexer.endBulkIngestion(useStaging)
+
+            // Completed only now, after the FTS rebuild and index/trigger restore above actually
+            // finish — emitting it earlier let a search fired the instant the UI showed
+            // "Completed" hit EpgIndexBusyException (FTS still marked stale) or a full table scan
+            // (query indexes from beginBulkIngestion() not yet recreated).
+            val endTime = System.currentTimeMillis()
+            val finalState =
+                MultiSourceState.Completed(
+                    sourcesProcessed = sources.size,
+                    errors = allStats.count { it.error != null },
+                    sourceStats = allStats.associateBy { it.sourceId },
+                    totalChannels = totalChannels,
+                    totalProgrammes = totalProgrammes,
+                    totalDownloadBytes = totalBytes,
+                    updatedAtMs = endTime,
+                    durationMs = endTime - startTime,
+                )
+            _state.value = finalState
+            updateLastPipelineStats(finalState)
         } catch (e: Exception) {
             withContext(NonCancellable) {
-                EpgIndexer.getInstance(context).endBulkIngestion()
+                EpgIndexer.getInstance(context).endBulkIngestion(useStaging)
             }
             // Checked before logging/setting Error state: a cancelled run isn't a processing
             // failure, and flashing a red error onto the EPG management screen for a normal
             // cancellation (e.g. leaving the screen mid-refresh) is misleading.
-            if (e is CancellationException) throw e
+            if (e is CancellationException) {
+                // Reset rather than leaving _state stranded on whatever mid-run value (Processing/
+                // Finalizing) was last set — the refresh this described no longer exists, and the
+                // next screen open must not show a permanently "in progress" guide sync.
+                _state.value = MultiSourceState.Idle
+                throw e
+            }
             Log.e(TAG, "processAllSources failed: ${e.message}", e)
             _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
         }
@@ -876,6 +888,9 @@ class EpgFileManager private constructor(
     private suspend fun processSingleSourceInternal(sourceId: Long) = ingestMutex.withLock {
         val startTime = System.currentTimeMillis()
         val batchSize = if (isFixedDevice()) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
+        // Declared before the try block (not inside it, as before) so the catch block's cleanup
+        // call can pass the same value beginBulkIngestion() was actually called with.
+        val useStaging = shouldUseStaging()
         try {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
             val source =
@@ -887,7 +902,6 @@ class EpgFileManager private constructor(
             val indexer = EpgIndexer.getInstance(context)
             val label = source.label.ifBlank { extractLabel(source.url) }
 
-            val useStaging = shouldUseStaging()
             indexer.setIndexing()
             if (useStaging) {
                 indexer.clearStaging()
@@ -914,7 +928,7 @@ class EpgFileManager private constructor(
             }
 
             // Start bulk setup in parallel with the download — same rationale as processAllSourcesInternal.
-            val bulkReady = scope.async(Dispatchers.IO) { indexer.beginBulkIngestion() }
+            val bulkReady = scope.async(Dispatchers.IO) { indexer.beginBulkIngestion(useStaging) }
 
             // Download phase
             activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
@@ -999,6 +1013,23 @@ class EpgFileManager private constructor(
                 invalidateXmltvCache(listOf(source), listOf(stats))
             }
 
+            // Inline — same reasoning as processAllSourcesInternal.
+            if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
+                try {
+                    indexer.rebuildFtsAndUpdateState()
+                    indexer.incrementalVacuum()
+                } catch (e: Exception) {
+                    Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
+                }
+            }
+
+            // Restore FTS sync triggers only now — see the identical comment in
+            // processAllSourcesInternal for why this must come after the swap and rebuild, not
+            // before. Still unconditional: an unchanged/skipped source still needs them back.
+            indexer.endBulkIngestion(useStaging)
+
+            // Completed only now — see the identical comment in processAllSourcesInternal for why
+            // this must come after the FTS rebuild and index/trigger restore above, not before.
             val endTime = System.currentTimeMillis()
             val finalState =
                 MultiSourceState.Completed(
@@ -1016,26 +1047,16 @@ class EpgFileManager private constructor(
                 )
             _state.value = finalState
             updateLastPipelineStats(finalState)
-
-            // Inline — same reasoning as processAllSourcesInternal.
-            if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
-                try {
-                    indexer.rebuildFtsAndUpdateState()
-                    indexer.incrementalVacuum()
-                } catch (e: Exception) {
-                    Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
-                }
-            }
-
-            // Restore FTS sync triggers only now — see the identical comment in
-            // processAllSourcesInternal for why this must come after the swap and rebuild, not
-            // before. Still unconditional: an unchanged/skipped source still needs them back.
-            indexer.endBulkIngestion()
         } catch (e: Exception) {
             withContext(NonCancellable) {
-                EpgIndexer.getInstance(context).endBulkIngestion()
+                EpgIndexer.getInstance(context).endBulkIngestion(useStaging)
             }
-            if (e is CancellationException) throw e
+            if (e is CancellationException) {
+                // See the identical comment in processAllSourcesInternal: don't strand the UI on
+                // a mid-run state for a refresh that no longer exists.
+                _state.value = MultiSourceState.Idle
+                throw e
+            }
             Log.e(TAG, "processSingleSource failed: ${e.message}", e)
             _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
         }
