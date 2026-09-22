@@ -1,6 +1,7 @@
 # Codebase Stability & Resilience Plan: Modular Remediation
 
-**Status:** In Progress — Batches 0 & 1 complete (2026-09-22)  
+**Status:** In Progress — Batches 0, 1, 3 complete; F-02 code landed, hardware verification pending (2026-09-22)  
+**Scope note (2026-09-22):** remaining work narrowed to general (provider-agnostic) and Xtream-specific findings only, per direction — F-11 (Jellyfin), F-13 (SMB), and F-14 (M3U/LOCAL parsing) are out of scope going forward. F-12 (OkHttp dispatcher leak) touches both Xtream and Jellyfin `ApiService`; if picked up, scope it to the Xtream half only.  
 **Date:** 2026-09-22  
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`
 
@@ -46,10 +47,11 @@
   - *Mechanism:* `pause()`, `resume()`, `stop()`, `seekTo()`, and track selection call `awaitInstance()` inside unhandled `viewModelScope.launch` blocks. Throws unchecked `ServiceDestroyedException` directly to `Thread.UncaughtExceptionHandler`.
   - *Fix:* Use null-safe `StreamingPlaybackService.getInstance()?.let { ... }` for control actions; catch `ServiceDestroyedException` in state observers.
   - *Landed:* Chose a `try/catch`-based `launchServiceAction()` helper over `getInstance()?.let{}` — preserves the original wait-for-startup semantics (a control action fired while the service is still coming up now succeeds once it's ready, instead of silently no-op'ing). Swallows `TimeoutCancellationException`/`ServiceDestroyedException`, lets real `CancellationException` propagate. Also caught the same bare `awaitInstance()` in `observeServiceState()` (line 131, outside the audit's cited ranges) — same crash class, fired automatically on every ViewModel init/restart, arguably the most likely trigger of the two.
-- **F-02 (`core:player`): High-bitrate Live TV buffer cap deadlock**
+- **F-02 (`core:player`): High-bitrate Live TV buffer cap deadlock** — 🟡 **CODE DONE** (commit `f5628c42`), **hardware verification pending**
   - *Location:* [`AdaptiveLoadControl.kt:144`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/loadcontrol/AdaptiveLoadControl.kt#L144), [`NetworkBufferProfile.kt:65`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/loadcontrol/NetworkBufferProfile.kt#L65), [`StreamHealthMonitor.kt:42`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamHealthMonitor.kt#L42)
   - *Mechanism:* 16MB buffer cap with `prioritizeTimeOverSizeThresholds = false` yields only ~6.4s on high-bitrate streams (>16Mbps). `StreamHealthMonitor` demands `minBufferMs = 8000L` (8s). `isBufferLow` is continuously true; stream cycles through recycles and terminates after 3 minutes (`Recovery exhausted`).
   - *Fix:* Set `.setPrioritizeTimeOverSizeThresholds(true)` and increase buffer ceiling to 32MB. **Merge gated on Shield TV 4K physical verification.**
+  - *Landed:* The plan's fix as written would have flipped `prioritizeTimeOverSizeThresholds` globally — but `buildDelegate()` uses the *same* call for VOD, and `NetworkBufferProfile.VOD_TARGET_BUFFER_BYTES`'s existing kdoc documents that VOD deliberately prioritizes its size cap over time specifically to bound native memory on high-bitrate 4K VOD on 1-2GB Android TV devices. A global flip would have silently reopened that OOM risk to fix a LIVE-only bug. Scoped the flip to `contentType == LIVE_TV` only; VOD keeps `false` unchanged. Buffer cap raised to 32MB as planned. **Not yet verified on a physical Shield — code change only, per your no-device-without-asking rule.**
 - **F-03 (`core:player`): Double-teardown publication race in `StreamingPlaybackService`** — ✅ **DONE** (commit `d5ebaa1e`)
   - *Location:* [`StreamingPlaybackService.kt:1001-1059`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L1001-L1059)
   - *Mechanism:* `stopAndRelease()` calls `releasePlayerAndSession()`, followed by `stopSelf()`. When `onDestroy()` dispatches, it runs `releasePlayerAndSession()` again without an `isReleased` check, exceptionally completing the *new* `instanceReady` deferred of a newly starting stream.
@@ -69,22 +71,27 @@
 ---
 
 ### Category 3: Database Stability & Missing Indices (P1/P2)
-- **F-15 (`core:ui`): Watch history write cancelled on screen exit**
+- **F-15 (`core:ui`): Watch history write cancelled on screen exit** — ✅ **DONE** (commit `d7dc5a6a`)
   - *Location:* [`StreamLoaderViewModel.kt:583-592`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt#L583-L592)
   - *Mechanism:* `doStopPlayback()` runs in `viewModelScope`, cancelled when the screen is popped on Back press before Room write finishes.
   - *Fix:* Wrap execution in `withContext(NonCancellable + Dispatchers.IO)`.
-- **F-16 (`core:network`): Unbounded WAL growth in `XtreamDatabase`**
+  - *Landed:* Fixed as scoped, only at `stopPlayback()` (the fire-and-forget caller) — `stopPlaybackAwaited()` already used `withContext` from the caller's own scope, not `viewModelScope`, so it wasn't exposed to this cancellation in the first place.
+- **F-16 (`core:network`): Unbounded WAL growth in `XtreamDatabase`** — ✅ **DONE** (commit `69bc4469`)
   - *Location:* [`XtreamDatabase.kt:193-212`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/db/XtreamDatabase.kt#L193-L212)
   - *Mechanism:* Lacks `PRAGMA synchronous = NORMAL` and `journal_size_limit`.
   - *Fix:* Add `RoomDatabase.Callback` setting `synchronous = NORMAL` and `journal_size_limit = 10485760`.
-- **F-17 & F-18 (`core:network`): Missing indices on `xtream_series` and `xtream_episodes`**
+  - *Landed:* Fixed as scoped. `journal_size_limit` routed through the same `execPragma()` cursor-stepping helper `EpgIndexDatabase` already uses, not plain `execSQL()` — that PRAGMA echoes its new value as a result row, which Android's `execSQL` rejects.
+- **F-17 & F-18 (`core:network`): Missing indices on `xtream_series` and `xtream_episodes`** — ✅ **DONE** (commit `69bc4469`)
   - *Location:* `XtreamSeriesEntity.kt`, `XtreamEpisodeEntity.kt`
   - *Mechanism:* Missing composite indices on `(providerId, tmdbId)` and `(providerId, season, episodeNum)` cause full table scans during watch state deduplication.
   - *Fix:* Room Migration `17→18` in `XtreamDatabase` + `DATABASE_SCHEMA.md` update.
-- **F-19 (`core:network`): Concurrency race in `EpgIndexDatabase.destroy()` vs `getInstance()`**
+  - *Landed:* Both indices added, migration index names matched to Room's default `index_<table>_<col1>_<col2>` convention exactly (verified against the existing v10/v14/v15 migrations' naming for consistency). `docs/DATABASE_SCHEMA.md` updated in the same commit. Bundled with F-16 — same file, same migration, one PR as the plan intended.
+  - *Verified (2026-09-22):* Added `core:network`'s first `androidTest` source set with a Room `MIGRATION_17_18` test — builds a byte-correct v18 database via Room, rolls it back to v17 shape (drops the two new indices, resets `PRAGMA user_version`), reopens through Room with only this migration registered and no destructive fallback, and asserts it succeeds with seeded rows intact. Ran on `emulator-5554` (Pixel_10 AVD) only — the two real Shields were disconnected from adb first and reconnected after, per the no-device-without-asking rule. **Passed**: `tests="1" failures="0" errors="0"`. `MIGRATION_17_18` made `internal` (was `private`) so the test can exercise the real object.
+- **F-19 (`core:network`): Concurrency race in `EpgIndexDatabase.destroy()` vs `getInstance()`** — ✅ **DONE** (commit `772ec345`)
   - *Location:* [`EpgIndexDatabase.kt:118-128`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexDatabase.kt#L118-L128)
   - *Mechanism:* `destroy()` exits synchronized block before deleting SQLite files, allowing a racing `getInstance()` to create a database that `destroy()` deletes.
   - *Fix:* Synchronize file deletion under the database instance creation lock.
+  - *Landed:* Fixed as scoped — file deletion moved inside the existing `synchronized(this)` block. No schema change, no `DATABASE_SCHEMA.md` update needed.
 
 ---
 
@@ -177,17 +184,17 @@ flowchart TD
         B1_4["PR 1D: DefaultDataSource.Factory for file playback (F-05) [86cd8ee4]"]
     end
 
-    subgraph Buffer["PR Batch 2: Live TV Buffering Architecture"]
-        B2["PR 2: AdaptiveLoadControl time prioritization & 32MB ceiling (F-02)"]
-        B2_Gate{{"Gate: Physical Shield TV 4K Test"}}
+    subgraph Buffer["PR Batch 2: Live TV Buffering Architecture — CODE DONE, GATE PENDING"]
+        B2["PR 2: AdaptiveLoadControl time prioritization (LIVE_TV only) & 32MB ceiling (F-02) [f5628c42]"]
+        B2_Gate{{"Gate: Physical Shield TV 4K Test — NOT YET RUN"}}
         B2 --> B2_Gate
     end
 
-    subgraph DB["PR Batch 3: Database Migrations & Integrity"]
-        B3_1["PR 3A: XtreamDatabase v17->18 (indices + PRAGMAs) + SCHEMA doc (F-16..18)"]
-        B3_2["PR 3B: EpgIndexDatabase v16->17 (staging indices) + SCHEMA doc"]
-        B3_3["PR 3C: EpgIndexDatabase destroy() mutex synchronization (F-19)"]
-        B3_4["PR 3D: Protect watch history write via NonCancellable (F-15)"]
+    subgraph DB["PR Batch 3: Database Migrations & Integrity — DONE"]
+        B3_1["PR 3A: XtreamDatabase v17->18 (indices + PRAGMAs) + SCHEMA doc (F-16..18) [69bc4469]"]
+        B3_2["PR 3B: EpgIndexDatabase v16->17 (staging indices) + SCHEMA doc — moved to Batch 4, belongs with F-20/21"]
+        B3_3["PR 3C: EpgIndexDatabase destroy() mutex synchronization (F-19) [772ec345]"]
+        B3_4["PR 3D: Protect watch history write via NonCancellable (F-15) [d7dc5a6a]"]
     end
 
     subgraph EPG["PR Batch 4: EPG Pipeline & Native Memory"]
@@ -234,13 +241,13 @@ flowchart TD
    - Shipped PR 0A (`F-08`, commit `92be6c8e`) and PR 0B (`F-09`, commit `c5696d7f`).
 2. **Batch 1 (Playback Crashes):** ✅ **DONE (2026-09-22)**
    - Shipped PR 1A (`80d3d66a`), 1B (`d5ebaa1e`), 1C (`94ebf181`), 1D (`86cd8ee4`). Compiles + ktlint clean on `core:player`; not yet run on-device — see note below.
-3. **Batch 2 (Buffer Architecture):**
-   - Author PR 2. Do not merge until verified on physical NVIDIA Shield hardware streaming a 4K/60fps channel continuously for 15 minutes.
-4. **Batch 3 (Room Migrations):**
-   - Ship PR 3A and 3B in separate commits, each updating `docs/DATABASE_SCHEMA.md` in lockstep.
+3. **Batch 2 (Buffer Architecture):** 🟡 **CODE DONE (`f5628c42`), HARDWARE GATE NOT YET RUN**
+   - Scoped the fix to `LIVE_TV` only (see F-02's *Landed* note — a global flip would have reopened a documented VOD memory-safety tradeoff). Do not merge/rely on until verified on physical NVIDIA Shield hardware streaming a 4K/60fps channel continuously for 15 minutes — holding until you say go.
+4. **Batch 3 (Room Migrations):** ✅ **DONE (2026-09-22)**
+   - Shipped PR 3A (`69bc4469`, F-16/17/18 + SCHEMA doc), 3C (`772ec345`, F-19), 3D (`d7dc5a6a`, F-15). PR 3B (EpgIndexDatabase staging indices) deferred — it's actually part of the F-20/21 EPG-staging cluster, not this batch; will land with Batch 4.
 5. **Batch 4 (EPG Pipeline):**
-   - Ship PR 4A through 4D to eliminate native RSS bloat and guide browsing freezes.
+   - Ship PR 4A through 4D to eliminate native RSS bloat and guide browsing freezes. Next up.
 6. **Batch 5 & 6 (Network & UI):**
-   - Ship provider concurrency and UI focus fixes as isolated PRs.
+   - Narrowed scope (2026-09-22): F-11 (Jellyfin) and F-13 (SMB) dropped. F-12 (OkHttp leak), if picked up, scoped to the Xtream `ApiService` half only. F-10 (Xtream HTTP status codes) and the UI-resilience items (F-25/26/27/28) remain in scope.
 7. **Batch 7 (Sweeps):**
-   - Execute broad refactor sweeps only after all functional defects are resolved.
+   - Execute broad refactor sweeps only after all functional defects are resolved. F-14 (M3U BOM) dropped from scope entirely (LOCAL/REMOTE_M3U-only).
