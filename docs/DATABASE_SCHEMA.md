@@ -72,9 +72,9 @@ The last three columns drive refresh change detection — see `docs/epg_guide.md
 ---
 
 ## 2. EPG Index Database (`epg_index.db`)
-**Version:** 16
+**Version:** 17
 
-Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast schedule searching. This database is considered transient and may be cleared during schema updates.
+Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast schedule searching. This database is considered transient and may be cleared during schema updates — no `addMigrations()` is registered for any version jump, only `fallbackToDestructiveMigration(true)`; a version bump always rebuilds empty and re-syncs from the configured XMLTV sources on the next run, which is the intended, accepted behavior for this specific database (unlike `xtream_v2.db`, it holds no durable user data). v17 added `source_id` indices to both staging tables.
 
 ### Table: `epg_channel`
 | Column | Type | Description |
@@ -87,7 +87,9 @@ Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast
 **Index:** `idx_channel_source` on `(source_id)`
 
 ### Table: `epg_channel_staging`
-Mirrors `epg_channel` exactly (same columns, no indices). Used as a write target during ingestion when staging is enabled, so the live `epg_channel` table stays queryable until the atomic swap (`executeSwapToMain()`) promotes staged rows.
+Mirrors `epg_channel` exactly (same columns). Used as a write target during ingestion when staging is enabled, so the live `epg_channel` table stays queryable until the atomic swap (`executeSwapToMain()`) promotes staged rows.
+
+**Index (added v17):** `idx_channel_staging_source` on `(source_id)` — backs `EpgIndexDao`'s per-source staging queries (`clearStagingChannelsForSources`, `transferChannelsFromStaging`); `source_id` is the second column of the primary key, not the leading one, so those queries had no usable index before this.
 
 ### Table: `epg_programme`
 | Column | Type | Description |
@@ -105,7 +107,9 @@ Mirrors `epg_channel` exactly (same columns, no indices). Used as a write target
 **Indices (7):** `idx_programme_start` (start_epoch), `idx_programme_end` (end_epoch), `idx_programme_time_range` (start_epoch, end_epoch), `idx_programme_channel` (channel_id), `idx_programme_dedup` (channel_id, source_id, start_epoch — UNIQUE), `idx_programme_source` (source_id), `idx_programme_channel_source` (channel_id, source_id).
 
 ### Table: `epg_programme_staging`
-Mirrors `epg_programme` (same columns), with a single unique index `idx_programme_staging_dedup` on `(channel_id, source_id, start_epoch)`. Same role as `epg_channel_staging` — write target during staged ingestion before the atomic swap.
+Mirrors `epg_programme` (same columns). Same role as `epg_channel_staging` — write target during staged ingestion before the atomic swap.
+
+**Indices:** `idx_programme_staging_dedup` (channel_id, source_id, start_epoch — UNIQUE), `idx_programme_staging_source` (source_id, added v17 — same rationale as `epg_channel_staging`'s, backing `clearStagingProgrammesForSources`/`transferProgrammesFromStaging`).
 
 ### Virtual Table: `epg_programme_fts` (FTS4)
 Provides full-text search over `epg_programme`.
