@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -84,6 +85,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -330,20 +332,46 @@ internal fun StreamList(
                     }
                 }
                 streams.isNullOrEmpty() -> {
+                    // Nothing else in this branch is focusable — the previous version was a bare
+                    // Text. Removing the last item from an already-loaded category (e.g.
+                    // unfavoriting the only favorite) left D-pad focus with nowhere to land: the
+                    // focused Card was gone, nothing here claimed it, so it fell to the window
+                    // root and stopped responding to D-pad input. A refresh action here both
+                    // fixes that and gives an actionable retry for a genuinely empty category.
+                    val emptyStateFocusRequester = remember { FocusRequester() }
+                    if (selectedCategoryId != null) {
+                        LaunchedEffect(streams, selectedCategoryId) {
+                            try {
+                                emptyStateFocusRequester.requestFocus()
+                            } catch (_: IllegalStateException) {
+                                // Not yet composed/attached — next recomposition retries via the key above.
+                            }
+                        }
+                    }
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text =
-                                if (streams == null) {
-                                    stringResource(R.string.category_select_to_view_channels)
-                                } else {
-                                    stringResource(R.string.category_no_channels)
-                                },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = CinemaTextSecondary,
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text =
+                                    if (streams == null) {
+                                        stringResource(R.string.category_select_to_view_channels)
+                                    } else {
+                                        stringResource(R.string.category_no_channels)
+                                    },
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = CinemaTextSecondary,
+                            )
+                            if (selectedCategoryId != null) {
+                                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                                CinemaSecondaryButton(
+                                    onClick = { onRefreshStreams(selectedCategoryId) },
+                                    text = stringResource(R.string.common_refresh),
+                                    modifier = Modifier.focusRequester(emptyStateFocusRequester),
+                                )
+                            }
+                        }
                     }
                 }
                 else -> {
