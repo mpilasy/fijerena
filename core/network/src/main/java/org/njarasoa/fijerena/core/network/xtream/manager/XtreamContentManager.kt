@@ -104,7 +104,23 @@ class XtreamContentManager(
         // DELETE ... IN (...) batches well under that so deletes don't fail outright on
         // providers with very large catalogs.
         private const val SQLITE_DELETE_BATCH_SIZE = 900
+
+        // A partial/glitched sync (dropped connection mid-stream, server hiccup) can return a
+        // handful of items instead of nothing at all — the seenIds.isEmpty() check above doesn't
+        // catch that. Below this floor a sync response is too small to trust as "the whole
+        // catalog shrank"; abort the delete phase rather than wipe out everything it didn't see.
+        private const val MIN_EXISTING_COUNT_FOR_PURGE_GUARD = 50
+        private const val MIN_SYNC_SURVIVAL_RATIO = 0.2
     }
+
+    /** True if [seenCount] out of [existingCount] previously-known items is too small a
+     * response to trust for deletion — likely a partial/glitched sync, not a real shrink. */
+    private fun isSuspiciousPartialSync(
+        seenCount: Int,
+        existingCount: Int,
+    ): Boolean =
+        existingCount > MIN_EXISTING_COUNT_FOR_PURGE_GUARD &&
+            seenCount < existingCount * MIN_SYNC_SURVIVAL_RATIO
 
     suspend fun getCategories(): Result<List<XtreamCategory>> =
         withContext(Dispatchers.IO) {
@@ -504,6 +520,13 @@ class XtreamContentManager(
                             )
                             return
                         }
+                        if (isSuspiciousPartialSync(seenIds.size, currentHashes.size)) {
+                            android.util.Log.w(
+                                TAG,
+                                "syncCategories($type): server returned only ${seenIds.size} of ${currentHashes.size} known categories — treating as a partial/glitched sync, not deleting",
+                            )
+                            return
+                        }
 
                         val toDeleteIds = currentHashes.keys.filter { it !in seenIds }
                         var inserted = 0
@@ -666,6 +689,13 @@ class XtreamContentManager(
                                 )
                                 return@coroutineScope
                             }
+                            if (isSuspiciousPartialSync(seenIds.size, currentHashes.size)) {
+                                android.util.Log.w(
+                                    TAG,
+                                    "syncStreams($type): server returned only ${seenIds.size} of ${currentHashes.size} known streams — treating as a partial/glitched sync, not deleting",
+                                )
+                                return@coroutineScope
+                            }
 
                             if (batch.isNotEmpty()) {
                                 streamDao.insertAll(batch)
@@ -785,6 +815,13 @@ class XtreamContentManager(
                                 android.util.Log.w(
                                     TAG,
                                     "syncSeries(): server returned 0 series but ${currentHashes.size} exist locally — treating as a failed sync, not deleting",
+                                )
+                                return@coroutineScope
+                            }
+                            if (isSuspiciousPartialSync(seenIds.size, currentHashes.size)) {
+                                android.util.Log.w(
+                                    TAG,
+                                    "syncSeries(): server returned only ${seenIds.size} of ${currentHashes.size} known series — treating as a partial/glitched sync, not deleting",
                                 )
                                 return@coroutineScope
                             }
