@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -587,7 +588,14 @@ class StreamLoaderViewModel(
         subtitleTrackIndex: Int? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            doStopPlayback(position, duration, audioTrackIndex, subtitleTrackIndex)
+            // NonCancellable: this coroutine is a child of viewModelScope, which gets cancelled
+            // the moment the screen popping back (e.g. Back press) clears this ViewModel —
+            // without this, that cancellation could land mid-write and truncate the
+            // watch-history/position commit doStopPlayback() is in the middle of. The outer
+            // launch still responds to cancellation normally the instant this block returns.
+            withContext(NonCancellable) {
+                doStopPlayback(position, duration, audioTrackIndex, subtitleTrackIndex)
+            }
         }
     }
 
