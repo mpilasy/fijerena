@@ -80,7 +80,7 @@ class XtreamMediaProvider(
 
     override suspend fun disconnect() {
         trimMemory()
-        repository.logout()
+        repository.disconnect()
     }
 
     override fun isConnected(): Boolean = repository.isAuthenticated()
