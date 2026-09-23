@@ -56,6 +56,10 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_section_provider_playback">Provider &amp; Playback</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_data_sync">Data &amp; Sync</string>
+    <string name="settings_section_advanced">Advanced</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_mg">Malagasy</string>

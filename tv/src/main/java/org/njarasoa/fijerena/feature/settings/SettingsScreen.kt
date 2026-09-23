@@ -24,6 +24,7 @@ import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
@@ -198,7 +199,10 @@ fun SettingsScreen(
                 // of the list. focusRestorer remembers the last focused child and hands it back.
                 modifier = Modifier.fillMaxSize().focusRestorer(),
             ) {
-                // Provider Details
+                // Provider & Playback
+                item {
+                    SettingsSectionHeader(text = stringResource(R.string.settings_section_provider_playback), scale = scale)
+                }
                 item {
                     ProviderSettingsCard(
                         providerName = uiState.providerName,
@@ -223,7 +227,10 @@ fun SettingsScreen(
                     )
                 }
 
-                // Theme Selection
+                // Appearance
+                item {
+                    SettingsSectionHeader(text = stringResource(R.string.settings_section_appearance), scale = scale)
+                }
                 item {
                     ThemeSettingsCard(
                         selectedThemeId = uiState.themeId,
@@ -252,15 +259,6 @@ fun SettingsScreen(
                     )
                 }
 
-                // EPG Data
-                item {
-                    EpgSettingsCard(
-                        context = context,
-                        epgRefreshTrigger = uiState.epgRefreshTrigger,
-                        scale = scale,
-                    )
-                }
-
                 // UI Scale
                 item {
                     UiScaleSettingsCard(
@@ -273,13 +271,14 @@ fun SettingsScreen(
                     )
                 }
 
-                // Developer Mode
+                // Data & Sync
                 item {
-                    DeveloperSettingsCard(
-                        isDevMode = uiState.isDevMode,
-                        onDevModeChanged = { enabled ->
-                            viewModel.updateDevMode(enabled)
-                        },
+                    SettingsSectionHeader(text = stringResource(R.string.settings_section_data_sync), scale = scale)
+                }
+                item {
+                    EpgSettingsCard(
+                        context = context,
+                        epgRefreshTrigger = uiState.epgRefreshTrigger,
                         scale = scale,
                     )
                 }
@@ -314,6 +313,20 @@ fun SettingsScreen(
                             }
                         },
                         exportImportMessage = uiState.exportImportMessage,
+                        scale = scale,
+                    )
+                }
+
+                // Advanced
+                item {
+                    SettingsSectionHeader(text = stringResource(R.string.settings_section_advanced), scale = scale)
+                }
+                item {
+                    DeveloperSettingsCard(
+                        isDevMode = uiState.isDevMode,
+                        onDevModeChanged = { enabled ->
+                            viewModel.updateDevMode(enabled)
+                        },
                         scale = scale,
                     )
                 }
@@ -368,4 +381,25 @@ fun SettingsScreen(
             )
         }
     }
+}
+
+/**
+ * Groups the settings list into visual waypoints (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,
+ * Phase 5, 8d) without touching any card's internals — plain non-focusable label, same as a list
+ * section header anywhere else in the app.
+ */
+@Composable
+private fun SettingsSectionHeader(
+    text: String,
+    scale: Float,
+) {
+    Text(
+        text = text,
+        style =
+            MaterialTheme.typography.labelLarge.copy(
+                fontSize = MaterialTheme.typography.labelLarge.fontSize.scaled(scale),
+            ),
+        color = CinemaAccent,
+        modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.xs),
+    )
 }
