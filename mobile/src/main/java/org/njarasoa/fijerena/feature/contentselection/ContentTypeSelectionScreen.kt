@@ -38,21 +38,27 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.feature.contentselection.components.MobileContinueWatchingShelf
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -79,6 +85,7 @@ fun MobileContentTypeSelectionScreen(
     onProviderChanged: () -> Unit = {},
     onSearch: () -> Unit = {},
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
+    onContinueWatchingSelected: (ContinueWatchingItem) -> Unit = {},
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -100,7 +107,9 @@ fun MobileContentTypeSelectionScreen(
     var moviesCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var tvShowsCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var mediaProviderRef by remember { mutableStateOf<org.njarasoa.fijerena.core.player.domain.MediaProvider?>(null) }
+    var mediaRepositoryRef by remember { mutableStateOf<MediaRepository?>(null) }
     var backdropImageUrl by remember { mutableStateOf<String?>(null) }
+    var continueWatchingItems by remember { mutableStateOf<List<ContinueWatchingItem>>(emptyList()) }
 
     // Show EPG Browser button when EPG index has data. Collected live (not a one-shot
     // `remember`) so a source that finishes indexing while this screen is on-screen shows the
@@ -128,6 +137,7 @@ fun MobileContentTypeSelectionScreen(
                     // unmanaged standalone one: same cached auth session, and connect() has
                     // already been run for it.
                     val repo = AppContainer.getInstance(context.applicationContext).getMediaRepository(activeProvider.id)
+                    mediaRepositoryRef = repo
                     val mediaProvider = repo.getProvider()
                     if (mediaProvider != null) {
                         supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
@@ -183,6 +193,26 @@ fun MobileContentTypeSelectionScreen(
                 }
             }
         }
+    }
+
+    // "Jump Back In" shelf — reload whenever the repository changes (provider switch) and again
+    // on every ON_RESUME, so returning from playback immediately reflects updated progress.
+    LaunchedEffect(mediaRepositoryRef) {
+        continueWatchingItems = mediaRepositoryRef?.getContinueWatchingItems() ?: emptyList()
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, mediaRepositoryRef) {
+        val repo = mediaRepositoryRef
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME && repo != null) {
+                    coroutineScope.launch {
+                        continueWatchingItems = repo.getContinueWatchingItems()
+                    }
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -271,6 +301,17 @@ fun MobileContentTypeSelectionScreen(
                         .padding(bottom = CinemaSpacing.lg)
                         .staggeredEntrance(0),
             )
+
+            if (continueWatchingItems.isNotEmpty()) {
+                MobileContinueWatchingShelf(
+                    items = continueWatchingItems,
+                    onItemSelected = onContinueWatchingSelected,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = CinemaSpacing.lg),
+                )
+            }
 
             val isDevMode = appSettings.isDevMode
             var cardIndex = 1
