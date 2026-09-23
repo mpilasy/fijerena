@@ -12,8 +12,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -29,7 +31,10 @@ fun AudioTrackSelectorDialog(
     viewModel: PlaybackViewModel,
     onDismiss: () -> Unit,
 ) {
-    val audioTracks = remember { viewModel.getAudioTracks() }
+    // Keyed on tracksVersion, not just composed-once: opening this dialog before ExoPlayer
+    // resolved tracks used to freeze on an empty list for the dialog's whole lifetime.
+    val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
+    val audioTracks = remember(tracksVersion) { viewModel.getAudioTracks() }
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
@@ -98,7 +103,10 @@ fun SubtitleSelectorDialog(
     viewModel: PlaybackViewModel,
     onDismiss: () -> Unit,
 ) {
-    val subtitleTracks = remember { viewModel.getSubtitleTracks() }
+    // Keyed on tracksVersion, not just composed-once: opening this dialog before ExoPlayer
+    // resolved tracks used to freeze on an empty list for the dialog's whole lifetime.
+    val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
+    val subtitleTracks = remember(tracksVersion) { viewModel.getSubtitleTracks() }
     val hasActiveSubtitle = subtitleTracks.any { it.isSelected }
 
     CinemaAlertDialog(
@@ -202,7 +210,10 @@ fun QualitySelectorDialog(
     viewModel: PlaybackViewModel,
     onDismiss: () -> Unit,
 ) {
-    val videoQualities = remember { viewModel.getVideoQualities() }
+    // Keyed on tracksVersion, not just composed-once: opening this dialog before ExoPlayer
+    // resolved tracks used to freeze on an empty list for the dialog's whole lifetime.
+    val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
+    val videoQualities = remember(tracksVersion) { viewModel.getVideoQualities() }
     val hasManualSelection = videoQualities.any { it.isSelected }
 
     CinemaAlertDialog(
