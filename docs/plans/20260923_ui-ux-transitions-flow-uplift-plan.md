@@ -14,29 +14,32 @@ Every item below is scored 1 (low) – 3 (high) on three axes:
 
 | # | Item | C | R | V | Priority | Phase |
 |---|---|---|---|---|---|---|
-| 1c | Centralized easing tokens | 1 | 1 | — | prereq | 1 |
-| 8a | Provider empty-state CTA | 1 | 1 | 3 | 2.0 | 1 |
-| 8b | TV loading spinner | 1 | 1 | 2 | 1.0 | 1 |
-| 5a | Debounced mobile search | 1 | 1 | 2 | 1.0 | 1 |
-| 5b | Search scope filter chips | 1 | 1 | 2 | 1.0 | 1 |
-| 6b | Haptic micro-interactions | 1 | 1 | 1 | 0.0 | 1 |
-| 4a | "Jump Back In" shelf | 3 | 2 | 3 | 0.5 | 2 |
+| 1c | Centralized easing tokens | 1 | 1 | — | prereq | 1 (Done) |
+| 8a | Provider empty-state CTA | 1 | 1 | 3 | 2.0 | 1 (Done) |
+| 8b | TV loading spinner | 1 | 1 | 2 | 1.0 | 1 (Done) |
+| 5a | Debounced mobile search | 1 | 1 | 2 | 1.0 | 1 (Done) |
+| 5b | Search scope filter chips | 1 | 1 | 2 | 1.0 | 1 (Done) |
+| 6b | Haptic micro-interactions | 1 | 1 | 1 | 0.0 | 1 (Done) |
 | 1a | Mobile player vertical transition | 1 | 1 | 2 | 1.0 | 2 |
 | 1b | State crossfades (Loading/Success/Error) | 2 | 1 | 2 | 0.5 | 2 |
 | 2b | Seamless channel switch (mobile) | 2 | 2 | 3 | 1.0 | 2 |
-| 3a | 16:9 backdrop hero | 2 | 1 | 3 | 1.5 | 3 |
-| 3b | Action bar & meta line redesign | 2 | 1 | 2 | 0.5 | 3 |
-| 3c | Tabbed detail sections | 3 | 2 | 3 | 0.5 | 3 |
-| 2a | Double-tap 10s seek | 2 | 2 | 3 | 1.0 | 4 |
-| 2c | VOD brightness/volume swipe | 3 | 3 | 2 | −1.0 | 4 |
+| 4a | "Jump Back In" shelf (TV & Mobile) | 3 | 2 | 3 | 0.5 | 3 |
+| 3a | 16:9 backdrop hero | 2 | 1 | 3 | 1.5 | 4 |
+| 3b | Action bar & meta line redesign | 2 | 1 | 2 | 0.5 | 4 |
+| 3c | Tabbed detail sections | 3 | 2 | 3 | 0.5 | 4 |
 | 8c | Provider row overflow menu | 2 | 2 | 2 | 0.0 | 5 |
 | 8d | TV Settings grouping | 2 | 1 | 2 | 0.5 | 5 |
+| 2a | Double-tap 10s seek | 2 | 2 | 3 | 1.0 | 6 |
 | 6a | Mobile EPG Now/Next mode | 3 | 1 | 2 | 0.5 | 6 |
+| 2c | VOD brightness/volume swipe | 3 | 3 | 2 | −1.0 | 6 (Stretch) |
 
-Two deliberate score-order overrides, both because of file/function locality, not because the math was wrong:
+### Sequencing Rationale & Locality Overrides
 
-- **2b ships in Phase 2, 2a/2c wait for Phase 4** — all three touch `MobilePlayerScreen.kt`'s gesture code, but 2b's risk is about position-tracking correctness (same lesson as the `cd8c6b49` fix — track live position, not a frozen one), not gesture arbitration. 2a/2c *add new touch-gesture surface* to the same function already touched twice this session for gesture-conflict bugs (`ae1d5558`). Landing 2b alone first, verifying it, then coming back for 2a+2c as one coordinated pass avoids three separate risky edits to the same fragile block stacked on top of each other.
-- **3a/3b/3c stay together in Phase 3** despite 3c's lower individual score — they're the same two screens (`MobileMovieDetailsScreen`, `MobileEpisodeSelectionScreen`), touched in a natural build order (hero, then actions, then tabs). Splitting them across phases would mean revisiting the same files three separate times for no benefit.
+- **Phase 2 unites Motion & Surface Polish (1a, 1b, 2b):** Rather than scattering transitions across disparate phases, 1a (player slide up/down), 1b (content crossfades), and 2b (seamless channel switch freeze-frame) form a focused, low-to-medium risk transition pass immediately consuming Phase 1's easing tokens.
+- **Phase 3 isolates "Jump Back In" (4a):** 4a is high-value but cross-layer (Room DAO with series collapsing, thumbnail rehydration from Xtream DB, TV D-pad shelf, Mobile touch shelf, and NavHost routing). Separating it into its own phase prevents conflating data/shelf architecture with screen transitions.
+- **Phase 4 keeps Mobile Detail Screens together (3a, 3b, 3c):** Both screens (`MobileMovieDetailsScreen`, `MobileEpisodeSelectionScreen`) are modernized in natural sequence: backdrop hero, action controls, and segmented tabs.
+- **Phase 5 prioritizes TV Ergonomics (8c, 8d):** As a TV-first media player, TV provider action clutter and settings list navigation are addressed before introducing experimental touch gestures.
+- **Phase 6 groups Gestures & Alternate Views (2a, 6a, 2c):** Double-tap seek (2a) lands cleanly after player lifecycle and transitions have fully settled. 2c (brightness/volume swipe) has negative ROI (-1.0) and high touch-arbitration risk, so it is decoupled from 2a and marked as an optional stretch item.
 
 ---
 
@@ -103,26 +106,9 @@ Cheapest tier in the whole plan: one file each, isolated, no cross-item dependen
 
 ---
 
-## Phase 2 — Home & Core Player Flow (highest-traffic screens)
+## Phase 2 — Motion & Surface Polish (NavHost, State Crossfades & Seamless Switch)
 
-The screens nearly every session touches: the home content-type picker and the player's basic open/close/switch motion. Higher value than Phase 1's items individually, but real code moves — not one-liners.
-
-### 4a. "Jump Back In" Shelf on Home (TV & Mobile)
-- **Problem:** In [`ContentTypeSelectionScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt), returning users must make 4–5 manual clicks/taps through content categories to resume whatever media they were watching previously.
-- **Verified (2026-09-23):** `MediaRepository.getWatchHistory(limit = 10)` as originally proposed does not exist and would not compile.
-  - Actual signature: `suspend fun getWatchHistory(): List<WatchedItem>` — no `limit` parameter.
-  - Backing query, [`WatchStateDao.getAll(providerId)`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/db/WatchStateDao.kt#L231-L232): `SELECT * FROM watch_state WHERE providerId = :providerId` — unbounded, no `ORDER BY`, no completion filter. Its own comment: "Every row for this provider, all content types, unbounded."
-  - This is most of why this item's Complexity is 3, not 1 — it needs a new DB-layer query first, not just a UI-layer call against something that already exists.
-- **Solution (revised):**
-  - Add `WatchStateDao.getRecentIncomplete(providerId: Long, limit: Int): List<WatchStateEntity>`:
-    `SELECT * FROM watch_state WHERE providerId = :providerId AND isCompleted = 0 AND lastPlayedAt IS NOT NULL ORDER BY lastPlayedAt DESC LIMIT :limit`
-    (`lastPlayedAt IS NOT NULL` excludes a manual watched/unwatched mark, which stores a null `lastPlayedAt` since it was never actually played — see `WatchStateEntity`'s kdoc.) Matches this DAO's existing precedent for this shape of query (`getLatestSeriesTrackPrefs` a few lines above already does `ORDER BY updatedAt DESC LIMIT 1`).
-  - Add a `MediaRepository` wrapper (e.g. `getRecentIncompleteWatchHistory(limit: Int = 10): List<WatchedItem>`) mapping through the same `toWatchedItem()` used by `getWatchHistory()`.
-  - Call that from `ContentTypeSelectionScreen` instead of the nonexistent overload.
-  - When history exists, display a sleek "Jump Back In" horizontal row above or below the content type cards.
-  - Each item displays: backdrop/thumbnail, title, progress bar with elapsed percentage, and "Resume" cue.
-  - Tapping an item navigates directly to the player (or episode selection for series) with resume position intact.
-  - Fully D-pad focusable on TV with smooth focus scaling.
+A cohesive transition and visual continuity pass across navigation and playback surfaces, directly consuming Phase 1's easing curves.
 
 ### 1a. Mobile Player Expansion & Dismissal Transition
 - **Problem:** In [`MobileNavHost.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/navigation/MobileNavHost.kt#L155-L178), `Screen.Player` enters with a flat horizontal slide (`slideIntoContainer(Left)`). Opening full-screen video feels like pushing an ordinary list item, and exiting slides sideways unnaturally.
@@ -146,7 +132,39 @@ The screens nearly every session touches: the home content-type picker and the p
 
 ---
 
-## Phase 3 — Mobile Detail Screens Modernization (Parity with TV Hero)
+## Phase 3 — Home Screen Quick-Resume / Jump Back In
+
+A high-value, cross-layer feature providing 1-click/tap resume capability right on the app's landing screen.
+
+### 4a. "Jump Back In" Shelf on Home (TV & Mobile)
+- **Problem:** In [`ContentTypeSelectionScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt), returning users must make 4–5 manual clicks/taps through content categories to resume whatever media they were watching previously.
+- **Architecture & Data Pipeline:**
+  - `MediaRepository.getWatchHistory()` as originally conceived returned unbounded rows without series collapsing or thumbnail artwork.
+  - **Database Queries (`WatchStateDao`):**
+    - `getResumable(providerId, ContentType.MOVIES, limit)`: retrieves incomplete movie watch states ordered by `lastPlayedAt DESC`.
+    - `getResumableSeriesCollapsed(providerId, ContentType.TV_SHOWS, limit)`: uses SQLite window function `ROW_NUMBER() OVER (PARTITION BY COALESCE(seriesId, itemId) ...)` so multiple in-progress episodes of the same show collapse to a single card for that show.
+  - **Thumbnail Rehydration:** `watch_state` stores IDs, positions, and titles, but no artwork. Rehydrate posters and covers via `XtreamDatabase` (`streamDao().getIconsByIds` for movies; `seriesDao().getCoversByIds` for series) or server metadata (Jellyfin).
+  - **Domain Model:** Dedicated `@Immutable data class ContinueWatchingItem(...)` in `core:player/domain/` with `id`, `name`, `subtitle`, `contentType`, `categoryId`, `thumbnailUrl`, `progress` (0.02..0.95), `playbackPositionMs`, `durationMs`, and `target: BrowseTarget`.
+  - **Repository Method:** `MediaRepository.getContinueWatchingItems(limit = 10)`: fetches in-progress movies and series, rehydrates thumbnails, and merges sorted descending by recency.
+- **UI & Interaction:**
+  - **TV (`TvContinueWatchingShelf`):**
+    - Displayed below hero cards when in-progress items exist.
+    - Horizontal `TvLazyRow` with TV focus tokens (1.0 -> 1.1 scale on 200ms tween, `CinemaAccentLight` border, 8dp glow).
+    - Card displays 16:9 thumbnail via `CinemaThumbnail`, title (>=18sp), subtitle/episode cue, and bottom progress bar (`CinemaAccent`).
+    - D-pad Down from hero cards lands directly on the shelf; D-pad Up returns to hero cards.
+  - **Mobile (`MobileContinueWatchingShelf`):**
+    - Displayed prominently in `MobileContentTypeSelectionScreen` above content cards.
+    - Horizontal `LazyRow` with touch-friendly 16:9 cards, progress bar, title, and episode/time subtitle.
+  - **Navigation Routing:**
+    - Selecting an item routes via `TvNavHost` and `MobileNavHost`:
+      - `BrowseTarget.Movie`: navigates directly to `Screen.Player` at saved position (1 click to play!).
+      - `BrowseTarget.Series`: navigates to `Screen.EpisodeSelection(seriesId, ..., initialEpisodeId)` with the in-progress episode preselected in the detail panel.
+      - `BrowseTarget.Episode`: navigates directly to `Screen.Player`.
+  - **Lifecycle Refresh:** Refresh shelf items on `Lifecycle.Event.ON_RESUME` so returning from playback immediately reflects updated progress.
+
+---
+
+## Phase 4 — Mobile Detail Screens Modernization (Parity with TV Hero)
 
 Same two screens end to end (`MobileMovieDetailsScreen`, `MobileEpisodeSelectionScreen`) — build in this order (hero → actions → tabs) rather than splitting across phases.
 
@@ -175,33 +193,9 @@ Same two screens end to end (`MobileMovieDetailsScreen`, `MobileEpisodeSelection
 
 ---
 
-## Phase 4 — Mobile Player Gesture Expansion (new touch surface, land as one coordinated pass)
+## Phase 5 — TV Provider & Settings Management (Ergonomics & Navigation)
 
-Both items add *new* gesture handling to the same `detectDragGestures`/tap-gesture block in `MobilePlayerScreen.kt` that's already been the site of two real bugs fixed this session (`ae1d5558` — overlay touch-stealing; the underlying function is fragile). Land together, after Phase 2's 2b has already gone through that file once and settled — don't stack three separate gesture rewrites on top of each other across phases.
-
-### 2a. Double-Tap Left/Right 10s Relative Seek (Replacing Double-Tap Pause)
-- **Problem:** In [`MobilePlayerScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt#L465-L473), double-tap toggles pause/resume. This duplicates single-tap + center button and breaks universal mobile video player conventions (YouTube, Netflix, Plex, MX Player).
-- **Solution:**
-  - Replace the double-tap handler with a horizontal screen-split calculation:
-    - Tap on left 40% of the screen: relative seek `-10_000L` (-10s).
-    - Tap on right 40% of the screen: relative seek `+10_000L` (+10s).
-    - Center 20%: toggle controls overlay or ignore.
-  - Implement a momentary seek ripple overlay: a circular translucent pill showing `⟲ 10s` (left) or `10s ⟳` (right) with animated chevrons, accumulating rapid taps (`20s`, `30s`) and automatically fading out after 600ms.
-  - Single tap continues to cleanly toggle controls overlay visibility.
-- **Note:** This removes documented behavior — `AGENTS.md` § Controls & Navigation currently states "Pause: Explicit via pause button, `KEYCODE_MEDIA_PLAY_PAUSE`, or mobile double-tap (VOD only)." The change itself is sound (matches universal convention, and double-tap-pause is redundant with the existing pause button + single-tap-to-toggle-controls), but `AGENTS.md` is "the single source of truth" per its own header — update that line in the same PR, not as a follow-up. Also fold in the `HapticFeedbackType.LongPress` trigger on seek activation deferred from 6b (Phase 1) — same PR, not a separate haptics follow-up.
-
-### 2c. VOD Vertical Gestures for Brightness & Volume
-- **Problem:** In [`MobilePlayerScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt#L477-L483), drag gestures are completely disabled on VOD (`!isLiveContent`).
-- **Solution:**
-  - On Movies and TV Shows (VOD), utilize vertical swipe drag gestures:
-    - Left half vertical drag: adjust screen window brightness (`Activity.window.attributes.screenBrightness`).
-    - Right half vertical drag: adjust stream/media volume via `AudioManager`.
-  - Display a temporary, elegant centered HUD pill (icon + vertical mini progress bar) showing current brightness/volume percentage that fades out 1s after touch release.
-- **Note:** Lowest priority-score item in the whole plan (Complexity 3, Risk 3) — new system-API integration (window brightness, `AudioManager`) layered into the same block as 2a, on a VOD-only surface. Do this last within Phase 4, after 2a has landed and settled, and verify gesture arbitration against the *current* state of the guarded overlay checks (`ae1d5558`), not an older version of the function.
-
----
-
-## Phase 5 — TV Provider & Settings Management (lower traffic, real friction when visited)
+Focus on Android TV usability, decluttering dense action rows and organizing settings navigation.
 
 ### 8c. Provider Row Crams up to 6 Icon-Only Action Buttons with No Labels
 - **Problem:** [`ProviderList`'s row content, TV](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/provider/ProviderSelectionScreen.kt#L322-L389) renders, per provider, up to six adjacent `CinemaIconButton`s — Select (conditional), Manage EPG (conditional), Duplicate, Copy To (conditional), Edit, Delete — each distinguished only by a small icon, no visible text label, packed into one `Row` with `Spacing.xs` between them. On a D-pad, that's up to six small, visually-similar adjacent focus targets per row with no label to read before committing to a press — a user has to know the icon vocabulary (checkmark = select, pencil = edit, etc.) or focus each one and read the content-description off... nothing, since content descriptions aren't rendered visually, only exposed to accessibility services.
@@ -217,13 +211,34 @@ Both items add *new* gesture handling to the same `detectDragGestures`/tap-gestu
 
 ---
 
-## Phase 6 — EPG Alternate View (standalone, no dependencies on other phases)
+## Phase 6 — Player Gestures & EPG Alternate View
+
+Delivering mobile player seek muscle memory and fast EPG feed browsing.
+
+### 2a. Double-Tap Left/Right 10s Relative Seek (Replacing Double-Tap Pause)
+- **Problem:** In [`MobilePlayerScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt#L465-L473), double-tap toggles pause/resume. This duplicates single-tap + center button and breaks universal mobile video player conventions (YouTube, Netflix, Plex, MX Player).
+- **Solution:**
+  - Replace the double-tap handler with a horizontal screen-split calculation:
+    - Tap on left 40% of the screen: relative seek `-10_000L` (-10s).
+    - Tap on right 40% of the screen: relative seek `+10_000L` (+10s).
+    - Center 20%: toggle controls overlay or ignore.
+  - Implement a momentary seek ripple overlay: a circular translucent pill showing `⟲ 10s` (left) or `10s ⟳` (right) with animated chevrons, accumulating rapid taps (`20s`, `30s`) and automatically fading out after 600ms.
+  - Single tap continues to cleanly toggle controls overlay visibility.
+- **Note:** This removes documented behavior — `AGENTS.md` § Controls & Navigation currently states "Pause: Explicit via pause button, `KEYCODE_MEDIA_PLAY_PAUSE`, or mobile double-tap (VOD only)." Update that line in the same PR. Fold in `HapticFeedbackType.LongPress` on seek activation deferred from 6b (Phase 1).
 
 ### 6a. Mobile EPG "Now & Next" Fast-Browse Mode
 - **Problem:** [`MobileEpgTimeline.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/epg/MobileEpgTimeline.kt#L201-L219) has independent un-synchronized horizontal `LazyRow`s per channel, making horizontal timeline alignment difficult on a phone screen.
 - **Solution:**
   - Add an EPG display mode toggle: **Grid Timeline** vs **Now & Next List**.
   - "Now & Next List" renders a clean vertical feed: Channel Logo/Name on the left, Current Program (with time elapsed bar) and Up Next program on the right. Tapping tunes the channel immediately; tapping program opens description dialog.
+
+### 2c. VOD Vertical Gestures for Brightness & Volume (Optional Stretch)
+- **Problem:** In [`MobilePlayerScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt#L477-L483), drag gestures are completely disabled on VOD (`!isLiveContent`).
+- **Solution (Optional Stretch):**
+  - Left half vertical drag: adjust screen window brightness (`Activity.window.attributes.screenBrightness`).
+  - Right half vertical drag: adjust stream/media volume via `AudioManager`.
+  - Display a temporary, elegant centered HUD pill (icon + vertical mini progress bar) showing current brightness/volume percentage that fades out 1s after touch release.
+- **Note:** Lowest priority-score item in the whole plan (Complexity 3, Risk 3, Priority -1.0) due to potential touch-arbitration conflicts with Android system navigation gestures. Kept as an optional stretch item to be attempted only after 2a has fully validated.
 
 ---
 
@@ -236,4 +251,4 @@ Both items add *new* gesture handling to the same `detectDragGestures`/tap-gestu
 3. **Hardware & Emulator Testing:**
    - **Android TV (Shield / Bravia):** Verify D-pad navigation, focus restoration, safe margins, and absence of frame drops.
    - **Android Mobile:** Verify touch gestures, double-tap seek accuracy, orientation changes, and smooth 60fps animations.
-4. **Phase 4 specifically:** given the fragile-function history of `MobilePlayerScreen.kt`'s gesture code, verify 2a and 2c each individually — full playback session, every overlay open/closed combination — before considering Phase 4 done, not just a final combined pass.
+4. **Phase 6 specifically:** given the fragile-function history of `MobilePlayerScreen.kt`'s gesture code, verify 2a and 2c each individually — full playback session, every overlay open/closed combination — before considering Phase 6 done, not just a final combined pass.
