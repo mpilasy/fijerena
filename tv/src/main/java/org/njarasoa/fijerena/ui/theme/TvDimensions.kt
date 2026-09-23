@@ -89,6 +89,9 @@ object TvDimensions {
     val contentTypeCardHeight: Dp = 240.dp
     val contentTypeIconSize: Dp = 56.dp
 
+    /** "Jump Back In" shelf card — wide enough for a legible 16:9 thumbnail at 10-foot viewing. */
+    val continueWatchingCardWidth: Dp = 280.dp
+
     // Borders
     val borderDefault: Dp = 1.dp
     val borderFocused: Dp = 2.dp

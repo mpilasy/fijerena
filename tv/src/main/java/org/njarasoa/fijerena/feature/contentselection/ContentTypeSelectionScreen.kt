@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.Tv
 import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +62,9 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -72,8 +76,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -82,6 +88,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
@@ -117,9 +124,11 @@ fun ContentTypeSelectionScreen(
     onEpgBrowser: () -> Unit = {},
     onProviderChanged: () -> Unit = {},
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
+    onContinueWatchingSelected: (ContinueWatchingItem) -> Unit = {},
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
+    val coroutineScope = rememberCoroutineScope()
     var providerName by remember { mutableStateOf("") }
     var providerType by remember { mutableStateOf("") }
     var supportedContentTypes by remember {
@@ -139,7 +148,9 @@ fun ContentTypeSelectionScreen(
 
     // Stash provider ref so we can load counts
     var mediaProviderRef by remember { mutableStateOf<MediaProvider?>(null) }
+    var mediaRepositoryRef by remember { mutableStateOf<MediaRepository?>(null) }
     var backdropImageUrl by remember { mutableStateOf<String?>(null) }
+    var continueWatchingItems by remember { mutableStateOf<List<ContinueWatchingItem>>(emptyList()) }
 
     // Show EPG Browser button when EPG index has data. Collected live (not a one-shot
     // `remember`) so a source that finishes indexing while this screen is on-screen shows the
@@ -167,6 +178,7 @@ fun ContentTypeSelectionScreen(
                     // unmanaged standalone one: same cached auth session, and connect() has
                     // already been run for it.
                     val repo = AppContainer.getInstance(context.applicationContext).getMediaRepository(activeProvider.id)
+                    mediaRepositoryRef = repo
                     val mediaProvider = repo.getProvider()
                     if (mediaProvider != null) {
                         supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
@@ -222,6 +234,26 @@ fun ContentTypeSelectionScreen(
                 }
             }
         }
+    }
+
+    // "Jump Back In" shelf — reload whenever the repository changes (provider switch) and again
+    // on every ON_RESUME, so returning from playback immediately reflects updated progress.
+    LaunchedEffect(mediaRepositoryRef) {
+        continueWatchingItems = mediaRepositoryRef?.getContinueWatchingItems() ?: emptyList()
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, mediaRepositoryRef) {
+        val repo = mediaRepositoryRef
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME && repo != null) {
+                    coroutineScope.launch {
+                        continueWatchingItems = repo.getContinueWatchingItems()
+                    }
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
@@ -405,12 +437,22 @@ fun ContentTypeSelectionScreen(
                             )
                         }
                     }
+
+                    if (continueWatchingItems.isNotEmpty()) {
+                        TvContinueWatchingShelf(
+                            items = continueWatchingItems,
+                            onItemSelected = onContinueWatchingSelected,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = Spacing.xl.scaled(scale)),
+                        )
+                    }
                 }
             }
 
             // Provider picker dialog
             if (showProviderPicker && allProviders.size > 1) {
-                val coroutineScope = rememberCoroutineScope()
                 CinemaAlertDialog(
                     onDismissRequest = { showProviderPicker = false },
                     containerColor = CinemaSurface,
