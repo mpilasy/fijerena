@@ -19,6 +19,8 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
 
 /**
  * Cinematic 16:9 backdrop header shared by [org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen]
@@ -51,14 +53,18 @@ fun MobileDetailHero(
         )
         // One brush for both scrims: dark at the very top (legible against a translucent status
         // bar / back button), clear through the middle where the art itself should read, dark
-        // again at the bottom where the title overlay sits.
+        // again at the bottom where the title overlay sits. Themed off the palette's own
+        // background (same source TV's GradientOverlay/TvDetailHero scrims use), not a raw
+        // black — a scrim tinted to the active theme reads as part of the surface it sits on
+        // instead of a fixed color pasted over every theme alike.
+        val palette = CinemaThemeHolder.current
         val scrimBrush =
-            remember {
+            remember(palette.background) {
                 Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = CinemaAlpha.imageOverlayLight),
+                    0f to palette.background.copy(alpha = CinemaAlpha.imageOverlayLight),
                     0.25f to Color.Transparent,
                     0.6f to Color.Transparent,
-                    1f to Color.Black.copy(alpha = CinemaAlpha.imageOverlay),
+                    1f to palette.background.copy(alpha = CinemaAlpha.imageOverlay),
                 )
             }
         Box(modifier = Modifier.matchParentSize().background(scrimBrush))
@@ -70,7 +76,7 @@ fun MobileDetailHero(
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineLarge,
-                color = Color.White,
+                color = CinemaTextPrimary,
             )
         }
     }
