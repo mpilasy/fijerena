@@ -1,6 +1,6 @@
 # Codebase Stability & Resilience Plan: Modular Remediation
 
-**Status:** ✅ **COMPLETE** — every finding landed except explicitly out-of-scope ones. Batches 0-7 done, F-02 hardware-verified, F-06/F-29/F-12(Xtream half) done (2026-09-23). Verified on-device: XtreamDatabase migration passed on `emulator-5554`; F-02 confirmed on mdarcy Shield — 17 min continuous 4K live playback, 0 rebuffers, 0 dropped frames, `Stream Health: HEALTHY` throughout. Only F-11/F-13/F-14 and F-12's Jellyfin half remain, all intentionally out of scope (Jellyfin/SMB/M3U-only) — see their entries below.  
+**Status:** ✅ **COMPLETE** — every finding landed except explicitly out-of-scope ones, plus 4 additional defects from an independent code review (§5 Addendum). Batches 0-7 done, F-02 hardware-verified, F-06/F-29/F-12(Xtream half) done (2026-09-23). Verified on-device: XtreamDatabase migration passed on `emulator-5554`; F-02 confirmed on mdarcy Shield — 17 min continuous 4K live playback, 0 rebuffers, 0 dropped frames, `Stream Health: HEALTHY` throughout. Only F-11/F-13/F-14 and F-12's Jellyfin half remain, all intentionally out of scope (Jellyfin/SMB/M3U-only) — see their entries below.  
 **Scope note (2026-09-22):** remaining work narrowed to general (provider-agnostic) and Xtream-specific findings only, per direction — F-11 (Jellyfin), F-13 (SMB), and F-14 (M3U/LOCAL parsing) are out of scope going forward. F-12 (OkHttp dispatcher leak) touches both Xtream and Jellyfin `ApiService`; if picked up, scope it to the Xtream half only.  
 **Date:** 2026-09-22  
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`
@@ -261,5 +261,30 @@ flowchart TD
 6. **Batch 5 & 6 (Network & UI):** ✅ **ALL IN-SCOPE ITEMS DONE (2026-09-22)**
    - Batch 5: shipped F-10 (`7adba1e2`); F-11 (Jellyfin) and F-13 (SMB) dropped, F-12 dropped (downgraded to Medium — not a true leak, see its *Landed* note).
    - Batch 6: shipped F-25 (`383789c3`), F-26 (`23275fdc`), F-27 (`3a5ad287`), F-28 (`132eed41`).
-7. **Batch 7 (Sweeps):** F-06 ✅ **DONE (`8b519cfd`, 2026-09-23)**, F-14 out of scope, F-29 still deferred
+7. **Batch 7 (Sweeps):** ✅ **DONE except F-14 (out of scope)** — F-06 (`8b519cfd`), F-29 (`65d21377`), both 2026-09-23
    - F-06 landed — general player code (audio-becoming-noisy), one missing `ExoPlayer.Builder` flag. F-14 (M3U BOM) dropped from scope entirely (LOCAL/REMOTE_M3U-only). F-29 (`navigateOnce` sweep) landed (`65d21377`) — low-priority but real, done since nothing else was queued.
+8. **F-12 revisit (2026-09-23):** ✅ **XTREAM HALF DONE (`5b865f9b`)**
+   - Not actually Jellyfin-specific — the Xtream half is a general/Xtream fix like everything else here, only skipped earlier for severity. `XtreamApiService` now shuts its `Dispatcher`/`ConnectionPool` down explicitly in `close()`. Jellyfin half still out of scope (`JellyfinApiService` has no `close()` at all today).
+
+---
+
+## 5. Addendum: Findings from External Code Review (2026-09-23)
+
+A second, independent line-by-line review of the landed code (not part of the original audit) surfaced four additional real defects — three of them regressions introduced by this plan's own F-25 and F-26/F-27-adjacent player-UI work, one pre-existing. Verified against the actual source before fixing, same discipline as the rest of this plan. All four landed same-day.
+
+- **TV screensaver auto-resume used a stale position** — ✅ **DONE** (commit `cd8c6b49`)
+  - *Location:* `TvPlayerScreen.kt`
+  - *Mechanism:* F-25's auto-resume (`383789c3`) used `lastSuccessState.resumePosition`, which only reflects where the stream stood when first loaded. `StreamLoaderViewModel.recordHistory()` writes fresh positions to the DB but never back into its own `_state`. Watching 45 minutes of a movie, then the screensaver auto-stop timer firing, then waking the TV restarted from the pre-session position — silently discarding all progress from the viewer's perspective.
+  - *Fix:* Track the live position via the existing `setPositionSaveListener` callback, reset per stream, falling back to `resumePosition` only if nothing's been reported yet.
+- **Mobile player drag gesture stole touches from open overlays** — ✅ **DONE** (commit `ae1d5558`)
+  - *Location:* `MobilePlayerScreen.kt`
+  - *Mechanism:* The channel-swipe/drawer-swipe drag detector guarded only `showStats`, not `showCategoryOverlay`/`showLastWatchedOverlay` — the asymmetry was the tell (the `showStats` guard was clearly deliberate, just never extended). Scrolling inside an open drawer got consumed here instead, skipping channels.
+  - *Fix:* Extend the existing guard to all three overlay flags.
+- **Track selection dialogs froze on an empty list** — ✅ **DONE** (commit `05958f13`)
+  - *Location:* `AudioTrackSelectorDialog.kt`, `SubtitleSelectorDialog.kt`, `QualitySelectorDialog.kt` (TV), `MobilePlayerDialogs.kt` (mobile)
+  - *Mechanism:* `remember { viewModel.getXTracks() }` with no key — opening the dialog before ExoPlayer resolved tracks froze it on an empty list ("No audio/subtitles") for the dialog's entire lifetime, even after tracks became available.
+  - *Fix:* New `PlaybackViewModel.tracksVersion` (bumped from a new `onTracksChanged` override), keyed into every affected `remember{}`.
+- **Control-overlay track counts permanently hidden on Live TV** — ✅ **DONE** (commit `05958f13`, same fix as above)
+  - *Location:* `TvPlayerControlsOverlay.kt`, `MobileControlsOverlay.kt`
+  - *Mechanism:* `remember(metadata) { viewModel.getXTracks().size }` for audio/subtitle/quality counts — `metadata` is set once at `playStream()` time, before tracks are typically ready, and for Live TV specifically may never change again for the whole session (the enrichment effect that would otherwise re-key it is series/episode-only). Result: audio/subtitle/quality buttons permanently hidden on live channels even once tracks actually loaded. Broader than the external review reported — it only flagged the subtitle count, but all three (audio/subtitle/quality) shared the identical bug in both files.
+  - *Fix:* Same `tracksVersion` signal, added to the existing `metadata` key.
