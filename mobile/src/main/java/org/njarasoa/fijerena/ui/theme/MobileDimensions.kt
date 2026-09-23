@@ -59,4 +59,7 @@ object MobileDimensions {
     val epgProgramMinWidth: Dp = 140.dp
     val epgProgramHeight: Dp = 64.dp
     val epgChannelHeaderHeight: Dp = 44.dp
+
+    /** "Jump Back In" shelf card — a touch-sized 16:9 thumbnail card, narrower than TV's. */
+    val continueWatchingCardWidth: Dp = 160.dp
 }
