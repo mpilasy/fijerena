@@ -93,6 +93,12 @@ fun MobileSearchScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchHistory by viewModel.searchHistory.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
+    // Scope filter selection lives here, not inside SearchResults — performSearch() emits a
+    // transitional UiState.Loading on every debounced re-search (not just the first), which
+    // unmounts SearchResults entirely. A plain rememberSaveable inside it doesn't survive that
+    // disposal (same gotcha as tab content resetting without a SaveableStateHolder), so the
+    // filter would silently reset to "All" every time the user kept typing.
+    var selectedTypeFilter by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
 
@@ -285,6 +291,8 @@ fun MobileSearchScreen(
                             searchProgress = state.searchProgress ?: "",
                             devStats = devStats,
                             searchHistory = searchHistory,
+                            selectedTypeFilter = selectedTypeFilter,
+                            onTypeFilterChange = { selectedTypeFilter = it },
                             onHistoryItemClick = { term ->
                                 searchQuery = term
                                 viewModel.performSearch(term)
@@ -379,6 +387,8 @@ private fun SearchResults(
     searchProgress: String?,
     devStats: String?,
     searchHistory: List<String>,
+    selectedTypeFilter: String?,
+    onTypeFilterChange: (String?) -> Unit,
     onHistoryItemClick: (String) -> Unit,
     onHistoryItemRemove: (String) -> Unit,
     onClearHistory: () -> Unit,
@@ -453,8 +463,9 @@ private fun SearchResults(
 
         // Scope filter chips — only meaningful for Global Search, where results already span
         // multiple content types worth triaging. A type-scoped search (queryContentType != "ALL")
-        // only ever has one type of result to begin with.
-        var selectedTypeFilter by rememberSaveable { mutableStateOf<String?>(null) }
+        // only ever has one type of result to begin with. Selection is hoisted to the caller (see
+        // MobileSearchScreen) so it survives the transitional Loading state performSearch() emits
+        // on every re-search, not just the first.
         if (queryContentType == "ALL" && groupedByType.size > 1) {
             val totalCount = categoryResults.size + results.size
             Row(
@@ -467,7 +478,7 @@ private fun SearchResults(
             ) {
                 CinemaFilterChip(
                     selected = selectedTypeFilter == null,
-                    onClick = { selectedTypeFilter = null },
+                    onClick = { onTypeFilterChange(null) },
                     label = { Text("${stringResource(R.string.content_type_all_label)} ($totalCount)") },
                 )
                 for ((type, cats, streams) in groupedByType) {
@@ -475,7 +486,7 @@ private fun SearchResults(
                     if (count > 0) {
                         CinemaFilterChip(
                             selected = selectedTypeFilter == type,
-                            onClick = { selectedTypeFilter = if (selectedTypeFilter == type) null else type },
+                            onClick = { onTypeFilterChange(if (selectedTypeFilter == type) null else type) },
                             label = { Text("${localizedContentTypeLabel(type)} ($count)") },
                         )
                     }
