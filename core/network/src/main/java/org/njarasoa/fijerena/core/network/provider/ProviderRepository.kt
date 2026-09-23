@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package org.njarasoa.fijerena.core.network.provider
 import android.content.Context
 import androidx.core.content.edit

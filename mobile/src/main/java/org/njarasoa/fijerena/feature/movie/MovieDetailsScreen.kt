@@ -340,7 +340,7 @@ private fun MovieDetailsContent(
         val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
 
         Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-        TabRow(selectedTabIndex = safeTabIndex) {
+        PrimaryTabRow(selectedTabIndex = safeTabIndex) {
             tabs.forEachIndexed { index, tab ->
                 Tab(
                     selected = index == safeTabIndex,
