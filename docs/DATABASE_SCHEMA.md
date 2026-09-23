@@ -338,6 +338,16 @@ id and `parentCategoryId` is NULL.
 reads from an in-memory snapshot of this table, because Compose calls `isFavorite()` synchronously
 during composition; the snapshot is filled in `setProvider()`, which runs on `Dispatchers.IO`.
 
+### Catalog Lifecycle, Orphan Pruning & Compaction
+Catalog entries (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `favorite_state`, `xtream_epg_cache`, and `watch_state`) reside in `xtream_v2.db`, while the provider entities that own them live in `providers.db`. Because SQLite cannot enforce cross-database foreign key cascades, deleting a provider in `providers.db` does not automatically purge its rows in `xtream_v2.db`.
+
+1. **Cascaded Provider Deletion:** `ProviderRepository.deleteProvider(id)` cascades through all catalog tables in `xtream_v2.db`, deletes associated encrypted/plaintext SharedPreferences (`provider_creds_{id}.xml`, `media_cache_{id}.xml`, `xtream_cache_{id}.xml`), removes associated EPG sources, and invokes `VACUUM` followed by `PRAGMA wal_checkpoint(TRUNCATE)`.
+2. **Orphan Pruning (`pruneOrphanedCatalogData`):** Sweeps `xtream_v2.db` across all catalog DAOs using `deleteOrphaned(validProviderIds)` (`WHERE providerId NOT IN (:validProviderIds)`), sweeps orphaned SharedPreferences files, and deletes orphaned EPG sources.
+3. **Safety Circuit Breaker:** If `validProviderIds.isEmpty()`, `pruneOrphanedCatalogData()` immediately aborts and returns `(0, 0)`, preventing accidental deletion if provider loading ever returned empty.
+4. **Automatic Background Maintenance:** A non-blocking background sweep runs on startup in `TvNavHost` and `MobileNavHost` on `Dispatchers.IO`, and during scheduled runs in `EpgSyncWorker`.
+5. **Manual Maintenance ("Shrink Database"):** Exposed in Settings → Data & Sync → "Shrink Database" (`SettingsViewModel.pruneDatabase()`), passing `forceVacuum = true` to force compaction and report rows removed and bytes reclaimed.
+6. **SQLite WAL Compaction:** In SQLite WAL mode, `VACUUM` shifts freed pages into the WAL file (`xtream_v2.db-wal`). Executing `PRAGMA wal_checkpoint(TRUNCATE)` immediately following `VACUUM` is required to truncate the WAL file and release space back to the Android filesystem.
+
 ---
 
 ## 4. Per-Provider Local Storage (SharedPreferences)
