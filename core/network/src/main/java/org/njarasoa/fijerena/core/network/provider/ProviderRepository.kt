@@ -15,6 +15,12 @@ import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
+/** Result of [ProviderRepository.pruneOrphanedCatalogData]. */
+data class OrphanedDataPruneResult(
+    val rowsRemoved: Long,
+    val bytesReclaimed: Long,
+)
+
 /**
  * Manages provider CRUD and per-provider encrypted password storage.
  * Passwords are stored in per-provider EncryptedSharedPreferences files.
@@ -169,6 +175,39 @@ class ProviderRepository(
             }
         }
     }
+
+    /**
+     * Settings → "Shrink Database": manual sweep for `xtream_v2.db` rows whose `providerId`
+     * doesn't match any provider that exists right now, covering both drift from before
+     * [clearProviderCatalog] started running on every deletion, and any other divergence this
+     * class doesn't already know to clean up on its own. Safe to run at any time, including when
+     * nothing is orphaned — the DELETE/VACUUM pair just costs a few queries and a no-op VACUUM.
+     */
+    suspend fun pruneOrphanedCatalogData(): OrphanedDataPruneResult =
+        withContext(Dispatchers.IO) {
+            val validProviderIds = dao.getAllProvidersList().map { it.id }
+            val db = XtreamDatabase.getInstance(context)
+            val dbFile = context.getDatabasePath("xtream_v2.db")
+            val sizeBeforeBytes = dbFile.length()
+
+            val rowsRemoved =
+                db.streamDao().deleteOrphaned(validProviderIds) +
+                    db.seriesDao().deleteOrphaned(validProviderIds) +
+                    db.episodeDao().deleteOrphaned(validProviderIds) +
+                    db.categoryDao().deleteOrphaned(validProviderIds) +
+                    db.favoriteStateDao().deleteOrphaned(validProviderIds) +
+                    db.epgCacheDao().deleteOrphaned(validProviderIds) +
+                    db.watchStateDao().deleteOrphaned(validProviderIds)
+
+            try {
+                db.openHelper.writableDatabase.execSQL("VACUUM")
+            } catch (e: Exception) {
+                android.util.Log.w("ProviderRepository", "VACUUM during orphan prune failed", e)
+            }
+
+            val bytesReclaimed = (sizeBeforeBytes - dbFile.length()).coerceAtLeast(0)
+            OrphanedDataPruneResult(rowsRemoved.toLong(), bytesReclaimed)
+        }
 
     /**
      * EPG sources belong to a single provider, and their indexed channels/programmes live in a

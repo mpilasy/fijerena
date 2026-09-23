@@ -644,6 +644,12 @@
     <string name="common_import">Import</string>
     <string name="settings_quick_import_not_found">Settings file not found in Downloads or app folder</string>
     <string name="settings_quick_import_button">Quick Import from Downloads</string>
+    <string name="settings_shrink_database_title">Database Maintenance</string>
+    <string name="settings_shrink_database_desc">Remove leftover data from deleted providers and reclaim disk space</string>
+    <string name="settings_shrink_database_button">Shrink Database</string>
+    <string name="settings_shrink_database_button_running">Shrinking…</string>
+    <string name="settings_shrink_database_result_format">Removed %1$d leftover rows, freed %2$s</string>
+    <string name="settings_shrink_database_nothing_to_clean">Nothing to clean up — database is already tidy</string>
     <string name="settings_import_select_title">Select What to Import</string>
     <string name="settings_import_general_label">General Settings</string>
     <string name="settings_import_providers_count_format">Providers (%1$d)</string>

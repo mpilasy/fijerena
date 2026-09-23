@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.feature.settings.components.LanguageSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.PlaybackSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.AboutSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.CloudSyncSettingsCard
+import org.njarasoa.fijerena.feature.settings.components.DatabaseMaintenanceCard
 import org.njarasoa.fijerena.feature.settings.components.DeveloperSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.EpgSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ExportImportSettingsCard
@@ -269,6 +270,12 @@ fun MobileSettingsScreen(
                             }
                     }
                 },
+            )
+
+            // === Database Maintenance ===
+            DatabaseMaintenanceCard(
+                uiState = uiState,
+                viewModel = viewModel,
             )
 
             // === About ===

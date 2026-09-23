@@ -12,6 +12,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 
 data class SettingsUiState(
     val providerName: String = "",
@@ -31,6 +32,8 @@ data class SettingsUiState(
     val uiScale: Float = AppSettings.DEFAULT_UI_SCALE,
     val exportImportMessage: String? = null,
     val epgRefreshTrigger: Int = 0,
+    val isPruningDatabase: Boolean = false,
+    val databaseMaintenanceMessage: String? = null,
 )
 
 class SettingsViewModel(
@@ -173,6 +176,29 @@ class SettingsViewModel(
 
     fun setExportImportMessage(message: String?) {
         _uiState.value = _uiState.value.copy(exportImportMessage = message)
+    }
+
+    fun clearDatabaseMaintenanceMessage() {
+        _uiState.value = _uiState.value.copy(databaseMaintenanceMessage = null)
+    }
+
+    /** Settings → "Shrink Database" — see [ProviderRepository.pruneOrphanedCatalogData]. */
+    fun pruneDatabase() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isPruningDatabase = true, databaseMaintenanceMessage = null)
+            val result = providerRepo.pruneOrphanedCatalogData()
+            val message =
+                if (result.rowsRemoved == 0L) {
+                    context.getString(R.string.settings_shrink_database_nothing_to_clean)
+                } else {
+                    context.getString(
+                        R.string.settings_shrink_database_result_format,
+                        result.rowsRemoved,
+                        NumberUtils.formatBytes(result.bytesReclaimed),
+                    )
+                }
+            _uiState.value = _uiState.value.copy(isPruningDatabase = false, databaseMaintenanceMessage = message)
+        }
     }
 
     private fun formatExpiryDate(expDate: String?): String? =

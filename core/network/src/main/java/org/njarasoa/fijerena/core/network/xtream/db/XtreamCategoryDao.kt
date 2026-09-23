@@ -41,6 +41,10 @@ interface XtreamCategoryDao {
     @Query("DELETE FROM xtream_categories WHERE providerId = :providerId")
     fun deleteAllForProvider(providerId: Long)
 
+    /** Rows whose provider no longer exists at all — see [ProviderRepository.pruneOrphanedCatalogData][org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData]. */
+    @Query("DELETE FROM xtream_categories WHERE providerId NOT IN (:validProviderIds)")
+    fun deleteOrphaned(validProviderIds: List<Long>): Int
+
     @Query("SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type")
     fun getCategoryIds(
         providerId: Long,
