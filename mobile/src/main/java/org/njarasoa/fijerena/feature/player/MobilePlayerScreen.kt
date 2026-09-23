@@ -230,9 +230,15 @@ fun MobilePlayerContent(
     // that actually drives playback (position save, playStream trigger) still keys off the live
     // streamState/currentStreamId, not this — only the final `when` that picks what to draw uses
     // the frozen fallback, via displayState below.
+    // Cleared on Error, not just set on Success: without this, a channel switch that fails
+    // leaves the *previous* channel's frozen frame in place, and the next successful switch's
+    // own Loading window falls back to that now-stale frame instead of the spinner below —
+    // confusing after the viewer already saw an Error screen in between.
     var lastSuccessState by remember { mutableStateOf<StreamLoaderViewModel.StreamState.Success?>(null) }
-    if (streamState is StreamLoaderViewModel.StreamState.Success) {
-        lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
+    when (streamState) {
+        is StreamLoaderViewModel.StreamState.Success -> lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
+        is StreamLoaderViewModel.StreamState.Error -> lastSuccessState = null
+        else -> {}
     }
     val displayState: StreamLoaderViewModel.StreamState =
         if (streamState is StreamLoaderViewModel.StreamState.Loading && lastSuccessState != null) {
