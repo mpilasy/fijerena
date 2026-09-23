@@ -163,10 +163,16 @@ class CategoryViewModel(
     // existing graceful-degrade-to-default behavior.
     private val repositoryDeferred = CompletableDeferred<MediaRepository>()
 
+    // Mirrors repositoryDeferred's result once completed — set in the same init coroutine, right
+    // alongside repositoryDeferred.complete(). CompletableDeferred.getCompleted() would do the
+    // same thing but is @ExperimentalCoroutinesApi; this avoids that opt-in for no real benefit.
+    @Volatile
+    private var repositorySnapshot: MediaRepository? = null
+
     private suspend fun awaitRepository(): MediaRepository = repositoryDeferred.await()
 
     private val repositoryOrNull: MediaRepository?
-        get() = if (repositoryDeferred.isCompleted) repositoryDeferred.getCompleted() else null
+        get() = repositorySnapshot
 
     private var categories: List<MediaCategory> = emptyList()
     private var currentStreams: List<MediaItem> = emptyList()
@@ -183,6 +189,7 @@ class CategoryViewModel(
     init {
         viewModelScope.launch {
             val repo = AppContainer.getInstance(context).getMediaRepository()
+            repositorySnapshot = repo
             repositoryDeferred.complete(repo)
             launch { repo.recentItems(contentType).collect { _recentItems.value = it } }
             loadCategoriesInternal()
