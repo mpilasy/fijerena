@@ -440,6 +440,11 @@ private fun SearchResults(
             )
         }
     } else {
+        // Filter chips and the results list must be vertical siblings — this whole branch is
+        // composed directly inside the caller's Box (SearchScreen.kt), which stacks children by
+        // paint order, not position. Without this Column, the LazyColumn below (declared after
+        // the Row) painted on top of it and ate every touch meant for the chips.
+        Column(modifier = Modifier.fillMaxSize()) {
         // Pre-compute grouped results outside LazyColumn to avoid O(N×types) filter per recomposition
         val groupedByType =
             remember(categoryResults, results) {
@@ -612,6 +617,7 @@ private fun SearchResults(
                     }
                 }
             }
+        }
         }
     }
 }
