@@ -107,6 +107,19 @@ fun TvPlayerScreen(
         lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
     }
 
+    // Playback Trigger key — declared here (moved up from its original spot below) because the
+    // screensaver-resume position tracking right below needs to key off it too.
+    // Use derived state or specific key to avoid re-triggering on EPG updates
+    val currentStreamId = lastSuccessState?.streamId
+
+    // The last position setPositionSaveListener reported for the *current* stream, reset to null
+    // on a channel/title change. lastSuccessState.resumePosition (used below) only ever reflects
+    // where this stream stood when it was first loaded — recordHistory() writes fresh positions
+    // to the DB but never back into loaderViewModel's own state, so without this a screensaver
+    // resume after watching 45 minutes of a movie would restart from wherever the user was
+    // *before this viewing session*, not 45:00.
+    var lastKnownPositionMs by remember(currentStreamId) { mutableStateOf<Long?>(null) }
+
     // Observe app focus/lifecycle to pause on background and stop after timeout
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -137,7 +150,7 @@ fun TvPlayerScreen(
                                     episodeLabel = success.episodeLabel,
                                     logoUrl = success.logoUrl,
                                 ),
-                                success.resumePosition,
+                                lastKnownPositionMs ?: success.resumePosition,
                             )
                         }
                     }
@@ -178,13 +191,10 @@ fun TvPlayerScreen(
     // Set up auto-save listener for playback position
     LaunchedEffect(Unit) {
         StreamingPlaybackService.awaitInstance().setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
+            lastKnownPositionMs = position
             loaderViewModel.recordHistory(position, duration, isPaused, audioIndex, subtitleIndex)
         }
     }
-
-    // Playback Trigger
-    // Use derived state or specific key to avoid re-triggering on EPG updates
-    val currentStreamId = lastSuccessState?.streamId
 
     LaunchedEffect(currentStreamId) {
         val state = streamState
