@@ -43,20 +43,21 @@ fun MobileContinueWatchingShelf(
     onItemSelected: (ContinueWatchingItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (items.isEmpty()) return
-    Column(modifier = modifier) {
-        Text(
-            text = stringResource(R.string.series_continue_watching_badge),
-            style = MaterialTheme.typography.titleLarge,
-            color = CinemaTextPrimary,
-            modifier = Modifier.padding(bottom = CinemaSpacing.sm),
-        )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-            contentPadding = PaddingValues(horizontal = CinemaSpacing.xxs),
-        ) {
-            items(items, key = { it.id }) { item ->
-                MobileContinueWatchingCard(item = item, onClick = { onItemSelected(item) })
+    if (items.isNotEmpty()) {
+        Column(modifier = modifier) {
+            Text(
+                text = stringResource(R.string.series_continue_watching_badge),
+                style = MaterialTheme.typography.titleLarge,
+                color = CinemaTextPrimary,
+                modifier = Modifier.padding(bottom = CinemaSpacing.sm),
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                contentPadding = PaddingValues(horizontal = CinemaSpacing.xxs),
+            ) {
+                items(items, key = { it.id }) { item ->
+                    MobileContinueWatchingCard(item = item, onClick = { onItemSelected(item) })
+                }
             }
         }
     }
