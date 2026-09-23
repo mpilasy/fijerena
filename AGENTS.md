@@ -311,6 +311,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20260920_xtream-concurrency-fixes-plan.md](docs/plans/20260920_xtream-concurrency-fixes-plan.md) | **Complete** - both phases landed (2026-09-21) |
 | [docs/plans/20260921_adversarial-review-findings-plan.md](docs/plans/20260921_adversarial-review-findings-plan.md) | **Complete** - all five phases landed (2026-09-22) |
 | [docs/plans/20260922_codebase-stability-resilience-plan.md](docs/plans/20260922_codebase-stability-resilience-plan.md) | **Complete** - all findings landed except intentionally out-of-scope ones (2026-09-23) |
+| [docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md](docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md) | Proposed (2026-09-23) |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 
