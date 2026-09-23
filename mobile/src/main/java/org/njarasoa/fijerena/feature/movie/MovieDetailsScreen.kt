@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Star
@@ -39,12 +38,13 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
+import org.njarasoa.fijerena.ui.components.MetaBadge
+import org.njarasoa.fijerena.ui.components.MetaText
 import org.njarasoa.fijerena.ui.components.MobileDetailHero
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -215,66 +215,46 @@ private fun MovieDetailsContent(
             )
         }
 
-        // Rating and duration on same row
-        val hasRating = movieDetail.metadata.rating != null
-        val hasContentRating = movieDetail.metadata.contentRating != null
-        val hasDuration = movieDetail.metadata.duration != null
-        if (hasRating || hasContentRating || hasDuration) {
+        // Single dot-separated meta row: star rating and content rating/resolution stay their own
+        // small pills (same as before), everything else is plain text — all joined by " · " into
+        // one flowing line instead of each fact carrying its own separate spacing.
+        val endsAtContext = LocalContext.current
+        val endsAtText =
+            remember(movieDetail.metadata.duration, resumePositionMs) {
+                computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
+            }
+        val year = extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
+        val resolution =
+            movieDetail.videoInfo?.let { video -> video.width?.let { w -> video.height?.let { h -> resolutionLabel(w, h) } } }
+        val metaSegments =
+            listOfNotNull<@Composable () -> Unit>(
+                movieDetail.metadata.rating?.let { rating ->
+                    { RatingBadge(rating = rating, textColor = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.titleMedium) }
+                },
+                year?.let { { MetaText(it.toString()) } },
+                movieDetail.metadata.contentRating?.let { { MetaBadge(it) } },
+                movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { { MetaText(formatDuration(it)) } },
+                endsAtText?.let { { MetaText(stringResource(R.string.movie_ends_at_format, it)) } },
+                resolution?.let { { MetaBadge(it) } },
+            )
+        if (metaSegments.isNotEmpty()) {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             Row(
-                // Content rating + star rating + duration + "ends at" can add up to wider than a
-                // narrow phone screen; a plain Row clips the tail (e.g. "Ends at" left dangling
-                // with its time cut off) instead of wrapping. Scroll rather than clip.
+                // Rating badge + a long meta line can add up to wider than a narrow phone screen;
+                // a plain Row clips the tail instead of wrapping. Scroll rather than clip.
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                movieDetail.metadata.contentRating?.let { contentRating ->
-                    Text(
-                        text = contentRating,
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier =
-                            Modifier
-                                .background(
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                    RoundedCornerShape(CinemaCornerRadius.small),
-                                ).padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xs),
-                    )
-                }
-                movieDetail.metadata.rating?.let { rating ->
-                    RatingBadge(
-                        rating = rating,
-                        textColor = MaterialTheme.colorScheme.secondary,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-                val year = extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
-                year?.let {
-                    Text(
-                        text = "$it",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-                movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
-                    Text(
-                        text = formatDuration(duration),
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                    )
-                }
-                // "Ends at" based on remaining duration
-                val endsAtContext = LocalContext.current
-                val endsAtText =
-                    remember(movieDetail.metadata.duration, resumePositionMs) {
-                        computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
+                metaSegments.forEachIndexed { index, segment ->
+                    if (index > 0) {
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        )
                     }
-                if (endsAtText != null) {
-                    Text(
-                        text = stringResource(R.string.movie_ends_at_format, endsAtText),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                        maxLines = 1,
-                    )
+                    segment()
                 }
             }
         }

@@ -68,6 +68,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
+import org.njarasoa.fijerena.ui.components.MetaBadge
+import org.njarasoa.fijerena.ui.components.MetaText
 import org.njarasoa.fijerena.ui.components.MobileDetailHero
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -473,51 +475,43 @@ private fun EpisodeListContent(
                     )
                 }
 
-                // Metadata row: content rating | rating | year | season count
+                // Single dot-separated meta row (see MobileMovieDetailsScreen for the same
+                // treatment): star rating and content rating stay their own small pills,
+                // year range and season/episode count are plain text, all dot-joined.
                 val presentLabel = stringResource(R.string.series_present)
                 val yearRange = seriesDetail.seriesYearRange(presentLabel)
+                val countText =
+                    if (sortedSeasons.size > 1) {
+                        stringResource(R.string.series_seasons_and_episodes_format, sortedSeasons.size, totalEpisodes)
+                    } else {
+                        stringResource(R.string.series_total_episodes_format, totalEpisodes)
+                    }
+                val seriesMetaSegments =
+                    listOfNotNull<@Composable () -> Unit>(
+                        seriesDetail.metadata.rating?.let { rating ->
+                            { RatingBadge(rating = rating, textColor = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.titleMedium) }
+                        },
+                        yearRange?.let { { MetaText(it) } },
+                        seriesDetail.metadata.contentRating?.let { { MetaBadge(it) } },
+                        { MetaText(countText) },
+                    )
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    seriesDetail.metadata.contentRating?.let { contentRating ->
-                        Text(
-                            text = contentRating,
-                            style = MaterialTheme.typography.labelLarge,
-                            modifier =
-                                Modifier
-                                    .background(
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                        RoundedCornerShape(CinemaCornerRadius.small),
-                                    ).padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xs),
-                        )
-                    }
-                    seriesDetail.metadata.rating?.let { rating ->
-                        RatingBadge(
-                            rating = rating,
-                            textColor = MaterialTheme.colorScheme.secondary,
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
-                    yearRange?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
-                    val countText =
-                        if (sortedSeasons.size > 1) {
-                            stringResource(R.string.series_seasons_and_episodes_format, sortedSeasons.size, totalEpisodes)
-                        } else {
-                            stringResource(R.string.series_total_episodes_format, totalEpisodes)
+                    seriesMetaSegments.forEachIndexed { index, segment ->
+                        if (index > 0) {
+                            Text(
+                                text = "•",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                            )
                         }
-                    Text(
-                        text = countText,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                        segment()
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
@@ -899,65 +893,41 @@ private fun EpisodeDetailContent(
             )
         }
 
-        // Rating, year and duration on same row
+        // Single dot-separated meta row — same treatment as the series header above.
         val contentRating = episode.metadata.contentRating ?: seriesDetail.metadata.contentRating
         val rating = episode.metadata.rating ?: seriesDetail.metadata.rating
         val year = episode.metadata.year ?: episode.metadata.airDate?.take(4)?.toIntOrNull() ?: seriesDetail.metadata.year
-        val hasDuration = episode.metadata.duration != null
-        if (contentRating != null || rating != null || year != null || hasDuration) {
+        val endsAtContext = LocalContext.current
+        val endsAtText =
+            remember(episode.metadata.duration, resumePositionMs) {
+                computeEndsAt(endsAtContext, episode.metadata.duration, resumePositionMs)
+            }
+        val episodeMetaSegments =
+            listOfNotNull<@Composable () -> Unit>(
+                rating?.let { { RatingBadge(rating = it, textColor = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.titleMedium) } },
+                year?.let { { MetaText("$it") } },
+                contentRating?.let { { MetaBadge(it) } },
+                episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { { MetaText(formatDuration(it)) } },
+                endsAtText?.let { { MetaText(stringResource(R.string.movie_ends_at_format, it)) } },
+            )
+        if (episodeMetaSegments.isNotEmpty()) {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
             Row(
                 // See the series header above — same overflow-clips-instead-of-wraps risk on a
                 // narrow phone screen.
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
+                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                contentRating?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier =
-                            Modifier
-                                .background(
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                    RoundedCornerShape(CinemaCornerRadius.small),
-                                ).padding(horizontal = CinemaSpacing.sm, vertical = CinemaSpacing.xs),
-                    )
-                }
-                rating?.let {
-                    RatingBadge(
-                        rating = it,
-                        textColor = MaterialTheme.colorScheme.secondary,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-                year?.let {
-                    Text(
-                        text = "$it",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-                episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
-                    Text(
-                        text = formatDuration(duration),
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                    )
-                }
-                // "Ends at" based on remaining duration
-                val endsAtContext = LocalContext.current
-                val endsAtText =
-                    remember(episode.metadata.duration, resumePositionMs) {
-                        computeEndsAt(endsAtContext, episode.metadata.duration, resumePositionMs)
+                episodeMetaSegments.forEachIndexed { index, segment ->
+                    if (index > 0) {
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        )
                     }
-                if (endsAtText != null) {
-                    Text(
-                        text = stringResource(R.string.movie_ends_at_format, endsAtText),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                        maxLines = 1,
-                    )
+                    segment()
                 }
             }
         }
