@@ -180,7 +180,7 @@ fun MobileNavHost(
             // Content Type Selection Screen
             composable<Screen.ContentTypeSelection> {
                 val navigateToContentType: (String) -> Unit = { contentType ->
-                    navController.navigate(Screen.CategoryList(contentType))
+                    navController.navigateOnce(Screen.CategoryList(contentType))
                 }
                 MobileContentTypeSelectionScreen(
                     onContentTypeSelected = navigateToContentType,
@@ -198,13 +198,13 @@ fun MobileNavHost(
                         }
                     },
                     onSettings = {
-                        navController.navigate(Screen.Settings)
+                        navController.navigateOnce(Screen.Settings)
                     },
                     onSearch = {
-                        navController.navigate(Screen.Search("ALL"))
+                        navController.navigateOnce(Screen.Search("ALL"))
                     },
                     onEpgBrowser = {
-                        navController.navigate(Screen.EpgBrowser)
+                        navController.navigateOnce(Screen.EpgBrowser)
                     },
                 )
             }
@@ -216,7 +216,7 @@ fun MobileNavHost(
                     onNavigateToPlayer = { streamId, _, categoryId ->
                         // Land on the docked mini-player, not full-screen — same parity as every
                         // other Live TV entry point.
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.CategoryList(
                                 contentType = ContentType.LIVE_TV,
                                 initialCategoryId = categoryId,
@@ -239,7 +239,7 @@ fun MobileNavHost(
                             // Continue Watching: the card stands for the show, so open episode
                             // selection with the last-watched episode's panel already up.
                             is BrowseTarget.Series ->
-                                navController.navigate(
+                                navController.navigateOnce(
                                     Screen.EpisodeSelection(
                                         seriesId = target.seriesId.raw,
                                         seriesName = itemName,
@@ -263,7 +263,7 @@ fun MobileNavHost(
                                     ),
                                 )
                             is BrowseTarget.Movie ->
-                                navController.navigate(
+                                navController.navigateOnce(
                                     Screen.MovieDetails(
                                         movieId = target.movieId,
                                         movieName = itemName,
@@ -282,10 +282,10 @@ fun MobileNavHost(
                         }
                     },
                     onSearchClick = {
-                        navController.navigate(Screen.Search(categoryListScreen.contentType))
+                        navController.navigateOnce(Screen.Search(categoryListScreen.contentType))
                     },
                     onEpgClick = { categoryId, categoryName ->
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.EpgGuide(
                                 categoryId = categoryId,
                                 categoryName = categoryName,
@@ -357,20 +357,20 @@ fun MobileNavHost(
                             }
 
                             // Navigate to content selection for all provider types
-                            navController.navigate(Screen.ContentTypeSelection) {
+                            navController.navigateOnce(Screen.ContentTypeSelection) {
                                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                 launchSingleTop = true
                             }
                         }
                     },
                     onAddProvider = {
-                        navController.navigate(Screen.AddProvider())
+                        navController.navigateOnce(Screen.AddProvider())
                     },
                     onEditProvider = { id ->
-                        navController.navigate(Screen.AddProvider(editId = id))
+                        navController.navigateOnce(Screen.AddProvider(editId = id))
                     },
                     onManageEpg = { id ->
-                        navController.navigate(Screen.EpgManagement(providerId = id))
+                        navController.navigateOnce(Screen.EpgManagement(providerId = id))
                     },
                     onBack = {
                         navController.navigateUp()
@@ -387,10 +387,10 @@ fun MobileNavHost(
                     onThemeChanged = onThemeChanged,
                     onUiStyleChanged = onUiStyleChanged,
                     onManageProviders = {
-                        navController.navigate(Screen.ProviderSelection)
+                        navController.navigateOnce(Screen.ProviderSelection)
                     },
                     onCellularBuffers = {
-                        navController.navigate(Screen.CellularBufferSettings)
+                        navController.navigateOnce(Screen.CellularBufferSettings)
                     },
                     onProviderChanged = {
                         coroutineScope.launch {
@@ -412,7 +412,7 @@ fun MobileNavHost(
                                 }
                             }
 
-                            navController.navigate(Screen.ContentTypeSelection) {
+                            navController.navigateOnce(Screen.ContentTypeSelection) {
                                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
                                 launchSingleTop = true
                             }
@@ -439,7 +439,7 @@ fun MobileNavHost(
                         // Navigate based on content type
                         when (contentType) {
                             ContentType.TV_SHOWS ->
-                                navController.navigate(
+                                navController.navigateOnce(
                                     Screen.EpisodeSelection(
                                         seriesId = itemId,
                                         seriesName = itemName,
@@ -447,7 +447,7 @@ fun MobileNavHost(
                                     ),
                                 )
                             ContentType.MOVIES ->
-                                navController.navigate(
+                                navController.navigateOnce(
                                     Screen.MovieDetails(
                                         movieId = itemId,
                                         movieName = itemName,
@@ -456,7 +456,7 @@ fun MobileNavHost(
                                 )
                             else ->
                                 // Live TV: land on the docked mini-player, not full-screen.
-                                navController.navigate(
+                                navController.navigateOnce(
                                     Screen.CategoryList(
                                         contentType = contentType,
                                         initialCategoryId = categoryId,
@@ -466,7 +466,7 @@ fun MobileNavHost(
                         }
                     },
                     onCategorySelected = { categoryId, contentType ->
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.CategoryList(
                                 contentType = contentType,
                                 initialCategoryId = categoryId,
@@ -497,7 +497,7 @@ fun MobileNavHost(
                         )
                     },
                     onCategorySelected = { categoryId ->
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.CategoryList(
                                 contentType = ContentType.MOVIES,
                                 initialCategoryId = categoryId,
@@ -508,7 +508,7 @@ fun MobileNavHost(
                         navController.navigateUp()
                     },
                     onRelatedTitleSelected = { related ->
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.MovieDetails(
                                 movieId = related.id,
                                 movieName = related.name,
@@ -543,7 +543,7 @@ fun MobileNavHost(
                         )
                     },
                     onCategorySelected = { categoryId ->
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.CategoryList(
                                 contentType = ContentType.TV_SHOWS,
                                 initialCategoryId = categoryId,
@@ -554,7 +554,7 @@ fun MobileNavHost(
                         navController.navigateUp()
                     },
                     onRelatedTitleSelected = { related ->
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.EpisodeSelection(
                                 seriesId = related.id,
                                 seriesName = related.name,
@@ -582,7 +582,7 @@ fun MobileNavHost(
                     categoryName = epgScreen.categoryName,
                     onProgramSelected = { _, channel ->
                         // Land on the docked mini-player, not full-screen.
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.CategoryList(
                                 contentType = ContentType.LIVE_TV,
                                 initialCategoryId = channel.categoryId,
@@ -591,7 +591,7 @@ fun MobileNavHost(
                         )
                     },
                     onChannelSelected = { streamId, _, categoryId ->
-                        navController.navigate(
+                        navController.navigateOnce(
                             Screen.CategoryList(
                                 contentType = ContentType.LIVE_TV,
                                 initialCategoryId = categoryId,

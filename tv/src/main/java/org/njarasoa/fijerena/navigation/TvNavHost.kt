@@ -218,19 +218,19 @@ fun TvNavHost(
                             coroutineScope.launch {
                                 val repository = AppContainer.getInstance(context).getMediaRepository()
                                 val hasChannelToPreview = repository.getLastItemId(ContentType.LIVE_TV) != null
-                                navController.navigate(
+                                navController.navigateOnce(
                                     Screen.CategoryList(contentType.name, showPreviewPane = false),
                                 ) {
                                     popUpTo(Screen.ContentTypeSelection) { inclusive = false }
                                 }
                                 if (hasChannelToPreview) {
-                                    navController.navigate(
+                                    navController.navigateOnce(
                                         Screen.CategoryList(contentType.name, showPreviewPane = true),
                                     )
                                 }
                             }
                         } else {
-                            navController.navigate(Screen.CategoryList(contentType.name)) {
+                            navController.navigateOnce(Screen.CategoryList(contentType.name)) {
                                 popUpTo(Screen.ContentTypeSelection) { inclusive = false }
                             }
                         }
@@ -253,13 +253,13 @@ fun TvNavHost(
                             }
                         },
                         onSettings = {
-                            navController.navigate(Screen.Settings)
+                            navController.navigateOnce(Screen.Settings)
                         },
                         onSearch = {
-                            navController.navigate(Screen.Search("ALL"))
+                            navController.navigateOnce(Screen.Search("ALL"))
                         },
                         onEpgBrowser = {
-                            navController.navigate(Screen.EpgBrowser)
+                            navController.navigateOnce(Screen.EpgBrowser)
                         },
                     )
                 }
@@ -272,7 +272,7 @@ fun TvNavHost(
                             // Land on the preview pane, not full-screen — see LiveTvSplitLayout.
                             // Pushing (not popUpTo) a new CategoryList entry means Back from the
                             // preview pops back here for free via normal nav-stack semantics.
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.CategoryList(
                                     contentType = ContentType.LIVE_TV,
                                     initialCategoryId = categoryId,
@@ -310,7 +310,7 @@ fun TvNavHost(
                                 // episode — open episode selection with the last-watched
                                 // episode's detail/resume panel already up.
                                 is BrowseTarget.Series ->
-                                    navController.navigate(
+                                    navController.navigateOnce(
                                         Screen.EpisodeSelection(
                                             seriesId = target.seriesId.raw,
                                             seriesName = streamName,
@@ -334,7 +334,7 @@ fun TvNavHost(
                                         ),
                                     )
                                 is BrowseTarget.Movie ->
-                                    navController.navigate(
+                                    navController.navigateOnce(
                                         Screen.MovieDetails(
                                             movieId = target.movieId,
                                             movieName = streamName,
@@ -346,7 +346,7 @@ fun TvNavHost(
                                 // e.g. the one silently pushed under the main-menu preview) —
                                 // same rule applies there as everywhere else.
                                 is BrowseTarget.Channel ->
-                                    navController.navigate(
+                                    navController.navigateOnce(
                                         Screen.CategoryList(
                                             contentType = categoryListScreen.contentType,
                                             initialCategoryId = categoryId,
@@ -358,11 +358,11 @@ fun TvNavHost(
                             }
                         },
                         onSearchClick = {
-                            navController.navigate(Screen.Search(categoryListScreen.contentType))
+                            navController.navigateOnce(Screen.Search(categoryListScreen.contentType))
                         },
                         onEpgClick = { categoryId, categoryName ->
                             // Navigate to EPG Guide for the selected category
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.EpgGuide(
                                     categoryId = categoryId,
                                     categoryName = categoryName,
@@ -388,7 +388,7 @@ fun TvNavHost(
                             // Navigate based on content type
                             when (streamContentType) {
                                 ContentType.TV_SHOWS ->
-                                    navController.navigate(
+                                    navController.navigateOnce(
                                         Screen.EpisodeSelection(
                                             seriesId = itemId,
                                             seriesName = streamName,
@@ -396,7 +396,7 @@ fun TvNavHost(
                                         ),
                                     )
                                 ContentType.MOVIES ->
-                                    navController.navigate(
+                                    navController.navigateOnce(
                                         Screen.MovieDetails(
                                             movieId = itemId,
                                             movieName = streamName,
@@ -407,7 +407,7 @@ fun TvNavHost(
                                     // Live TV: land on the preview pane, not full-screen. Pushing
                                     // (not popUpTo) means Back from the preview pops back to these
                                     // search results for free via normal nav-stack semantics.
-                                    navController.navigate(
+                                    navController.navigateOnce(
                                         Screen.CategoryList(
                                             contentType = streamContentType,
                                             initialCategoryId = categoryId,
@@ -417,7 +417,7 @@ fun TvNavHost(
                             }
                         },
                         onCategorySelected = { categoryId, contentType ->
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.CategoryList(
                                     contentType = contentType,
                                     initialCategoryId = categoryId,
@@ -448,7 +448,7 @@ fun TvNavHost(
                             )
                         },
                         onCategorySelected = { categoryId ->
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.CategoryList(
                                     contentType = ContentType.MOVIES,
                                     initialCategoryId = categoryId,
@@ -459,7 +459,7 @@ fun TvNavHost(
                             navController.navigateUp()
                         },
                         onRelatedTitleSelected = { related ->
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.MovieDetails(
                                     movieId = related.id,
                                     movieName = related.name,
@@ -494,7 +494,7 @@ fun TvNavHost(
                             )
                         },
                         onCategorySelected = { categoryId ->
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.CategoryList(
                                     contentType = ContentType.TV_SHOWS,
                                     initialCategoryId = categoryId,
@@ -505,7 +505,7 @@ fun TvNavHost(
                             navController.navigateUp()
                         },
                         onRelatedTitleSelected = { related ->
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.EpisodeSelection(
                                     seriesId = related.id,
                                     seriesName = related.name,
@@ -525,7 +525,7 @@ fun TvNavHost(
                         onProgramSelected = { _, channel ->
                             // Land on the preview pane, not full-screen. Pushing (not popUpTo)
                             // means Back from the preview pops back to the EPG guide for free.
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.CategoryList(
                                     contentType = ContentType.LIVE_TV,
                                     initialCategoryId = channel.categoryId,
@@ -534,7 +534,7 @@ fun TvNavHost(
                             )
                         },
                         onChannelSelected = { streamId, _, categoryId ->
-                            navController.navigate(
+                            navController.navigateOnce(
                                 Screen.CategoryList(
                                     contentType = ContentType.LIVE_TV,
                                     initialCategoryId = categoryId,
@@ -608,19 +608,19 @@ fun TvNavHost(
                                 }
 
                                 // Navigate to content selection for all provider types
-                                navController.navigate(Screen.ContentTypeSelection) {
+                                navController.navigateOnce(Screen.ContentTypeSelection) {
                                     popUpTo(Screen.ProviderSelection) { inclusive = true }
                                 }
                             }
                         },
                         onAddProvider = {
-                            navController.navigate(Screen.AddProvider())
+                            navController.navigateOnce(Screen.AddProvider())
                         },
                         onEditProvider = { id ->
-                            navController.navigate(Screen.AddProvider(editId = id))
+                            navController.navigateOnce(Screen.AddProvider(editId = id))
                         },
                         onManageEpg = { id ->
-                            navController.navigate(Screen.EpgManagement(providerId = id))
+                            navController.navigateOnce(Screen.EpgManagement(providerId = id))
                         },
                         onBack = {
                             navController.navigateUp()
@@ -649,7 +649,7 @@ fun TvNavHost(
                         onUiStyleChanged = onUiStyleChanged,
                         onUiScaleChanged = onUiScaleChanged,
                         onManageProviders = {
-                            navController.navigate(Screen.ProviderSelection)
+                            navController.navigateOnce(Screen.ProviderSelection)
                         },
                         onProviderChanged = {
                             coroutineScope.launch {
@@ -671,7 +671,7 @@ fun TvNavHost(
                                     }
                                 }
 
-                                navController.navigate(Screen.ContentTypeSelection) {
+                                navController.navigateOnce(Screen.ContentTypeSelection) {
                                     popUpTo(Screen.Settings) { inclusive = false }
                                 }
                             }
