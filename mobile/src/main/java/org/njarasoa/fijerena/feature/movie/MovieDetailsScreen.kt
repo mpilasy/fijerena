@@ -18,8 +18,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,10 +36,8 @@ import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
-import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -49,12 +45,12 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
+import org.njarasoa.fijerena.ui.components.MobileDetailHero
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
-import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,6 +76,7 @@ fun MobileMovieDetailsScreen(
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
+    val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? MovieDetailsViewModel.UiState.Success)?.isFavorite ?: false
     val isWatched = (uiState as? MovieDetailsViewModel.UiState.Success)?.isWatched ?: false
@@ -139,6 +136,7 @@ fun MobileMovieDetailsScreen(
                             resumeDurationMs = shown.resumeDurationMs,
                             categoryName = shown.categoryName,
                             logoUrl = logoUrl,
+                            backdropUrl = backdropUrl,
                             isFavorite = isFavorite,
                             isWatched = isWatched,
                             onToggleFavorite = { viewModel.toggleFavorite(shown.streamName) },
@@ -170,6 +168,7 @@ private fun MovieDetailsContent(
     resumeDurationMs: Long,
     categoryName: String?,
     logoUrl: String?,
+    backdropUrl: String?,
     isFavorite: Boolean,
     isWatched: Boolean,
     onToggleFavorite: () -> Unit,
@@ -196,38 +195,14 @@ private fun MovieDetailsContent(
     ) {
         item(key = "detail") {
         Column {
-        // Cover image, with the title logo overlaid on it (bottom-left, over a gradient scrim
-        // so it reads regardless of what's under it) rather than as a separate headline block
-        // below the poster.
-        Box(modifier = Modifier.fillMaxWidth()) {
-            CinemaThumbnail(
-                url = movieDetail.coverUrl,
-                fallbackLetter = movieDetail.name.firstOrNull(),
-                contentType = ThumbnailContentType.MOVIE,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(MobileDimensions.posterHeightLarge),
-            )
-            Box(
-                modifier =
-                    Modifier
-                        .matchParentSize()
-                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))),
-            )
-            val movieTitleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
-            TitleLogoOrText(
-                contentDescription = movieTitleText,
-                logoUrl = logoUrl,
-                modifier = Modifier.align(Alignment.BottomStart).padding(CinemaSpacing.md),
-            ) {
-                Text(
-                    text = movieTitleText,
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White,
-                )
-            }
-        }
+        val movieTitleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
+        MobileDetailHero(
+            title = movieTitleText,
+            backdropUrl = backdropUrl,
+            posterUrl = movieDetail.coverUrl,
+            logoUrl = logoUrl,
+            thumbnailContentType = ThumbnailContentType.MOVIE,
+        )
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
