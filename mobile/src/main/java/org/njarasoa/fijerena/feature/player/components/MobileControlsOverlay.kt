@@ -37,6 +37,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -106,6 +108,8 @@ fun MobileControlsOverlay(
     nextEpisode: EpisodeItem? = null,
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
 ) {
+    val haptic = LocalHapticFeedback.current
+
     // Key on metadata so track counts update when a new stream is loaded
     // Keyed on tracksVersion, not just metadata: metadata is set once at playStream() time,
     // before ExoPlayer typically resolves tracks, and (for Live TV especially) may never change
@@ -374,6 +378,7 @@ fun MobileControlsOverlay(
                             // Seek position state for dragging
                             var isSeeking by remember { mutableStateOf(false) }
                             var seekPosition by remember { mutableStateOf(0f) }
+                            var lastHapticSecond by remember { mutableStateOf(-1L) }
 
                             val scrubberColors =
                                 SliderDefaults.colors(
@@ -394,6 +399,13 @@ fun MobileControlsOverlay(
                                     onValueChange = { newValue ->
                                         isSeeking = true
                                         seekPosition = newValue
+                                        // One tick per second crossed while dragging, not per pixel —
+                                        // Slider fires onValueChange continuously during a drag.
+                                        val newSecond = (newValue * duration).toLong() / 1000
+                                        if (newSecond != lastHapticSecond) {
+                                            lastHapticSecond = newSecond
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        }
                                     },
                                     onValueChangeFinished = {
                                         val newPositionMs = (seekPosition * duration).toLong()
@@ -528,7 +540,11 @@ fun MobileControlsOverlay(
                         }
 
                         // Favorite toggle
-                        CinemaIconButton(onClick = onToggleFavorite,
+                        CinemaIconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onToggleFavorite()
+                            },
                             icon = {
                                 Icon(
                                     imageVector = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
