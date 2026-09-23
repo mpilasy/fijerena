@@ -212,6 +212,23 @@ fun MobilePlayerContent(
 
     val streamState by loaderViewModel.state.collectAsStateWithLifecycle()
 
+    // Remember the last successful stream so a channel change can keep the player UI mounted
+    // (and the old video frame visible) through the Loading window instead of unmounting to a
+    // full-screen spinner and flashing black — mirrors TV's TvPlayerScreen. Every effect below
+    // that actually drives playback (position save, playStream trigger) still keys off the live
+    // streamState/currentStreamId, not this — only the final `when` that picks what to draw uses
+    // the frozen fallback, via displayState below.
+    var lastSuccessState by remember { mutableStateOf<StreamLoaderViewModel.StreamState.Success?>(null) }
+    if (streamState is StreamLoaderViewModel.StreamState.Success) {
+        lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
+    }
+    val displayState: StreamLoaderViewModel.StreamState =
+        if (streamState is StreamLoaderViewModel.StreamState.Loading && lastSuccessState != null) {
+            lastSuccessState!!
+        } else {
+            streamState
+        }
+
     // UI State
     var showChannelToast by remember { mutableStateOf(false) }
     // Bumped every time showChannelToast is (re)triggered, so the auto-hide LaunchedEffect below
@@ -437,7 +454,7 @@ fun MobilePlayerContent(
         }
     }
 
-    when (val state = streamState) {
+    when (val state = displayState) {
         is StreamLoaderViewModel.StreamState.Loading -> {
             LoadingScreen()
         }
@@ -717,6 +734,20 @@ fun MobilePlayerContent(
                         channelName = state.streamName,
                         currentEpgProgram = state.currentEpgProgram,
                     )
+                }
+
+                // Small spinner over the frozen last frame while a new stream is being resolved
+                // (loaderViewModel.state is still Loading) — the Buffering overlay below only
+                // covers ExoPlayer's own buffering once playStream() has already been called, so
+                // without this the resolve gap between a channel switch and that call would show
+                // nothing at all.
+                AnimatedVisibility(
+                    visible = !isInPipMode && streamState is StreamLoaderViewModel.StreamState.Loading,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.Center),
+                ) {
+                    CircularProgressIndicator()
                 }
             }
 
