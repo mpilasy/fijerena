@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -98,11 +99,24 @@ fun MobileProviderSelectionScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = stringResource(R.string.provider_no_providers),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                CinemaIcons.Add,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                                modifier = Modifier.size(MobileDimensions.iconXLarge),
+                            )
+                            Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                            Text(
+                                text = stringResource(R.string.provider_no_providers),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                            )
+                            Spacer(modifier = Modifier.height(CinemaSpacing.lg))
+                            CinemaButton(onClick = onAddProvider) {
+                                Text(stringResource(R.string.provider_add_title))
+                            }
+                        }
                     }
                 }
                 is ProviderUiState.Error -> {

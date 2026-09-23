@@ -3,6 +3,7 @@
 package org.njarasoa.fijerena.feature.provider
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,7 +18,9 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
@@ -126,18 +129,48 @@ fun TvProviderSelectionScreen(
 
         when (val state = uiState) {
             is ProviderUiState.Loading -> {
-                Text(
-                    text = stringResource(R.string.provider_loading),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = CinemaTextSecondary,
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
             }
             is ProviderUiState.NoProviders -> {
-                Text(
-                    text = stringResource(R.string.provider_no_providers),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = CinemaTextSecondary,
-                )
+                val emptyStateFocusRequester = remember { FocusRequester() }
+                LaunchedEffect(Unit) {
+                    try {
+                        emptyStateFocusRequester.requestFocus()
+                    } catch (_: IllegalStateException) {
+                        // Not yet composed/attached — first-run screen only shows this branch once.
+                    }
+                }
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            CinemaIcons.Add,
+                            contentDescription = null,
+                            tint = CinemaTextSecondary,
+                            modifier = Modifier.height(TvDimensions.iconLarge.scaled(scale)),
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                        Text(
+                            text = stringResource(R.string.provider_no_providers),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = CinemaTextSecondary,
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+                        CinemaButton(
+                            onClick = onAddProvider,
+                            modifier = Modifier.focusRequester(emptyStateFocusRequester),
+                        ) {
+                            Text(stringResource(R.string.provider_add_title))
+                        }
+                    }
+                }
             }
             is ProviderUiState.Error -> {
                 Text(
