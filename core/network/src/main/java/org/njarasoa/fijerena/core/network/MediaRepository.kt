@@ -1284,27 +1284,33 @@ class MediaRepository(
      * Xtream/local storage only.
      */
     suspend fun getContinueWatchingItems(limit: Int = 10): List<ContinueWatchingItem> {
-        if (usesServerUserData) return emptyList()
-        val movieRows = watchStateDao.getResumable(providerId, ContentType.MOVIES, limit)
-        val seriesRows = watchStateDao.getResumableSeriesCollapsed(providerId, ContentType.TV_SHOWS, limit)
-        if (movieRows.isEmpty() && seriesRows.isEmpty()) return emptyList()
+        val result =
+            if (usesServerUserData) {
+                emptyList()
+            } else {
+                val movieRows = watchStateDao.getResumable(providerId, ContentType.MOVIES, limit)
+                val seriesRows = watchStateDao.getResumableSeriesCollapsed(providerId, ContentType.TV_SHOWS, limit)
 
-        val movieItems =
-            rehydrateThumbnails(
-                movieRows.map { it.toWatchedItem().toRecentMediaItem(MediaType.MOVIE) },
-                ContentType.MOVIES,
-            )
-        val seriesItems =
-            rehydrateThumbnails(
-                seriesRows.map { it.toWatchedItem().toRecentMediaItem(MediaType.SERIES) },
-                ContentType.TV_SHOWS,
-            )
+                // rehydrateThumbnails/zip/sortedByDescending all no-op cleanly on empty input, so
+                // there is no dedicated empty-rows branch here — just the one shape below.
+                val movieItems =
+                    rehydrateThumbnails(
+                        movieRows.map { it.toWatchedItem().toRecentMediaItem(MediaType.MOVIE) },
+                        ContentType.MOVIES,
+                    )
+                val seriesItems =
+                    rehydrateThumbnails(
+                        seriesRows.map { it.toWatchedItem().toRecentMediaItem(MediaType.SERIES) },
+                        ContentType.TV_SHOWS,
+                    )
 
-        val entries =
-            movieRows.zip(movieItems) { row, item -> row.toContinueWatchingItem(item, ContentType.MOVIES) } +
-                seriesRows.zip(seriesItems) { row, item -> row.toContinueWatchingItem(item, ContentType.TV_SHOWS) }
+                val entries =
+                    movieRows.zip(movieItems) { row, item -> row.toContinueWatchingItem(item, ContentType.MOVIES) } +
+                        seriesRows.zip(seriesItems) { row, item -> row.toContinueWatchingItem(item, ContentType.TV_SHOWS) }
 
-        return entries.sortedByDescending { it.second }.map { it.first }.take(limit)
+                entries.sortedByDescending { it.second }.map { it.first }.take(limit)
+            }
+        return result
     }
 
     /**

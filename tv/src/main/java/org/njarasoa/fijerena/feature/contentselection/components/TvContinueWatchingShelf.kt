@@ -52,20 +52,21 @@ fun TvContinueWatchingShelf(
     onItemSelected: (ContinueWatchingItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (items.isEmpty()) return
-    Column(modifier = modifier) {
-        Text(
-            text = stringResource(R.string.series_continue_watching_badge),
-            style = MaterialTheme.typography.titleLarge,
-            color = CinemaTextPrimary,
-            modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xxs),
-        )
-        TvLazyRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-            contentPadding = PaddingValues(horizontal = Spacing.xxs),
-        ) {
-            items(items, key = { it.id }) { item ->
-                TvContinueWatchingCard(item = item, onClick = { onItemSelected(item) })
+    if (items.isNotEmpty()) {
+        Column(modifier = modifier) {
+            Text(
+                text = stringResource(R.string.series_continue_watching_badge),
+                style = MaterialTheme.typography.titleLarge,
+                color = CinemaTextPrimary,
+                modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xxs),
+            )
+            TvLazyRow(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                contentPadding = PaddingValues(horizontal = Spacing.xxs),
+            ) {
+                items(items, key = { it.id }) { item ->
+                    TvContinueWatchingCard(item = item, onClick = { onItemSelected(item) })
+                }
             }
         }
     }
