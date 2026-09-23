@@ -1,6 +1,6 @@
 # Codebase Stability & Resilience Plan: Modular Remediation
 
-**Status:** ✅ **COMPLETE** — every finding landed except explicitly out-of-scope ones. Batches 0-7 done, F-02 hardware-verified, F-06 and F-29 done (2026-09-23). Verified on-device: XtreamDatabase migration passed on `emulator-5554`; F-02 confirmed on mdarcy Shield — 17 min continuous 4K live playback, 0 rebuffers, 0 dropped frames, `Stream Health: HEALTHY` throughout. Only F-11/F-12/F-13/F-14 remain, all intentionally out of scope (Jellyfin/SMB/M3U-only, or downgraded) — see their entries below.  
+**Status:** ✅ **COMPLETE** — every finding landed except explicitly out-of-scope ones. Batches 0-7 done, F-02 hardware-verified, F-06/F-29/F-12(Xtream half) done (2026-09-23). Verified on-device: XtreamDatabase migration passed on `emulator-5554`; F-02 confirmed on mdarcy Shield — 17 min continuous 4K live playback, 0 rebuffers, 0 dropped frames, `Stream Health: HEALTHY` throughout. Only F-11/F-13/F-14 and F-12's Jellyfin half remain, all intentionally out of scope (Jellyfin/SMB/M3U-only) — see their entries below.  
 **Scope note (2026-09-22):** remaining work narrowed to general (provider-agnostic) and Xtream-specific findings only, per direction — F-11 (Jellyfin), F-13 (SMB), and F-14 (M3U/LOCAL parsing) are out of scope going forward. F-12 (OkHttp dispatcher leak) touches both Xtream and Jellyfin `ApiService`; if picked up, scope it to the Xtream half only.  
 **Date:** 2026-09-22  
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`
@@ -130,7 +130,8 @@
   - *Location:* [`JellyfinMediaProvider.kt:558-574`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinMediaProvider.kt#L558-L574)
   - *Mechanism:* Concurrent 401s launch parallel re-auths; null `userId` produces `/Users/null/Items` requests.
   - *Fix:* Add `Mutex` around re-authentication; prevent wiping credentials for Quick Connect.
-- **F-12 (`core:network`): OkHttp dispatcher and connection pool leak on API service close** — ⏭️ **OUT OF SCOPE** (downgraded to Medium in initial review — not a true leak, OkHttp's default dispatcher/pool self-reclaim; the far worse shared-dispatcher variant was already fixed in `d073b145` before this plan started)
+- **F-12 (`core:network`): OkHttp dispatcher and connection pool leak on API service close** — ✅ **XTREAM HALF DONE** (commit `5b865f9b`); Jellyfin half still out of scope
+  - *Reassessed (2026-09-23):* Not actually Jellyfin-specific — the Xtream half of this is a general/Xtream fix like everything else in this plan, it was only skipped earlier for severity (downgraded to Medium — not a true leak, OkHttp's default dispatcher/pool self-reclaim). Landed: `XtreamApiService` now holds its `Dispatcher`/`ConnectionPool` as properties and shuts both down explicitly in `close()`. Jellyfin half not done — `JellyfinApiService` has no `close()` at all today; adding one needs a look at provider teardown lifecycle, not a mechanical change, and Jellyfin itself stays out of scope. The far worse shared-dispatcher variant of this bug class was already fixed in `d073b145` before this plan started.
   - *Location:* [`XtreamApiService.kt:86`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt#L86), [`JellyfinApiService.kt:56`](file:///home/tahiry/data/code/mpilasy/fijerena/core/network/src/main/java/org/njarasoa/fijerena/core/network/jellyfin/JellyfinApiService.kt#L56)
   - *Mechanism:* Custom OkHttp `Dispatcher` and `ConnectionPool` are not closed when Ktor engine uses `preconfigured`.
   - *Fix:* Explicitly shut down dispatcher executor and evict connection pool in `close()`.
@@ -217,7 +218,7 @@ flowchart TD
     subgraph Network["PR Batch 5: Provider & Network Resilience — F-10 DONE, F-11/12/13 OUT OF SCOPE"]
         B5_1["PR 5A: Validate HTTP status codes in XtreamApiService (F-10) [7adba1e2]"]
         B5_2["PR 5B: Mutex in Jellyfin withAutoReconnect (F-11) — dropped, Jellyfin"]
-        B5_3["PR 5C: Shutdown OkHttp Dispatchers in API services (F-12) — dropped, downgraded to Medium"]
+        B5_3["PR 5C: Shutdown OkHttp Dispatcher/Pool in XtreamApiService (F-12) [5b865f9b] — Jellyfin half out of scope"]
         B5_4["PR 5D: SMB scanDirectory attribute optimization (F-13) — dropped, SMB"]
     end
 
