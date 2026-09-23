@@ -119,13 +119,13 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **State Management:** `PlaybackViewModel` delegates to `StreamingPlaybackService` (a `MediaSessionService`).
 - **OK / Center Key:** **Shows controls only** — it never pauses or resumes playback.
 - **Double-OK:** Dismisses the stats overlay if visible.
-- **Pause:** Explicit via pause button, `KEYCODE_MEDIA_PLAY_PAUSE`, or mobile double-tap (VOD only).
+- **Pause:** Explicit via pause button or `KEYCODE_MEDIA_PLAY_PAUSE`. Mobile double-tap no longer pauses — see Mobile Gestures below.
 - **Seeking / Navigation:** 
   - **VOD:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
   - **TV Shows:** D-pad Left/Right (TV) or Swipe (Mobile) to skip between episodes in-player.
 - **Channel Overlays (Live TV):** D-pad Left/Right (TV) or Swipe (Mobile) open channel overlays. TV: `TvChannelListOverlay(panelAlignment=…)` with `slideInHorizontally` and `GlassPanel(backgroundAlpha=0.5f)`. Mobile: `MobileChannelListSheet`.
 - **Preview Pane / Dock (Live TV browse):** Channel plays alongside the list while browsing — TV: focus-driven split (`LiveTvSplitLayout`); Mobile: tap-driven docked mini-player (`MobileCategoryListScreen`). Both promote to full-screen on the same engine connection (no restart). Each platform guarantees Back always has a real stopover before exiting Live TV — see `docs/NAVIGATION_GUIDE.md` → "Live TV Preview / Dock Back-Stack".
-- **Mobile Gestures:** `detectTapGestures` (tap=controls, double-tap=pause/resume VOD). Merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
+- **Mobile Gestures:** `detectTapGestures` (tap=controls; double-tap=10s relative seek, VOD only — left 40% of the width rewinds, right 40% seeks forward, center 20% does nothing). Merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
 
 ### Features
 

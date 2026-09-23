@@ -13,8 +13,12 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -23,12 +27,13 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -50,7 +55,10 @@ import org.njarasoa.fijerena.core.player.service.watchExhaustionToasts
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
@@ -74,6 +82,10 @@ import org.njarasoa.fijerena.feature.player.components.SubtitleSelectorDialog
  * Refactored to use StreamLoaderViewModel.
  */
 private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
+
+/** Double-tap seek step (2a) — matches the app-wide seek convention documented in AGENTS.md. */
+private const val SEEK_STEP_MS = 10_000L
+private const val SEEK_STEP_SECONDS = 10
 
 /**
  * Nav-route wrapper: owns ViewModel creation (fresh [StreamLoaderViewModel] per back-stack entry,
@@ -244,6 +256,15 @@ fun MobilePlayerContent(
     var showLastWatchedOverlay by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
     var showStats by remember { mutableStateOf(false) }
+
+    // Double-tap seek ripple pill (2a) — side is -1 (rewind, left 40%) or +1 (forward, right
+    // 40%), 0 means hidden. Accumulates across a burst of rapid taps in the same direction
+    // (10s, 20s, 30s...) rather than showing one pill per tap; seekRippleTick, same pattern as
+    // channelToastTick above, restarts the auto-hide delay on every tap in the burst.
+    var seekRippleSide by remember { mutableStateOf(0) }
+    var seekRippleSeconds by remember { mutableStateOf(0) }
+    var seekRippleTick by remember { mutableStateOf(0) }
+    val haptic = LocalHapticFeedback.current
     var hasStartedPlaying by remember { mutableStateOf(false) }
     var showRecoverySpinner by remember { mutableStateOf(false) }
 
@@ -254,7 +275,6 @@ fun MobilePlayerContent(
     val recentStreams = rememberStableRecentOrder(publishedRecentStreams)
 
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
-    val currentPlaybackState by rememberUpdatedState(playbackState)
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
     val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
 
@@ -320,6 +340,15 @@ fun MobilePlayerContent(
         if (showChannelToast) {
             delay(CinemaAnimation.toastDismissMs)
             showChannelToast = false
+        }
+    }
+
+    // Auto-hide seek ripple pill
+    LaunchedEffect(seekRippleSide, seekRippleTick) {
+        if (seekRippleSide != 0) {
+            delay(CinemaAnimation.seekRippleDismissMs)
+            seekRippleSide = 0
+            seekRippleSeconds = 0
         }
     }
 
@@ -479,12 +508,34 @@ fun MobilePlayerContent(
                                     onTap = {
                                         if (!showStats) showControls = !showControls
                                     },
-                                    onDoubleTap = {
+                                    // Double-tap 10s relative seek (2a), replacing the old
+                                    // double-tap pause/resume — that duplicated the single-tap +
+                                    // center button path and broke the double-tap-to-seek
+                                    // convention every other mobile video player uses (YouTube,
+                                    // Netflix, Plex, MX Player). Left 40% of the width rewinds,
+                                    // right 40% seeks forward, the center 20% is left alone —
+                                    // single tap already toggles the controls overlay, so a
+                                    // second meaning on center double-tap would be redundant.
+                                    onDoubleTap = { offset ->
                                         if (!showStats && !isLiveContent) {
-                                            when (currentPlaybackState) {
-                                                is PlaybackState.Playing -> viewModel.pause()
-                                                is PlaybackState.Paused -> viewModel.resume()
-                                                else -> {}
+                                            val width = size.width
+                                            when {
+                                                offset.x < width * 0.4f -> {
+                                                    viewModel.seekRelative(-SEEK_STEP_MS)
+                                                    seekRippleSeconds =
+                                                        if (seekRippleSide == -1) seekRippleSeconds + SEEK_STEP_SECONDS else SEEK_STEP_SECONDS
+                                                    seekRippleSide = -1
+                                                    seekRippleTick++
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                }
+                                                offset.x > width * 0.6f -> {
+                                                    viewModel.seekRelative(SEEK_STEP_MS)
+                                                    seekRippleSeconds =
+                                                        if (seekRippleSide == 1) seekRippleSeconds + SEEK_STEP_SECONDS else SEEK_STEP_SECONDS
+                                                    seekRippleSide = 1
+                                                    seekRippleTick++
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                }
                                             }
                                         }
                                     },
@@ -748,6 +799,31 @@ fun MobilePlayerContent(
                     modifier = Modifier.align(Alignment.Center),
                 ) {
                     CircularProgressIndicator()
+                }
+
+                // Double-tap seek ripple pill (2a) — sits on whichever side was tapped, fading
+                // out CinemaAnimation.seekRippleDismissMs after the last tap in a burst.
+                AnimatedVisibility(
+                    visible = !isInPipMode && seekRippleSide != 0,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(if (seekRippleSide < 0) Alignment.CenterStart else Alignment.CenterEnd),
+                ) {
+                    GlassPanel(
+                        modifier = Modifier.padding(horizontal = CinemaSpacing.xl),
+                        panelShape = RoundedCornerShape(percent = 50),
+                    ) {
+                        Text(
+                            text =
+                                stringResource(
+                                    if (seekRippleSide < 0) R.string.player_seek_rewind_format else R.string.player_seek_forward_format,
+                                    seekRippleSeconds,
+                                ),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = CinemaTextPrimary,
+                            modifier = Modifier.padding(horizontal = CinemaSpacing.lg, vertical = CinemaSpacing.md),
+                        )
+                    }
                 }
             }
 
