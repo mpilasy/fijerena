@@ -298,8 +298,34 @@ fun MobileNavHost(
                 )
             }
 
-            // Player Screen
-            composable<Screen.Player> { backStackEntry ->
+            // Player Screen — vertical slide, not the lateral push used by list/detail screens:
+            // opening full-screen video reads as rising up, not stepping sideways into a list.
+            composable<Screen.Player>(
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Up,
+                        animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
+                    ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Down,
+                        animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
+                    ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Up,
+                        animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
+                    ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Down,
+                        animationSpec = tween(CinemaAnimation.navTransitionMs, easing = CinemaAnimation.StandardEasing),
+                    ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                },
+            ) { backStackEntry ->
                 val playerScreen = backStackEntry.toRoute<Screen.Player>()
                 MobilePlayerScreen(
                     streamId = playerScreen.streamId,
