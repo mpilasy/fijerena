@@ -1,6 +1,6 @@
 # Codebase Stability & Resilience Plan: Modular Remediation
 
-**Status:** ✅ **COMPLETE** — all in-scope findings landed, including F-02's hardware gate. Batches 0-6 done, F-06 done (2026-09-23). Verified on-device: XtreamDatabase migration passed on `emulator-5554`; F-02 confirmed on mdarcy Shield — 17 min continuous 4K live playback, 0 rebuffers, 0 dropped frames, `Stream Health: HEALTHY` throughout. Remaining out-of-scope items (F-11/12/13/14/29) intentionally deferred, not oversights — see their entries below.  
+**Status:** ✅ **COMPLETE** — every finding landed except explicitly out-of-scope ones. Batches 0-7 done, F-02 hardware-verified, F-06 and F-29 done (2026-09-23). Verified on-device: XtreamDatabase migration passed on `emulator-5554`; F-02 confirmed on mdarcy Shield — 17 min continuous 4K live playback, 0 rebuffers, 0 dropped frames, `Stream Health: HEALTHY` throughout. Only F-11/F-12/F-13/F-14 remain, all intentionally out of scope (Jellyfin/SMB/M3U-only, or downgraded) — see their entries below.  
 **Scope note (2026-09-22):** remaining work narrowed to general (provider-agnostic) and Xtream-specific findings only, per direction — F-11 (Jellyfin), F-13 (SMB), and F-14 (M3U/LOCAL parsing) are out of scope going forward. F-12 (OkHttp dispatcher leak) touches both Xtream and Jellyfin `ApiService`; if picked up, scope it to the Xtream half only.  
 **Date:** 2026-09-22  
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`
@@ -166,9 +166,10 @@
 ---
 
 ### Category 7: Decoupled Low-Priority Sweeps & Polish (P3)
-- **F-29 (`core:navigation`): `navigateOnce` sweep across navigation hosts**
+- **F-29 (`core:navigation`): `navigateOnce` sweep across navigation hosts** — ✅ **DONE** (commit `65d21377`)
   - *Location:* `TvNavHost.kt`, `MobileNavHost.kt`
-  - *Status:* Speculative refactor; isolate into standalone PR. Still deferred — not a verified defect.
+  - *Status:* Speculative refactor; isolate into standalone PR.
+  - *Investigated (2026-09-23):* `navigateOnce()` already existed but was applied only to `Screen.Player` (7 of ~52 call sites) — the one destination where a duplicate push is a real bug (instantiates a new player engine). The other ~45 were unguarded; worst case there is a harmless duplicate back-stack entry costing one extra Back press, not damage. Correctly filed as low-priority. Done anyway since nothing else was queued: added a `navigateOnce(route, builder)` overload for the `NavOptionsBuilder`-passing call sites, swept the rest. No literal back-to-back duplicate-push pattern found on inspection — the D-pad-repeat race is the actual mechanism, not a duplicated call site.
 - **F-14 (`core:network`): UTF-8 BOM handling in M3U parser**
   - *Location:* `M3uParser.kt:39`
   - *Status:* ⏭️ **OUT OF SCOPE** (LOCAL/REMOTE_M3U-only, dropped 2026-09-22).
@@ -227,10 +228,10 @@ flowchart TD
         B6_4["PR 6D: Activity-scoped ViewModel + auto-enter wiring for mobile Live TV PiP (F-28) [132eed41]"]
     end
 
-    subgraph Polish["PR Batch 7: Low-Priority Sweeps & Polish"]
-        B7_1["PR 7A: Standalone navigateOnce codebase sweep (F-29)"]
-        B7_2["PR 7B: M3U UTF-8 BOM tolerance (F-14)"]
-        B7_3["PR 7C: Audio becoming noisy handler (F-06)"]
+    subgraph Polish["PR Batch 7: Low-Priority Sweeps & Polish — DONE except F-14 (out of scope)"]
+        B7_1["PR 7A: Standalone navigateOnce codebase sweep (F-29) [65d21377]"]
+        B7_2["PR 7B: M3U UTF-8 BOM tolerance (F-14) — out of scope, LOCAL/REMOTE_M3U-only"]
+        B7_3["PR 7C: Audio becoming noisy handler (F-06) [8b519cfd]"]
     end
 
     Hotfixes --> Player
@@ -260,4 +261,4 @@ flowchart TD
    - Batch 5: shipped F-10 (`7adba1e2`); F-11 (Jellyfin) and F-13 (SMB) dropped, F-12 dropped (downgraded to Medium — not a true leak, see its *Landed* note).
    - Batch 6: shipped F-25 (`383789c3`), F-26 (`23275fdc`), F-27 (`3a5ad287`), F-28 (`132eed41`).
 7. **Batch 7 (Sweeps):** F-06 ✅ **DONE (`8b519cfd`, 2026-09-23)**, F-14 out of scope, F-29 still deferred
-   - F-06 landed — general player code (audio-becoming-noisy), one missing `ExoPlayer.Builder` flag. F-14 (M3U BOM) dropped from scope entirely (LOCAL/REMOTE_M3U-only). F-29 (`navigateOnce` sweep) stays deferred — speculative refactor, not a verified defect.
+   - F-06 landed — general player code (audio-becoming-noisy), one missing `ExoPlayer.Builder` flag. F-14 (M3U BOM) dropped from scope entirely (LOCAL/REMOTE_M3U-only). F-29 (`navigateOnce` sweep) landed (`65d21377`) — low-priority but real, done since nothing else was queued.
