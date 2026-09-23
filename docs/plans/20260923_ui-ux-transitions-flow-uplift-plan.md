@@ -1,6 +1,6 @@
 # UI/UX Polish, Transitions & Flow Uplift Plan
 
-**Status:** In Progress — Phases 1-3 done (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
+**Status:** In Progress — Phases 1-4 done (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
 
 ## 1. Scoring Method
 
@@ -173,32 +173,42 @@ A high-value, cross-layer feature providing 1-click/tap resume capability right 
 
 ---
 
-## Phase 4 — Mobile Detail Screens Modernization (Parity with TV Hero)
+## Phase 4 — Mobile Detail Screens Modernization (Parity with TV Hero) — ✅ **DONE (2026-09-23)**
 
 Same two screens end to end (`MobileMovieDetailsScreen`, `MobileEpisodeSelectionScreen`) — build in this order (hero → actions → tabs) rather than splitting across phases.
 
-### 3a. Cinematic 16:9 Backdrop Hero Banner
+### 3a. Cinematic 16:9 Backdrop Hero Banner — ✅ **DONE** (commit `caa899df`)
 - **Problem:** In [`MobileMovieDetailsScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/movie/MovieDetailsScreen.kt#L202-L230) and [`MobileEpisodeSelectionScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/episode/EpisodeSelectionScreen.kt#L456-L486), 2:3 vertical posters are forced into horizontal banners (`fillMaxWidth().height(posterHeightLarge)`), causing severe image cropping. Meanwhile, [`MovieDetailsViewModel.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/MovieDetailsViewModel.kt#L69-L70) already fetches 16:9 TMDB landscape `backdropUrl`s, which mobile leaves unused.
 - **Solution:**
   - Collect `backdropUrl` in `MobileMovieDetailsScreen` and `MobileEpisodeSelectionScreen`.
   - Render a true 16:9 aspect-ratio header using `backdropUrl` (falling back to blurred/gradient cover art if null).
   - Apply top-to-bottom and bottom-to-top gradient scrims, overlaying the TMDB title wordmark logo ([`TitleLogoOrText`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/components/TitleLogoOrText.kt)) gracefully on the backdrop.
+- **Landed:** Fixed as scoped via a new shared `MobileDetailHero` composable, used by both screens (they had byte-for-byte identical hero blocks — this reads as a net code reduction, not just a swap). One scrim brush does both directions (dark→transparent by 25%, transparent→dark from 60%) rather than two stacked overlays. "Falling back to blurred/gradient cover art if null" landed as *unblurred* poster fallback — `Modifier.blur()` needs API 31 (this app's `minSdk` is 30) and nothing else in the codebase uses it; the poster was already being center-cropped to a wide banner before this item, so falling back to that same crop (now at a true 16:9 ratio) is a strict improvement with zero new API surface, not a regression.
 
-### 3b. Action Bar & Meta Line Redesign
+### 3b. Action Bar & Meta Line Redesign — ✅ **DONE** (commit `92d0e654`)
 - **Problem:** Action buttons on mobile detail screens are currently a mix of stacked full-width buttons and scattered icon toggles.
 - **Solution:**
   - Modernize action controls into a single cohesive row:
     - Primary wide pill: "Play" / "Resume from XXm" (`CinemaButton`).
     - Secondary circular/rounded icon buttons: Favorite toggle, Watched toggle, Trailer, and Info.
   - Consolidate metadata into a single dot-separated meta row: Year · Content Rating badge · Duration · "Ends at" time · Resolution badge.
+- **Landed:** Scope narrowed to the meta-line half, applied to all three places carrying one of these rows (movie header, series header, per-episode detail panel) — checked `CinemaIconButton`/`DetailIconAction` before touching the action row and found they're already a `FilledIconButton` in `CircleShape` with a label underneath: the "primary pill + circular secondary icons" the Problem/Solution text asks for already existed, not "stacked full-width buttons and scattered icon toggles". Two further deliberate deviations from the text, not silently dropped:
+  - No "Info" icon added — its likely purpose (surfacing technical stream info without cluttering the header) is what 3c's Overview tab now does instead; adding a redundant icon action would fight the phase that lands right after it in the same commit sequence.
+  - "Start from Beginning" (an existing, working resume-restart action, shown whenever `hasResume`) was kept even though it isn't in the plan's 4-icon list — removing a working feature to match an illustrative list isn't a real improvement, and nothing in the Problem statement calls it out as broken.
+  - New shared `MetaText`/`MetaBadge` composables (`ui/components/MobileDetailMeta.kt`) so all three meta rows build the dot-joined line the same way; star rating stays its own `RatingBadge` pill (matching TV's `TvDetailHero`, which keeps its score chip outside the plain-text meta line too), content rating and resolution are `MetaBadge` pills, everything else is plain `MetaText`.
 
-### 3c. Tabbed / Segmented Detail Sections
+### 3c. Tabbed / Segmented Detail Sections — ✅ **DONE** (commit `063b4535`)
 - **Problem:** On Mobile, synopsis, cast, alternate streams, and related titles are all dumped into a continuous vertical scroll, causing excessive scrolling distance.
 - **Solution:**
   - Introduce a sticky segmented tab strip below the hero actions:
     - **Movie Details:** `Overview` (synopsis, director, studio), `Cast` (actors), `More Like This` (related titles), `Versions` (alternate streams).
     - **Series Details:** `Episodes` (season dropdown + episode cards), `Overview`, `Cast`, `More Like This`.
   - Prevents scrolling fatigue and keeps episode picking instantly accessible.
+- **Landed:** Found TV already shipped this exact pattern (`docs/plans/20260902_tv-detail-hero-ui-plan.md` Phase 4 — `MovieDetailTab`/`SeriesDetailTab` in the TV screens, tabs built from what the title actually has, not a fixed list) and mirrored its structure and naming for mobile rather than designing from scratch, with three differences from both the TV precedent and this plan's literal text:
+  - **Not sticky-pinned during scroll.** TV's tab row is a `stickyHeader`; making mobile's the same would mean restructuring the whole `LazyColumn` item layout (currently one large `item(key="detail")` block holding everything above the tabs) into multiple items so a sticky header has something to pin against — a materially bigger, riskier change than this item's C2 score budgeted for. A plain inline `TabRow` still delivers the core ask (only one tab's content composes/scrolls at a time, cutting total scroll length) without that restructuring risk. Worth revisiting as a follow-up if a pinned strip turns out to matter in practice.
+  - **"Versions" is its own tab (mobile only)**, unlike TV which folds the alternate-stream picker into its "Details" tab. Followed the plan's literal mobile spec here since it explicitly asks for a dedicated tab; the trade-off is that the plain "Stream name: X" line (previously always visible, even with zero alternates) now only shows when there's actually something to switch to — the Versions tab doesn't exist otherwise. A minor information trim, not a lost capability.
+  - **"Studio" was dropped from Overview** — `MediaMetadata` (the shared domain model every provider metadata flows through) has no studio field, so there was nothing to show.
+  - Series-only fix caught before landing: the horizontal swipe-to-change-season gesture was originally attached to the whole `LazyColumn` unconditionally. Since the season list/episode items only compose while the `Episodes` tab is selected, an un-gated swipe while viewing Overview/Cast/More Like This would silently change the season selection in the background — invisible until switching back to Episodes. Gated the gesture's `pointerInput` on `selectedTab == SeriesDetailTab.EPISODES` before committing.
 
 ---
 
