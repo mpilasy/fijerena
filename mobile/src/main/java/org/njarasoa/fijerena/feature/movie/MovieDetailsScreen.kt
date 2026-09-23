@@ -340,16 +340,21 @@ private fun MovieDetailsContent(
         val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
 
         Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-        PrimaryTabRow(selectedTabIndex = safeTabIndex) {
-            tabs.forEachIndexed { index, tab ->
-                Tab(
-                    selected = index == safeTabIndex,
-                    onClick = { selectedTabIndex = index },
-                    text = { Text(movieDetailTabLabel(tab)) },
-                )
+        // A single-tab strip (a title with no cast/related-titles/alternate-instances, leaving
+        // only Overview) has nothing to switch between — skip the strip entirely rather than
+        // render dead chrome for a tab the user can't leave.
+        if (tabs.size > 1) {
+            PrimaryTabRow(selectedTabIndex = safeTabIndex) {
+                tabs.forEachIndexed { index, tab ->
+                    Tab(
+                        selected = index == safeTabIndex,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(movieDetailTabLabel(tab)) },
+                    )
+                }
             }
+            Spacer(modifier = Modifier.height(CinemaSpacing.md))
         }
-        Spacer(modifier = Modifier.height(CinemaSpacing.md))
         when (tabs.getOrNull(safeTabIndex)) {
             MovieDetailTab.OVERVIEW ->
                 MovieOverviewTabContent(
