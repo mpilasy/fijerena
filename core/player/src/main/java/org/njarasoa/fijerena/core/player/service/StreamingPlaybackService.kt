@@ -375,7 +375,12 @@ class StreamingPlaybackService : MediaSessionService() {
                         .setUsage(C.USAGE_MEDIA)
                         .build(),
                     true,
-                ).setWakeMode(C.WAKE_MODE_NETWORK)
+                // Without this, unplugging headphones (or the Shield remote's headphone jack)
+                // mid-playback left audio blasting out of the device speaker instead of
+                // auto-pausing — ExoPlayer's built-in ACTION_AUDIO_BECOMING_NOISY handling, off
+                // by default.
+                ).setHandleAudioBecomingNoisy(true)
+                .setWakeMode(C.WAKE_MODE_NETWORK)
 
         val player = playerBuilder.build()
 
