@@ -2,7 +2,9 @@ package org.njarasoa.fijerena.feature.search
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +31,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
@@ -43,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
@@ -53,6 +57,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
+import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
@@ -138,6 +143,19 @@ fun MobileSearchScreen(
         }
     }
 
+    // As-you-type search: debounced so every keystroke doesn't fire its own query. The manual
+    // triggers below (search icon tap, keyboard search action) still work unchanged — performSearch()
+    // already cancels any in-flight search job before starting a new one, so an explicit tap
+    // landing right after a debounced fire is a harmless redundant call, not a race.
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.length >= 2) {
+            delay(CinemaAnimation.searchDebounceMs)
+            viewModel.performSearch(searchQuery)
+        } else if (searchQuery.isEmpty()) {
+            viewModel.clearSearch()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -189,7 +207,12 @@ fun MobileSearchScreen(
                     )
                 },
                 trailingIcon = {
-                    if (searchQuery.isNotEmpty() || uiState is SearchViewModel.UiState.Success) {
+                    if (uiState is SearchViewModel.UiState.Loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(MobileDimensions.iconDefault),
+                            color = CinemaTextPrimary,
+                        )
+                    } else if (searchQuery.isNotEmpty() || uiState is SearchViewModel.UiState.Success) {
                         CinemaIconButton(
                             onClick = {
                                 searchQuery = ""
@@ -422,6 +445,41 @@ private fun SearchResults(
             remember(categoryResults, results) {
                 buildGroupedSearchResults(categoryResults, results)
             }
+
+        // Scope filter chips — only meaningful for Global Search, where results already span
+        // multiple content types worth triaging. A type-scoped search (queryContentType != "ALL")
+        // only ever has one type of result to begin with.
+        var selectedTypeFilter by rememberSaveable { mutableStateOf<String?>(null) }
+        if (queryContentType == "ALL" && groupedByType.size > 1) {
+            val totalCount = categoryResults.size + results.size
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                CinemaFilterChip(
+                    selected = selectedTypeFilter == null,
+                    onClick = { selectedTypeFilter = null },
+                    label = { Text("${stringResource(R.string.content_type_all_label)} ($totalCount)") },
+                )
+                for ((type, cats, streams) in groupedByType) {
+                    val count = cats.size + streams.size
+                    if (count > 0) {
+                        CinemaFilterChip(
+                            selected = selectedTypeFilter == type,
+                            onClick = { selectedTypeFilter = if (selectedTypeFilter == type) null else type },
+                            label = { Text("${localizedContentTypeLabel(type)} ($count)") },
+                        )
+                    }
+                }
+            }
+        }
+        val visibleGroups =
+            selectedTypeFilter?.let { filter -> groupedByType.filter { it.first == filter } } ?: groupedByType
+
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
             contentPadding = PaddingValues(bottom = Spacing.md),
@@ -476,7 +534,7 @@ private fun SearchResults(
             }
 
             if (queryContentType == "ALL") {
-                groupedByType.forEach { (type, typeCats, typeStreams) ->
+                visibleGroups.forEach { (type, typeCats, typeStreams) ->
 
                     if (typeCats.isNotEmpty() || typeStreams.isNotEmpty()) {
                         val isExpanded = expandedGroups.contains(type)
