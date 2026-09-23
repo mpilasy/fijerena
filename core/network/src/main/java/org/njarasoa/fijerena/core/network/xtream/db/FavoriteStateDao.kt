@@ -49,6 +49,10 @@ interface FavoriteStateDao {
     @Query("DELETE FROM favorite_state WHERE providerId = :providerId")
     fun deleteAll(providerId: Long)
 
+    /** Rows whose provider no longer exists at all — see [org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData]. */
+    @Query("DELETE FROM favorite_state WHERE providerId NOT IN (:validProviderIds)")
+    fun deleteOrphaned(validProviderIds: List<Long>): Int
+
     /** Restore path: rewrites `providerId` before insert, so it takes whole rows. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun restoreAll(entities: List<FavoriteStateEntity>)

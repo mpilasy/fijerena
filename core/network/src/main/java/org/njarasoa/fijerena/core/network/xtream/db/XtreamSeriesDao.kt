@@ -43,6 +43,10 @@ interface XtreamSeriesDao {
     @Query("DELETE FROM xtream_series WHERE providerId = :providerId")
     fun deleteAll(providerId: Long)
 
+    /** Rows whose provider no longer exists at all — see [org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData]. */
+    @Query("DELETE FROM xtream_series WHERE providerId NOT IN (:validProviderIds)")
+    fun deleteOrphaned(validProviderIds: List<Long>): Int
+
     @Query("SELECT seriesId FROM xtream_series WHERE providerId = :providerId")
     fun getSeriesIds(providerId: Long): List<Int>
 

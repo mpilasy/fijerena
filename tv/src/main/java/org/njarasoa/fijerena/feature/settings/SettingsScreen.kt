@@ -317,6 +317,16 @@ fun SettingsScreen(
                     )
                 }
 
+                // Database Maintenance
+                item {
+                    DatabaseMaintenanceCard(
+                        isPruning = uiState.isPruningDatabase,
+                        resultMessage = uiState.databaseMaintenanceMessage,
+                        onShrinkClick = { viewModel.pruneDatabase() },
+                        scale = scale,
+                    )
+                }
+
                 // Advanced
                 item {
                     SettingsSectionHeader(text = stringResource(R.string.settings_section_advanced), scale = scale)
