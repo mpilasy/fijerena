@@ -261,6 +261,43 @@ fun TvNavHost(
                         onEpgBrowser = {
                             navController.navigateOnce(Screen.EpgBrowser)
                         },
+                        onContinueWatchingSelected = { item ->
+                            // Same dispatch as CategoryList's Recent row (below) — a shelf card is
+                            // just another resumable entry, and should route exactly like one.
+                            when (val target = item.target) {
+                                is BrowseTarget.Series ->
+                                    navController.navigateOnce(
+                                        Screen.EpisodeSelection(
+                                            seriesId = target.seriesId.raw,
+                                            seriesName = item.name,
+                                            categoryId = item.categoryId,
+                                            initialEpisodeId = target.resumeEpisodeId?.raw,
+                                        ),
+                                    )
+                                is BrowseTarget.Episode ->
+                                    navController.navigateOnce(
+                                        Screen.Player(
+                                            streamId = target.episodeId.raw,
+                                            streamName = item.name,
+                                            categoryId = item.categoryId,
+                                            contentType = ContentType.TV_SHOWS,
+                                            episodeId = target.episodeId.raw,
+                                            episodeExtension = target.extension,
+                                            seriesId = target.seriesId?.raw,
+                                            seriesName = target.seriesName,
+                                        ),
+                                    )
+                                is BrowseTarget.Movie ->
+                                    navController.navigateOnce(
+                                        Screen.MovieDetails(
+                                            movieId = target.movieId,
+                                            movieName = item.name,
+                                            categoryId = item.categoryId,
+                                        ),
+                                    )
+                                is BrowseTarget.Channel, is BrowseTarget.CategoryRef -> Unit
+                            }
+                        },
                     )
                 }
 
