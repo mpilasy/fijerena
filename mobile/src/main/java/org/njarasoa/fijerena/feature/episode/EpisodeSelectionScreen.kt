@@ -68,6 +68,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
+import org.njarasoa.fijerena.ui.components.MobileDetailHero
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
@@ -103,6 +104,7 @@ fun MobileEpisodeSelectionScreen(
     val relatedTitles by viewModel.relatedTitles.collectAsStateWithLifecycle()
     val tmdbTitle by viewModel.tmdbTitle.collectAsStateWithLifecycle()
     val logoUrl by viewModel.logoUrl.collectAsStateWithLifecycle()
+    val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
     val isFavorite = (uiState as? SeriesDetailsViewModel.UiState.Success)?.isFavorite ?: false
 
@@ -227,6 +229,7 @@ fun MobileEpisodeSelectionScreen(
                             resumeState = resumeState,
                             categoryName = lastSuccess?.categoryName,
                             logoUrl = logoUrl,
+                            backdropUrl = backdropUrl,
                             isFavorite = isFavorite,
                             onToggleFavorite = { viewModel.toggleFavorite(lastSuccess?.streamName ?: seriesName) },
                             onPlayEpisode = { episodeId, episodeTitle, extension, startFromBeginning ->
@@ -261,6 +264,7 @@ private fun EpisodeListContent(
     resumeState: EpisodeResumeState,
     categoryName: String?,
     logoUrl: String?,
+    backdropUrl: String?,
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onPlayEpisode: (episodeId: String, episodeTitle: String, extension: String, startFromBeginning: Boolean) -> Unit,
@@ -450,40 +454,14 @@ private fun EpisodeListContent(
     ) {
         item(key = "series_hero_header") {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // Cover image, with the title logo overlaid on it (bottom-left, over a gradient
-                // scrim so it reads regardless of what's under it) rather than as a separate
-                // headline block below the poster.
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    CinemaThumbnail(
-                        url = seriesDetail.coverUrl,
-                        fallbackLetter = seriesName.firstOrNull(),
-                        contentType = ThumbnailContentType.TV_SHOW,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(MobileDimensions.posterHeightLarge),
-                    )
-                    Box(
-                        modifier =
-                            Modifier
-                                .matchParentSize()
-                                .background(
-                                    Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))),
-                                ),
-                    )
-                    val seriesTitleText = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName }
-                    TitleLogoOrText(
-                        contentDescription = seriesTitleText,
-                        logoUrl = logoUrl,
-                        modifier = Modifier.align(Alignment.BottomStart).padding(CinemaSpacing.md),
-                    ) {
-                        Text(
-                            text = seriesTitleText,
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = Color.White,
-                        )
-                    }
-                }
+                val seriesTitleText = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName }
+                MobileDetailHero(
+                    title = seriesTitleText,
+                    backdropUrl = backdropUrl,
+                    posterUrl = seriesDetail.coverUrl,
+                    logoUrl = logoUrl,
+                    thumbnailContentType = ThumbnailContentType.TV_SHOW,
+                )
 
                 // Genre
                 seriesDetail.metadata.genre?.let { genre ->
