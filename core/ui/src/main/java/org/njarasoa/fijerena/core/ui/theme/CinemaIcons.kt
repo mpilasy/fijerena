@@ -139,6 +139,9 @@ import androidx.compose.material.icons.sharp.SkipPrevious
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.sharp.ContentCopy
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.sharp.MoreVert
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.sharp.SwapHoriz
@@ -337,4 +340,7 @@ object CinemaIcons {
 
     val SwapHoriz: ImageVector
         @Composable @ReadOnlyComposable get() = pick(Icons.Rounded.SwapHoriz, Icons.Outlined.SwapHoriz, Icons.Sharp.SwapHoriz)
+
+    val MoreVert: ImageVector
+        @Composable @ReadOnlyComposable get() = pick(Icons.Rounded.MoreVert, Icons.Outlined.MoreVert, Icons.Sharp.MoreVert)
 }
