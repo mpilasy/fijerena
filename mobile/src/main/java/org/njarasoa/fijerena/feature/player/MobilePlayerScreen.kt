@@ -496,7 +496,11 @@ fun MobilePlayerContent(
                                         hasFiredHorizontalThisGesture = false
                                     },
                                     onDrag = { change, dragAmount ->
-                                        if (showStats) return@detectDragGestures
+                                        // Without guarding the other two overlays the same way
+                                        // showStats already was, a vertical scroll inside the open
+                                        // category/last-watched drawer was consumed here instead —
+                                        // channel-skipping while the user tried to scroll the list.
+                                        if (showStats || showCategoryOverlay || showLastWatchedOverlay) return@detectDragGestures
                                         change.consume()
                                         verticalAccumulator += dragAmount.y
                                         horizontalAccumulator += dragAmount.x
