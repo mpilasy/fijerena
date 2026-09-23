@@ -51,6 +51,13 @@ class XtreamApiService(
             coerceInputValues = true
         }
 
+    // Held directly so close() can shut them down explicitly — Ktor's HttpClient.close() on the
+    // OkHttp engine doesn't do this itself. Not a true leak (OkHttp's default dispatcher reclaims
+    // idle threads after 60s and this pool evicts idle connections after 5 min on its own), but a
+    // provider switch/reconnect leaves both lingering longer than necessary until then.
+    private val okhttpDispatcher = okhttp3.Dispatcher()
+    private val okhttpConnectionPool = ConnectionPool(5, 5, TimeUnit.MINUTES)
+
     private val client: HttpClient =
         HttpClient(OkHttp) {
             // Without this, a non-2xx response (401/403/429/502...) — often an HTML error page,
@@ -97,8 +104,8 @@ class XtreamApiService(
                 config {
                     followRedirects(true)
                     followSslRedirects(true)
-                    dispatcher(okhttp3.Dispatcher())
-                    connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
+                    dispatcher(okhttpDispatcher)
+                    connectionPool(okhttpConnectionPool)
                 }
             }
         }
@@ -475,5 +482,8 @@ class XtreamApiService(
      */
     fun close() {
         client.close()
+        // client.close() alone doesn't touch these — see okhttpDispatcher's kdoc.
+        okhttpDispatcher.executorService.shutdown()
+        okhttpConnectionPool.evictAll()
     }
 }
