@@ -1,6 +1,6 @@
 # UI/UX Polish, Transitions & Flow Uplift Plan
 
-**Status:** Proposed (2026-09-23), reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
+**Status:** In Progress — Phase 1 done (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
 
 ## 1. Scoring Method
 
@@ -53,47 +53,53 @@ All items adhere strictly to the project rules and prior architectural decisions
 
 ---
 
-## Phase 1 — Free Wins (Prereq + 5 items, all C1/R1)
+## Phase 1 — Free Wins (Prereq + 5 items, all C1/R1) — ✅ **DONE (2026-09-23)**
 
 Cheapest tier in the whole plan: one file each, isolated, no cross-item dependency except 1c being a prerequisite token addition the later phases' motion work can reference. Ship this phase as one batch or as five trivial standalone PRs — either works, nothing here blocks anything else.
 
-### 1c. Centralized Easing Tokens in `CinemaAnimation` (prerequisite)
+### 1c. Centralized Easing Tokens in `CinemaAnimation` (prerequisite) — ✅ **DONE** (commit `7ddc3607`)
 - **Problem:** Currently, animations use default `tween(ms)` without explicit easing curves, resulting in stiff linear or semi-abrupt motion.
 - **Solution:** Add centralized Compose easing curves to [`CinemaAnimation.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/theme/CinemaAnimation.kt):
   - `StandardEasing = FastOutSlowInEasing` (for screen slides, crossfades, and drawer reveals)
   - `EmphasizedEasing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)` (for focus scale and player overlay popups)
+- **Landed:** Tokens added exactly as scoped. No consumers wired yet — Phase 2/3's motion items are what will actually reference these.
 
-### 8a. Provider List's First Screen Has No Call-to-Action for a Brand-New User
+### 8a. Provider List's First Screen Has No Call-to-Action for a Brand-New User — ✅ **DONE** (commit `baf4216b`)
 - **Problem:** [`TvProviderSelectionScreen`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/provider/ProviderSelectionScreen.kt#L135-L141) and [`ProviderSelectionScreen` (mobile)](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/provider/ProviderSelectionScreen.kt#L96-L107) both render `ProviderUiState.NoProviders` as nothing but centered, static body text ("No providers"). This is the literal first screen a brand-new install shows once past the splash — there is no button, arrow, or visual cue pointing at the header's "+" icon (itself icon-only, no visible label) that's the only way to actually do anything. A first-time user has no obvious next step.
 - **Solution:**
   - Replace the bare text with a proper empty state: icon/illustration, the existing message as a subtitle, and a real "Add Provider" button (`CinemaButton`/`CinemaSecondaryButton`) wired to the same `onAddProvider` callback the header icon already uses.
   - On TV, make that button D-pad focusable and auto-focused on first composition of this state, so a new user can press the D-pad center key immediately without hunting for the header icon.
+- **Landed:** Fixed on both platforms as scoped — icon, subtitle, `CinemaButton` wired to the existing `onAddProvider` callback, auto-focused on TV via the same `FocusRequester` + `LaunchedEffect` pattern used for F-27's empty-state fix earlier. Icon reuses `CinemaIcons.Add` (same glyph as the action it triggers) rather than sourcing a new illustration asset.
 
-### 8b. TV Loading State Has No Visual Feedback, and Is Inconsistent with Mobile's
+### 8b. TV Loading State Has No Visual Feedback, and Is Inconsistent with Mobile's — ✅ **DONE** (commit `baf4216b`)
 - **Problem:** [`TvProviderSelectionScreen`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/provider/ProviderSelectionScreen.kt#L128-L134) renders `ProviderUiState.Loading` as plain static text ("Loading..."), with no spinner, skeleton, or animation of any kind. [`ProviderSelectionScreen` (mobile)](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/provider/ProviderSelectionScreen.kt#L88-L94) already does this correctly — a centered `CircularProgressIndicator()`. On a screen that can be reached mid-load (e.g. right after adding/editing a provider, per the screen's own `LaunchedEffect(Unit) { viewModel.loadProviders() }` at line 82), a static loading string with zero motion reads as a frozen/broken screen on TV specifically.
 - **Solution:** Mirror mobile's `CircularProgressIndicator()` (or the app's TV-specific `MitohanaLoading` loader already used on the player's loading screen, for visual consistency with the rest of the TV app) in the TV `Loading` branch.
+- **Landed:** Used `CircularProgressIndicator()`, not `MitohanaLoading` — checked `MitohanaLoading`'s actual implementation and it's an animated-dots *text* string ("Buffering..." + cycling dots), semantically built for player-buffering context, not a generic spinner. Using it here would show "Buffering..." on a provider list, which is wrong. Mobile's plain spinner was the better fit despite the "for visual consistency" framing in the original proposal.
 
-### 5a. Debounced As-You-Type Search on Mobile
+### 5a. Debounced As-You-Type Search on Mobile — ✅ **DONE** (commit `6b1e8682`)
 - **Problem:** In [`MobileSearchScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/search/SearchScreen.kt#L170-L218), search only triggers when the user presses the keyboard Search IME button. Typing does not filter results automatically.
 - **Solution:**
   - Add a 300ms debounced `LaunchedEffect(searchQuery)` in `MobileSearchScreen`:
     - When `searchQuery.length >= 2`, automatically invoke `viewModel.performSearch(searchQuery)`.
     - When cleared, immediately invoke `viewModel.clearSearch()`.
   - Show a small animated indeterminate progress circle inside the search field trailing icon while search coroutines run.
+- **Landed:** Fixed as scoped. Debounce duration uses a new `CinemaAnimation.searchDebounceMs` token, not a raw `300` literal, per the project's own no-hardcoded-durations rule. Verified `performSearch()` already cancels its prior job before starting a new one, so the debounced trigger can't race the existing manual ones (search-icon tap, keyboard search action) — confirmed in `SearchViewModel.kt` before relying on it.
 
-### 5b. Content-Type Scope Filter Chips in Global Search
+### 5b. Content-Type Scope Filter Chips in Global Search — ✅ **DONE** (commit `6b1e8682`)
 - **Problem:** In Global Search (`Screen.Search("ALL")`), 200 mixed results across Live TV, Movies, and TV Shows are grouped into long vertical collapsible sections.
 - **Solution:**
   - Add quick filter chips right below the search bar: `All`, `Live TV (N)`, `Movies (N)`, `TV Shows (N)`.
   - Selecting a chip instantly filters the visible result set in memory without database re-querying, making result triage fast and effortless.
+- **Landed:** Used `CinemaFilterChip` (a selectable chip with a `selected: Boolean` state) rather than `CinemaAssistChip` — better semantic fit for a scope filter than a one-off action chip. Filters the already-computed `buildGroupedSearchResults()` output client-side, exactly as scoped. Chips only render when there's more than one content type actually present in the results — a type-scoped search never needed triaging to begin with.
 
-### 6b. Haptic Micro-Interactions on Mobile (scrubber + toggles only — see note)
+### 6b. Haptic Micro-Interactions on Mobile (scrubber + toggles only — see note) — ✅ **DONE** (commit `ab4d9634`)
 - **Problem:** Mobile touch interactions (scrubbing video slider, long-press actions, chip toggles) lack tactile feedback.
 - **Solution:**
   - Integrate `LocalHapticFeedback.current.performHapticFeedback()`:
     - `HapticFeedbackType.TextHandleMove`: on video scrubber seek snaps / seconds intervals.
     - `HapticFeedbackType.LongPress`: on favorite/watched toggle long-press.
 - **Note:** The double-tap-10s-seek haptic trigger from the original proposal is deferred to Phase 4 alongside 2a — that gesture doesn't exist yet, so its haptic can't be wired here. Add `HapticFeedbackType.LongPress` on seek activation as part of 2a's own PR instead of a separate follow-up.
+- **Landed:** Checked `MobileControlsOverlay.kt` for a "watched" toggle to wire alongside favorite, per the original text — there isn't one; only a favorite toggle exists in the player controls (a watched toggle, if it exists at all, lives on list/detail screens, out of a player-interactions item's scope). Scrubber haptic fires once per second boundary crossed during drag (Slider's `onValueChange` fires continuously, so a naive per-callback trigger would buzz constantly) — tracked via a `lastHapticSecond` state var, not a debounce.
 
 ---
 
