@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences

@@ -620,7 +620,7 @@ private fun EpisodeListContent(
                 // Segmented detail sections — tab state is hoisted above the LazyColumn (see
                 // there); this item only reads it.
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-                TabRow(selectedTabIndex = safeTabIndex) {
+                PrimaryTabRow(selectedTabIndex = safeTabIndex) {
                     tabs.forEachIndexed { index, tab ->
                         Tab(
                             selected = index == safeTabIndex,
