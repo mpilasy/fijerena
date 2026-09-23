@@ -2,6 +2,11 @@
 
 package org.njarasoa.fijerena.feature.category
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -31,6 +36,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.ErrorScreen
@@ -171,7 +177,20 @@ private fun CategoryGridContent(
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
-        when (val state = uiState) {
+        AnimatedContent(
+            targetState = uiState,
+            // Keyed on the sealed subtype, not the state instance itself — Success carries fresh
+            // data (stream lists, streamsLoading) on nearly every emission, and a plain
+            // targetState comparison would refire the crossfade on every one of those instead of
+            // only on Loading/Success/Error swaps.
+            contentKey = { it::class },
+            transitionSpec = {
+                fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) togetherWith
+                    fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+            },
+            label = "category_state_crossfade",
+        ) { state ->
+        when (state) {
             is CategoryViewModel.UiState.Loading -> {
                 AmbientBackdrop(modifier = Modifier.fillMaxSize())
                 Box(modifier = safeMarginModifier) {
@@ -253,6 +272,7 @@ private fun CategoryGridContent(
                     )
                 }
             }
+        }
         }
     }
 }
