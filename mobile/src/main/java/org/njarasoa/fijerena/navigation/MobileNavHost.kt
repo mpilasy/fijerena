@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -152,29 +154,51 @@ fun MobileNavHost(
         NavHost(
             navController = navController,
             startDestination = startDestination,
+            // Screen.Player defines its own vertical slide (below) — these NavHost-wide defaults
+            // apply to the *other* screen in a Player transition too (the one that didn't define
+            // its own transitions), so without the Player check here that screen independently
+            // slid sideways while Player slid vertically: two perpendicular animations running at
+            // once. Fading instead of sliding the non-Player side lets Player's own vertical
+            // motion read as the transition, rather than fighting a lateral one.
             enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(CinemaAnimation.navTransitionMs),
-                ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                if (isPlayerTransition(initialState, targetState)) {
+                    fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                } else {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(CinemaAnimation.navTransitionMs),
+                    ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                }
             },
             exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(CinemaAnimation.navTransitionMs),
-                ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                if (isPlayerTransition(initialState, targetState)) {
+                    fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                } else {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(CinemaAnimation.navTransitionMs),
+                    ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                }
             },
             popEnterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(CinemaAnimation.navTransitionMs),
-                ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                if (isPlayerTransition(initialState, targetState)) {
+                    fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                } else {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(CinemaAnimation.navTransitionMs),
+                    ) + fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                }
             },
             popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(CinemaAnimation.navTransitionMs),
-                ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                if (isPlayerTransition(initialState, targetState)) {
+                    fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                } else {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(CinemaAnimation.navTransitionMs),
+                    ) + fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                }
             },
         ) {
             // Content Type Selection Screen
@@ -670,3 +694,9 @@ fun MobileNavHost(
         }
     }
 }
+
+/** Either side of this transition is [Screen.Player] — see the NavHost default transitions above. */
+private fun isPlayerTransition(
+    initialState: NavBackStackEntry,
+    targetState: NavBackStackEntry,
+): Boolean = initialState.destination.hasRoute<Screen.Player>() || targetState.destination.hasRoute<Screen.Player>()
