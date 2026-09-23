@@ -33,6 +33,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
@@ -1269,6 +1270,65 @@ class MediaRepository(
             contentType == ContentType.MOVIES -> BrowseTarget.Movie(itemId)
             else -> BrowseTarget.Channel(itemId)
         }
+
+    /**
+     * Cross-content-type "Jump Back In" shelf (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,
+     * Phase 3): only genuinely in-progress items — see [WatchedItem.resumeProgress]'s 2%-95% band,
+     * enforced in SQL by [WatchStateDao.getResumable]/[WatchStateDao.getResumableSeriesCollapsed] —
+     * Movies and TV Shows merged and sorted by recency, newest first. Live TV never appears:
+     * [savePlaybackPosition] never records a position for a live stream, so no live entry can fall
+     * in the resumable band, same reasoning as [getRecentItemsFromWatchState].
+     *
+     * Server-backed providers (Jellyfin) return empty — they own resume/recency server-side
+     * ([getRecentItemsSuspend]'s `usesServerUserData` branch), and this feature is scoped to
+     * Xtream/local storage only.
+     */
+    suspend fun getContinueWatchingItems(limit: Int = 10): List<ContinueWatchingItem> {
+        if (usesServerUserData) return emptyList()
+        val movieRows = watchStateDao.getResumable(providerId, ContentType.MOVIES, limit)
+        val seriesRows = watchStateDao.getResumableSeriesCollapsed(providerId, ContentType.TV_SHOWS, limit)
+        if (movieRows.isEmpty() && seriesRows.isEmpty()) return emptyList()
+
+        val movieItems =
+            rehydrateThumbnails(
+                movieRows.map { it.toWatchedItem().toRecentMediaItem(MediaType.MOVIE) },
+                ContentType.MOVIES,
+            )
+        val seriesItems =
+            rehydrateThumbnails(
+                seriesRows.map { it.toWatchedItem().toRecentMediaItem(MediaType.SERIES) },
+                ContentType.TV_SHOWS,
+            )
+
+        val entries =
+            movieRows.zip(movieItems) { row, item -> row.toContinueWatchingItem(item, ContentType.MOVIES) } +
+                seriesRows.zip(seriesItems) { row, item -> row.toContinueWatchingItem(item, ContentType.TV_SHOWS) }
+
+        return entries.sortedByDescending { it.second }.map { it.first }.take(limit)
+    }
+
+    /**
+     * Paired with its sort key ([WatchStateEntity.lastPlayedAt]) rather than embedding recency
+     * into [ContinueWatchingItem] itself — the shelf card has no use for it once merged and sorted.
+     */
+    private fun WatchStateEntity.toContinueWatchingItem(
+        item: MediaItem,
+        contentType: String,
+    ): Pair<ContinueWatchingItem, Long> {
+        val continueWatchingItem =
+            ContinueWatchingItem(
+                id = item.id,
+                name = item.name,
+                subtitle = if (contentType == ContentType.TV_SHOWS) itemName else null,
+                contentType = contentType,
+                categoryId = item.categoryId,
+                thumbnailUrl = item.thumbnailUrl,
+                progress = (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f),
+                remainingMs = (durationMs - positionMs).coerceAtLeast(0L),
+                target = requireNotNull(item.target) { "toRecentMediaItem always sets target" },
+            )
+        return continueWatchingItem to (lastPlayedAt ?: 0L)
+    }
 
     // --- Server-aware suspend methods (branch on supportsServerUserData) ---
 

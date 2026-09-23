@@ -192,6 +192,45 @@ interface WatchStateDao {
         limit: Int,
     ): List<WatchStateEntity>
 
+    /**
+     * "Jump Back In" shelf, Movies half — genuinely in-progress rows only: same 2%-95% band as
+     * `WatchedItem.resumeProgress`, computed here in SQL so the LIMIT lands on the right rows
+     * instead of over-fetching and filtering in Kotlin.
+     */
+    @Query(
+        "SELECT * FROM watch_state WHERE providerId = :providerId AND contentType = :contentType " +
+            "AND lastPlayedAt IS NOT NULL AND isCompleted = 0 AND durationMs > 0 " +
+            "AND (positionMs * 100.0 / durationMs) BETWEEN 2.0 AND 95.0 " +
+            "ORDER BY lastPlayedAt DESC LIMIT :limit",
+    )
+    suspend fun getResumable(
+        providerId: Long,
+        contentType: String,
+        limit: Int,
+    ): List<WatchStateEntity>
+
+    /**
+     * "Jump Back In" shelf, TV Shows half — same series-collapse as [getRecentSeriesCollapsed],
+     * but the resumable-band filter applies before partitioning: a series whose most recently
+     * played episode was already finished (and no other episode is mid-watch) has nothing to
+     * resume, so it doesn't appear here even though it would in the plain Recent row.
+     */
+    @androidx.room.RewriteQueriesToDropUnusedColumns
+    @Query(
+        "SELECT * FROM (" +
+            "SELECT *, ROW_NUMBER() OVER (" +
+            "PARTITION BY COALESCE(seriesId, itemId) ORDER BY lastPlayedAt DESC, itemId DESC" +
+            ") AS rn FROM watch_state " +
+            "WHERE providerId = :providerId AND contentType = :contentType AND lastPlayedAt IS NOT NULL " +
+            "AND isCompleted = 0 AND durationMs > 0 AND (positionMs * 100.0 / durationMs) BETWEEN 2.0 AND 95.0" +
+            ") WHERE rn = 1 ORDER BY lastPlayedAt DESC LIMIT :limit",
+    )
+    suspend fun getResumableSeriesCollapsed(
+        providerId: Long,
+        contentType: String,
+        limit: Int,
+    ): List<WatchStateEntity>
+
     @Query(
         "SELECT seriesId, COUNT(DISTINCT COALESCE(episodeId, itemId)) AS completed " +
             "FROM watch_state WHERE providerId = :providerId AND contentType = :contentType " +
