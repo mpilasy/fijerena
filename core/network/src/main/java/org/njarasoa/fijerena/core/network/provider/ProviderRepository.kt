@@ -129,9 +129,45 @@ class ProviderRepository(
         clearProviderPassword(id)
         clearProviderCache(id)
         clearProviderWatchState(id)
+        clearProviderCatalog(id)
         settingsCache.remove(id)
         // Clear cached provider instance
         MediaProviderFactory.clearCache(id)
+    }
+
+    /**
+     * `xtream_v2.db`'s catalog rows (streams, series, episodes, categories, favorites, the
+     * per-stream EPG payload cache) are keyed by `providerId` but live in the same app-wide
+     * database file as every other provider's rows, so no SQL cascade reaches them from
+     * `providers.db` — same reasoning as [clearProviderWatchState], delete by hand. Before this,
+     * [clearProviderCache] only ever cleared a small SharedPreferences blob, never these Room
+     * tables — hundreds of thousands of orphaned rows could accumulate indefinitely across
+     * provider deletions, and SQLite does not shrink `xtream_v2.db` back down on its own even once
+     * the rows are gone (hence the `VACUUM` below).
+     */
+    private suspend fun clearProviderCatalog(providerId: Long) {
+        // Every DAO call here is a plain blocking Room method, not `suspend` — XtreamDatabase's
+        // builder never calls allowMainThreadQueries(), so without this withContext they would
+        // run on whatever dispatcher the caller happens to be on (ProviderViewModel.deleteProvider
+        // calls in from a bare viewModelScope.launch { }, i.e. Main) and Room would throw.
+        withContext(Dispatchers.IO) {
+            val db = XtreamDatabase.getInstance(context)
+            db.streamDao().deleteAllForProvider(providerId)
+            db.seriesDao().deleteAll(providerId)
+            db.episodeDao().deleteAll(providerId)
+            db.categoryDao().deleteAllForProvider(providerId)
+            db.favoriteStateDao().deleteAll(providerId)
+            db.epgCacheDao().deleteAll(providerId)
+            try {
+                db.openHelper.writableDatabase.execSQL("VACUUM")
+            } catch (e: Exception) {
+                // VACUUM needs the connection free of any other open transaction/statement; if
+                // one is mid-flight this just skips reclaiming disk space this time around — the
+                // rows themselves are already deleted regardless, which is the correctness-
+                // critical part; VACUUM only recovers the now-unused disk space.
+                android.util.Log.w("ProviderRepository", "VACUUM after provider delete failed", e)
+            }
+        }
     }
 
     /**
