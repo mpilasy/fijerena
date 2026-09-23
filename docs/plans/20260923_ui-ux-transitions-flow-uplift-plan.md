@@ -1,6 +1,6 @@
 # UI/UX Polish, Transitions & Flow Uplift Plan
 
-**Status:** In Progress — Phase 1 done (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
+**Status:** In Progress — Phases 1-2 done (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
 
 ## 1. Scoring Method
 
@@ -106,29 +106,32 @@ Cheapest tier in the whole plan: one file each, isolated, no cross-item dependen
 
 ---
 
-## Phase 2 — Motion & Surface Polish (NavHost, State Crossfades & Seamless Switch)
+## Phase 2 — Motion & Surface Polish (NavHost, State Crossfades & Seamless Switch) — ✅ **DONE (2026-09-23)**
 
 A cohesive transition and visual continuity pass across navigation and playback surfaces, directly consuming Phase 1's easing curves.
 
-### 1a. Mobile Player Expansion & Dismissal Transition
+### 1a. Mobile Player Expansion & Dismissal Transition — ✅ **DONE** (commit `e6fd9434`)
 - **Problem:** In [`MobileNavHost.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/navigation/MobileNavHost.kt#L155-L178), `Screen.Player` enters with a flat horizontal slide (`slideIntoContainer(Left)`). Opening full-screen video feels like pushing an ordinary list item, and exiting slides sideways unnaturally.
 - **Solution:** Configure a specialized transition spec for `composable<Screen.Player>` in `MobileNavHost.kt`:
   - **Enter:** `slideIntoContainer(SlideDirection.Up, animationSpec = tween(CinemaAnimation.navTransitionMs, easing = FastOutSlowInEasing)) + fadeIn(tween(CinemaAnimation.navTransitionMs))`
   - **Exit / Pop Exit:** `slideOutOfContainer(SlideDirection.Down, animationSpec = tween(CinemaAnimation.navTransitionMs, easing = FastOutSlowInEasing)) + fadeOut(tween(CinemaAnimation.navTransitionMs))`
   - Other screens retain directional left/right lateral transitions with smooth easing curves.
+- **Landed:** Fixed as scoped via per-destination `enterTransition`/`exitTransition`/`popEnterTransition`/`popExitTransition` on `composable<Screen.Player>` — other destinations keep the NavHost-wide lateral transitions untouched.
 
-### 1b. State Crossfades for Loading / Content / Error
+### 1b. State Crossfades for Loading / Content / Error — ✅ **DONE** (commit `67197117`)
 - **Problem:** In [`TvCategoryGridScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/category/TvCategoryGridScreen.kt#L174-L256) and [`MobileCategoryListScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/category/MobileCategoryListScreen.kt#L570-L585), transitions between `Loading`, `Success`, and `Error`, as well as category switching, swap views instantly using a raw `when (uiState)` without animation. This creates jarring content pops and skeleton flashes.
 - **Solution:**
   - Wrap top-level state branches in `AnimatedContent` or `Crossfade(targetState = uiState, animationSpec = tween(CinemaAnimation.navTransitionMs))`.
   - For stream list reloading within `CategoryViewModel.UiState.Success`, animate the transition between `streamsLoading` (skeleton rows) and the populated stream list using a 200ms crossfade, preventing harsh list replacement.
+- **Landed:** Scope narrowed on landing — only the top-level `Loading`/`Success`/`Error` crossfade shipped, via `AnimatedContent(targetState = uiState, contentKey = { it::class }, ...)` on both `TvCategoryGridScreen` and `MobileCategoryListScreen`. `contentKey` on the sealed subtype (not the state instance) is what makes this safe: `Success` carries fresh data on nearly every emission (stream list updates, `streamsLoading` toggling, the docked Live TV preview target changing), and a plain `targetState` comparison would've refired the crossfade on every one of those instead of only on real Loading/Success/Error swaps — would've been constant flicker, including inside TV's `LiveTvSplitLayout`'s promoted full-screen player. The second half — a 200ms crossfade between `StreamList`'s skeleton and populated-list branches — was intentionally **not** done: that component owns D-pad auto-scroll/auto-focus (`LaunchedEffect(streams, streamsLoading, lastPlayedItemId)`, per-item `FocusRequester`s) and wrapping it in `AnimatedContent` would keep both the outgoing skeleton and incoming list composed and requesting focus simultaneously during the fade window — exactly the "heavy animation on TV focus-sensitive code" risk this plan's own constraints (§2.4) warn against. Left as a follow-up if wanted, not silently dropped.
 
-### 2b. Seamless Channel Switch on Mobile (Eliminate Black Screen Flash)
+### 2b. Seamless Channel Switch on Mobile (Eliminate Black Screen Flash) — ✅ **DONE** (commit `16d3088c`)
 - **Problem:** In [`MobilePlayerScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt#L440-L450), swiping vertically on Live TV triggers `streamState = Loading`, which immediately replaces `PlayerContent` with `LoadingScreen()`. This destroys the `SurfaceView` and flashes a full black screen on every channel change.
 - **Solution:**
   - Port TV's seamless solution from [`TvPlayerScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/player/TvPlayerScreen.kt#L261-L269) to Mobile: track `lastSuccessState` in `MobilePlayerScreen`.
   - When `streamState is StreamLoaderViewModel.StreamState.Loading`, if `lastSuccessState != null`, keep `PlayerContent` mounted with the frozen last frame and display the `ChannelToast` / loading indicator over the video until the new stream starts.
 - **Note:** Porting the `lastSuccessState` pattern from TV should not port TV's bug along with it. `TvPlayerScreen.kt`'s original version of this pattern fed a frozen `resumePosition` (captured once, at initial load) into a resume/restart call — fixed in commit `cd8c6b49` by tracking the *live* position from `setPositionSaveListener` instead, since `recordHistory()` writes fresh positions to the DB but never back into `loaderViewModel`'s own state. If this phase's mobile port ever needs to re-trigger playback with a resume position (not just keep the frozen last frame visible during the Loading gap), use the same live-position-tracking approach, not TV's original one.
+- **Landed:** Implemented via a `displayState` indirection rather than porting TV's `PlayerContent()` extraction: `lastSuccessState` tracks the same way as TV, but instead of splitting Mobile's ~300-line inline `Success` branch (dense with local `mutableState` closures — toasts, overlays, gesture state) into a standalone function, the final `when` that picks what to draw now switches on `displayState` (falls back to `lastSuccessState` only while `streamState is Loading`), while every effect that actually drives playback (`LaunchedEffect(currentStreamId)`, the position-save listener, `enrichedState`) still keys off the live `streamState` untouched — so TV's original resume-position bug was never in the code path to port in the first place. Added a small `CircularProgressIndicator`, independent of the existing ExoPlayer-buffering overlay, visible only while `streamState is Loading` — covers the stream-resolve gap before `playStream()` is even called, which the buffering overlay doesn't reach.
 
 ---
 
