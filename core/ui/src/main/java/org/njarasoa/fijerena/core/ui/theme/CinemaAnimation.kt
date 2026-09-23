@@ -1,5 +1,9 @@
 package org.njarasoa.fijerena.core.ui.theme
 
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.FastOutSlowInEasing
+
 /**
  * Animation & Timing Constants
  * Centralizes all duration and timing values for consistent animations.
@@ -16,4 +20,10 @@ object CinemaAnimation {
     const val loadingDebounceMs = 600L
     const val imageLoadCrossfadeMs = 300
     const val shimmerDurationMs = 1200
+
+    /** Screen slides, crossfades, drawer reveals. */
+    val StandardEasing: Easing = FastOutSlowInEasing
+
+    /** Focus scale and player overlay popups — a snappier settle than [StandardEasing]. */
+    val EmphasizedEasing: Easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
 }
