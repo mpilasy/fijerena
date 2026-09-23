@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.session.MediaController
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -42,6 +43,15 @@ class PlaybackViewModel(
     private val _controller = MutableStateFlow<MediaController?>(null)
     val controller: StateFlow<MediaController?> = _controller.asStateFlow()
 
+    // Bumped on every onTracksChanged — getAudioTracks()/getSubtitleTracks()/getVideoQualities()
+    // are plain synchronous reads of controller.currentTracks with nothing to observe on their
+    // own, so a caller that only recomposed on `controller` or `metadata` changing could freeze
+    // on an empty list forever if it read tracks before ExoPlayer resolved them (metadata is set
+    // once at playStream() time, well before tracks are typically ready). Callers that need to
+    // stay current key their remember{} on this instead.
+    private val _tracksVersion = MutableStateFlow(0)
+    val tracksVersion: StateFlow<Int> = _tracksVersion.asStateFlow()
+
     private val _isInPictureInPictureMode = MutableStateFlow(false)
     val isInPictureInPictureMode: StateFlow<Boolean> = _isInPictureInPictureMode.asStateFlow()
 
@@ -63,6 +73,10 @@ class PlaybackViewModel(
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 // Rely on service.playbackState Flow for state updates
+            }
+
+            override fun onTracksChanged(tracks: Tracks) {
+                _tracksVersion.value++
             }
 
             override fun onPlayerError(error: PlaybackException) {

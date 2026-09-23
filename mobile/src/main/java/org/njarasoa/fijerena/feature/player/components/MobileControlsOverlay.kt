@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -106,9 +107,14 @@ fun MobileControlsOverlay(
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
 ) {
     // Key on metadata so track counts update when a new stream is loaded
-    val audioTrackCount = remember(metadata) { viewModel.getAudioTracks().size }
-    val subtitleTrackCount = remember(metadata) { viewModel.getSubtitleTracks().size }
-    val qualityCount = remember(metadata) { viewModel.getVideoQualities().size }
+    // Keyed on tracksVersion, not just metadata: metadata is set once at playStream() time,
+    // before ExoPlayer typically resolves tracks, and (for Live TV especially) may never change
+    // again for the rest of the session — leaving these counts permanently 0 and hiding the
+    // audio/subtitle/quality buttons even once tracks actually loaded.
+    val tracksVersion by viewModel.tracksVersion.collectAsStateWithLifecycle()
+    val audioTrackCount = remember(metadata, tracksVersion) { viewModel.getAudioTracks().size }
+    val subtitleTrackCount = remember(metadata, tracksVersion) { viewModel.getSubtitleTracks().size }
+    val qualityCount = remember(metadata, tracksVersion) { viewModel.getVideoQualities().size }
 
     // State for resolution and codec
     var videoCodec by remember { mutableStateOf<String?>(null) }
