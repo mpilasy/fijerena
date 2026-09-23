@@ -37,6 +37,10 @@ interface XtreamCategoryDao {
         type: String,
     )
 
+    /** Every type at once, for provider deletion — see [ProviderRepository.deleteProvider][org.njarasoa.fijerena.core.network.provider.ProviderRepository.deleteProvider]. */
+    @Query("DELETE FROM xtream_categories WHERE providerId = :providerId")
+    fun deleteAllForProvider(providerId: Long)
+
     @Query("SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type")
     fun getCategoryIds(
         providerId: Long,
