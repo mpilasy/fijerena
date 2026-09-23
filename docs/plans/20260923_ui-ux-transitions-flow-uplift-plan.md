@@ -1,6 +1,6 @@
 # UI/UX Polish, Transitions & Flow Uplift Plan
 
-**Status:** In Progress — Phases 1-2 done (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
+**Status:** In Progress — Phases 1-3 done (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
 
 ## 1. Scoring Method
 
@@ -135,11 +135,11 @@ A cohesive transition and visual continuity pass across navigation and playback 
 
 ---
 
-## Phase 3 — Home Screen Quick-Resume / Jump Back In
+## Phase 3 — Home Screen Quick-Resume / Jump Back In — ✅ **DONE (2026-09-23)**
 
 A high-value, cross-layer feature providing 1-click/tap resume capability right on the app's landing screen.
 
-### 4a. "Jump Back In" Shelf on Home (TV & Mobile)
+### 4a. "Jump Back In" Shelf on Home (TV & Mobile) — ✅ **DONE** (commits `8fe88265`, `15140bfc`, `cce06ce0`)
 - **Problem:** In [`ContentTypeSelectionScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/contentselection/ContentTypeSelectionScreen.kt), returning users must make 4–5 manual clicks/taps through content categories to resume whatever media they were watching previously.
 - **Architecture & Data Pipeline:**
   - `MediaRepository.getWatchHistory()` as originally conceived returned unbounded rows without series collapsing or thumbnail artwork.
@@ -164,6 +164,12 @@ A high-value, cross-layer feature providing 1-click/tap resume capability right 
       - `BrowseTarget.Series`: navigates to `Screen.EpisodeSelection(seriesId, ..., initialEpisodeId)` with the in-progress episode preselected in the detail panel.
       - `BrowseTarget.Episode`: navigates directly to `Screen.Player`.
   - **Lifecycle Refresh:** Refresh shelf items on `Lifecycle.Event.ON_RESUME` so returning from playback immediately reflects updated progress.
+- **Landed:** Data pipeline, both shelves, and lifecycle refresh built as scoped, with four deliberate deviations from this text, each checked against real code before landing:
+  - **Resumable band enforced in SQL, not just by name.** `getResumable`/`getResumableSeriesCollapsed` filter `isCompleted = 0 AND durationMs > 0 AND (positionMs * 100.0 / durationMs) BETWEEN 2.0 AND 95.0` — the same 2%-95% band `WatchedItem.resumeProgress()` already uses everywhere else progress is computed, done in SQL so the `LIMIT` lands on the right rows instead of over-fetching. `getResumableSeriesCollapsed` applies that filter *before* the `ROW_NUMBER()` partition: a series whose most-recently-played episode was already finished has nothing to resume and correctly drops off the shelf, even though it would still show in the plain Recent row.
+  - **Thumbnail rehydration reuses `MediaRepository`'s existing private `rehydrateThumbnails()`** (already used by the per-content-type Recent row) rather than a new standalone lookup — same `streamDao().getIconsByIds`/`seriesDao().getCoversByIds` source, zero new DB-access code. Jellyfin/server-backed providers are explicitly out of scope (`getContinueWatchingItems` returns empty under `usesServerUserData`) — this phase was scoped to Xtream/local storage from the start, and the server user-data endpoints don't expose raw position/duration, only a completion fraction, so this shelf can't be built the same way for them.
+  - **`ContinueWatchingItem` carries `remainingMs`, not `playbackPositionMs`/`durationMs` separately** — the card only ever needs the remaining-time label, computed once in the repository (`durationMs - positionMs`) rather than re-derived per card render. `subtitle` is the episode's own stored title (`watch_state.itemName`) for a TV Shows card, null for a Movie card — not a "S1E4"-style label, since `watch_state` has no season/episode-number columns; adding one would mean joining `XtreamEpisodeDao` per shelf item for a first cut nothing else in the app does either (the existing per-content-type Recent row shows no episode cue at all).
+  - **Navigation routing matches the existing `BrowseTarget` dispatch used everywhere else** (`CategoryList`'s Recent row, Search's results), not the "`BrowseTarget.Movie` → `Screen.Player` directly" text above: a movie card opens `Screen.MovieDetails`, same as every other resumable movie entry in the app. The original text would have made the *new* shelf the only place in the app where a resumable movie skips the details screen — an inconsistency the plan's own text didn't intend, caught by checking against `TvNavHost`/`MobileNavHost`'s real dispatch code before wiring the new callback.
+  - Explicit D-pad Down/Up interception between the hero row and the shelf was *not* added — Compose TV's default 2D focus search already moves focus vertically between two focusable rows with nothing unusual in between, and adding `onPreviewKeyEvent` interception for a case the default already handles would be unnecessary speculative complexity. Revisit only if real-device testing shows the default behavior isn't good enough.
 
 ---
 
