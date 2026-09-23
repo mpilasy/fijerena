@@ -1,5 +1,17 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Database Compaction & Orphaned Catalog Self-Healing
+**Release Date:** 2026-09-23
+
+### Database Maintenance & Disk Space Recovery
+- **Catalog Cascade on Provider Delete:** `ProviderRepository.deleteProvider(id)` cascades through all catalog tables in `xtream_v2.db` (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `favorite_state`, `xtream_epg_cache`), purges orphaned SharedPreferences (`provider_creds_*`, `media_cache_*`, `xtream_cache_*`), and triggers `VACUUM` followed by `PRAGMA wal_checkpoint(TRUNCATE)`.
+- **Immediate Disk Compaction:** Executing `PRAGMA wal_checkpoint(TRUNCATE)` after `VACUUM` truncates SQLite WAL files to immediately reclaim freed physical disk space without waiting for OS restart or checkpoint thresholds.
+- **Orphan Pruning Sweep (`pruneOrphanedCatalogData`):** Added `deleteOrphaned(validProviderIds)` across all Room catalog DAOs to prune rows belonging to deleted providers left behind by older versions. Guarded with an empty-provider circuit breaker to prevent data loss.
+- **Automatic Self-Healing Sweep:** Runs non-blocking on startup in `TvNavHost` and `MobileNavHost` (`Dispatchers.IO`), and periodically in `EpgSyncWorker`.
+- **Manual "Shrink Database" Card:** Added to Settings on TV and Mobile (`DatabaseMaintenanceCard.kt`) showing live progress, count of rows removed, and MB of disk space reclaimed.
+
+---
+
 ## Version: UI Look & Feel Uplift (Phases 1–4) & Durable Favorites
 **Release Date:** 2026-08-29
 

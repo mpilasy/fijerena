@@ -303,6 +303,7 @@ Enable in Settings. Features gated behind dev mode:
 | Export Settings | Save providers + EPG sources + global config to JSON |
 | Import Settings | Load JSON; conflict dialog for name clashes |
 | Cache Management | View size breakdown; clear per content type or all |
+| Shrink Database | Purges orphaned catalog rows from deleted providers and compacts `xtream_v2.db` with WAL truncation |
 | UI Scale | 70–100%; scales category grid and item cards |
 | Developer Mode | Enables debug overlays and advanced settings |
 | Cellular Buffer Settings | (dev mode) Tune cellular buffer multipliers |
