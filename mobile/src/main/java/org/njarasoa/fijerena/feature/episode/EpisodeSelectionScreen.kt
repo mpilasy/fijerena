@@ -58,6 +58,7 @@ import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
+import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
@@ -424,6 +425,26 @@ private fun EpisodeListContent(
     val anchorResumePosMs = anchorEpisode?.id?.let { episodePlaybackPositions[it] } ?: 0L
     val hasResume = anchorResumePosMs > 0L
 
+    // Segmented detail sections (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md, Phase
+    // 4 3c) — hoisted above the LazyColumn (not declared inside the hero item below) because both
+    // the hero item's TabRow and the LazyColumn's own conditional stickyHeader/items need it.
+    // Episodes is the always-present, always-first tab: it's the reason this screen exists, not
+    // one option among equals.
+    val hasCast = !seriesDetail.metadata.cast.isNullOrBlank()
+    val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty()
+    val tabs =
+        remember(hasCast, hasMoreLikeThis) {
+            buildList {
+                add(SeriesDetailTab.EPISODES)
+                add(SeriesDetailTab.OVERVIEW)
+                if (hasCast) add(SeriesDetailTab.CAST)
+                if (hasMoreLikeThis) add(SeriesDetailTab.MORE_LIKE_THIS)
+            }
+        }
+    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+    val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
+    val selectedTab = tabs.getOrNull(safeTabIndex)
+
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(CinemaSpacing.md),
@@ -434,9 +455,11 @@ private fun EpisodeListContent(
                 // Horizontal swipe anywhere in the list switches season — the touch equivalent
                 // of tapping a season tab. Vertical scrolling is untouched: this only fires on
                 // a horizontal drag, same technique EpisodeDetailContent below uses for
-                // prev/next episode.
-                .pointerInput(hasMultipleSeasons, previousSeason, nextSeason) {
-                    if (!hasMultipleSeasons) return@pointerInput
+                // prev/next episode. Gated on the Episodes detail-tab too — without it, a swipe
+                // made while looking at Overview/Cast/More Like This silently changed the season
+                // selection in the background, invisible until switching back to Episodes.
+                .pointerInput(hasMultipleSeasons, previousSeason, nextSeason, selectedTab) {
+                    if (!hasMultipleSeasons || selectedTab != SeriesDetailTab.EPISODES) return@pointerInput
                     var dragAmount = 0f
                     detectHorizontalDragGestures(
                         onDragStart = { dragAmount = 0f },
@@ -594,139 +617,180 @@ private fun EpisodeListContent(
                     }
                 }
 
-                // Plot description
-                seriesDetail.metadata.plot?.let { plot ->
-                    Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-                    var plotExpanded by rememberSaveable(plot) { mutableStateOf(false) }
-                    var plotOverflows by remember(plot) { mutableStateOf(false) }
-                    Text(
-                        text = plot,
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = if (plotExpanded) Int.MAX_VALUE else 3,
-                        overflow = TextOverflow.Ellipsis,
-                        onTextLayout = { result ->
-                            if (!plotExpanded) plotOverflows = result.hasVisualOverflow
-                        },
-                        modifier =
-                            if (plotOverflows || plotExpanded) {
-                                Modifier.clickable { plotExpanded = !plotExpanded }
-                            } else {
-                                Modifier
-                            },
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-                // Cast
-                seriesDetail.metadata.cast?.let { cast ->
-                    Text(
-                        text = stringResource(R.string.movie_cast_format, cast),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                }
-
-                // Director
-                seriesDetail.metadata.director?.let { director ->
-                    Text(
-                        text = stringResource(R.string.movie_director_format, director),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-                    )
-                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-                }
-
-                // StreamNamePicker
-                StreamNamePicker(
-                    currentName = seriesName,
-                    alternates = alternateStreams,
-                    onSelect = onAlternateStreamSelected,
-                    modifier = Modifier.padding(vertical = CinemaSpacing.xs),
-                )
-
-                // TMDB ID
-                Text(
-                    text = stringResource(R.string.details_tmdb_format, seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-                )
-
-                // Category button
-                if (categoryName != null) {
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    CinemaOutlinedButton(
-                        onClick = onCategorySelected,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.details_category_format, categoryName))
-                    }
-                }
-
+                // Segmented detail sections — tab state is hoisted above the LazyColumn (see
+                // there); this item only reads it.
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-                Text(
-                    text = stringResource(R.string.series_episodes_header),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
-
-        // Season tabs — pinned in place as the episode list scrolls under it (stickyHeader, not
-        // a plain item), so it reads as the control for what's below rather than scrolling away
-        // with it. A horizontal swipe anywhere in this list (see the pointerInput above) does
-        // the same thing as tapping a tab.
-        if (hasMultipleSeasons) {
-            stickyHeader(key = "season_tabs", contentType = "header") {
-                SeasonTabs(
-                    seasons = sortedSeasons,
-                    selectedSeason = resumeState.selectedSeason,
-                    onSeasonSelected = { resumeState.selectSeason(it) },
-                )
-            }
-        }
-
-        val currentSeasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: emptyList()
-        items(currentSeasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
-            EpisodeCard(
-                episode = episode,
-                isContinueWatching = episode.id == resumeState.resumeEpisodeId,
-                watchProgress = episodeProgress[episode.id] ?: 0f,
-                isWatched = episode.id in watchedEpisodeIds,
-                onClick = {
-                    onEpisodeSelected(episode)
-                },
-                onToggleWatched = {
-                    // Manual watched/unwatched mark (Phase 6,
-                    // docs/plans/20260828_watch-state-durable-storage-plan.md). Optimistic: flips this
-                    // episode's own badge immediately rather than waiting on the write;
-                    // the full re-read after it lands is what catches a TMDB sibling this
-                    // mark just completed too (Phase 5) and restores the resume bar on an
-                    // unmark — a single-item patch would miss both.
-                    val nowWatched = episode.id !in watchedEpisodeIds
-                    watchedEpisodeIds =
-                        if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
-                    watchedToggleScope.launch {
-                        mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
-                        refreshEpisodeWatchState()
+                TabRow(selectedTabIndex = safeTabIndex) {
+                    tabs.forEachIndexed { index, tab ->
+                        Tab(
+                            selected = index == safeTabIndex,
+                            onClick = { selectedTabIndex = index },
+                            text = { Text(seriesDetailTabLabel(tab)) },
+                        )
                     }
-                },
-            )
+                }
+
+                if (selectedTab == SeriesDetailTab.OVERVIEW) {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                    SeriesOverviewTabContent(
+                        seriesDetail = seriesDetail,
+                        seriesName = seriesName,
+                        alternateStreams = alternateStreams,
+                        categoryName = categoryName,
+                        onAlternateStreamSelected = onAlternateStreamSelected,
+                        onCategorySelected = onCategorySelected,
+                    )
+                } else if (selectedTab == SeriesDetailTab.CAST) {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                    CastChipsTabContent(cast = seriesDetail.metadata.cast.orEmpty())
+                } else if (selectedTab == SeriesDetailTab.MORE_LIKE_THIS) {
+                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                    RelatedTitlesRow(
+                        title = stringResource(R.string.details_more_like_this),
+                        items = relatedTitles.moreLikeThis,
+                        onItemClick = onRelatedTitleSelected,
+                    )
+                }
+            }
         }
 
-        // Last rows of the list
-        if (relatedTitles.moreLikeThis.isNotEmpty()) {
-            item(key = "more-like-this", contentType = "related") {
-                RelatedTitlesRow(
-                    title = stringResource(R.string.details_more_like_this),
-                    items = relatedTitles.moreLikeThis,
-                    onItemClick = onRelatedTitleSelected,
-                    modifier = Modifier.padding(top = CinemaSpacing.md),
+        // Episodes tab only: season tabs pinned in place as the episode list scrolls under it
+        // (stickyHeader, not a plain item), so it reads as the control for what's below rather
+        // than scrolling away with it. A horizontal swipe anywhere in this list (see the
+        // pointerInput above) does the same thing as tapping a tab.
+        if (selectedTab == SeriesDetailTab.EPISODES) {
+            if (hasMultipleSeasons) {
+                stickyHeader(key = "season_tabs", contentType = "header") {
+                    SeasonTabs(
+                        seasons = sortedSeasons,
+                        selectedSeason = resumeState.selectedSeason,
+                        onSeasonSelected = { resumeState.selectSeason(it) },
+                    )
+                }
+            }
+
+            val currentSeasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: emptyList()
+            items(currentSeasonEpisodes, key = { it.id }, contentType = { "episode" }) { episode ->
+                EpisodeCard(
+                    episode = episode,
+                    isContinueWatching = episode.id == resumeState.resumeEpisodeId,
+                    watchProgress = episodeProgress[episode.id] ?: 0f,
+                    isWatched = episode.id in watchedEpisodeIds,
+                    onClick = {
+                        onEpisodeSelected(episode)
+                    },
+                    onToggleWatched = {
+                        // Manual watched/unwatched mark (Phase 6,
+                        // docs/plans/20260828_watch-state-durable-storage-plan.md). Optimistic: flips this
+                        // episode's own badge immediately rather than waiting on the write;
+                        // the full re-read after it lands is what catches a TMDB sibling this
+                        // mark just completed too (Phase 5) and restores the resume bar on an
+                        // unmark — a single-item patch would miss both.
+                        val nowWatched = episode.id !in watchedEpisodeIds
+                        watchedEpisodeIds =
+                            if (nowWatched) watchedEpisodeIds + episode.id else watchedEpisodeIds - episode.id
+                        watchedToggleScope.launch {
+                            mediaRepository.setWatched(episode.id, ContentType.TV_SHOWS, nowWatched)
+                            refreshEpisodeWatchState()
+                        }
+                    },
                 )
             }
+        }
+    }
+}
+
+/** Section tabs — [EPISODES] is always present and always the initial selection. */
+private enum class SeriesDetailTab { EPISODES, OVERVIEW, CAST, MORE_LIKE_THIS }
+
+@Composable
+private fun seriesDetailTabLabel(tab: SeriesDetailTab): String =
+    when (tab) {
+        SeriesDetailTab.EPISODES -> stringResource(R.string.series_episodes_header)
+        SeriesDetailTab.OVERVIEW -> stringResource(R.string.details_tab_overview)
+        SeriesDetailTab.CAST -> stringResource(R.string.details_tab_cast)
+        SeriesDetailTab.MORE_LIKE_THIS -> stringResource(R.string.details_more_like_this)
+    }
+
+/**
+ * Overview tab: plot, director, the stream-name picker (alternate cached instances of this
+ * series), TMDB id, then the category button. Cast lives in its own tab now (see
+ * [CastChipsTabContent]); episodes live in the always-present Episodes tab.
+ */
+@Composable
+private fun SeriesOverviewTabContent(
+    seriesDetail: SeriesDetail,
+    seriesName: String,
+    alternateStreams: List<MediaItem>,
+    categoryName: String?,
+    onAlternateStreamSelected: (MediaItem) -> Unit,
+    onCategorySelected: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        seriesDetail.metadata.plot?.let { plot ->
+            var plotExpanded by rememberSaveable(plot) { mutableStateOf(false) }
+            var plotOverflows by remember(plot) { mutableStateOf(false) }
+            Text(
+                text = plot,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = if (plotExpanded) Int.MAX_VALUE else 3,
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { result ->
+                    if (!plotExpanded) plotOverflows = result.hasVisualOverflow
+                },
+                modifier =
+                    if (plotOverflows || plotExpanded) {
+                        Modifier.clickable { plotExpanded = !plotExpanded }
+                    } else {
+                        Modifier
+                    },
+            )
+            Spacer(modifier = Modifier.height(CinemaSpacing.md))
+        }
+
+        seriesDetail.metadata.director?.let { director ->
+            Text(
+                text = stringResource(R.string.movie_director_format, director),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+            )
+            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+        }
+
+        StreamNamePicker(
+            currentName = seriesName,
+            alternates = alternateStreams,
+            onSelect = onAlternateStreamSelected,
+            modifier = Modifier.padding(vertical = CinemaSpacing.xs),
+        )
+
+        Text(
+            text = stringResource(R.string.details_tmdb_format, seriesDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
+        )
+
+        if (categoryName != null) {
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            CinemaOutlinedButton(
+                onClick = onCategorySelected,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.details_category_format, categoryName))
+            }
+        }
+    }
+}
+
+/** Cast tab: one comma-string split into plain chips — no data behind a real cast/crew model yet. */
+@Composable
+private fun CastChipsTabContent(cast: String) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+    ) {
+        cast.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { member ->
+            CinemaBadge(text = member, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

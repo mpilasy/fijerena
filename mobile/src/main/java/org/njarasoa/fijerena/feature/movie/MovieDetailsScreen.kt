@@ -15,11 +15,11 @@ import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -319,18 +320,107 @@ private fun MovieDetailsContent(
             }
         }
 
-        // Plot/Description
-        movieDetail.metadata.plot?.let { plot ->
-            Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-            Text(
-                text = plot,
-                style = MaterialTheme.typography.bodyLarge,
-            )
+        // Segmented detail sections (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,
+        // Phase 4 3c) — mirrors TV's own tabbed layout (docs/plans/20260902_tv-detail-hero-ui-plan.md
+        // Phase 4): built from what this movie actually has, not a fixed list, so a title with no
+        // cast/related-titles/alternate-instances doesn't show an empty tab for it.
+        val hasCast = !movieDetail.metadata.cast.isNullOrBlank()
+        val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty() || relatedTitles.collection.isNotEmpty()
+        val hasVersions = alternateStreams.isNotEmpty()
+        val tabs =
+            remember(hasCast, hasMoreLikeThis, hasVersions) {
+                buildList {
+                    add(MovieDetailTab.OVERVIEW)
+                    if (hasCast) add(MovieDetailTab.CAST)
+                    if (hasMoreLikeThis) add(MovieDetailTab.MORE_LIKE_THIS)
+                    if (hasVersions) add(MovieDetailTab.VERSIONS)
+                }
+            }
+        var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+        val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
+
+        Spacer(modifier = Modifier.height(CinemaSpacing.lg))
+        TabRow(selectedTabIndex = safeTabIndex) {
+            tabs.forEachIndexed { index, tab ->
+                Tab(
+                    selected = index == safeTabIndex,
+                    onClick = { selectedTabIndex = index },
+                    text = { Text(movieDetailTabLabel(tab)) },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+        when (tabs.getOrNull(safeTabIndex)) {
+            MovieDetailTab.OVERVIEW ->
+                MovieOverviewTabContent(
+                    movieDetail = movieDetail,
+                    categoryName = categoryName,
+                    onCategorySelected = onCategorySelected,
+                )
+            MovieDetailTab.CAST -> CastChipsTabContent(cast = movieDetail.metadata.cast.orEmpty())
+            MovieDetailTab.MORE_LIKE_THIS ->
+                Column {
+                    if (relatedTitles.collection.isNotEmpty()) {
+                        RelatedTitlesRow(
+                            title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
+                            items = relatedTitles.collection,
+                            onItemClick = onRelatedTitleSelected,
+                        )
+                    }
+                    if (relatedTitles.moreLikeThis.isNotEmpty()) {
+                        RelatedTitlesRow(
+                            title = stringResource(R.string.details_more_like_this),
+                            items = relatedTitles.moreLikeThis,
+                            onItemClick = onRelatedTitleSelected,
+                            modifier =
+                                if (relatedTitles.collection.isNotEmpty()) Modifier.padding(top = CinemaSpacing.lg) else Modifier,
+                        )
+                    }
+                }
+            MovieDetailTab.VERSIONS ->
+                // The catalogue's raw name, not movieDetail.name — some providers' detail API
+                // returns a cleaned-up name inconsistent with the raw name alternates are listed
+                // under, so use the same source as alternates to keep the picker consistent.
+                StreamNamePicker(currentName = movieName, alternates = alternateStreams, onSelect = onAlternateStreamSelected)
+            null -> Unit
         }
 
-        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+        }
+        }
+    }
+    }
+}
 
-        // Release date
+/** Section tabs built from what a movie actually has — [OVERVIEW] is the only one always present. */
+private enum class MovieDetailTab { OVERVIEW, CAST, MORE_LIKE_THIS, VERSIONS }
+
+@Composable
+private fun movieDetailTabLabel(tab: MovieDetailTab): String =
+    when (tab) {
+        MovieDetailTab.OVERVIEW -> stringResource(R.string.details_tab_overview)
+        MovieDetailTab.CAST -> stringResource(R.string.details_tab_cast)
+        MovieDetailTab.MORE_LIKE_THIS -> stringResource(R.string.details_more_like_this)
+        MovieDetailTab.VERSIONS -> stringResource(R.string.details_tab_versions)
+    }
+
+/**
+ * Overview tab: plot, release date, director, technical stream info, then the TMDB id and the
+ * category button — everything that was diagnostics/context rather than headline facts on the old
+ * flat layout. Cast lives in its own tab now (see [CastChipsTabContent]); alternate stream
+ * instances live in the Versions tab.
+ */
+@Composable
+private fun MovieOverviewTabContent(
+    movieDetail: MovieDetail,
+    categoryName: String?,
+    onCategorySelected: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        movieDetail.metadata.plot?.let { plot ->
+            Text(text = plot, style = MaterialTheme.typography.bodyLarge)
+            Spacer(modifier = Modifier.height(CinemaSpacing.md))
+        }
+
         movieDetail.metadata.releaseDate?.let { releaseDate ->
             Text(
                 text = stringResource(R.string.movie_released_format, releaseDate),
@@ -340,19 +430,6 @@ private fun MovieDetailsContent(
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
         }
 
-        // Cast
-        movieDetail.metadata.cast?.let { cast ->
-            Text(
-                text = stringResource(R.string.movie_cast_format, cast),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(modifier = Modifier.height(CinemaSpacing.xs))
-        }
-
-        // Director
         movieDetail.metadata.director?.let { director ->
             Text(
                 text = stringResource(R.string.movie_director_format, director),
@@ -436,26 +513,12 @@ private fun MovieDetailsContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-        // The provider's own (often raw) stream name, now that the headline above is TMDB's title.
-        // A dropdown when the local catalogue holds other instances of the same TMDB title.
-        StreamNamePicker(
-            // The catalogue's raw name, not movieDetail.name — some providers' detail API
-            // returns a cleaned-up name inconsistent with the raw name alternates are listed
-            // under, so use the same source as alternates to keep the picker consistent.
-            currentName = movieName,
-            alternates = alternateStreams,
-            onSelect = onAlternateStreamSelected,
-        )
-
-        // TMDB ID
-        Spacer(modifier = Modifier.height(CinemaSpacing.xs))
         Text(
             text = stringResource(R.string.details_tmdb_format, movieDetail.metadata.tmdbId ?: stringResource(R.string.details_tmdb_none)),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
         )
 
-        // Category this movie belongs to — tap to browse it
         if (categoryName != null) {
             Spacer(modifier = Modifier.height(CinemaSpacing.lg))
             CinemaOutlinedButton(
@@ -465,34 +528,19 @@ private fun MovieDetailsContent(
                 Text(stringResource(R.string.details_category_format, categoryName))
             }
         }
-
-        }
-        }
-
-        // Last thing on the screen, below the technical rows and the category: the rows are a
-        // place to go next, so they sit after everything about this title. Items in their own
-        // right so the one that is off-screen is never composed or measured until scrolled to.
-        if (relatedTitles.collection.isNotEmpty()) {
-            item(key = "related-collection") {
-                RelatedTitlesRow(
-                    title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
-                    items = relatedTitles.collection,
-                    onItemClick = onRelatedTitleSelected,
-                    modifier = Modifier.padding(top = CinemaSpacing.lg),
-                )
-            }
-        }
-        if (relatedTitles.moreLikeThis.isNotEmpty()) {
-            item(key = "related-more-like-this") {
-                RelatedTitlesRow(
-                    title = stringResource(R.string.details_more_like_this),
-                    items = relatedTitles.moreLikeThis,
-                    onItemClick = onRelatedTitleSelected,
-                    modifier = Modifier.padding(top = CinemaSpacing.lg),
-                )
-            }
-        }
     }
+}
+
+/** Cast tab: one comma-string split into plain chips — no data behind a real cast/crew model yet. */
+@Composable
+private fun CastChipsTabContent(cast: String) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+    ) {
+        cast.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach { member ->
+            CinemaBadge(text = member, style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 
