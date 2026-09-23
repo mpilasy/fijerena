@@ -1,6 +1,6 @@
 # UI/UX Polish, Transitions & Flow Uplift Plan
 
-**Status:** In Progress — Phases 1-5 done (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
+**Status:** In Progress — Phases 1-5 done, Phase 6 partial (2a done, 6a/2c held back by user) (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
 
 ## 1. Scoring Method
 
@@ -234,9 +234,9 @@ Focus on Android TV usability, decluttering dense action rows and organizing set
 
 ## Phase 6 — Player Gestures & EPG Alternate View
 
-Delivering mobile player seek muscle memory and fast EPG feed browsing.
+Delivering mobile player seek muscle memory and fast EPG feed browsing. 6a and 2c held back by explicit user instruction (2026-09-23) — only 2a in scope for now.
 
-### 2a. Double-Tap Left/Right 10s Relative Seek (Replacing Double-Tap Pause)
+### 2a. Double-Tap Left/Right 10s Relative Seek (Replacing Double-Tap Pause) — ✅ **DONE** (commit `be8822d5`)
 - **Problem:** In [`MobilePlayerScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt#L465-L473), double-tap toggles pause/resume. This duplicates single-tap + center button and breaks universal mobile video player conventions (YouTube, Netflix, Plex, MX Player).
 - **Solution:**
   - Replace the double-tap handler with a horizontal screen-split calculation:
@@ -246,14 +246,15 @@ Delivering mobile player seek muscle memory and fast EPG feed browsing.
   - Implement a momentary seek ripple overlay: a circular translucent pill showing `⟲ 10s` (left) or `10s ⟳` (right) with animated chevrons, accumulating rapid taps (`20s`, `30s`) and automatically fading out after 600ms.
   - Single tap continues to cleanly toggle controls overlay visibility.
 - **Note:** This removes documented behavior — `AGENTS.md` § Controls & Navigation currently states "Pause: Explicit via pause button, `KEYCODE_MEDIA_PLAY_PAUSE`, or mobile double-tap (VOD only)." Update that line in the same PR. Fold in `HapticFeedbackType.LongPress` on seek activation deferred from 6b (Phase 1).
+- **Landed:** Fixed as scoped — left/right 40% split, center 20% left alone (chose "ignore" over "toggle controls", since single-tap already owns that and doubling it up on double-tap-center would be redundant), `HapticFeedbackType.LongPress` fired on every seek tap as directed by the deferred 6b note, `AGENTS.md` updated in the same commit. One deliberate simplification: the ripple pill is plain text (the format strings already carry the `⟲`/`⟳` glyphs) with a fade in/out, not "animated chevrons" — a custom chevron animation wasn't worth the extra complexity for what's a 600ms transient, and nothing else in the codebase has a precedent for that kind of decoration to match. New `CinemaAnimation.seekRippleDismissMs` token (600L) rather than reusing an unrelated existing 600L constant (`loadingDebounceMs`) that happens to share the value but means something else.
 
-### 6a. Mobile EPG "Now & Next" Fast-Browse Mode
+### 6a. Mobile EPG "Now & Next" Fast-Browse Mode — held back, not started
 - **Problem:** [`MobileEpgTimeline.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/epg/MobileEpgTimeline.kt#L201-L219) has independent un-synchronized horizontal `LazyRow`s per channel, making horizontal timeline alignment difficult on a phone screen.
 - **Solution:**
   - Add an EPG display mode toggle: **Grid Timeline** vs **Now & Next List**.
   - "Now & Next List" renders a clean vertical feed: Channel Logo/Name on the left, Current Program (with time elapsed bar) and Up Next program on the right. Tapping tunes the channel immediately; tapping program opens description dialog.
 
-### 2c. VOD Vertical Gestures for Brightness & Volume (Optional Stretch)
+### 2c. VOD Vertical Gestures for Brightness & Volume (Optional Stretch) — held back, not started
 - **Problem:** In [`MobilePlayerScreen.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/mobile/src/main/java/org/njarasoa/fijerena/feature/player/MobilePlayerScreen.kt#L477-L483), drag gestures are completely disabled on VOD (`!isLiveContent`).
 - **Solution (Optional Stretch):**
   - Left half vertical drag: adjust screen window brightness (`Activity.window.attributes.screenBrightness`).
