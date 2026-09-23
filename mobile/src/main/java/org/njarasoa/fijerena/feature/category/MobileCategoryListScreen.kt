@@ -3,6 +3,11 @@ package org.njarasoa.fijerena.feature.category
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -118,6 +123,7 @@ import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
@@ -498,7 +504,20 @@ fun MobileCategoryListScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
         ) {
-            when (val state = uiState) {
+            AnimatedContent(
+                targetState = uiState,
+                // Keyed on the sealed subtype, not the state instance — Success carries fresh
+                // data (stream lists, docked preview target) on nearly every emission, and a
+                // plain targetState comparison would refire the crossfade on every one of those
+                // instead of only on Loading/Success/Error swaps.
+                contentKey = { it::class },
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) togetherWith
+                        fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                },
+                label = "category_state_crossfade",
+            ) { state ->
+            when (state) {
                 is CategoryViewModel.UiState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize().padding(Spacing.sm),
@@ -935,6 +954,7 @@ fun MobileCategoryListScreen(
                     }
                 }
             }
+        }
         }
     }
 
