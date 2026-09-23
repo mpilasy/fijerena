@@ -1,6 +1,6 @@
 # Codebase Stability & Resilience Plan: Modular Remediation
 
-**Status:** All in-scope work complete except F-02's hardware gate — Batches 0, 1, 3, 4, 5, 6 done; F-02 code landed, Shield TV 4K verification still pending (2026-09-22)  
+**Status:** ✅ **COMPLETE** — all in-scope findings landed, including F-02's hardware gate. Batches 0-6 done, F-06 done (2026-09-23). Verified on-device: XtreamDatabase migration passed on `emulator-5554`; F-02 confirmed on mdarcy Shield — 17 min continuous 4K live playback, 0 rebuffers, 0 dropped frames, `Stream Health: HEALTHY` throughout. Remaining out-of-scope items (F-11/12/13/14/29) intentionally deferred, not oversights — see their entries below.  
 **Scope note (2026-09-22):** remaining work narrowed to general (provider-agnostic) and Xtream-specific findings only, per direction — F-11 (Jellyfin), F-13 (SMB), and F-14 (M3U/LOCAL parsing) are out of scope going forward. F-12 (OkHttp dispatcher leak) touches both Xtream and Jellyfin `ApiService`; if picked up, scope it to the Xtream half only.  
 **Date:** 2026-09-22  
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`
@@ -47,11 +47,12 @@
   - *Mechanism:* `pause()`, `resume()`, `stop()`, `seekTo()`, and track selection call `awaitInstance()` inside unhandled `viewModelScope.launch` blocks. Throws unchecked `ServiceDestroyedException` directly to `Thread.UncaughtExceptionHandler`.
   - *Fix:* Use null-safe `StreamingPlaybackService.getInstance()?.let { ... }` for control actions; catch `ServiceDestroyedException` in state observers.
   - *Landed:* Chose a `try/catch`-based `launchServiceAction()` helper over `getInstance()?.let{}` — preserves the original wait-for-startup semantics (a control action fired while the service is still coming up now succeeds once it's ready, instead of silently no-op'ing). Swallows `TimeoutCancellationException`/`ServiceDestroyedException`, lets real `CancellationException` propagate. Also caught the same bare `awaitInstance()` in `observeServiceState()` (line 131, outside the audit's cited ranges) — same crash class, fired automatically on every ViewModel init/restart, arguably the most likely trigger of the two.
-- **F-02 (`core:player`): High-bitrate Live TV buffer cap deadlock** — 🟡 **CODE DONE** (commit `f5628c42`), **hardware verification pending**
+- **F-02 (`core:player`): High-bitrate Live TV buffer cap deadlock** — ✅ **DONE, HARDWARE-VERIFIED** (commit `f5628c42`)
   - *Location:* [`AdaptiveLoadControl.kt:144`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/loadcontrol/AdaptiveLoadControl.kt#L144), [`NetworkBufferProfile.kt:65`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/loadcontrol/NetworkBufferProfile.kt#L65), [`StreamHealthMonitor.kt:42`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamHealthMonitor.kt#L42)
   - *Mechanism:* 16MB buffer cap with `prioritizeTimeOverSizeThresholds = false` yields only ~6.4s on high-bitrate streams (>16Mbps). `StreamHealthMonitor` demands `minBufferMs = 8000L` (8s). `isBufferLow` is continuously true; stream cycles through recycles and terminates after 3 minutes (`Recovery exhausted`).
   - *Fix:* Set `.setPrioritizeTimeOverSizeThresholds(true)` and increase buffer ceiling to 32MB. **Merge gated on Shield TV 4K physical verification.**
-  - *Landed:* The plan's fix as written would have flipped `prioritizeTimeOverSizeThresholds` globally — but `buildDelegate()` uses the *same* call for VOD, and `NetworkBufferProfile.VOD_TARGET_BUFFER_BYTES`'s existing kdoc documents that VOD deliberately prioritizes its size cap over time specifically to bound native memory on high-bitrate 4K VOD on 1-2GB Android TV devices. A global flip would have silently reopened that OOM risk to fix a LIVE-only bug. Scoped the flip to `contentType == LIVE_TV` only; VOD keeps `false` unchanged. Buffer cap raised to 32MB as planned. **Not yet verified on a physical Shield — code change only, per your no-device-without-asking rule.**
+  - *Landed:* The plan's fix as written would have flipped `prioritizeTimeOverSizeThresholds` globally — but `buildDelegate()` uses the *same* call for VOD, and `NetworkBufferProfile.VOD_TARGET_BUFFER_BYTES`'s existing kdoc documents that VOD deliberately prioritizes its size cap over time specifically to bound native memory on high-bitrate 4K VOD on 1-2GB Android TV devices. A global flip would have silently reopened that OOM risk to fix a LIVE-only bug. Scoped the flip to `contentType == LIVE_TV` only; VOD keeps `false` unchanged. Buffer cap raised to 32MB as planned.
+  - *Hardware-verified (2026-09-23):* Deployed to mdarcy Shield, watched a real 4K/HEVC Sky Sports UHD live channel (~300+ Mbps burst network speed, well above the ~16Mbps trigger threshold) via the app's own Stats-for-Nerds overlay. **17:02 continuous playback, `Stream Health: HEALTHY` the entire time, 0 rebuffers, 0 dropped frames, 0.00% drop rate, buffered duration held above the 15-30s target throughout** — the old bug's failure signature (buffer stuck under 8s, hard error around the 3-minute mark) never appeared. Also deployed to the Bravia (`192.168.68.22:5555`), same build, not separately watched. Both Shields and the Bravia were backed up (`scripts/deploy-tv-ip.sh`'s default behavior) before each install.
 - **F-03 (`core:player`): Double-teardown publication race in `StreamingPlaybackService`** — ✅ **DONE** (commit `d5ebaa1e`)
   - *Location:* [`StreamingPlaybackService.kt:1001-1059`](file:///home/tahiry/data/code/mpilasy/fijerena/core/player/src/main/java/org/njarasoa/fijerena/core/player/service/StreamingPlaybackService.kt#L1001-L1059)
   - *Mechanism:* `stopAndRelease()` calls `releasePlayerAndSession()`, followed by `stopSelf()`. When `onDestroy()` dispatches, it runs `releasePlayerAndSession()` again without an `isReleased` check, exceptionally completing the *new* `instanceReady` deferred of a newly starting stream.
@@ -167,13 +168,14 @@
 ### Category 7: Decoupled Low-Priority Sweeps & Polish (P3)
 - **F-29 (`core:navigation`): `navigateOnce` sweep across navigation hosts**
   - *Location:* `TvNavHost.kt`, `MobileNavHost.kt`
-  - *Status:* Speculative refactor; isolate into standalone PR.
+  - *Status:* Speculative refactor; isolate into standalone PR. Still deferred — not a verified defect.
 - **F-14 (`core:network`): UTF-8 BOM handling in M3U parser**
   - *Location:* `M3uParser.kt:39`
-  - *Status:* Edge-case format tolerance.
-- **F-06 (`core:player`): `setHandleAudioBecomingNoisy(true)`**
+  - *Status:* ⏭️ **OUT OF SCOPE** (LOCAL/REMOTE_M3U-only, dropped 2026-09-22).
+- **F-06 (`core:player`): `setHandleAudioBecomingNoisy(true)`** — ✅ **DONE** (commit `8b519cfd`)
   - *Location:* `StreamingPlaybackService.kt:360`
   - *Status:* Mobile UX enhancement.
+  - *Landed:* Fixed as scoped — one missing `ExoPlayer.Builder` flag. General player code, not provider-specific, so picked up under the general+Xtream scope despite being filed as "mobile" — also affects the Shield remote's headphone jack.
 
 ---
 
@@ -193,9 +195,9 @@ flowchart TD
         B1_4["PR 1D: DefaultDataSource.Factory for file playback (F-05) [86cd8ee4]"]
     end
 
-    subgraph Buffer["PR Batch 2: Live TV Buffering Architecture — CODE DONE, GATE PENDING"]
+    subgraph Buffer["PR Batch 2: Live TV Buffering Architecture — DONE, HARDWARE-VERIFIED"]
         B2["PR 2: AdaptiveLoadControl time prioritization (LIVE_TV only) & 32MB ceiling (F-02) [f5628c42]"]
-        B2_Gate{{"Gate: Physical Shield TV 4K Test — NOT YET RUN"}}
+        B2_Gate{{"Gate: Physical Shield TV 4K Test — PASSED 2026-09-23, mdarcy, 17min/0 rebuffers"}}
         B2 --> B2_Gate
     end
 
@@ -248,8 +250,8 @@ flowchart TD
    - Shipped PR 0A (`F-08`, commit `92be6c8e`) and PR 0B (`F-09`, commit `c5696d7f`).
 2. **Batch 1 (Playback Crashes):** ✅ **DONE (2026-09-22)**
    - Shipped PR 1A (`80d3d66a`), 1B (`d5ebaa1e`), 1C (`94ebf181`), 1D (`86cd8ee4`). Compiles + ktlint clean on `core:player`; not yet run on-device — see note below.
-3. **Batch 2 (Buffer Architecture):** 🟡 **CODE DONE (`f5628c42`), HARDWARE GATE NOT YET RUN**
-   - Scoped the fix to `LIVE_TV` only (see F-02's *Landed* note — a global flip would have reopened a documented VOD memory-safety tradeoff). Do not merge/rely on until verified on physical NVIDIA Shield hardware streaming a 4K/60fps channel continuously for 15 minutes — holding until you say go.
+3. **Batch 2 (Buffer Architecture):** ✅ **DONE, HARDWARE-VERIFIED (`f5628c42`, verified 2026-09-23)**
+   - Scoped the fix to `LIVE_TV` only (see F-02's *Landed* note — a global flip would have reopened a documented VOD memory-safety tradeoff). Verified on mdarcy Shield: 17 min continuous 4K live, `Stream Health: HEALTHY` throughout, 0 rebuffers, 0 dropped frames.
 4. **Batch 3 (Room Migrations):** ✅ **DONE (2026-09-22)**
    - Shipped PR 3A (`69bc4469`, F-16/17/18 + SCHEMA doc), 3C (`772ec345`, F-19), 3D (`d7dc5a6a`, F-15). PR 3B (EpgIndexDatabase staging indices) deferred — it's actually part of the F-20/21 EPG-staging cluster, not this batch; will land with Batch 4.
 5. **Batch 4 (EPG Pipeline):** ✅ **DONE (2026-09-22)**
@@ -257,5 +259,5 @@ flowchart TD
 6. **Batch 5 & 6 (Network & UI):** ✅ **ALL IN-SCOPE ITEMS DONE (2026-09-22)**
    - Batch 5: shipped F-10 (`7adba1e2`); F-11 (Jellyfin) and F-13 (SMB) dropped, F-12 dropped (downgraded to Medium — not a true leak, see its *Landed* note).
    - Batch 6: shipped F-25 (`383789c3`), F-26 (`23275fdc`), F-27 (`3a5ad287`), F-28 (`132eed41`).
-7. **Batch 7 (Sweeps):**
-   - Execute broad refactor sweeps only after all functional defects are resolved. F-14 (M3U BOM) dropped from scope entirely (LOCAL/REMOTE_M3U-only).
+7. **Batch 7 (Sweeps):** F-06 ✅ **DONE (`8b519cfd`, 2026-09-23)**, F-14 out of scope, F-29 still deferred
+   - F-06 landed — general player code (audio-becoming-noisy), one missing `ExoPlayer.Builder` flag. F-14 (M3U BOM) dropped from scope entirely (LOCAL/REMOTE_M3U-only). F-29 (`navigateOnce` sweep) stays deferred — speculative refactor, not a verified defect.
