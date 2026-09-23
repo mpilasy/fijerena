@@ -23,6 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
@@ -100,6 +101,10 @@ fun MobileNavHost(
             }
         }
         hasProvider = providerRepo.getProviderCount() > 0
+        // Self-healing: quietly sweep orphaned catalog rows left by past deleted providers
+        coroutineScope.launch(Dispatchers.IO) {
+            providerRepo.pruneOrphanedCatalogData(forceVacuum = false)
+        }
     }
 
     val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()

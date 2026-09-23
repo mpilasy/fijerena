@@ -186,7 +186,7 @@ class SettingsViewModel(
     fun pruneDatabase() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPruningDatabase = true, databaseMaintenanceMessage = null)
-            val result = providerRepo.pruneOrphanedCatalogData()
+            val result = providerRepo.pruneOrphanedCatalogData(forceVacuum = true)
             val message =
                 if (result.rowsRemoved == 0L) {
                     context.getString(R.string.settings_shrink_database_nothing_to_clean)
