@@ -1,6 +1,6 @@
 # UI/UX Polish, Transitions & Flow Uplift Plan
 
-**Status:** In Progress — Phases 1-4 done (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
+**Status:** In Progress — Phases 1-5 done (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
 
 ## 1. Scoring Method
 
@@ -212,21 +212,23 @@ Same two screens end to end (`MobileMovieDetailsScreen`, `MobileEpisodeSelection
 
 ---
 
-## Phase 5 — TV Provider & Settings Management (Ergonomics & Navigation)
+## Phase 5 — TV Provider & Settings Management (Ergonomics & Navigation) — ✅ **DONE (2026-09-23)**
 
 Focus on Android TV usability, decluttering dense action rows and organizing settings navigation.
 
-### 8c. Provider Row Crams up to 6 Icon-Only Action Buttons with No Labels
+### 8c. Provider Row Crams up to 6 Icon-Only Action Buttons with No Labels — ✅ **DONE** (commit `3a696ed0`)
 - **Problem:** [`ProviderList`'s row content, TV](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/provider/ProviderSelectionScreen.kt#L322-L389) renders, per provider, up to six adjacent `CinemaIconButton`s — Select (conditional), Manage EPG (conditional), Duplicate, Copy To (conditional), Edit, Delete — each distinguished only by a small icon, no visible text label, packed into one `Row` with `Spacing.xs` between them. On a D-pad, that's up to six small, visually-similar adjacent focus targets per row with no label to read before committing to a press — a user has to know the icon vocabulary (checkmark = select, pencil = edit, etc.) or focus each one and read the content-description off... nothing, since content descriptions aren't rendered visually, only exposed to accessibility services.
 - **Solution:**
   - Collapse the secondary actions (Duplicate, Copy To, Edit, Delete) behind a single "more actions" overflow button that opens a focusable menu/dialog with real text labels — mirrors the existing [`FavoriteMenuDialog`](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/category/components/FavoriteMenuDialog.kt) pattern already used elsewhere in the TV app for the same "several actions on one item" shape.
   - Keep only the primary action (Select, or nothing if already active) as a direct one-press button on the row itself.
+- **Landed:** Fixed as scoped, with one addition beyond the text: Manage EPG stays a direct row button too, alongside Select — the Problem/Solution text's own icon list already separates it from the four collapsed into the menu ("Duplicate, Copy To, Edit, Delete"), and it's a single-tap-and-done action like Select, not an occasional maintenance one like the four that moved. New `ProviderActionsMenuDialog` (`feature/provider/components/ProviderDialogs.kt`) reuses `TvInputListItem` rows exactly like `FavoriteContextMenuDialog` does, including its `initialFocus` on a trailing Cancel row. Added a `MoreVert` entry to `CinemaIcons` (outlined/rounded/sharp trio, same as every other icon there) — nothing in the icon set covered an overflow glyph before this.
 
-### 8d. TV Settings Is One Long, Flat, Ungrouped List
+### 8d. TV Settings Is One Long, Flat, Ungrouped List — ✅ **DONE** (commit `59ed0204`)
 - **Problem:** [`SettingsScreen` (TV)](file:///home/tahiry/data/code/mpilasy/fijerena/tv/src/main/java/org/njarasoa/fijerena/feature/settings/SettingsScreen.kt#L193-L330) is a single `TvLazyColumn` with ten sequential `item { }` cards — Provider, Playback, Theme, Language, EPG, UI Scale, Developer, Cloud Sync, Export/Import, About — with no section headers, grouping, or side navigation. Each card is itself expandable/interactive (own internal focusable controls), so reaching "About" or "Export/Import" from the top means holding D-pad-down through nine other cards' worth of focus stops first. There's no fast path to a specific settings area.
 - **Solution (cheap option, do this one):**
   - Group related cards under section headers (e.g. "Provider & Playback", "Appearance", "Data & Sync", "Advanced") so the list has visual waypoints, even without restructuring the underlying cards. Complexity/Risk stay low (`C2 R1` above) because this doesn't touch any card's internals.
 - **Stretch option (not scored/scheduled — separate proposal if wanted):** A persistent left-rail category selector for TV, jumping the `TvLazyColumn` to the relevant section. Meaningfully higher complexity (new persistent nav chrome specific to one screen) for an incremental improvement over section headers — only worth it if headers alone prove insufficient in practice.
+- **Landed:** Fixed as scoped, using exactly the plan's own example group names. Doing this required more than adding headers, though: the ten cards' original order (Provider, Playback, Theme, Language, EPG, UI Scale, Developer, Cloud Sync, Export/Import, About) interleaves what the groups need — UI Scale sat after EPG, Developer sat before Cloud Sync/Export-Import — so cards had to be reordered into contiguous runs (Provider+Playback / Theme+Language+UI Scale / EPG+Cloud Sync+Export-Import / Developer+About) before a header could sit in front of each group without splitting it. Card contents themselves are untouched, as scoped — only their order and the new header items between them changed. New private `SettingsSectionHeader` composable, plain non-focusable label text, no new focus-order concerns.
 
 ---
 
