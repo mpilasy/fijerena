@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
+import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDialog
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
@@ -51,7 +52,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -74,6 +74,7 @@ fun TvProviderSelectionScreen(
     var deleteConfirmProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     var duplicateProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     var copyFromProvider by remember { mutableStateOf<ProviderEntity?>(null) }
+    var actionsMenuProvider by remember { mutableStateOf<ProviderEntity?>(null) }
     val appSettings =
         remember {
             org.njarasoa.fijerena.core.network
@@ -183,22 +184,16 @@ fun TvProviderSelectionScreen(
                 ProviderList(
                     providers = listOf(state.provider),
                     onSelect = onProviderSelected,
-                    onEdit = onEditProvider,
                     onManageEpg = onManageEpg,
-                    onDelete = { deleteConfirmProvider = it },
-                    onDuplicate = { duplicateProvider = it },
-                    onCopyTo = { copyFromProvider = it },
+                    onMoreActions = { actionsMenuProvider = it },
                 )
             }
             is ProviderUiState.MultipleProviders -> {
                 ProviderList(
                     providers = state.providers,
                     onSelect = onProviderSelected,
-                    onEdit = onEditProvider,
                     onManageEpg = onManageEpg,
-                    onDelete = { deleteConfirmProvider = it },
-                    onDuplicate = { duplicateProvider = it },
-                    onCopyTo = { copyFromProvider = it },
+                    onMoreActions = { actionsMenuProvider = it },
                 )
             }
         }
@@ -258,6 +253,18 @@ fun TvProviderSelectionScreen(
             else -> emptyList()
         }
 
+    actionsMenuProvider?.let { provider ->
+        ProviderActionsMenuDialog(
+            provider = provider,
+            canCopyTo = allProviders.size > 1,
+            onEdit = { onEditProvider(provider.id) },
+            onDuplicate = { duplicateProvider = provider },
+            onCopyTo = { copyFromProvider = provider },
+            onDelete = { deleteConfirmProvider = provider },
+            onDismiss = { actionsMenuProvider = null },
+        )
+    }
+
     duplicateProvider?.let { provider ->
         DuplicateProviderDialog(
             provider = provider,
@@ -307,11 +314,8 @@ fun TvProviderSelectionScreen(
 private fun ProviderList(
     providers: List<ProviderEntity>,
     onSelect: (ProviderEntity) -> Unit,
-    onEdit: (Long) -> Unit,
     onManageEpg: (Long) -> Unit,
-    onDelete: (ProviderEntity) -> Unit,
-    onDuplicate: (ProviderEntity) -> Unit,
-    onCopyTo: (ProviderEntity) -> Unit,
+    onMoreActions: (ProviderEntity) -> Unit,
 ) {
     val scale = LocalUiScale.current
     TvLazyColumn(
@@ -378,44 +382,15 @@ private fun ProviderList(
                             },
                         )
                     }
+                    // Duplicate/Copy To/Edit/Delete collapse behind one overflow button with real
+                    // text labels — see ProviderActionsMenuDialog.
                     CinemaIconButton(
-                        onClick = { onDuplicate(provider) },
+                        onClick = { onMoreActions(provider) },
                         icon = {
                             Icon(
-                                CinemaIcons.ContentCopy,
-                                contentDescription = stringResource(R.string.provider_duplicate_button),
+                                CinemaIcons.MoreVert,
+                                contentDescription = stringResource(R.string.provider_more_actions_for_format, provider.name),
                                 tint = CinemaAccent
-                            )
-                        },
-                    )
-                    if (providers.size > 1) {
-                        CinemaIconButton(
-                            onClick = { onCopyTo(provider) },
-                            icon = {
-                                Icon(
-                                    CinemaIcons.SwapHoriz,
-                                    contentDescription = stringResource(R.string.provider_copy_to_button),
-                                    tint = CinemaAccent
-                                )
-                            },
-                        )
-                    }
-                    CinemaIconButton(
-                        onClick = { onEdit(provider.id) },
-                        icon = {
-                            Icon(
-                                CinemaIcons.Edit,
-                                contentDescription = stringResource(R.string.provider_edit_button),
-                                tint = CinemaAccent
-                            )
-                        },
-                    )
-                    CinemaDangerIconButton(
-                        onClick = { onDelete(provider) },
-                        icon = {
-                            Icon(
-                                CinemaIcons.Delete,
-                                contentDescription = stringResource(R.string.provider_delete_button)
                             )
                         },
                     )

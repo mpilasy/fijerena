@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -65,6 +66,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.TvCheckRow
+import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.TvRadioRow
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -563,6 +565,167 @@ fun DuplicateProviderDialog(
             ) { Text(stringResource(R.string.common_cancel)) }
         },
         containerColor = CinemaSurface,
+    )
+}
+
+/**
+ * Overflow menu for a provider row's secondary actions (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,
+ * Phase 5, 8c) — collapses Duplicate/Copy To/Edit/Delete behind one button with real text labels,
+ * mirroring [org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog]'s
+ * pattern for the same "several actions on one item" shape. Select and Manage EPG stay direct
+ * row buttons — they're the single-tap-and-done primary actions, not occasional maintenance ones.
+ */
+@Composable
+fun ProviderActionsMenuDialog(
+    provider: ProviderEntity,
+    canCopyTo: Boolean,
+    onEdit: () -> Unit,
+    onDuplicate: () -> Unit,
+    onCopyTo: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val cancelFocusRequester = remember { FocusRequester() }
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = provider.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaTextPrimary,
+                maxLines = 2,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                TvInputListItem(
+                    selected = false,
+                    onClick = {
+                        onDuplicate()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingContent = {
+                        Icon(
+                            imageVector = CinemaIcons.ContentCopy,
+                            contentDescription = null,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                            tint = CinemaAccent,
+                        )
+                    },
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.provider_duplicate_button),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextPrimary,
+                        )
+                    },
+                )
+
+                if (canCopyTo) {
+                    TvInputListItem(
+                        selected = false,
+                        onClick = {
+                            onCopyTo()
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingContent = {
+                            Icon(
+                                imageVector = CinemaIcons.SwapHoriz,
+                                contentDescription = null,
+                                modifier = Modifier.size(TvDimensions.iconSmall),
+                                tint = CinemaAccent,
+                            )
+                        },
+                        headlineContent = {
+                            Text(
+                                text = stringResource(R.string.provider_copy_to_button),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CinemaTextPrimary,
+                            )
+                        },
+                    )
+                }
+
+                TvInputListItem(
+                    selected = false,
+                    onClick = {
+                        onEdit()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingContent = {
+                        Icon(
+                            imageVector = CinemaIcons.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                            tint = CinemaAccent,
+                        )
+                    },
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.provider_edit_button),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextPrimary,
+                        )
+                    },
+                )
+
+                TvInputListItem(
+                    selected = false,
+                    onClick = {
+                        onDelete()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingContent = {
+                        Icon(
+                            imageVector = CinemaIcons.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                            tint = CinemaError,
+                        )
+                    },
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.provider_delete_button),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaError,
+                        )
+                    },
+                )
+
+                TvInputListItem(
+                    selected = false,
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().focusRequester(cancelFocusRequester),
+                    leadingContent = {
+                        Icon(
+                            imageVector = CinemaIcons.Close,
+                            contentDescription = null,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                            tint = CinemaTextSecondary,
+                        )
+                    },
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.common_cancel),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextSecondary,
+                        )
+                    },
+                )
+            }
+        },
+        initialFocus = cancelFocusRequester,
+        confirmButton = {},
+        containerColor = CinemaSurface,
+        titleContentColor = CinemaTextPrimary,
+        textContentColor = CinemaTextSecondary,
     )
 }
 

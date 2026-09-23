@@ -312,6 +312,8 @@
     <string name="provider_delete_confirm_title">Delete Provider?</string>
     <string name="provider_delete_confirm_message">Delete \"%1$s\"? All cached data for this provider will be removed.</string>
     <string name="provider_active_label">Active</string>
+    <string name="provider_more_actions">More actions</string>
+    <string name="provider_more_actions_for_format">More actions for %1$s</string>
     <string name="provider_duplicate_button">Duplicate</string>
     <string name="provider_duplicate_title">Duplicate Provider</string>
     <string name="provider_duplicate_name_default_format">%1$s (copy)</string>
