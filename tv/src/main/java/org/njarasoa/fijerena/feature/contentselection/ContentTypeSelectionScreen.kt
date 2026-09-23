@@ -384,9 +384,17 @@ fun ContentTypeSelectionScreen(
                     }
                 }
 
-                // Content type hero cards
+                // Content type hero cards. Scrollable, not just fillMaxSize: the hero row plus
+                // the "Jump Back In" shelf below it can exceed a lower-density TV's viewport
+                // height, and an unscrollable Center-arranged Column clips whatever doesn't fit
+                // off both edges instead of making it reachable. Arrangement.Center still centers
+                // this content when it's shorter than the viewport, same as before — verticalScroll
+                // only takes over once content is taller than the space it's given.
                 Column(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
