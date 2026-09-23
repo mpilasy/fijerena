@@ -129,16 +129,18 @@ class ProviderRepository(
      * Delete a provider and clean up its encrypted prefs and cache.
      */
     suspend fun deleteProvider(id: Long) {
-        val entity = dao.getProviderById(id) ?: return
-        dao.deleteProvider(entity)
-        deleteProviderEpgSources(id)
-        clearProviderPassword(id)
-        clearProviderCache(id)
-        clearProviderWatchState(id)
-        clearProviderCatalog(id)
-        settingsCache.remove(id)
-        // Clear cached provider instance
-        MediaProviderFactory.clearCache(id)
+        val entity = dao.getProviderById(id)
+        if (entity != null) {
+            dao.deleteProvider(entity)
+            deleteProviderEpgSources(id)
+            clearProviderPassword(id)
+            clearProviderCache(id)
+            clearProviderWatchState(id)
+            clearProviderCatalog(id)
+            settingsCache.remove(id)
+            // Clear cached provider instance
+            MediaProviderFactory.clearCache(id)
+        }
     }
 
     /**
@@ -165,7 +167,9 @@ class ProviderRepository(
             db.favoriteStateDao().deleteAll(providerId)
             db.epgCacheDao().deleteAll(providerId)
             try {
-                db.openHelper.writableDatabase.execSQL("VACUUM")
+                val sdb = db.openHelper.writableDatabase
+                sdb.execSQL("VACUUM")
+                sdb.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() }
             } catch (e: Exception) {
                 // VACUUM needs the connection free of any other open transaction/statement; if
                 // one is mid-flight this just skips reclaiming disk space this time around — the
@@ -177,37 +181,84 @@ class ProviderRepository(
     }
 
     /**
-     * Settings → "Shrink Database": manual sweep for `xtream_v2.db` rows whose `providerId`
-     * doesn't match any provider that exists right now, covering both drift from before
-     * [clearProviderCatalog] started running on every deletion, and any other divergence this
-     * class doesn't already know to clean up on its own. Safe to run at any time, including when
-     * nothing is orphaned — the DELETE/VACUUM pair just costs a few queries and a no-op VACUUM.
+     * Sweeps `xtream_v2.db` for rows whose `providerId` doesn't match any provider that exists
+     * right now, covering both drift from before [clearProviderCatalog] started running on every
+     * deletion, and any other divergence this class doesn't already know to clean up on its own.
+     * Guarded so it never runs if providers cannot be loaded, protecting good data.
      */
-    suspend fun pruneOrphanedCatalogData(): OrphanedDataPruneResult =
-        withContext(Dispatchers.IO) {
-            val validProviderIds = dao.getAllProvidersList().map { it.id }
-            val db = XtreamDatabase.getInstance(context)
-            val dbFile = context.getDatabasePath("xtream_v2.db")
-            val sizeBeforeBytes = dbFile.length()
+    suspend fun pruneOrphanedCatalogData(forceVacuum: Boolean = false): OrphanedDataPruneResult {
+        val result =
+            withContext(Dispatchers.IO) {
+                val validProviderIds = dao.getAllProvidersList().map { it.id }
+                if (validProviderIds.isEmpty()) {
+                    OrphanedDataPruneResult(0L, 0L)
+                } else {
+                    val db = XtreamDatabase.getInstance(context)
+                    val dbFile = context.getDatabasePath("xtream_v2.db")
+                    val walFile = context.getDatabasePath("xtream_v2.db-wal")
+                    val sizeBeforeBytes =
+                        (if (dbFile.exists()) dbFile.length() else 0L) + (if (walFile.exists()) walFile.length() else 0L)
 
-            val rowsRemoved =
-                db.streamDao().deleteOrphaned(validProviderIds) +
-                    db.seriesDao().deleteOrphaned(validProviderIds) +
-                    db.episodeDao().deleteOrphaned(validProviderIds) +
-                    db.categoryDao().deleteOrphaned(validProviderIds) +
-                    db.favoriteStateDao().deleteOrphaned(validProviderIds) +
-                    db.epgCacheDao().deleteOrphaned(validProviderIds) +
-                    db.watchStateDao().deleteOrphaned(validProviderIds)
+                    val rowsRemoved =
+                        db.streamDao().deleteOrphaned(validProviderIds) +
+                            db.seriesDao().deleteOrphaned(validProviderIds) +
+                            db.episodeDao().deleteOrphaned(validProviderIds) +
+                            db.categoryDao().deleteOrphaned(validProviderIds) +
+                            db.favoriteStateDao().deleteOrphaned(validProviderIds) +
+                            db.epgCacheDao().deleteOrphaned(validProviderIds) +
+                            db.watchStateDao().deleteOrphaned(validProviderIds)
 
-            try {
-                db.openHelper.writableDatabase.execSQL("VACUUM")
-            } catch (e: Exception) {
-                android.util.Log.w("ProviderRepository", "VACUUM during orphan prune failed", e)
+                    cleanupOrphanedPrefs(validProviderIds.toSet())
+
+                    val sourceDao = this@ProviderRepository.db.epgSourceDao()
+                    val allSourceProviderIds = sourceDao.getAllSourcesOnce().map { it.providerId }.toSet()
+                    val orphanSourceProviderIds = allSourceProviderIds - validProviderIds.toSet()
+                    for (orphanId in orphanSourceProviderIds) {
+                        deleteProviderEpgSources(orphanId)
+                    }
+
+                    if (rowsRemoved > 0 || forceVacuum) {
+                        try {
+                            val sdb = db.openHelper.writableDatabase
+                            sdb.execSQL("VACUUM")
+                            sdb.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() }
+                        } catch (e: Exception) {
+                            android.util.Log.w("ProviderRepository", "VACUUM during orphan prune failed", e)
+                        }
+                    }
+
+                    val sizeAfterBytes =
+                        (if (dbFile.exists()) dbFile.length() else 0L) + (if (walFile.exists()) walFile.length() else 0L)
+                    val bytesReclaimed = (sizeBeforeBytes - sizeAfterBytes).coerceAtLeast(0L)
+                    OrphanedDataPruneResult(rowsRemoved.toLong(), bytesReclaimed)
+                }
             }
+        return result
+    }
 
-            val bytesReclaimed = (sizeBeforeBytes - dbFile.length()).coerceAtLeast(0)
-            OrphanedDataPruneResult(rowsRemoved.toLong(), bytesReclaimed)
+    private fun cleanupOrphanedPrefs(validProviderIds: Set<Long>) {
+        try {
+            val prefsDir = java.io.File(context.applicationInfo.dataDir, "shared_prefs")
+            if (prefsDir.exists() && prefsDir.isDirectory) {
+                val files = prefsDir.listFiles() ?: emptyArray()
+                val prefixPatterns = listOf("provider_creds_", "media_cache_", "xtream_cache_")
+                for (file in files) {
+                    val name = file.name
+                    for (prefix in prefixPatterns) {
+                        if (name.startsWith(prefix) && name.endsWith(".xml")) {
+                            val idStr = name.removePrefix(prefix).removeSuffix(".xml")
+                            val id = idStr.toLongOrNull()
+                            if (id != null && id !in validProviderIds) {
+                                file.delete()
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("ProviderRepository", "Failed cleaning up orphaned prefs", e)
         }
+    }
 
     /**
      * EPG sources belong to a single provider, and their indexed channels/programmes live in a

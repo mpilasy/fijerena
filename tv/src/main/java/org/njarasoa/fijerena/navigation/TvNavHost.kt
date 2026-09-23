@@ -25,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
@@ -120,6 +121,10 @@ fun TvNavHost(
             appSettings.hasProviderCache = providerCount > 0
         }
         initializationComplete = true
+        // Self-healing: quietly sweep orphaned catalog rows left by past deleted providers
+        coroutineScope.launch(Dispatchers.IO) {
+            providerRepo.pruneOrphanedCatalogData(forceVacuum = false)
+        }
     }
 
     val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()

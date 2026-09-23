@@ -75,12 +75,14 @@ class EpgSyncWorker(
         val fileManager = EpgFileManager.getInstance(applicationContext)
         val force = inputData.getBoolean("force", false)
 
-        // A sync belongs to the active provider and refreshes its own sources only.
-        val providerId = ProviderRepository(applicationContext).getActiveProvider()?.id
+        val providerRepo = ProviderRepository(applicationContext)
+        val providerId = providerRepo.getActiveProvider()?.id
         if (providerId == null) {
             Log.i(TAG, "doWork: no active provider, nothing to sync")
             return Result.success()
         }
+        // Routine maintenance: sweep orphaned catalog data left by deleted providers
+        providerRepo.pruneOrphanedCatalogData(forceVacuum = false)
 
         return try {
             val staleSources = if (force) {
