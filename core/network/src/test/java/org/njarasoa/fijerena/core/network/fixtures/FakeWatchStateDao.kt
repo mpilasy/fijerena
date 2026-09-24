@@ -231,10 +231,51 @@ class FakeWatchStateDao : WatchStateDao {
                     (it.audioTrackIndex != null || it.subtitleTrackIndex != null)
             }.maxByOrNull { it.updatedAt }
 
+    override suspend fun getResumable(
+        providerId: Long,
+        contentType: String,
+        limit: Int,
+    ): List<WatchStateEntity> =
+        rows.values
+            .filter {
+                it.providerId == providerId &&
+                    it.contentType == contentType &&
+                    it.lastPlayedAt != null &&
+                    !it.isCompleted &&
+                    it.durationMs > 0 &&
+                    (it.positionMs * 100.0 / it.durationMs) in 2.0..95.0
+            }.sortedByDescending { it.lastPlayedAt }
+            .take(limit)
+
+    override suspend fun getResumableSeriesCollapsed(
+        providerId: Long,
+        contentType: String,
+        limit: Int,
+    ): List<WatchStateEntity> =
+        rows.values
+            .filter {
+                it.providerId == providerId &&
+                    it.contentType == contentType &&
+                    it.lastPlayedAt != null &&
+                    !it.isCompleted &&
+                    it.durationMs > 0 &&
+                    (it.positionMs * 100.0 / it.durationMs) in 2.0..95.0
+            }.groupBy { it.seriesId ?: it.itemId }
+            .map { (_, group) ->
+                group.sortedWith(compareByDescending<WatchStateEntity> { it.lastPlayedAt }.thenByDescending { it.itemId }).first()
+            }.sortedByDescending { it.lastPlayedAt }
+            .take(limit)
+
     override suspend fun getAll(providerId: Long): List<WatchStateEntity> = rows.values.filter { it.providerId == providerId }
 
     override suspend fun deleteAll(providerId: Long) {
         rows.keys.filter { it.first == providerId }.forEach { rows.remove(it) }
+    }
+
+    override suspend fun deleteOrphaned(validProviderIds: List<Long>): Int {
+        val toRemove = rows.keys.filter { it.first !in validProviderIds }
+        toRemove.forEach { rows.remove(it) }
+        return toRemove.size
     }
 
     override suspend fun restoreAll(entities: List<WatchStateEntity>) {

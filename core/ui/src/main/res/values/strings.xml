@@ -650,6 +650,8 @@
     <string name="settings_shrink_database_button_running">Shrinking…</string>
     <string name="settings_shrink_database_result_format">Removed %1$d leftover rows, freed %2$s</string>
     <string name="settings_shrink_database_nothing_to_clean">Nothing to clean up — database is already tidy</string>
+    <string name="settings_shrink_database_dev_stats_time">Last shrink: Finished at %1$s • Took %2$s</string>
+    <string name="settings_shrink_database_dev_stats_delta">%1$d records deleted • %2$s recovered</string>
     <string name="settings_import_select_title">Select What to Import</string>
     <string name="settings_import_general_label">General Settings</string>
     <string name="settings_import_providers_count_format">Providers (%1$d)</string>

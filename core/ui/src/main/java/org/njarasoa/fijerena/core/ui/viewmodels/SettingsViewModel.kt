@@ -34,6 +34,10 @@ data class SettingsUiState(
     val epgRefreshTrigger: Int = 0,
     val isPruningDatabase: Boolean = false,
     val databaseMaintenanceMessage: String? = null,
+    val lastShrinkAtMs: Long = 0L,
+    val lastShrinkDurationMs: Long = 0L,
+    val lastShrinkRowsRemoved: Long = 0L,
+    val lastShrinkBytesReclaimed: Long = 0L,
 )
 
 class SettingsViewModel(
@@ -51,6 +55,10 @@ class SettingsViewModel(
                 language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
                 uiScale = appSettings.uiScale,
+                lastShrinkAtMs = appSettings.lastShrinkAtMs,
+                lastShrinkDurationMs = appSettings.lastShrinkDurationMs,
+                lastShrinkRowsRemoved = appSettings.lastShrinkRowsRemoved,
+                lastShrinkBytesReclaimed = appSettings.lastShrinkBytesReclaimed,
             ),
         )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -197,7 +205,15 @@ class SettingsViewModel(
                         NumberUtils.formatBytes(result.bytesReclaimed),
                     )
                 }
-            _uiState.value = _uiState.value.copy(isPruningDatabase = false, databaseMaintenanceMessage = message)
+            _uiState.value =
+                _uiState.value.copy(
+                    isPruningDatabase = false,
+                    databaseMaintenanceMessage = message,
+                    lastShrinkAtMs = appSettings.lastShrinkAtMs,
+                    lastShrinkDurationMs = appSettings.lastShrinkDurationMs,
+                    lastShrinkRowsRemoved = appSettings.lastShrinkRowsRemoved,
+                    lastShrinkBytesReclaimed = appSettings.lastShrinkBytesReclaimed,
+                )
         }
     }
 

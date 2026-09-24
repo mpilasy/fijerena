@@ -7,9 +7,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
@@ -48,6 +50,22 @@ fun DatabaseMaintenanceCard(
                 text = uiState.databaseMaintenanceMessage ?: "",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+            )
+        }
+        if (uiState.isDevMode && uiState.lastShrinkAtMs > 0L) {
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            val time = NumberUtils.formatTimestamp(LocalContext.current, uiState.lastShrinkAtMs)
+            val duration = NumberUtils.formatDuration(uiState.lastShrinkDurationMs)
+            Text(
+                text = stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+            )
+            val bytesStr = NumberUtils.formatBytes(uiState.lastShrinkBytesReclaimed)
+            Text(
+                text = stringResource(R.string.settings_shrink_database_dev_stats_delta, uiState.lastShrinkRowsRemoved, bytesStr),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
             )
         }
     }

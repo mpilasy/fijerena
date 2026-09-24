@@ -324,6 +324,11 @@ fun SettingsScreen(
                         resultMessage = uiState.databaseMaintenanceMessage,
                         onShrinkClick = { viewModel.pruneDatabase() },
                         scale = scale,
+                        isDevMode = uiState.isDevMode,
+                        lastShrinkAtMs = uiState.lastShrinkAtMs,
+                        lastShrinkDurationMs = uiState.lastShrinkDurationMs,
+                        lastShrinkRowsRemoved = uiState.lastShrinkRowsRemoved,
+                        lastShrinkBytesReclaimed = uiState.lastShrinkBytesReclaimed,
                     )
                 }
 
