@@ -216,9 +216,27 @@ class XtreamMediaProvider(
             rawSeriesId.toIntOrNull() ?: return kotlin.Result.failure(
                 Exception("Invalid series ID: $rawSeriesId"),
             )
-        // Always hit Xtream for the episode list — ongoing shows add episodes, and skipping this
-        // call would mean not noticing new ones until the persisted cache expires. Only the TMDB
-        // content-rating round trip below is skipped when we already have a fresh persisted value.
+
+        // Persisted episode-list freshness (7 days, same window as DETAIL_CACHE_TTL_MS): every
+        // open used to re-hit Xtream for the whole episode list unconditionally, on the reasoning
+        // that ongoing shows add episodes and a longer-lived cache would hide that. In practice
+        // this meant hitting the API on every single visit, including several times a minute
+        // while browsing seasons back and forth. A show the size of Law & Order returns several
+        // hundred episodes on every one of those calls — [getCachedSeriesDetail] already rebuilds
+        // a full SeriesDetail from disk with no network call, this just decides when that's
+        // trustworthy enough to use instead of asking Xtream again.
+        val cachedEntity = repository.getCachedSeriesEntity(id)
+        val episodesFresh =
+            cachedEntity?.episodesFetchedAt != null &&
+                System.currentTimeMillis() - cachedEntity.episodesFetchedAt < EPISODE_LIST_CACHE_TTL_MS
+        if (episodesFresh) {
+            val cached = repository.getCachedSeriesDetail(id)
+            if (cached != null) {
+                seriesDetailCache.put(rawSeriesId, cached)
+                return kotlin.Result.success(cached)
+            }
+        }
+
         return when (val result = resolveSeriesInfo(id)) {
             is XtreamResponse.Ok -> {
                 // Xtream re-sends the episode list on every visit, and it rarely carries synopses —
@@ -874,6 +892,11 @@ class XtreamMediaProvider(
         // Detail data (plot/cast/genre/rating/contentRating) rarely changes for a given title —
         // long TTL avoids re-hitting Xtream + TMDB every time a detail screen is reopened.
         private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
+
+        // Separate stamp from DETAIL_CACHE_TTL_MS (same duration, different question): this one
+        // guards the episode list itself, not the TMDB-derived enrichment fields — kept
+        // independent so either window can move without accidentally moving the other.
+        private const val EPISODE_LIST_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
         private const val MAX_CONCURRENT_TMDB_REQUESTS = 10
 
         // Below this a row reads as an accident rather than a suggestion, so it is not shown.

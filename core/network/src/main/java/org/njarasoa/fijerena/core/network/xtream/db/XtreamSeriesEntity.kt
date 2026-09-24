@@ -41,6 +41,13 @@ data class XtreamSeriesEntity(
     val tmdbId: String? = null,
     val detailFetchedAt: Long? = null,
     val posterPath: String? = null,
+    // Set every time `get_series_info` successfully persists this series' episode list — the
+    // 24h freshness check that lets a detail-screen open skip the network round trip and rebuild
+    // straight from `xtream_episodes` (see XtreamMediaProvider.EPISODE_LIST_CACHE_TTL_MS). A
+    // separate stamp from detailFetchedAt above: that one guards the TMDB content-rating/plot
+    // enrichment cache (7 days), a different freshness question from "did the episode list itself
+    // change".
+    val episodesFetchedAt: Long? = null,
 ) {
     companion object {
         fun computeHash(

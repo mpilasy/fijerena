@@ -922,6 +922,10 @@ class XtreamContentManager(
                 }
                 if (episodesToInsert.isNotEmpty()) {
                     episodeDao.insertAll(guardSeriesLevelEpisodeTmdbIds(episodesToInsert))
+                    // Only stamped when episodes actually came back — an empty list already
+                    // reads as "no usable cache" to buildCachedSeriesDetail regardless of this
+                    // timestamp, so there's nothing worth marking fresh in that case.
+                    seriesDao.updateEpisodesFetchedAt(providerId, seriesId, System.currentTimeMillis())
                 }
 
                 response
