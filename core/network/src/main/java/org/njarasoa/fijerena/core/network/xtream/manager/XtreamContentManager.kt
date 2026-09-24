@@ -1002,9 +1002,19 @@ class XtreamContentManager(
                 ?.seriesId
         }
 
-    /** Cached series row, used only to check for a still-fresh persisted TMDB content rating — episode list is always fetched live. */
+    /** Cached series row — checked for both a still-fresh persisted TMDB content rating and episode-list freshness (see [XtreamMediaProvider.EPISODE_LIST_CACHE_TTL_MS]). */
     suspend fun getCachedSeriesEntity(seriesId: Int): XtreamSeriesEntity? =
         withContext(Dispatchers.IO) { seriesDao.getSeriesById(providerId, seriesId) }
+
+    /**
+     * Forces the next [getSeriesInfo] call for [seriesId] to hit Xtream instead of being served
+     * from the persisted episode-list cache — the counterpart to [saveSeriesDetailCache]'s `0L`
+     * expiry trick, called from [XtreamMediaProvider.invalidateCachedDetail] so the header
+     * Refresh button (TV) / pull-to-refresh (Mobile) actually goes back to the network instead of
+     * re-serving what's already on disk.
+     */
+    suspend fun expireEpisodeListCache(seriesId: Int) =
+        withContext(Dispatchers.IO) { seriesDao.updateEpisodesFetchedAt(providerId, seriesId, 0L) }
 
     /** Persists the TMDB content rating once a series detail fetch has completed. */
     suspend fun saveSeriesDetailCache(
