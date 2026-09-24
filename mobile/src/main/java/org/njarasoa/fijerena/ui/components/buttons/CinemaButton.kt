@@ -67,15 +67,30 @@ fun CinemaButton(
     )
 }
 
-/** Themed replacement for [OutlinedButton], see [CinemaButton]. */
+/**
+ * Themed replacement for [OutlinedButton], see [CinemaButton].
+ *
+ * Overrides M3's default outline/content colors — the theme's `colorScheme.outline` token
+ * ([CinemaSurfaceLight]) is a dark gray meant for hairline dividers, not button borders, so at
+ * its default 100% opacity it still sits too close to the surrounding card background to read
+ * as a tappable control. A faint tinted fill (matching [CinemaIconButton]'s 0.15f convention)
+ * plus a brighter border give it the same "this is a button" affordance filled buttons get from
+ * their solid color, without the visual weight of a primary action.
+ */
 @Composable
 fun CinemaOutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    colors: ButtonColors = ButtonDefaults.outlinedButtonColors(),
+    colors: ButtonColors = ButtonDefaults.outlinedButtonColors(
+        contentColor = CinemaTextPrimary,
+        containerColor = CinemaTextPrimary.copy(alpha = 0.15f),
+        disabledContentColor = CinemaTextDisabled,
+        disabledContainerColor = Color.Transparent,
+    ),
     elevation: ButtonElevation? = null,
-    border: BorderStroke? = ButtonDefaults.outlinedButtonBorder(enabled),
+    border: BorderStroke? =
+        BorderStroke(1.dp, CinemaTextPrimary.copy(alpha = if (enabled) CinemaAlpha.textFaint else CinemaAlpha.divider)),
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     interactionSource: MutableInteractionSource? = null,
     content: @Composable RowScope.() -> Unit,
