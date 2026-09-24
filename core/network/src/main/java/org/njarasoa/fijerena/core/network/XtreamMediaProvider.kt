@@ -199,6 +199,11 @@ class XtreamMediaProvider(
             repository.getCachedSeriesEntity(id)?.let {
                 repository.saveSeriesDetailCache(id, it.contentRating, it.tmdbId, 0L)
             }
+            // And the persisted episode-list cache (EPISODE_LIST_CACHE_TTL_MS) — without this a
+            // manual refresh (TV's header Refresh button, Mobile's pull-to-refresh) would still
+            // serve the on-disk episode list for the rest of its week, making the refresh action
+            // look like it did nothing.
+            repository.expireEpisodeListCache(id)
         }
     }
 

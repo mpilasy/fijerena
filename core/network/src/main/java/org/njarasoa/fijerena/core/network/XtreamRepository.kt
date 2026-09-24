@@ -205,6 +205,9 @@ class XtreamRepository(
 
     suspend fun getCachedSeriesEntity(seriesId: Int) = contentManager.getCachedSeriesEntity(seriesId)
 
+    /** See [XtreamContentManager.expireEpisodeListCache]. */
+    suspend fun expireEpisodeListCache(seriesId: Int) = contentManager.expireEpisodeListCache(seriesId)
+
     suspend fun saveSeriesDetailCache(
         seriesId: Int,
         contentRating: String?,
