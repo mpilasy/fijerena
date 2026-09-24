@@ -132,4 +132,12 @@ interface XtreamSeriesDao {
         detailFetchedAt: Long,
         posterPath: String? = null,
     )
+
+    /** Stamped every time `get_series_info` successfully persists this series' episode list. */
+    @Query("UPDATE xtream_series SET episodesFetchedAt = :episodesFetchedAt WHERE seriesId = :seriesId AND providerId = :providerId")
+    fun updateEpisodesFetchedAt(
+        providerId: Long,
+        seriesId: Int,
+        episodesFetchedAt: Long,
+    )
 }

@@ -20,7 +20,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
         WatchStateEntity::class,
         FavoriteStateEntity::class,
     ],
-    version = 18,
+    version = 19,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -213,6 +213,17 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 18→19: `episodesFetchedAt` on `xtream_series` — the persisted freshness stamp
+         * behind the 24h episode-list cache (see [XtreamSeriesEntity.episodesFetchedAt]).
+         */
+        private val MIGRATION_18_19 =
+            object : Migration(18, 19) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `xtream_series` ADD COLUMN `episodesFetchedAt` INTEGER")
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -223,7 +234,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                     ).addMigrations(
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
                         MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
-                        MIGRATION_17_18,
+                        MIGRATION_17_18, MIGRATION_18_19,
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC
