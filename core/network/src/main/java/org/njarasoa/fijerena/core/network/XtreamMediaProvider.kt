@@ -201,8 +201,8 @@ class XtreamMediaProvider(
             }
             // And the persisted episode-list cache (EPISODE_LIST_CACHE_TTL_MS) — without this a
             // manual refresh (TV's header Refresh button, Mobile's pull-to-refresh) would still
-            // serve the on-disk episode list for the rest of its week, making the refresh action
-            // look like it did nothing.
+            // serve the on-disk episode list for the rest of its 24h window, making the refresh
+            // action look like it did nothing.
             repository.expireEpisodeListCache(id)
         }
     }
@@ -222,7 +222,7 @@ class XtreamMediaProvider(
                 Exception("Invalid series ID: $rawSeriesId"),
             )
 
-        // Persisted episode-list freshness (7 days, same window as DETAIL_CACHE_TTL_MS): every
+        // Persisted episode-list freshness (24h — see EPISODE_LIST_CACHE_TTL_MS): every
         // open used to re-hit Xtream for the whole episode list unconditionally, on the reasoning
         // that ongoing shows add episodes and a longer-lived cache would hide that. In practice
         // this meant hitting the API on every single visit, including several times a minute
@@ -898,10 +898,11 @@ class XtreamMediaProvider(
         // long TTL avoids re-hitting Xtream + TMDB every time a detail screen is reopened.
         private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
 
-        // Separate stamp from DETAIL_CACHE_TTL_MS (same duration, different question): this one
-        // guards the episode list itself, not the TMDB-derived enrichment fields — kept
-        // independent so either window can move without accidentally moving the other.
-        private const val EPISODE_LIST_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
+        // Separate stamp from DETAIL_CACHE_TTL_MS (different question, and now a different
+        // window): this one guards the episode list itself, not the TMDB-derived enrichment
+        // fields. Shorter than the metadata cache — an ongoing show adds episodes far more often
+        // than its plot/cast/rating changes, so a fresh copy is worth asking for sooner.
+        private const val EPISODE_LIST_CACHE_TTL_MS = 24 * 3600 * 1000L // 24 hours
         private const val MAX_CONCURRENT_TMDB_REQUESTS = 10
 
         // Below this a row reads as an accident rather than a suggestion, so it is not shown.

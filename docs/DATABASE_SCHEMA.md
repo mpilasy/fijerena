@@ -142,7 +142,7 @@ v14 added `plotFetchedAt` for TMDB synopses; v15 added `watch_state` and an inde
 `xtream_series(providerId, tmdbId)` and `xtream_episodes(providerId, season, episodeNum)` for the
 TMDB sibling-dedup joins below, which had no covering index on either table; v19 added
 `xtream_series.episodesFetchedAt`, a persisted freshness stamp so a series detail screen can skip
-the network round trip for its episode list when a stored copy is under 7 days old, instead of
+the network round trip for its episode list when a stored copy is under 24 hours old, instead of
 re-fetching the whole list on every single open.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
@@ -229,7 +229,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `tmdbId` | TEXT | Sourced TMDB ID (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 | `posterPath` | TEXT | Sourced TMDB poster path (added v17) |
-| `episodesFetchedAt` | INTEGER | Timestamp episodes were last fetched/persisted for this series; backs the 7-day episode-list cache in `XtreamMediaProvider.getSeriesDetail` (added v19) |
+| `episodesFetchedAt` | INTEGER | Timestamp episodes were last fetched/persisted for this series; backs the 24-hour episode-list cache in `XtreamMediaProvider.getSeriesDetail` (added v19) |
 
 **Indices:** `(providerId)`, `(categoryId, providerId)`, `(providerId, categoryId, excluded)`, `(providerId, tmdbId)` (added v18, for the TMDB sibling-dedup joins below)
 
