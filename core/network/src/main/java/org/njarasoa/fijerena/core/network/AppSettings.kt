@@ -40,6 +40,10 @@ class AppSettings(
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
         private const val KEY_LANGUAGE = "app_language"
+        private const val KEY_LAST_SHRINK_AT_MS = "last_shrink_at_ms"
+        private const val KEY_LAST_SHRINK_DURATION_MS = "last_shrink_duration_ms"
+        private const val KEY_LAST_SHRINK_ROWS_REMOVED = "last_shrink_rows_removed"
+        private const val KEY_LAST_SHRINK_BYTES_RECLAIMED = "last_shrink_bytes_reclaimed"
         private const val MAX_SEARCH_HISTORY = 20
         const val DEFAULT_WATCH_HISTORY_SIZE = 25
         const val DEFAULT_WATCH_DELAY_SECONDS = 10
@@ -324,6 +328,35 @@ class AppSettings(
     fun resetCellularBuffers() {
         cellularLiveMultiplier = DEFAULT_CELLULAR_MULTIPLIER
         cellularVodMultiplier = DEFAULT_CELLULAR_MULTIPLIER
+    }
+
+    var lastShrinkAtMs: Long
+        get() = prefs.getLong(KEY_LAST_SHRINK_AT_MS, 0L)
+        set(value) = prefs.edit { putLong(KEY_LAST_SHRINK_AT_MS, value) }
+
+    var lastShrinkDurationMs: Long
+        get() = prefs.getLong(KEY_LAST_SHRINK_DURATION_MS, 0L)
+        set(value) = prefs.edit { putLong(KEY_LAST_SHRINK_DURATION_MS, value) }
+
+    var lastShrinkRowsRemoved: Long
+        get() = prefs.getLong(KEY_LAST_SHRINK_ROWS_REMOVED, 0L)
+        set(value) = prefs.edit { putLong(KEY_LAST_SHRINK_ROWS_REMOVED, value) }
+
+    var lastShrinkBytesReclaimed: Long
+        get() = prefs.getLong(KEY_LAST_SHRINK_BYTES_RECLAIMED, 0L)
+        set(value) = prefs.edit { putLong(KEY_LAST_SHRINK_BYTES_RECLAIMED, value) }
+
+    fun saveShrinkStats(
+        durationMs: Long,
+        rowsRemoved: Long,
+        bytesReclaimed: Long,
+    ) {
+        prefs.edit {
+            putLong(KEY_LAST_SHRINK_AT_MS, System.currentTimeMillis())
+            putLong(KEY_LAST_SHRINK_DURATION_MS, durationMs)
+            putLong(KEY_LAST_SHRINK_ROWS_REMOVED, rowsRemoved)
+            putLong(KEY_LAST_SHRINK_BYTES_RECLAIMED, bytesReclaimed)
+        }
     }
 }
 

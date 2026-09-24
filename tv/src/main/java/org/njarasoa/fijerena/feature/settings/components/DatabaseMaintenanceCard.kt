@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -15,6 +16,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -29,6 +31,11 @@ fun DatabaseMaintenanceCard(
     resultMessage: String?,
     onShrinkClick: () -> Unit,
     scale: Float,
+    isDevMode: Boolean = false,
+    lastShrinkAtMs: Long = 0L,
+    lastShrinkDurationMs: Long = 0L,
+    lastShrinkRowsRemoved: Long = 0L,
+    lastShrinkBytesReclaimed: Long = 0L,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
@@ -68,6 +75,29 @@ fun DatabaseMaintenanceCard(
                             fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale),
                         ),
                     color = CinemaTextSecondary,
+                )
+            }
+            if (isDevMode && lastShrinkAtMs > 0L) {
+                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                val context = LocalContext.current
+                val time = NumberUtils.formatTimestamp(context, lastShrinkAtMs)
+                val duration = NumberUtils.formatDuration(lastShrinkDurationMs)
+                Text(
+                    text = stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration),
+                    style =
+                        MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale),
+                        ),
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
+                )
+                val bytesStr = NumberUtils.formatBytes(lastShrinkBytesReclaimed)
+                Text(
+                    text = stringResource(R.string.settings_shrink_database_dev_stats_delta, lastShrinkRowsRemoved, bytesStr),
+                    style =
+                        MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale),
+                        ),
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
                 )
             }
         }

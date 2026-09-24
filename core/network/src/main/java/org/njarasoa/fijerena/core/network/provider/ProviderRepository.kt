@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
@@ -189,6 +190,7 @@ class ProviderRepository(
     suspend fun pruneOrphanedCatalogData(forceVacuum: Boolean = false): OrphanedDataPruneResult {
         val result =
             withContext(Dispatchers.IO) {
+                val startMs = System.currentTimeMillis()
                 val validProviderIds = dao.getAllProvidersList().map { it.id }
                 if (validProviderIds.isEmpty()) {
                     OrphanedDataPruneResult(0L, 0L)
@@ -230,6 +232,8 @@ class ProviderRepository(
                     val sizeAfterBytes =
                         (if (dbFile.exists()) dbFile.length() else 0L) + (if (walFile.exists()) walFile.length() else 0L)
                     val bytesReclaimed = (sizeBeforeBytes - sizeAfterBytes).coerceAtLeast(0L)
+                    val durationMs = System.currentTimeMillis() - startMs
+                    AppSettings(context).saveShrinkStats(durationMs, rowsRemoved.toLong(), bytesReclaimed)
                     OrphanedDataPruneResult(rowsRemoved.toLong(), bytesReclaimed)
                 }
             }

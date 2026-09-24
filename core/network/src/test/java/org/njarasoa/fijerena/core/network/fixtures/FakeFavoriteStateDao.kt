@@ -53,4 +53,10 @@ class FakeFavoriteStateDao : FavoriteStateDao {
     }
 
     override fun count(providerId: Long): Int = rows.values.count { it.providerId == providerId }
+
+    override fun deleteOrphaned(validProviderIds: List<Long>): Int {
+        val toRemove = rows.keys.filter { it.providerId !in validProviderIds }
+        toRemove.forEach { rows.remove(it) }
+        return toRemove.size
+    }
 }
