@@ -98,8 +98,10 @@ class MainActivity : ComponentActivity() {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
             val playbackViewModel = ViewModelProvider(this)[PlaybackViewModel::class.java]
             val state = playbackViewModel.playbackState.value
-            if (state is org.njarasoa.fijerena.core.player.model.PlaybackState.Playing ||
-                state is org.njarasoa.fijerena.core.player.model.PlaybackState.Buffering
+            // Live only — same rule as the S+ auto-enter params set by the player screens.
+            if (playbackViewModel.currentMetadata.value.isLive &&
+                (state is org.njarasoa.fijerena.core.player.model.PlaybackState.Playing ||
+                    state is org.njarasoa.fijerena.core.player.model.PlaybackState.Buffering)
             ) {
                 enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build())
             }
