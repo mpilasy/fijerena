@@ -56,6 +56,12 @@ class StreamingPlaybackService : MediaSessionService() {
     // run is more than just redundant cleanup.
     private var isReleased = false
 
+    // Set by pause() (the app's own pause button, and TV's onFocusLost) and cleared as soon as
+    // playback is requested again — lets the live-pause guard in onCreate() tell those apart from
+    // pauses arriving via the media session (PiP window, notification, Bluetooth), headphone
+    // unplug, or audio-focus loss.
+    private var pausedInApp = false
+
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
@@ -435,6 +441,31 @@ class StreamingPlaybackService : MediaSessionService() {
             )
         player.addListener(playerListener!!)
 
+        // Live TV has no use for a paused stream: resuming it plays stale buffered content that's
+        // behind the broadcast. Any pause the app didn't ask for itself stops it instead.
+        player.addListener(
+            object : Player.Listener {
+                override fun onPlayWhenReadyChanged(
+                    playWhenReady: Boolean,
+                    reason: Int,
+                ) {
+                    if (playWhenReady) {
+                        pausedInApp = false
+                        return
+                    }
+                    val isExternalPause =
+                        reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST ||
+                            reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY ||
+                            reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS
+                    if (isExternalPause && !pausedInApp && _currentMetadata.value.isLive) {
+                        Log.i(TAG, "External pause on live stream (reason=$reason) — stopping instead.")
+                        // Posted: stop() calls back into the player, which is mid-callback here.
+                        mainHandler.post { if (mediaSession?.player?.playWhenReady == false) stop() }
+                    }
+                }
+            },
+        )
+
         analyticsListener =
             PerformanceAnalyticsListener(
                 onMetricsUpdate = { dropped, total ->
@@ -705,6 +736,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     fun pause() {
+        pausedInApp = true
         mediaSession?.player?.pause()
         releaseWakeLock()
     }

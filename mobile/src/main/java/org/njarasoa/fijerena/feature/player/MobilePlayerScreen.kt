@@ -195,12 +195,9 @@ fun MobilePlayerContent(
         val observer =
             LifecycleEventObserver { _, event ->
                 when (event) {
-                    Lifecycle.Event.ON_PAUSE -> {
-                        // Pass current PiP state from activity as a safeguard
-                        val inPip = activity?.isInPictureInPictureMode ?: false
-                        viewModel.onFocusLost(inPip)
-                    }
-                    Lifecycle.Event.ON_RESUME -> viewModel.onFocusRegained()
+                    // ON_STOP, not ON_PAUSE — see onAppStopped's kdoc.
+                    Lifecycle.Event.ON_STOP -> viewModel.onAppStopped()
+                    Lifecycle.Event.ON_RESUME -> viewModel.onAppResumed()
                     else -> {}
                 }
             }

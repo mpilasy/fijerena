@@ -85,6 +85,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -236,7 +237,14 @@ fun MobileCategoryListScreen(
     // Dock auto-seeds on entry (below), so without this, Back from a docked preview would skip
     // straight past the bare category screen and out of Live TV — mirrors TV's silent bare
     // CategoryList push in TvNavHost.kt that guarantees the same stopover.
-    BackHandler(enabled = isLiveTv && !fullScreen && dockTarget != null) { dockTarget = null }
+    BackHandler(enabled = isLiveTv && !fullScreen && dockTarget != null) {
+        // Stop first, same as the dock's close button: clearing dockTarget alone unmounts the
+        // dock (and its lifecycle observer with it) but left the stream playing, with nothing
+        // left to ever stop it — even after leaving the app. Resolved directly since
+        // dockPlayback is declared further down; it's the same Activity-scoped instance.
+        ViewModelProvider(context as ComponentActivity)[PlaybackViewModel::class.java].stop()
+        dockTarget = null
+    }
 
     // Auto-seed the dock so entry never lands on a bare list — mirrors TV's
     // LiveTvSplitLayout: an explicit initialStreamId (search/EPG deep link) wins, otherwise
@@ -385,15 +393,15 @@ fun MobileCategoryListScreen(
             }
         }
 
-        // Pause when the app isn't RESUMED (backgrounded); resume on return — mirrors TV's
-        // LiveTvSplitLayout, which does the same for the exact same reason (a docked preview
-        // has no business burning battery/data while the app isn't visible).
+        // Stop when the app isn't visible (backgrounded, PiP dismissed); restart on return — a
+        // docked preview has no business burning battery/data while the app isn't visible.
+        // ON_STOP, not ON_PAUSE, so going into PiP keeps it playing — see onAppStopped's kdoc.
         DisposableEffect(lifecycleOwner) {
             val observer =
                 LifecycleEventObserver { _, event ->
                     when (event) {
-                        Lifecycle.Event.ON_PAUSE -> dockPlayback.onFocusLost(false)
-                        Lifecycle.Event.ON_RESUME -> dockPlayback.onFocusRegained()
+                        Lifecycle.Event.ON_STOP -> dockPlayback.onAppStopped()
+                        Lifecycle.Event.ON_RESUME -> dockPlayback.onAppResumed()
                         else -> {}
                     }
                 }
@@ -439,6 +447,18 @@ fun MobileCategoryListScreen(
             contentType = contentType,
             onBack = { fullScreen = false },
         )
+        return
+    }
+
+    // PiP entered from the dock: the window is just the video. Without this the whole dock
+    // screen (preview card, Recent list) got squeezed into the PiP window. The promoted
+    // full-screen branch above needs no equivalent — MobilePlayerContent already hides its own
+    // chrome in PiP.
+    val isInPip = dockPlayback?.isInPictureInPictureMode?.collectAsStateWithLifecycle()?.value == true
+    if (isInPip) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize())
+        }
         return
     }
 
