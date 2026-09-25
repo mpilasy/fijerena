@@ -560,6 +560,8 @@
     <string name="epg_browser_watch_confirm_title">Watch now?</string>
     <string name="epg_browser_watch_confirm_message">This show airs at %1$s.\nWatch %2$s now?</string>
     <string name="epg_browser_watch_now_btn">Watch now</string>
+    <string name="epg_browser_add_calendar_btn">Add to calendar</string>
+    <string name="epg_browser_no_calendar_app">No calendar app found on this device</string>
     <string name="epg_browser_watch_description">Watch</string>
     <string name="epg_browser_show_less">Show less</string>
     <string name="epg_browser_show_more">Show more</string>

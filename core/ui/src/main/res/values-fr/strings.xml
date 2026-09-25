@@ -554,6 +554,8 @@
     <string name="epg_browser_watch_confirm_title">Regarder maintenant ?</string>
     <string name="epg_browser_watch_confirm_message">Cette émission passe à %1$s.\nRegarder %2$s maintenant ?</string>
     <string name="epg_browser_watch_now_btn">Regarder maintenant</string>
+    <string name="epg_browser_add_calendar_btn">Ajouter au calendrier</string>
+    <string name="epg_browser_no_calendar_app">Aucune application de calendrier trouvée sur cet appareil</string>
     <string name="epg_browser_watch_description">Regarder</string>
     <string name="epg_browser_show_less">Afficher moins</string>
     <string name="epg_browser_show_more">Afficher plus</string>
