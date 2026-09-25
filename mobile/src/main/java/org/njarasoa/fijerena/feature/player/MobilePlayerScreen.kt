@@ -281,14 +281,15 @@ fun MobilePlayerContent(
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
     val isInPipMode by viewModel.isInPictureInPictureMode.collectAsStateWithLifecycle()
 
-    // Enable/disable PiP auto-enter
-    LaunchedEffect(playbackState::class) {
+    // Enable/disable PiP auto-enter — only for live video that's actually playing. Anything else
+    // (VOD, paused, idle) just leaves the app normally on Home/app-switch.
+    LaunchedEffect(playbackState::class, currentMetadata.isLive) {
         val ps = playbackState
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             val isPlaying = ps is PlaybackState.Playing || ps is PlaybackState.Buffering
             activity?.setPictureInPictureParams(
                 android.app.PictureInPictureParams.Builder()
-                    .setAutoEnterEnabled(isPlaying)
+                    .setAutoEnterEnabled(isPlaying && currentMetadata.isLive)
                     .build()
             )
         }
