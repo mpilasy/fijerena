@@ -58,6 +58,11 @@ class PlaybackViewModel(
     private var isInErrorState = false
     private var focusLostJob: Job? = null
 
+    // Set when onAppStopped() stopped a live stream, so onAppResumed() knows to restart it.
+    // Cleared by any explicit playStream()/stop() so a stale flag can't resurrect a stream the
+    // user already moved on from.
+    private var liveStoppedInBackground = false
+
     private val playerListener =
         object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
@@ -195,6 +200,7 @@ class PlaybackViewModel(
     ) {
         // Reset error state on new stream
         isInErrorState = false
+        liveStoppedInBackground = false
         onFocusRegained()
         ensureServiceRunning()
         // DO NOT set _playbackState.value = Buffering here!
@@ -261,6 +267,7 @@ class PlaybackViewModel(
     fun stop() {
         // Reset error state when user goes back
         isInErrorState = false
+        liveStoppedInBackground = false
         onFocusRegained()
         launchServiceAction { it.stop() }
     }
@@ -283,7 +290,40 @@ class PlaybackViewModel(
      */
     fun onFocusLost(isInPip: Boolean = false) {
         if (isInPip || _isInPictureInPictureMode.value) return
+        pauseAndScheduleStop()
+    }
 
+    /**
+     * Mobile: the activity is no longer visible (ON_STOP). Unlike ON_PAUSE, this never fires
+     * while in PiP — ON_PAUSE arrives *before* isInPictureInPictureMode flips on a swipe-home
+     * PiP entry (paused the stream going into PiP), and nothing handled the ON_STOP that follows
+     * dismissing the PiP window (left the stream playing with no window at all). Live stops
+     * outright instead of pausing — a paused live stream is stale by the time it's resumed —
+     * and [onAppResumed] restarts it.
+     */
+    fun onAppStopped() {
+        val currentState = _playbackState.value
+        if (_currentMetadata.value.isLive && currentState !is PlaybackState.Idle && currentState !is PlaybackState.Ended) {
+            liveStoppedInBackground = true
+            isInErrorState = false
+            onFocusRegained()
+            launchServiceAction { it.stop() }
+            return
+        }
+        pauseAndScheduleStop()
+    }
+
+    /** Mobile counterpart of [onAppStopped], for ON_RESUME. */
+    fun onAppResumed() {
+        onFocusRegained()
+        if (liveStoppedInBackground) {
+            // Unconditional (no Idle check): the stop launched by onAppStopped() is async, so a
+            // quick return can land before it takes effect — playStream() replaces it either way.
+            playStream(_currentMetadata.value)
+        }
+    }
+
+    private fun pauseAndScheduleStop() {
         val currentState = _playbackState.value
         if (currentState is PlaybackState.Playing || currentState is PlaybackState.Buffering) {
             pause()
