@@ -70,6 +70,8 @@ import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
+import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -625,10 +627,26 @@ private fun MobileProgramCard(
                         )
                     },
                     confirmButton = {
-                        CinemaDialogTextButton(onClick = {
-                            pendingConfirmAiring = null
-                            onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
-                        }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
+                        Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
+                            CinemaDialogTextButton(onClick = {
+                                pendingConfirmAiring = null
+                                onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                            }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
+
+                            if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {
+                                CinemaDialogTextButton(onClick = {
+                                    pendingConfirmAiring = null
+                                    openAddToCalendarEvent(
+                                        context = airingContext,
+                                        title = program.title,
+                                        description = program.description,
+                                        location = pending.channelName,
+                                        startEpochSeconds = pending.startEpoch,
+                                        endEpochSeconds = pending.endEpoch,
+                                    )
+                                }) { Text(stringResource(R.string.epg_browser_add_calendar_btn)) }
+                            }
+                        }
                     },
                     dismissButton = {
                         CinemaDialogTextButton(onClick = { pendingConfirmAiring = null }) { Text(stringResource(R.string.common_cancel)) }

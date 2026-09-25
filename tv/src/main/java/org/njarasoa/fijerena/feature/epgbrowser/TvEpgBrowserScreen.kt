@@ -25,6 +25,8 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Search
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
+import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.tv.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -909,10 +911,26 @@ private fun ProgramCard(
                         )
                     },
                     confirmButton = {
-                        CinemaButton(onClick = {
-                            pendingConfirmAiring = null
-                            onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
-                        }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+                            CinemaButton(onClick = {
+                                pendingConfirmAiring = null
+                                onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                            }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
+
+                            if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {
+                                CinemaButton(onClick = {
+                                    pendingConfirmAiring = null
+                                    openAddToCalendarEvent(
+                                        context = airingContext,
+                                        title = program.title,
+                                        description = program.description,
+                                        location = pending.channelName,
+                                        startEpochSeconds = pending.startEpoch,
+                                        endEpochSeconds = pending.endEpoch,
+                                    )
+                                }) { Text(stringResource(R.string.epg_browser_add_calendar_btn)) }
+                            }
+                        }
                     },
                     dismissButton = {
                         CinemaButton(onClick = { pendingConfirmAiring = null }) { Text(stringResource(R.string.common_cancel)) }
