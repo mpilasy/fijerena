@@ -677,7 +677,13 @@ fun MobileCategoryListScreen(
                                         contentType = contentType,
                                     )
                                     if (target == null) {
-                                        viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
+                                        // Only reload when Favorites is what's on screen (so an
+                                        // unfavorited row drops out) — refreshStreams selects the
+                                        // category it loads, so calling it from any other category
+                                        // yanked the view over to Favorites.
+                                        if (state.selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID) {
+                                            viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
+                                        }
                                     } else {
                                         composableScope.launch {
                                             favoriteStreams = viewModel.getFavoritesSnapshot()
