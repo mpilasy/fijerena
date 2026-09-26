@@ -15,8 +15,10 @@ data class ParsedTitle(
 
 // Requires the code to be all-uppercase letters so ordinary title casing ("A-Team") never
 // matches — real prefixes/suffixes from provider feeds are consistently shouted like "EN", "FR".
-private val PREFIX_CODE = Regex("^([A-Z]{2,4})\\s*[:\\-]\\s*")
-private val SUFFIX_CODE = Regex("\\s*\\(([A-Z]{2,4})\\)\\s*$")
+// D+/A+ (Disney+/Apple TV+) are the exception: accepted in either case, badged uppercase.
+private const val CODE = "[A-Z]{2,4}|[DdAa]\\+"
+private val PREFIX_CODE = Regex("^($CODE)\\s*[:\\-]\\s*")
+private val SUFFIX_CODE = Regex("\\s*\\(($CODE)\\)\\s*$")
 
 /**
  * Strips a leading `EN -`/`NP:` style prefix or a trailing `(US)` style suffix off [raw] and
@@ -29,11 +31,11 @@ fun parseDisplayTitle(raw: String): ParsedTitle {
     var badge: String? = null
 
     PREFIX_CODE.find(text)?.let { match ->
-        badge = match.groupValues[1]
+        badge = match.groupValues[1].uppercase()
         text = text.substring(match.range.last + 1)
     }
     SUFFIX_CODE.find(text)?.let { match ->
-        if (badge == null) badge = match.groupValues[1]
+        if (badge == null) badge = match.groupValues[1].uppercase()
         text = text.removeRange(match.range)
     }
 
