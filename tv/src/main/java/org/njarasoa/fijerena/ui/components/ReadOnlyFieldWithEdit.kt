@@ -64,6 +64,8 @@ fun ReadOnlyFieldWithEdit(
     keyboardType: KeyboardType = KeyboardType.Text,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     displayText: String = value,
+    // Lets a dialog land its initial focus on the edit button; see CinemaAlertDialog.initialFocus.
+    editButtonFocusRequester: FocusRequester? = null,
 ) {
     var isEditing by remember { mutableStateOf(false) }
     var editValue by remember(value) { mutableStateOf(value) }
@@ -173,7 +175,10 @@ fun ReadOnlyFieldWithEdit(
                     editValue = value
                     isEditing = true
                 },
-                modifier = Modifier.focusRequester(returnFocusRequester),
+                modifier =
+                    Modifier
+                        .focusRequester(returnFocusRequester)
+                        .then(if (editButtonFocusRequester != null) Modifier.focusRequester(editButtonFocusRequester) else Modifier),
                 icon = { Icon(CinemaIcons.Edit, contentDescription = stringResource(R.string.common_edit_field_description_format, label)) },
             )
         }

@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -196,6 +197,8 @@ internal fun ProfileEditDialog(
     var name by remember { mutableStateOf(initialName) }
     var colorIndex by remember { mutableIntStateOf(initialColorIndex) }
     var showNameError by remember { mutableStateOf(false) }
+    // Without an initial focus the dialog opens with focus nowhere and D-pad presses go nowhere.
+    val nameFocusRequester = remember { FocusRequester() }
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
@@ -209,19 +212,23 @@ internal fun ProfileEditDialog(
                         showNameError = false
                     },
                     label = stringResource(R.string.profile_name_label),
+                    editButtonFocusRequester = nameFocusRequester,
                 )
                 if (showNameError) {
                     Text(stringResource(R.string.profile_error_name_required), color = CinemaError)
                 }
                 Text(stringResource(R.string.profile_color_label), color = CinemaTextSecondary)
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                    CinemaProfileColors.palette.indices.forEach { index ->
-                        ColorSwatch(
-                            index = index,
-                            selected = index == colorIndex,
-                            onClick = { colorIndex = index },
-                            scale = scale,
-                        )
+                // Two rows: the whole palette on one line doesn't fit the dialog's width.
+                CinemaProfileColors.palette.indices.chunked(SWATCHES_PER_ROW).forEach { rowIndices ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
+                        rowIndices.forEach { index ->
+                            ColorSwatch(
+                                index = index,
+                                selected = index == colorIndex,
+                                onClick = { colorIndex = index },
+                                scale = scale,
+                            )
+                        }
                     }
                 }
                 if (onDelete != null) {
@@ -249,8 +256,11 @@ internal fun ProfileEditDialog(
                 androidx.compose.material3.Text(stringResource(R.string.common_cancel))
             }
         },
+        initialFocus = nameFocusRequester,
     )
 }
+
+private const val SWATCHES_PER_ROW = 4
 
 @Composable
 private fun ColorSwatch(

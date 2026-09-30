@@ -202,9 +202,12 @@ internal fun ProfileEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(stringResource(R.string.profile_color_label), color = CinemaTextSecondary)
-                Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
-                    CinemaProfileColors.palette.indices.forEach { index ->
-                        ColorSwatch(index = index, selected = index == colorIndex, onClick = { colorIndex = index })
+                // Two rows: the whole palette on one line doesn't fit a phone-width dialog.
+                CinemaProfileColors.palette.indices.chunked(SWATCHES_PER_ROW).forEach { rowIndices ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm)) {
+                        rowIndices.forEach { index ->
+                            ColorSwatch(index = index, selected = index == colorIndex, onClick = { colorIndex = index })
+                        }
                     }
                 }
                 if (onDelete != null) {
@@ -251,3 +254,5 @@ private fun ColorSwatch(
         ProfileAvatar(name = "", colorIndex = index, size = MobileDimensions.iconLarge, fontSize = MaterialTheme.typography.titleSmall.fontSize)
     }
 }
+
+private const val SWATCHES_PER_ROW = 4
