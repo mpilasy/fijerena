@@ -75,7 +75,8 @@ class ProfileRepository(
                     AppSettings(context).removeDevMode(id)
                     CategoryFiltersStore(context).removeProfile(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
-                    dao.deleteRecordingTombstone(id, System.currentTimeMillis())
+                    dao.deleteRecordingTombstone(id)
+                    SettingsDatabase.getInstance(context).settingsSyncDao().deleteForProfile(id)
                     DeleteBlocked.NONE
                 }
             }

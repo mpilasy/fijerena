@@ -14,6 +14,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
@@ -127,6 +128,7 @@ class ProviderRepository(
                 putString(KEY_USERNAME, username)
                     .putString(KEY_PASSWORD, password)
             }
+            SettingsSyncQueue.providerLogin(context, id, loginProfile)
         }
         if (initialSettings.categoryFilters != CategoryFilters()) {
             filtersStore.set(id, activeProfileId(), initialSettings.categoryFilters)
@@ -165,6 +167,13 @@ class ProviderRepository(
             getProviderPrefs(id, loginProfile).edit { putString(KEY_USERNAME, username) }
         }
         getProviderPrefs(id, loginProfile).edit { putString(KEY_PASSWORD, password) }
+        // The password lives outside the row, so no trigger sees it change. A Jellyfin login is
+        // its profile's own record; any other provider's login is part of the provider record.
+        if (effectiveType == "JELLYFIN") {
+            SettingsSyncQueue.providerLogin(context, id, loginProfile)
+        } else {
+            SettingsSyncQueue.provider(context, id)
+        }
         // If Jellyfin credentials changed, discard the cached session token so the
         // provider re-authenticates with the new username/password on next use.
         if (effectiveType == "JELLYFIN") {
@@ -184,7 +193,8 @@ class ProviderRepository(
     suspend fun deleteProvider(id: Long) {
         val entity = dao.getProviderById(id)
         if (entity != null) {
-            dao.deleteProviderRecordingTombstone(entity, System.currentTimeMillis())
+            dao.deleteProviderRecordingTombstone(entity)
+            db.settingsSyncDao().deleteForProviderKey(entity.providerKey)
             deleteProviderEpgSources(id)
             clearProviderPassword(id)
             clearProviderCache(id)
@@ -427,6 +437,7 @@ class ProviderRepository(
             getProviderPrefs(providerId, profileId).edit { putString(KEY_USERNAME, username) }
         }
         getProviderPrefs(providerId, profileId).edit { remove(KEY_PASSWORD) }
+        SettingsSyncQueue.providerLogin(context, providerId, profileId)
         saveJellyfinSession(providerId, token, userId)
         MediaProviderFactory.clearCache(providerId)
     }
@@ -445,6 +456,7 @@ class ProviderRepository(
                     .remove(KEY_JELLYFIN_TOKEN)
                     .remove(KEY_JELLYFIN_USER_ID)
             }
+            SettingsSyncQueue.providerLogin(context, provider.id, ProfileEntity.DEFAULT_ID)
             MediaProviderFactory.clearCache(provider.id)
         }
     }

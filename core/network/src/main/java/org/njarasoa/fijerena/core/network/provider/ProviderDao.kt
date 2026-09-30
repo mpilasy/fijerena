@@ -39,11 +39,15 @@ interface ProviderDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTombstone(tombstone: SettingsTombstoneEntity)
 
-    /** Deletes the provider and records it for live sync, in one transaction — see [SettingsTombstoneEntity]. */
+    /**
+     * Deletes the provider and records it for live sync, in one transaction — see
+     * [SettingsTombstoneEntity]. [deletedAt] 0 (the default) means "now on the sync clock",
+     * stamped by [SettingsSyncTriggers].
+     */
     @Transaction
     suspend fun deleteProviderRecordingTombstone(
         provider: ProviderEntity,
-        deletedAt: Long,
+        deletedAt: Long = 0,
     ) {
         deleteProvider(provider)
         insertTombstone(SettingsTombstoneEntity(SyncKind.PROVIDER, provider.providerKey, deletedAt))

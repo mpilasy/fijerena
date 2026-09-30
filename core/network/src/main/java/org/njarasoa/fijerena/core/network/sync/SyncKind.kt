@@ -16,6 +16,21 @@ object SyncKind {
     const val PROVIDER = "provider"
     const val PROFILE = "profile"
 
+    /** A Jellyfin login, per provider and profile; keyed by the provider's `providerKey`. */
+    const val PROVIDER_LOGIN = "provider_login"
+
+    /** A profile's category filters on one provider; keyed by the provider's `providerKey`. */
+    const val CATEGORY_FILTERS = "category_filters"
+
+    /** An EPG source; keyed by its `source_key`. */
+    const val EPG_SOURCE = "epg_source"
+
+    /** One setting; keyed by its `app_settings` key. Per profile for dev mode, [SHARED] otherwise. */
+    const val SETTING = "setting"
+
+    /** The profile slot of anything the whole household shares. */
+    const val SHARED = "shared"
+
     fun forFavorite(favoriteKind: String): String =
         if (favoriteKind == FavoriteKind.CATEGORY) FAVORITE_CATEGORY else FAVORITE_STREAM
 

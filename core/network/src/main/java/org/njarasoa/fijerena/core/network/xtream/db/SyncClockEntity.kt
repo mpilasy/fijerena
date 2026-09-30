@@ -4,9 +4,11 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * The one-row sync clock of this database — a hybrid logical clock kept as milliseconds:
+ * The one-row sync clock of a database — a hybrid logical clock kept as milliseconds:
  * every local change moves [hlc] to `max(now, hlc + 1)`, and every received record to at least its
- * own value, so a device with a slow clock can't keep losing. Advanced by [XtreamSyncTriggers].
+ * own value, so a device with a slow clock can't keep losing. Both `xtream_v2.db` and
+ * `providers.db` have one, advanced by their triggers ([XtreamSyncTriggers],
+ * `SettingsSyncTriggers`); records in different databases never share a key, so they needn't agree.
  *
  * [applying] is 1 while changes received from another device are written, which stops the
  * triggers from queueing them to be sent straight back. See

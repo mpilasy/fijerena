@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import kotlinx.serialization.json.Json
+import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 
 /**
  * Category filters per (provider, profile): each profile has its own complete set for every
@@ -16,7 +17,7 @@ import kotlinx.serialization.json.Json
  * empty once [ProviderRepository.migrateCategoryFiltersToProfiles] has run.
  */
 class CategoryFiltersStore(
-    context: Context,
+    private val context: Context,
 ) {
     private val prefs: SharedPreferences = context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
 
@@ -42,7 +43,10 @@ class CategoryFiltersStore(
         providerId: Long,
         profileId: String,
         filters: CategoryFilters,
-    ) = prefs.edit { putString(key(providerId, profileId), json.encodeToString(CategoryFiltersSerializer, filters)) }
+    ) {
+        prefs.edit { putString(key(providerId, profileId), json.encodeToString(CategoryFiltersSerializer, filters)) }
+        SettingsSyncQueue.categoryFilters(context, providerId, profileId)
+    }
 
     /** A new profile starts with [fromProfileId]'s filters on every provider. */
     fun copyProfile(
@@ -55,6 +59,7 @@ class CategoryFiltersStore(
                 .filterKeys { it.endsWith(suffix) }
                 .mapKeys { (k, _) -> k.removeSuffix(suffix) + "_$toProfileId" }
         prefs.edit { copies.forEach { (k, v) -> putString(k, v as String) } }
+        copies.keys.forEach { SettingsSyncQueue.categoryFilters(context, it.substringBefore('_').toLong(), toProfileId) }
     }
 
     /** A copied provider takes every profile's filters of the one it was copied from, and no others. */
@@ -72,6 +77,7 @@ class CategoryFiltersStore(
             all.keys.filter { it.startsWith("${toProviderId}_") }.forEach { remove(it) }
             copies.forEach { (k, v) -> putString(k, v as String) }
         }
+        copies.keys.forEach { SettingsSyncQueue.categoryFilters(context, toProviderId, it.substringAfter('_')) }
     }
 
     fun removeProvider(providerId: Long) {

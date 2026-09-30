@@ -400,11 +400,31 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
    `providerKey` when sending. Re-adding a favourite (or restoring it from an export or a provider
    copy) drops its tombstone; deleting a provider or profile drops its item tombstones, its own
    covers them. No `watch_clear` for Jellyfin. **Recorded always, sync on or not** (decided
-   2026-09-30), pruned after 90 days at startup. `deletedAt` is wall-clock time until Phase 4's
-   HLC. EPG source deletions aren't recorded yet — they need a stable key first, as providers did.
-4. **Outbox + HLC.** `sync_outbox` and `sync_state` (cursor, HLC) tables; every write path in
-   `MediaRepository` / settings writes an outbox row in the same transaction. Coalesce by key.
-   Record keys carry `profileKey` from the start. Room migration + schema doc.
+   2026-09-30), pruned after 90 days at startup. (Phase 4 put `deletedAt` on the HLC and added
+   EPG source deletions.)
+4. **Outbox + HLC** — *landed 2026-09-30*, in two commits (`xtream_v2.db` v22, `providers.db`
+   v14). As built:
+   - **SQLite triggers write the outbox**, in the writing transaction, on `watch_state`,
+     `favorite_state`, `providers`, `profiles`, `epg_source` and both `sync_tombstone` tables —
+     so every write path is covered, indirect ones included (a TMDB group completion updating
+     sibling rows), without each call site remembering. Updates count only when a synced column
+     changes. Installed on every open, since Room doesn't manage triggers.
+   - **The outbox holds keys, not payloads** (`sync_outbox` in each database): the sync client
+     reads the current row, or its tombstone, when it sends. That is the coalescing.
+   - **HLC in SQL**: a one-row `sync_clock` per database, `hlc = max(now_ms, hlc + 1)` ticked by
+     the triggers; tombstones are written with `deletedAt = 0` and stamped with it. The two
+     clocks needn't agree — records of different databases never share a key. Receiving a record
+     (Phase 5) must raise the clock to at least its value.
+   - **`applying` flag** on `sync_clock`: the triggers do nothing while it is set — the
+     `fromRemote` path for Phase 5.
+   - **Values kept in SharedPreferences** (passwords, Jellyfin logins, category filters, synced
+     settings) are queued by `SettingsSyncQueue` just after they are written — no shared
+     transaction exists, so a crash in between drops the entry until the next change. Synced
+     settings: theme, dev mode (per profile), EPG auto-refresh on/off, time and interval.
+   - **EPG sources** got a `source_key` UUID like providers, and a delete trigger records their
+     tombstones.
+   - **Not queued: data that existed before Phase 4.** The first sync of a device must upload
+     everything it has (Phase 7), not just the outbox.
 5. **Merge/apply engine.** Pure function `(local, remote) -> resolution` with unit tests for every
    conflict case (newer wins, tombstone vs update, unknown provider, unknown profile, user-data
    record for a Jellyfin provider ignored, clock skew). Apply path with `fromRemote` and snapshot

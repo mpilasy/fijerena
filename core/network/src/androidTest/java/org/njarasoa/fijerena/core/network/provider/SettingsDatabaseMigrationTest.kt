@@ -15,10 +15,11 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
 /**
  * [SettingsDatabase.MIGRATION_10_11] (the `profiles` table, seeded with `default`),
- * [SettingsDatabase.MIGRATION_11_12] (`profiles.colorIndex`) and [SettingsDatabase.MIGRATION_12_13]
- * (`providers.providerKey`, `sync_tombstone`), run against a database rolled back to v10: built
- * fresh at the current schema via Room, then what v11–v13 added removed — `profiles` and
- * `sync_tombstone` dropped, `providers` rebuilt with its exact v12 DDL. Reopening through Room with
+ * [SettingsDatabase.MIGRATION_11_12] (`profiles.colorIndex`), [SettingsDatabase.MIGRATION_12_13]
+ * (`providers.providerKey`, `sync_tombstone`) and [SettingsDatabase.MIGRATION_13_14]
+ * (`epg_source.source_key`, `sync_outbox`, `sync_clock`), run against a database rolled back to
+ * v10: built fresh at the current schema via Room, then what v11–v14 added removed — the new
+ * tables dropped, `providers` and `epg_source` rebuilt with their exact v12 DDL. Reopening through Room with
  * only those migrations exercises Room's own schema validation; this database has no destructive
  * fallback, so a mismatch throws.
  *
@@ -27,7 +28,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 @RunWith(AndroidJUnit4::class)
 class SettingsDatabaseMigrationTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
-    private val testDbName = "test_settings_migration_10_13.db"
+    private val testDbName = "test_settings_migration_10_14.db"
 
     @Before
     fun deleteTestDbBefore() {
@@ -40,7 +41,7 @@ class SettingsDatabaseMigrationTest {
     }
 
     @Test
-    fun migration10To13_createsDefaultProfileKeysProvidersAndKeepsThem() {
+    fun migration10To14_createsDefaultProfileKeysProvidersAndSourcesAndKeepsThem() {
         val seedDb = Room.databaseBuilder(context, SettingsDatabase::class.java, testDbName).build()
         val providerId =
             runBlocking {
@@ -54,9 +55,31 @@ class SettingsDatabaseMigrationTest {
                     ProviderEntity(name = "Other provider", url = "http://other.test", username = "user"),
                 )
             }
+        runBlocking { seedDb.epgSourceDao().insertSource(EpgSourceEntity(url = "http://epg.test/a.xml", providerId = providerId)) }
         val rawDb = seedDb.openHelper.writableDatabase
         rawDb.execSQL("DROP TABLE `profiles`")
         rawDb.execSQL("DROP TABLE `sync_tombstone`")
+        rawDb.execSQL("DROP TABLE `sync_outbox`")
+        rawDb.execSQL("DROP TABLE `sync_clock`")
+        rawDb.execSQL("DROP INDEX `index_epg_source_source_key`")
+        rawDb.execSQL("DROP INDEX `index_epg_source_provider_id`")
+        rawDb.execSQL("ALTER TABLE `epg_source` RENAME TO `epg_source_v14`")
+        rawDb.execSQL(
+            "CREATE TABLE `epg_source` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `url` TEXT NOT NULL, " +
+                "`label` TEXT NOT NULL, `timezone_offset_hours` INTEGER NOT NULL, `added_at_ms` INTEGER NOT NULL, " +
+                "`last_ingested_at_ms` INTEGER NOT NULL, `last_error` TEXT, `enabled` INTEGER NOT NULL, " +
+                "`last_channels` INTEGER NOT NULL DEFAULT 0, `last_programmes` INTEGER NOT NULL DEFAULT 0, " +
+                "`last_download_bytes` INTEGER NOT NULL DEFAULT 0, `ingest_method` TEXT NOT NULL DEFAULT 'DOWNLOADED', " +
+                "`last_ingestion_duration_ms` INTEGER NOT NULL DEFAULT 0, `last_download_duration_ms` INTEGER NOT NULL DEFAULT 0, " +
+                "`provider_id` INTEGER NOT NULL, `last_content_sha256` TEXT, `etag` TEXT, `last_modified_header` TEXT)",
+        )
+        val sourceColumns =
+            "`id`, `url`, `label`, `timezone_offset_hours`, `added_at_ms`, `last_ingested_at_ms`, `last_error`, `enabled`, " +
+                "`last_channels`, `last_programmes`, `last_download_bytes`, `ingest_method`, `last_ingestion_duration_ms`, " +
+                "`last_download_duration_ms`, `provider_id`, `last_content_sha256`, `etag`, `last_modified_header`"
+        rawDb.execSQL("INSERT INTO `epg_source` ($sourceColumns) SELECT $sourceColumns FROM `epg_source_v14`")
+        rawDb.execSQL("DROP TABLE `epg_source_v14`")
+        rawDb.execSQL("CREATE INDEX `index_epg_source_provider_id` ON `epg_source` (`provider_id`)")
         rawDb.execSQL("DROP INDEX `index_providers_providerKey`")
         rawDb.execSQL("ALTER TABLE `providers` RENAME TO `providers_v13`")
         rawDb.execSQL(
@@ -77,9 +100,13 @@ class SettingsDatabaseMigrationTest {
 
         val migratedDb =
             Room.databaseBuilder(context, SettingsDatabase::class.java, testDbName)
-                .addMigrations(SettingsDatabase.MIGRATION_10_11, SettingsDatabase.MIGRATION_11_12, SettingsDatabase.MIGRATION_12_13)
-                .build()
-        assertEquals(13, migratedDb.openHelper.writableDatabase.version)
+                .addMigrations(
+                    SettingsDatabase.MIGRATION_10_11,
+                    SettingsDatabase.MIGRATION_11_12,
+                    SettingsDatabase.MIGRATION_12_13,
+                    SettingsDatabase.MIGRATION_13_14,
+                ).build()
+        assertEquals(14, migratedDb.openHelper.writableDatabase.version)
 
         runBlocking {
             val profiles = migratedDb.profileDao().getAll()
@@ -93,6 +120,8 @@ class SettingsDatabaseMigrationTest {
             assertEquals(36, provider.providerKey.length)
             assertNotEquals(provider.providerKey, other.providerKey)
             assertTrue(migratedDb.providerDao().getAllTombstones().isEmpty())
+            assertEquals(36, migratedDb.epgSourceDao().getAllSourcesOnce().single().sourceKey.length)
+            assertTrue(migratedDb.settingsSyncDao().getBatch(10).isEmpty())
         }
         migratedDb.close()
     }

@@ -5,11 +5,12 @@ This document details the complete database schema for the Fijerena application,
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 13
+**Version:** 14
 
 Manages media provider configurations, authentication metadata, persistent EPG source URLs, and
 user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`; v13 added
-`providers.providerKey` and `sync_tombstone` for live sync.)
+`providers.providerKey` and `sync_tombstone` for live sync; v14 added `epg_source.source_key`,
+`sync_outbox` and `sync_clock`, filled by triggers.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -54,9 +55,9 @@ Deleted providers and profiles, kept so live sync can tell other devices (see
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `kind` | TEXT (PK) | `provider` or `profile` |
-| `itemKey` | TEXT (PK) | The provider's `providerKey`, or the profile id |
-| `deletedAt` | INTEGER | When it was deleted (wall clock until the Phase 4 hybrid logical clock) |
+| `kind` | TEXT (PK) | `provider`, `profile` or `epg_source` (v14) |
+| `itemKey` | TEXT (PK) | The provider's `providerKey`, the profile id, or the source's `source_key` |
+| `deletedAt` | INTEGER | When it was deleted, on the sync clock (v14: written as 0 and stamped by trigger) |
 
 **Index:** `(deletedAt)`
 
@@ -105,8 +106,36 @@ The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successfu
 | `last_content_sha256` | TEXT | SHA-256 of the last ingested payload, decompressed for `.gz` sources; null = never hashed (added v10) |
 | `etag` | TEXT | `ETag` from the last download, sent back as `If-None-Match` (added v10) |
 | `last_modified_header` | TEXT | `Last-Modified` from the last download, sent back as `If-Modified-Since` (added v10) |
+| `source_key` | TEXT (unique) | Random UUID naming the source in live sync, like `providers.providerKey`; backfilled by `MIGRATION_13_14` (added v14) |
 
-**Index:** `index_epg_source_provider_id` on `(provider_id)`
+**Index:** `index_epg_source_provider_id` on `(provider_id)`; `index_epg_source_source_key` (unique) on `(source_key)`
+
+### Tables: `sync_outbox`, `sync_clock` (added v14)
+The `providers.db` counterparts of `xtream_v2.db`'s (§3): `sync_outbox` holds keys changed locally
+and not yet sent — `kind` (`provider`, `profile`, `epg_source`, `provider_login`,
+`category_filters`, `setting`), `profileId` (the profile for per-person kinds, `shared` otherwise),
+`itemKey` (`providerKey`, profile id, `source_key` or setting key), `hlc`; primary key
+`(kind, profileId, itemKey)`, indexed on `hlc`. `sync_clock` is this database's one-row hybrid
+logical clock plus the `applying` flag. Deleting a provider removes its logins' and filters'
+entries; deleting a profile removes its entries (their tombstones cover them).
+
+### Sync triggers (v14, installed on every open)
+`SettingsSyncTriggers.install`, in `onOpen`. Each ticks `sync_clock` and queues into `sync_outbox`
+in the writing transaction, unless `applying` is set. Updates count only when a synced column
+changes, so sync statistics, activation and EPG ingestion bookkeeping are never queued.
+
+| Trigger | Fires on | Queues |
+|---|---|---|
+| `sync_providers_insert` / `_update` | insert; update changing `name`, `url`, `username`, `type`, `config` or `providerSettings` | `provider` |
+| `sync_profiles_insert` / `_update` | insert; update changing `name` or `colorIndex` | `profile` |
+| `sync_epg_source_insert` / `_update` | insert; update changing `url`, `label`, `timezone_offset_hours`, `enabled` or `provider_id` | `epg_source` |
+| `sync_epg_source_delete` | delete | records an `epg_source` tombstone (which queues it) |
+| `sync_tombstone_insert` | a new `sync_tombstone` row | the tombstone's kind; stamps `deletedAt` when it is 0 |
+
+Values kept in SharedPreferences are queued by `SettingsSyncQueue` instead, just after they are
+written (no shared transaction): provider passwords (`provider`), Jellyfin logins
+(`provider_login`), category filters (`category_filters`), and the synced settings (`setting`):
+`theme_id`, `dev_mode` (per profile), `epg_auto_refresh`, `epg_refresh_time`, `epg_refresh_interval`.
 
 The last three columns drive refresh change detection — see `docs/epg_guide.md` → "Change Detection".
 
@@ -403,7 +432,7 @@ them the next device to sync would bring the item back. See
 | `kind` | TEXT (PK) | `favorite_stream`, `favorite_category` or `watch_clear` |
 | `itemId` | TEXT (PK) | The favourite's `itemId`; empty for `watch_clear` |
 | `contentType` | TEXT (PK) | The favourite's `contentType`; empty for `watch_clear` |
-| `deletedAt` | INTEGER | When it was removed (wall clock until the Phase 4 hybrid logical clock); for `watch_clear`, every older watch row of that provider and profile is dropped |
+| `deletedAt` | INTEGER | When it was removed, on the sync clock (v22); for `watch_clear`, every older watch row of that provider and profile is dropped |
 
 **Index:** `(deletedAt)`
 

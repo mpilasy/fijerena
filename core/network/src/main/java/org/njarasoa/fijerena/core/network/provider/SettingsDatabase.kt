@@ -8,6 +8,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import org.njarasoa.fijerena.core.network.profile.ProfileDao
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.network.xtream.db.SyncClockEntity
 
 @Database(
     entities = [
@@ -16,8 +17,10 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
         EpgPipelineStatsEntity::class,
         ProfileEntity::class,
         SettingsTombstoneEntity::class,
+        SettingsOutboxEntity::class,
+        SyncClockEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = false,
 )
 abstract class SettingsDatabase : RoomDatabase() {
@@ -28,6 +31,8 @@ abstract class SettingsDatabase : RoomDatabase() {
     abstract fun epgPipelineStatsDao(): EpgPipelineStatsDao
 
     abstract fun profileDao(): ProfileDao
+
+    abstract fun settingsSyncDao(): SettingsSyncDao
 
     companion object {
         private const val DB_NAME = "providers.db"
@@ -237,6 +242,38 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 13→14, live sync phase 4: `epg_source.source_key` (a random UUID per existing
+         * source, unique), `sync_outbox` and `sync_clock`. The triggers that fill them are
+         * installed on open — see [SettingsSyncTriggers].
+         */
+        val MIGRATION_13_14 =
+            object : Migration(13, 14) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `epg_source` ADD COLUMN `source_key` TEXT NOT NULL DEFAULT ''")
+                    val ids =
+                        db.query("SELECT `id` FROM `epg_source`").use { cursor ->
+                            buildList { while (cursor.moveToNext()) add(cursor.getLong(0)) }
+                        }
+                    ids.forEach { id ->
+                        db.execSQL(
+                            "UPDATE `epg_source` SET `source_key` = ? WHERE `id` = ?",
+                            arrayOf<Any>(java.util.UUID.randomUUID().toString(), id),
+                        )
+                    }
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_epg_source_source_key` ON `epg_source` (`source_key`)")
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_outbox` (`kind` TEXT NOT NULL, `profileId` TEXT NOT NULL, " +
+                            "`itemKey` TEXT NOT NULL, `hlc` INTEGER NOT NULL, PRIMARY KEY(`kind`, `profileId`, `itemKey`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_outbox_hlc` ON `sync_outbox` (`hlc`)")
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_clock` (`id` INTEGER NOT NULL, `hlc` INTEGER NOT NULL, " +
+                            "`applying` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+                    )
+                }
+            }
+
         /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
         private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -265,10 +302,15 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_10_11,
                         MIGRATION_11_12,
                         MIGRATION_12_13,
+                        MIGRATION_13_14,
                     ).addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {
                                 insertDefaultProfile(db)
+                            }
+
+                            override fun onOpen(db: SupportSQLiteDatabase) {
+                                SettingsSyncTriggers.install(db)
                             }
                         },
                     )

@@ -40,11 +40,14 @@ interface ProfileDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTombstone(tombstone: SettingsTombstoneEntity)
 
-    /** Deletes the profile and records it for live sync, in one transaction — see [SettingsTombstoneEntity]. */
+    /**
+     * Deletes the profile and records it for live sync, in one transaction — see
+     * [SettingsTombstoneEntity]. [deletedAt] 0 (the default) means "now on the sync clock".
+     */
     @Transaction
     suspend fun deleteRecordingTombstone(
         id: String,
-        deletedAt: Long,
+        deletedAt: Long = 0,
     ) {
         delete(id)
         insertTombstone(SettingsTombstoneEntity(SyncKind.PROFILE, id, deletedAt))

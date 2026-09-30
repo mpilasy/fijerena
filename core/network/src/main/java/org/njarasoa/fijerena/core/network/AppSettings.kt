@@ -3,12 +3,13 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 
 /**
  * Manages application settings and preferences.
  */
 class AppSettings(
-    context: Context,
+    private val context: Context,
 ) {
     private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences(
@@ -78,7 +79,10 @@ class AppSettings(
      */
     var isDevMode: Boolean
         get() = prefs.getBoolean(devModeKey(activeProfileId), prefs.getBoolean(KEY_DEV_MODE, false))
-        set(value) = prefs.edit { putBoolean(devModeKey(activeProfileId), value) }
+        set(value) {
+            prefs.edit { putBoolean(devModeKey(activeProfileId), value) }
+            SettingsSyncQueue.setting(context, KEY_DEV_MODE, activeProfileId)
+        }
 
     /**
      * One-time upgrade: gives every profile in [profileIds] the install-wide developer-mode flag
@@ -163,7 +167,10 @@ class AppSettings(
 
     var themeId: String
         get() = prefs.getString(KEY_THEME_ID, "deep_night") ?: "deep_night"
-        set(value) = prefs.edit { putString(KEY_THEME_ID, value) }
+        set(value) {
+            prefs.edit { putString(KEY_THEME_ID, value) }
+            SettingsSyncQueue.setting(context, KEY_THEME_ID)
+        }
 
     /** Platform-inspired look-and-feel preset (shape/type/icon/grid/dialog character), independent of [themeId]'s color. */
     var uiStyleId: String
@@ -195,7 +202,10 @@ class AppSettings(
      */
     var epgAutoRefreshEnabled: Boolean
         get() = prefs.getBoolean(KEY_EPG_AUTO_REFRESH, true)
-        set(value) = prefs.edit { putBoolean(KEY_EPG_AUTO_REFRESH, value) }
+        set(value) {
+            prefs.edit { putBoolean(KEY_EPG_AUTO_REFRESH, value) }
+            SettingsSyncQueue.setting(context, KEY_EPG_AUTO_REFRESH)
+        }
 
     /**
      * EPG refresh start time (HH:mm format).
@@ -203,7 +213,10 @@ class AppSettings(
      */
     var epgRefreshTime: String
         get() = prefs.getString(KEY_EPG_REFRESH_TIME, DEFAULT_EPG_REFRESH_TIME) ?: DEFAULT_EPG_REFRESH_TIME
-        set(value) = prefs.edit { putString(KEY_EPG_REFRESH_TIME, value) }
+        set(value) {
+            prefs.edit { putString(KEY_EPG_REFRESH_TIME, value) }
+            SettingsSyncQueue.setting(context, KEY_EPG_REFRESH_TIME)
+        }
 
     /**
      * EPG refresh interval in hours.
@@ -212,7 +225,10 @@ class AppSettings(
      */
     var epgRefreshInterval: Int
         get() = prefs.getInt(KEY_EPG_REFRESH_INTERVAL, DEFAULT_EPG_REFRESH_INTERVAL)
-        set(value) = prefs.edit { putInt(KEY_EPG_REFRESH_INTERVAL, value) }
+        set(value) {
+            prefs.edit { putInt(KEY_EPG_REFRESH_INTERVAL, value) }
+            SettingsSyncQueue.setting(context, KEY_EPG_REFRESH_INTERVAL)
+        }
 
     /**
      * Enable or disable automatic background refresh of provider content (categories/streams).

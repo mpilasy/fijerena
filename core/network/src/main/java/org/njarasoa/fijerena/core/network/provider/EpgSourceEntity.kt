@@ -4,8 +4,12 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
-@Entity(tableName = "epg_source", indices = [Index("provider_id")])
+@Entity(
+    tableName = "epg_source",
+    indices = [Index("provider_id"), Index(value = ["source_key"], unique = true)],
+)
 data class EpgSourceEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -43,4 +47,7 @@ data class EpgSourceEntity(
     val etag: String? = null,
     @ColumnInfo(name = "last_modified_header")
     val lastModifiedHeader: String? = null,
+    /** Random UUID naming this source in live sync, like `providers.providerKey` (added v14). */
+    @ColumnInfo(name = "source_key")
+    val sourceKey: String = UUID.randomUUID().toString(),
 )
