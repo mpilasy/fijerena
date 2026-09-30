@@ -5,6 +5,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import java.util.UUID
@@ -58,11 +60,34 @@ class ProfileRepository(
                     xtreamDb.watchStateDao().deleteProfile(id)
                     xtreamDb.favoriteStateDao().deleteProfile(id)
                     deleteProfilePrefs(id)
+                    if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
                     dao.delete(id)
                     DeleteBlocked.NONE
                 }
             }
         }
+
+    /**
+     * The Default profile keeps its Jellyfin logins, Recent Categories and bookmarks in the
+     * provider-level storage every profile shares (`providers.username`, `provider_creds_<id>`,
+     * `media_cache_<id>`), not in `_profile_` files — so [deleteProfilePrefs] finds none of it.
+     * Cleared here instead, leaving what is genuinely shared (other providers' logins, migration
+     * flags) in place.
+     */
+    private suspend fun clearDefaultProfileData() {
+        ProviderRepository(context).clearDefaultJellyfinLogins()
+        java.io
+            .File(context.applicationInfo.dataDir, "shared_prefs")
+            .listFiles()
+            ?.map { it.name.removeSuffix(".xml") }
+            ?.filter { SHARED_MEDIA_CACHE.matches(it) }
+            ?.forEach { MediaRepository.clearDefaultProfile(context.getSharedPreferences(it, Context.MODE_PRIVATE)) }
+    }
+
+    private companion object {
+        // media_cache_<providerId> exactly — not a media_cache_<id>_profile_<profileId> file.
+        val SHARED_MEDIA_CACHE = Regex("media_cache_\\d+")
+    }
 
     /**
      * Every `media_cache_<providerId>_profile_<id>.xml` (see `MediaRepository.profileCacheName`)

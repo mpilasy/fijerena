@@ -70,6 +70,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -149,6 +150,9 @@ fun ContentTypeSelectionScreen(
     var showProviderPicker by remember { mutableStateOf(false) }
     var allProviders by remember { mutableStateOf<List<org.njarasoa.fijerena.core.network.provider.ProviderEntity>>(emptyList()) }
     var activeProviderId by remember { mutableStateOf(0L) }
+    // The active provider is a Jellyfin server this profile hasn't signed in to: home shows a
+    // sign-in panel in place of the library (docs/plans/20260929_live-sync-plan.md → User profiles).
+    var needsSignIn by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
     // Category counts per content type: Pair(filtered, total) — null while loading
@@ -185,28 +189,36 @@ fun ContentTypeSelectionScreen(
                     providerType = activeProvider.type
                     activeProviderId = activeProvider.id
                     // A Jellyfin server this profile hasn't signed in to: each profile is its own
-                    // Jellyfin user (docs/plans/20260929_live-sync-plan.md → User profiles).
-                    if (!providerRepo.hasLogin(activeProvider) &&
-                        AppContainer.getInstance(context.applicationContext).shouldPromptSignIn(activeProvider.id)
-                    ) {
-                        val message = signInResources.getString(R.string.profile_jellyfin_sign_in_prompt, activeProvider.name)
-                        withContext(Dispatchers.Main) {
-                            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
-                            onSignInRequired(activeProvider.id)
+                    // Jellyfin user (docs/plans/20260929_live-sync-plan.md → User profiles). No
+                    // repository is built — it could only fail to authenticate — and the first time
+                    // per process the sign-in screen opens by itself; after that the panel stays.
+                    needsSignIn = !providerRepo.hasLogin(activeProvider)
+                    if (needsSignIn) {
+                        mediaRepositoryRef = null
+                        mediaProviderRef = null
+                        if (AppContainer.getInstance(context.applicationContext).shouldPromptSignIn(activeProvider.id)) {
+                            val message = signInResources.getString(R.string.profile_jellyfin_sign_in_prompt, activeProvider.name)
+                            withContext(Dispatchers.Main) {
+                                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                                onSignInRequired(activeProvider.id)
+                            }
                         }
+                        null
+                    } else {
+                        // Reuse the app-wide managed repository/provider instead of creating an
+                        // unmanaged standalone one: same cached auth session, and connect() has
+                        // already been run for it.
+                        val repo = AppContainer.getInstance(context.applicationContext).getMediaRepository(activeProvider.id)
+                        mediaRepositoryRef = repo
+                        val mediaProvider = repo.getProvider()
+                        if (mediaProvider != null) {
+                            supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
+                            mediaProviderRef = mediaProvider
+                        }
+                        mediaProvider?.capabilities?.supportedContentTypes
                     }
-                    // Reuse the app-wide managed repository/provider instead of creating an
-                    // unmanaged standalone one: same cached auth session, and connect() has
-                    // already been run for it.
-                    val repo = AppContainer.getInstance(context.applicationContext).getMediaRepository(activeProvider.id)
-                    mediaRepositoryRef = repo
-                    val mediaProvider = repo.getProvider()
-                    if (mediaProvider != null) {
-                        supportedContentTypes = mediaProvider.capabilities.supportedContentTypes
-                        mediaProviderRef = mediaProvider
-                    }
-                    mediaProvider?.capabilities?.supportedContentTypes
                 } else {
+                    needsSignIn = false
                     providerName = appSettings.providerName
                     null
                 }
@@ -421,77 +433,85 @@ fun ContentTypeSelectionScreen(
                     }
                 }
 
-                // Content type hero cards. Scrollable, not just fillMaxSize: the hero row plus
-                // the "Jump Back In" shelf below it can exceed a lower-density TV's viewport
-                // height, and an unscrollable Center-arranged Column clips whatever doesn't fit
-                // off both edges instead of making it reachable. Arrangement.Center still centers
-                // this content when it's shorter than the viewport, same as before — verticalScroll
-                // only takes over once content is taller than the space it's given.
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
+                if (needsSignIn) {
+                    JellyfinSignInPanel(
+                        providerName = providerName,
+                        onSignIn = { onSignInRequired(activeProviderId) },
+                        scale = scale,
+                    )
+                } else {
+                    // Content type hero cards. Scrollable, not just fillMaxSize: the hero row plus
+                    // the "Jump Back In" shelf below it can exceed a lower-density TV's viewport
+                    // height, and an unscrollable Center-arranged Column clips whatever doesn't fit
+                    // off both edges instead of making it reachable. Arrangement.Center still centers
+                    // this content when it's shorter than the viewport, same as before — verticalScroll
+                    // only takes over once content is taller than the space it's given.
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        val isDevMode = appSettings.isDevMode
-                        var cardIndex = 1
-                        if (ContentType.LIVE_TV in supportedContentTypes) {
-                            ContentTypeHeroCard(
-                                title = stringResource(R.string.provider_live_tv_label),
-                                subtitle = stringResource(R.string.content_type_live_tv_subtitle_short),
-                                icon = CinemaIcons.LiveTv,
-                                categoryCounts = liveTvCounts,
-                                showTotal = isDevMode,
-                                showLivePulse = true,
-                                gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                                onClick = { onContentTypeSelected(NavContentType.LIVE_TV) },
-                                modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
-                            )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            val isDevMode = appSettings.isDevMode
+                            var cardIndex = 1
+                            if (ContentType.LIVE_TV in supportedContentTypes) {
+                                ContentTypeHeroCard(
+                                    title = stringResource(R.string.provider_live_tv_label),
+                                    subtitle = stringResource(R.string.content_type_live_tv_subtitle_short),
+                                    icon = CinemaIcons.LiveTv,
+                                    categoryCounts = liveTvCounts,
+                                    showTotal = isDevMode,
+                                    showLivePulse = true,
+                                    gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
+                                    onClick = { onContentTypeSelected(NavContentType.LIVE_TV) },
+                                    modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
+                                )
+                            }
+
+                            if (ContentType.MOVIES in supportedContentTypes) {
+                                ContentTypeHeroCard(
+                                    title = stringResource(R.string.provider_movies_label),
+                                    subtitle = stringResource(R.string.content_type_movies_subtitle_short),
+                                    icon = CinemaIcons.Movie,
+                                    categoryCounts = moviesCounts,
+                                    showTotal = isDevMode,
+                                    gradientColors = listOf(CinemaAccent, CinemaAccentDark),
+                                    onClick = { onContentTypeSelected(NavContentType.MOVIES) },
+                                    modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
+                                )
+                            }
+
+                            if (ContentType.TV_SHOWS in supportedContentTypes) {
+                                ContentTypeHeroCard(
+                                    title = stringResource(R.string.provider_tv_shows_label),
+                                    subtitle = stringResource(R.string.content_type_tv_shows_subtitle_short),
+                                    icon = CinemaIcons.Tv,
+                                    categoryCounts = tvShowsCounts,
+                                    showTotal = isDevMode,
+                                    gradientColors = listOf(CinemaAccentLight, CinemaAccent),
+                                    onClick = { onContentTypeSelected(NavContentType.TV_SHOWS) },
+                                    modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
+                                )
+                            }
                         }
 
-                        if (ContentType.MOVIES in supportedContentTypes) {
-                            ContentTypeHeroCard(
-                                title = stringResource(R.string.provider_movies_label),
-                                subtitle = stringResource(R.string.content_type_movies_subtitle_short),
-                                icon = CinemaIcons.Movie,
-                                categoryCounts = moviesCounts,
-                                showTotal = isDevMode,
-                                gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                                onClick = { onContentTypeSelected(NavContentType.MOVIES) },
-                                modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
+                        if (continueWatchingItems.isNotEmpty()) {
+                            TvContinueWatchingShelf(
+                                items = continueWatchingItems,
+                                onItemSelected = onContinueWatchingSelected,
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = Spacing.xl.scaled(scale)),
                             )
                         }
-
-                        if (ContentType.TV_SHOWS in supportedContentTypes) {
-                            ContentTypeHeroCard(
-                                title = stringResource(R.string.provider_tv_shows_label),
-                                subtitle = stringResource(R.string.content_type_tv_shows_subtitle_short),
-                                icon = CinemaIcons.Tv,
-                                categoryCounts = tvShowsCounts,
-                                showTotal = isDevMode,
-                                gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                                onClick = { onContentTypeSelected(NavContentType.TV_SHOWS) },
-                                modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
-                            )
-                        }
-                    }
-
-                    if (continueWatchingItems.isNotEmpty()) {
-                        TvContinueWatchingShelf(
-                            items = continueWatchingItems,
-                            onItemSelected = onContinueWatchingSelected,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = Spacing.xl.scaled(scale)),
-                        )
                     }
                 }
             }
@@ -767,5 +787,30 @@ private fun ContentTypeHeroCard(
                 }
             }
         }
+    }
+}
+
+/** In place of the library while this profile has no login for the active Jellyfin server. */
+@Composable
+private fun JellyfinSignInPanel(
+    providerName: String,
+    onSignIn: () -> Unit,
+    scale: Float,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.profile_jellyfin_sign_in_prompt, providerName),
+            style = MaterialTheme.typography.headlineSmall.copy(fontSize = MaterialTheme.typography.headlineSmall.fontSize.scaled(scale)),
+            color = CinemaTextPrimary,
+        )
+        Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
+        CinemaPrimaryButton(
+            onClick = onSignIn,
+            text = stringResource(R.string.profile_jellyfin_sign_in_button),
+        )
     }
 }

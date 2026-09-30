@@ -186,18 +186,23 @@ picker and no change.
 2. **Header avatar** on Content Type Selection, next to Settings, **always shown** (so profiles
    are discoverable with only one). Opens the same picker. Switching evicts cached
    `MediaRepository` instances and reloads the home screen for the new profile.
-3. **Jellyfin sign-in** — switching to a profile with no login for the active Jellyfin server shows
-   that server's sign-in (existing Jellyfin form, Quick Connect included) instead of its library.
+3. **Jellyfin sign-in** — a profile with no login for the active Jellyfin server gets a sign-in panel
+   on home in place of the library; its button (and, once per process, an automatic redirect) opens
+   that server's sign-in (existing Jellyfin form, Quick Connect included).
 4. **Settings → Profiles** — add, rename, change colour, delete (confirmation, warns that the
-   profile's favourites and history go with it). `default` can be renamed; the last profile can't
-   be deleted.
+   profile's favourites and history go with it). The last profile can't be deleted, nor can the
+   profile the device is using — switch away first. `default` can be renamed and deleted like any
+   other: its Jellyfin logins (`providers.username` + password/session in `provider_creds_<id>`, on
+   Jellyfin providers only), Recent Categories, bookmarks and legacy blobs in `media_cache_<id>` are
+   cleared, while other providers' shared logins and the migration flags stay. Once it's gone, adding
+   a Jellyfin server stores no login for it.
 
 **Active profile** is per device, not synced (the TV and a phone are used by different people at
 the same time). Remembered across restarts. With more than one profile: picker on app start, and
 "Switch profile" in settings on `:tv` and `:mobile`.
 
 **Local schema.** `watch_state` and `favorite_state` primary keys gain `profileId`:
-`(providerId, profileId, itemId, contentType[, kind])`. New `profile` table. Every DAO query takes
+`(providerId, profileId, itemId, contentType[, kind])`. New `profiles` table (`providers.db`). Every DAO query takes
 the active profile. `MediaRepository` keeps its in-memory snapshot (`cachedFavorites`,
 `favoriteIdSet`, `cachedWatchHistory`, `recentItemsFlows`) for the **active profile only** and
 reloads it on switch — the synchronous `isFavorite()` Compose reads, and the 26 favorite consumer
@@ -216,14 +221,17 @@ per Jellyfin user, so each profile signs in as its own Jellyfin user and gets it
 data for free — nothing of it passes through our sync (see Jellyfin section).
 
 - The Jellyfin *server* (URL, config) is shared, like any provider. The *login* is per profile.
-- Today the username sits in `providers.username` and the password / session in the provider's
-  EncryptedSharedPreferences, keyed by `providerId` only (`ProviderRepository.getPassword`,
-  `saveJellyfinSession`). These move to per-`(providerId, profileId)` storage: a
-  `provider_login(providerId, profileId, username)` table plus EncryptedSharedPreferences keyed by
-  both ids for password and session.
-- On upgrade, the existing Jellyfin login becomes the `Default` profile's login.
-- A profile with no login for a Jellyfin server sees that server's sign-in prompt instead of its
-  library; it isn't hidden, so the profile can sign in.
+- Storage (as built — no `provider_login` table): the `default` profile keeps the login providers
+  always had, `providers.username` plus the `provider_creds_<id>` EncryptedSharedPreferences
+  (password, `jellyfin_token`, `jellyfin_user_id`), so nothing moves on upgrade. Any other
+  profile's Jellyfin login lives in its own `provider_creds_<id>_profile_<profileId>` file
+  (username, password, session). `ProviderRepository.credsFileName`, `getLogin` and `hasLogin`
+  pick the right one; provider and profile deletion remove the per-profile files.
+- On upgrade, the existing Jellyfin login is therefore the `Default` profile's login.
+- A profile with no login for the active Jellyfin server sees a sign-in panel on home in place of
+  the library, with a "Sign in" button to that server's edit screen (username/password or Quick
+  Connect). The first time per process the edit screen also opens by itself. The provider isn't
+  hidden, so the profile can sign in, and the header stays usable to switch profile or provider.
 - Switching profile rebuilds the Jellyfin `MediaProvider` with that profile's session.
 - **Sync:** username + password sync per profile as a `provider_login` record
   (`profileKey` + `providerKey`), E2E encrypted. The session token does **not** sync: each device

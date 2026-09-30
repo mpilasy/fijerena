@@ -852,4 +852,5 @@
     <string name="profile_picker_title">Who\'s watching?</string>
     <string name="profile_switch_description">Switch profile (%1$s)</string>
     <string name="profile_jellyfin_sign_in_prompt">Sign in to %1$s for this profile</string>
+    <string name="profile_jellyfin_sign_in_button">Sign in</string>
 </resources>

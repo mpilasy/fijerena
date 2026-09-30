@@ -6,12 +6,15 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,10 +66,16 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     val scale = LocalUiScale.current
     var adding by remember { mutableStateOf(false) }
     val activeFocusRequester = remember { FocusRequester() }
+    val listState = rememberLazyListState()
 
-    // Land on this device's current profile once the list has loaded — OK then keeps it.
+    // Land on this device's current profile once the list has loaded — OK then keeps it. Scrolled
+    // to first: a lazy row only composes what's on screen, and focus can't reach a card that isn't.
     LaunchedEffect(profiles.isNotEmpty()) {
-        if (profiles.isNotEmpty()) runCatching { activeFocusRequester.requestFocus() }
+        val activeIndex = profiles.indexOfFirst { it.isActive }
+        if (activeIndex >= 0) {
+            listState.scrollToItem(activeIndex)
+            runCatching { activeFocusRequester.requestFocus() }
+        }
     }
 
     Box(
@@ -83,8 +92,14 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale))) {
-                profiles.forEach { profile ->
+            // Lazy and scrollable: a household with many profiles would otherwise run off the screen,
+            // with D-pad focus moving onto cards nobody can see.
+            LazyRow(
+                state = listState,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
+                contentPadding = PaddingValues(horizontal = Spacing.lg.scaled(scale), vertical = Spacing.md.scaled(scale)),
+            ) {
+                items(profiles, key = { it.id }) { profile ->
                     PickerCard(
                         label = profile.name,
                         onClick = { viewModel.switchTo(profile.id, onProfileChosen) },
@@ -99,21 +114,23 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                         )
                     }
                 }
-                PickerCard(
-                    label = stringResource(R.string.settings_profiles_add),
-                    onClick = { adding = true },
-                    scale = scale,
-                ) {
-                    Box(
-                        modifier = Modifier.size(TvDimensions.iconButtonSizeLarge.scaled(scale)),
-                        contentAlignment = Alignment.Center,
+                item(key = ADD_PROFILE_KEY) {
+                    PickerCard(
+                        label = stringResource(R.string.settings_profiles_add),
+                        onClick = { adding = true },
+                        scale = scale,
                     ) {
-                        Icon(
-                            imageVector = CinemaIcons.Add,
-                            contentDescription = null,
-                            tint = CinemaTextPrimary,
-                            modifier = Modifier.size(TvDimensions.iconLarge.scaled(scale)),
-                        )
+                        Box(
+                            modifier = Modifier.size(TvDimensions.iconButtonSizeLarge.scaled(scale)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = CinemaIcons.Add,
+                                contentDescription = null,
+                                tint = CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconLarge.scaled(scale)),
+                            )
+                        }
                     }
                 }
             }
@@ -178,3 +195,5 @@ private fun PickerCard(
         )
     }
 }
+
+private const val ADD_PROFILE_KEY = "add-profile"

@@ -110,7 +110,12 @@ class ProviderRepository(
                 isActive = activate,
             )
         val id = dao.insertProvider(entity)
-        savePassword(id, password)
+        // The shared credentials file is the Default profile's Jellyfin login; once Default has been
+        // deleted there is nobody to keep a Jellyfin password there for. Every other type's login
+        // is shared by all profiles and always lives there.
+        if (type != "JELLYFIN" || db.profileDao().exists(ProfileEntity.DEFAULT_ID)) {
+            savePassword(id, password)
+        }
         // The row's login is the Default profile's. When someone else adds a Jellyfin server it
         // is also theirs, or they'd be asked to sign in to the server they just signed in to.
         val loginProfile = loginProfileId(type)
@@ -417,6 +422,24 @@ class ProviderRepository(
         getProviderPrefs(providerId, profileId).edit { remove(KEY_PASSWORD) }
         saveJellyfinSession(providerId, token, userId)
         MediaProviderFactory.clearCache(providerId)
+    }
+
+    /**
+     * Deleting the Default profile: its Jellyfin logins are the provider-level ones —
+     * `providers.username` and the password/session in `provider_creds_<id>` — so they are cleared
+     * here, on Jellyfin providers only. Every other provider's login in that same file is shared by
+     * all profiles and stays.
+     */
+    suspend fun clearDefaultJellyfinLogins() {
+        dao.getAllProvidersList().filter { it.type == "JELLYFIN" }.forEach { provider ->
+            dao.updateProvider(provider.copy(username = ""))
+            getProviderPrefs(provider.id, ProfileEntity.DEFAULT_ID).edit {
+                remove(KEY_PASSWORD)
+                    .remove(KEY_JELLYFIN_TOKEN)
+                    .remove(KEY_JELLYFIN_USER_ID)
+            }
+            MediaProviderFactory.clearCache(provider.id)
+        }
     }
 
     /** Only Jellyfin logins are per profile; see [getLogin]. */

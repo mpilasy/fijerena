@@ -38,6 +38,13 @@ callback on a fresh install (`INSERT OR IGNORE` in both). A fixed id rather than
 so that once sync lands every device's pre-existing data converges on one profile. Which profile a
 device is using is `active_profile_id` in `app_settings` (§5), not a column here.
 
+`default` can be deleted once another profile is in use. Its data lives in provider-level storage
+rather than `_profile_` files, so `ProfileRepository` clears it there: Jellyfin providers'
+`providers.username` and the password/session in `provider_creds_<id>`, and the Recent Categories,
+`last_*` bookmarks and legacy blobs in each `media_cache_<id>` (migration flags set, so the legacy
+backfill never recreates rows for it). Other providers' logins in `provider_creds_<id>` are shared
+and stay.
+
 ### Table: `providers`
 | Column | Type | Description |
 |--------|------|-------------|

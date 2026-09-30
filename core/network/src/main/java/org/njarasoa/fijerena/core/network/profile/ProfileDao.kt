@@ -14,6 +14,9 @@ interface ProfileDao {
     @Query("SELECT * FROM profiles ORDER BY createdAt ASC, id ASC")
     suspend fun getAll(): List<ProfileEntity>
 
+    @Query("SELECT EXISTS(SELECT 1 FROM profiles WHERE id = :id)")
+    suspend fun exists(id: String): Boolean
+
     @Query("SELECT COUNT(*) FROM profiles")
     suspend fun count(): Int
 

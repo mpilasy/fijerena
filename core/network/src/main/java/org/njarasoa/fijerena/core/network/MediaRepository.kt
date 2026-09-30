@@ -290,6 +290,27 @@ class MediaRepository(
             profileId: String,
         ): String = "media_cache_${providerId}_profile_$profileId"
 
+        /** The Default profile's own keys in the shared `media_cache_<id>`: Recent Categories and bookmarks. */
+        internal fun isDefaultProfileKey(key: String): Boolean = key.startsWith(KEY_RECENT_CATEGORIES) || key.startsWith("last_")
+
+        /**
+         * Deleting the Default profile: removes what is its own from a provider's shared
+         * `media_cache_<id>` — Recent Categories and bookmarks — and its legacy pre-profile blobs,
+         * marking them migrated so [backfillAndPurgeWatchState]/[backfillAndPurgeFavorites] never
+         * copy them into a profile that no longer exists.
+         */
+        fun clearDefaultProfile(prefs: SharedPreferences) {
+            prefs.edit(commit = true) {
+                prefs.all.keys.filter(::isDefaultProfileKey).forEach(::remove)
+                remove(KEY_WATCH_HISTORY)
+                remove(KEY_WATCH_HISTORY_V2)
+                remove(KEY_FAVORITES)
+                remove(KEY_FAVORITE_CATEGORIES)
+                putBoolean(KEY_WATCH_STATE_MIGRATED, true)
+                putBoolean(KEY_FAVORITES_MIGRATED, true)
+            }
+        }
+
         private const val KEY_LAST_LIVE_CATEGORY = "last_live_category"
         private const val KEY_LAST_LIVE_ITEM = "last_live_item"
         private const val KEY_LAST_MOVIES_CATEGORY = "last_movies_category"
