@@ -33,6 +33,15 @@ interface XtreamStreamDao {
         type: String,
     )
 
+    /** Sets [excluded] on the streams of [categoryIds] only — see XtreamCategoryExclusionSync. */
+    @Query("UPDATE xtream_streams SET excluded = :excluded WHERE providerId = :providerId AND type = :type AND categoryId IN (:categoryIds)")
+    fun setExcludedForCategories(
+        providerId: Long,
+        type: String,
+        categoryIds: List<String>,
+        excluded: Boolean,
+    )
+
     @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND streamId = :streamId LIMIT 1")
     fun getStreamById(
         providerId: Long,

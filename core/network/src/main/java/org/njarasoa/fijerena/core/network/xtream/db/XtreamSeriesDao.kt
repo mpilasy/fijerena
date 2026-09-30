@@ -20,6 +20,14 @@ interface XtreamSeriesDao {
     @Query("UPDATE xtream_series SET excluded = COALESCE((SELECT c.excluded FROM xtream_categories c WHERE c.categoryId = xtream_series.categoryId AND c.providerId = xtream_series.providerId AND c.type = 'SERIES'), 0) WHERE providerId = :providerId")
     fun syncExcludedFromCategories(providerId: Long)
 
+    /** Sets [excluded] on the series of [categoryIds] only — see XtreamCategoryExclusionSync. */
+    @Query("UPDATE xtream_series SET excluded = :excluded WHERE providerId = :providerId AND categoryId IN (:categoryIds)")
+    fun setExcludedForCategories(
+        providerId: Long,
+        categoryIds: List<String>,
+        excluded: Boolean,
+    )
+
     @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND seriesId = :seriesId LIMIT 1")
     fun getSeriesById(
         providerId: Long,

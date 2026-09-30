@@ -1,6 +1,6 @@
 # Profile-Scoped Settings Plan
 
-**Status:** In Progress — steps 1–3 done 2026-09-30; switch latency open (see Step 3 results)
+**Status:** Complete (2026-09-30)
 
 Move two settings from device/provider scope to the profile:
 
@@ -120,4 +120,9 @@ UI change.
 - **Switch latency:** a switch where bearstv's filters differ takes ~3.4 s from choosing the profile
   to home appearing, against 0.16 s when they don't — the recompute of ~283k catalogue rows. The
   picker gives no feedback meanwhile. The same cost already applied to saving a filter edit.
+- **Fixed (same day):** `XtreamCategoryExclusionSync.recompute` now writes only the categories whose
+  flag changes, and only their streams and series (`setExcludedForCategories`); the end of a content
+  sync keeps the full re-derivation (`fullStreamSync = true`). The same switch now starts showing
+  home after 0.17 s. After two switches every stream (235k) and series (47k) flag on bearstv still
+  matched its category.
 

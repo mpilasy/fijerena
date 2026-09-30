@@ -1234,7 +1234,7 @@ class XtreamContentManager(
         }
 
     suspend fun recomputeExclusions() = withContext(Dispatchers.IO) {
-        XtreamCategoryExclusionSync.recompute(categoryDao, streamDao, seriesDao, providerId, categoryFilters())
+        XtreamCategoryExclusionSync.recompute(categoryDao, streamDao, seriesDao, providerId, categoryFilters(), fullStreamSync = true)
     }
 
     /** Total category count for [type], including excluded ones — for "X of Y" style UI counts. */
