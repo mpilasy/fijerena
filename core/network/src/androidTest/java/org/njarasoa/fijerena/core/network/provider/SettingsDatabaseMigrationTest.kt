@@ -17,8 +17,9 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
  * [SettingsDatabase.MIGRATION_10_11] (the `profiles` table, seeded with `default`),
  * [SettingsDatabase.MIGRATION_11_12] (`profiles.colorIndex`), [SettingsDatabase.MIGRATION_12_13]
  * (`providers.providerKey`, `sync_tombstone`) and [SettingsDatabase.MIGRATION_13_14]
- * (`epg_source.source_key`, `sync_outbox`, `sync_clock`), run against a database rolled back to
- * v10: built fresh at the current schema via Room, then what v11–v14 added removed — the new
+ * (`epg_source.source_key`, `sync_outbox`, `sync_clock`) and [SettingsDatabase.MIGRATION_14_15]
+ * (`sync_outbox` → `sync_version`), run against a database rolled back to
+ * v10: built fresh at the current schema via Room, then what v11–v15 added removed — the new
  * tables dropped, `providers` and `epg_source` rebuilt with their exact v12 DDL. Reopening through Room with
  * only those migrations exercises Room's own schema validation; this database has no destructive
  * fallback, so a mismatch throws.
@@ -28,7 +29,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 @RunWith(AndroidJUnit4::class)
 class SettingsDatabaseMigrationTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
-    private val testDbName = "test_settings_migration_10_14.db"
+    private val testDbName = "test_settings_migration_10_15.db"
 
     @Before
     fun deleteTestDbBefore() {
@@ -41,7 +42,7 @@ class SettingsDatabaseMigrationTest {
     }
 
     @Test
-    fun migration10To14_createsDefaultProfileKeysProvidersAndSourcesAndKeepsThem() {
+    fun migration10To15_createsDefaultProfileKeysProvidersAndSourcesAndKeepsThem() {
         val seedDb = Room.databaseBuilder(context, SettingsDatabase::class.java, testDbName).build()
         val providerId =
             runBlocking {
@@ -59,7 +60,7 @@ class SettingsDatabaseMigrationTest {
         val rawDb = seedDb.openHelper.writableDatabase
         rawDb.execSQL("DROP TABLE `profiles`")
         rawDb.execSQL("DROP TABLE `sync_tombstone`")
-        rawDb.execSQL("DROP TABLE `sync_outbox`")
+        rawDb.execSQL("DROP TABLE `sync_version`")
         rawDb.execSQL("DROP TABLE `sync_clock`")
         rawDb.execSQL("DROP INDEX `index_epg_source_source_key`")
         rawDb.execSQL("DROP INDEX `index_epg_source_provider_id`")
@@ -105,8 +106,9 @@ class SettingsDatabaseMigrationTest {
                     SettingsDatabase.MIGRATION_11_12,
                     SettingsDatabase.MIGRATION_12_13,
                     SettingsDatabase.MIGRATION_13_14,
+                    SettingsDatabase.MIGRATION_14_15,
                 ).build()
-        assertEquals(14, migratedDb.openHelper.writableDatabase.version)
+        assertEquals(15, migratedDb.openHelper.writableDatabase.version)
 
         runBlocking {
             val profiles = migratedDb.profileDao().getAll()
@@ -121,7 +123,7 @@ class SettingsDatabaseMigrationTest {
             assertNotEquals(provider.providerKey, other.providerKey)
             assertTrue(migratedDb.providerDao().getAllTombstones().isEmpty())
             assertEquals(36, migratedDb.epgSourceDao().getAllSourcesOnce().single().sourceKey.length)
-            assertTrue(migratedDb.settingsSyncDao().getBatch(10).isEmpty())
+            assertTrue(migratedDb.settingsSyncDao().getPending(10).isEmpty())
         }
         migratedDb.close()
     }

@@ -22,7 +22,7 @@ class SettingsSyncTriggersTest {
     private fun queued(
         kind: String,
         itemKey: String,
-    ) = runBlocking { sync.getBatch(100_000) }.filter { it.kind == kind && it.itemKey == itemKey }
+    ) = runBlocking { sync.getPending(100_000) }.filter { it.kind == kind && it.itemKey == itemKey }
 
     @Test
     fun aProviderIsQueuedForSyncedChangesOnly() =

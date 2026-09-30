@@ -5,12 +5,12 @@ This document details the complete database schema for the Fijerena application,
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 14
+**Version:** 15
 
 Manages media provider configurations, authentication metadata, persistent EPG source URLs, and
 user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`; v13 added
 `providers.providerKey` and `sync_tombstone` for live sync; v14 added `epg_source.source_key`,
-`sync_outbox` and `sync_clock`, filled by triggers.)
+`sync_outbox` and `sync_clock`, filled by triggers; v15 turned `sync_outbox` into `sync_version`.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -110,17 +110,18 @@ The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successfu
 
 **Index:** `index_epg_source_provider_id` on `(provider_id)`; `index_epg_source_source_key` (unique) on `(source_key)`
 
-### Tables: `sync_outbox`, `sync_clock` (added v14)
-The `providers.db` counterparts of `xtream_v2.db`'s (§3): `sync_outbox` holds keys changed locally
-and not yet sent — `kind` (`provider`, `profile`, `epg_source`, `provider_login`,
+### Tables: `sync_version` (v15; `sync_outbox` in v14), `sync_clock` (added v14)
+The `providers.db` counterparts of `xtream_v2.db`'s (§3): `sync_version` holds the sync version of
+every synced key — the clock of its latest change, local or received, which the merge compares an
+incoming record against — with `pending` = 1 for local changes not yet sent. `kind` (`provider`, `profile`, `epg_source`, `provider_login`,
 `category_filters`, `setting`), `profileId` (the profile for per-person kinds, `shared` otherwise),
-`itemKey` (`providerKey`, profile id, `source_key` or setting key), `hlc`; primary key
-`(kind, profileId, itemKey)`, indexed on `hlc`. `sync_clock` is this database's one-row hybrid
+`itemKey` (`providerKey`, profile id, `source_key` or setting key), `hlc`, `pending`; primary key
+`(kind, profileId, itemKey)`, indexed on `(pending, hlc)`. `sync_clock` is this database's one-row hybrid
 logical clock plus the `applying` flag. Deleting a provider removes its logins' and filters'
 entries; deleting a profile removes its entries (their tombstones cover them).
 
 ### Sync triggers (v14, installed on every open)
-`SettingsSyncTriggers.install`, in `onOpen`. Each ticks `sync_clock` and queues into `sync_outbox`
+`SettingsSyncTriggers.install`, in `onOpen`. Each ticks `sync_clock` and writes the key into `sync_version` as pending
 in the writing transaction, unless `applying` is set. Updates count only when a synced column
 changes, so sync statistics, activation and EPG ingestion bookkeeping are never queued.
 
@@ -201,7 +202,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 22
+**Version:** 23
 
 Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
 `watch_state` and `favorite_state` tables. (v10 added FTS4 search tables for streams/series; v11
@@ -216,7 +217,8 @@ the network round trip for its episode list when a stored copy is under 24 hours
 re-fetching the whole list on every single open; v20 added `profileId` to the primary key of
 `watch_state` and `favorite_state`, rebuilding both tables and assigning every existing row to the
 `default` profile — see `docs/plans/20260929_live-sync-plan.md` → User profiles; v21 added
-`sync_tombstone` for live sync; v22 added `sync_outbox` and `sync_clock`, filled by triggers.)
+`sync_tombstone` for live sync; v22 added `sync_outbox` and `sync_clock`, filled by triggers; v23 turned
+`sync_outbox` into `sync_version`.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -442,10 +444,12 @@ the same favourite (or restoring it from an export or a provider copy) removes i
 written for Jellyfin's history, which it keeps server-side. Deleting a provider or profile removes
 its rows here (its own tombstone in `providers.db` covers them). Pruned after 90 days at startup.
 
-### Table: `sync_outbox` (added v22)
-Keys changed locally and not yet sent to the sync server — only the key: the sync client reads the
-current row (or its tombstone) when it sends, so repeated changes to one item collapse into one
-entry. Same key columns as `sync_tombstone`, plus `hlc` (sync clock at the latest change; indexed).
+### Table: `sync_version` (v23; `sync_outbox` in v22)
+The sync version of every synced key: `hlc`, the clock of its latest change, local or received —
+what the merge compares an incoming record against (last writer wins) — and `pending` = 1 for a
+local change not yet sent (the outbox). Only the key is kept: the sync client reads the current row
+(or its tombstone) when it sends, so repeated changes to one item collapse into one entry. Same key
+columns as `sync_tombstone`, plus `hlc` and `pending`; indexed on `(pending, hlc)`.
 `kind` is `watch`, `favorite_stream`, `favorite_category` or `watch_clear`. Deleting a provider or
 profile removes its entries (its own tombstone covers them).
 
@@ -460,7 +464,7 @@ Room doesn't manage these; `XtreamSyncTriggers.install` drops and recreates them
 that changes one replaces it. They queue with delete-then-insert, never `INSERT OR REPLACE`: inside
 a trigger SQLite applies the firing statement's conflict rule, and Room's `@Insert`/`@Update` run as
 `OR ABORT`. Each ticks
-`sync_clock` and upserts the changed key into `sync_outbox` in the writing transaction, unless
+`sync_clock` and writes the changed key into `sync_version` as pending, in the writing transaction, unless
 `applying` is set:
 
 | Trigger | Fires on | Queues |

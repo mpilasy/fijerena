@@ -17,10 +17,10 @@ import org.njarasoa.fijerena.core.network.xtream.db.SyncClockEntity
         EpgPipelineStatsEntity::class,
         ProfileEntity::class,
         SettingsTombstoneEntity::class,
-        SettingsOutboxEntity::class,
+        SettingsVersionEntity::class,
         SyncClockEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = false,
 )
 abstract class SettingsDatabase : RoomDatabase() {
@@ -274,6 +274,24 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 14→15, live sync phase 5: `sync_outbox` becomes `sync_version` (kept after
+         * sending, `pending` for what is still to send) — see `XtreamDatabase.MIGRATION_22_23`.
+         */
+        val MIGRATION_14_15 =
+            object : Migration(14, 15) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_version` (`kind` TEXT NOT NULL, `profileId` TEXT NOT NULL, " +
+                            "`itemKey` TEXT NOT NULL, `hlc` INTEGER NOT NULL, `pending` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`kind`, `profileId`, `itemKey`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_version_pending_hlc` ON `sync_version` (`pending`, `hlc`)")
+                    db.execSQL("INSERT INTO `sync_version` SELECT `kind`, `profileId`, `itemKey`, `hlc`, 1 FROM `sync_outbox`")
+                    db.execSQL("DROP TABLE `sync_outbox`")
+                }
+            }
+
         /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
         private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -303,6 +321,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_11_12,
                         MIGRATION_12_13,
                         MIGRATION_13_14,
+                        MIGRATION_14_15,
                     ).addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {

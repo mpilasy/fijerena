@@ -4,24 +4,25 @@ import androidx.room.Entity
 import androidx.room.Index
 
 /**
- * A provider, profile, login, filter set, EPG source or setting that changed locally and hasn't
- * been sent to the sync server yet — only the key, like `xtream_v2.db`'s `sync_outbox`: the sync
- * client reads the current value when it sends. [kind] is a
+ * The sync version of a provider, profile, login, filter set, EPG source or setting — the
+ * `providers.db` counterpart of `xtream_v2.db`'s `sync_version`: [hlc] of its latest change,
+ * local or received, and [pending] for local changes not yet sent. [kind] is a
  * [org.njarasoa.fijerena.core.network.sync.SyncKind]; [profileId] is the profile for per-person
  * kinds and [org.njarasoa.fijerena.core.network.sync.SyncKind.SHARED] otherwise; [itemKey] is the
  * `providerKey`, profile id, `source_key` or setting key.
  *
- * Written by [SettingsSyncTriggers] for rows of this database, and by
+ * Local changes are written by [SettingsSyncTriggers] for rows of this database, and by
  * [org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue] for values kept in SharedPreferences.
  */
 @Entity(
-    tableName = "sync_outbox",
+    tableName = "sync_version",
     primaryKeys = ["kind", "profileId", "itemKey"],
-    indices = [Index(value = ["hlc"])],
+    indices = [Index(value = ["pending", "hlc"])],
 )
-data class SettingsOutboxEntity(
+data class SettingsVersionEntity(
     val kind: String,
     val profileId: String,
     val itemKey: String,
     val hlc: Long,
+    val pending: Boolean,
 )

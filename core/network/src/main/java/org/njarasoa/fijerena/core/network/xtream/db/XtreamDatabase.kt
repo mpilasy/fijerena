@@ -21,10 +21,10 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
         WatchStateEntity::class,
         FavoriteStateEntity::class,
         SyncTombstoneEntity::class,
-        SyncOutboxEntity::class,
+        SyncVersionEntity::class,
         SyncClockEntity::class,
     ],
-    version = 22,
+    version = 23,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -44,7 +44,7 @@ abstract class XtreamDatabase : RoomDatabase() {
 
     abstract fun syncTombstoneDao(): SyncTombstoneDao
 
-    abstract fun syncOutboxDao(): SyncOutboxDao
+    abstract fun syncVersionDao(): SyncVersionDao
 
     companion object {
         @Volatile
@@ -341,6 +341,30 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 22→23, live sync phase 5: `sync_outbox` becomes `sync_version` — entries are
+         * kept after sending, as the version the merge compares against, with `pending` marking
+         * the ones still to send. Existing entries were never sent, so they stay pending.
+         */
+        // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest).
+        internal val MIGRATION_22_23 =
+            object : Migration(22, 23) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_version` (`providerId` INTEGER NOT NULL, " +
+                            "`profileId` TEXT NOT NULL, `kind` TEXT NOT NULL, `itemId` TEXT NOT NULL, " +
+                            "`contentType` TEXT NOT NULL, `hlc` INTEGER NOT NULL, `pending` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`providerId`, `profileId`, `kind`, `itemId`, `contentType`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_version_pending_hlc` ON `sync_version` (`pending`, `hlc`)")
+                    db.execSQL(
+                        "INSERT INTO `sync_version` SELECT `providerId`, `profileId`, `kind`, `itemId`, `contentType`, `hlc`, 1 " +
+                            "FROM `sync_outbox`",
+                    )
+                    db.execSQL("DROP TABLE `sync_outbox`")
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -352,7 +376,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
                         MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
                         MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
-                        MIGRATION_21_22,
+                        MIGRATION_21_22, MIGRATION_22_23,
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC

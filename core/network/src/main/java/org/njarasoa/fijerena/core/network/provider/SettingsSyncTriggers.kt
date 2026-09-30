@@ -22,9 +22,9 @@ internal object SettingsSyncTriggers {
     private fun queue(
         kind: String,
         itemKey: String,
-    ) = "DELETE FROM `sync_outbox` WHERE `kind` = $kind AND `profileId` = '${SyncKind.SHARED}' AND `itemKey` = $itemKey; " +
-        "INSERT INTO `sync_outbox` (`kind`, `profileId`, `itemKey`, `hlc`) " +
-        "VALUES ($kind, '${SyncKind.SHARED}', $itemKey, $CLOCK);"
+    ) = "DELETE FROM `sync_version` WHERE `kind` = $kind AND `profileId` = '${SyncKind.SHARED}' AND `itemKey` = $itemKey; " +
+        "INSERT INTO `sync_version` (`kind`, `profileId`, `itemKey`, `hlc`, `pending`) " +
+        "VALUES ($kind, '${SyncKind.SHARED}', $itemKey, $CLOCK, 1);"
 
     private fun changed(vararg columns: String) = columns.joinToString(" OR ") { "OLD.`$it` IS NOT NEW.`$it`" }
 

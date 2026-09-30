@@ -683,7 +683,7 @@ class ProviderRepository(
     private suspend fun clearProviderWatchState(providerId: Long) {
         XtreamDatabase.getInstance(context).watchStateDao().deleteAllProfiles(providerId)
         XtreamDatabase.getInstance(context).syncTombstoneDao().deleteForProvider(providerId)
-        XtreamDatabase.getInstance(context).syncOutboxDao().deleteForProvider(providerId)
+        XtreamDatabase.getInstance(context).syncVersionDao().deleteForProvider(providerId)
         try {
             context
                 .getSharedPreferences("media_cache_$providerId", Context.MODE_PRIVATE)

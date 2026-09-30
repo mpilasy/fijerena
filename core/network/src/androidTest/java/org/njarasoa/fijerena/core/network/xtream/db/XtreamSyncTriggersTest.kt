@@ -20,7 +20,7 @@ class XtreamSyncTriggersTest {
     private val db = XtreamDatabase.getInstance(InstrumentationRegistry.getInstrumentation().targetContext)
 
     private fun queued(providerId: Long) =
-        runBlocking { db.syncOutboxDao().getBatch(10_000).filter { it.providerId == providerId } }
+        runBlocking { db.syncVersionDao().getPending(10_000).filter { it.providerId == providerId } }
 
     private fun favorite(
         providerId: Long,
@@ -34,6 +34,7 @@ class XtreamSyncTriggersTest {
         db.favoriteStateDao().upsertClearingTombstone(favorite(provider, "m1"))
         val first = queued(provider).single()
         assertEquals(SyncKind.FAVORITE_STREAM, first.kind)
+        assertTrue(first.pending)
         assertTrue(first.hlc > 1_600_000_000_000L) // milliseconds since the epoch, not 0
 
         db.favoriteStateDao().upsertClearingTombstone(favorite(provider, "m1"))

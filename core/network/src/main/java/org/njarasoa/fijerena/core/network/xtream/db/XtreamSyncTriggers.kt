@@ -10,8 +10,8 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
  * sibling rows — without each call site having to remember. See
  * `docs/plans/20260929_live-sync-plan.md` → Flow.
  *
- * Each trigger advances [SyncClockEntity.hlc] and records the key in [SyncOutboxEntity] at that
- * value. A new [SyncTombstoneEntity] with `deletedAt = 0` is stamped with the clock too. Nothing
+ * Each trigger advances [SyncClockEntity.hlc] and records the key in [SyncVersionEntity] at that
+ * value, pending. A new [SyncTombstoneEntity] with `deletedAt = 0` is stamped with the clock too. Nothing
  * fires while [SyncClockEntity.applying] is set. Deleting rows fires nothing: a deletion is queued
  * through its tombstone, and rows removed with their provider or profile are covered by that
  * one's own tombstone.
@@ -33,10 +33,10 @@ internal object XtreamSyncTriggers {
     private fun queue(
         kind: String,
         row: String,
-    ) = "DELETE FROM `sync_outbox` WHERE `providerId` = $row.`providerId` AND `profileId` = $row.`profileId` " +
+    ) = "DELETE FROM `sync_version` WHERE `providerId` = $row.`providerId` AND `profileId` = $row.`profileId` " +
         "AND `kind` = $kind AND `itemId` = $row.`itemId` AND `contentType` = $row.`contentType`; " +
-        "INSERT INTO `sync_outbox` (`providerId`, `profileId`, `kind`, `itemId`, `contentType`, `hlc`) " +
-        "VALUES ($row.`providerId`, $row.`profileId`, $kind, $row.`itemId`, $row.`contentType`, $CLOCK);"
+        "INSERT INTO `sync_version` (`providerId`, `profileId`, `kind`, `itemId`, `contentType`, `hlc`, `pending`) " +
+        "VALUES ($row.`providerId`, $row.`profileId`, $kind, $row.`itemId`, $row.`contentType`, $CLOCK, 1);"
 
     private val favoriteKind =
         "CASE NEW.`kind` WHEN '${FavoriteKind.CATEGORY}' THEN '${SyncKind.FAVORITE_CATEGORY}' ELSE '${SyncKind.FAVORITE_STREAM}' END"

@@ -112,7 +112,7 @@ class XtreamDatabaseMigrationTest {
         rawDb.execSQL("DROP TABLE `watch_state`")
         rawDb.execSQL("DROP TABLE `favorite_state`")
         rawDb.execSQL("DROP TABLE `sync_tombstone`") // v21, recreated by MIGRATION_20_21
-        rawDb.execSQL("DROP TABLE `sync_outbox`") // v22, recreated by MIGRATION_21_22
+        rawDb.execSQL("DROP TABLE `sync_version`") // v23, recreated via MIGRATION_21_22 and 22_23
         rawDb.execSQL("DROP TABLE `sync_clock`")
         rawDb.execSQL(
             "CREATE TABLE `watch_state` (" +
@@ -153,9 +153,9 @@ class XtreamDatabaseMigrationTest {
         // No fallbackToDestructiveMigration: a schema mismatch must throw, not silently wipe.
         val migratedDb =
             Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_19_20, XtreamDatabase.MIGRATION_20_21, XtreamDatabase.MIGRATION_21_22)
+                .addMigrations(XtreamDatabase.MIGRATION_19_20, XtreamDatabase.MIGRATION_20_21, XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23)
                 .build()
-        assertEquals(22, migratedDb.openHelper.writableDatabase.version)
+        assertEquals(23, migratedDb.openHelper.writableDatabase.version)
 
         val default = ProfileEntity.DEFAULT_ID
         runBlocking {
@@ -185,16 +185,16 @@ class XtreamDatabaseMigrationTest {
         )
         val rawDb = seedDb.openHelper.writableDatabase
         rawDb.execSQL("DROP TABLE `sync_tombstone`")
-        rawDb.execSQL("DROP TABLE `sync_outbox`")
+        rawDb.execSQL("DROP TABLE `sync_version`")
         rawDb.execSQL("DROP TABLE `sync_clock`")
         rawDb.execSQL("PRAGMA user_version = 20")
         seedDb.close()
 
         val migratedDb =
             Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_20_21, XtreamDatabase.MIGRATION_21_22)
+                .addMigrations(XtreamDatabase.MIGRATION_20_21, XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23)
                 .build()
-        assertEquals(22, migratedDb.openHelper.writableDatabase.version)
+        assertEquals(23, migratedDb.openHelper.writableDatabase.version)
 
         val dao = migratedDb.favoriteStateDao()
         assertEquals(listOf("m1"), dao.getAll(42L, ProfileEntity.DEFAULT_ID).map { it.itemId })
@@ -212,17 +212,44 @@ class XtreamDatabaseMigrationTest {
     fun migration21To22_addsOutboxAndClock() {
         val seedDb = Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName).build()
         val rawDb = seedDb.openHelper.writableDatabase
-        rawDb.execSQL("DROP TABLE `sync_outbox`")
+        rawDb.execSQL("DROP TABLE `sync_version`")
         rawDb.execSQL("DROP TABLE `sync_clock`")
         rawDb.execSQL("PRAGMA user_version = 21")
         seedDb.close()
 
         val migratedDb =
             Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_21_22)
+                .addMigrations(XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23)
                 .build()
-        assertEquals(22, migratedDb.openHelper.writableDatabase.version)
-        runBlocking { assertTrue(migratedDb.syncOutboxDao().getBatch(10).isEmpty()) }
+        assertEquals(23, migratedDb.openHelper.writableDatabase.version)
+        runBlocking { assertTrue(migratedDb.syncVersionDao().getPending(10).isEmpty()) }
+        migratedDb.close()
+    }
+
+    /** [XtreamDatabase.MIGRATION_22_23] turns `sync_outbox` into `sync_version`, keeping unsent entries pending. */
+    @Test
+    fun migration22To23_keepsQueuedChangesAsPendingVersions() {
+        val seedDb = Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName).build()
+        val rawDb = seedDb.openHelper.writableDatabase
+        rawDb.execSQL("DROP TABLE `sync_version`")
+        rawDb.execSQL(
+            "CREATE TABLE `sync_outbox` (`providerId` INTEGER NOT NULL, `profileId` TEXT NOT NULL, `kind` TEXT NOT NULL, " +
+                "`itemId` TEXT NOT NULL, `contentType` TEXT NOT NULL, `hlc` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`providerId`, `profileId`, `kind`, `itemId`, `contentType`))",
+        )
+        rawDb.execSQL("CREATE INDEX `index_sync_outbox_hlc` ON `sync_outbox` (`hlc`)")
+        rawDb.execSQL("INSERT INTO `sync_outbox` VALUES (42, 'p', 'watch', 'm1', 'MOVIES', 123)")
+        rawDb.execSQL("PRAGMA user_version = 22")
+        seedDb.close()
+
+        val migratedDb =
+            Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
+                .addMigrations(XtreamDatabase.MIGRATION_22_23)
+                .build()
+        assertEquals(23, migratedDb.openHelper.writableDatabase.version)
+        val version = runBlocking { migratedDb.syncVersionDao().getPending(10) }.single()
+        assertEquals(123L, version.hlc)
+        assertTrue(version.pending)
         migratedDb.close()
     }
 }
