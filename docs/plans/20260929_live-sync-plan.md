@@ -451,8 +451,27 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
      the providers the applier reports.
    - **Left for Phase 7**: adopting a matching provider (or EPG source) that already exists under
      another key on first sync; retrying deferred records.
-6. **Server.** Worker + DO, endpoints above, integration tests against Miniflare. Docker image
-   running the same code under `workerd` for self-hosting.
+6. **Server** — *landed 2026-09-30* in `server/` (see `server/README.md`). As built:
+   - Worker routes, one `Account` Durable Object per account holds `records`, `devices`,
+     `pairings` and the WebSockets (hibernation API; `ping` auto-answered).
+   - **Accounts** (decided 2026-09-30): `POST /accounts` creates one and its first device.
+     Device tokens and pairing codes are `<accountId>.<secret>`, so the worker routes without a
+     lookup and only the account's object, holding the secret's SHA-256, can validate them.
+     Optional `SETUP_SECRET` (`X-Setup-Secret` header) gates account creation on a public
+     self-hosted server; pairing never needs it.
+   - Endpoints as above plus `POST /pairings` (a single-use code, 10 minutes), `GET /devices`,
+     `DELETE /devices/:id` (revokes, closes its socket).
+   - A write not newer than the stored `updated_at` is rejected as `stale`. A deletion carries
+     `cascade: "provider" | "profile"` to drop the tagged records — the server can't tell a
+     provider tombstone from any other otherwise.
+   - Tombstones purged after 90 days (lazily, at most hourly, by server time); `purged_through`
+     marks the gap, and a pull from before it gets `410 {resync: true}`.
+   - **Tests run against the real `workerd`** with the self-hosted config and a temporary data
+     directory (14 integration tests, restart persistence included), not Miniflare: the
+     vitest-Workers integration and Miniflare itself are only published as alpha builds. Stable
+     `wrangler` deploys to Cloudflare (it pulls that alpha Miniflare in as its own dependency).
+   - **Docker image not yet built**: Docker isn't installed on the dev machine. `Dockerfile` runs
+     the same `workerd` binary and config the tests use.
 7. **Sync client.** HTTP push/pull, WebSocket while foregrounded, catch-up on resume, retry with
    backoff, full resync past the tombstone horizon.
 8. **Encryption + pairing.** Account key, AES-GCM, HMAC keys, QR pairing UI on `:tv` and `:mobile`.

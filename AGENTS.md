@@ -51,6 +51,7 @@ fijerena/
 │   ├── navigation/  # Type-safe Screen definitions (shared)
 │   ├── ui/          # Shared ViewModels, design tokens, and components
 │   └── data/        # Shared session and auth data
+├── server/          # Live sync server (TypeScript; Cloudflare Worker or workerd in Docker) — see server/README.md
 ├── docs/            # In-depth technical documentation (see below)
 ├── gradle/          # Version catalog (libs.versions.toml)
 └── build/           # APK outputs collected here after assembleDebug

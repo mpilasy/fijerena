@@ -1,0 +1,25 @@
+{
+  "name": "fijerena-sync",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live sync server for Fijerena — see docs/plans/20260929_live-sync-plan.md",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --format=esm --target=es2022 --external:cloudflare:* --outfile=dist/worker.js",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && vitest run",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260930.2",
+    "@types/node": "26.6.3",
+    "@types/ws": "8.18.2",
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11",
+    "workerd": "1.20260930.2",
+    "wrangler": "4.145.0",
+    "ws": "8.22.0"
+  }
+}
