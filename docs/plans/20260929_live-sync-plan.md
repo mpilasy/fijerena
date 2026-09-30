@@ -6,7 +6,7 @@ selected settings follow the user across devices without a manual export/import.
 sharing devices gets **user profiles**: each person's favorites and watch history are their own
 and follow them to any device.
 
-**Status:** design agreed 2026-09-29 (see Decisions); two open questions on profiles. Nothing
+**Status:** design agreed 2026-09-29 (see Decisions); no open questions. Nothing
 implemented.
 
 ---
@@ -41,9 +41,10 @@ seq        = server-assigned, monotonically increasing per account
 ```
 
 `kind` is one of `watch`, `watch_clear`, `favorite_stream`, `favorite_category`, `setting`,
-`provider`, `epg_source`, `profile`.
+`provider`, `provider_login`, `epg_source`, `profile`.
 
-`profileKey` applies to per-person data (`watch`, `watch_clear`, `favorite_*`). Shared data
+`profileKey` applies to per-person data (`watch`, `watch_clear`, `favorite_*`,
+`provider_login`). Shared data
 (`provider`, `epg_source`, `setting`, `profile`) uses a fixed `shared` value in that slot.
 
 **`providerKey` is not `providerId`.** `providerId` is a local autoincrement `Long` — the same
@@ -160,8 +161,9 @@ Separate favorites and watch history per person on shared devices. Netflix-style
 
 | Per profile | Shared by the household |
 |---|---|
-| Watch state, resume positions, Recent rows | Providers (incl. passwords), EPG sources |
-| Favorite streams and categories | Global settings (theme etc.), per-device settings |
+| Watch state, resume positions, Recent rows | Providers: URL, type, config; login of non-Jellyfin providers |
+| Favorite streams and categories | EPG sources |
+| **Jellyfin login** (username + password) | Global settings (theme etc.), per-device settings |
 
 **Identity.** A profile is a random UUID (`profileKey`) plus a name and avatar colour, synced as a
 `profile` record. Creating, renaming or deleting one on any device applies everywhere.
@@ -189,8 +191,25 @@ remaining profile can't be deleted.
 **Privacy:** none between profiles — one shared account key, no PIN. Profiles separate data, they
 don't protect it.
 
-**Jellyfin:** unaffected. Its user data lives on the Jellyfin server under the Jellyfin account,
-which profiles don't change (see Open questions).
+**Jellyfin: one login per profile** (decided 2026-09-29). Jellyfin keeps favorites and history
+per Jellyfin user, so each profile signs in as its own Jellyfin user and gets its own Jellyfin
+data for free — nothing of it passes through our sync (see Jellyfin section).
+
+- The Jellyfin *server* (URL, config) is shared, like any provider. The *login* is per profile.
+- Today the username sits in `providers.username` and the password / session in the provider's
+  EncryptedSharedPreferences, keyed by `providerId` only (`ProviderRepository.getPassword`,
+  `saveJellyfinSession`). These move to per-`(providerId, profileId)` storage: a
+  `provider_login(providerId, profileId, username)` table plus EncryptedSharedPreferences keyed by
+  both ids for password and session.
+- On upgrade, the existing Jellyfin login becomes the `Default` profile's login.
+- A profile with no login for a Jellyfin server sees that server's sign-in prompt instead of its
+  library; it isn't hidden, so the profile can sign in.
+- Switching profile rebuilds the Jellyfin `MediaProvider` with that profile's session.
+- **Sync:** username + password sync per profile as a `provider_login` record
+  (`profileKey` + `providerKey`), E2E encrypted. The session token does **not** sync: each device
+  signs in itself and gets its own Jellyfin session, as Jellyfin expects one per device.
+- Every other provider (Xtream, Local — anything whose `capabilities.supportsServerUserData` is
+  false) is unchanged: one login, shared by every profile.
 
 ## Server
 
@@ -304,11 +323,13 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
 1. **Profiles schema.** `profile` table keyed by the profile UUID (the same value sync uses as
    `profileKey`, so no mapping table later). `profileId` added to `watch_state` and
    `favorite_state` primary keys, existing rows backfilled to `Default`. DAO queries and
-   `MediaRepository` snapshot scoped to the active profile. Room migration + schema doc.
-   **Blocked on Open question 1** (Jellyfin login per profile or shared), which shapes the
-   `profile` table.
+   `MediaRepository` snapshot scoped to the active profile. `provider_login` table; Jellyfin
+   username, password and session moved to per-`(providerId, profileId)` storage, existing login
+   assigned to `Default`. `SettingsExportManager` reads and restores the active profile's rows
+   (format stays version 5). Room migration + schema doc.
 2. **Profiles UI.** Picker on start (only with 2+ profiles), add/rename/delete, switch profile on
-   `:tv` and `:mobile`, snapshot reload on switch.
+   `:tv` and `:mobile`, snapshot reload on switch, Jellyfin provider rebuilt with the new
+   profile's session, Jellyfin sign-in for a profile without a login.
 
 **Sync**
 
@@ -373,13 +394,13 @@ All decided 2026-09-29.
    password included; deleting it deletes it everywhere (see Deletions).
 4. **Theme:** syncs. UI scale and cellular multipliers stay per-device.
 5. **Export file:** no change, stays version 5. It remains a snapshot backup, no tombstones, no
-   passwords (it is a plaintext file in `/sdcard/Download`). `SettingsExportManager` untouched.
+   passwords (it is a plaintext file in `/sdcard/Download`). Format untouched; see 9 for profiles.
 6. **User profiles:** in this plan, built first (see Design → User profiles, Phases 1–2).
-
-## Open questions
-
-1. **Jellyfin and profiles.** Jellyfin user data is tied to the Jellyfin login, so every profile
-   sees the same Jellyfin favorites and history. Accept that, or allow a Jellyfin login per
-   profile (each person has their own Jellyfin user)?
-2. **Export and profiles.** The export file carries favorites and watch state per provider. With
-   profiles: export the active profile only, or all profiles (needs a version 6 format)?
+7. **Jellyfin and profiles:** one Jellyfin login per profile; login syncs, session doesn't.
+8. **Non-Jellyfin providers and profiles:** one login per provider, shared by every profile
+   (Xtream, Local — every provider whose `capabilities.supportsServerUserData` is false). Their
+   favorites and watch history are still per profile (stored locally, not on the provider).
+9. **Export and profiles:** export covers the **active profile only**; import restores into the
+   active profile. The version 5 format already fits (favorites and watch state per provider), so
+   it stays version 5. Providers, EPG sources and settings export as today. Jellyfin logins of
+   other profiles are not exported (no passwords in the export, as before).
