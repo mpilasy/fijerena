@@ -46,7 +46,7 @@ Despite high resilience in core layers, five areas of technical debt and fragili
    - Minimal automated Compose UI and navigation test coverage (currently limited to `EpisodeSelectionScreenTest` in `:tv`).
 5. **Upstream Security Deprecation & Multi-Device Sync:**
    - `androidx.security:security-crypto` is deprecated upstream; owned Keystore replacement documented in [`20260828_secret-store-migration-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/20260828_secret-store-migration-plan.md) is deferred.
-   - Xtream user state remains device-local; multi-device synchronization is planned in [`20260809_xtream-multi-device-sync-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/20260809_xtream-multi-device-sync-plan.md) but not started.
+   - Xtream user state remains device-local; multi-device synchronization is planned in [`20260929_live-sync-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/20260929_live-sync-plan.md) but not started.
 
 ---
 
@@ -97,7 +97,7 @@ graph TD
 
 ### Phase 6: Long-Term Architecture (Deferred)
 - **SecretStore Migration:** Replace deprecated `EncryptedSharedPreferences` per [`20260828_secret-store-migration-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/20260828_secret-store-migration-plan.md).
-- **Xtream Multi-Device Sync:** Implement shared state backend per [`20260809_xtream-multi-device-sync-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/20260809_xtream-multi-device-sync-plan.md).
+- **Xtream Multi-Device Sync:** Implement shared state backend per [`20260929_live-sync-plan.md`](file:///home/tahiry/data/code/mpilasy/fijerena/docs/plans/20260929_live-sync-plan.md).
 
 ---
 
