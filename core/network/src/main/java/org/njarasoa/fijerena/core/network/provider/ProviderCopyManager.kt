@@ -82,6 +82,8 @@ class ProviderCopyManager(
 
             if (options.copyProviderSettings) {
                 providerRepo.updateProviderSettings(target.id, providerRepo.getProviderSettings(source.id))
+                // updateProviderSettings wrote only the active profile's filters; bring every profile's.
+                providerRepo.copyCategoryFilters(source.id, target.id)
                 settingsCopied = true
             }
 
@@ -154,6 +156,7 @@ class ProviderCopyManager(
                     initialSettings = providerRepo.getProviderSettings(source.id),
                     activate = false,
                 )
+            providerRepo.copyCategoryFilters(sourceId, newId)
             copyProviderData(
                 sourceId = sourceId,
                 targetId = newId,

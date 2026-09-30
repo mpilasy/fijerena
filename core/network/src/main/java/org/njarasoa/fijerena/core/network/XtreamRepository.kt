@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.coroutines.Deferred
 import kotlinx.serialization.Serializable
+import org.njarasoa.fijerena.core.network.provider.CategoryFiltersStore
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.xtream.SyncDelta
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
@@ -38,6 +39,7 @@ class XtreamRepository(
         )
     private val appSettings = AppSettings(context) // Keep for global settings (isDevMode)
     private val database = XtreamDatabase.getInstance(context)
+    private val filtersStore = CategoryFiltersStore(context)
 
     // Managers
     private val metricsManager = XtreamMetricsManager(appSettings)
@@ -62,6 +64,7 @@ class XtreamRepository(
             providerSettings,
             metricsManager,
             providerId,
+            categoryFilters = { filtersStore.get(providerId, appSettings.activeProfileId, providerSettings.categoryFilters) },
         )
 
 

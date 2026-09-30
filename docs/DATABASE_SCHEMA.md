@@ -54,7 +54,7 @@ and stay.
 | `username` | TEXT | Username for authentication |
 | `type` | TEXT | Provider type: `XTREAM`, `JELLYFIN`, `SMB`, `LOCAL`, `REMOTE_M3U` |
 | `config` | TEXT | JSON blob for type-specific config (e.g., SMB share) |
-| `providerSettings` | TEXT | JSON blob for per-provider preferences |
+| `providerSettings` | TEXT | JSON blob for per-provider preferences. Category filters are no longer kept here but per profile in `category_filters` (section 6); on upgrade they were copied to every profile and stripped from this JSON |
 | `createdAt` | INTEGER | Timestamp when created |
 | `lastUsedAt` | INTEGER | Timestamp of last access |
 | `isActive` | INTEGER | Boolean (0/1) if currently selected |
@@ -475,6 +475,7 @@ The application uses several specialized SharedPreferences files for internal st
 |----------|------|---------|
 | `epg_file_manager` | `migrated_to_sources_v1` | One-time flag: legacy single-EPG-file state has been migrated to `epg_source` rows. |
 | `epg_indexer_state` | `fts_stale` | Survives process death so an interrupted FTS rebuild is retried on next indexer run. |
+| `category_filters` | `{providerId}_{profileId}` | Category filters (`CategoryFilters` JSON) of one profile on one provider, via `CategoryFiltersStore`. No key = no filters. A new profile copies the creating profile's keys; provider and profile deletion remove theirs. |
 | `drive_sync_prefs` | `sync_enabled`, `last_sync` | Google Drive settings-sync toggle and last successful sync timestamp. |
 | `player_prefs` | `hints_dismissed` | Whether the player control discoverability hints have been dismissed (TV only). |
 | `provider_creds_{id}` | per-provider | (Encrypted) Passwords and sensitive tokens per provider, via `EncryptedSharedPreferences`. |

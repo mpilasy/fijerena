@@ -16,11 +16,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -32,6 +36,8 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
@@ -278,6 +284,16 @@ fun ColumnScope.ProviderSettingsSection(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
+                    // Filters are per profile: say whose these are.
+                    val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(LocalContext.current))
+                    val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
+                    activeProfile?.let { profile ->
+                        Text(
+                            text = stringResource(R.string.provider_category_filters_profile, profile.name),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                        )
+                    }
                     Spacer(modifier = Modifier.height(CinemaSpacing.xs))
                     Row(
                         modifier = Modifier.fillMaxWidth(),

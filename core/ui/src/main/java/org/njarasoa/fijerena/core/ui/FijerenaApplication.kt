@@ -53,8 +53,8 @@ class FijerenaApplication :
         EpgFileManager.getInstance(this).initialize()
         // Initialize Provider Content sync
         ProviderSyncManager.getInstance(this).initialize()
-        // One-time rewrite of any provider settings still storing the legacy category-filter
-        // prefix shape — see ProviderRepository.migrateLegacyCategoryFilterPrefixes().
+        // One-time moves of each provider's category filters and the install-wide dev-mode flag to
+        // every profile — see ProviderRepository.migrateCategoryFiltersToProfiles().
         // SupervisorJob + handler: an uncaught exception in a bare CoroutineScope(Dispatchers.IO)
         // propagates to the thread's uncaught-exception handler and can crash the process on
         // cold boot; log and swallow instead.
@@ -63,7 +63,7 @@ class FijerenaApplication :
                 Log.e("FijerenaApplication", "Startup coroutine failed", throwable)
             }
         CoroutineScope(SupervisorJob() + Dispatchers.IO + startupExceptionHandler).launch {
-            ProviderRepository(this@FijerenaApplication).migrateLegacyCategoryFilterPrefixes()
+            ProviderRepository(this@FijerenaApplication).migrateCategoryFiltersToProfiles()
             ProfileRepository(this@FijerenaApplication).migrateLegacyDevMode()
             // Build the encrypted credential store off the main thread, before the nav host's
             // session-restore effect asks for it from the main dispatcher.

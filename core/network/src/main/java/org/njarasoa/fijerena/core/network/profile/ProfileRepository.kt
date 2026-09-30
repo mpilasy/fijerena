@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.provider.CategoryFiltersStore
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
@@ -31,6 +32,8 @@ class ProfileRepository(
     ): String {
         val id = UUID.randomUUID().toString()
         dao.insert(ProfileEntity(id = id, name = name.trim(), createdAt = System.currentTimeMillis(), colorIndex = colorIndex))
+        // Starts with the creator's category filters; dev mode starts off (no flag stored).
+        CategoryFiltersStore(context).copyProfile(AppSettings(context).activeProfileId, id)
         return id
     }
 
@@ -52,7 +55,7 @@ class ProfileRepository(
 
     /**
      * Deletes a profile with its favourites, watch state, Recent Categories, bookmarks and Jellyfin
-     * logins on every provider, and its developer-mode flag. Refuses the profile this device is using — switch away first — and the last one
+     * logins on every provider, and its developer-mode flag and category filters. Refuses the profile this device is using — switch away first — and the last one
      * left, since the app always needs somebody to be.
      */
     suspend fun deleteProfile(id: String): DeleteBlocked =
@@ -66,6 +69,7 @@ class ProfileRepository(
                     xtreamDb.favoriteStateDao().deleteProfile(id)
                     deleteProfilePrefs(id)
                     AppSettings(context).removeDevMode(id)
+                    CategoryFiltersStore(context).removeProfile(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
                     dao.delete(id)
                     DeleteBlocked.NONE

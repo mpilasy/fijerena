@@ -69,7 +69,9 @@ class ProviderRepository(
 
     // Keyed by file name: one provider can have several — see [credsFileName].
     private val encryptedPrefsCache = java.util.concurrent.ConcurrentHashMap<String, android.content.SharedPreferences>()
-    private val settingsCache = java.util.concurrent.ConcurrentHashMap<Long, ProviderSettings>()
+    // Keyed by (providerId, profileId): the category filters in each entry are that profile's.
+    private val settingsCache = java.util.concurrent.ConcurrentHashMap<Pair<Long, String>, ProviderSettings>()
+    private val filtersStore = CategoryFiltersStore(context)
 
     fun getAllProviders(): Flow<List<ProviderEntity>> = dao.getAllProviders()
 
@@ -98,7 +100,8 @@ class ProviderRepository(
         activate: Boolean = true,
     ): Long {
         if (activate) dao.deactivateAll()
-        val settingsJson = json.encodeToString(initialSettings)
+        // Category filters are per profile and live in [filtersStore], not in the provider's JSON.
+        val settingsJson = json.encodeToString(initialSettings.copy(categoryFilters = CategoryFilters()))
         val entity =
             ProviderEntity(
                 name = name,
@@ -125,7 +128,9 @@ class ProviderRepository(
                     .putString(KEY_PASSWORD, password)
             }
         }
-        settingsCache[id] = initialSettings
+        if (initialSettings.categoryFilters != CategoryFilters()) {
+            filtersStore.set(id, activeProfileId(), initialSettings.categoryFilters)
+        }
         return id
     }
 
@@ -184,7 +189,8 @@ class ProviderRepository(
             clearProviderCache(id)
             clearProviderWatchState(id)
             clearProviderCatalog(id)
-            settingsCache.remove(id)
+            settingsCache.keys.removeAll { it.first == id }
+            filtersStore.removeProvider(id)
             // Clear cached provider instance
             MediaProviderFactory.clearCache(id)
         }
@@ -450,29 +456,40 @@ class ProviderRepository(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    private fun activeProfileId(): String = AppSettings(context).activeProfileId
+
     /**
-     * Get the settings for a provider.
+     * Get the settings for a provider, with the active profile's category filters.
      * Returns default settings if provider not found or settings are invalid.
      */
     suspend fun getProviderSettings(providerId: Long): ProviderSettings {
-        settingsCache[providerId]?.let { return it }
+        val profileId = activeProfileId()
+        settingsCache[providerId to profileId]?.let { return it }
         val entity = dao.getProviderById(providerId) ?: return ProviderSettings.DEFAULT
-        val settings = parseProviderSettings(entity.providerSettings)
-        settingsCache[providerId] = settings
+        val stored = parseProviderSettings(entity.providerSettings)
+        val settings = stored.copy(categoryFilters = filtersStore.get(providerId, profileId, stored.categoryFilters))
+        settingsCache[providerId to profileId] = settings
         return settings
     }
 
     /**
-     * Update the settings for a provider.
+     * Update the settings for a provider. The category filters are saved as the active profile's;
+     * everything else is the provider's, shared by all profiles.
      */
     suspend fun updateProviderSettings(
         providerId: Long,
         settings: ProviderSettings,
     ) {
         val entity = dao.getProviderById(providerId) ?: return
-        val settingsJson = json.encodeToString(settings)
+        val profileId = activeProfileId()
+        // Leave whatever filters the JSON still holds: until migrateCategoryFiltersToProfiles has
+        // run they are the other profiles' fallback.
+        val stored = parseProviderSettings(entity.providerSettings)
+        val settingsJson = json.encodeToString(settings.copy(categoryFilters = stored.categoryFilters))
         dao.updateProvider(entity.copy(providerSettings = settingsJson))
-        settingsCache[providerId] = settings
+        filtersStore.set(providerId, profileId, settings.categoryFilters)
+        settingsCache.keys.removeAll { it.first == providerId }
+        settingsCache[providerId to profileId] = settings
         // Clear cached provider so it picks up new settings
         MediaProviderFactory.clearCache(providerId)
 
@@ -507,19 +524,60 @@ class ProviderRepository(
     }
 
     /**
-     * One-time rewrite of any stored provider settings still using the legacy
-     * `categoryFilters.prefixes: List<String>` shape into the current
-     * `categoryFilters.rules: List<CategoryMatcher>` shape. [CategoryMatcherSerializer] already
-     * tolerates reading the old shape indefinitely, so this isn't required for correctness — it
-     * just ensures the stored bytes actually reflect the new format instead of relying on the
-     * lenient decoder forever. Safe to call on every app start: a no-op once migrated.
+     * Xtream bakes category filters into the shared catalogue's `excluded` flags, so on a profile
+     * switch they're recomputed for every Xtream provider whose filters differ between [fromProfileId]
+     * and [toProfileId] — local only, no network. Identical filters (the usual case) cost nothing.
      */
-    suspend fun migrateLegacyCategoryFilterPrefixes() {
-        dao.getAllProvidersList().forEach { entity ->
-            if (!entity.providerSettings.contains("\"prefixes\"")) return@forEach
-            val settings = parseProviderSettings(entity.providerSettings)
-            dao.updateProvider(entity.copy(providerSettings = json.encodeToString(settings)))
+    suspend fun applyCategoryFiltersForSwitch(
+        fromProfileId: String,
+        toProfileId: String,
+    ) {
+        dao.getAllProvidersList().filter { it.type == "XTREAM" }.forEach { entity ->
+            val fallback = parseProviderSettings(entity.providerSettings).categoryFilters
+            val newFilters = filtersStore.get(entity.id, toProfileId, fallback)
+            if (filtersStore.get(entity.id, fromProfileId, fallback) == newFilters) return@forEach
+            withContext(Dispatchers.IO) {
+                val database = XtreamDatabase.getInstance(context)
+                org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
+                    database.categoryDao(),
+                    database.streamDao(),
+                    database.seriesDao(),
+                    entity.id,
+                    newFilters,
+                )
+            }
+            // Same as a filter edit: the cached provider and EPG matcher hold category lists and
+            // excluded flags from before.
+            MediaProviderFactory.clearCache(entity.id)
         }
+    }
+
+    /** Every profile's category filters of [fromProviderId] replace [toProviderId]'s. */
+    fun copyCategoryFilters(
+        fromProviderId: Long,
+        toProviderId: Long,
+    ) {
+        filtersStore.copyProvider(fromProviderId, toProviderId)
+        settingsCache.keys.removeAll { it.first == toProviderId }
+    }
+
+    /**
+     * One-time upgrade to per-profile category filters: each provider's filters, still in its
+     * settings JSON (legacy `prefixes` shape included — the decoder normalises it), are copied to
+     * every profile that has none of its own, then removed from the JSON. Safe to call on every
+     * app start: a no-op once migrated. See docs/plans/20260930_profile-scoped-settings-plan.md.
+     */
+    suspend fun migrateCategoryFiltersToProfiles() {
+        val profileIds = db.profileDao().getAll().map { it.id }
+        dao.getAllProvidersList().forEach { entity ->
+            val stored = parseProviderSettings(entity.providerSettings)
+            if (stored.categoryFilters == CategoryFilters()) return@forEach
+            profileIds
+                .filterNot { filtersStore.has(entity.id, it) }
+                .forEach { filtersStore.set(entity.id, it, stored.categoryFilters) }
+            dao.updateProvider(entity.copy(providerSettings = json.encodeToString(stored.copy(categoryFilters = CategoryFilters()))))
+        }
+        settingsCache.clear()
     }
 
     // --- Cache management ---

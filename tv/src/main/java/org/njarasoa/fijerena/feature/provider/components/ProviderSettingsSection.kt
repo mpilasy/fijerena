@@ -18,9 +18,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.provider.FilterMode
@@ -31,6 +34,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -217,6 +222,16 @@ fun ProviderSettingsSection(
                 style = styles.bodySmall,
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
+            // Filters are per profile: say whose these are.
+            val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(LocalContext.current))
+            val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
+            activeProfile?.let { profile ->
+                Text(
+                    text = stringResource(R.string.provider_category_filters_profile, profile.name),
+                    style = styles.bodySmall,
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                )
+            }
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

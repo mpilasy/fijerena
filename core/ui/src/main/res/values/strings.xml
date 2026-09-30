@@ -278,6 +278,7 @@
     <string name="provider_playlist_type_label">Playlist Type</string>
     <string name="provider_playlist_type_desc">Playlist format (m3u_plus = extended with EPG, simple = basic)</string>
     <string name="provider_category_filters_desc">Hide categories by prefix (e.g., \'Adult\', \'XXX\')</string>
+    <string name="provider_category_filters_profile">These are %1$s\'s filters. Every profile has its own.</string>
     <string name="provider_filter_mode_value">Mode: %1$s</string>
     <string name="provider_no_filters">No filters configured</string>
     <string name="provider_prefixes_value">%1$d prefix(es): %2$s</string>

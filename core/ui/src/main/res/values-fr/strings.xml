@@ -274,6 +274,7 @@
     <string name="provider_playlist_type_label">Type de playlist</string>
     <string name="provider_playlist_type_desc">Format de playlist (m3u_plus = étendu avec EPG, simple = basique)</string>
     <string name="provider_category_filters_desc">Masquer les catégories par préfixe (ex. \'Adulte\', \'XXX\')</string>
+    <string name="provider_category_filters_profile">Filtres du profil %1$s. Chaque profil a les siens.</string>
     <string name="provider_filter_mode_value">Mode : %1$s</string>
     <string name="provider_no_filters">Aucun filtre configuré</string>
     <string name="provider_prefixes_value">%1$d préfixe(s) : %2$s</string>

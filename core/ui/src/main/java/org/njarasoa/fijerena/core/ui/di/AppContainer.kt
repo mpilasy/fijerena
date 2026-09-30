@@ -127,13 +127,17 @@ class AppContainer(
      * previous profile (see its `profileId`), so all of them are closed and dropped; the next
      * getMediaRepository() builds one for the new profile. Shared provider sessions are kept —
      * switching person doesn't mean logging back in to Xtream — but Jellyfin's are dropped, since
-     * each profile signs in to Jellyfin as its own user. Callers must also drop any screen still
+     * each profile signs in to Jellyfin as its own user. Xtream providers whose category filters
+     * differ between the two profiles get their hidden-category flags recomputed. Callers must also drop any screen still
      * holding a repository, which the nav hosts do by rebuilding the back stack from home.
      */
     suspend fun switchProfile(profileId: String) {
         withContext(Dispatchers.IO) {
             mutex.withLock {
-                AppSettings(context.applicationContext).activeProfileId = profileId
+                val appSettings = AppSettings(context.applicationContext)
+                val previousProfileId = appSettings.activeProfileId
+                appSettings.activeProfileId = profileId
+                providerRepository.applyCategoryFiltersForSwitch(previousProfileId, profileId)
                 mediaRepositories.values.forEach { repo ->
                     try {
                         repo.close()

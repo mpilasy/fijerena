@@ -251,7 +251,8 @@ class SettingsExportManager(
                         username = entity.username,
                         type = entity.type,
                         config = entity.config,
-                        providerSettings = entity.providerSettings,
+                        // With the active profile's category filters, like favourites and history.
+                        providerSettings = json.encodeToString(providerRepo.getProviderSettings(entity.id)),
                         isActive = entity.isActive,
                     )
                 }

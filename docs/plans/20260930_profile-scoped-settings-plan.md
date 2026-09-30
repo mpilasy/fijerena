@@ -1,6 +1,6 @@
 # Profile-Scoped Settings Plan
 
-**Status:** Proposed (2026-09-30)
+**Status:** In Progress — steps 1–2 landed 2026-09-30; step 3 (device check) pending
 
 Move two settings from device/provider scope to the profile:
 
@@ -45,46 +45,39 @@ Context: `docs/plans/20260929_live-sync-plan.md` → User profiles.
 
 ### Category filters
 
-**Storage.** New table in `providers.db` (v13):
+**Storage (as built — SharedPreferences, not the Room table first planned).** One
+`category_filters` prefs file, key `<providerId>_<profileId>`, value the `CategoryFilters` JSON
+(same shape as before). `CategoryFiltersStore` wraps it. A table was the first plan, but
+`MediaProviderFactory.create` and the Xtream content code read filters synchronously, some of it
+on the main thread, where Room can't be queried. Provider and profile deletion remove their keys
+by hand instead of by cascade. No Room migration.
 
-```
-profile_provider_filters(
-  profileId  TEXT    NOT NULL REFERENCES profiles(id)  ON DELETE CASCADE,
-  providerId INTEGER NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
-  filters    TEXT    NOT NULL,   -- CategoryFilters JSON, same shape as today
-  PRIMARY KEY (profileId, providerId)
-)
-```
-
-A table rather than a map inside the provider's JSON: cascades clean up on profile and provider
-deletion, and it maps one-to-one onto a sync record later.
-
-**Migration 12→13.** Create the table; for each provider × each profile, insert the provider's
-current `categoryFilters` (legacy `prefixes` shape normalised as today). Strip `categoryFilters`
-from `providers.providerSettings` so there is one source of truth. Instrumented migration test
-like `SettingsDatabaseMigrationTest`. `docs/DATABASE_SCHEMA.md` updated in the same commit.
+**Upgrade.** `ProviderRepository.migrateCategoryFiltersToProfiles`, at startup: each provider's
+filters still in `providers.providerSettings` (legacy `prefixes` shape normalised by the decoder)
+are copied to every profile without its own key, then stripped from the JSON. Until it has run,
+a missing key falls back to the JSON's filters, so nothing changes in the meantime. It replaces
+`migrateLegacyCategoryFilterPrefixes`, whose job it also does.
 
 **Reading and writing.** `ProviderSettings` keeps its `categoryFilters` field in memory, so the
-UI, `MediaRepository` and `XtreamContentManager` stay unchanged:
+UI and `MediaRepository` stay unchanged:
 
-- `ProviderRepository.getProviderSettings(providerId)` overlays the active profile's row (or empty
-  filters if none).
+- `ProviderRepository.getProviderSettings(providerId)` overlays the active profile's filters (no
+  key = the JSON's, empty once migrated).
 - `ProviderRepository.updateProviderSettings` splits the write: filters to the active profile's
-  row, everything else to `providers.providerSettings`. The existing immediate recompute stays.
-- `settingsCache` is keyed by (providerId, profileId), or cleared on switch.
-- A new provider has no rows (no row = empty filters); copying a provider copies every profile's
-  rows; adding a profile copies the active profile's rows.
+  key, everything else to `providers.providerSettings`. The existing immediate recompute stays.
+- `settingsCache` is keyed by (providerId, profileId).
+- A new provider has no keys (everything visible); copying a provider copies every profile's
+  keys; adding a profile copies the active profile's keys.
+- `XtreamContentManager` reads the active profile's filters afresh on every load and sync (a
+  `categoryFilters` supplier from `XtreamRepository`) instead of the snapshot it was built with,
+  so a sync still running across a profile switch applies the new profile's filters.
 
 **Applying on switch.** `AppContainer.switchProfile`, under its existing mutex: for each Xtream
 provider whose filters differ between the old and new profile, run
-`XtreamCategoryExclusionSync.recompute` with the new profile's filters. Identical filters (the
-common case right after upgrade) cost nothing. M3U, Jellyfin and Local filter in memory through
+`XtreamCategoryExclusionSync.recompute` with the new profile's filters and drop the cached
+provider instance and EPG matcher (as a filter edit does). Identical filters (the common case right
+after upgrade) cost nothing. M3U, Jellyfin and Local filter in memory through
 `MediaRepository`, which is rebuilt on switch already.
-
-**Race with a running content sync.** `XtreamContentManager` finishes with a recompute using the
-settings it started with. If the profile switched meanwhile, it would re-apply the old profile's
-filters. Fix: that final recompute re-reads the active profile's filters instead of using the
-snapshot.
 
 **UI.** Filters stay where they are: provider edit screen (Settings → Manage Providers → ⋮) →
 category filters, on `:tv` and `:mobile`. Saving there changes the **active profile's** filters
@@ -98,9 +91,9 @@ UI change.
 
 1. Dev mode per profile — `AppSettings`, upgrade step, profile-deletion cleanup, export, unit
    tests. One commit.
-2. Filters per profile — table + migration 12→13 + schema doc, repository overlay/split, switch
-   recompute, sync race fix, add/copy provider and add profile, export, UI note, unit +
-   instrumented migration tests. One commit.
+2. Filters per profile — prefs store + startup upgrade + schema doc, repository overlay/split,
+   switch recompute, live filters in the Xtream content code, add/copy provider and add profile,
+   export, UI note, unit + instrumented tests. One commit.
 3. Verify on the TV emulator: two profiles with different filters on one Xtream provider;
    switching changes visible categories; timing of the switch recompute on a large catalogue
    noted here. **Ask before installing** on any device.

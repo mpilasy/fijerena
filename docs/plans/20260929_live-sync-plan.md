@@ -202,7 +202,7 @@ picker and no change.
 
 **Category filters and dev mode** are per profile (decided 2026-09-30; design in
 `docs/plans/20260930_profile-scoped-settings-plan.md`). Each profile has its own complete filter
-set per provider, stored in `profile_provider_filters` (`providers.db` v13); Xtream's shared
+set per provider, stored in the `category_filters` prefs (`<providerId>_<profileId>`); Xtream's shared
 `excluded` flags are recomputed for the active profile on switch. Dev mode is a per-profile flag.
 On upgrade both were copied to every existing profile.
 

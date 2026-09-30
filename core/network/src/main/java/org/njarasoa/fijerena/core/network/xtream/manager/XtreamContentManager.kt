@@ -13,6 +13,7 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.asString
 import org.njarasoa.fijerena.core.network.normalizeTmdbId
 import org.njarasoa.fijerena.core.network.toJsonPrimitive
+import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
@@ -55,6 +56,9 @@ class XtreamContentManager(
     private val providerSettings: ProviderSettings,
     private val metricsManager: XtreamMetricsManager,
     private val providerId: Long,
+    // Read afresh by every sync and load: filters are per profile and the profile can change
+    // under a live instance. See docs/plans/20260930_profile-scoped-settings-plan.md.
+    private val categoryFilters: () -> CategoryFilters = { providerSettings.categoryFilters },
 ) {
     private val categoryDao = database.categoryDao()
     private val streamDao = database.streamDao()
@@ -134,16 +138,17 @@ class XtreamContentManager(
                 }
 
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
+                val filters = categoryFilters()
                 val categories = service.getCategories()
                 categoryDao.insertAll(
                     categories.map {
                         XtreamCategoryEntity(
                             it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_LIVE,
-                            excluded = !providerSettings.categoryFilters.shouldShowCategory(it.categoryName),
+                            excluded = !filters.shouldShowCategory(it.categoryName),
                         )
                     },
                 )
-                categories.filter { providerSettings.categoryFilters.shouldShowCategory(it.categoryName) }
+                categories.filter { filters.shouldShowCategory(it.categoryName) }
             }
         }
 
@@ -159,16 +164,17 @@ class XtreamContentManager(
                 }
 
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
+                val filters = categoryFilters()
                 val categories = service.getVodCategories()
                 categoryDao.insertAll(
                     categories.map {
                         XtreamCategoryEntity(
                             it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_VOD,
-                            excluded = !providerSettings.categoryFilters.shouldShowCategory(it.categoryName),
+                            excluded = !filters.shouldShowCategory(it.categoryName),
                         )
                     },
                 )
-                categories.filter { providerSettings.categoryFilters.shouldShowCategory(it.categoryName) }
+                categories.filter { filters.shouldShowCategory(it.categoryName) }
             }
         }
 
@@ -184,16 +190,17 @@ class XtreamContentManager(
                 }
 
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
+                val filters = categoryFilters()
                 val categories = service.getSeriesCategories()
                 categoryDao.insertAll(
                     categories.map {
                         XtreamCategoryEntity(
                             it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_SERIES,
-                            excluded = !providerSettings.categoryFilters.shouldShowCategory(it.categoryName),
+                            excluded = !filters.shouldShowCategory(it.categoryName),
                         )
                     },
                 )
-                categories.filter { providerSettings.categoryFilters.shouldShowCategory(it.categoryName) }
+                categories.filter { filters.shouldShowCategory(it.categoryName) }
             }
         }
 
@@ -217,7 +224,7 @@ class XtreamContentManager(
                         else -> emptyList()
                     }
 
-                val filters = providerSettings.categoryFilters
+                val filters = categoryFilters()
                 val excludedCategoryIds: Set<String> =
                     if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) {
                         emptySet()
@@ -481,6 +488,7 @@ class XtreamContentManager(
 
                 override suspend fun execute() {
                     val service = sessionManager.apiService ?: return
+                    val filters = categoryFilters()
                     try {
                         val categories =
                             when (type) {
@@ -506,7 +514,7 @@ class XtreamContentManager(
                                             it.parentId,
                                             type,
                                         ),
-                                    excluded = !providerSettings.categoryFilters.shouldShowCategory(it.categoryName),
+                                    excluded = !filters.shouldShowCategory(it.categoryName),
                                 )
                             }
 
@@ -591,7 +599,7 @@ class XtreamContentManager(
                             var inserted = 0
                             var updated = 0
 
-                            val filters = providerSettings.categoryFilters
+                            val filters = categoryFilters()
                             val allowedCategoryIds: Set<String>? =
                                 if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) {
                                     null
@@ -740,7 +748,7 @@ class XtreamContentManager(
                             var inserted = 0
                             var updated = 0
 
-                            val filters = providerSettings.categoryFilters
+                            val filters = categoryFilters()
                             val allowedCategoryIds: Set<String>? =
                                 if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) {
                                     null
@@ -1226,7 +1234,7 @@ class XtreamContentManager(
         }
 
     suspend fun recomputeExclusions() = withContext(Dispatchers.IO) {
-        XtreamCategoryExclusionSync.recompute(categoryDao, streamDao, seriesDao, providerId, providerSettings.categoryFilters)
+        XtreamCategoryExclusionSync.recompute(categoryDao, streamDao, seriesDao, providerId, categoryFilters())
     }
 
     /** Total category count for [type], including excluded ones — for "X of Y" style UI counts. */
