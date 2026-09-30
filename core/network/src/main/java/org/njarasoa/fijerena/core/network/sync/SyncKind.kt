@@ -1,0 +1,27 @@
+package org.njarasoa.fijerena.core.network.sync
+
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
+
+/**
+ * The `kind` of a synced record — see `docs/plans/20260929_live-sync-plan.md` → Record model.
+ * Phase 3 only records deletions (the `sync_tombstone` tables), so only the kinds that can be
+ * deleted are here; Phase 4 adds the rest with the outbox.
+ */
+object SyncKind {
+    const val FAVORITE_STREAM = "favorite_stream"
+    const val FAVORITE_CATEGORY = "favorite_category"
+
+    /** "Clear watch history": one marker whose `deletedAt` drops every older watch row. */
+    const val WATCH_CLEAR = "watch_clear"
+    const val PROVIDER = "provider"
+    const val PROFILE = "profile"
+
+    fun forFavorite(favoriteKind: String): String =
+        if (favoriteKind == FavoriteKind.CATEGORY) FAVORITE_CATEGORY else FAVORITE_STREAM
+
+    /**
+     * How long a deletion is kept locally — the server's planned tombstone horizon. A device
+     * offline for longer does a full resync, so older deletions are never needed.
+     */
+    const val TOMBSTONE_RETENTION_MS = 90L * 24 * 60 * 60 * 1000
+}

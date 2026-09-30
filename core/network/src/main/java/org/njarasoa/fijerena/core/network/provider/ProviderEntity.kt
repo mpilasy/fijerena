@@ -1,7 +1,9 @@
 package org.njarasoa.fijerena.core.network.provider
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 /**
  * Room entity representing a media provider configuration.
@@ -16,8 +18,11 @@ import androidx.room.PrimaryKey
  * @property createdAt Timestamp when provider was created
  * @property lastUsedAt Timestamp when provider was last used
  * @property isActive Whether this is the currently active provider
+ * @property providerKey Random UUID naming this provider in live sync. Unlike [id] (a local
+ *   autoincrement) it's the same on every device, and unlike URL + username it survives edits.
+ *   See `docs/plans/20260929_live-sync-plan.md` → Record model.
  */
-@Entity(tableName = "providers")
+@Entity(tableName = "providers", indices = [Index(value = ["providerKey"], unique = true)])
 data class ProviderEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
@@ -36,4 +41,5 @@ data class ProviderEntity(
     val lastSyncInserted: Int = 0,
     val lastSyncUpdated: Int = 0,
     val lastSyncDeleted: Int = 0,
+    val providerKey: String = UUID.randomUUID().toString(),
 )

@@ -656,7 +656,7 @@ class SettingsExportManager(
                                     )
                                 }
                         if (newRows.isNotEmpty()) {
-                            favoriteStateDao.restoreAll(newRows)
+                            favoriteStateDao.restoreAllClearingTombstones(newRows)
                             favoritesRestored += newRows.size
                         }
                     }
@@ -695,7 +695,7 @@ class SettingsExportManager(
                                     )
                                 }
                         if (newRows.isNotEmpty()) {
-                            favoriteStateDao.restoreAll(newRows)
+                            favoriteStateDao.restoreAllClearingTombstones(newRows)
                             favoriteCategoriesRestored += newRows.size
                         }
                     }

@@ -20,8 +20,9 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
         XtreamEpgCacheEntity::class,
         WatchStateEntity::class,
         FavoriteStateEntity::class,
+        SyncTombstoneEntity::class,
     ],
-    version = 20,
+    version = 21,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -38,6 +39,8 @@ abstract class XtreamDatabase : RoomDatabase() {
     abstract fun watchStateDao(): WatchStateDao
 
     abstract fun favoriteStateDao(): FavoriteStateDao
+
+    abstract fun syncTombstoneDao(): SyncTombstoneDao
 
     companion object {
         @Volatile
@@ -293,6 +296,24 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 20→21, live sync phase 3: the `sync_tombstone` table for favourite and
+         * watch-history deletions. See `docs/plans/20260929_live-sync-plan.md` → Deletions.
+         */
+        // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest).
+        internal val MIGRATION_20_21 =
+            object : Migration(20, 21) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_tombstone` (`providerId` INTEGER NOT NULL, " +
+                            "`profileId` TEXT NOT NULL, `kind` TEXT NOT NULL, `itemId` TEXT NOT NULL, " +
+                            "`contentType` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`providerId`, `profileId`, `kind`, `itemId`, `contentType`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_tombstone_deletedAt` ON `sync_tombstone` (`deletedAt`)")
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -303,7 +324,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                     ).addMigrations(
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
                         MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
-                        MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20,
+                        MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC

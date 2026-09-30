@@ -102,7 +102,7 @@ class ProviderCopyManager(
                         .filter { listOf(it.profileId, it.itemId, it.contentType, it.kind) !in existingKeys }
                         .map { it.copy(providerId = target.id) }
                 if (newRows.isNotEmpty()) {
-                    favoriteStateDao.restoreAll(newRows)
+                    favoriteStateDao.restoreAllClearingTombstones(newRows)
                     favoritesCopied = newRows.size
                 }
             }

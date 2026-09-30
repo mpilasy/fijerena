@@ -2,8 +2,12 @@ package org.njarasoa.fijerena.core.network.profile
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
+import org.njarasoa.fijerena.core.network.provider.SettingsTombstoneEntity
+import org.njarasoa.fijerena.core.network.sync.SyncKind
 
 @Dao
 interface ProfileDao {
@@ -32,4 +36,17 @@ interface ProfileDao {
 
     @Query("DELETE FROM profiles WHERE id = :id")
     suspend fun delete(id: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTombstone(tombstone: SettingsTombstoneEntity)
+
+    /** Deletes the profile and records it for live sync, in one transaction — see [SettingsTombstoneEntity]. */
+    @Transaction
+    suspend fun deleteRecordingTombstone(
+        id: String,
+        deletedAt: Long,
+    ) {
+        delete(id)
+        insertTombstone(SettingsTombstoneEntity(SyncKind.PROFILE, id, deletedAt))
+    }
 }

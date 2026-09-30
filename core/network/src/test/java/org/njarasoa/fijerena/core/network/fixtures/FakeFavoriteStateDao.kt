@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.fixtures
 
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
+import org.njarasoa.fijerena.core.network.xtream.db.SyncTombstoneEntity
 
 /**
  * In-memory [FavoriteStateDao]. Keyed on the real primary key so `upsert` replaces the same way
@@ -17,6 +18,9 @@ class FakeFavoriteStateDao : FavoriteStateDao {
         val contentType: String,
         val kind: String,
     )
+
+    /** The `sync_tombstone` rows this DAO wrote, by their primary key. */
+    val tombstones = LinkedHashMap<List<Any>, SyncTombstoneEntity>()
 
     private fun key(e: FavoriteStateEntity) = Key(e.providerId, e.profileId, e.itemId, e.contentType, e.kind)
 
@@ -70,5 +74,25 @@ class FakeFavoriteStateDao : FavoriteStateDao {
         val toRemove = rows.keys.filter { it.providerId !in validProviderIds }
         toRemove.forEach { rows.remove(it) }
         return toRemove.size
+    }
+
+    override fun getAllOfKind(
+        providerId: Long,
+        profileId: String,
+        kind: String,
+    ): List<FavoriteStateEntity> = rows.values.filter { it.providerId == providerId && it.profileId == profileId && it.kind == kind }
+
+    override fun insertTombstone(tombstone: SyncTombstoneEntity) {
+        tombstones[listOf(tombstone.providerId, tombstone.profileId, tombstone.kind, tombstone.itemId, tombstone.contentType)] = tombstone
+    }
+
+    override fun deleteTombstone(
+        providerId: Long,
+        profileId: String,
+        kind: String,
+        itemId: String,
+        contentType: String,
+    ) {
+        tombstones.remove(listOf(providerId, profileId, kind, itemId, contentType))
     }
 }

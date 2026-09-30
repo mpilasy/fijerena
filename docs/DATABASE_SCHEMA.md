@@ -5,10 +5,11 @@ This document details the complete database schema for the Fijerena application,
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 12
+**Version:** 13
 
 Manages media provider configurations, authentication metadata, persistent EPG source URLs, and
-user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`.)
+user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`; v13 added
+`providers.providerKey` and `sync_tombstone` for live sync.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -45,6 +46,20 @@ rather than `_profile_` files, so `ProfileRepository` clears it there: Jellyfin 
 backfill never recreates rows for it). Other providers' logins in `provider_creds_<id>` are shared
 and stay.
 
+### Table: `sync_tombstone` (added v13)
+Deleted providers and profiles, kept so live sync can tell other devices (see
+`docs/plans/20260929_live-sync-plan.md` → Deletions). Written in the same transaction as the delete
+(`ProviderDao.deleteProviderRecordingTombstone`, `ProfileDao.deleteRecordingTombstone`); pruned after
+90 days at startup. Favourite and history deletions have their own `sync_tombstone` in `xtream_v2.db`.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `kind` | TEXT (PK) | `provider` or `profile` |
+| `itemKey` | TEXT (PK) | The provider's `providerKey`, or the profile id |
+| `deletedAt` | INTEGER | When it was deleted (wall clock until the Phase 4 hybrid logical clock) |
+
+**Index:** `(deletedAt)`
+
 ### Table: `providers`
 | Column | Type | Description |
 |--------|------|-------------|
@@ -64,6 +79,7 @@ and stay.
 | `lastSyncInserted` | INTEGER | Rows inserted by the last sync (added v9) |
 | `lastSyncUpdated` | INTEGER | Rows updated by the last sync (added v9) |
 | `lastSyncDeleted` | INTEGER | Rows deleted by the last sync (added v9) |
+| `providerKey` | TEXT (unique) | Random UUID naming the provider in live sync — the same on every device, unlike `id`, and unchanged by editing URL or name. Backfilled for existing rows by `MIGRATION_12_13` (added v13) |
 
 The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successful** sync's `SyncDelta`
 (they are `COALESCE`d, not zeroed, on a failed run). All three zero means the catalog did not change.
@@ -156,7 +172,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 20
+**Version:** 21
 
 Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
 `watch_state` and `favorite_state` tables. (v10 added FTS4 search tables for streams/series; v11
@@ -170,7 +186,8 @@ TMDB sibling-dedup joins below, which had no covering index on either table; v19
 the network round trip for its episode list when a stored copy is under 24 hours old, instead of
 re-fetching the whole list on every single open; v20 added `profileId` to the primary key of
 `watch_state` and `favorite_state`, rebuilding both tables and assigning every existing row to the
-`default` profile — see `docs/plans/20260929_live-sync-plan.md` → User profiles.)
+`default` profile — see `docs/plans/20260929_live-sync-plan.md` → User profiles; v21 added
+`sync_tombstone` for live sync.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -373,6 +390,27 @@ id and `parentCategoryId` is NULL.
 **No cap.** Rows are inserted and deleted only — nothing truncates. `MediaRepository` still serves
 reads from an in-memory snapshot of this table, because Compose calls `isFavorite()` synchronously
 during composition; the snapshot is filled in `setProvider()`, which runs on `Dispatchers.IO`.
+
+### Table: `sync_tombstone` (added v21)
+Removed favourites and cleared watch histories, kept so live sync can tell other devices — without
+them the next device to sync would bring the item back. See
+`docs/plans/20260929_live-sync-plan.md` → Deletions (tombstones).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `providerId` | INTEGER (PK) | The provider, by local id; the sync client sends its `providerKey` |
+| `profileId` | TEXT (PK) | The profile the favourite or history belonged to |
+| `kind` | TEXT (PK) | `favorite_stream`, `favorite_category` or `watch_clear` |
+| `itemId` | TEXT (PK) | The favourite's `itemId`; empty for `watch_clear` |
+| `contentType` | TEXT (PK) | The favourite's `contentType`; empty for `watch_clear` |
+| `deletedAt` | INTEGER | When it was removed (wall clock until the Phase 4 hybrid logical clock); for `watch_clear`, every older watch row of that provider and profile is dropped |
+
+**Index:** `(deletedAt)`
+
+Written by `FavoriteStateDao` and `WatchStateDao` in the same transaction as the delete; re-adding
+the same favourite (or restoring it from an export or a provider copy) removes its tombstone. Not
+written for Jellyfin's history, which it keeps server-side. Deleting a provider or profile removes
+its rows here (its own tombstone in `providers.db` covers them). Pruned after 90 days at startup.
 
 ### Catalog Lifecycle, Orphan Pruning & Compaction
 Catalog entries (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `favorite_state`, `xtream_epg_cache`, and `watch_state`) reside in `xtream_v2.db`, while the provider entities that own them live in `providers.db`. Because SQLite cannot enforce cross-database foreign key cascades, deleting a provider in `providers.db` does not automatically purge its rows in `xtream_v2.db`.

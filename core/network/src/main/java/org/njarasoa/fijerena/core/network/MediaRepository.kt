@@ -866,7 +866,13 @@ class MediaRepository(
      * whose rows are gone.
      */
     suspend fun clearWatchHistory() {
-        watchStateDao.deleteAll(providerId, profileId)
+        // Recorded for live sync unless the provider keeps history itself (Jellyfin) — see
+        // docs/plans/20260929_live-sync-plan.md → Jellyfin.
+        if (usesServerUserData) {
+            watchStateDao.deleteAll(providerId, profileId)
+        } else {
+            watchStateDao.deleteAllRecordingClear(providerId, profileId, System.currentTimeMillis())
+        }
         synchronized(watchHistoryLock) {
             cachedWatchHistory = emptyList()
             cache.commitAsync {
@@ -893,7 +899,7 @@ class MediaRepository(
             favorites.add(0, item)
             cachedFavorites = favorites
             favoriteIdSet = null
-            writeScope.launch { favoriteStateDao.upsert(item.toEntity(providerId, profileId)) }
+            writeScope.launch { favoriteStateDao.upsertClearingTombstone(item.toEntity(providerId, profileId)) }
         }
         return !alreadyFavorite
     }
@@ -907,7 +913,10 @@ class MediaRepository(
         if (removed) {
             cachedFavorites = favorites
             favoriteIdSet = null
-            writeScope.launch { favoriteStateDao.delete(providerId, profileId, itemId, contentType, FavoriteKind.STREAM) }
+            val deletedAt = System.currentTimeMillis()
+            writeScope.launch {
+                favoriteStateDao.deleteRecordingTombstone(providerId, profileId, itemId, contentType, FavoriteKind.STREAM, deletedAt)
+            }
         }
         return removed
     }
@@ -997,7 +1006,8 @@ class MediaRepository(
     fun clearFavorites() = synchronized(favoriteLock) {
         cachedFavorites = emptyList()
         favoriteIdSet = null
-        writeScope.launch { favoriteStateDao.deleteAllOfKind(providerId, profileId, FavoriteKind.STREAM) }
+        val deletedAt = System.currentTimeMillis()
+        writeScope.launch { favoriteStateDao.deleteAllOfKindRecordingTombstones(providerId, profileId, FavoriteKind.STREAM, deletedAt) }
     }
 
     // --- Favorite Categories ---
@@ -1015,7 +1025,7 @@ class MediaRepository(
         favorites.add(0, item)
         cachedFavoriteCategories = favorites
         favoriteCategoryIdSet = null
-        writeScope.launch { favoriteStateDao.upsert(item.toEntity(providerId, profileId)) }
+        writeScope.launch { favoriteStateDao.upsertClearingTombstone(item.toEntity(providerId, profileId)) }
         return true
     }
 
@@ -1028,7 +1038,10 @@ class MediaRepository(
         if (!removed) return false
         cachedFavoriteCategories = favorites
         favoriteCategoryIdSet = null
-        writeScope.launch { favoriteStateDao.delete(providerId, profileId, categoryId, contentType, FavoriteKind.CATEGORY) }
+        val deletedAt = System.currentTimeMillis()
+        writeScope.launch {
+            favoriteStateDao.deleteRecordingTombstone(providerId, profileId, categoryId, contentType, FavoriteKind.CATEGORY, deletedAt)
+        }
         return true
     }
 
@@ -1079,7 +1092,8 @@ class MediaRepository(
     fun clearFavoriteCategories() = synchronized(favoriteLock) {
         cachedFavoriteCategories = emptyList()
         favoriteCategoryIdSet = null
-        writeScope.launch { favoriteStateDao.deleteAllOfKind(providerId, profileId, FavoriteKind.CATEGORY) }
+        val deletedAt = System.currentTimeMillis()
+        writeScope.launch { favoriteStateDao.deleteAllOfKindRecordingTombstones(providerId, profileId, FavoriteKind.CATEGORY, deletedAt) }
     }
 
     /**

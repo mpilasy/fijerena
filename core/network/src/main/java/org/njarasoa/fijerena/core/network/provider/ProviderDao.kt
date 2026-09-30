@@ -3,9 +3,12 @@ package org.njarasoa.fijerena.core.network.provider
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
+import org.njarasoa.fijerena.core.network.sync.SyncKind
 
 @Dao
 interface ProviderDao {
@@ -32,6 +35,26 @@ interface ProviderDao {
 
     @Delete
     suspend fun deleteProvider(provider: ProviderEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTombstone(tombstone: SettingsTombstoneEntity)
+
+    /** Deletes the provider and records it for live sync, in one transaction — see [SettingsTombstoneEntity]. */
+    @Transaction
+    suspend fun deleteProviderRecordingTombstone(
+        provider: ProviderEntity,
+        deletedAt: Long,
+    ) {
+        deleteProvider(provider)
+        insertTombstone(SettingsTombstoneEntity(SyncKind.PROVIDER, provider.providerKey, deletedAt))
+    }
+
+    /** Drops deletions older than [cutoff] — see [SyncKind.TOMBSTONE_RETENTION_MS]. */
+    @Query("DELETE FROM sync_tombstone WHERE deletedAt < :cutoff")
+    suspend fun pruneTombstones(cutoff: Long)
+
+    @Query("SELECT * FROM sync_tombstone")
+    suspend fun getAllTombstones(): List<SettingsTombstoneEntity>
 
     @Query("UPDATE providers SET isActive = 0")
     suspend fun deactivateAll()

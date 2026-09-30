@@ -111,6 +111,7 @@ class XtreamDatabaseMigrationTest {
         val rawDb = seedDb.openHelper.writableDatabase
         rawDb.execSQL("DROP TABLE `watch_state`")
         rawDb.execSQL("DROP TABLE `favorite_state`")
+        rawDb.execSQL("DROP TABLE `sync_tombstone`") // v21, recreated by MIGRATION_20_21
         rawDb.execSQL(
             "CREATE TABLE `watch_state` (" +
                 "`providerId` INTEGER NOT NULL, `itemId` TEXT NOT NULL, `contentType` TEXT NOT NULL, " +
@@ -150,9 +151,9 @@ class XtreamDatabaseMigrationTest {
         // No fallbackToDestructiveMigration: a schema mismatch must throw, not silently wipe.
         val migratedDb =
             Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_19_20)
+                .addMigrations(XtreamDatabase.MIGRATION_19_20, XtreamDatabase.MIGRATION_20_21)
                 .build()
-        assertEquals(20, migratedDb.openHelper.writableDatabase.version)
+        assertEquals(21, migratedDb.openHelper.writableDatabase.version)
 
         val default = ProfileEntity.DEFAULT_ID
         runBlocking {
@@ -170,6 +171,35 @@ class XtreamDatabaseMigrationTest {
         assertEquals(listOf("c9", "m1"), favorites.map { it.itemId })
         assertTrue(migratedDb.favoriteStateDao().getAll(42L, "someone-else").isEmpty())
 
+        migratedDb.close()
+    }
+
+    /** [XtreamDatabase.MIGRATION_20_21] adds `sync_tombstone`; a v20 install is the current schema without it. */
+    @Test
+    fun migration20To21_addsTombstoneTableWithoutLosingData() {
+        val seedDb = Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName).build()
+        seedDb.favoriteStateDao().upsert(
+            FavoriteStateEntity(42L, ProfileEntity.DEFAULT_ID, "m1", "MOVIES", FavoriteKind.STREAM, "Film", "c1", 1L),
+        )
+        val rawDb = seedDb.openHelper.writableDatabase
+        rawDb.execSQL("DROP TABLE `sync_tombstone`")
+        rawDb.execSQL("PRAGMA user_version = 20")
+        seedDb.close()
+
+        val migratedDb =
+            Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
+                .addMigrations(XtreamDatabase.MIGRATION_20_21)
+                .build()
+        assertEquals(21, migratedDb.openHelper.writableDatabase.version)
+
+        val dao = migratedDb.favoriteStateDao()
+        assertEquals(listOf("m1"), dao.getAll(42L, ProfileEntity.DEFAULT_ID).map { it.itemId })
+        dao.deleteRecordingTombstone(42L, ProfileEntity.DEFAULT_ID, "m1", "MOVIES", FavoriteKind.STREAM, 99L)
+        runBlocking {
+            val tombstone = migratedDb.syncTombstoneDao().getAll(42L).single()
+            assertEquals("m1", tombstone.itemId)
+            assertEquals(99L, tombstone.deletedAt)
+        }
         migratedDb.close()
     }
 }

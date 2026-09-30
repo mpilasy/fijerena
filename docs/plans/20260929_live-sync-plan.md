@@ -391,9 +391,17 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
 
 **Sync**
 
-3. **Stable provider identity + tombstones.** `providerKey` UUID on providers (backfilled for
-   existing rows); `sync_tombstone` table; remove/clear paths write tombstones (local-user-data
-   providers only — see Jellyfin). Room migration + `docs/DATABASE_SCHEMA.md`.
+3. **Stable provider identity + tombstones** — *landed 2026-09-30.* `providers.providerKey`, a
+   unique random UUID (backfilled per existing provider; `providers.db` v13). A `sync_tombstone`
+   table in **each** database (decided 2026-09-30) so every deletion is recorded in the same
+   transaction as the row it deletes: `providers.db` for `provider` (by `providerKey`) and
+   `profile` deletions, `xtream_v2.db` (v21) for `favorite_stream` / `favorite_category` removals
+   and `watch_clear` markers, keyed there by local `providerId` — the sync client translates to
+   `providerKey` when sending. Re-adding a favourite (or restoring it from an export or a provider
+   copy) drops its tombstone; deleting a provider or profile drops its item tombstones, its own
+   covers them. No `watch_clear` for Jellyfin. **Recorded always, sync on or not** (decided
+   2026-09-30), pruned after 90 days at startup. `deletedAt` is wall-clock time until Phase 4's
+   HLC. EPG source deletions aren't recorded yet — they need a stable key first, as providers did.
 4. **Outbox + HLC.** `sync_outbox` and `sync_state` (cursor, HLC) tables; every write path in
    `MediaRepository` / settings writes an outbox row in the same transaction. Coalesce by key.
    Record keys carry `profileKey` from the start. Room migration + schema doc.

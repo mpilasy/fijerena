@@ -67,11 +67,13 @@ class ProfileRepository(
                     val xtreamDb = XtreamDatabase.getInstance(context)
                     xtreamDb.watchStateDao().deleteProfile(id)
                     xtreamDb.favoriteStateDao().deleteProfile(id)
+                    // The profile's own tombstone (below) covers its favourite and history ones.
+                    xtreamDb.syncTombstoneDao().deleteForProfile(id)
                     deleteProfilePrefs(id)
                     AppSettings(context).removeDevMode(id)
                     CategoryFiltersStore(context).removeProfile(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
-                    dao.delete(id)
+                    dao.deleteRecordingTombstone(id, System.currentTimeMillis())
                     DeleteBlocked.NONE
                 }
             }

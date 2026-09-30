@@ -4,6 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import org.njarasoa.fijerena.core.network.sync.SyncKind
 
 /**
  * Favourites storage. Every read here is blocking rather than suspending on purpose: the caller is
@@ -46,6 +48,74 @@ interface FavoriteStateDao {
         contentType: String,
         kind: String,
     )
+
+    @Query("SELECT * FROM favorite_state WHERE providerId = :providerId AND profileId = :profileId AND kind = :kind")
+    fun getAllOfKind(
+        providerId: Long,
+        profileId: String,
+        kind: String,
+    ): List<FavoriteStateEntity>
+
+    // --- Live sync tombstones: see SyncTombstoneEntity. The production writers use these. ---
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertTombstone(tombstone: SyncTombstoneEntity)
+
+    @Query(
+        "DELETE FROM sync_tombstone WHERE providerId = :providerId AND profileId = :profileId " +
+            "AND kind = :kind AND itemId = :itemId AND contentType = :contentType",
+    )
+    fun deleteTombstone(
+        providerId: Long,
+        profileId: String,
+        kind: String,
+        itemId: String,
+        contentType: String,
+    )
+
+    /** [upsert], dropping any tombstone left by an earlier removal of the same favourite. */
+    @Transaction
+    fun upsertClearingTombstone(entity: FavoriteStateEntity) {
+        upsert(entity)
+        deleteTombstone(entity.providerId, entity.profileId, SyncKind.forFavorite(entity.kind), entity.itemId, entity.contentType)
+    }
+
+    /** [delete], recording the removal for live sync. */
+    @Transaction
+    fun deleteRecordingTombstone(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        kind: String,
+        deletedAt: Long,
+    ) {
+        delete(providerId, profileId, itemId, contentType, kind)
+        insertTombstone(SyncTombstoneEntity(providerId, profileId, SyncKind.forFavorite(kind), itemId, contentType, deletedAt))
+    }
+
+    /** [deleteAllOfKind], recording each removed favourite for live sync. */
+    @Transaction
+    fun deleteAllOfKindRecordingTombstones(
+        providerId: Long,
+        profileId: String,
+        kind: String,
+        deletedAt: Long,
+    ) {
+        getAllOfKind(providerId, profileId, kind).forEach {
+            insertTombstone(SyncTombstoneEntity(providerId, profileId, SyncKind.forFavorite(kind), it.itemId, it.contentType, deletedAt))
+        }
+        deleteAllOfKind(providerId, profileId, kind)
+    }
+
+    /** [restoreAll], dropping tombstones of the favourites it brings back. */
+    @Transaction
+    fun restoreAllClearingTombstones(entities: List<FavoriteStateEntity>) {
+        restoreAll(entities)
+        entities.forEach {
+            deleteTombstone(it.providerId, it.profileId, SyncKind.forFavorite(it.kind), it.itemId, it.contentType)
+        }
+    }
 
     /** Backs "Clear All Favorites", which is scoped to streams — categories are left alone. */
     @Query("DELETE FROM favorite_state WHERE providerId = :providerId AND profileId = :profileId AND kind = :kind")

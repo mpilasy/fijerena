@@ -4,6 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import org.njarasoa.fijerena.core.network.sync.SyncKind
 
 /**
  * See `docs/plans/20260828_watch-state-durable-storage-plan.md`. Statements mirror the plan's Write path /
@@ -296,6 +298,23 @@ interface WatchStateDao {
         providerId: Long,
         profileId: String,
     )
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTombstone(tombstone: SyncTombstoneEntity)
+
+    /**
+     * [deleteAll], recording a `watch_clear` marker for live sync: every watch row for this
+     * provider and profile older than [clearedAt] is dropped on the other devices too.
+     */
+    @Transaction
+    suspend fun deleteAllRecordingClear(
+        providerId: Long,
+        profileId: String,
+        clearedAt: Long,
+    ) {
+        deleteAll(providerId, profileId)
+        insertTombstone(SyncTombstoneEntity(providerId, profileId, SyncKind.WATCH_CLEAR, "", "", clearedAt))
+    }
 
     /** Profile deletion: that profile's rows across every provider. */
     @Query("DELETE FROM watch_state WHERE profileId = :profileId")

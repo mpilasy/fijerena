@@ -10,8 +10,14 @@ import org.njarasoa.fijerena.core.network.profile.ProfileDao
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
 @Database(
-    entities = [ProviderEntity::class, EpgSourceEntity::class, EpgPipelineStatsEntity::class, ProfileEntity::class],
-    version = 12,
+    entities = [
+        ProviderEntity::class,
+        EpgSourceEntity::class,
+        EpgPipelineStatsEntity::class,
+        ProfileEntity::class,
+        SettingsTombstoneEntity::class,
+    ],
+    version = 13,
     exportSchema = false,
 )
 abstract class SettingsDatabase : RoomDatabase() {
@@ -203,6 +209,34 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 12→13, live sync phase 3: `providers.providerKey` (a random UUID per existing
+         * provider, unique) and the `sync_tombstone` table for provider and profile deletions.
+         * See `docs/plans/20260929_live-sync-plan.md` → Record model, Deletions.
+         */
+        val MIGRATION_12_13 =
+            object : Migration(12, 13) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `providers` ADD COLUMN `providerKey` TEXT NOT NULL DEFAULT ''")
+                    val ids =
+                        db.query("SELECT `id` FROM `providers`").use { cursor ->
+                            buildList { while (cursor.moveToNext()) add(cursor.getLong(0)) }
+                        }
+                    ids.forEach { id ->
+                        db.execSQL(
+                            "UPDATE `providers` SET `providerKey` = ? WHERE `id` = ?",
+                            arrayOf<Any>(java.util.UUID.randomUUID().toString(), id),
+                        )
+                    }
+                    db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_providers_providerKey` ON `providers` (`providerKey`)")
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_tombstone` (`kind` TEXT NOT NULL, `itemKey` TEXT NOT NULL, " +
+                            "`deletedAt` INTEGER NOT NULL, PRIMARY KEY(`kind`, `itemKey`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_tombstone_deletedAt` ON `sync_tombstone` (`deletedAt`)")
+                }
+            }
+
         /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
         private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -230,6 +264,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_9_10,
                         MIGRATION_10_11,
                         MIGRATION_11_12,
+                        MIGRATION_12_13,
                     ).addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {

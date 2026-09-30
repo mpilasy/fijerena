@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.sync.pruneSyncTombstones
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
@@ -65,6 +66,8 @@ class FijerenaApplication :
         CoroutineScope(SupervisorJob() + Dispatchers.IO + startupExceptionHandler).launch {
             ProviderRepository(this@FijerenaApplication).migrateCategoryFiltersToProfiles()
             ProfileRepository(this@FijerenaApplication).migrateLegacyDevMode()
+            // Live sync keeps deletions for 90 days — see SyncKind.TOMBSTONE_RETENTION_MS.
+            pruneSyncTombstones(this@FijerenaApplication)
             // Build the encrypted credential store off the main thread, before the nav host's
             // session-restore effect asks for it from the main dispatcher.
             AccountManager(this@FijerenaApplication).warmUp()

@@ -178,12 +178,13 @@ class ProviderRepository(
     }
 
     /**
-     * Delete a provider and clean up its encrypted prefs and cache.
+     * Delete a provider and clean up its encrypted prefs and cache. The deletion is recorded for
+     * live sync; its favourite and history tombstones go with it, the provider's own covers them.
      */
     suspend fun deleteProvider(id: Long) {
         val entity = dao.getProviderById(id)
         if (entity != null) {
-            dao.deleteProvider(entity)
+            dao.deleteProviderRecordingTombstone(entity, System.currentTimeMillis())
             deleteProviderEpgSources(id)
             clearProviderPassword(id)
             clearProviderCache(id)
@@ -669,6 +670,7 @@ class ProviderRepository(
      */
     private suspend fun clearProviderWatchState(providerId: Long) {
         XtreamDatabase.getInstance(context).watchStateDao().deleteAllProfiles(providerId)
+        XtreamDatabase.getInstance(context).syncTombstoneDao().deleteForProvider(providerId)
         try {
             context
                 .getSharedPreferences("media_cache_$providerId", Context.MODE_PRIVATE)
