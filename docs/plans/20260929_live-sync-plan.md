@@ -150,7 +150,7 @@ today):
 
 `MediaRepository` already branches on `usesServerUserData` for every user-data read and write,
 so the outbox hook goes on the local-storage side of those branches and Jellyfin never reaches it.
-Phase 2 must verify that no local user-data write path for a Jellyfin provider bypasses that gate.
+Phase 4 must verify that no local user-data write path for a Jellyfin provider bypasses that gate.
 
 ### User profiles
 
@@ -294,36 +294,47 @@ The records reveal provider hosts, usernames, passwords and full viewing history
 
 ## Phases
 
-1. **Stable provider identity + tombstones.** `providerKey` UUID on providers (backfilled for
-   existing rows); `sync_tombstone` table;
-   remove/clear paths write tombstones (local-user-data providers only — see Jellyfin). Room migration + `docs/DATABASE_SCHEMA.md`.
-2. **Outbox + HLC.** `sync_outbox` and `sync_state` (cursor, HLC) tables; every write path in
-   `MediaRepository` / settings writes an outbox row in the same transaction. Coalesce by key.
-   Room migration + schema doc.
-3. **Merge/apply engine.** Pure function `(local, remote) -> resolution` with unit tests for every
-   conflict case (newer wins, tombstone vs update, unknown provider, user-data record for a
-   Jellyfin provider ignored, clock skew). Apply path with `fromRemote` and snapshot refresh.
-4. **Server.** Worker + DO, endpoints above, integration tests against Miniflare. Docker image
-   running the same code under `workerd` for self-hosting.
-5. **Sync client.** HTTP push/pull, WebSocket while foregrounded, catch-up on resume, retry with
-   backoff, full resync past the tombstone horizon.
-6. **Encryption + pairing.** Account key, AES-GCM, HMAC keys, QR pairing UI on `:tv` and `:mobile`.
-7. **Settings UI.** Sync server URL (validated via `GET /info`), sync on/off, paired devices
-   list, revoke, last-sync time; dev mode shows raw sync errors.
-8. **Profiles schema.** `profile` table, `profileId` added to `watch_state` and `favorite_state`
-   primary keys, existing rows backfilled to `Default`. DAO queries and `MediaRepository` snapshot
-   scoped to the active profile. Room migration + schema doc. Works with sync off.
-9. **Profiles UI.** Picker on start (only with 2+ profiles), add/rename/delete, switch profile on
+Profiles first, then sync: profiles change the `watch_state` / `favorite_state` primary keys,
+every DAO query and the `MediaRepository` snapshot — the same tables and write paths the outbox,
+tombstones and merge engine are built on. Doing profiles first means sync is built once on the
+final schema. Profiles are also useful on their own (a shared TV) and need no server.
+
+**Profiles**
+
+1. **Profiles schema.** `profile` table keyed by the profile UUID (the same value sync uses as
+   `profileKey`, so no mapping table later). `profileId` added to `watch_state` and
+   `favorite_state` primary keys, existing rows backfilled to `Default`. DAO queries and
+   `MediaRepository` snapshot scoped to the active profile. Room migration + schema doc.
+   **Blocked on Open question 1** (Jellyfin login per profile or shared), which shapes the
+   `profile` table.
+2. **Profiles UI.** Picker on start (only with 2+ profiles), add/rename/delete, switch profile on
    `:tv` and `:mobile`, snapshot reload on switch.
 
-Phases 1–3 and 8–9 land without any server and are testable in isolation. The sync record key
-carries `profileKey` from Phase 2 onward (every record in `Default` until Phase 8 lands), so
-profiles never require re-keying records already on the server. Phase 8 can also be pulled ahead
-of Phase 2 if profiles are wanted before sync.
+**Sync**
+
+3. **Stable provider identity + tombstones.** `providerKey` UUID on providers (backfilled for
+   existing rows); `sync_tombstone` table; remove/clear paths write tombstones (local-user-data
+   providers only — see Jellyfin). Room migration + `docs/DATABASE_SCHEMA.md`.
+4. **Outbox + HLC.** `sync_outbox` and `sync_state` (cursor, HLC) tables; every write path in
+   `MediaRepository` / settings writes an outbox row in the same transaction. Coalesce by key.
+   Record keys carry `profileKey` from the start. Room migration + schema doc.
+5. **Merge/apply engine.** Pure function `(local, remote) -> resolution` with unit tests for every
+   conflict case (newer wins, tombstone vs update, unknown provider, unknown profile, user-data
+   record for a Jellyfin provider ignored, clock skew). Apply path with `fromRemote` and snapshot
+   refresh.
+6. **Server.** Worker + DO, endpoints above, integration tests against Miniflare. Docker image
+   running the same code under `workerd` for self-hosting.
+7. **Sync client.** HTTP push/pull, WebSocket while foregrounded, catch-up on resume, retry with
+   backoff, full resync past the tombstone horizon.
+8. **Encryption + pairing.** Account key, AES-GCM, HMAC keys, QR pairing UI on `:tv` and `:mobile`.
+9. **Settings UI.** Sync server URL (validated via `GET /info`), sync on/off, paired devices
+   list, revoke, last-sync time; dev mode shows raw sync errors.
+
+Phases 1–5 land without any server and are testable in isolation.
 
 ## Testing
 
-- Unit: merge engine (Phase 3) exhaustively.
+- Unit: merge engine (Phase 5) exhaustively.
 - Two emulators + one real device against a local server (Miniflare, then the `workerd` Docker
   image): pause/resume handoff,
   offline edits then reconnect, favorite removed on A while B offline, clock skewed ±1 h on one
@@ -363,7 +374,7 @@ All decided 2026-09-29.
 4. **Theme:** syncs. UI scale and cellular multipliers stay per-device.
 5. **Export file:** no change, stays version 5. It remains a snapshot backup, no tombstones, no
    passwords (it is a plaintext file in `/sdcard/Download`). `SettingsExportManager` untouched.
-6. **User profiles:** in this plan (see Design → User profiles, Phases 8–9).
+6. **User profiles:** in this plan, built first (see Design → User profiles, Phases 1–2).
 
 ## Open questions
 
