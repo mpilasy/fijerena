@@ -1,6 +1,6 @@
 # Profile-Scoped Settings Plan
 
-**Status:** In Progress — steps 1–2 landed 2026-09-30; step 3 (device check) pending
+**Status:** In Progress — steps 1–3 done 2026-09-30; switch latency open (see Step 3 results)
 
 Move two settings from device/provider scope to the profile:
 
@@ -105,3 +105,19 @@ UI change.
   first use instead of all at once.
 - EPG browser and search read `excluded` too — they follow the active profile through the same
   flags; no change needed, but step 3 checks them.
+
+## Step 3 results (2026-09-30, TV and phone emulators)
+
+- Instrumented tests: 6/6 pass on the TV emulator (`ProfileCategoryFiltersTest` fixed to create its
+  own profiles — `DeleteDefaultProfileTest` in the same APK deletes `default`).
+- Upgrade: on both emulators every provider's filters landed under every profile byte-for-byte,
+  the rest of each provider's settings JSON unchanged; the install-wide dev-mode flag was copied to
+  every profile and removed. Home counts unchanged (bearstv 268/876, 139/428, 90/352).
+- New profile copied the creator's filters on all six filtered providers; dev mode started off (the
+  dev-only "X of Y" counts and "(XTREAM)" label disappeared for it). The filter section named the
+  profile. Removing two rules as the new profile raised its TV Shows from 90 to 107 while Default
+  stayed at 90; switching back re-applied Default's. Deleting the profile removed its filter keys.
+- **Switch latency:** a switch where bearstv's filters differ takes ~3.4 s from choosing the profile
+  to home appearing, against 0.16 s when they don't — the recompute of ~283k catalogue rows. The
+  picker gives no feedback meanwhile. The same cost already applied to saving a filter edit.
+
