@@ -42,12 +42,17 @@ class ProfileRepository(
         dao.update(id, name.trim(), colorIndex)
     }
 
+    /** See [AppSettings.copyLegacyDevModeToProfiles]; run once at startup. */
+    suspend fun migrateLegacyDevMode() {
+        AppSettings(context).copyLegacyDevModeToProfiles(dao.getAll().map { it.id })
+    }
+
     /** Why [deleteProfile] refused, or [NONE] when it went ahead. */
     enum class DeleteBlocked { NONE, ACTIVE, LAST }
 
     /**
      * Deletes a profile with its favourites, watch state, Recent Categories, bookmarks and Jellyfin
-     * logins on every provider. Refuses the profile this device is using — switch away first — and the last one
+     * logins on every provider, and its developer-mode flag. Refuses the profile this device is using — switch away first — and the last one
      * left, since the app always needs somebody to be.
      */
     suspend fun deleteProfile(id: String): DeleteBlocked =
@@ -60,6 +65,7 @@ class ProfileRepository(
                     xtreamDb.watchStateDao().deleteProfile(id)
                     xtreamDb.favoriteStateDao().deleteProfile(id)
                     deleteProfilePrefs(id)
+                    AppSettings(context).removeDevMode(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
                     dao.delete(id)
                     DeleteBlocked.NONE

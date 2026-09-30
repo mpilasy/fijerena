@@ -72,11 +72,31 @@ class AppSettings(
         set(value) = prefs.edit { putString(KEY_ACTIVE_PROFILE_ID, value) }
 
     /**
-     * Enable or disable developer mode.
+     * Developer mode of the active profile — each profile has its own, off until turned on. See
+     * docs/plans/20260930_profile-scoped-settings-plan.md. Falls back to the install-wide flag
+     * this replaced until [copyLegacyDevModeToProfiles] has run.
      */
     var isDevMode: Boolean
-        get() = prefs.getBoolean(KEY_DEV_MODE, false)
-        set(value) = prefs.edit { putBoolean(KEY_DEV_MODE, value) }
+        get() = prefs.getBoolean(devModeKey(activeProfileId), prefs.getBoolean(KEY_DEV_MODE, false))
+        set(value) = prefs.edit { putBoolean(devModeKey(activeProfileId), value) }
+
+    /**
+     * One-time upgrade: gives every profile in [profileIds] the install-wide developer-mode flag
+     * (unless it already has its own), then drops that flag so profiles added later start off.
+     */
+    fun copyLegacyDevModeToProfiles(profileIds: List<String>) {
+        if (!prefs.contains(KEY_DEV_MODE)) return
+        val legacy = prefs.getBoolean(KEY_DEV_MODE, false)
+        prefs.edit {
+            profileIds.filterNot { prefs.contains(devModeKey(it)) }.forEach { putBoolean(devModeKey(it), legacy) }
+            remove(KEY_DEV_MODE)
+        }
+    }
+
+    /** Drops a deleted profile's developer-mode flag. */
+    fun removeDevMode(profileId: String) = prefs.edit { remove(devModeKey(profileId)) }
+
+    private fun devModeKey(profileId: String) = "${KEY_DEV_MODE}_$profileId"
 
     /**
      * Get or set the maximum size of the watch history queue.

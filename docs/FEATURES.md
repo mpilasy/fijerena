@@ -119,7 +119,7 @@ Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 
 Settings → Export Settings / Import Settings.
 
-**Exported:** all provider configs (name, URL, username, type, config JSON, per-provider settings), all EPG source URLs, per-provider favorites (item ID, name, category, content type), and global AppSettings (theme, UI scale, dev mode, EPG auto-refresh, cellular buffer multipliers).
+**Exported:** all provider configs (name, URL, username, type, config JSON, per-provider settings), all EPG source URLs, per-provider favorites (item ID, name, category, content type), and global AppSettings (theme, UI scale, the active profile's dev mode, EPG auto-refresh, cellular buffer multipliers).
 
 **Not exported:** passwords (EncryptedSharedPreferences), cache, EPG programme data.
 
@@ -282,7 +282,7 @@ Favorites and Last Watched/Continue Watching persist durably in SQLite via Room 
 
 ## Developer Mode
 
-Enable in Settings. Features gated behind dev mode:
+Enable in Settings. Each profile has its own switch (off for a new profile). Features gated behind dev mode:
 
 - **Payload size tracking:** API response sizes shown in category grid
 - **EPG DB stats:** programme and channel counts in EPG Browser header

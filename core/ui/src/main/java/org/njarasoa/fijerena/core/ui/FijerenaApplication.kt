@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -63,6 +64,7 @@ class FijerenaApplication :
             }
         CoroutineScope(SupervisorJob() + Dispatchers.IO + startupExceptionHandler).launch {
             ProviderRepository(this@FijerenaApplication).migrateLegacyCategoryFilterPrefixes()
+            ProfileRepository(this@FijerenaApplication).migrateLegacyDevMode()
             // Build the encrypted credential store off the main thread, before the nav host's
             // session-restore effect asks for it from the main dispatcher.
             AccountManager(this@FijerenaApplication).warmUp()

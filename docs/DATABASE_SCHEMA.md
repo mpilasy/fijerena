@@ -437,7 +437,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `dev_mode` | BOOLEAN | Toggles developer features |
+| `dev_mode_<profileId>` | BOOLEAN | Toggles developer features for that profile (absent = off). Replaced the install-wide `dev_mode`, copied to every profile on upgrade |
 | `active_profile_id` | TEXT | Profile using this device; absent means `default`. Per device, never synced |
 | `theme_id` | TEXT | Current dark theme variant (default `deep_night`) |
 | `ui_style_id` | TEXT | Look-and-feel preset, independent of color (default `material`) |
