@@ -1691,6 +1691,27 @@ class MediaRepository(
         return "$timeMs ms"
     }
 
+    /**
+     * Changes received from another device rewrote this provider's favourites or history rows
+     * behind the in-memory views: refill them and re-publish every Recent list, so the UI shows the
+     * new state without a restart. See `docs/plans/20260929_live-sync-plan.md` → Applying remote
+     * records.
+     */
+    suspend fun reloadAfterRemoteChange() {
+        synchronized(favoriteLock) {
+            cachedFavorites = null
+            cachedFavoriteCategories = null
+            favoriteIdSet = null
+            favoriteCategoryIdSet = null
+            getFavoriteItems()
+            getFavoriteCategoryItems()
+        }
+        synchronized(watchHistoryLock) {
+            cachedWatchHistory = null
+        }
+        recentItemsFlows.keys.toList().forEach { refreshRecentItems(it) }
+    }
+
     // --- Cache management ---
 
     fun clearCache() {

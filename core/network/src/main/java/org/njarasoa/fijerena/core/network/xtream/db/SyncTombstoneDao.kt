@@ -12,6 +12,21 @@ interface SyncTombstoneDao {
     @Query("SELECT * FROM sync_tombstone WHERE providerId = :providerId")
     suspend fun getAll(providerId: Long): List<SyncTombstoneEntity>
 
+    @Query(
+        "SELECT * FROM sync_tombstone WHERE providerId = :providerId AND profileId = :profileId " +
+            "AND kind = :kind AND itemId = :itemId AND contentType = :contentType",
+    )
+    suspend fun get(
+        providerId: Long,
+        profileId: String,
+        kind: String,
+        itemId: String,
+        contentType: String,
+    ): SyncTombstoneEntity?
+
+    @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun upsert(tombstone: SyncTombstoneEntity)
+
     /** Provider deletion: its own `provider` tombstone in `providers.db` covers everything. */
     @Query("DELETE FROM sync_tombstone WHERE providerId = :providerId")
     suspend fun deleteForProvider(providerId: Long)

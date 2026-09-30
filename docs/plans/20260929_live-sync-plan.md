@@ -425,10 +425,32 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
      tombstones.
    - **Not queued: data that existed before Phase 4.** The first sync of a device must upload
      everything it has (Phase 7), not just the outbox.
-5. **Merge/apply engine.** Pure function `(local, remote) -> resolution` with unit tests for every
-   conflict case (newer wins, tombstone vs update, unknown provider, unknown profile, user-data
-   record for a Jellyfin provider ignored, clock skew). Apply path with `fromRemote` and snapshot
-   refresh.
+5. **Merge/apply engine** — *landed 2026-09-30*, in two commits (`xtream_v2.db` v23,
+   `providers.db` v15). As built:
+   - **`sync_outbox` became `sync_version`**: kept after sending as each key's version (clock of
+     its latest change, local or received), `pending` for what is still to send. The merge needs
+     the local version to compare against; table rows don't carry the HLC.
+   - **`SyncMerge.resolve`** (pure, unit-tested): last writer wins against
+     `max(version, tombstone)`, a tie keeps the local version (rare; diverges until the next
+     change); a `watch_clear` drops watch rows whose own version is older; records for a
+     provider or profile not here yet are **deferred** (retry after the next pull), for a deleted
+     one **skipped**; favourites and history of a Jellyfin provider skipped. `Hlc.tick`/`receive`
+     mirror the SQL for the clock-skew test.
+   - **`SyncRecord`** (`SyncKey` + hlc + deleted + payload) and **`SyncPayloads`**, one JSON shape
+     per kind — no local ids, sync statistics or device state (active provider, Jellyfin
+     session).
+   - **`SyncApplier`** applies a batch in dependency order (profiles, providers, EPG sources,
+     settings, logins, filters, then user data), one transaction per record with `applying` set;
+     each applied record becomes the key's non-pending version; the batch's newest clock value is
+     received into both clocks. Provider and profile deletions reuse the repositories' full
+     cleanup, then overwrite the tombstone and version with the received clock. Deleting the
+     profile this device is using is deferred and reported, for the caller to switch first.
+     Settings, logins and filters are written past `SettingsSyncQueue`, so they aren't sent back.
+   - **Snapshot refresh**: `MediaRepository.reloadAfterRemoteChange()` refills favourites and
+     re-publishes Recent lists; `AppContainer.reloadAfterRemoteChange(providerIds)` runs it for
+     the providers the applier reports.
+   - **Left for Phase 7**: adopting a matching provider (or EPG source) that already exists under
+     another key on first sync; retrying deferred records.
 6. **Server.** Worker + DO, endpoints above, integration tests against Miniflare. Docker image
    running the same code under `workerd` for self-hosting.
 7. **Sync client.** HTTP push/pull, WebSocket while foregrounded, catch-up on resume, retry with

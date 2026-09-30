@@ -39,13 +39,15 @@ class CategoryFiltersStore(
         profileId: String,
     ): Boolean = prefs.contains(key(providerId, profileId))
 
+    /** [queueForSync] false only when applying filters received from another device. */
     fun set(
         providerId: Long,
         profileId: String,
         filters: CategoryFilters,
+        queueForSync: Boolean = true,
     ) {
         prefs.edit { putString(key(providerId, profileId), json.encodeToString(CategoryFiltersSerializer, filters)) }
-        SettingsSyncQueue.categoryFilters(context, providerId, profileId)
+        if (queueForSync) SettingsSyncQueue.categoryFilters(context, providerId, profileId)
     }
 
     /** A new profile starts with [fromProfileId]'s filters on every provider. */

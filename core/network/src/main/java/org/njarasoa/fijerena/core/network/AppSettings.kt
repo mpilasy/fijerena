@@ -3,6 +3,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 
 /**
@@ -60,6 +62,11 @@ class AppSettings(
         const val DEFAULT_EPG_REFRESH_INTERVAL = 24
         const val DEFAULT_CONTENT_REFRESH_TIME = "04:00"
         const val DEFAULT_CELLULAR_MULTIPLIER = 1.0f
+
+        /** Settings kept the same on every device by live sync; dev mode is per profile. */
+        val SYNCED_SETTING_KEYS =
+            listOf(KEY_THEME_ID, KEY_DEV_MODE, KEY_EPG_AUTO_REFRESH, KEY_EPG_REFRESH_TIME, KEY_EPG_REFRESH_INTERVAL)
+        const val DEV_MODE_SETTING_KEY = KEY_DEV_MODE
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
     }
@@ -94,6 +101,41 @@ class AppSettings(
         prefs.edit {
             profileIds.filterNot { prefs.contains(devModeKey(it)) }.forEach { putBoolean(devModeKey(it), legacy) }
             remove(KEY_DEV_MODE)
+        }
+    }
+
+    /**
+     * A setting received from another device (live sync): written straight to prefs, not through
+     * the setters, which would queue it to be sent back. Keys other than [SYNCED_SETTING_KEYS] are
+     * ignored — a newer app version may sync more.
+     */
+    fun applyRemoteSetting(
+        key: String,
+        profileId: String,
+        value: kotlinx.serialization.json.JsonPrimitive,
+    ) {
+        prefs.edit {
+            when (key) {
+                KEY_DEV_MODE -> value.booleanOrNull?.let { putBoolean(devModeKey(profileId), it) }
+                KEY_THEME_ID, KEY_EPG_REFRESH_TIME -> if (value.isString) putString(key, value.content)
+                KEY_EPG_AUTO_REFRESH -> value.booleanOrNull?.let { putBoolean(key, it) }
+                KEY_EPG_REFRESH_INTERVAL -> value.intOrNull?.let { putInt(key, it) }
+            }
+        }
+    }
+
+    /** The value of a synced setting as it is sent — [profileId] matters only for dev mode. */
+    fun syncedSetting(
+        key: String,
+        profileId: String,
+    ): kotlinx.serialization.json.JsonPrimitive? {
+        val stored = if (key == KEY_DEV_MODE) devModeKey(profileId) else key
+        if (!prefs.contains(stored)) return null
+        return when (key) {
+            KEY_DEV_MODE, KEY_EPG_AUTO_REFRESH -> kotlinx.serialization.json.JsonPrimitive(prefs.getBoolean(stored, false))
+            KEY_THEME_ID, KEY_EPG_REFRESH_TIME -> kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
+            KEY_EPG_REFRESH_INTERVAL -> kotlinx.serialization.json.JsonPrimitive(prefs.getInt(stored, DEFAULT_EPG_REFRESH_INTERVAL))
+            else -> null
         }
     }
 

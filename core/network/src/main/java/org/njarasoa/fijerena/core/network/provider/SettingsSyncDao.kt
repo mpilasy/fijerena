@@ -39,6 +39,34 @@ interface SettingsSyncDao {
         insertAtClock(kind, profileId, itemKey)
     }
 
+    // --- Applying records received from another device (live sync phase 5) ---
+
+    @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun upsertVersion(version: SettingsVersionEntity)
+
+    /** A received clock value: this device's next change must come after it. */
+    @Query("UPDATE sync_clock SET hlc = MAX(hlc, :remote) WHERE id = ${SyncClockEntity.SINGLE_ROW}")
+    suspend fun receive(remote: Long)
+
+    /** While set, [SettingsSyncTriggers] queue nothing — see [SyncClockEntity.applying]. */
+    @Query("UPDATE sync_clock SET applying = :applying WHERE id = ${SyncClockEntity.SINGLE_ROW}")
+    suspend fun setApplying(applying: Boolean)
+
+    @Query("SELECT * FROM sync_tombstone WHERE kind = :kind AND itemKey = :itemKey")
+    suspend fun getTombstone(
+        kind: String,
+        itemKey: String,
+    ): SettingsTombstoneEntity?
+
+    @androidx.room.Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun upsertTombstone(tombstone: SettingsTombstoneEntity)
+
+    @Query("SELECT * FROM providers WHERE providerKey = :providerKey")
+    suspend fun providerByKey(providerKey: String): ProviderEntity?
+
+    @Query("SELECT * FROM epg_source WHERE source_key = :sourceKey")
+    suspend fun sourceByKey(sourceKey: String): EpgSourceEntity?
+
     @Query("SELECT providerKey FROM providers WHERE id = :providerId")
     suspend fun providerKey(providerId: Long): String?
 

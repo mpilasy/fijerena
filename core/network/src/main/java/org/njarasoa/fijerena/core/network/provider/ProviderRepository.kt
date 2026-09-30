@@ -461,6 +461,95 @@ class ProviderRepository(
         }
     }
 
+    // --- Live sync: changes received from another device (phase 5) ---
+    // These write without queueing: the caller (SyncApplier) holds the sync clock's `applying` flag
+    // for the database writes, and prefs writes here simply skip SettingsSyncQueue.
+
+    /** Adds or updates the provider named [providerKey]; returns its local id. Never activates it. */
+    internal suspend fun applyRemoteProvider(
+        providerKey: String,
+        remote: org.njarasoa.fijerena.core.network.sync.SyncPayloads.Provider,
+    ): Long {
+        val existing = db.settingsSyncDao().providerByKey(providerKey)
+        val id =
+            if (existing != null) {
+                dao.updateProvider(
+                    existing.copy(
+                        name = remote.name,
+                        url = remote.url,
+                        username = remote.username,
+                        type = remote.type,
+                        config = remote.config,
+                        providerSettings = remote.providerSettings,
+                    ),
+                )
+                existing.id
+            } else {
+                dao.insertProvider(
+                    ProviderEntity(
+                        name = remote.name,
+                        url = remote.url,
+                        username = remote.username,
+                        type = remote.type,
+                        config = remote.config,
+                        providerSettings = remote.providerSettings,
+                        isActive = false,
+                        providerKey = providerKey,
+                    ),
+                )
+            }
+        remote.password?.let { savePassword(id, it) }
+        settingsCache.keys.removeAll { it.first == id }
+        MediaProviderFactory.clearCache(id)
+        return id
+    }
+
+    /**
+     * Writes (or, when [login] is null, removes) a profile's Jellyfin login. Drops the session so
+     * the next use signs in with it — sessions are per device and never synced.
+     */
+    internal suspend fun applyRemoteLogin(
+        providerId: Long,
+        profileId: String,
+        login: org.njarasoa.fijerena.core.network.sync.SyncPayloads.Login?,
+    ) {
+        if (profileId == ProfileEntity.DEFAULT_ID) {
+            dao.getProviderById(providerId)?.let { dao.updateProvider(it.copy(username = login?.username.orEmpty())) }
+        }
+        getProviderPrefs(providerId, profileId).edit {
+            if (profileId != ProfileEntity.DEFAULT_ID) {
+                if (login == null) remove(KEY_USERNAME) else putString(KEY_USERNAME, login.username)
+            }
+            if (login?.password == null) remove(KEY_PASSWORD) else putString(KEY_PASSWORD, login.password)
+            remove(KEY_JELLYFIN_TOKEN).remove(KEY_JELLYFIN_USER_ID)
+        }
+        MediaProviderFactory.clearCache(providerId)
+    }
+
+    /** A profile's category filters on a provider; re-applied to Xtream's flags if it is this device's profile. */
+    internal suspend fun applyRemoteCategoryFilters(
+        providerId: Long,
+        profileId: String,
+        filters: CategoryFilters,
+    ) {
+        filtersStore.set(providerId, profileId, filters, queueForSync = false)
+        settingsCache.keys.removeAll { it.first == providerId }
+        val entity = dao.getProviderById(providerId) ?: return
+        if (profileId == activeProfileId() && entity.type == "XTREAM") {
+            withContext(Dispatchers.IO) {
+                val database = XtreamDatabase.getInstance(context)
+                org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
+                    database.categoryDao(),
+                    database.streamDao(),
+                    database.seriesDao(),
+                    providerId,
+                    filters,
+                )
+            }
+            MediaProviderFactory.clearCache(providerId)
+        }
+    }
+
     /** Only Jellyfin logins are per profile; see [getLogin]. */
     private fun loginProfileId(type: String): String =
         if (type == "JELLYFIN") AppSettings(context).activeProfileId else ProfileEntity.DEFAULT_ID

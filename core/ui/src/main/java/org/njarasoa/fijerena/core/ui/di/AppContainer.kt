@@ -152,6 +152,16 @@ class AppContainer(
     }
 
     /**
+     * Changes received from another device rewrote favourites or history of [providerIds]: every
+     * cached repository of theirs refills its in-memory views and re-publishes its Recent lists.
+     * See `SyncApplier.Result.userDataChangedProviderIds`.
+     */
+    suspend fun reloadAfterRemoteChange(providerIds: Set<Long>) {
+        val repos = mutex.withLock { mediaRepositories.filterKeys { it in providerIds }.values.toList() }
+        withContext(Dispatchers.IO) { repos.forEach { it.reloadAfterRemoteChange() } }
+    }
+
+    /**
      * Evicts a single cached MediaRepository. Call this after a provider's credentials
      * change (URL/username/password) so the next getMediaRepository() call rebuilds it
      * with a fresh MediaProvider instead of reusing one built from the old credentials.
