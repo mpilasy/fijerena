@@ -6,11 +6,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import org.njarasoa.fijerena.core.network.profile.ProfileDao
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
 @Database(
     entities = [ProviderEntity::class, EpgSourceEntity::class, EpgPipelineStatsEntity::class, ProfileEntity::class],
-    version = 11,
+    version = 12,
     exportSchema = false,
 )
 abstract class SettingsDatabase : RoomDatabase() {
@@ -19,6 +20,8 @@ abstract class SettingsDatabase : RoomDatabase() {
     abstract fun epgSourceDao(): EpgSourceDao
 
     abstract fun epgPipelineStatsDao(): EpgPipelineStatsDao
+
+    abstract fun profileDao(): ProfileDao
 
     companion object {
         private const val DB_NAME = "providers.db"
@@ -192,6 +195,14 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /** Migration 11→12: avatar colour per profile, an index into the UI palette. */
+        val MIGRATION_11_12 =
+            object : Migration(11, 12) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `profiles` ADD COLUMN `colorIndex` INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+
         /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
         private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -218,6 +229,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_8_9,
                         MIGRATION_9_10,
                         MIGRATION_10_11,
+                        MIGRATION_11_12,
                     ).addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {

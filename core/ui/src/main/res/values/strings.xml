@@ -832,4 +832,21 @@
     <string name="provider_error_delete_failed">Failed to delete provider</string>
     <string name="provider_error_update_failed">Failed to update provider</string>
     <string name="provider_error_save_failed">Failed to save provider</string>
+    <!-- Profiles (docs/plans/20260929_live-sync-plan.md → User profiles) -->
+    <string name="settings_profiles_title">Profiles</string>
+    <string name="settings_profiles_description">Each profile has its own favourites, watch history and recent categories. Providers and settings are shared.</string>
+    <string name="settings_profiles_add">Add profile</string>
+    <string name="settings_profiles_active_marker">Using on this device</string>
+    <string name="profile_dialog_add_title">New profile</string>
+    <string name="profile_dialog_edit_title">Edit profile</string>
+    <string name="profile_name_label">Name</string>
+    <string name="profile_color_label">Colour</string>
+    <string name="profile_color_option_format">Colour %1$d</string>
+    <string name="profile_save_button">Save</string>
+    <string name="profile_delete_button">Delete profile</string>
+    <string name="profile_error_name_required">Enter a name</string>
+    <string name="profile_delete_confirm_title">Delete %1$s?</string>
+    <string name="profile_delete_confirm_text">Their favourites, watch history and recent categories on every provider will be deleted. This can\'t be undone.</string>
+    <string name="profile_delete_blocked_active">This device is using that profile. Switch to another profile first.</string>
+    <string name="profile_delete_blocked_last">The last profile can\'t be deleted.</string>
 </resources>

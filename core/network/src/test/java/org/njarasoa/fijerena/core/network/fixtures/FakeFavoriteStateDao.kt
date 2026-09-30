@@ -52,6 +52,10 @@ class FakeFavoriteStateDao : FavoriteStateDao {
         rows.values.removeAll { it.providerId == providerId && it.profileId == profileId && it.kind == kind }
     }
 
+    override fun deleteProfile(profileId: String) {
+        rows.values.removeAll { it.profileId == profileId }
+    }
+
     override fun deleteAllProfiles(providerId: Long) {
         rows.values.removeAll { it.providerId == providerId }
     }

@@ -66,9 +66,10 @@ class MediaRepositoryProfileTest {
     @Test
     fun `clearing favorites leaves the other profile's alone`() =
         runBlocking {
+            // One repository at a time: each writes on its own thread, and the fakes are plain maps.
             defaultRepo.addFavorite("m1", "Film", "cat1", ContentType.MOVIES)
-            otherRepo.addFavorite("m2", "Other film", "cat1", ContentType.MOVIES)
             defaultRepo.awaitPendingWrites()
+            otherRepo.addFavorite("m2", "Other film", "cat1", ContentType.MOVIES)
             otherRepo.awaitPendingWrites()
 
             otherRepo.clearFavorites()
@@ -91,9 +92,10 @@ class MediaRepositoryProfileTest {
     @Test
     fun `clearing watch history leaves the other profile's alone`() =
         runBlocking {
+            // One repository at a time: each writes on its own thread, and the fakes are plain maps.
             defaultRepo.savePlaybackPosition("m1", "Film", "cat1", ContentType.MOVIES, 5_000L, 100_000L)
-            otherRepo.savePlaybackPosition("m1", "Film", "cat1", ContentType.MOVIES, 9_000L, 100_000L)
             defaultRepo.awaitPendingWrites()
+            otherRepo.savePlaybackPosition("m1", "Film", "cat1", ContentType.MOVIES, 9_000L, 100_000L)
             otherRepo.awaitPendingWrites()
 
             otherRepo.clearWatchHistory()

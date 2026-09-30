@@ -34,6 +34,13 @@ class SettingsViewModelFactory(
                     exportManager = SettingsExportManager(appContext),
                 ) as T
             }
+            modelClass.isAssignableFrom(ProfilesViewModel::class.java) -> {
+                ProfilesViewModel(
+                    context = appContext,
+                    repository = org.njarasoa.fijerena.core.network.profile.ProfileRepository(appContext),
+                    appSettings = AppSettings(appContext),
+                ) as T
+            }
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
                 SearchViewModel(appContext, contentType) as T
             }

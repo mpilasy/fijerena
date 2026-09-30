@@ -176,6 +176,22 @@ device contributing its own "Default".
 `watch_state` / `favorite_state` row is assigned to it. Users who never add a second profile see no
 picker and no change.
 
+**Where profiles appear in the UI** (decided 2026-09-29):
+
+1. **"Who's watching?" picker** — full screen, before Content Type Selection, only with 2+
+   profiles. TV: centred row of large D-pad cards (colour circle with initial, name below), focus
+   starts on this device's last profile. Mobile: 2-column grid. Last card is "+ Add profile".
+   **TV shows it on every launch** (shared screen, avoids watching as the wrong person);
+   **mobile skips it** and reopens as the last profile.
+2. **Header avatar** on Content Type Selection, next to Settings, **always shown** (so profiles
+   are discoverable with only one). Opens the same picker. Switching evicts cached
+   `MediaRepository` instances and reloads the home screen for the new profile.
+3. **Jellyfin sign-in** — switching to a profile with no login for the active Jellyfin server shows
+   that server's sign-in (existing Jellyfin form, Quick Connect included) instead of its library.
+4. **Settings → Profiles** — add, rename, change colour, delete (confirmation, warns that the
+   profile's favourites and history go with it). `default` can be renamed; the last profile can't
+   be deleted.
+
 **Active profile** is per device, not synced (the TV and a phone are used by different people at
 the same time). Remembered across restarts. With more than one profile: picker on app start, and
 "Switch profile" in settings on `:tv` and `:mobile`.

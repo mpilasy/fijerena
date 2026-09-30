@@ -23,10 +23,12 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.feature.settings.components.ImportConflictDialog
 import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
 import org.njarasoa.fijerena.feature.settings.components.LanguageSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.PlaybackSettingsCard
+import org.njarasoa.fijerena.feature.settings.components.ProfilesSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.AboutSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.CloudSyncSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.DatabaseMaintenanceCard
@@ -50,6 +52,9 @@ fun MobileSettingsScreen(
     val context = LocalContext.current
     val resources = LocalResources.current
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
+    val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
@@ -202,6 +207,17 @@ fun MobileSettingsScreen(
                     .padding(CinemaSpacing.md),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
+            // === Profiles === first, since it decides whose favourites and history the rest is about.
+            ProfilesSettingsCard(
+                profiles = profiles,
+                message = profilesMessage,
+                newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
+                onAdd = profilesViewModel::addProfile,
+                onUpdate = profilesViewModel::updateProfile,
+                onDelete = profilesViewModel::deleteProfile,
+                onDismissMessage = profilesViewModel::clearMessage,
+            )
+
             // === Provider ===
             ProviderSettingsCard(
                 uiState = uiState,

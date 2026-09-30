@@ -795,4 +795,21 @@
     <string name="provider_error_delete_failed">Échec de la suppression du fournisseur</string>
     <string name="provider_error_update_failed">Échec de la mise à jour du fournisseur</string>
     <string name="provider_error_save_failed">Échec de l\'enregistrement du fournisseur</string>
+    <!-- Profils (docs/plans/20260929_live-sync-plan.md → User profiles) -->
+    <string name="settings_profiles_title">Profils</string>
+    <string name="settings_profiles_description">Chaque profil a ses propres favoris, historique et catégories récentes. Les fournisseurs et les paramètres sont partagés.</string>
+    <string name="settings_profiles_add">Ajouter un profil</string>
+    <string name="settings_profiles_active_marker">Utilisé sur cet appareil</string>
+    <string name="profile_dialog_add_title">Nouveau profil</string>
+    <string name="profile_dialog_edit_title">Modifier le profil</string>
+    <string name="profile_name_label">Nom</string>
+    <string name="profile_color_label">Couleur</string>
+    <string name="profile_color_option_format">Couleur %1$d</string>
+    <string name="profile_save_button">Enregistrer</string>
+    <string name="profile_delete_button">Supprimer le profil</string>
+    <string name="profile_error_name_required">Saisissez un nom</string>
+    <string name="profile_delete_confirm_title">Supprimer %1$s ?</string>
+    <string name="profile_delete_confirm_text">Ses favoris, son historique et ses catégories récentes sur tous les fournisseurs seront supprimés. Cette action est irréversible.</string>
+    <string name="profile_delete_blocked_active">Cet appareil utilise ce profil. Passez d\'abord à un autre profil.</string>
+    <string name="profile_delete_blocked_last">Le dernier profil ne peut pas être supprimé.</string>
 </resources>

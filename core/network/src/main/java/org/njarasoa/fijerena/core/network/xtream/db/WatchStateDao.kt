@@ -297,6 +297,10 @@ interface WatchStateDao {
         profileId: String,
     )
 
+    /** Profile deletion: that profile's rows across every provider. */
+    @Query("DELETE FROM watch_state WHERE profileId = :profileId")
+    suspend fun deleteProfile(profileId: String)
+
     /** Provider deletion: every profile's rows go with it. */
     @Query("DELETE FROM watch_state WHERE providerId = :providerId")
     suspend fun deleteAllProfiles(providerId: Long)

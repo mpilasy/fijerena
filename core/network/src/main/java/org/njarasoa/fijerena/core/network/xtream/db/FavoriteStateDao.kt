@@ -55,6 +55,10 @@ interface FavoriteStateDao {
         kind: String,
     )
 
+    /** Profile deletion: that profile's rows across every provider. */
+    @Query("DELETE FROM favorite_state WHERE profileId = :profileId")
+    fun deleteProfile(profileId: String)
+
     /** Provider deletion: every profile's rows go with it. */
     @Query("DELETE FROM favorite_state WHERE providerId = :providerId")
     fun deleteAllProfiles(providerId: Long)

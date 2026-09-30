@@ -29,6 +29,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.feature.settings.components.*
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -49,6 +50,9 @@ fun SettingsScreen(
     val context = LocalContext.current
     val resources = LocalResources.current
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
+    val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
@@ -201,6 +205,21 @@ fun SettingsScreen(
                 // of the list. focusRestorer remembers the last focused child and hands it back.
                 modifier = Modifier.fillMaxSize().focusRestorer(),
             ) {
+                // Profiles — first, since it decides whose favourites and history everything below
+                // the provider line is about.
+                item {
+                    ProfilesSettingsCard(
+                        profiles = profiles,
+                        message = profilesMessage,
+                        newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
+                        onAdd = profilesViewModel::addProfile,
+                        onUpdate = profilesViewModel::updateProfile,
+                        onDelete = profilesViewModel::deleteProfile,
+                        onDismissMessage = profilesViewModel::clearMessage,
+                        scale = scale,
+                    )
+                }
+
                 // Provider & Playback
                 item {
                     SettingsSectionHeader(text = stringResource(R.string.settings_section_provider_playback), scale = scale)

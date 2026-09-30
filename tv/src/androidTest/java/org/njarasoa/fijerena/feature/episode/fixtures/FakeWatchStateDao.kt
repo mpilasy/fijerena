@@ -297,6 +297,10 @@ class FakeWatchStateDao : WatchStateDao {
         rows.keys.filter { it.providerId == providerId && it.profileId == profileId }.forEach { rows.remove(it) }
     }
 
+    override suspend fun deleteProfile(profileId: String) {
+        rows.keys.filter { it.profileId == profileId }.forEach { rows.remove(it) }
+    }
+
     override suspend fun deleteAllProfiles(providerId: Long) {
         rows.keys.filter { it.providerId == providerId }.forEach { rows.remove(it) }
     }

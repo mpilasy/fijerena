@@ -5,10 +5,10 @@ This document details the complete database schema for the Fijerena application,
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 11
+**Version:** 12
 
 Manages media provider configurations, authentication metadata, persistent EPG source URLs, and
-user profiles. (v11 added `profiles`.)
+user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -31,6 +31,7 @@ bookmarks are per profile; providers, EPG sources and settings are shared. See
 | `id` | TEXT (PK) | `default` for the profile every install starts with; a random UUID for any other |
 | `name` | TEXT | Display name |
 | `createdAt` | INTEGER | Creation timestamp |
+| `colorIndex` | INTEGER | Avatar colour, an index into `CinemaProfileColors.palette` in core:ui; default 0 (added v12) |
 
 The `default` row is inserted by `MIGRATION_10_11` on upgrade and by the database's `onCreate`
 callback on a fresh install (`INSERT OR IGNORE` in both). A fixed id rather than a per-device UUID,
