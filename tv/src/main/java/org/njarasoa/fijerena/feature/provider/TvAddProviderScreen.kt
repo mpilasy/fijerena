@@ -174,8 +174,10 @@ fun TvAddProviderScreen(
             if (provider != null) {
                 name = provider.name
                 url = provider.url
-                username = provider.username
-                password = providerRepo.getPassword(editId) ?: ""
+                // This profile's login: its own for Jellyfin, the shared one otherwise.
+                val login = providerRepo.getLogin(provider)
+                username = login.username
+                password = login.password
                 selectedType =
                     try {
                         ProviderType.valueOf(provider.type)
@@ -638,9 +640,12 @@ fun TvAddProviderScreen(
                                 onSuccess = { nameVal, usernameVal, token, userId ->
                                     showQuickConnectDialog = false
                                     viewModel.quickConnectSave(
+                                        // Editing: sign this profile in to this provider rather
+                                        // than add a second one, as whoever Jellyfin says it is.
+                                        id = if (isEditMode) editId else null,
                                         name = name.ifBlank { nameVal },
                                         url = url.trimEnd('/'),
-                                        username = username.ifBlank { usernameVal },
+                                        username = if (isEditMode) usernameVal else username.ifBlank { usernameVal },
                                         token = token,
                                         userId = userId,
                                         onComplete = onSuccess,

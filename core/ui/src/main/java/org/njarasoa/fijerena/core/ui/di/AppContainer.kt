@@ -66,8 +66,10 @@ class AppContainer(
                             }
 
                         if (entity != null) {
-                            val password = providerRepository.getPassword(entity.id) ?: ""
-                            val provider = MediaProviderFactory.create(entity, context.applicationContext, password)
+                            // This profile's login — its own for Jellyfin, the shared one otherwise.
+                            val login = providerRepository.getLogin(entity)
+                            val provider =
+                                MediaProviderFactory.create(entity.copy(username = login.username), context.applicationContext, login.password)
                             newRepo.setProvider(provider)
                             // Only cache once we actually have a backing provider — otherwise this
                             // provider-less repo would get stuck at mediaRepositories[0L] forever,
@@ -109,11 +111,23 @@ class AppContainer(
         }
     }
 
+    // (providerId, profileId) pairs already sent to sign in this process — see [shouldPromptSignIn].
+    private val signInPrompted = java.util.concurrent.ConcurrentHashMap.newKeySet<Pair<Long, String>>()
+
+    /**
+     * Whether the home screen should send this device's profile to sign in to [providerId]: true
+     * the first time per process for each provider/profile pair, false after. Once is enough —
+     * backing out of the sign-in screen must land on a usable home (to switch profile, say), not
+     * bounce straight back into sign-in.
+     */
+    fun shouldPromptSignIn(providerId: Long): Boolean = signInPrompted.add(providerId to AppSettings(context.applicationContext).activeProfileId)
+
     /**
      * Makes [profileId] the profile this device uses. Every cached MediaRepository belongs to the
      * previous profile (see its `profileId`), so all of them are closed and dropped; the next
-     * getMediaRepository() builds one for the new profile. Provider sessions are kept — switching
-     * person doesn't mean logging back in to Xtream. Callers must also drop any screen still
+     * getMediaRepository() builds one for the new profile. Shared provider sessions are kept —
+     * switching person doesn't mean logging back in to Xtream — but Jellyfin's are dropped, since
+     * each profile signs in to Jellyfin as its own user. Callers must also drop any screen still
      * holding a repository, which the nav hosts do by rebuilding the back stack from home.
      */
     suspend fun switchProfile(profileId: String) {
@@ -128,6 +142,7 @@ class AppContainer(
                     }
                 }
                 mediaRepositories.clear()
+                MediaProviderFactory.clearProfileScopedProviders()
             }
         }
     }

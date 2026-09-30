@@ -27,6 +27,8 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 @Composable
 fun QuickConnectDialog(
     showQuickConnectDialog: Boolean,
+    // The provider being edited, or null when adding one — see ProviderViewModel.quickConnectSave.
+    editId: Long?,
     qcCode: String,
     qcSecret: String,
     qcError: String?,
@@ -81,9 +83,11 @@ fun QuickConnectDialog(
                     val auth = authResult.getOrThrow()
                     onShowQuickConnectDialogChange(false)
                     viewModel.quickConnectSave(
+                        id = editId,
                         name = name.ifBlank { auth.user.name },
                         url = url.trimEnd('/'),
-                        username = username.ifBlank { auth.user.name },
+                        // Editing signs this profile in as whoever Jellyfin says it is.
+                        username = if (editId != null) auth.user.name else username.ifBlank { auth.user.name },
                         token = auth.accessToken,
                         userId = auth.user.id,
                         onComplete = onSuccess,

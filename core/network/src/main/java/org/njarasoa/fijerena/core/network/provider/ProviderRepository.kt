@@ -13,6 +13,7 @@ import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
@@ -31,6 +32,28 @@ data class OrphanedDataPruneResult(
 class ProviderRepository(
     private val context: Context,
 ) {
+    companion object {
+        private const val KEY_USERNAME = "username"
+        private const val KEY_PASSWORD = "password"
+        private const val KEY_JELLYFIN_TOKEN = "jellyfin_token"
+        private const val KEY_JELLYFIN_USER_ID = "jellyfin_user_id"
+
+        /**
+         * The encrypted credentials file for [providerId] as used by [profileId]. The Default
+         * profile keeps `provider_creds_<id>`, where credentials always lived, so nothing moves on
+         * upgrade; any other profile gets its own file — only ever for Jellyfin, see [getLogin].
+         */
+        fun credsFileName(
+            providerId: Long,
+            profileId: String,
+        ): String =
+            if (profileId == ProfileEntity.DEFAULT_ID) {
+                "provider_creds_$providerId"
+            } else {
+                "provider_creds_${providerId}_profile_$profileId"
+            }
+    }
+
     private val db = SettingsDatabase.getInstance(context)
     private val dao = db.providerDao()
 
@@ -44,7 +67,8 @@ class ProviderRepository(
             .build()
     }
 
-    private val encryptedPrefsCache = java.util.concurrent.ConcurrentHashMap<Long, android.content.SharedPreferences>()
+    // Keyed by file name: one provider can have several — see [credsFileName].
+    private val encryptedPrefsCache = java.util.concurrent.ConcurrentHashMap<String, android.content.SharedPreferences>()
     private val settingsCache = java.util.concurrent.ConcurrentHashMap<Long, ProviderSettings>()
 
     fun getAllProviders(): Flow<List<ProviderEntity>> = dao.getAllProviders()
@@ -87,6 +111,15 @@ class ProviderRepository(
             )
         val id = dao.insertProvider(entity)
         savePassword(id, password)
+        // The row's login is the Default profile's. When someone else adds a Jellyfin server it
+        // is also theirs, or they'd be asked to sign in to the server they just signed in to.
+        val loginProfile = loginProfileId(type)
+        if (loginProfile != ProfileEntity.DEFAULT_ID) {
+            getProviderPrefs(id, loginProfile).edit {
+                putString(KEY_USERNAME, username)
+                    .putString(KEY_PASSWORD, password)
+            }
+        }
         settingsCache[id] = initialSettings
         return id
     }
@@ -104,23 +137,30 @@ class ProviderRepository(
         config: String? = null,
     ) {
         val existing = dao.getProviderById(id) ?: return
+        val effectiveType = type ?: existing.type
+        val loginProfile = loginProfileId(effectiveType)
+        // A non-Default profile's Jellyfin login is its own: the row's username and the shared
+        // password belong to the Default profile and stay untouched.
+        val ownLogin = loginProfile != ProfileEntity.DEFAULT_ID
         dao.updateProvider(
             existing.copy(
                 name = name,
                 url = url,
-                username = username,
-                type = type ?: existing.type,
+                username = if (ownLogin) existing.username else username,
+                type = effectiveType,
                 config = config ?: existing.config,
             ),
         )
-        savePassword(id, password)
+        if (ownLogin) {
+            getProviderPrefs(id, loginProfile).edit { putString(KEY_USERNAME, username) }
+        }
+        getProviderPrefs(id, loginProfile).edit { putString(KEY_PASSWORD, password) }
         // If Jellyfin credentials changed, discard the cached session token so the
         // provider re-authenticates with the new username/password on next use.
-        val effectiveType = type ?: existing.type
         if (effectiveType == "JELLYFIN") {
-            getProviderPrefs(id).edit {
-                remove("jellyfin_token")
-                    .remove("jellyfin_user_id")
+            getProviderPrefs(id, loginProfile).edit {
+                remove(KEY_JELLYFIN_TOKEN)
+                    .remove(KEY_JELLYFIN_USER_ID)
             }
         }
         // Clear cached provider instance since credentials may have changed
@@ -306,24 +346,82 @@ class ProviderRepository(
     }
 
     /**
-     * Get the stored password for a provider.
+     * Get the stored password for a provider — the Default profile's, for a Jellyfin provider.
+     * Use [getLogin] wherever the profile this device uses matters.
      */
-    fun getPassword(providerId: Long): String? = getProviderPrefs(providerId).getString("password", null)
+    fun getPassword(providerId: Long): String? = getProviderPrefs(providerId, ProfileEntity.DEFAULT_ID).getString(KEY_PASSWORD, null)
+
+    /** A username and password to connect with. Empty strings when there is none yet. */
+    data class Login(
+        val username: String,
+        val password: String,
+    )
 
     /**
-     * Persist a Jellyfin session token (from Quick Connect or normal auth) so the
-     * provider can restore it on next launch without re-authenticating.
+     * The login this device's profile uses for [entity]. Jellyfin keeps favourites and history per
+     * Jellyfin user, so each profile signs in as its own; every other provider has one login
+     * shared by all profiles (docs/plans/20260929_live-sync-plan.md → User profiles). The Default
+     * profile's login is the one providers always had: `providers.username` plus
+     * `provider_creds_<id>`.
+     */
+    fun getLogin(entity: ProviderEntity): Login {
+        val profileId = loginProfileId(entity.type)
+        val prefs = getProviderPrefs(entity.id, profileId)
+        val username =
+            if (profileId == ProfileEntity.DEFAULT_ID) entity.username else prefs.getString(KEY_USERNAME, null).orEmpty()
+        return Login(username, prefs.getString(KEY_PASSWORD, null).orEmpty())
+    }
+
+    /**
+     * Whether this device's profile can connect to [entity] without signing in first: always,
+     * except a Jellyfin server this profile has neither a username nor a saved session for.
+     */
+    fun hasLogin(entity: ProviderEntity): Boolean {
+        val profileId = loginProfileId(entity.type)
+        return profileId == ProfileEntity.DEFAULT_ID ||
+            getLogin(entity).username.isNotBlank() ||
+            getProviderPrefs(entity.id, profileId).getString(KEY_JELLYFIN_TOKEN, null) != null
+    }
+
+    /**
+     * Persist a Jellyfin session token (from Quick Connect or normal auth) for this device's
+     * profile, so the provider can restore it on next launch without re-authenticating.
      */
     fun saveJellyfinSession(
         providerId: Long,
         token: String,
         userId: String,
     ) {
-        getProviderPrefs(providerId).edit {
-            putString("jellyfin_token", token)
-                .putString("jellyfin_user_id", userId)
+        getProviderPrefs(providerId, loginProfileId("JELLYFIN")).edit {
+            putString(KEY_JELLYFIN_TOKEN, token)
+                .putString(KEY_JELLYFIN_USER_ID, userId)
         }
     }
+
+    /**
+     * Quick Connect sign-in to an existing Jellyfin provider, for this device's profile: the
+     * username it reported plus the session, and no password — Quick Connect never has one.
+     */
+    suspend fun saveQuickConnectLogin(
+        providerId: Long,
+        username: String,
+        token: String,
+        userId: String,
+    ) {
+        val profileId = loginProfileId("JELLYFIN")
+        if (profileId == ProfileEntity.DEFAULT_ID) {
+            dao.getProviderById(providerId)?.let { dao.updateProvider(it.copy(username = username)) }
+        } else {
+            getProviderPrefs(providerId, profileId).edit { putString(KEY_USERNAME, username) }
+        }
+        getProviderPrefs(providerId, profileId).edit { remove(KEY_PASSWORD) }
+        saveJellyfinSession(providerId, token, userId)
+        MediaProviderFactory.clearCache(providerId)
+    }
+
+    /** Only Jellyfin logins are per profile; see [getLogin]. */
+    private fun loginProfileId(type: String): String =
+        if (type == "JELLYFIN") AppSettings(context).activeProfileId else ProfileEntity.DEFAULT_ID
 
     // --- Provider Settings ---
 
@@ -439,15 +537,26 @@ class ProviderRepository(
         providerId: Long,
         password: String,
     ) {
-        getProviderPrefs(providerId).edit {
-            putString("password", password)
+        getProviderPrefs(providerId, ProfileEntity.DEFAULT_ID).edit {
+            putString(KEY_PASSWORD, password)
         }
     }
 
+    /** Every profile's credentials for the provider: the shared file and each profile's own. */
     private fun clearProviderPassword(providerId: Long) {
         try {
-            getProviderPrefs(providerId).edit { clear() }
-            encryptedPrefsCache.remove(providerId)
+            getProviderPrefs(providerId, ProfileEntity.DEFAULT_ID).edit { clear() }
+            encryptedPrefsCache.remove(credsFileName(providerId, ProfileEntity.DEFAULT_ID))
+            val profilePrefix = credsFileName(providerId, "")
+            java.io
+                .File(context.applicationInfo.dataDir, "shared_prefs")
+                .listFiles()
+                ?.map { it.name.removeSuffix(".xml") }
+                ?.filter { it.startsWith(profilePrefix) }
+                ?.forEach { name ->
+                    encryptedPrefsCache.remove(name)
+                    context.deleteSharedPreferences(name)
+                }
         } catch (_: Exception) {
             // Ignore errors clearing prefs for deleted provider
         }
@@ -496,9 +605,11 @@ class ProviderRepository(
     }
 
     @Suppress("DEPRECATION")
-    private fun getProviderPrefs(providerId: Long): android.content.SharedPreferences =
-        encryptedPrefsCache.computeIfAbsent(providerId) { id ->
-            val fileName = "provider_creds_$id"
+    private fun getProviderPrefs(
+        providerId: Long,
+        profileId: String,
+    ): android.content.SharedPreferences =
+        encryptedPrefsCache.computeIfAbsent(credsFileName(providerId, profileId)) { fileName ->
             val prefs =
                 try {
                     EncryptedSharedPreferences.create(

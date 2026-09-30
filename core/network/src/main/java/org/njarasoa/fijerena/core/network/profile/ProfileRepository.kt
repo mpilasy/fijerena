@@ -44,8 +44,8 @@ class ProfileRepository(
     enum class DeleteBlocked { NONE, ACTIVE, LAST }
 
     /**
-     * Deletes a profile with its favourites, watch state, Recent Categories and bookmarks on every
-     * provider. Refuses the profile this device is using — switch away first — and the last one
+     * Deletes a profile with its favourites, watch state, Recent Categories, bookmarks and Jellyfin
+     * logins on every provider. Refuses the profile this device is using — switch away first — and the last one
      * left, since the app always needs somebody to be.
      */
     suspend fun deleteProfile(id: String): DeleteBlocked =
@@ -64,14 +64,18 @@ class ProfileRepository(
             }
         }
 
-    /** Every `media_cache_<providerId>_profile_<id>.xml` — see `MediaRepository.profileCacheName`. */
+    /**
+     * Every `media_cache_<providerId>_profile_<id>.xml` (see `MediaRepository.profileCacheName`)
+     * and `provider_creds_<providerId>_profile_<id>.xml` — its Jellyfin logins, see
+     * `ProviderRepository.credsFileName`.
+     */
     private fun deleteProfilePrefs(id: String) {
         val suffix = "_profile_$id"
         java.io
             .File(context.applicationInfo.dataDir, "shared_prefs")
             .listFiles()
             ?.map { it.name.removeSuffix(".xml") }
-            ?.filter { it.startsWith("media_cache_") && it.endsWith(suffix) }
+            ?.filter { (it.startsWith("media_cache_") || it.startsWith("provider_creds_")) && it.endsWith(suffix) }
             ?.forEach { context.deleteSharedPreferences(it) }
     }
 }

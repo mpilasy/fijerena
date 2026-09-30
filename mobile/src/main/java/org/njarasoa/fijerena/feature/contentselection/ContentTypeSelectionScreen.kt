@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -92,8 +93,10 @@ fun MobileContentTypeSelectionScreen(
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
     onContinueWatchingSelected: (ContinueWatchingItem) -> Unit = {},
     onChooseProfile: () -> Unit = {},
+    onSignInRequired: (providerId: Long) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val signInResources = LocalResources.current
     val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -141,6 +144,17 @@ fun MobileContentTypeSelectionScreen(
                     providerName = activeProvider.name
                     providerType = activeProvider.type
                     activeProviderId = activeProvider.id
+                    // A Jellyfin server this profile hasn't signed in to: each profile is its own
+                    // Jellyfin user (docs/plans/20260929_live-sync-plan.md → User profiles).
+                    if (!providerRepo.hasLogin(activeProvider) &&
+                        AppContainer.getInstance(context.applicationContext).shouldPromptSignIn(activeProvider.id)
+                    ) {
+                        val message = signInResources.getString(R.string.profile_jellyfin_sign_in_prompt, activeProvider.name)
+                        withContext(Dispatchers.Main) {
+                            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                            onSignInRequired(activeProvider.id)
+                        }
+                    }
                     // Reuse the app-wide managed repository/provider instead of creating an
                     // unmanaged standalone one: same cached auth session, and connect() has
                     // already been run for it.

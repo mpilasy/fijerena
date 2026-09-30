@@ -209,8 +209,10 @@ fun MobileAddProviderScreen(
             if (provider != null) {
                 name = provider.name
                 url = provider.url
-                username = provider.username
-                password = providerRepo.getPassword(editId) ?: ""
+                // This profile's login: its own for Jellyfin, the shared one otherwise.
+                val login = providerRepo.getLogin(provider)
+                username = login.username
+                password = login.password
                 selectedType =
                     try {
                         ProviderType.valueOf(provider.type)
@@ -937,6 +939,7 @@ fun MobileAddProviderScreen(
 
             QuickConnectDialog(
                 showQuickConnectDialog = showQuickConnectDialog,
+                editId = if (isEditMode) editId else null,
                 qcCode = qcCode,
                 qcSecret = qcSecret,
                 qcError = qcError,

@@ -347,8 +347,12 @@ class ProviderViewModel(
     /**
      * Save a Jellyfin provider authenticated via Quick Connect.
      * Stores the access token directly so no password-based re-auth is ever needed.
+     *
+     * With [id], this signs this device's profile in to that existing provider instead of adding a
+     * new one — before, Quick Connect from the edit screen silently added a duplicate provider.
      */
     fun quickConnectSave(
+        id: Long? = null,
         name: String,
         url: String,
         username: String,
@@ -359,8 +363,13 @@ class ProviderViewModel(
         viewModelScope.launch {
             _saveState.value = SaveState.Saving
             try {
-                val id = providerRepository.addProvider(name, url, username, "", "JELLYFIN", "")
-                providerRepository.saveJellyfinSession(id, token, userId)
+                if (id != null) {
+                    providerRepository.saveQuickConnectLogin(id, username, token, userId)
+                    AppContainer.getInstance(context).evictMediaRepository(id)
+                } else {
+                    val newId = providerRepository.addProvider(name, url, username, "", "JELLYFIN", "")
+                    providerRepository.saveJellyfinSession(newId, token, userId)
+                }
                 loadProviders()
                 _saveState.value = SaveState.Idle
                 onComplete()

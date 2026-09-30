@@ -6,8 +6,8 @@ selected settings follow the user across devices without a manual export/import.
 sharing devices gets **user profiles**: each person's favorites and watch history are their own
 and follow them to any device.
 
-**Status:** design agreed 2026-09-29 (see Decisions); no open questions. Phase 1 landed
-2026-09-29; Phases 2–9 not started.
+**Status:** design agreed 2026-09-29 (see Decisions); no open questions. Phases 1–2 landed
+2026-09-29; Phases 3–9 not started.
 
 ---
 
@@ -352,15 +352,23 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
    `SettingsExportManager` exports and restores the active profile's rows (format stays
    version 5). Unit tests prove two profiles can't see each other's rows; the 19→20 migration was
    checked against Room's generated schema and has an instrumented test (not yet run on a device).
-2. **Profiles UI + Jellyfin login per profile.** Picker on start (only with 2+ profiles),
-   add/rename/delete, switch profile on `:tv` and `:mobile` (evict cached `MediaRepository`
-   instances so the next one is built for the new profile), per-profile orphan cleanup on profile
-   delete. Jellyfin login moved here from Phase 1 (decided 2026-09-29: with only `default`
-   existing it would sit unused): `provider_login` table; Jellyfin username, password and session
-   moved to per-`(providerId, profileId)` storage, existing login assigned to `default`;
-   `MediaProviderFactory`'s provider cache, Quick Connect and the add/edit provider screens made
-   profile-aware; Jellyfin provider rebuilt with the new profile's session on switch; Jellyfin
-   sign-in for a profile without a login.
+2. **Profiles UI + Jellyfin login per profile** — *landed 2026-09-29*, in three commits:
+   - *Management:* Settings → Profiles on `:tv` and `:mobile` (add, rename, colour, delete).
+     `providers.db` v12 adds `profiles.colorIndex`, an index into `CinemaProfileColors.palette`.
+     The active profile and the last one can't be deleted; deleting cascades to the profile's
+     rows and per-profile prefs on every provider.
+   - *Picker and switching:* `Screen.ProfilePicker`, launch picker on TV only, header avatar on
+     both. `AppContainer.switchProfile` stores the new profile and closes every cached
+     `MediaRepository`; the nav hosts rebuild the back stack from home.
+   - *Jellyfin login:* **no `provider_login` table** — same pattern as the per-profile prefs
+     instead, simpler and nothing moves on upgrade. `default` keeps the login providers always
+     had (`providers.username` + `provider_creds_<id>`); any other profile's Jellyfin login lives
+     in `provider_creds_<id>_profile_<profileId>` (username, password, session).
+     `ProviderRepository.getLogin` / `hasLogin` pick the right one; `MediaProviderFactory` reads
+     the active profile's session and drops Jellyfin providers on switch. Quick Connect from the
+     edit screen now signs this profile in to that provider (it used to add a duplicate). Home
+     sends a profile with no login for the active Jellyfin server to its edit screen, once per
+     provider/profile per process so Back still reaches a usable home.
 
 **Sync**
 

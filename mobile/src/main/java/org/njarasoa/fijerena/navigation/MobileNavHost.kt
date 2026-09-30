@@ -233,6 +233,9 @@ fun MobileNavHost(
                     onChooseProfile = {
                         navController.navigateOnce(Screen.ProfilePicker)
                     },
+                    onSignInRequired = { providerId ->
+                        navController.navigateOnce(Screen.AddProvider(editId = providerId))
+                    },
                     onSearch = {
                         navController.navigateOnce(Screen.Search("ALL"))
                     },
