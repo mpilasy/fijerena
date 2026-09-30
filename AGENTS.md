@@ -315,6 +315,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20260922_codebase-stability-resilience-plan.md](docs/plans/20260922_codebase-stability-resilience-plan.md) | **Complete** - all findings landed except intentionally out-of-scope ones (2026-09-23) |
 | [docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md](docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md) | In Progress (Phases 1-5 complete, Phase 6 item 2a complete 2026-09-23; 6a/2c held back by user) |
 | [docs/plans/20260930_profile-architecture-adversarial-review-plan.md](docs/plans/20260930_profile-architecture-adversarial-review-plan.md) | **Resolved** - findings 3, 5, 6, 7 fixed; rest not defects, by design or deferred (2026-09-30) |
+| [docs/plans/20260930_profile-scoped-settings-plan.md](docs/plans/20260930_profile-scoped-settings-plan.md) | Proposed (2026-09-30) - category filters and dev mode per profile |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 

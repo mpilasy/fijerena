@@ -41,11 +41,11 @@ seq        = server-assigned, monotonically increasing per account
 ```
 
 `kind` is one of `watch`, `watch_clear`, `favorite_stream`, `favorite_category`, `setting`,
-`provider`, `provider_login`, `epg_source`, `profile`.
+`provider`, `provider_login`, `category_filters`, `epg_source`, `profile`.
 
 `profileKey` applies to per-person data (`watch`, `watch_clear`, `favorite_*`,
-`provider_login`). Shared data
-(`provider`, `epg_source`, `setting`, `profile`) uses a fixed `shared` value in that slot.
+`provider_login`, `category_filters`, and the per-profile `setting` dev mode). Shared data
+(`provider`, `epg_source`, other `setting`s, `profile`) uses a fixed `shared` value in that slot.
 
 **`providerKey` is not `providerId`.** `providerId` is a local autoincrement `Long` — the same
 provider has different ids on different devices. `providerKey` is a random UUID generated when the
@@ -133,7 +133,9 @@ resurrected by the next device that syncs.
 | Favorite streams / categories | yes, **except Jellyfin** | |
 | Providers (name, URL, username, **password**, type, config) | yes | Password inside the E2E payload — see Security |
 | EPG sources | yes | |
-| Theme, dev mode, EPG auto-refresh | yes | |
+| Theme, EPG auto-refresh | yes | |
+| Dev mode | yes, **per profile** | `setting` record with the profile's `profileKey` |
+| Category filters | yes, **per profile and provider** | `category_filters` record (`profileKey` + `providerKey`) |
 | UI scale, cellular multipliers | **no** | Per-device by nature (TV vs phone) |
 | Caches, EPG programme data | no | Re-downloaded |
 
@@ -165,6 +167,7 @@ Separate favorites and watch history per person on shared devices. Netflix-style
 | Favorite streams and categories | EPG sources |
 | Recent Categories, last-browsed bookmarks | |
 | **Jellyfin login** (username + password) | Global settings (theme etc.), per-device settings |
+| **Category filters** (per provider), **dev mode** | |
 
 **Identity.** A profile is a random UUID (`profileKey`) plus a name and avatar colour, synced as a
 `profile` record. Creating, renaming or deleting one on any device applies everywhere. The one
@@ -196,6 +199,12 @@ picker and no change.
    Jellyfin providers only), Recent Categories, bookmarks and legacy blobs in `media_cache_<id>` are
    cleared, while other providers' shared logins and the migration flags stay. Once it's gone, adding
    a Jellyfin server stores no login for it.
+
+**Category filters and dev mode** are per profile (decided 2026-09-30; design in
+`docs/plans/20260930_profile-scoped-settings-plan.md`). Each profile has its own complete filter
+set per provider, stored in `profile_provider_filters` (`providers.db` v13); Xtream's shared
+`excluded` flags are recomputed for the active profile on switch. Dev mode is a per-profile flag.
+On upgrade both were copied to every existing profile.
 
 **Active profile** is per device, not synced (the TV and a phone are used by different people at
 the same time). Remembered across restarts. With more than one profile: picker on app start, and
@@ -377,6 +386,8 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
      edit screen now signs this profile in to that provider (it used to add a duplicate). Home
      sends a profile with no login for the active Jellyfin server to its edit screen, once per
      provider/profile per process so Back still reaches a usable home.
+   - *Profile-scoped settings* (planned 2026-09-30): category filters per profile and provider,
+     dev mode per profile. See `docs/plans/20260930_profile-scoped-settings-plan.md`.
 
 **Sync**
 
@@ -439,7 +450,8 @@ All decided 2026-09-29.
 2. **Passwords:** sync, E2E encrypted (see Security).
 3. **Providers missing on a device:** auto-add. A provider added on one device appears on all,
    password included; deleting it deletes it everywhere (see Deletions).
-4. **Theme:** syncs. UI scale and cellular multipliers stay per-device.
+4. **Theme:** syncs. UI scale and cellular multipliers stay per-device. Dev mode syncs per
+   profile (2026-09-30).
 5. **Export file:** no change, stays version 5. It remains a snapshot backup, no tombstones, no
    passwords (it is a plaintext file in `/sdcard/Download`). Format untouched; see 9 for profiles.
 6. **User profiles:** in this plan, built first (see Design → User profiles, Phases 1–2).
@@ -450,4 +462,8 @@ All decided 2026-09-29.
 9. **Export and profiles:** export covers the **active profile only**; import restores into the
    active profile. The version 5 format already fits (favorites and watch state per provider), so
    it stays version 5. Providers, EPG sources and settings export as today. Jellyfin logins of
-   other profiles are not exported (no passwords in the export, as before).
+   other profiles are not exported (no passwords in the export, as before). Category filters and
+   the dev-mode flag export and import as the active profile's (2026-09-30).
+10. **Category filters and dev mode per profile** (2026-09-30): each profile has its own complete
+    filter set per provider (no provider-level base); both copied to every profile on upgrade.
+    Sync as per-profile records.
