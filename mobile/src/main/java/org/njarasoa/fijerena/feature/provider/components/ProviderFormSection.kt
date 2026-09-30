@@ -52,7 +52,7 @@ fun ColumnScope.ProviderFormSection(
     onQcSecretChange: (String) -> Unit,
     onQcErrorChange: (String?) -> Unit,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     // Type-specific fields
     when (selectedType) {
         ProviderType.XTREAM -> {
@@ -186,7 +186,7 @@ fun ColumnScope.ProviderFormSection(
                 CinemaOutlinedButton(
                     onClick = {
                         if (url.isBlank()) {
-                            onErrorChange(context.getString(R.string.provider_enter_jellyfin_url_first))
+                            onErrorChange(resources.getString(R.string.provider_enter_jellyfin_url_first))
                         } else {
                             onQcCodeChange("")
                             onQcSecretChange("")

@@ -117,6 +117,9 @@ class MainActivity : ComponentActivity() {
      * is how the "cursor dead then replays" stall was shown to be a rendering backlog rather than
      * lost input.
      */
+    // RestrictedApi is a false positive here: lint resolves the override to androidx.core's
+    // @RestrictTo ComponentActivity.dispatchKeyEvent, but this overrides Activity's public one.
+    @android.annotation.SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         if (logKeyEvents) {
             android.util.Log.i("MainActivity", "dispatchKeyEvent: action=${event.action}, code=${event.keyCode}")

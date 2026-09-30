@@ -23,13 +23,14 @@ fun PlayerEffects(
     val isDeveloperMode = state.isDeveloperMode
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
 
     // Auto-show toast on repeated buffer exhaustion
     LaunchedEffect(isDeveloperMode, currentMetadata.streamUrl) {
         watchExhaustionToasts {
             android.widget.Toast.makeText(
                 context,
-                context.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
+                resources.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
                 android.widget.Toast.LENGTH_LONG
             ).show()
         }

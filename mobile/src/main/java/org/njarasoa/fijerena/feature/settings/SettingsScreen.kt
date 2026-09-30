@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -47,6 +48,7 @@ fun MobileSettingsScreen(
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -69,8 +71,8 @@ fun MobileSettingsScreen(
                 coroutineScope.launch {
                     val success = exportManager.exportToUri(uri)
                     viewModel.setExportImportMessage(
-                        if (success) context.getString(R.string.settings_export_success)
-                        else context.getString(R.string.settings_export_failed)
+                        if (success) resources.getString(R.string.settings_export_success)
+                        else resources.getString(R.string.settings_export_failed)
                     )
                 }
             }
@@ -90,7 +92,7 @@ fun MobileSettingsScreen(
                             pendingImportOptions = SettingsExportManager.ImportOptions()
                             showImportOptionsDialog = true
                         }.onFailure { e ->
-                            viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message ?: ""))
+                            viewModel.setExportImportMessage(resources.getString(R.string.settings_import_failed, e.message ?: ""))
                         }
                 }
             }
@@ -167,7 +169,7 @@ fun MobileSettingsScreen(
             coroutineScope.launch {
                 val success = syncManager.handleSignInResult(result.data)
                 if (!success) {
-                    signInError = context.getString(R.string.settings_google_signin_failed)
+                    signInError = resources.getString(R.string.settings_google_signin_failed)
                 } else {
                     signInError = null
                 }
@@ -266,7 +268,7 @@ fun MobileSettingsScreen(
                                 pendingImportOptions = SettingsExportManager.ImportOptions()
                                 showImportOptionsDialog = true
                             }.onFailure { e ->
-                                viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message ?: ""))
+                                viewModel.setExportImportMessage(resources.getString(R.string.settings_import_failed, e.message ?: ""))
                             }
                     }
                 },

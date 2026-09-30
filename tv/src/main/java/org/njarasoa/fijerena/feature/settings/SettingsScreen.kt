@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -46,6 +47,7 @@ fun SettingsScreen(
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -83,7 +85,7 @@ fun SettingsScreen(
         val uri = pendingExportUri ?: return@LaunchedEffect
         val success = exportManager.exportToUri(uri)
         viewModel.setExportImportMessage(
-            if (success) context.getString(R.string.settings_export_success) else context.getString(R.string.settings_export_failed),
+            if (success) resources.getString(R.string.settings_export_success) else resources.getString(R.string.settings_export_failed),
         )
         pendingExportUri = null
     }
@@ -98,7 +100,7 @@ fun SettingsScreen(
                 pendingImportOptions = SettingsExportManager.ImportOptions()
                 showImportOptionsDialog = true
             }.onFailure { e ->
-                viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message))
+                viewModel.setExportImportMessage(resources.getString(R.string.settings_import_failed, e.message))
             }
         pendingImportUri = null
     }
@@ -113,7 +115,7 @@ fun SettingsScreen(
                 pendingImportOptions = SettingsExportManager.ImportOptions()
                 showImportOptionsDialog = true
             }.onFailure { e ->
-                viewModel.setExportImportMessage(context.getString(R.string.settings_import_failed, e.message))
+                viewModel.setExportImportMessage(resources.getString(R.string.settings_import_failed, e.message))
             }
         pendingImportPath = null
     }
@@ -133,7 +135,7 @@ fun SettingsScreen(
             coroutineScope.launch {
                 val success = syncManager.handleSignInResult(result.data)
                 if (!success) {
-                    signInError = context.getString(R.string.settings_google_signin_failed)
+                    signInError = resources.getString(R.string.settings_google_signin_failed)
                 } else {
                     signInError = null
                 }
@@ -309,7 +311,7 @@ fun SettingsScreen(
                             if (path != null) {
                                 pendingImportPath = path
                             } else {
-                                viewModel.setExportImportMessage(context.getString(R.string.settings_quick_import_not_found))
+                                viewModel.setExportImportMessage(resources.getString(R.string.settings_quick_import_not_found))
                             }
                         },
                         exportImportMessage = uiState.exportImportMessage,

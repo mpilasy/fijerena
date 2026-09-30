@@ -73,6 +73,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -263,6 +264,7 @@ internal fun EpisodeListContent(
     onAlternateStreamSelected: (MediaItem) -> Unit,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     var providerName by remember { mutableStateOf(appSettings.providerName) }
     // AppSettings.providerName is the legacy single-provider key and is never written once a
@@ -364,7 +366,7 @@ internal fun EpisodeListContent(
 
     val sortedSeasons =
         remember(seriesDetail) {
-            seriesDetail.sortedSeasons { num -> context.getString(R.string.series_season_name_format, num) }
+            seriesDetail.sortedSeasons { num -> resources.getString(R.string.series_season_name_format, num) }
         }
 
     // Pre-sort episodes per season — avoid re-sorting inside LazyColumn on every recomposition

@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.ui.R
@@ -85,7 +85,7 @@ fun TvStatsOverlay(
     onHide: () -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
-    val context = LocalContext.current
+    val resources = LocalResources.current
 
     // Handle Back button to close overlay
     BackHandler(enabled = true) {
@@ -233,11 +233,11 @@ fun TvStatsOverlay(
                                         curAudioChannels =
                                             if (format.channelCount > 0) {
                                                 when (format.channelCount) {
-                                                    1 -> context.getString(R.string.audio_channel_mono)
-                                                    2 -> context.getString(R.string.audio_channel_stereo)
-                                                    6 -> context.getString(R.string.audio_channel_5_1)
-                                                    8 -> context.getString(R.string.audio_channel_7_1)
-                                                    else -> context.getString(R.string.audio_channel_custom, format.channelCount)
+                                                    1 -> resources.getString(R.string.audio_channel_mono)
+                                                    2 -> resources.getString(R.string.audio_channel_stereo)
+                                                    6 -> resources.getString(R.string.audio_channel_5_1)
+                                                    8 -> resources.getString(R.string.audio_channel_7_1)
+                                                    else -> resources.getString(R.string.audio_channel_custom, format.channelCount)
                                                 }
                                             } else {
                                                 naText
@@ -257,9 +257,9 @@ fun TvStatsOverlay(
                 val mFps = serviceMeasuredFps
                 curVideoFrameRate =
                     if (fmt != null && fmt.frameRate > 0) {
-                        context.getString(R.string.player_stats_fps_unit, fmt.frameRate.toInt())
+                        resources.getString(R.string.player_stats_fps_unit, fmt.frameRate.toInt())
                     } else if (mFps > 0) {
-                        context.getString(R.string.player_stats_measured_fps, mFps)
+                        resources.getString(R.string.player_stats_measured_fps, mFps)
                     } else {
                         naText
                     }

@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -105,6 +106,7 @@ fun MobileAddProviderScreen(
     onSuccess: () -> Unit,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val viewModel: ProviderViewModel =
         viewModel(
             factory = ProviderViewModelFactory(context),
@@ -397,36 +399,36 @@ fun MobileAddProviderScreen(
                         when (selectedType) {
                             ProviderType.XTREAM ->
                                 when {
-                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
-                                    url.isBlank() -> context.getString(R.string.provider_error_url_required)
-                                    username.isBlank() -> context.getString(R.string.provider_error_username_required)
-                                    password.isBlank() -> context.getString(R.string.provider_error_password_required)
+                                    name.isBlank() -> resources.getString(R.string.provider_error_name_required)
+                                    url.isBlank() -> resources.getString(R.string.provider_error_url_required)
+                                    username.isBlank() -> resources.getString(R.string.provider_error_username_required)
+                                    password.isBlank() -> resources.getString(R.string.provider_error_password_required)
                                     else -> null
                                 }
                             ProviderType.JELLYFIN ->
                                 when {
-                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
-                                    url.isBlank() -> context.getString(R.string.provider_error_url_required)
-                                    username.isBlank() -> context.getString(R.string.provider_error_username_required)
-                                    password.isBlank() -> context.getString(R.string.provider_error_password_required)
+                                    name.isBlank() -> resources.getString(R.string.provider_error_name_required)
+                                    url.isBlank() -> resources.getString(R.string.provider_error_url_required)
+                                    username.isBlank() -> resources.getString(R.string.provider_error_username_required)
+                                    password.isBlank() -> resources.getString(R.string.provider_error_password_required)
                                     else -> null
                                 }
                             ProviderType.SMB ->
                                 when {
-                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
-                                    host.isBlank() -> context.getString(R.string.provider_error_host_required)
-                                    shareName.isBlank() -> context.getString(R.string.provider_error_share_required)
+                                    name.isBlank() -> resources.getString(R.string.provider_error_name_required)
+                                    host.isBlank() -> resources.getString(R.string.provider_error_host_required)
+                                    shareName.isBlank() -> resources.getString(R.string.provider_error_share_required)
                                     else -> null
                                 }
                             ProviderType.LOCAL ->
                                 when {
-                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
+                                    name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                     else -> null
                                 }
                             ProviderType.REMOTE_M3U ->
                                 when {
-                                    name.isBlank() -> context.getString(R.string.provider_error_name_required)
-                                    url.isBlank() -> context.getString(R.string.provider_error_m3u_url_required)
+                                    name.isBlank() -> resources.getString(R.string.provider_error_name_required)
+                                    url.isBlank() -> resources.getString(R.string.provider_error_m3u_url_required)
                                     else -> null
                                 }
                         }

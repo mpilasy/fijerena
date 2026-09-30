@@ -60,6 +60,7 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -752,6 +753,7 @@ private fun DetailsTabContent(
 ) {
     val scale = LocalUiScale.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = providerName,
@@ -824,11 +826,11 @@ private fun DetailsTabContent(
                                     parts.add(
                                         channelLabel(
                                             ch,
-                                            mono = context.getString(R.string.audio_channel_mono),
-                                            stereo = context.getString(R.string.audio_channel_stereo),
-                                            surround51 = context.getString(R.string.audio_channel_5_1),
-                                            surround71 = context.getString(R.string.audio_channel_7_1),
-                                            custom = { context.getString(R.string.audio_channel_custom, it) },
+                                            mono = resources.getString(R.string.audio_channel_mono),
+                                            stereo = resources.getString(R.string.audio_channel_stereo),
+                                            surround51 = resources.getString(R.string.audio_channel_5_1),
+                                            surround71 = resources.getString(R.string.audio_channel_7_1),
+                                            custom = { resources.getString(R.string.audio_channel_custom, it) },
                                         ),
                                     )
                                 }

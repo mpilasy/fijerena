@@ -3,6 +3,7 @@
 package org.njarasoa.fijerena.feature.player
 
 import android.app.Activity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -125,7 +127,7 @@ fun MobilePlayerScreen(
                 ),
         ),
 ) {
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
 
     // Use activity-scoped ViewModel so it's shared with MainActivity for PiP updates
     val activityScopedViewModel: PlaybackViewModel =
@@ -185,6 +187,7 @@ fun MobilePlayerContent(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val activity = context as? Activity
     val appSettings = remember { AppSettings(context.applicationContext) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -300,7 +303,7 @@ fun MobilePlayerContent(
         watchExhaustionToasts {
             android.widget.Toast.makeText(
                 context,
-                context.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
+                resources.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
                 android.widget.Toast.LENGTH_LONG
             ).show()
         }

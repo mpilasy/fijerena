@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -96,6 +97,7 @@ fun MobileEpisodeSelectionScreen(
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val viewModel: SeriesDetailsViewModel =
         viewModel(
             factory =
@@ -193,7 +195,7 @@ fun MobileEpisodeSelectionScreen(
                     val detail = displaySeriesDetail
                     val flatEpisodes =
                         remember(detail) {
-                            val sorted = detail.sortedSeasons { num -> context.getString(R.string.series_season_name_format, num) }
+                            val sorted = detail.sortedSeasons { num -> resources.getString(R.string.series_season_name_format, num) }
                             detail.flattenedEpisodes(sorted)
                         }
                     val currentIdx =
@@ -277,10 +279,11 @@ private fun EpisodeListContent(
     onAlternateStreamSelected: (MediaItem) -> Unit,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val watchedToggleScope = rememberCoroutineScope()
     val sortedSeasons =
         remember(seriesDetail) {
-            seriesDetail.sortedSeasons { num -> context.getString(R.string.series_season_name_format, num) }
+            seriesDetail.sortedSeasons { num -> resources.getString(R.string.series_season_name_format, num) }
         }
     val sortedEpisodesBySeason =
         remember(seriesDetail) {
