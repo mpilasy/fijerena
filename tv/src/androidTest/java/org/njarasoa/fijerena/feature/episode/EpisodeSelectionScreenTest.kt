@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.feature.episode.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.feature.episode.fixtures.FakeXtreamEpisodeDao
 
@@ -73,6 +74,7 @@ class EpisodeSelectionScreenTest {
             MediaRepository(
                 context = context,
                 providerId = 999L,
+                profileId = ProfileEntity.DEFAULT_ID,
                 watchStateDao = FakeWatchStateDao(),
                 episodeDao = FakeXtreamEpisodeDao(),
             )
@@ -152,6 +154,7 @@ class EpisodeSelectionScreenTest {
             MediaRepository(
                 context = context,
                 providerId = 999L,
+                profileId = ProfileEntity.DEFAULT_ID,
                 watchStateDao = FakeWatchStateDao(),
                 episodeDao = FakeXtreamEpisodeDao(),
             )

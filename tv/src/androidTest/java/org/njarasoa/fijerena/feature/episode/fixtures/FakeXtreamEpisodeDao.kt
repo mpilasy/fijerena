@@ -41,13 +41,18 @@ class FakeXtreamEpisodeDao : XtreamEpisodeDao {
 
     override suspend fun getSiblingCompletedEpisodeIds(
         providerId: Long,
+        profileId: String,
         seriesId: Int,
     ): List<String> = emptyList()
 
-    override suspend fun getSiblingCompletedCountsBySeries(providerId: Long): Map<Int, Int> = emptyMap()
+    override suspend fun getSiblingCompletedCountsBySeries(
+        providerId: Long,
+        profileId: String,
+    ): Map<Int, Int> = emptyMap()
 
     override suspend fun clearGroupCompletion(
         providerId: Long,
+        profileId: String,
         itemId: String,
         now: Long,
     ) = Unit
@@ -58,4 +63,6 @@ class FakeXtreamEpisodeDao : XtreamEpisodeDao {
         plot: String,
         fetchedAt: Long,
     ) = Unit
+
+    override fun deleteOrphaned(validProviderIds: List<Long>): Int = 0
 }

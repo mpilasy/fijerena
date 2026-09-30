@@ -362,7 +362,7 @@
 
     <string name="series_error_load_failed">Échec du chargement des infos</string>
     <string name="series_refresh_info">Actualiser les infos de la série</string>
-    <string name="series_season_name_format">Saison %1$s</string>
+    <string name="series_season_name_format">Saison %1$d</string>
     <string name="series_episode_number_short">E%1$02d</string>
     <string name="series_total_episodes_format">%1$d épisodes</string>
     <string name="series_play_episode_action">▶ Lire l\'épisode</string>

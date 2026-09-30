@@ -5,6 +5,8 @@ import android.content.ComponentCallbacks2
 import android.content.pm.ApplicationInfo
 import android.os.StrictMode
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -99,6 +101,7 @@ class FijerenaApplication :
         }
     }
 
+    @OptIn(UnstableApi::class)
     private fun isPlaybackActive(): Boolean {
         val state = StreamingPlaybackService.getInstance()?.playbackState?.value
         return state is PlaybackState.Playing || state is PlaybackState.Buffering

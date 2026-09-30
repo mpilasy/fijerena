@@ -13,14 +13,13 @@ import org.junit.runner.RunWith
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
 /**
- * Verifies the real [XtreamDatabase.MIGRATION_17_18] (not a re-implementation of it) against a
- * database shaped like an actual pre-migration install: built fresh at the current (v18) schema
- * via Room — guaranteeing every other table/column matches exactly what Room expects — then rolled
- * back to look like v17 by dropping just the two new indices and resetting `PRAGMA user_version`,
- * the only two things that actually differ between v17 and v18.
+ * Verifies real migrations (not re-implementations of them) against databases shaped like actual
+ * pre-migration installs: built fresh at the current schema via Room — guaranteeing every other
+ * table/column matches exactly what Room expects — then rolled back to the old shape of just what
+ * the migration under test changes.
  *
  * Reopening through Room afterward exercises Room's own post-migration schema validation, the same
- * check that decides whether a real device's data survives this migration or falls through
+ * check that decides whether a real device's data survives a migration or falls through
  * [XtreamDatabase]'s `fallbackToDestructiveMigration(dropAllTables = true)` and gets wiped —
  * including `watch_state`/`favorite_state`, neither of which is re-fetchable from the server.
  *
@@ -41,10 +40,16 @@ class XtreamDatabaseMigrationTest {
         context.deleteDatabase(testDbName)
     }
 
+    /**
+     * [XtreamDatabase.MIGRATION_17_18] only creates two indices. The current schema is several
+     * versions past v18, so a fresh database can't be rolled back to a true v17 and reopened
+     * through Room. Instead the migration runs directly against a fresh database with those two
+     * indices dropped, and the indices it creates are compared with the ones Room itself creates
+     * — the same names and columns Room's post-migration validation checks.
+     */
     @Test
     fun migration17To18_addsIndicesWithoutLosingData() {
-        // 1. Fresh install at the current (v18) schema — Room's own onCreate() builds every
-        // table/index exactly as compiled, so nothing here can be hand-authored wrong.
+        val indexNames = listOf("index_xtream_series_providerId_tmdbId", "index_xtream_episodes_providerId_season_episodeNum")
         val seedDb =
             Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName).build()
         seedDb.seriesDao().insertAll(
@@ -71,45 +76,28 @@ class XtreamDatabaseMigrationTest {
                 ),
             ),
         )
-
-        // 2. Roll it back to look like v17: drop the two indices this migration adds, and reset
-        // the version pragma Room's opener checks. Nothing else differs between v17 and v18.
         val rawDb = seedDb.openHelper.writableDatabase
-        rawDb.execSQL("DROP INDEX `index_xtream_series_providerId_tmdbId`")
-        rawDb.execSQL("DROP INDEX `index_xtream_episodes_providerId_season_episodeNum`")
-        rawDb.execSQL("PRAGMA user_version = 17")
+        val expected = indexNames.associateWith { indexSql(rawDb, it) }
+        indexNames.forEach { rawDb.execSQL("DROP INDEX `$it`") }
+
+        XtreamDatabase.MIGRATION_17_18.migrate(rawDb)
+
+        indexNames.forEach { name ->
+            assertTrue("$name missing after migration", expected[name] != null)
+            assertEquals(expected[name], indexSql(rawDb, name))
+        }
+        assertEquals("Test Show", seedDb.seriesDao().getSeriesById(42L, 1)?.name)
+        assertEquals(1, seedDb.episodeDao().getEpisodes(42L, 1).size)
         seedDb.close()
-
-        // 3. Reopen through Room with ONLY the migration under test registered, and no
-        // fallbackToDestructiveMigration — a schema mismatch must throw here, not silently wipe,
-        // so this test actually fails loud on a bad migration instead of passing green over data
-        // loss.
-        val migratedDb =
-            Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_17_18)
-                .build()
-
-        // Forces Room to actually open the file and run its post-migration validation, rather
-        // than lazily deferring to the first DAO call.
-        assertEquals(18, migratedDb.openHelper.writableDatabase.version)
-
-        // 4. The two indices exist, exactly as Room expects them to be named.
-        val indexNames = mutableSetOf<String>()
-        migratedDb.openHelper.writableDatabase
-            .query("SELECT name FROM sqlite_master WHERE type = 'index'")
-            .use { cursor ->
-                while (cursor.moveToNext()) indexNames.add(cursor.getString(0))
-            }
-        assertTrue(indexNames.contains("index_xtream_series_providerId_tmdbId"))
-        assertTrue(indexNames.contains("index_xtream_episodes_providerId_season_episodeNum"))
-
-        // 5. Seeded rows survived the migration untouched — this is a CREATE INDEX-only
-        // migration, but assert it explicitly rather than assume.
-        assertEquals("Test Show", migratedDb.seriesDao().getSeriesById(42L, 1)?.name)
-        assertEquals(1, migratedDb.episodeDao().getEpisodes(42L, 1).size)
-
-        migratedDb.close()
     }
+
+    private fun indexSql(
+        db: androidx.sqlite.db.SupportSQLiteDatabase,
+        name: String,
+    ): String? =
+        db.query("SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?", arrayOf(name)).use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        }
 
     /**
      * [XtreamDatabase.MIGRATION_19_20] rebuilds `watch_state` and `favorite_state` with
