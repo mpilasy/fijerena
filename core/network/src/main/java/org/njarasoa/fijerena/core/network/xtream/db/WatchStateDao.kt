@@ -304,13 +304,14 @@ interface WatchStateDao {
 
     /**
      * [deleteAll], recording a `watch_clear` marker for live sync: every watch row for this
-     * provider and profile older than [clearedAt] is dropped on the other devices too.
+     * provider and profile older than [clearedAt] is dropped on the other devices too. 0 (the
+     * default) means "now on the sync clock", stamped by [XtreamSyncTriggers].
      */
     @Transaction
     suspend fun deleteAllRecordingClear(
         providerId: Long,
         profileId: String,
-        clearedAt: Long,
+        clearedAt: Long = 0,
     ) {
         deleteAll(providerId, profileId)
         insertTombstone(SyncTombstoneEntity(providerId, profileId, SyncKind.WATCH_CLEAR, "", "", clearedAt))

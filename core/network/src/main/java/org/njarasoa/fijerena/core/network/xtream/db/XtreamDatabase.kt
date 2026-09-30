@@ -21,8 +21,10 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
         WatchStateEntity::class,
         FavoriteStateEntity::class,
         SyncTombstoneEntity::class,
+        SyncOutboxEntity::class,
+        SyncClockEntity::class,
     ],
-    version = 21,
+    version = 22,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -41,6 +43,8 @@ abstract class XtreamDatabase : RoomDatabase() {
     abstract fun favoriteStateDao(): FavoriteStateDao
 
     abstract fun syncTombstoneDao(): SyncTombstoneDao
+
+    abstract fun syncOutboxDao(): SyncOutboxDao
 
     companion object {
         @Volatile
@@ -314,6 +318,29 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 21→22, live sync phase 4: `sync_outbox` (keys changed locally, waiting to be
+         * sent) and `sync_clock` (this database's hybrid logical clock). The triggers that fill
+         * them are installed on open — see [XtreamSyncTriggers].
+         */
+        // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest).
+        internal val MIGRATION_21_22 =
+            object : Migration(21, 22) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_outbox` (`providerId` INTEGER NOT NULL, " +
+                            "`profileId` TEXT NOT NULL, `kind` TEXT NOT NULL, `itemId` TEXT NOT NULL, " +
+                            "`contentType` TEXT NOT NULL, `hlc` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`providerId`, `profileId`, `kind`, `itemId`, `contentType`))",
+                    )
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_outbox_hlc` ON `sync_outbox` (`hlc`)")
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `sync_clock` (`id` INTEGER NOT NULL, `hlc` INTEGER NOT NULL, " +
+                            "`applying` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+                    )
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -325,6 +352,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
                         MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
                         MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
+                        MIGRATION_21_22,
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC
@@ -347,6 +375,9 @@ abstract class XtreamDatabase : RoomDatabase() {
                                 } catch (e: Exception) {
                                     android.util.Log.w("XtreamDatabase", "Failed to run DB maintenance", e)
                                 }
+                                // Not in the try: without the triggers, changes would silently
+                                // never sync. A failure here must surface.
+                                XtreamSyncTriggers.install(db)
                             }
                         },
                     )

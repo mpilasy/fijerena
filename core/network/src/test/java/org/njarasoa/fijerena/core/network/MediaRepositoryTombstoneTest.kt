@@ -102,7 +102,6 @@ class MediaRepositoryTombstoneTest {
             assertEquals(SyncKind.WATCH_CLEAR, marker.kind)
             assertEquals(PROVIDER, marker.providerId)
             assertEquals(PROFILE, marker.profileId)
-            assertTrue(marker.deletedAt > 0)
             assertTrue(repo.getWatchHistory().isEmpty())
         }
 

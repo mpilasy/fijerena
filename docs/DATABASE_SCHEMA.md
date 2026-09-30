@@ -172,7 +172,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 21
+**Version:** 22
 
 Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
 `watch_state` and `favorite_state` tables. (v10 added FTS4 search tables for streams/series; v11
@@ -187,7 +187,7 @@ the network round trip for its episode list when a stored copy is under 24 hours
 re-fetching the whole list on every single open; v20 added `profileId` to the primary key of
 `watch_state` and `favorite_state`, rebuilding both tables and assigning every existing row to the
 `default` profile — see `docs/plans/20260929_live-sync-plan.md` → User profiles; v21 added
-`sync_tombstone` for live sync.)
+`sync_tombstone` for live sync; v22 added `sync_outbox` and `sync_clock`, filled by triggers.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -407,10 +407,38 @@ them the next device to sync would bring the item back. See
 
 **Index:** `(deletedAt)`
 
-Written by `FavoriteStateDao` and `WatchStateDao` in the same transaction as the delete; re-adding
+Written by `FavoriteStateDao` and `WatchStateDao` in the same transaction as the delete, with
+`deletedAt = 0`, which the `sync_tombstone_insert` trigger replaces with the sync clock (v22); re-adding
 the same favourite (or restoring it from an export or a provider copy) removes its tombstone. Not
 written for Jellyfin's history, which it keeps server-side. Deleting a provider or profile removes
 its rows here (its own tombstone in `providers.db` covers them). Pruned after 90 days at startup.
+
+### Table: `sync_outbox` (added v22)
+Keys changed locally and not yet sent to the sync server — only the key: the sync client reads the
+current row (or its tombstone) when it sends, so repeated changes to one item collapse into one
+entry. Same key columns as `sync_tombstone`, plus `hlc` (sync clock at the latest change; indexed).
+`kind` is `watch`, `favorite_stream`, `favorite_category` or `watch_clear`. Deleting a provider or
+profile removes its entries (its own tombstone covers them).
+
+### Table: `sync_clock` (added v22)
+One row (`id` = 1): `hlc`, this database's hybrid logical clock in milliseconds — each local change
+moves it to `max(now, hlc + 1)` — and `applying`, set while changes received from another device are
+written so they aren't queued straight back.
+
+### Sync triggers (v22, installed on every open)
+Room doesn't manage these; `XtreamSyncTriggers.install` creates them (`IF NOT EXISTS`) in the
+database's `onOpen`, so fresh installs, migrations and destructive rebuilds all get them. Each ticks
+`sync_clock` and upserts the changed key into `sync_outbox` in the writing transaction, unless
+`applying` is set:
+
+| Trigger | Fires on | Queues |
+|---|---|---|
+| `sync_watch_state_insert` / `_update` | any insert/update of `watch_state` | `watch` |
+| `sync_favorite_state_insert` / `_update` | any insert/update of `favorite_state` | `favorite_stream` / `favorite_category` |
+| `sync_tombstone_insert` | a new `sync_tombstone` row | the tombstone's own kind; stamps `deletedAt` when it is 0 |
+
+Row deletions fire nothing: a removal is queued through its tombstone, and rows deleted with their
+provider or profile are covered by that one's tombstone.
 
 ### Catalog Lifecycle, Orphan Pruning & Compaction
 Catalog entries (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `favorite_state`, `xtream_epg_cache`, and `watch_state`) reside in `xtream_v2.db`, while the provider entities that own them live in `providers.db`. Because SQLite cannot enforce cross-database foreign key cascades, deleting a provider in `providers.db` does not automatically purge its rows in `xtream_v2.db`.

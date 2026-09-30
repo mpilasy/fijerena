@@ -80,7 +80,10 @@ interface FavoriteStateDao {
         deleteTombstone(entity.providerId, entity.profileId, SyncKind.forFavorite(entity.kind), entity.itemId, entity.contentType)
     }
 
-    /** [delete], recording the removal for live sync. */
+    /**
+     * [delete], recording the removal for live sync. [deletedAt] 0 (the default) means "now on the
+     * sync clock", stamped by [XtreamSyncTriggers]; tests pass explicit values.
+     */
     @Transaction
     fun deleteRecordingTombstone(
         providerId: Long,
@@ -88,19 +91,19 @@ interface FavoriteStateDao {
         itemId: String,
         contentType: String,
         kind: String,
-        deletedAt: Long,
+        deletedAt: Long = 0,
     ) {
         delete(providerId, profileId, itemId, contentType, kind)
         insertTombstone(SyncTombstoneEntity(providerId, profileId, SyncKind.forFavorite(kind), itemId, contentType, deletedAt))
     }
 
-    /** [deleteAllOfKind], recording each removed favourite for live sync. */
+    /** [deleteAllOfKind], recording each removed favourite for live sync; see [deleteRecordingTombstone] for [deletedAt]. */
     @Transaction
     fun deleteAllOfKindRecordingTombstones(
         providerId: Long,
         profileId: String,
         kind: String,
-        deletedAt: Long,
+        deletedAt: Long = 0,
     ) {
         getAllOfKind(providerId, profileId, kind).forEach {
             insertTombstone(SyncTombstoneEntity(providerId, profileId, SyncKind.forFavorite(kind), it.itemId, it.contentType, deletedAt))

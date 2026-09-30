@@ -4,10 +4,10 @@ import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 
 /**
  * The `kind` of a synced record — see `docs/plans/20260929_live-sync-plan.md` → Record model.
- * Phase 3 only records deletions (the `sync_tombstone` tables), so only the kinds that can be
- * deleted are here; Phase 4 adds the rest with the outbox.
+ * Kinds are added as their write paths are queued for sync.
  */
 object SyncKind {
+    const val WATCH = "watch"
     const val FAVORITE_STREAM = "favorite_stream"
     const val FAVORITE_CATEGORY = "favorite_category"
 
