@@ -67,7 +67,9 @@ account (pairing) never needs it.
 | `DELETE /devices/:id` | device | revokes a device and closes its socket |
 
 Devices authenticate with `Authorization: Bearer <deviceToken>`. A record is
-`{key, providerTag?, profileTag?, updatedAt, deleted, payload?, cascade?}`: `updatedAt` is the
+`{key, providerTag?, profileTag?, updatedAt, deleted, payload, cascade?}`. The payload is required on
+deletions too: keys are one-way, so the encrypted payload is where devices learn which item it
+was. `updatedAt` is the
 device's hybrid logical clock, and a write that isn't newer than the stored version is rejected as
 `stale`. A deletion with `cascade: "provider"` or `"profile"` also drops every other record with the
 same tag. Tombstones are purged after 90 days; a device whose `since` falls before the purge gets

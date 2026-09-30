@@ -49,6 +49,18 @@ interface FavoriteStateDao {
         kind: String,
     )
 
+    @Query(
+        "SELECT * FROM favorite_state WHERE providerId = :providerId AND profileId = :profileId " +
+            "AND itemId = :itemId AND contentType = :contentType AND kind = :kind",
+    )
+    fun get(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        kind: String,
+    ): FavoriteStateEntity?
+
     @Query("SELECT * FROM favorite_state WHERE providerId = :providerId AND profileId = :profileId AND kind = :kind")
     fun getAllOfKind(
         providerId: Long,

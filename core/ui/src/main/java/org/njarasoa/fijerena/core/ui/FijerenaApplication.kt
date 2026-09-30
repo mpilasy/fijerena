@@ -30,6 +30,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.network.NetworkModule
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.sync.SyncManager
 
 class FijerenaApplication :
     Application(),
@@ -54,6 +55,8 @@ class FijerenaApplication :
         EpgFileManager.getInstance(this).initialize()
         // Initialize Provider Content sync
         ProviderSyncManager.getInstance(this).initialize()
+        // Live sync between devices, while the app is in use — a no-op until this device is linked.
+        SyncManager.getInstance(this).start()
         // One-time moves of each provider's category filters and the install-wide dev-mode flag to
         // every profile — see ProviderRepository.migrateCategoryFiltersToProfiles().
         // SupervisorJob + handler: an uncaught exception in a bare CoroutineScope(Dispatchers.IO)

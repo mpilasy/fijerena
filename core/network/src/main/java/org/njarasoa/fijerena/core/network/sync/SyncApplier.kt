@@ -292,6 +292,7 @@ class SyncApplier(
             Resolution.Upsert -> {
                 val remote = SyncPayloads.decode<SyncPayloads.Provider>(record.payload)
                 inSettingsApply {
+                    adoptMatchingProvider(providerKey, remote)
                     providers.applyRemoteProvider(providerKey, remote)
                     markSettingsVersion(SyncKind.PROVIDER, SyncKind.SHARED, providerKey, record.hlc)
                 }
@@ -305,6 +306,29 @@ class SyncApplier(
             else -> skippedOrDeferred(resolution)
         }
     }
+
+    /**
+     * First sync of a device that already had this provider: the same one set up on both before
+     * they were linked has two keys. The local copy takes the other device's key — only if the
+     * server has never seen the local key, so a provider already shared stays itself — rather than
+     * syncing as a duplicate. Matched on type, URL and username, like the settings import.
+     */
+    private suspend fun adoptMatchingProvider(
+        providerKey: String,
+        remote: SyncPayloads.Provider,
+    ) {
+        if (sync.providerByKey(providerKey) != null) return
+        val match =
+            sync.allProviders().firstOrNull {
+                it.type == remote.type &&
+                    normalizedUrl(it.url) == normalizedUrl(remote.url) &&
+                    it.username == remote.username &&
+                    !sync.knownToServer(SyncKind.PROVIDER, it.providerKey)
+            } ?: return
+        sync.adoptProviderKey(match.providerKey, providerKey)
+    }
+
+    private fun normalizedUrl(url: String) = url.trim().trimEnd('/').lowercase()
 
     /**
      * After a repository deletion (which records its own tombstone on this device's clock and
@@ -337,6 +361,12 @@ class SyncApplier(
                 val providerId = sync.providerByKey(remote.providerKey)!!.id
                 inSettingsApply {
                     val dao = settingsDb.epgSourceDao()
+                    // First sync: the same source added on both devices before linking adopts this key.
+                    if (sync.sourceByKey(sourceKey) == null) {
+                        sync.sourcesAt(providerId, remote.url)
+                            .firstOrNull { !sync.knownToServer(SyncKind.EPG_SOURCE, it.sourceKey) }
+                            ?.let { sync.adoptSourceKey(it.sourceKey, sourceKey) }
+                    }
                     val existing = sync.sourceByKey(sourceKey)
                     if (existing != null) {
                         dao.updateSource(

@@ -10,14 +10,18 @@ const MAX_PAGE = 1000;
 const MAX_PAYLOAD = 64 * 1024;
 const PURGE_INTERVAL_MS = 60 * 60 * 1000;
 
-/** A record as it travels: opaque key and tags (HMACs), ciphertext payload, device clock. */
+/**
+ * A record as it travels: opaque key and tags (HMACs), device clock, and the ciphertext payload —
+ * deletions included, since the key is one-way and the payload is where devices find out which
+ * item it was.
+ */
 interface WireRecord {
   key: string;
   providerTag?: string | null;
   profileTag?: string | null;
   updatedAt: number;
   deleted: boolean;
-  payload?: string | null;
+  payload: string;
   /** On a deletion: also drop every other record of the same provider or profile. */
   cascade?: "provider" | "profile";
 }
@@ -228,7 +232,7 @@ export class Account extends DurableObject<Env> {
           seq,
           r.updatedAt,
           r.deleted ? 1 : 0,
-          r.deleted ? null : (r.payload ?? null),
+          r.payload,
           Date.now(),
         );
         if (r.deleted && r.cascade === "provider" && r.providerTag) {
@@ -351,7 +355,7 @@ function invalid(r: WireRecord): string | null {
   if (!r || typeof r.key !== "string" || r.key.length === 0 || r.key.length > 256) return "record key must be 1-256 characters";
   if (!Number.isSafeInteger(r.updatedAt) || r.updatedAt < 0) return "updatedAt must be a non-negative integer";
   if (typeof r.deleted !== "boolean") return "deleted must be a boolean";
-  if (!r.deleted && (typeof r.payload !== "string" || r.payload.length > MAX_PAYLOAD)) return `payload must be a string of at most ${MAX_PAYLOAD} characters`;
+  if (typeof r.payload !== "string" || r.payload.length > MAX_PAYLOAD) return `payload must be a string of at most ${MAX_PAYLOAD} characters`;
   if (r.cascade !== undefined && (!r.deleted || (r.cascade !== "provider" && r.cascade !== "profile"))) return "cascade is only for provider or profile deletions";
   for (const tag of [r.providerTag, r.profileTag]) {
     if (tag != null && (typeof tag !== "string" || tag.length > 256)) return "tags must be strings of at most 256 characters";

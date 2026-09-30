@@ -76,6 +76,14 @@ class FakeFavoriteStateDao : FavoriteStateDao {
         return toRemove.size
     }
 
+    override fun get(
+        providerId: Long,
+        profileId: String,
+        itemId: String,
+        contentType: String,
+        kind: String,
+    ): FavoriteStateEntity? = rows[Key(providerId, profileId, itemId, contentType, kind)]
+
     override fun getAllOfKind(
         providerId: Long,
         profileId: String,

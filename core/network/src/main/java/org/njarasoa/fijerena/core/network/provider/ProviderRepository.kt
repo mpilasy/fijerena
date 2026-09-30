@@ -465,6 +465,29 @@ class ProviderRepository(
     // These write without queueing: the caller (SyncApplier) holds the sync clock's `applying` flag
     // for the database writes, and prefs writes here simply skip SettingsSyncQueue.
 
+    /** [profileId]'s own Jellyfin login on [entity] as it is sent, or null if it has none. */
+    internal fun syncedLogin(
+        entity: ProviderEntity,
+        profileId: String,
+    ): org.njarasoa.fijerena.core.network.sync.SyncPayloads.Login? {
+        val prefs = getProviderPrefs(entity.id, profileId)
+        val username = if (profileId == ProfileEntity.DEFAULT_ID) entity.username else prefs.getString(KEY_USERNAME, null).orEmpty()
+        if (username.isBlank()) return null
+        return org.njarasoa.fijerena.core.network.sync.SyncPayloads.Login(username, prefs.getString(KEY_PASSWORD, null))
+    }
+
+    /** Profiles with a Jellyfin login of their own on [providerId] — Default's is the row's. */
+    internal fun profilesWithOwnLogin(providerId: Long): List<String> {
+        val prefix = "${credsFileName(providerId, ProfileEntity.DEFAULT_ID)}_profile_"
+        return java.io
+            .File(context.applicationInfo.dataDir, "shared_prefs")
+            .listFiles()
+            ?.map { it.name.removeSuffix(".xml") }
+            ?.filter { it.startsWith(prefix) }
+            ?.map { it.removePrefix(prefix) }
+            .orEmpty()
+    }
+
     /** Adds or updates the provider named [providerKey]; returns its local id. Never activates it. */
     internal suspend fun applyRemoteProvider(
         providerKey: String,

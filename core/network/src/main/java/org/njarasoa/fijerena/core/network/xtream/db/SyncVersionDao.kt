@@ -60,6 +60,59 @@ interface SyncVersionDao {
         before: Long,
     )
 
+    /** Sent: no longer pending — unless it changed again meanwhile ([hlc] no longer matches). */
+    @Query(
+        "UPDATE sync_version SET pending = 0 WHERE providerId = :providerId AND profileId = :profileId " +
+            "AND kind = :kind AND itemId = :itemId AND contentType = :contentType AND hlc = :hlc",
+    )
+    suspend fun markSent(
+        providerId: Long,
+        profileId: String,
+        kind: String,
+        itemId: String,
+        contentType: String,
+        hlc: Long,
+    )
+
+    @Query(
+        "DELETE FROM sync_version WHERE providerId = :providerId AND profileId = :profileId " +
+            "AND kind = :kind AND itemId = :itemId AND contentType = :contentType",
+    )
+    suspend fun deleteVersion(
+        providerId: Long,
+        profileId: String,
+        kind: String,
+        itemId: String,
+        contentType: String,
+    )
+
+    @Query("SELECT EXISTS(SELECT 1 FROM sync_version WHERE pending = 1)")
+    suspend fun hasPending(): Boolean
+
+    /** Linking to a server: it has seen nothing from here yet. */
+    @Query("UPDATE sync_version SET pending = 1")
+    suspend fun markAllPending()
+
+    // --- Seeding: on linking, everything that already exists is queued once, at its own time. ---
+
+    @Query(
+        "INSERT OR IGNORE INTO sync_version SELECT providerId, profileId, 'watch', itemId, contentType, " +
+            "MAX(updatedAt, COALESCE(lastPlayedAt, 0)), 1 FROM watch_state",
+    )
+    suspend fun seedWatch()
+
+    @Query(
+        "INSERT OR IGNORE INTO sync_version SELECT providerId, profileId, " +
+            "CASE kind WHEN 'CATEGORY' THEN 'favorite_category' ELSE 'favorite_stream' END, itemId, contentType, createdAt, 1 " +
+            "FROM favorite_state",
+    )
+    suspend fun seedFavorites()
+
+    @Query(
+        "INSERT OR IGNORE INTO sync_version SELECT providerId, profileId, kind, itemId, contentType, deletedAt, 1 FROM sync_tombstone",
+    )
+    suspend fun seedTombstones()
+
     /** Versions of a provider being deleted: its own tombstone covers them. */
     @Query("DELETE FROM sync_version WHERE providerId = :providerId")
     suspend fun deleteForProvider(providerId: Long)

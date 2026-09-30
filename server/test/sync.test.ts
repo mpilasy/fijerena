@@ -62,7 +62,7 @@ describe("sync server", () => {
     expect(all.body.records[0]).toMatchObject({ key: "x", seq: 2, updatedAt: 110 });
   });
 
-  it("stores a deletion without its payload, and a provider deletion drops the provider's records", async () => {
+  it("stores a deletion with its payload, and a provider deletion drops the provider's records", async () => {
     const { deviceToken } = await server.createAccount();
     await server.request("POST", "/changes", {
       token: deviceToken,
@@ -76,12 +76,13 @@ describe("sync server", () => {
     });
     await server.request("POST", "/changes", {
       token: deviceToken,
-      body: { records: [{ key: "prov", providerTag: "P", updatedAt: 5, deleted: true, payload: "ignored", cascade: "provider" }] },
+      body: { records: [{ key: "prov", providerTag: "P", updatedAt: 5, deleted: true, payload: "which-provider", cascade: "provider" }] },
     });
     const all = await server.request("GET", "/changes?since=0", { token: deviceToken });
     const keys = all.body.records.map((r: { key: string }) => r.key);
     expect(keys).toEqual(["other", "prov"]);
-    expect(all.body.records[1]).toMatchObject({ deleted: true, payload: null });
+    // The payload stays: the key is one-way, so it is how devices learn what was deleted.
+    expect(all.body.records[1]).toMatchObject({ deleted: true, payload: "which-provider" });
   });
 
   it("rejects malformed batches", async () => {
@@ -91,6 +92,7 @@ describe("sync server", () => {
       { records: [{ key: "", updatedAt: 1, deleted: false, payload: "x" }] },
       { records: [{ key: "k", updatedAt: -1, deleted: false, payload: "x" }] },
       { records: [{ key: "k", updatedAt: 1, deleted: false }] },
+      { records: [{ key: "k", updatedAt: 1, deleted: true }] },
       { records: [{ key: "k", updatedAt: 1, deleted: false, payload: "x", cascade: "provider" }] },
     ]) {
       expect((await server.request("POST", "/changes", { token: deviceToken, body: bad })).status).toBe(400);
@@ -186,7 +188,7 @@ describe("sync server purging old tombstones", () => {
     const { deviceToken } = await server.createAccount();
     await server.request("POST", "/changes", {
       token: deviceToken,
-      body: { records: [record("keep", 1), { key: "gone", updatedAt: 2, deleted: true }, record("later", 3)] },
+      body: { records: [record("keep", 1), record("gone", 2, { deleted: true }), record("later", 3)] },
     });
     await new Promise((r) => setTimeout(r, 10));
 

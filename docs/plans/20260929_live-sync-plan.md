@@ -472,8 +472,31 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
      `wrangler` deploys to Cloudflare (it pulls that alpha Miniflare in as its own dependency).
    - **Docker image not yet built**: Docker isn't installed on the dev machine. `Dockerfile` runs
      the same `workerd` binary and config the tests use.
-7. **Sync client.** HTTP push/pull, WebSocket while foregrounded, catch-up on resume, retry with
-   backoff, full resync past the tombstone horizon.
+7. **Sync client** — *landed 2026-09-30.* As built:
+   - **`SyncEngine.syncNow()`**: pull all pages and apply them (`SyncApplier`), then push pending
+     versions (`LocalRecords.pending`, `providers.db` first so a provider precedes its items).
+     A version is marked sent only if its clock didn't move meanwhile. A `410` resets the cursor
+     to 0 (full resync: everything re-applied against local versions, so only real changes land).
+     Deferred records are kept (up to 1000) and retried with every page.
+   - **First pass after linking** pulls first, then queues everything local
+     (`LocalRecords.seedEverything`, each item at its own last-change time, skipping keys that
+     already have a version) and pushes. A received provider matching a local one (type, URL,
+     username) that the server has never seen **adopts the received key**; EPG sources likewise
+     (provider + URL). Linking marks every existing version pending — a new server has seen
+     nothing.
+   - **Wire**: server key = `SyncCrypto.keyId(key)`, tags for cascades, payload =
+     `seal(Envelope)` carrying the record's own identity — deletions included, so the server now
+     keeps payloads on deletions (keys are one-way from Phase 8 on). A received envelope whose
+     key doesn't match the record's is dropped. **`PlainSyncCrypto` (readable) until Phase 8.**
+   - **`SyncManager`** (`core:ui`): WebSocket while any activity is started (text `ping` every
+     30 s; a `head` beyond the cursor pulls); a pass on coming to the foreground and on leaving
+     it; a push 3 s after a local change (Room invalidation on `sync_version`, only if something
+     is pending); retries 5 s → 5 min; a refused token stops. Received favourites/history refresh
+     `AppContainer`'s repositories; a deleted active profile switches to another, then re-syncs.
+   - **`SyncAccountManager`**: create an account, create a pairing code, pair, unlink.
+     `SyncAccountStore` keeps URL, device token and cursor in EncryptedSharedPreferences.
+   - **Debug builds**: `SyncDebugReceiver` drives it over adb (`setup`, `pairing`, `pair`, `now`,
+     `status`, `unlink`) until Phase 9's screen.
 8. **Encryption + pairing.** Account key, AES-GCM, HMAC keys, QR pairing UI on `:tv` and `:mobile`.
 9. **Settings UI.** Sync server URL (validated via `GET /info`), sync on/off, paired devices
    list, revoke, last-sync time; dev mode shows raw sync errors.
