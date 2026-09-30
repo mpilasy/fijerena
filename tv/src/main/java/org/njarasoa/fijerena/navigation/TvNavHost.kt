@@ -272,7 +272,11 @@ fun TvNavHost(
                             navController.navigateOnce(Screen.ProfilePicker)
                         },
                         onSignInRequired = { providerId ->
-                            navController.navigateOnce(Screen.AddProvider(editId = providerId))
+                            // Plain navigate, not navigateOnce: this fires from home's load, often
+                            // while home is still entering after a profile switch — not RESUMED yet,
+                            // so navigateOnce's double-tap guard would drop it (and the prompt is
+                            // only offered once per process).
+                            navController.navigate(Screen.AddProvider(editId = providerId)) { launchSingleTop = true }
                         },
                         onSearch = {
                             navController.navigateOnce(Screen.Search("ALL"))

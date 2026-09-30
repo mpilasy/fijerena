@@ -522,6 +522,10 @@ class ProviderViewModel(
                             config = config,
                         )
                     try {
+                        // create() caches by provider id, and every validation shares id 0: without
+                        // evicting first, a retry after a wrong password reused the provider built
+                        // with it and kept failing until the app restarted.
+                        MediaProviderFactory.clearCache(tempEntity.id)
                         val provider = MediaProviderFactory.create(tempEntity, context, password)
                         val result = provider.connect()
                         try {
@@ -529,8 +533,10 @@ class ProviderViewModel(
                         } catch (e: Exception) {
                             android.util.Log.e("ProviderViewModel", "Error disconnecting provider", e)
                         }
+                        MediaProviderFactory.clearCache(tempEntity.id)
                         result
                     } catch (e: Exception) {
+                        MediaProviderFactory.clearCache(tempEntity.id)
                         Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
                     }
                 }
