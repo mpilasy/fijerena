@@ -89,14 +89,15 @@ class ProviderCopyManager(
 
             if (options.copyFavorites) {
                 val favoriteStateDao = xtreamDb.favoriteStateDao()
+                // Every profile's favourites, each kept under its own profile.
                 val existingKeys =
                     favoriteStateDao
-                        .getAll(target.id)
-                        .mapTo(HashSet()) { Triple(it.itemId, it.contentType, it.kind) }
+                        .getAllProfiles(target.id)
+                        .mapTo(HashSet()) { listOf(it.profileId, it.itemId, it.contentType, it.kind) }
                 val newRows =
                     favoriteStateDao
-                        .getAll(source.id)
-                        .filter { Triple(it.itemId, it.contentType, it.kind) !in existingKeys }
+                        .getAllProfiles(source.id)
+                        .filter { listOf(it.profileId, it.itemId, it.contentType, it.kind) !in existingKeys }
                         .map { it.copy(providerId = target.id) }
                 if (newRows.isNotEmpty()) {
                     favoriteStateDao.restoreAll(newRows)
@@ -106,14 +107,15 @@ class ProviderCopyManager(
 
             if (options.copyWatchHistory) {
                 val watchStateDao = xtreamDb.watchStateDao()
+                // Every profile's history, each kept under its own profile.
                 val existingKeys =
                     watchStateDao
-                        .getAll(target.id)
-                        .mapTo(HashSet()) { it.itemId to it.contentType }
+                        .getAllProfiles(target.id)
+                        .mapTo(HashSet()) { Triple(it.profileId, it.itemId, it.contentType) }
                 val newRows =
                     watchStateDao
-                        .getAll(source.id)
-                        .filter { (it.itemId to it.contentType) !in existingKeys }
+                        .getAllProfiles(source.id)
+                        .filter { Triple(it.profileId, it.itemId, it.contentType) !in existingKeys }
                         .map { it.copy(providerId = target.id) }
                 if (newRows.isNotEmpty()) {
                     watchStateDao.restoreAll(newRows)

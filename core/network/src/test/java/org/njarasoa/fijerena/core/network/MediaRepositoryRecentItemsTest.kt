@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Handler
@@ -73,7 +74,7 @@ class MediaRepositoryRecentItemsTest {
         history.forEachIndexed { index, item ->
             watchStateDao.seed(item.toWatchStateEntity(providerId = 1L, at = base - index))
         }
-        return MediaRepository(context, 1L, watchStateDao = watchStateDao)
+        return MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao)
     }
 
     private fun MediaRepository.fetchRecent(contentType: String): List<MediaItem> =

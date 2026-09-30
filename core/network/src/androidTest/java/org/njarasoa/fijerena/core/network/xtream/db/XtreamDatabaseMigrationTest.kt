@@ -3,12 +3,14 @@ package org.njarasoa.fijerena.core.network.xtream.db
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
 /**
  * Verifies the real [XtreamDatabase.MIGRATION_17_18] (not a re-implementation of it) against a
@@ -105,6 +107,80 @@ class XtreamDatabaseMigrationTest {
         // migration, but assert it explicitly rather than assume.
         assertEquals("Test Show", migratedDb.seriesDao().getSeriesById(42L, 1)?.name)
         assertEquals(1, migratedDb.episodeDao().getEpisodes(42L, 1).size)
+
+        migratedDb.close()
+    }
+
+    /**
+     * [XtreamDatabase.MIGRATION_19_20] rebuilds `watch_state` and `favorite_state` with
+     * `profileId` in the primary key. Same approach as above: fresh v20 install, both tables rolled
+     * back to their exact v19 DDL (copied from MIGRATION_14_15/15_16, which is what every real
+     * device has) with rows in them, then reopened through the real migration.
+     */
+    @Test
+    fun migration19To20_assignsEveryRowToTheDefaultProfile() {
+        val seedDb = Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName).build()
+        val rawDb = seedDb.openHelper.writableDatabase
+        rawDb.execSQL("DROP TABLE `watch_state`")
+        rawDb.execSQL("DROP TABLE `favorite_state`")
+        rawDb.execSQL(
+            "CREATE TABLE `watch_state` (" +
+                "`providerId` INTEGER NOT NULL, `itemId` TEXT NOT NULL, `contentType` TEXT NOT NULL, " +
+                "`itemName` TEXT NOT NULL, `categoryId` TEXT NOT NULL, `positionMs` INTEGER NOT NULL, " +
+                "`durationMs` INTEGER NOT NULL, `isCompleted` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                "`lastPlayedAt` INTEGER, `seriesId` TEXT, `episodeId` TEXT, `seriesName` TEXT, " +
+                "`episodeExtension` TEXT, `audioTrackIndex` INTEGER, `subtitleTrackIndex` INTEGER, " +
+                "PRIMARY KEY(`providerId`, `itemId`, `contentType`))",
+        )
+        rawDb.execSQL(
+            "CREATE INDEX `index_watch_state_providerId_contentType_lastPlayedAt` " +
+                "ON `watch_state` (`providerId`, `contentType`, `lastPlayedAt`)",
+        )
+        rawDb.execSQL("CREATE INDEX `index_watch_state_providerId_seriesId` ON `watch_state` (`providerId`, `seriesId`)")
+        rawDb.execSQL(
+            "CREATE TABLE `favorite_state` (" +
+                "`providerId` INTEGER NOT NULL, `itemId` TEXT NOT NULL, `contentType` TEXT NOT NULL, " +
+                "`kind` TEXT NOT NULL, `name` TEXT NOT NULL, `parentCategoryId` TEXT, " +
+                "`createdAt` INTEGER NOT NULL, PRIMARY KEY(`providerId`, `itemId`, `contentType`, `kind`))",
+        )
+        rawDb.execSQL(
+            "CREATE INDEX `index_favorite_state_providerId_kind_contentType_createdAt` " +
+                "ON `favorite_state` (`providerId`, `kind`, `contentType`, `createdAt`)",
+        )
+        rawDb.execSQL(
+            "INSERT INTO `watch_state` VALUES " +
+                "(42, 'm1', 'MOVIES', 'Film', 'c1', 1000, 5000, 0, 111, 222, NULL, NULL, NULL, NULL, 1, NULL), " +
+                "(42, 'e1', 'TV_SHOWS', 'Ep', 'c2', 0, 0, 1, 333, NULL, 's1', 'e1', 'Show', 'mkv', NULL, 2)",
+        )
+        rawDb.execSQL(
+            "INSERT INTO `favorite_state` VALUES " +
+                "(42, 'm1', 'MOVIES', 'STREAM', 'Film', 'c1', 444), (42, 'c9', 'LIVE_TV', 'CATEGORY', 'News', NULL, 555)",
+        )
+        rawDb.execSQL("PRAGMA user_version = 19")
+        seedDb.close()
+
+        // No fallbackToDestructiveMigration: a schema mismatch must throw, not silently wipe.
+        val migratedDb =
+            Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
+                .addMigrations(XtreamDatabase.MIGRATION_19_20)
+                .build()
+        assertEquals(20, migratedDb.openHelper.writableDatabase.version)
+
+        val default = ProfileEntity.DEFAULT_ID
+        runBlocking {
+            val movie = migratedDb.watchStateDao().getItem(42L, default, "m1", "MOVIES")!!
+            assertEquals(1000L, movie.positionMs)
+            assertEquals(222L, movie.lastPlayedAt)
+            assertEquals(1, movie.audioTrackIndex)
+            val episode = migratedDb.watchStateDao().getItem(42L, default, "e1", "TV_SHOWS")!!
+            assertTrue(episode.isCompleted)
+            assertEquals("s1", episode.seriesId)
+            assertEquals(2, episode.subtitleTrackIndex)
+            assertTrue(migratedDb.watchStateDao().getAll(42L, "someone-else").isEmpty())
+        }
+        val favorites = migratedDb.favoriteStateDao().getAll(42L, default)
+        assertEquals(listOf("c9", "m1"), favorites.map { it.itemId })
+        assertTrue(migratedDb.favoriteStateDao().getAll(42L, "someone-else").isEmpty())
 
         migratedDb.close()
     }

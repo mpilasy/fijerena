@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
@@ -50,7 +51,7 @@ class MediaRepositorySetWatchedTest {
         // Unless a test says otherwise, the episode isn't in the local catalogue - setWatched
         // must degrade to no seriesId rather than crash.
         coEvery { episodeDao.getSeriesIdForEpisode(any(), any()) } returns null
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao, favoriteStateDao = FakeFavoriteStateDao(), streamDao = streamDao, episodeDao = episodeDao)
+        repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao, favoriteStateDao = FakeFavoriteStateDao(), streamDao = streamDao, episodeDao = episodeDao)
     }
 
     @After
@@ -63,7 +64,7 @@ class MediaRepositorySetWatchedTest {
         runBlocking {
             repository.setWatched("ch1", ContentType.LIVE_TV, watched = true)
 
-            val row = watchStateDao.getItem(1L, "ch1", ContentType.LIVE_TV)!!
+            val row = watchStateDao.getItem(1L, ProfileEntity.DEFAULT_ID, "ch1", ContentType.LIVE_TV)!!
             assertTrue("a manual mark must complete the row", row.isCompleted)
             assertEquals(0L, row.positionMs)
             assertEquals(0L, row.durationMs)
@@ -75,6 +76,7 @@ class MediaRepositorySetWatchedTest {
         runBlocking {
             watchStateDao.upsertProgress(
                 providerId = 1L,
+                profileId = ProfileEntity.DEFAULT_ID,
                 itemId = "ep1",
                 contentType = ContentType.TV_SHOWS,
                 itemName = "Episode 1",
@@ -93,7 +95,7 @@ class MediaRepositorySetWatchedTest {
 
             repository.setWatched("ep1", ContentType.TV_SHOWS, watched = true)
 
-            val row = watchStateDao.getItem(1L, "ep1", ContentType.TV_SHOWS)!!
+            val row = watchStateDao.getItem(1L, ProfileEntity.DEFAULT_ID, "ep1", ContentType.TV_SHOWS)!!
             assertTrue(row.isCompleted)
             assertEquals("a manual mark must not discard a stored resume point", 500_000L, row.positionMs)
             assertEquals(1_000L, row.lastPlayedAt)
@@ -105,6 +107,7 @@ class MediaRepositorySetWatchedTest {
             watchStateDao.seed(
                 WatchStateEntity(
                     providerId = 1L,
+                    profileId = ProfileEntity.DEFAULT_ID,
                     itemId = "ch1",
                     contentType = ContentType.LIVE_TV,
                     itemName = "Channel",
@@ -119,7 +122,7 @@ class MediaRepositorySetWatchedTest {
 
             repository.setWatched("ch1", ContentType.LIVE_TV, watched = false)
 
-            val row = watchStateDao.getItem(1L, "ch1", ContentType.LIVE_TV)!!
+            val row = watchStateDao.getItem(1L, ProfileEntity.DEFAULT_ID, "ch1", ContentType.LIVE_TV)!!
             assertFalse("must not be completed after unmarking", row.isCompleted)
         }
 
@@ -128,7 +131,7 @@ class MediaRepositorySetWatchedTest {
         runBlocking {
             repository.setWatched("never-seen", ContentType.LIVE_TV, watched = false)
 
-            assertEquals(null, watchStateDao.getItem(1L, "never-seen", ContentType.LIVE_TV))
+            assertEquals(null, watchStateDao.getItem(1L, ProfileEntity.DEFAULT_ID, "never-seen", ContentType.LIVE_TV))
         }
 
     @Test
@@ -142,7 +145,7 @@ class MediaRepositorySetWatchedTest {
 
             repository.setWatched("ep9", ContentType.TV_SHOWS, watched = true)
 
-            val row = watchStateDao.getItem(1L, "ep9", ContentType.TV_SHOWS)!!
+            val row = watchStateDao.getItem(1L, ProfileEntity.DEFAULT_ID, "ep9", ContentType.TV_SHOWS)!!
             assertTrue(row.isCompleted)
             assertEquals("42", row.seriesId)
             assertEquals("a manual mark on an unplayed episode must still be findable by its own id", "ep9", row.episodeId)
@@ -168,7 +171,7 @@ class MediaRepositorySetWatchedTest {
 
             repository.setWatched("movie1", ContentType.MOVIES, watched = true)
 
-            assertEquals(null, watchStateDao.getItem(1L, "movie1", ContentType.MOVIES))
+            assertEquals(null, watchStateDao.getItem(1L, ProfileEntity.DEFAULT_ID, "movie1", ContentType.MOVIES))
         }
 
     @Test
@@ -180,7 +183,7 @@ class MediaRepositorySetWatchedTest {
             repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 10_000L, 2_500_000L)
             repository.awaitPendingWrites()
 
-            val row = watchStateDao.getItem(1L, "ep1", ContentType.TV_SHOWS)!!
+            val row = watchStateDao.getItem(1L, ProfileEntity.DEFAULT_ID, "ep1", ContentType.TV_SHOWS)!!
             assertTrue("isCompleted is sticky since Phase 6 — only setWatched(false) may clear it", row.isCompleted)
         }
 }

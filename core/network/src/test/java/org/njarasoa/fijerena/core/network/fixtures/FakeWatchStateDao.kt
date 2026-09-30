@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.fixtures
 
 import org.njarasoa.fijerena.core.network.WatchedItem
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SeriesCompletedCount
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
@@ -11,23 +12,25 @@ import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
  * unit tests run on plain JVM, with no Robolectric to back a real database.
  */
 class FakeWatchStateDao : WatchStateDao {
-    private val rows = LinkedHashMap<Triple<Long, String, String>, WatchStateEntity>()
+    private data class Key(
+        val providerId: Long,
+        val profileId: String,
+        val itemId: String,
+        val contentType: String,
+    )
 
-    private fun key(
-        providerId: Long,
-        itemId: String,
-        contentType: String,
-    ) = Triple(providerId, itemId, contentType)
+    private val rows = LinkedHashMap<Key, WatchStateEntity>()
 
     /** Seeds a row directly, bypassing the upsert SQL — for tests that set up state, not exercise writes. */
     fun seed(entity: WatchStateEntity) {
-        rows[key(entity.providerId, entity.itemId, entity.contentType)] = entity
+        rows[Key(entity.providerId, entity.profileId, entity.itemId, entity.contentType)] = entity
     }
 
     fun all(): List<WatchStateEntity> = rows.values.toList()
 
     override fun upsertProgress(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
         itemName: String?,
@@ -43,11 +46,12 @@ class FakeWatchStateDao : WatchStateDao {
         audioTrackIndex: Int?,
         subtitleTrackIndex: Int?,
     ) {
-        val k = key(providerId, itemId, contentType)
+        val k = Key(providerId, profileId, itemId, contentType)
         val existing = rows[k]
         rows[k] =
             WatchStateEntity(
                 providerId = providerId,
+                profileId = profileId,
                 itemId = itemId,
                 contentType = contentType,
                 itemName = itemName ?: existing?.itemName ?: "",
@@ -69,18 +73,20 @@ class FakeWatchStateDao : WatchStateDao {
 
     override suspend fun markWatched(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
         now: Long,
         seriesId: String?,
         episodeId: String?,
     ) {
-        val k = key(providerId, itemId, contentType)
+        val k = Key(providerId, profileId, itemId, contentType)
         val existing = rows[k]
         rows[k] =
             existing?.copy(isCompleted = true, updatedAt = now)
                 ?: WatchStateEntity(
                     providerId = providerId,
+                    profileId = profileId,
                     itemId = itemId,
                     contentType = contentType,
                     itemName = "",
@@ -97,23 +103,26 @@ class FakeWatchStateDao : WatchStateDao {
 
     override suspend fun markUnwatched(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
         now: Long,
     ) {
-        val k = key(providerId, itemId, contentType)
+        val k = Key(providerId, profileId, itemId, contentType)
         val existing = rows[k] ?: return
         rows[k] = existing.copy(isCompleted = false, updatedAt = now)
     }
 
     override suspend fun clearRecentSeries(
         providerId: Long,
+        profileId: String,
         seriesId: String,
         contentType: String,
         now: Long,
     ) {
         for ((k, existing) in rows.entries) {
             if (existing.providerId == providerId &&
+                existing.profileId == profileId &&
                 existing.contentType == contentType &&
                 (existing.seriesId == seriesId || existing.itemId == seriesId)
             ) {
@@ -124,6 +133,7 @@ class FakeWatchStateDao : WatchStateDao {
 
     override fun upsertRecency(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
         itemName: String?,
@@ -136,7 +146,7 @@ class FakeWatchStateDao : WatchStateDao {
         audioTrackIndex: Int?,
         subtitleTrackIndex: Int?,
     ) {
-        val k = key(providerId, itemId, contentType)
+        val k = Key(providerId, profileId, itemId, contentType)
         val existing = rows[k]
         rows[k] =
             if (existing != null) {
@@ -156,6 +166,7 @@ class FakeWatchStateDao : WatchStateDao {
             } else {
                 WatchStateEntity(
                     providerId = providerId,
+                    profileId = profileId,
                     itemId = itemId,
                     contentType = contentType,
                     itemName = itemName ?: "",
@@ -177,26 +188,29 @@ class FakeWatchStateDao : WatchStateDao {
 
     override suspend fun getByContentType(
         providerId: Long,
+        profileId: String,
         contentType: String,
-    ): List<WatchStateEntity> = rows.values.filter { it.providerId == providerId && it.contentType == contentType }
+    ): List<WatchStateEntity> = rows.values.filter { it.providerId == providerId && it.profileId == profileId && it.contentType == contentType }
 
     override suspend fun getRecent(
         providerId: Long,
+        profileId: String,
         contentType: String,
         limit: Int,
     ): List<WatchStateEntity> =
         rows.values
-            .filter { it.providerId == providerId && it.contentType == contentType && it.lastPlayedAt != null }
+            .filter { it.providerId == providerId && it.profileId == profileId && it.contentType == contentType && it.lastPlayedAt != null }
             .sortedByDescending { it.lastPlayedAt }
             .take(limit)
 
     override suspend fun getRecentSeriesCollapsed(
         providerId: Long,
+        profileId: String,
         contentType: String,
         limit: Int,
     ): List<WatchStateEntity> =
         rows.values
-            .filter { it.providerId == providerId && it.contentType == contentType && it.lastPlayedAt != null }
+            .filter { it.providerId == providerId && it.profileId == profileId && it.contentType == contentType && it.lastPlayedAt != null }
             .groupBy { it.seriesId ?: it.itemId }
             .map { (_, group) ->
                 group.sortedWith(compareByDescending<WatchStateEntity> { it.lastPlayedAt }.thenByDescending { it.itemId }).first()
@@ -205,27 +219,30 @@ class FakeWatchStateDao : WatchStateDao {
 
     override suspend fun getSeriesCompletedCounts(
         providerId: Long,
+        profileId: String,
         contentType: String,
     ): List<SeriesCompletedCount> =
         rows.values
-            .filter { it.providerId == providerId && it.contentType == contentType && it.isCompleted && it.seriesId != null }
+            .filter { it.providerId == providerId && it.profileId == profileId && it.contentType == contentType && it.isCompleted && it.seriesId != null }
             .groupBy { it.seriesId!! }
             .map { (seriesId, group) -> SeriesCompletedCount(seriesId, group.map { it.episodeId ?: it.itemId }.distinct().size) }
 
     override suspend fun getItem(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
-    ): WatchStateEntity? = rows[key(providerId, itemId, contentType)]
+    ): WatchStateEntity? = rows[Key(providerId, profileId, itemId, contentType)]
 
     override suspend fun getLatestSeriesTrackPrefs(
         providerId: Long,
+        profileId: String,
         seriesId: String,
         contentType: String,
     ): WatchStateEntity? =
         rows.values
             .filter {
-                it.providerId == providerId &&
+                it.providerId == providerId && it.profileId == profileId &&
                     it.seriesId == seriesId &&
                     it.contentType == contentType &&
                     (it.audioTrackIndex != null || it.subtitleTrackIndex != null)
@@ -233,12 +250,13 @@ class FakeWatchStateDao : WatchStateDao {
 
     override suspend fun getResumable(
         providerId: Long,
+        profileId: String,
         contentType: String,
         limit: Int,
     ): List<WatchStateEntity> =
         rows.values
             .filter {
-                it.providerId == providerId &&
+                it.providerId == providerId && it.profileId == profileId &&
                     it.contentType == contentType &&
                     it.lastPlayedAt != null &&
                     !it.isCompleted &&
@@ -249,12 +267,13 @@ class FakeWatchStateDao : WatchStateDao {
 
     override suspend fun getResumableSeriesCollapsed(
         providerId: Long,
+        profileId: String,
         contentType: String,
         limit: Int,
     ): List<WatchStateEntity> =
         rows.values
             .filter {
-                it.providerId == providerId &&
+                it.providerId == providerId && it.profileId == profileId &&
                     it.contentType == contentType &&
                     it.lastPlayedAt != null &&
                     !it.isCompleted &&
@@ -266,14 +285,26 @@ class FakeWatchStateDao : WatchStateDao {
             }.sortedByDescending { it.lastPlayedAt }
             .take(limit)
 
-    override suspend fun getAll(providerId: Long): List<WatchStateEntity> = rows.values.filter { it.providerId == providerId }
+    override suspend fun getAll(
+        providerId: Long,
+        profileId: String,
+    ): List<WatchStateEntity> = rows.values.filter { it.providerId == providerId && it.profileId == profileId }
 
-    override suspend fun deleteAll(providerId: Long) {
-        rows.keys.filter { it.first == providerId }.forEach { rows.remove(it) }
+    override suspend fun getAllProfiles(providerId: Long): List<WatchStateEntity> = rows.values.filter { it.providerId == providerId }
+
+    override suspend fun deleteAll(
+        providerId: Long,
+        profileId: String,
+    ) {
+        rows.keys.filter { it.providerId == providerId && it.profileId == profileId }.forEach { rows.remove(it) }
+    }
+
+    override suspend fun deleteAllProfiles(providerId: Long) {
+        rows.keys.filter { it.providerId == providerId }.forEach { rows.remove(it) }
     }
 
     override suspend fun deleteOrphaned(validProviderIds: List<Long>): Int {
-        val toRemove = rows.keys.filter { it.first !in validProviderIds }
+        val toRemove = rows.keys.filter { it.providerId !in validProviderIds }
         toRemove.forEach { rows.remove(it) }
         return toRemove.size
     }
@@ -292,9 +323,11 @@ class FakeWatchStateDao : WatchStateDao {
 fun WatchedItem.toWatchStateEntity(
     providerId: Long,
     at: Long,
+    profileId: String = ProfileEntity.DEFAULT_ID,
 ): WatchStateEntity =
     WatchStateEntity(
         providerId = providerId,
+        profileId = profileId,
         itemId = itemId,
         contentType = contentType,
         itemName = itemName,

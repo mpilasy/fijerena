@@ -77,7 +77,8 @@ interface XtreamStreamDao {
             "FROM watch_state w " +
             "JOIN xtream_streams c " +
             "ON c.providerId = w.providerId AND c.type = :streamType AND CAST(c.streamId AS TEXT) = w.itemId " +
-            "WHERE w.providerId = :providerId AND w.contentType = :contentType AND w.isCompleted = 1 " +
+            "WHERE w.providerId = :providerId AND w.profileId = :profileId AND w.contentType = :contentType " +
+            "AND w.isCompleted = 1 " +
             "AND c.tmdbId IS NOT NULL " +
             "GROUP BY c.tmdbId" +
             ") done ON s.tmdbId = done.tmdbId " +
@@ -85,6 +86,7 @@ interface XtreamStreamDao {
     )
     suspend fun getSiblingCompletedStreamIds(
         providerId: Long,
+        profileId: String,
         contentType: String,
         streamType: String,
     ): List<String>
@@ -98,7 +100,7 @@ interface XtreamStreamDao {
      */
     @Query(
         "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +
-            "WHERE providerId = :providerId AND contentType = :contentType " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType " +
             "AND itemId IN (" +
             "SELECT CAST(c.streamId AS TEXT) FROM xtream_streams c " +
             "WHERE c.providerId = :providerId AND c.type = :streamType AND c.tmdbId IS NOT NULL " +
@@ -110,6 +112,7 @@ interface XtreamStreamDao {
     )
     suspend fun clearGroupCompletion(
         providerId: Long,
+        profileId: String,
         contentType: String,
         streamType: String,
         itemId: String,

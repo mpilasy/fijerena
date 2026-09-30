@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
@@ -69,7 +70,7 @@ class MediaRepositoryBenchmarkTest {
 
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns historyJson
 
-        repository = MediaRepository(context, 1L, watchStateDao = mockk(relaxed = true))
+        repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = mockk(relaxed = true))
 
         // Warm up
         repeat(100) {

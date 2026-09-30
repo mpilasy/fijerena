@@ -301,7 +301,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20260827_refresh-change-detection-plan.md](docs/plans/20260827_refresh-change-detection-plan.md) | Phases 0-3 and 5 landed; Phase 4 outstanding |
 | [docs/plans/20260824_codebase-audit-fix-plan.md](docs/plans/20260824_codebase-audit-fix-plan.md) | 29/29 complete (T1-T4) |
 | [docs/plans/20260826_tv-ui-performance-plan.md](docs/plans/20260826_tv-ui-performance-plan.md) | Partially landed; baseline measured on hardware 2026-08-26 |
-| [docs/plans/20260929_live-sync-plan.md](docs/plans/20260929_live-sync-plan.md) | Design agreed (2026-09-29); not started |
+| [docs/plans/20260929_live-sync-plan.md](docs/plans/20260929_live-sync-plan.md) | Phase 1 (profiles schema) landed 2026-09-29; Phases 2-9 not started |
 | [docs/plans/20260828_favorites-durable-storage-plan.md](docs/plans/20260828_favorites-durable-storage-plan.md) | **Complete** - all four phases landed |
 | [docs/plans/20260828_secret-store-migration-plan.md](docs/plans/20260828_secret-store-migration-plan.md) | Not started, deferred deliberately |
 | [docs/plans/20260829_ui-look-feel-uplift-plan.md](docs/plans/20260829_ui-look-feel-uplift-plan.md) | **Complete** - all four phases landed (2026-08-29) |

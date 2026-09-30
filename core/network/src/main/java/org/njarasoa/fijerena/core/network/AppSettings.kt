@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
 /**
  * Manages application settings and preferences.
@@ -18,6 +19,7 @@ class AppSettings(
 
     companion object {
         private const val KEY_DEV_MODE = "dev_mode"
+        private const val KEY_ACTIVE_PROFILE_ID = "active_profile_id"
         private const val KEY_WATCH_HISTORY_SIZE = "watch_history_size"
         private const val KEY_PROVIDER_NAME = "provider_name"
         private const val KEY_FAVORITES_MAX_SIZE = "favorites_max_size"
@@ -60,6 +62,13 @@ class AppSettings(
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
     }
+
+    /**
+     * The profile using this device. Per device and never synced: the TV and a phone are often in
+     * different hands at the same time. See docs/plans/20260929_live-sync-plan.md → User profiles.
+     */
+    val activeProfileId: String
+        get() = prefs.getString(KEY_ACTIVE_PROFILE_ID, null) ?: ProfileEntity.DEFAULT_ID
 
     /**
      * Enable or disable developer mode.

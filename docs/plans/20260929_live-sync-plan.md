@@ -6,8 +6,8 @@ selected settings follow the user across devices without a manual export/import.
 sharing devices gets **user profiles**: each person's favorites and watch history are their own
 and follow them to any device.
 
-**Status:** design agreed 2026-09-29 (see Decisions); no open questions. Nothing
-implemented.
+**Status:** design agreed 2026-09-29 (see Decisions); no open questions. Phase 1 landed
+2026-09-29; Phases 2–9 not started.
 
 ---
 
@@ -163,10 +163,14 @@ Separate favorites and watch history per person on shared devices. Netflix-style
 |---|---|
 | Watch state, resume positions, Recent rows | Providers: URL, type, config; login of non-Jellyfin providers |
 | Favorite streams and categories | EPG sources |
+| Recent Categories, last-browsed bookmarks | |
 | **Jellyfin login** (username + password) | Global settings (theme etc.), per-device settings |
 
 **Identity.** A profile is a random UUID (`profileKey`) plus a name and avatar colour, synced as a
-`profile` record. Creating, renaming or deleting one on any device applies everywhere.
+`profile` record. Creating, renaming or deleting one on any device applies everywhere. The one
+exception is the profile every install starts with: its id is the fixed string `default`, not a
+UUID, so every device's pre-existing data lands in the same profile once sync is on instead of each
+device contributing its own "Default".
 
 **Existing data.** On upgrade, one `Default` profile is created and every existing
 `watch_state` / `favorite_state` row is assigned to it. Users who never add a second profile see no
@@ -320,16 +324,27 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
 
 **Profiles**
 
-1. **Profiles schema.** `profile` table keyed by the profile UUID (the same value sync uses as
-   `profileKey`, so no mapping table later). `profileId` added to `watch_state` and
-   `favorite_state` primary keys, existing rows backfilled to `Default`. DAO queries and
-   `MediaRepository` snapshot scoped to the active profile. `provider_login` table; Jellyfin
-   username, password and session moved to per-`(providerId, profileId)` storage, existing login
-   assigned to `Default`. `SettingsExportManager` reads and restores the active profile's rows
-   (format stays version 5). Room migration + schema doc.
-2. **Profiles UI.** Picker on start (only with 2+ profiles), add/rename/delete, switch profile on
-   `:tv` and `:mobile`, snapshot reload on switch, Jellyfin provider rebuilt with the new
-   profile's session, Jellyfin sign-in for a profile without a login.
+1. **Profiles schema** — *landed 2026-09-29.* `profiles` table in `providers.db` (v11) keyed by
+   the profile id (the same value sync uses as `profileKey`, so no mapping table later), seeded
+   with `default`. `profileId` added to the `watch_state` and `favorite_state` primary keys and
+   indices (`xtream_v2.db` v20), existing rows assigned to `default`; the TMDB sibling joins in
+   `XtreamStreamDao` / `XtreamEpisodeDao` are profile-scoped too. `MediaRepository` takes a
+   `profileId` fixed for its lifetime; `AppContainer` passes `AppSettings.activeProfileId`
+   (always `default` until Phase 2). Recent Categories and the `last_*` bookmarks moved per
+   profile: `default` keeps `media_cache_<id>`, any other profile gets
+   `media_cache_<id>_profile_<profileId>`. Provider delete and copy cover every profile;
+   `SettingsExportManager` exports and restores the active profile's rows (format stays
+   version 5). Unit tests prove two profiles can't see each other's rows; the 19→20 migration was
+   checked against Room's generated schema and has an instrumented test (not yet run on a device).
+2. **Profiles UI + Jellyfin login per profile.** Picker on start (only with 2+ profiles),
+   add/rename/delete, switch profile on `:tv` and `:mobile` (evict cached `MediaRepository`
+   instances so the next one is built for the new profile), per-profile orphan cleanup on profile
+   delete. Jellyfin login moved here from Phase 1 (decided 2026-09-29: with only `default`
+   existing it would sit unused): `provider_login` table; Jellyfin username, password and session
+   moved to per-`(providerId, profileId)` storage, existing login assigned to `default`;
+   `MediaProviderFactory`'s provider cache, Quick Connect and the add/edit provider screens made
+   profile-aware; Jellyfin provider rebuilt with the new profile's session on switch; Jellyfin
+   sign-in for a profile without a login.
 
 **Sync**
 

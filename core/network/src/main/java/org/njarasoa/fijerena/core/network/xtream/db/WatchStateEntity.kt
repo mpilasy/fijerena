@@ -14,17 +14,22 @@ import androidx.room.Index
  *
  * `updatedAt` is this row's last-modified stamp. `lastPlayedAt` is set by playback only and drives
  * the Recent row; it stays null for a row created by a manual watched/unwatched mark (Phase 6).
+ *
+ * `profileId` scopes the row to one person — see `docs/plans/20260929_live-sync-plan.md` → User
+ * profiles. It is part of the primary key and leads every index after `providerId`, since every
+ * read is for one provider *and* one profile.
  */
 @Entity(
     tableName = "watch_state",
-    primaryKeys = ["providerId", "itemId", "contentType"],
+    primaryKeys = ["providerId", "profileId", "itemId", "contentType"],
     indices = [
-        Index(value = ["providerId", "contentType", "lastPlayedAt"]),
-        Index(value = ["providerId", "seriesId"]),
+        Index(value = ["providerId", "profileId", "contentType", "lastPlayedAt"]),
+        Index(value = ["providerId", "profileId", "seriesId"]),
     ],
 )
 data class WatchStateEntity(
     val providerId: Long,
+    val profileId: String,
     val itemId: String,
     val contentType: String,
     val itemName: String,

@@ -12,17 +12,23 @@ class FakeFavoriteStateDao : FavoriteStateDao {
 
     private data class Key(
         val providerId: Long,
+        val profileId: String,
         val itemId: String,
         val contentType: String,
         val kind: String,
     )
 
-    private fun key(e: FavoriteStateEntity) = Key(e.providerId, e.itemId, e.contentType, e.kind)
+    private fun key(e: FavoriteStateEntity) = Key(e.providerId, e.profileId, e.itemId, e.contentType, e.kind)
 
-    override fun getAll(providerId: Long): List<FavoriteStateEntity> =
+    override fun getAll(
+        providerId: Long,
+        profileId: String,
+    ): List<FavoriteStateEntity> =
         rows.values
-            .filter { it.providerId == providerId }
+            .filter { it.providerId == providerId && it.profileId == profileId }
             .sortedByDescending { it.createdAt }
+
+    override fun getAllProfiles(providerId: Long): List<FavoriteStateEntity> = rows.values.filter { it.providerId == providerId }
 
     override fun upsert(entity: FavoriteStateEntity) {
         rows[key(entity)] = entity
@@ -30,21 +36,23 @@ class FakeFavoriteStateDao : FavoriteStateDao {
 
     override fun delete(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
         kind: String,
     ) {
-        rows.remove(Key(providerId, itemId, contentType, kind))
+        rows.remove(Key(providerId, profileId, itemId, contentType, kind))
     }
 
     override fun deleteAllOfKind(
         providerId: Long,
+        profileId: String,
         kind: String,
     ) {
-        rows.values.removeAll { it.providerId == providerId && it.kind == kind }
+        rows.values.removeAll { it.providerId == providerId && it.profileId == profileId && it.kind == kind }
     }
 
-    override fun deleteAll(providerId: Long) {
+    override fun deleteAllProfiles(providerId: Long) {
         rows.values.removeAll { it.providerId == providerId }
     }
 

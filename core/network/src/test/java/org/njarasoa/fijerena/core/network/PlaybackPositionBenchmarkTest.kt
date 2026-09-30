@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
@@ -56,6 +57,7 @@ class PlaybackPositionBenchmarkTest {
             MediaRepository(
                 context,
                 1L,
+                ProfileEntity.DEFAULT_ID,
                 watchStateDao = FakeWatchStateDao(),
                 favoriteStateDao = FakeFavoriteStateDao(),
             )

@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -53,7 +54,8 @@ class AppContainer(
                 mutex.withLock {
                     mediaRepositories[resolvedId] ?: run {
                         val settings = providerRepository.getProviderSettings(resolvedId)
-                        val newRepo = MediaRepository(context.applicationContext, resolvedId, settings)
+                        val profileId = AppSettings(context.applicationContext).activeProfileId
+                        val newRepo = MediaRepository(context.applicationContext, resolvedId, profileId, settings)
 
                         // Set the provider implementation
                         val entity =

@@ -24,7 +24,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
  * - Global AppSettings (theme, UI scale, dev mode, EPG auto-refresh, etc.)
  * - Provider configurations (name, URL, username, type, config, per-provider settings)
  * - EPG sources (URL, label, timezone offset, enabled state)
- * - Favorites per provider (item ID, name, category, content type)
+ * - Favorites per provider (item ID, name, category, content type), active profile only
  *
  * NOT exported (for security/size reasons):
  * - Passwords (stored in EncryptedSharedPreferences)
@@ -270,6 +270,10 @@ class SettingsExportManager(
                     )
                 }
 
+            // Favourites and watch state are the active profile's only; the format has no notion of
+            // profiles (docs/plans/20260929_live-sync-plan.md → Decisions).
+            val profileId = appSettings.activeProfileId
+
             // Export favorites per provider. Rows since docs/plans/20260828_favorites-durable-storage-plan.md;
             // the on-disk shape is unchanged, so old backups still import and new ones still restore
             // onto a build that predates the table.
@@ -277,7 +281,7 @@ class SettingsExportManager(
             val providerFavorites =
                 allProviders.mapNotNull { entity ->
                     val favorites =
-                        favoriteStateDao.getAll(entity.id).filter { it.kind == FavoriteKind.STREAM }
+                        favoriteStateDao.getAll(entity.id, profileId).filter { it.kind == FavoriteKind.STREAM }
                     if (favorites.isEmpty()) return@mapNotNull null
                     ProviderFavorites(
                         providerName = entity.name,
@@ -298,7 +302,7 @@ class SettingsExportManager(
             val providerFavoriteCategories =
                 allProviders.mapNotNull { entity ->
                     val favCats =
-                        favoriteStateDao.getAll(entity.id).filter { it.kind == FavoriteKind.CATEGORY }
+                        favoriteStateDao.getAll(entity.id, profileId).filter { it.kind == FavoriteKind.CATEGORY }
                     if (favCats.isEmpty()) return@mapNotNull null
                     ProviderFavoriteCategories(
                         providerName = entity.name,
@@ -319,7 +323,7 @@ class SettingsExportManager(
             val watchStateDao = XtreamDatabase.getInstance(context).watchStateDao()
             val providerWatchState =
                 allProviders.mapNotNull { entity ->
-                    val rows = watchStateDao.getAll(entity.id)
+                    val rows = watchStateDao.getAll(entity.id, profileId)
                     if (rows.isEmpty()) return@mapNotNull null
                     ProviderWatchState(
                         providerName = entity.name,
@@ -610,6 +614,10 @@ class SettingsExportManager(
                     }
                 }
 
+                // Favourites and watch state restore into the active profile, whichever profile
+                // the backup was taken from (docs/plans/20260929_live-sync-plan.md → Decisions).
+                val profileId = AppSettings(context).activeProfileId
+
                 // Import favorites per provider (match by name + URL)
                 var favoritesRestored = 0
 
@@ -626,7 +634,7 @@ class SettingsExportManager(
                         // already has, so anything already present is skipped rather than replaced.
                         val existingKeys =
                             favoriteStateDao
-                                .getAll(matchingProvider.id)
+                                .getAll(matchingProvider.id, profileId)
                                 .asSequence()
                                 .filter { it.kind == FavoriteKind.STREAM }
                                 .mapTo(HashSet()) { it.itemId to it.contentType }
@@ -637,6 +645,7 @@ class SettingsExportManager(
                                 .map { fav ->
                                     FavoriteStateEntity(
                                         providerId = matchingProvider.id,
+                                        profileId = profileId,
                                         itemId = fav.itemId,
                                         contentType = fav.contentType,
                                         kind = FavoriteKind.STREAM,
@@ -664,7 +673,7 @@ class SettingsExportManager(
                                 ?: continue
                         val existingKeys =
                             favoriteStateDao
-                                .getAll(matchingProvider.id)
+                                .getAll(matchingProvider.id, profileId)
                                 .asSequence()
                                 .filter { it.kind == FavoriteKind.CATEGORY }
                                 .mapTo(HashSet()) { it.itemId to it.contentType }
@@ -675,6 +684,7 @@ class SettingsExportManager(
                                 .map { fav ->
                                     FavoriteStateEntity(
                                         providerId = matchingProvider.id,
+                                        profileId = profileId,
                                         itemId = fav.categoryId,
                                         contentType = fav.contentType,
                                         kind = FavoriteKind.CATEGORY,
@@ -710,6 +720,7 @@ class SettingsExportManager(
                             pws.rows.map { row ->
                                 WatchStateEntity(
                                     providerId = matchingProvider.id,
+                                    profileId = profileId,
                                     itemId = row.itemId,
                                     contentType = row.contentType,
                                     itemName = row.itemName,

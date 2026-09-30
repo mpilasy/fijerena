@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Handler
@@ -76,13 +77,13 @@ class MediaRepositoryTest {
     fun savePlaybackPosition_marksCompletedPastThreshold() =
         runBlocking {
             every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
-            repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+            repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao)
 
             // Played to the end: finalizeSession reports position == duration for PlaybackState.Ended.
             repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 2_500_000L, 2_500_000L)
             repository.awaitPendingWrites()
 
-            val saved = watchStateDao.getItem(1L, "ep1", ContentType.TV_SHOWS)!!
+            val saved = watchStateDao.getItem(1L, ProfileEntity.DEFAULT_ID, "ep1", ContentType.TV_SHOWS)!!
             assert(saved.isCompleted) { "an item watched to the end must be marked completed" }
         }
 
@@ -101,7 +102,7 @@ class MediaRepositoryTest {
                 ),
             )
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns json.encodeToString(existing)
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+        repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao)
 
         // Leaving while idle/buffering reports 0/0 — it must not overwrite what is already there.
         repository.savePlaybackPosition("ep1", "Episode 1", "cat1", ContentType.TV_SHOWS, 0L, 0L)
@@ -114,7 +115,7 @@ class MediaRepositoryTest {
     @Test
     fun savePlaybackPosition_shortSessionStillRecordsWhichEpisodePlayed() =
         runBlocking {
-            repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+            repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao)
 
             // 1.3% watched — below the threshold that records the last-played item, so this write is
             // the one creating the row. It must still say which episode of which show it was.
@@ -132,7 +133,7 @@ class MediaRepositoryTest {
             )
             repository.awaitPendingWrites()
 
-            val saved = watchStateDao.getItem(1L, "242136", ContentType.TV_SHOWS)!!
+            val saved = watchStateDao.getItem(1L, ProfileEntity.DEFAULT_ID, "242136", ContentType.TV_SHOWS)!!
             assertEquals("4080", saved.seriesId) // "a row created by a short session must carry its series id"
             assertEquals("242136", saved.episodeId) // "a row created by a short session must carry its episode id"
         }
@@ -140,7 +141,7 @@ class MediaRepositoryTest {
     @Test
     fun getWatchHistory_empty() {
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+        repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao)
         assert(repository.getWatchHistoryLocked().isEmpty())
     }
 
@@ -152,7 +153,7 @@ class MediaRepositoryTest {
         // Return JSON on first call
         every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns historyJson
 
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+        repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao)
 
         // First call should hit SharedPreferences
         val result1 = repository.getWatchHistoryLocked()
@@ -168,7 +169,7 @@ class MediaRepositoryTest {
     @Test
     fun saveLastPlayedItem_updatesCache() =
         runBlocking {
-            repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+            repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao)
 
             // Add item
             repository.saveLastPlayedItem("cat1", "1", "Test", ContentType.LIVE_TV)
@@ -192,7 +193,7 @@ class MediaRepositoryTest {
             val historyJson = json.encodeToString(history)
             every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns historyJson
 
-            repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+            repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao)
             assert(repository.getWatchHistoryLocked().isNotEmpty())
 
             repository.clearWatchHistory()
@@ -209,14 +210,14 @@ class MediaRepositoryTest {
     fun clearWatchHistory_deletesWatchStateRows() =
         runBlocking {
             every { sharedPreferences.getString(KEY_WATCH_HISTORY, null) } returns null
-            repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+            repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao)
             repository.savePlaybackPosition("1", "Test", "cat1", ContentType.MOVIES, 5_000L, 100_000L)
             repository.awaitPendingWrites()
-            assert(watchStateDao.getAll(1L).isNotEmpty())
+            assert(watchStateDao.getAll(1L, ProfileEntity.DEFAULT_ID).isNotEmpty())
 
             repository.clearWatchHistory()
 
-            assert(watchStateDao.getAll(1L).isEmpty())
+            assert(watchStateDao.getAll(1L, ProfileEntity.DEFAULT_ID).isEmpty())
         }
 
     @Test
@@ -226,7 +227,7 @@ class MediaRepositoryTest {
         every { sharedPreferences.getString("watch_history_v3", null) } returns null
         every { sharedPreferences.getString("watch_history_v2", null) } returns v2Json
 
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao)
+        repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao)
         val history = repository.getWatchHistoryLocked()
 
         assertEquals(1, history.size)

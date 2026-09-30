@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
 
 @Database(
@@ -20,7 +21,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
         WatchStateEntity::class,
         FavoriteStateEntity::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = false,
 )
 abstract class XtreamDatabase : RoomDatabase() {
@@ -224,6 +225,74 @@ abstract class XtreamDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 19→20: `profileId` on `watch_state` and `favorite_state`, part of each
+         * primary key. SQLite can't alter a primary key, so both tables are rebuilt: create the
+         * new shape, copy every row across assigned to the Default profile, drop the old table,
+         * rename. Indices are recreated with `profileId` after `providerId`.
+         * See `docs/plans/20260929_live-sync-plan.md` → User profiles.
+         *
+         * Neither table is re-fetchable from any server, and this database falls back to
+         * destructive migration — a schema mismatch here wipes them. Every CREATE statement below
+         * must match Room's generated schema for the entities exactly.
+         */
+        // internal, not private: exercised directly by XtreamDatabaseMigrationTest (androidTest).
+        internal val MIGRATION_19_20 =
+            object : Migration(19, 20) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    val defaultProfile = ProfileEntity.DEFAULT_ID
+                    val watchColumns =
+                        "`itemId`, `contentType`, `itemName`, `categoryId`, `positionMs`, `durationMs`, " +
+                            "`isCompleted`, `updatedAt`, `lastPlayedAt`, `seriesId`, `episodeId`, `seriesName`, " +
+                            "`episodeExtension`, `audioTrackIndex`, `subtitleTrackIndex`"
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `watch_state_new` (" +
+                            "`providerId` INTEGER NOT NULL, `profileId` TEXT NOT NULL, `itemId` TEXT NOT NULL, " +
+                            "`contentType` TEXT NOT NULL, `itemName` TEXT NOT NULL, `categoryId` TEXT NOT NULL, " +
+                            "`positionMs` INTEGER NOT NULL, `durationMs` INTEGER NOT NULL, `isCompleted` INTEGER NOT NULL, " +
+                            "`updatedAt` INTEGER NOT NULL, `lastPlayedAt` INTEGER, `seriesId` TEXT, `episodeId` TEXT, " +
+                            "`seriesName` TEXT, `episodeExtension` TEXT, `audioTrackIndex` INTEGER, " +
+                            "`subtitleTrackIndex` INTEGER, " +
+                            "PRIMARY KEY(`providerId`, `profileId`, `itemId`, `contentType`))",
+                    )
+                    db.execSQL(
+                        "INSERT INTO `watch_state_new` (`providerId`, `profileId`, $watchColumns) " +
+                            "SELECT `providerId`, ?, $watchColumns FROM `watch_state`",
+                        arrayOf<Any>(defaultProfile),
+                    )
+                    db.execSQL("DROP TABLE `watch_state`")
+                    db.execSQL("ALTER TABLE `watch_state_new` RENAME TO `watch_state`")
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_watch_state_providerId_profileId_contentType_lastPlayedAt` " +
+                            "ON `watch_state` (`providerId`, `profileId`, `contentType`, `lastPlayedAt`)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_watch_state_providerId_profileId_seriesId` " +
+                            "ON `watch_state` (`providerId`, `profileId`, `seriesId`)",
+                    )
+
+                    val favoriteColumns = "`itemId`, `contentType`, `kind`, `name`, `parentCategoryId`, `createdAt`"
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `favorite_state_new` (" +
+                            "`providerId` INTEGER NOT NULL, `profileId` TEXT NOT NULL, `itemId` TEXT NOT NULL, " +
+                            "`contentType` TEXT NOT NULL, `kind` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                            "`parentCategoryId` TEXT, `createdAt` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`providerId`, `profileId`, `itemId`, `contentType`, `kind`))",
+                    )
+                    db.execSQL(
+                        "INSERT INTO `favorite_state_new` (`providerId`, `profileId`, $favoriteColumns) " +
+                            "SELECT `providerId`, ?, $favoriteColumns FROM `favorite_state`",
+                        arrayOf<Any>(defaultProfile),
+                    )
+                    db.execSQL("DROP TABLE `favorite_state`")
+                    db.execSQL("ALTER TABLE `favorite_state_new` RENAME TO `favorite_state`")
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_favorite_state_providerId_profileId_kind_contentType_createdAt` " +
+                            "ON `favorite_state` (`providerId`, `profileId`, `kind`, `contentType`, `createdAt`)",
+                    )
+                }
+            }
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -234,7 +303,7 @@ abstract class XtreamDatabase : RoomDatabase() {
                     ).addMigrations(
                         MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
                         MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
-                        MIGRATION_17_18, MIGRATION_18_19,
+                        MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20,
                     )
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC

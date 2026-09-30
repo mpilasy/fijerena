@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
@@ -45,6 +46,7 @@ class MediaRepositoryFavoritesTest {
             MediaRepository(
                 context,
                 1L,
+                ProfileEntity.DEFAULT_ID,
                 watchStateDao = FakeWatchStateDao(),
                 favoriteStateDao = favoriteDao,
             )
@@ -81,6 +83,7 @@ class MediaRepositoryFavoritesTest {
                 MediaRepository(
                     context,
                     1L,
+                    ProfileEntity.DEFAULT_ID,
                     watchStateDao = FakeWatchStateDao(),
                     favoriteStateDao = favoriteDao,
                 )
@@ -138,7 +141,7 @@ class MediaRepositoryFavoritesTest {
 
             assertFalse(repository.isFavorite("item1", ContentType.MOVIES))
             assertTrue(repository.isFavoriteCategory("cat1", ContentType.MOVIES))
-            assertEquals(1, favoriteDao.getAll(1L).count { it.kind == FavoriteKind.CATEGORY })
+            assertEquals(1, favoriteDao.getAll(1L, ProfileEntity.DEFAULT_ID).count { it.kind == FavoriteKind.CATEGORY })
         }
 
     @Test
@@ -205,6 +208,7 @@ class MediaRepositoryFavoritesTest {
                 MediaRepository(
                     context,
                     1L,
+                    ProfileEntity.DEFAULT_ID,
                     watchStateDao = FakeWatchStateDao(),
                     favoriteStateDao = favoriteDao,
                 )
@@ -212,12 +216,12 @@ class MediaRepositoryFavoritesTest {
             repo.awaitPendingWrites()
 
             assertEquals(2, favoriteDao.count(1L))
-            val stream = favoriteDao.getAll(1L).single { it.kind == FavoriteKind.STREAM }
+            val stream = favoriteDao.getAll(1L, ProfileEntity.DEFAULT_ID).single { it.kind == FavoriteKind.STREAM }
             assertEquals("m1", stream.itemId)
             assertEquals("Movie 1", stream.name)
             assertEquals("c1", stream.parentCategoryId)
             assertEquals(111L, stream.createdAt)
-            val category = favoriteDao.getAll(1L).single { it.kind == FavoriteKind.CATEGORY }
+            val category = favoriteDao.getAll(1L, ProfileEntity.DEFAULT_ID).single { it.kind == FavoriteKind.CATEGORY }
             assertEquals("c9", category.itemId)
             assertEquals("Cat 9", category.name)
 
@@ -238,6 +242,7 @@ class MediaRepositoryFavoritesTest {
                 MediaRepository(
                     context,
                     1L,
+                    ProfileEntity.DEFAULT_ID,
                     watchStateDao = FakeWatchStateDao(),
                     favoriteStateDao = favoriteDao,
                 )

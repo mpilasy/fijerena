@@ -6,10 +6,11 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 
 @Database(
-    entities = [ProviderEntity::class, EpgSourceEntity::class, EpgPipelineStatsEntity::class],
-    version = 10,
+    entities = [ProviderEntity::class, EpgSourceEntity::class, EpgPipelineStatsEntity::class, ProfileEntity::class],
+    version = 11,
     exportSchema = false,
 )
 abstract class SettingsDatabase : RoomDatabase() {
@@ -175,6 +176,30 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 10→11: the `profiles` table, seeded with the Default profile every existing
+         * favourite and watch-state row is assigned to by `XtreamDatabase`'s 19→20.
+         * See `docs/plans/20260929_live-sync-plan.md` → User profiles.
+         */
+        val MIGRATION_10_11 =
+            object : Migration(10, 11) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL(
+                        "CREATE TABLE IF NOT EXISTS `profiles` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                            "`createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+                    )
+                    insertDefaultProfile(db)
+                }
+            }
+
+        /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
+        private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "INSERT OR IGNORE INTO `profiles` (`id`, `name`, `createdAt`) VALUES (?, ?, ?)",
+                arrayOf<Any>(ProfileEntity.DEFAULT_ID, ProfileEntity.DEFAULT_NAME, System.currentTimeMillis()),
+            )
+        }
+
         fun getInstance(context: Context): SettingsDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room
@@ -192,6 +217,13 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_7_8,
                         MIGRATION_8_9,
                         MIGRATION_9_10,
+                        MIGRATION_10_11,
+                    ).addCallback(
+                        object : RoomDatabase.Callback() {
+                            override fun onCreate(db: SupportSQLiteDatabase) {
+                                insertDefaultProfile(db)
+                            }
+                        },
                     )
                     // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC
                     // silently falls back to TRUNCATE (readers block on writes) on any device

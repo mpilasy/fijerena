@@ -93,7 +93,7 @@ interface XtreamEpisodeDao {
             "WHERE e2.providerId = :providerId AND e2.seriesId = :seriesId " +
             "AND EXISTS (" +
             "SELECT 1 FROM xtream_episodes sib " +
-            "JOIN watch_state w ON w.providerId = sib.providerId AND w.itemId = sib.id " +
+            "JOIN watch_state w ON w.providerId = sib.providerId AND w.profileId = :profileId AND w.itemId = sib.id " +
             "WHERE sib.providerId = :providerId " +
             "AND sib.season = e2.season AND sib.episodeNum = e2.episodeNum " +
             "AND sib.seriesId IN (" +
@@ -108,6 +108,7 @@ interface XtreamEpisodeDao {
     )
     suspend fun getSiblingCompletedEpisodeIds(
         providerId: Long,
+        profileId: String,
         seriesId: Int,
     ): List<String>
 
@@ -137,7 +138,8 @@ interface XtreamEpisodeDao {
             "FROM watch_state w " +
             "JOIN xtream_episodes sib ON sib.providerId = w.providerId AND sib.id = w.itemId " +
             "JOIN xtream_series s ON s.providerId = sib.providerId AND s.seriesId = sib.seriesId " +
-            "WHERE w.providerId = :providerId AND w.contentType = '${ContentType.TV_SHOWS}' " +
+            "WHERE w.providerId = :providerId AND w.profileId = :profileId " +
+            "AND w.contentType = '${ContentType.TV_SHOWS}' " +
             "AND w.isCompleted = 1 AND s.tmdbId IS NOT NULL " +
             "GROUP BY s.tmdbId, sib.season, sib.episodeNum" +
             ") " +
@@ -149,7 +151,10 @@ interface XtreamEpisodeDao {
             "WHERE e.providerId = :providerId " +
             "GROUP BY e.seriesId",
     )
-    suspend fun getSiblingCompletedCountsBySeries(providerId: Long): Map<
+    suspend fun getSiblingCompletedCountsBySeries(
+        providerId: Long,
+        profileId: String,
+    ): Map<
         @MapColumn(columnName = "seriesId")
         Int,
         @MapColumn(columnName = "completed")
@@ -165,7 +170,8 @@ interface XtreamEpisodeDao {
      */
     @Query(
         "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +
-            "WHERE providerId = :providerId AND contentType = '${ContentType.TV_SHOWS}' " +
+            "WHERE providerId = :providerId AND profileId = :profileId " +
+            "AND contentType = '${ContentType.TV_SHOWS}' " +
             "AND itemId IN (" +
             "SELECT sib.id FROM xtream_episodes target " +
             "JOIN xtream_episodes sib " +
@@ -183,6 +189,7 @@ interface XtreamEpisodeDao {
     )
     suspend fun clearGroupCompletion(
         providerId: Long,
+        profileId: String,
         itemId: String,
         now: Long,
     )

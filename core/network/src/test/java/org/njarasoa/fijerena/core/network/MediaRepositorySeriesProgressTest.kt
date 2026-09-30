@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
@@ -49,8 +50,8 @@ class MediaRepositorySeriesProgressTest {
         watchStateDao = FakeWatchStateDao()
         episodeDao = mockk(relaxed = true)
         streamDao = mockk(relaxed = true)
-        coEvery { episodeDao.getSiblingCompletedCountsBySeries(any()) } returns emptyMap()
-        repository = MediaRepository(context, 1L, watchStateDao = watchStateDao, favoriteStateDao = FakeFavoriteStateDao(), streamDao = streamDao, episodeDao = episodeDao)
+        coEvery { episodeDao.getSiblingCompletedCountsBySeries(any(), any()) } returns emptyMap()
+        repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao, favoriteStateDao = FakeFavoriteStateDao(), streamDao = streamDao, episodeDao = episodeDao)
     }
 
     @After
@@ -70,6 +71,7 @@ class MediaRepositorySeriesProgressTest {
         episodeId: String,
     ) = WatchStateEntity(
         providerId = 1L,
+        profileId = ProfileEntity.DEFAULT_ID,
         itemId = episodeId,
         contentType = ContentType.TV_SHOWS,
         itemName = episodeId,
@@ -89,7 +91,7 @@ class MediaRepositorySeriesProgressTest {
             // Watched under series 6548; 9279 is a language variant sharing its tmdbId and has no
             // rows of its own. Before dedup it reported nothing at all.
             watchStateDao.seed(completedEpisode(seriesId = "6548", episodeId = "343994"))
-            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L) } returns mapOf(6548 to 1, 9279 to 1)
+            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L, any()) } returns mapOf(6548 to 1, 9279 to 1)
             withEpisodeCounts(mapOf("6548" to 40, "9279" to 40))
 
             val progress = repository.getSeriesWatchProgress()
@@ -105,7 +107,7 @@ class MediaRepositorySeriesProgressTest {
             // still count, or adding dedup would regress every untagged show to 0%.
             watchStateDao.seed(completedEpisode(seriesId = "777", episodeId = "e1"))
             watchStateDao.seed(completedEpisode(seriesId = "777", episodeId = "e2"))
-            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L) } returns emptyMap()
+            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L, any()) } returns emptyMap()
             withEpisodeCounts(mapOf("777" to 8))
 
             val progress = repository.getSeriesWatchProgress()
@@ -119,7 +121,7 @@ class MediaRepositorySeriesProgressTest {
             // Both sources describe the same completed episode. Adding them would report 2/10 for
             // one watched episode.
             watchStateDao.seed(completedEpisode(seriesId = "6548", episodeId = "343994"))
-            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L) } returns mapOf(6548 to 1)
+            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L, any()) } returns mapOf(6548 to 1)
             withEpisodeCounts(mapOf("6548" to 10))
 
             val progress = repository.getSeriesWatchProgress()
@@ -135,7 +137,7 @@ class MediaRepositorySeriesProgressTest {
             watchStateDao.seed(completedEpisode(seriesId = "6548", episodeId = "e1"))
             watchStateDao.seed(completedEpisode(seriesId = "6548", episodeId = "e2"))
             watchStateDao.seed(completedEpisode(seriesId = "6548", episodeId = "e3"))
-            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L) } returns mapOf(6548 to 1)
+            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L, any()) } returns mapOf(6548 to 1)
             withEpisodeCounts(mapOf("6548" to 10))
 
             val progress = repository.getSeriesWatchProgress()
@@ -147,7 +149,7 @@ class MediaRepositorySeriesProgressTest {
     fun `a series the provider cannot count is absent rather than wrong`() =
         runBlocking {
             watchStateDao.seed(completedEpisode(seriesId = "6548", episodeId = "343994"))
-            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L) } returns mapOf(6548 to 1, 9279 to 1)
+            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L, any()) } returns mapOf(6548 to 1, 9279 to 1)
             // 9279's episodes were never cached, so it has no denominator.
             withEpisodeCounts(mapOf("6548" to 40))
 
@@ -161,7 +163,7 @@ class MediaRepositorySeriesProgressTest {
     fun `progress is clamped to fully watched`() =
         runBlocking {
             // A stale denominator smaller than the completed count must not render past 100%.
-            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L) } returns mapOf(6548 to 12)
+            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L, any()) } returns mapOf(6548 to 12)
             withEpisodeCounts(mapOf("6548" to 10))
 
             val progress = repository.getSeriesWatchProgress()
@@ -173,7 +175,7 @@ class MediaRepositorySeriesProgressTest {
     fun `no provider episode counts yields no progress at all`() =
         runBlocking {
             watchStateDao.seed(completedEpisode(seriesId = "6548", episodeId = "343994"))
-            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L) } returns mapOf(6548 to 1)
+            coEvery { episodeDao.getSiblingCompletedCountsBySeries(1L, any()) } returns mapOf(6548 to 1)
             // Non-Xtream providers don't implement getEpisodeCountsBySeries.
             val provider = mockk<MediaProvider>(relaxed = true)
             coEvery { provider.getEpisodeCountsBySeries() } returns null

@@ -5,9 +5,10 @@ This document details the complete database schema for the Fijerena application,
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 10
+**Version:** 11
 
-Manages media provider configurations, authentication metadata, and persistent EPG source URLs.
+Manages media provider configurations, authentication metadata, persistent EPG source URLs, and
+user profiles. (v11 added `profiles`.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -19,6 +20,22 @@ Manages media provider configurations, authentication metadata, and persistent E
 | `errors` | INTEGER | Number of errors encountered |
 | `total_channels` | INTEGER | Total channels from pipeline |
 | `total_programmes` | INTEGER | Total programmes from pipeline |
+
+### Table: `profiles` (added v11)
+The people using the app. Favourites, watch state, Recent Categories and the last-browsed
+bookmarks are per profile; providers, EPG sources and settings are shared. See
+`docs/plans/20260929_live-sync-plan.md` → User profiles.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | TEXT (PK) | `default` for the profile every install starts with; a random UUID for any other |
+| `name` | TEXT | Display name |
+| `createdAt` | INTEGER | Creation timestamp |
+
+The `default` row is inserted by `MIGRATION_10_11` on upgrade and by the database's `onCreate`
+callback on a fresh install (`INSERT OR IGNORE` in both). A fixed id rather than a per-device UUID,
+so that once sync lands every device's pre-existing data converges on one profile. Which profile a
+device is using is `active_profile_id` in `app_settings` (§5), not a column here.
 
 ### Table: `providers`
 | Column | Type | Description |
@@ -131,7 +148,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 18
+**Version:** 20
 
 Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
 `watch_state` and `favorite_state` tables. (v10 added FTS4 search tables for streams/series; v11
@@ -143,7 +160,9 @@ v14 added `plotFetchedAt` for TMDB synopses; v15 added `watch_state` and an inde
 TMDB sibling-dedup joins below, which had no covering index on either table; v19 added
 `xtream_series.episodesFetchedAt`, a persisted freshness stamp so a series detail screen can skip
 the network round trip for its episode list when a stored copy is under 24 hours old, instead of
-re-fetching the whole list on every single open.)
+re-fetching the whole list on every single open; v20 added `profileId` to the primary key of
+`watch_state` and `favorite_state`, rebuilding both tables and assigning every existing row to the
+`default` profile — see `docs/plans/20260929_live-sync-plan.md` → User profiles.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -275,6 +294,7 @@ silently evicted anything older. See `docs/plans/20260828_watch-state-durable-st
 | Column | Type | Description |
 |--------|------|-------------|
 | `providerId` | INTEGER (PK) | Foreign key to `providers.id` |
+| `profileId` | TEXT (PK) | Foreign key to `profiles.id` in `providers.db` (added v20) |
 | `itemId` | TEXT (PK) | Movie / episode / channel ID |
 | `contentType` | TEXT (PK) | `LIVE_TV`, `MOVIES`, or `TV_SHOWS` |
 | `itemName` | TEXT | Display name at the time of writing |
@@ -291,7 +311,10 @@ silently evicted anything older. See `docs/plans/20260828_watch-state-durable-st
 | `audioTrackIndex` | INTEGER | Last selected audio track, restored on replay (series-level fallback) |
 | `subtitleTrackIndex` | INTEGER | Last selected subtitle track, restored on replay |
 
-**Indices:** `(providerId, contentType, lastPlayedAt)`, `(providerId, seriesId)`
+**Indices:** `(providerId, profileId, contentType, lastPlayedAt)`, `(providerId, profileId, seriesId)`
+
+Every read and write is for one provider **and** one profile, including the TMDB sibling joins
+below. Deleting a provider deletes every profile's rows.
 
 **TMDB dedup:** a title cached under several catalogue variants (language/quality) is watched once
 and reads as watched everywhere. Movies join `xtream_streams` on a shared `tmdbId`. Episodes cannot —
@@ -329,6 +352,7 @@ id and `parentCategoryId` is NULL.
 | Column | Type | Description |
 |--------|------|-------------|
 | `providerId` | INTEGER (PK) | Foreign key to `providers.id` |
+| `profileId` | TEXT (PK) | Foreign key to `profiles.id` in `providers.db` (added v20) |
 | `itemId` | TEXT (PK) | Stream ID, or the category ID when `kind = CATEGORY` |
 | `contentType` | TEXT (PK) | `LIVE_TV`, `MOVIES`, or `TV_SHOWS` |
 | `kind` | TEXT (PK) | `STREAM` or `CATEGORY` |
@@ -336,7 +360,7 @@ id and `parentCategoryId` is NULL.
 | `parentCategoryId` | TEXT? | The stream's owning category; NULL for `kind = CATEGORY` |
 | `createdAt` | INTEGER | When it was favourited; drives the newest-first ordering the UI shows |
 
-**Index:** `(providerId, kind, contentType, createdAt)`
+**Index:** `(providerId, profileId, kind, contentType, createdAt)`
 
 **No cap.** Rows are inserted and deleted only — nothing truncates. `MediaRepository` still serves
 reads from an in-memory snapshot of this table, because Compose calls `isFavorite()` synchronously
@@ -357,6 +381,12 @@ Catalog entries (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_c
 ## 4. Per-Provider Local Storage (SharedPreferences)
 
 Located in `media_cache_{providerId}.xml`. Stores user-specific data that is not provided by the media server.
+
+**Per profile:** `recent_categories_{contentType}` and the `last_*` bookmarks belong to one profile.
+The `default` profile keeps them in `media_cache_{providerId}.xml`, where they always lived; any
+other profile has its own `media_cache_{providerId}_profile_{profileId}.xml` holding the same keys.
+The migration flags stay in the shared file. Provider deletion and the orphan sweep remove the
+per-profile files along with the shared one.
 
 ### Stored JSON Objects
 Data is stored as serialized JSON strings of Kotlin Data Classes.
@@ -400,6 +430,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | Key | Type | Description |
 |-----|------|-------------|
 | `dev_mode` | BOOLEAN | Toggles developer features |
+| `active_profile_id` | TEXT | Profile using this device; absent means `default`. Per device, never synced |
 | `theme_id` | TEXT | Current dark theme variant (default `deep_night`) |
 | `ui_style_id` | TEXT | Look-and-feel preset, independent of color (default `material`) |
 | `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0) |

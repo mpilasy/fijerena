@@ -24,14 +24,18 @@ object FavoriteKind {
  * and [parentCategoryId] is the category it was favourited from.
  *
  * [createdAt] carries the blob's ordering — newest first — which the favourites list relies on.
+ *
+ * [profileId] scopes the row to one person — see `docs/plans/20260929_live-sync-plan.md` → User
+ * profiles.
  */
 @Entity(
     tableName = "favorite_state",
-    primaryKeys = ["providerId", "itemId", "contentType", "kind"],
-    indices = [Index(value = ["providerId", "kind", "contentType", "createdAt"])],
+    primaryKeys = ["providerId", "profileId", "itemId", "contentType", "kind"],
+    indices = [Index(value = ["providerId", "profileId", "kind", "contentType", "createdAt"])],
 )
 data class FavoriteStateEntity(
     val providerId: Long,
+    val profileId: String,
     val itemId: String,
     val contentType: String,
     val kind: String,

@@ -18,6 +18,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
@@ -129,9 +130,13 @@ data class FavoriteCategoryItem(
 )
 
 /** A favourited stream as a `favorite_state` row. */
-private fun FavoriteItem.toEntity(providerId: Long): FavoriteStateEntity =
+private fun FavoriteItem.toEntity(
+    providerId: Long,
+    profileId: String,
+): FavoriteStateEntity =
     FavoriteStateEntity(
         providerId = providerId,
+        profileId = profileId,
         itemId = itemId,
         contentType = contentType,
         kind = FavoriteKind.STREAM,
@@ -141,9 +146,13 @@ private fun FavoriteItem.toEntity(providerId: Long): FavoriteStateEntity =
     )
 
 /** A favourited category as a `favorite_state` row: the category id *is* the item id. */
-private fun FavoriteCategoryItem.toEntity(providerId: Long): FavoriteStateEntity =
+private fun FavoriteCategoryItem.toEntity(
+    providerId: Long,
+    profileId: String,
+): FavoriteStateEntity =
     FavoriteStateEntity(
         providerId = providerId,
+        profileId = profileId,
         itemId = categoryId,
         contentType = contentType,
         kind = FavoriteKind.CATEGORY,
@@ -163,6 +172,11 @@ data class RecentCategory(
 class MediaRepository(
     private val context: Context,
     private val providerId: Long,
+    // Whose favourites, watch state, Recent Categories and last-position bookmarks this instance
+    // reads and writes — see docs/plans/20260929_live-sync-plan.md → User profiles. Fixed for the
+    // instance's lifetime: switching profile means a new MediaRepository, not a mutable field, so
+    // no in-memory snapshot can ever hold one profile's data under another's id.
+    private val profileId: String,
     private val providerSettings: ProviderSettings = ProviderSettings.DEFAULT,
     private val watchStateDao: WatchStateDao = XtreamDatabase.getInstance(context).watchStateDao(),
     // Injectable for the same reason as watchStateDao: setWatched/getSiblingCompleted* touch the
@@ -181,6 +195,17 @@ class MediaRepository(
             cacheName,
             Context.MODE_PRIVATE,
         )
+    }
+
+    // Recent Categories and the last-position bookmarks are per person. The Default profile keeps
+    // them in media_cache_<providerId>, where they already live, so nothing moves on upgrade; any
+    // other profile gets its own file. The legacy blobs and their migration flags stay in [cache].
+    private val profileCache: SharedPreferences by lazy {
+        if (profileId == ProfileEntity.DEFAULT_ID) {
+            cache
+        } else {
+            context.getSharedPreferences(profileCacheName(providerId, profileId), Context.MODE_PRIVATE)
+        }
     }
     private val appSettings = AppSettings(context) // Keep for global settings (isDevMode)
     private val json =
@@ -255,6 +280,16 @@ class MediaRepository(
         private const val KEY_RECENT_CATEGORIES = "recent_categories"
         private const val MAX_RECENT_CATEGORIES = 20
 
+        /**
+         * A non-Default profile's own prefs file for [providerId]. Named off `media_cache_<id>` so
+         * [org.njarasoa.fijerena.core.network.provider.ProviderRepository]'s provider-delete and
+         * orphan sweeps find it by the same prefix.
+         */
+        fun profileCacheName(
+            providerId: Long,
+            profileId: String,
+        ): String = "media_cache_${providerId}_profile_$profileId"
+
         private const val KEY_LAST_LIVE_CATEGORY = "last_live_category"
         private const val KEY_LAST_LIVE_ITEM = "last_live_item"
         private const val KEY_LAST_MOVIES_CATEGORY = "last_movies_category"
@@ -306,6 +341,9 @@ class MediaRepository(
                 for (item in blobHistory) {
                     watchStateDao.upsertProgress(
                         providerId = providerId,
+                        // The blob predates profiles, so it is the Default profile's history,
+                        // whichever profile happens to open this provider first.
+                        profileId = ProfileEntity.DEFAULT_ID,
                         itemId = item.itemId,
                         contentType = item.contentType,
                         itemName = item.itemName,
@@ -360,11 +398,13 @@ class MediaRepository(
         }
         val blobFavorites = decodeBlob<FavoriteItem>(KEY_FAVORITES)
         val blobCategories = decodeBlob<FavoriteCategoryItem>(KEY_FAVORITE_CATEGORIES)
+        // The blobs predate profiles, so they are the Default profile's favourites, whichever
+        // profile happens to open this provider first.
         for (item in blobFavorites) {
-            favoriteStateDao.upsert(item.toEntity(providerId))
+            favoriteStateDao.upsert(item.toEntity(providerId, ProfileEntity.DEFAULT_ID))
         }
         for (item in blobCategories) {
-            favoriteStateDao.upsert(item.toEntity(providerId))
+            favoriteStateDao.upsert(item.toEntity(providerId, ProfileEntity.DEFAULT_ID))
         }
         cache.edit(commit = true) {
             putBoolean(KEY_FAVORITES_MIGRATED, true)
@@ -627,7 +667,7 @@ class MediaRepository(
         seriesId: SeriesId? = null,
         seriesName: String? = null,
     ) {
-        cache.commitAsync {
+        profileCache.commitAsync {
             when (contentType) {
                 ContentType.LIVE_TV -> {
                     putString(KEY_LAST_LIVE_CATEGORY, categoryId)
@@ -653,6 +693,7 @@ class MediaRepository(
         writeScope.launch {
             watchStateDao.upsertRecency(
                 providerId = providerId,
+                profileId = profileId,
                 itemId = itemId,
                 contentType = contentType,
                 itemName = itemName,
@@ -670,21 +711,21 @@ class MediaRepository(
 
     fun getLastCategoryId(contentType: String): String? =
         when (contentType) {
-            ContentType.LIVE_TV -> cache.getString(KEY_LAST_LIVE_CATEGORY, null)
-            ContentType.MOVIES -> cache.getString(KEY_LAST_MOVIES_CATEGORY, null)
-            ContentType.TV_SHOWS -> cache.getString(KEY_LAST_TVSHOWS_CATEGORY, null)
+            ContentType.LIVE_TV -> profileCache.getString(KEY_LAST_LIVE_CATEGORY, null)
+            ContentType.MOVIES -> profileCache.getString(KEY_LAST_MOVIES_CATEGORY, null)
+            ContentType.TV_SHOWS -> profileCache.getString(KEY_LAST_TVSHOWS_CATEGORY, null)
             else -> null
         }
 
     fun getLastItemId(contentType: String): String? =
         when (contentType) {
-            ContentType.LIVE_TV -> cache.getString(KEY_LAST_LIVE_ITEM, null)
-            ContentType.MOVIES -> cache.getString(KEY_LAST_MOVIES_ITEM, null)
-            ContentType.TV_SHOWS -> cache.getString(KEY_LAST_TVSHOWS_ITEM, null)
+            ContentType.LIVE_TV -> profileCache.getString(KEY_LAST_LIVE_ITEM, null)
+            ContentType.MOVIES -> profileCache.getString(KEY_LAST_MOVIES_ITEM, null)
+            ContentType.TV_SHOWS -> profileCache.getString(KEY_LAST_TVSHOWS_ITEM, null)
             else -> null
         }
 
-    fun getLastContentType(): String? = cache.getString(KEY_LAST_CONTENT_TYPE, null)
+    fun getLastContentType(): String? = profileCache.getString(KEY_LAST_CONTENT_TYPE, null)
 
     // --- Recent Categories ---
 
@@ -706,7 +747,7 @@ class MediaRepository(
         updated.add(0, RecentCategory(categoryId, categoryName, contentType, System.currentTimeMillis()))
         // Keep max 20 entries
         val trimmed = updated.take(MAX_RECENT_CATEGORIES)
-        cache.commitAsync { putString(key, json.encodeToString(trimmed)) }
+        profileCache.commitAsync { putString(key, json.encodeToString(trimmed)) }
         cachedRecentCategories[contentType] = trimmed
     }
 
@@ -717,7 +758,7 @@ class MediaRepository(
     }
 
     private fun getRecentCategoryList(key: String): List<RecentCategory> {
-        val raw = cache.getString(key, null) ?: return emptyList()
+        val raw = profileCache.getString(key, null) ?: return emptyList()
         return try {
             json.decodeFromString(raw)
         } catch (_: Exception) {
@@ -732,7 +773,7 @@ class MediaRepository(
      * folded into [getRecentItemsFromWatchState], which reads the capped/collapsed queries
      * directly instead); kept for callers that want the whole history, such as a future export.
      */
-    suspend fun getWatchHistory(): List<WatchedItem> = watchStateDao.getAll(providerId).map { it.toWatchedItem() }
+    suspend fun getWatchHistory(): List<WatchedItem> = watchStateDao.getAll(providerId, profileId).map { it.toWatchedItem() }
 
     /**
      * The `watch_history_v3`/`v2` blob, decoded and cached. No writer reads this for an "existing
@@ -804,7 +845,7 @@ class MediaRepository(
      * whose rows are gone.
      */
     suspend fun clearWatchHistory() {
-        watchStateDao.deleteAll(providerId)
+        watchStateDao.deleteAll(providerId, profileId)
         synchronized(watchHistoryLock) {
             cachedWatchHistory = emptyList()
             cache.commitAsync {
@@ -831,7 +872,7 @@ class MediaRepository(
             favorites.add(0, item)
             cachedFavorites = favorites
             favoriteIdSet = null
-            writeScope.launch { favoriteStateDao.upsert(item.toEntity(providerId)) }
+            writeScope.launch { favoriteStateDao.upsert(item.toEntity(providerId, profileId)) }
         }
         return !alreadyFavorite
     }
@@ -845,7 +886,7 @@ class MediaRepository(
         if (removed) {
             cachedFavorites = favorites
             favoriteIdSet = null
-            writeScope.launch { favoriteStateDao.delete(providerId, itemId, contentType, FavoriteKind.STREAM) }
+            writeScope.launch { favoriteStateDao.delete(providerId, profileId, itemId, contentType, FavoriteKind.STREAM) }
         }
         return removed
     }
@@ -870,7 +911,7 @@ class MediaRepository(
      */
     private fun loadFavoriteSnapshotLocked() {
         if (cachedFavorites != null && cachedFavoriteCategories != null) return
-        val rows = runBlocking(Dispatchers.IO) { favoriteStateDao.getAll(providerId) }
+        val rows = runBlocking(Dispatchers.IO) { favoriteStateDao.getAll(providerId, profileId) }
         cachedFavorites =
             rows
                 .asSequence()
@@ -935,7 +976,7 @@ class MediaRepository(
     fun clearFavorites() = synchronized(favoriteLock) {
         cachedFavorites = emptyList()
         favoriteIdSet = null
-        writeScope.launch { favoriteStateDao.deleteAllOfKind(providerId, FavoriteKind.STREAM) }
+        writeScope.launch { favoriteStateDao.deleteAllOfKind(providerId, profileId, FavoriteKind.STREAM) }
     }
 
     // --- Favorite Categories ---
@@ -953,7 +994,7 @@ class MediaRepository(
         favorites.add(0, item)
         cachedFavoriteCategories = favorites
         favoriteCategoryIdSet = null
-        writeScope.launch { favoriteStateDao.upsert(item.toEntity(providerId)) }
+        writeScope.launch { favoriteStateDao.upsert(item.toEntity(providerId, profileId)) }
         return true
     }
 
@@ -966,7 +1007,7 @@ class MediaRepository(
         if (!removed) return false
         cachedFavoriteCategories = favorites
         favoriteCategoryIdSet = null
-        writeScope.launch { favoriteStateDao.delete(providerId, categoryId, contentType, FavoriteKind.CATEGORY) }
+        writeScope.launch { favoriteStateDao.delete(providerId, profileId, categoryId, contentType, FavoriteKind.CATEGORY) }
         return true
     }
 
@@ -1017,7 +1058,7 @@ class MediaRepository(
     fun clearFavoriteCategories() = synchronized(favoriteLock) {
         cachedFavoriteCategories = emptyList()
         favoriteCategoryIdSet = null
-        writeScope.launch { favoriteStateDao.deleteAllOfKind(providerId, FavoriteKind.CATEGORY) }
+        writeScope.launch { favoriteStateDao.deleteAllOfKind(providerId, profileId, FavoriteKind.CATEGORY) }
     }
 
     /**
@@ -1066,6 +1107,7 @@ class MediaRepository(
             writeScope.launch {
                 watchStateDao.upsertProgress(
                     providerId = providerId,
+                    profileId = profileId,
                     itemId = itemId,
                     contentType = contentType,
                     itemName = itemName,
@@ -1096,7 +1138,7 @@ class MediaRepository(
         contentType: String,
     ): Map<String, WatchedItem> {
         val idSet = itemIds.toHashSet()
-        val rows = watchStateDao.getByContentType(providerId, contentType)
+        val rows = watchStateDao.getByContentType(providerId, profileId, contentType)
         val result = HashMap<String, WatchedItem>()
         for (row in rows) {
             if (row.itemId in idSet) {
@@ -1124,8 +1166,8 @@ class MediaRepository(
         val totals = provider?.getEpisodeCountsBySeries()
         val result = HashMap<String, Float>()
         if (totals != null && totals.isNotEmpty()) {
-            val completedPerSeries = watchStateDao.getSeriesCompletedCounts(providerId, ContentType.TV_SHOWS)
-            val deduped = episodeDao.getSiblingCompletedCountsBySeries(providerId)
+            val completedPerSeries = watchStateDao.getSeriesCompletedCounts(providerId, profileId, ContentType.TV_SHOWS)
+            val deduped = episodeDao.getSiblingCompletedCountsBySeries(providerId, profileId)
             val completed = HashMap<String, Int>(completedPerSeries.size + deduped.size)
             for (row in completedPerSeries) {
                 completed[row.seriesId] = row.completed
@@ -1162,7 +1204,7 @@ class MediaRepository(
      */
     suspend fun getSiblingCompletedMovieIds(): Set<String> =
         streamDao
-            .getSiblingCompletedStreamIds(providerId, ContentType.MOVIES, XtreamStreamEntity.TYPE_VOD)
+            .getSiblingCompletedStreamIds(providerId, profileId, ContentType.MOVIES, XtreamStreamEntity.TYPE_VOD)
             .toSet()
 
     /**
@@ -1178,7 +1220,7 @@ class MediaRepository(
         val numericSeriesId = seriesId.toIntOrNull()
         val result =
             if (numericSeriesId != null) {
-                episodeDao.getSiblingCompletedEpisodeIds(providerId, numericSeriesId).toSet()
+                episodeDao.getSiblingCompletedEpisodeIds(providerId, profileId, numericSeriesId).toSet()
             } else {
                 emptySet()
             }
@@ -1225,9 +1267,9 @@ class MediaRepository(
         // before the limit, not after" in the plan.
         val rows =
             if (contentType == ContentType.TV_SHOWS) {
-                watchStateDao.getRecentSeriesCollapsed(providerId, contentType, limit)
+                watchStateDao.getRecentSeriesCollapsed(providerId, profileId, contentType, limit)
             } else {
-                watchStateDao.getRecent(providerId, contentType, limit)
+                watchStateDao.getRecent(providerId, profileId, contentType, limit)
             }
         val entries = rows.map { it.toWatchedItem() }
         val (inProgress, rest) = entries.partition { it.resumeProgress() != null }
@@ -1288,8 +1330,8 @@ class MediaRepository(
             if (usesServerUserData) {
                 emptyList()
             } else {
-                val movieRows = watchStateDao.getResumable(providerId, ContentType.MOVIES, limit)
-                val seriesRows = watchStateDao.getResumableSeriesCollapsed(providerId, ContentType.TV_SHOWS, limit)
+                val movieRows = watchStateDao.getResumable(providerId, profileId, ContentType.MOVIES, limit)
+                val seriesRows = watchStateDao.getResumableSeriesCollapsed(providerId, profileId, ContentType.TV_SHOWS, limit)
 
                 // rehydrateThumbnails/zip/sortedByDescending all no-op cleanly on empty input, so
                 // there is no dedicated empty-rows branch here — just the one shape below.
@@ -1474,7 +1516,7 @@ class MediaRepository(
                     )
                 }
             } else {
-                watchStateDao.getItem(providerId, itemId, contentType)?.toWatchedItem()
+                watchStateDao.getItem(providerId, profileId, itemId, contentType)?.toWatchedItem()
             }
         return result
     }
@@ -1494,7 +1536,7 @@ class MediaRepository(
             if (usesServerUserData) {
                 null
             } else {
-                watchStateDao.getLatestSeriesTrackPrefs(providerId, seriesId.raw, contentType)
+                watchStateDao.getLatestSeriesTrackPrefs(providerId, profileId, seriesId.raw, contentType)
             }
         return row?.let { it.audioTrackIndex to it.subtitleTrackIndex }
     }
@@ -1563,6 +1605,7 @@ class MediaRepository(
                     }
                 watchStateDao.markWatched(
                     providerId,
+                    profileId,
                     itemId,
                     contentType,
                     now,
@@ -1570,11 +1613,11 @@ class MediaRepository(
                     episodeId = if (seriesId != null) itemId else null,
                 )
             } else {
-                watchStateDao.markUnwatched(providerId, itemId, contentType, now)
+                watchStateDao.markUnwatched(providerId, profileId, itemId, contentType, now)
                 when (contentType) {
                     ContentType.MOVIES ->
-                        streamDao.clearGroupCompletion(providerId, contentType, XtreamStreamEntity.TYPE_VOD, itemId, now)
-                    ContentType.TV_SHOWS -> episodeDao.clearGroupCompletion(providerId, itemId, now)
+                        streamDao.clearGroupCompletion(providerId, profileId, contentType, XtreamStreamEntity.TYPE_VOD, itemId, now)
+                    ContentType.TV_SHOWS -> episodeDao.clearGroupCompletion(providerId, profileId, itemId, now)
                 }
             }
         }
@@ -1596,7 +1639,7 @@ class MediaRepository(
     ): Boolean {
         if (usesServerUserData) return false
         val now = System.currentTimeMillis()
-        watchStateDao.clearRecentSeries(providerId, seriesId ?: itemId, contentType, now)
+        watchStateDao.clearRecentSeries(providerId, profileId, seriesId ?: itemId, contentType, now)
         refreshRecentItems(contentType)
         return true
     }
@@ -1620,7 +1663,10 @@ class MediaRepository(
     // --- Cache management ---
 
     fun clearCache() {
-        cache.commitAsync { clear() }
+        // Only this profile's file: for Default that is media_cache_<providerId> itself, exactly
+        // as before profiles; for anyone else, clearing that shared file would also wipe the
+        // Default profile's Recent Categories and bookmarks.
+        profileCache.commitAsync { clear() }
         payloadSizes.clear()
         fetchTimes.clear()
         cachedFavorites = null
@@ -1633,7 +1679,8 @@ class MediaRepository(
 
     fun getCacheSize(): Long {
         var totalSize = 0L
-        cache.all.forEach { (_, value) ->
+        val entries = if (profileCache === cache) cache.all.values else cache.all.values + profileCache.all.values
+        entries.forEach { value ->
             when (value) {
                 // Estimate UTF-8 size without allocating byte arrays (worst-case 3 bytes per char)
                 is String -> totalSize += value.length.toLong() * 3

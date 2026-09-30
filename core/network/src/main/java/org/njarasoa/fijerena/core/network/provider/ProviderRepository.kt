@@ -12,6 +12,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
+import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
@@ -165,7 +166,7 @@ class ProviderRepository(
             db.seriesDao().deleteAll(providerId)
             db.episodeDao().deleteAll(providerId)
             db.categoryDao().deleteAllForProvider(providerId)
-            db.favoriteStateDao().deleteAll(providerId)
+            db.favoriteStateDao().deleteAllProfiles(providerId)
             db.epgCacheDao().deleteAll(providerId)
             try {
                 val sdb = db.openHelper.writableDatabase
@@ -250,7 +251,9 @@ class ProviderRepository(
                     val name = file.name
                     for (prefix in prefixPatterns) {
                         if (name.startsWith(prefix) && name.endsWith(".xml")) {
-                            val idStr = name.removePrefix(prefix).removeSuffix(".xml")
+                            // substringBefore: a non-Default profile's file is
+                            // media_cache_<id>_profile_<profileId> (MediaRepository.profileCacheName).
+                            val idStr = name.removePrefix(prefix).removeSuffix(".xml").substringBefore('_')
                             val id = idStr.toLongOrNull()
                             if (id != null && id !in validProviderIds) {
                                 file.delete()
@@ -469,13 +472,24 @@ class ProviderRepository(
      * the same pass — `deleteProvider` never touched it before, leaking that prefs file on every
      * deletion; bounded while history was capped at 25 rows, no longer bounded once storage is.
      * See docs/plans/20260828_watch-state-durable-storage-plan.md.
+     *
+     * Every profile's rows and prefs go with the provider: `watch_state` across all profiles, and
+     * each non-Default profile's own `media_cache_<id>_profile_<profileId>` file alongside the
+     * shared one (docs/plans/20260929_live-sync-plan.md → User profiles).
      */
     private suspend fun clearProviderWatchState(providerId: Long) {
-        XtreamDatabase.getInstance(context).watchStateDao().deleteAll(providerId)
+        XtreamDatabase.getInstance(context).watchStateDao().deleteAllProfiles(providerId)
         try {
             context
                 .getSharedPreferences("media_cache_$providerId", Context.MODE_PRIVATE)
                 .edit { clear() }
+            val profilePrefix = MediaRepository.profileCacheName(providerId, "")
+            java.io
+                .File(context.applicationInfo.dataDir, "shared_prefs")
+                .listFiles()
+                ?.map { it.name.removeSuffix(".xml") }
+                ?.filter { it.startsWith(profilePrefix) }
+                ?.forEach { context.deleteSharedPreferences(it) }
         } catch (_: Exception) {
             // Ignore errors clearing cache for deleted provider
         }

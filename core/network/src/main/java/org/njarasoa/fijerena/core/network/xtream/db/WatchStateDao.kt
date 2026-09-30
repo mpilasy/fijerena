@@ -21,13 +21,13 @@ interface WatchStateDao {
      * it existed a title that crossed 95% by accident could never be un-marked.
      */
     @Query(
-        "INSERT INTO watch_state (providerId, itemId, contentType, itemName, categoryId, positionMs, " +
+        "INSERT INTO watch_state (providerId, profileId, itemId, contentType, itemName, categoryId, positionMs, " +
             "durationMs, isCompleted, updatedAt, lastPlayedAt, seriesId, episodeId, seriesName, " +
             "episodeExtension, audioTrackIndex, subtitleTrackIndex) " +
-            "VALUES (:providerId, :itemId, :contentType, :itemName, :categoryId, :positionMs, :durationMs, " +
+            "VALUES (:providerId, :profileId, :itemId, :contentType, :itemName, :categoryId, :positionMs, :durationMs, " +
             ":isCompleted, :now, :now, :seriesId, :episodeId, :seriesName, :episodeExtension, " +
             ":audioTrackIndex, :subtitleTrackIndex) " +
-            "ON CONFLICT(providerId, itemId, contentType) DO UPDATE SET " +
+            "ON CONFLICT(providerId, profileId, itemId, contentType) DO UPDATE SET " +
             "positionMs = excluded.positionMs, " +
             "durationMs = excluded.durationMs, " +
             "isCompleted = MAX(watch_state.isCompleted, excluded.isCompleted), " +
@@ -43,6 +43,7 @@ interface WatchStateDao {
     )
     fun upsertProgress(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
         itemName: String?,
@@ -64,12 +65,12 @@ interface WatchStateDao {
      * or `isCompleted` on conflict, so starting playback never erases progress already stored.
      */
     @Query(
-        "INSERT INTO watch_state (providerId, itemId, contentType, itemName, categoryId, positionMs, " +
+        "INSERT INTO watch_state (providerId, profileId, itemId, contentType, itemName, categoryId, positionMs, " +
             "durationMs, isCompleted, updatedAt, lastPlayedAt, seriesId, episodeId, seriesName, " +
             "episodeExtension, audioTrackIndex, subtitleTrackIndex) " +
-            "VALUES (:providerId, :itemId, :contentType, :itemName, :categoryId, 0, 0, 0, :now, :now, " +
+            "VALUES (:providerId, :profileId, :itemId, :contentType, :itemName, :categoryId, 0, 0, 0, :now, :now, " +
             ":seriesId, :episodeId, :seriesName, :episodeExtension, :audioTrackIndex, :subtitleTrackIndex) " +
-            "ON CONFLICT(providerId, itemId, contentType) DO UPDATE SET " +
+            "ON CONFLICT(providerId, profileId, itemId, contentType) DO UPDATE SET " +
             "updatedAt = excluded.updatedAt, " +
             "lastPlayedAt = excluded.lastPlayedAt, " +
             "itemName = COALESCE(excluded.itemName, watch_state.itemName), " +
@@ -82,6 +83,7 @@ interface WatchStateDao {
     )
     fun upsertRecency(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
         itemName: String?,
@@ -110,14 +112,15 @@ interface WatchStateDao {
      * [getSeriesCompletedCounts]'s `seriesId IS NOT NULL` rollup.
      */
     @Query(
-        "INSERT INTO watch_state (providerId, itemId, contentType, itemName, categoryId, positionMs, " +
+        "INSERT INTO watch_state (providerId, profileId, itemId, contentType, itemName, categoryId, positionMs, " +
             "durationMs, isCompleted, updatedAt, lastPlayedAt, seriesId, episodeId) " +
-            "VALUES (:providerId, :itemId, :contentType, '', '', 0, 0, 1, :now, NULL, :seriesId, :episodeId) " +
-            "ON CONFLICT(providerId, itemId, contentType) DO UPDATE SET " +
+            "VALUES (:providerId, :profileId, :itemId, :contentType, '', '', 0, 0, 1, :now, NULL, :seriesId, :episodeId) " +
+            "ON CONFLICT(providerId, profileId, itemId, contentType) DO UPDATE SET " +
             "isCompleted = 1, updatedAt = excluded.updatedAt",
     )
     suspend fun markWatched(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
         now: Long,
@@ -132,10 +135,11 @@ interface WatchStateDao {
      */
     @Query(
         "UPDATE watch_state SET isCompleted = 0, updatedAt = :now " +
-            "WHERE providerId = :providerId AND itemId = :itemId AND contentType = :contentType",
+            "WHERE providerId = :providerId AND profileId = :profileId AND itemId = :itemId AND contentType = :contentType",
     )
     suspend fun markUnwatched(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
         now: Long,
@@ -149,29 +153,32 @@ interface WatchStateDao {
      */
     @Query(
         "UPDATE watch_state SET lastPlayedAt = NULL, updatedAt = :now " +
-            "WHERE providerId = :providerId AND (seriesId = :seriesId OR itemId = :seriesId) AND contentType = :contentType",
+            "WHERE providerId = :providerId AND profileId = :profileId AND (seriesId = :seriesId OR itemId = :seriesId) AND contentType = :contentType",
     )
     suspend fun clearRecentSeries(
         providerId: Long,
+        profileId: String,
         seriesId: String,
         contentType: String,
         now: Long,
     )
 
     /** Tier 2: every row for the content type, uncapped. Position/completion are stream attributes, not history. */
-    @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND contentType = :contentType")
+    @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType")
     suspend fun getByContentType(
         providerId: Long,
+        profileId: String,
         contentType: String,
     ): List<WatchStateEntity>
 
     /** Tier 1: Recent row for Movies/Live TV — plain recency, capped. */
     @Query(
-        "SELECT * FROM watch_state WHERE providerId = :providerId AND contentType = :contentType " +
+        "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType " +
             "AND lastPlayedAt IS NOT NULL ORDER BY lastPlayedAt DESC LIMIT :limit",
     )
     suspend fun getRecent(
         providerId: Long,
+        profileId: String,
         contentType: String,
         limit: Int,
     ): List<WatchStateEntity>
@@ -183,11 +190,12 @@ interface WatchStateDao {
             "SELECT *, ROW_NUMBER() OVER (" +
             "PARTITION BY COALESCE(seriesId, itemId) ORDER BY lastPlayedAt DESC, itemId DESC" +
             ") AS rn FROM watch_state " +
-            "WHERE providerId = :providerId AND contentType = :contentType AND lastPlayedAt IS NOT NULL" +
+            "WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType AND lastPlayedAt IS NOT NULL" +
             ") WHERE rn = 1 ORDER BY lastPlayedAt DESC LIMIT :limit",
     )
     suspend fun getRecentSeriesCollapsed(
         providerId: Long,
+        profileId: String,
         contentType: String,
         limit: Int,
     ): List<WatchStateEntity>
@@ -198,13 +206,14 @@ interface WatchStateDao {
      * instead of over-fetching and filtering in Kotlin.
      */
     @Query(
-        "SELECT * FROM watch_state WHERE providerId = :providerId AND contentType = :contentType " +
+        "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType " +
             "AND lastPlayedAt IS NOT NULL AND isCompleted = 0 AND durationMs > 0 " +
             "AND (positionMs * 100.0 / durationMs) BETWEEN 2.0 AND 95.0 " +
             "ORDER BY lastPlayedAt DESC LIMIT :limit",
     )
     suspend fun getResumable(
         providerId: Long,
+        profileId: String,
         contentType: String,
         limit: Int,
     ): List<WatchStateEntity>
@@ -221,57 +230,76 @@ interface WatchStateDao {
             "SELECT *, ROW_NUMBER() OVER (" +
             "PARTITION BY COALESCE(seriesId, itemId) ORDER BY lastPlayedAt DESC, itemId DESC" +
             ") AS rn FROM watch_state " +
-            "WHERE providerId = :providerId AND contentType = :contentType AND lastPlayedAt IS NOT NULL " +
+            "WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType AND lastPlayedAt IS NOT NULL " +
             "AND isCompleted = 0 AND durationMs > 0 AND (positionMs * 100.0 / durationMs) BETWEEN 2.0 AND 95.0" +
             ") WHERE rn = 1 ORDER BY lastPlayedAt DESC LIMIT :limit",
     )
     suspend fun getResumableSeriesCollapsed(
         providerId: Long,
+        profileId: String,
         contentType: String,
         limit: Int,
     ): List<WatchStateEntity>
 
     @Query(
         "SELECT seriesId, COUNT(DISTINCT COALESCE(episodeId, itemId)) AS completed " +
-            "FROM watch_state WHERE providerId = :providerId AND contentType = :contentType " +
+            "FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND contentType = :contentType " +
             "AND isCompleted = 1 AND seriesId IS NOT NULL GROUP BY seriesId",
     )
     suspend fun getSeriesCompletedCounts(
         providerId: Long,
+        profileId: String,
         contentType: String,
     ): List<SeriesCompletedCount>
 
     /** Single-item lookup, replacing the blob's O(1) `(itemId, contentType)` map hit. */
-    @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND itemId = :itemId AND contentType = :contentType")
+    @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND itemId = :itemId AND contentType = :contentType")
     suspend fun getItem(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
     ): WatchStateEntity?
 
     /**
      * Track-setting fallback for an episode with no saved choice of its own: the series' most
-     * recently touched row that actually carries a track choice. Uses the `(providerId, seriesId)`
-     * index. Excludes rows with both indices null so a series where nobody has ever picked a
+     * recently touched row that actually carries a track choice. Uses the
+     * `(providerId, profileId, seriesId)` index. Excludes rows with both indices null so a series where nobody has ever picked a
      * track doesn't return an arbitrary row that has nothing to offer.
      */
     @Query(
-        "SELECT * FROM watch_state WHERE providerId = :providerId AND seriesId = :seriesId AND " +
+        "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND seriesId = :seriesId AND " +
             "contentType = :contentType AND (audioTrackIndex IS NOT NULL OR subtitleTrackIndex IS NOT NULL) " +
             "ORDER BY updatedAt DESC LIMIT 1",
     )
     suspend fun getLatestSeriesTrackPrefs(
         providerId: Long,
+        profileId: String,
         seriesId: String,
         contentType: String,
     ): WatchStateEntity?
 
-    /** Every row for this provider, all content types, unbounded. See `getWatchHistory` in MediaRepository. */
-    @Query("SELECT * FROM watch_state WHERE providerId = :providerId")
-    suspend fun getAll(providerId: Long): List<WatchStateEntity>
+    /** Every row for this provider and profile, all content types, unbounded. See `getWatchHistory` in MediaRepository. */
+    @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId")
+    suspend fun getAll(
+        providerId: Long,
+        profileId: String,
+    ): List<WatchStateEntity>
 
+    /** Every row for this provider across every profile — copying a provider copies everyone's history. */
+    @Query("SELECT * FROM watch_state WHERE providerId = :providerId")
+    suspend fun getAllProfiles(providerId: Long): List<WatchStateEntity>
+
+    /** Backs "Clear watch history", which clears only the profile using the app. */
+    @Query("DELETE FROM watch_state WHERE providerId = :providerId AND profileId = :profileId")
+    suspend fun deleteAll(
+        providerId: Long,
+        profileId: String,
+    )
+
+    /** Provider deletion: every profile's rows go with it. */
     @Query("DELETE FROM watch_state WHERE providerId = :providerId")
-    suspend fun deleteAll(providerId: Long)
+    suspend fun deleteAllProfiles(providerId: Long)
 
     /** Rows whose provider no longer exists at all — see [org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData]. */
     @Query("DELETE FROM watch_state WHERE providerId NOT IN (:validProviderIds)")

@@ -16,9 +16,16 @@ import androidx.room.Query
  */
 @Dao
 interface FavoriteStateDao {
-    /** Whole-provider read for the snapshot. Newest first, matching the blob's ordering. */
-    @Query("SELECT * FROM favorite_state WHERE providerId = :providerId ORDER BY createdAt DESC")
-    fun getAll(providerId: Long): List<FavoriteStateEntity>
+    /** Whole-provider read for one profile's snapshot. Newest first, matching the blob's ordering. */
+    @Query("SELECT * FROM favorite_state WHERE providerId = :providerId AND profileId = :profileId ORDER BY createdAt DESC")
+    fun getAll(
+        providerId: Long,
+        profileId: String,
+    ): List<FavoriteStateEntity>
+
+    /** Every profile's rows for this provider — copying a provider copies everyone's favourites. */
+    @Query("SELECT * FROM favorite_state WHERE providerId = :providerId")
+    fun getAllProfiles(providerId: Long): List<FavoriteStateEntity>
 
     /**
      * Insert-or-replace. Re-favouriting something already favourited refreshes `createdAt`, which
@@ -29,25 +36,28 @@ interface FavoriteStateDao {
     fun upsert(entity: FavoriteStateEntity)
 
     @Query(
-        "DELETE FROM favorite_state WHERE providerId = :providerId AND itemId = :itemId " +
-            "AND contentType = :contentType AND kind = :kind",
+        "DELETE FROM favorite_state WHERE providerId = :providerId AND profileId = :profileId " +
+            "AND itemId = :itemId AND contentType = :contentType AND kind = :kind",
     )
     fun delete(
         providerId: Long,
+        profileId: String,
         itemId: String,
         contentType: String,
         kind: String,
     )
 
     /** Backs "Clear All Favorites", which is scoped to streams — categories are left alone. */
-    @Query("DELETE FROM favorite_state WHERE providerId = :providerId AND kind = :kind")
+    @Query("DELETE FROM favorite_state WHERE providerId = :providerId AND profileId = :profileId AND kind = :kind")
     fun deleteAllOfKind(
         providerId: Long,
+        profileId: String,
         kind: String,
     )
 
+    /** Provider deletion: every profile's rows go with it. */
     @Query("DELETE FROM favorite_state WHERE providerId = :providerId")
-    fun deleteAll(providerId: Long)
+    fun deleteAllProfiles(providerId: Long)
 
     /** Rows whose provider no longer exists at all — see [org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData]. */
     @Query("DELETE FROM favorite_state WHERE providerId NOT IN (:validProviderIds)")
