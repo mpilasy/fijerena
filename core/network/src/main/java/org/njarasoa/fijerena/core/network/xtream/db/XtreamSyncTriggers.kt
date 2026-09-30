@@ -16,8 +16,9 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
  * through its tombstone, and rows removed with their provider or profile are covered by that
  * one's own tombstone.
  *
- * Installed on every open (`IF NOT EXISTS`), so fresh installs, migrations and destructive
- * rebuilds all end up with them. Room doesn't manage triggers.
+ * Dropped and recreated on every open, so fresh installs, migrations and destructive rebuilds all
+ * end up with them, and an app update that changes one replaces the old definition. Room doesn't
+ * manage triggers.
  */
 internal object XtreamSyncTriggers {
     // Wall clock in ms from SQLite itself; julianday keeps sub-second precision.
@@ -26,14 +27,28 @@ internal object XtreamSyncTriggers {
     private const val TICK = "UPDATE `sync_clock` SET `hlc` = MAX($WALL_MS, `hlc` + 1) WHERE `id` = ${SyncClockEntity.SINGLE_ROW};"
     private const val CLOCK = "(SELECT `hlc` FROM `sync_clock` WHERE `id` = ${SyncClockEntity.SINGLE_ROW})"
 
+    // Delete-then-insert, never INSERT OR REPLACE: inside a trigger SQLite applies the conflict
+    // rule of the statement that fired it, and Room's @Insert/@Update run as OR ABORT — a REPLACE
+    // here would abort the user's write the second time the same key is queued.
     private fun queue(
         kind: String,
         row: String,
-    ) = "INSERT OR REPLACE INTO `sync_outbox` (`providerId`, `profileId`, `kind`, `itemId`, `contentType`, `hlc`) " +
+    ) = "DELETE FROM `sync_outbox` WHERE `providerId` = $row.`providerId` AND `profileId` = $row.`profileId` " +
+        "AND `kind` = $kind AND `itemId` = $row.`itemId` AND `contentType` = $row.`contentType`; " +
+        "INSERT INTO `sync_outbox` (`providerId`, `profileId`, `kind`, `itemId`, `contentType`, `hlc`) " +
         "VALUES ($row.`providerId`, $row.`profileId`, $kind, $row.`itemId`, $row.`contentType`, $CLOCK);"
 
     private val favoriteKind =
         "CASE NEW.`kind` WHEN '${FavoriteKind.CATEGORY}' THEN '${SyncKind.FAVORITE_CATEGORY}' ELSE '${SyncKind.FAVORITE_STREAM}' END"
+
+    private fun createTrigger(
+        db: SupportSQLiteDatabase,
+        name: String,
+        sql: String,
+    ) {
+        db.execSQL("DROP TRIGGER IF EXISTS `$name`")
+        db.execSQL(sql)
+    }
 
     fun install(db: SupportSQLiteDatabase) {
         db.execSQL(
@@ -41,17 +56,23 @@ internal object XtreamSyncTriggers {
         )
         for (event in listOf("INSERT", "UPDATE")) {
             val suffix = event.lowercase()
-            db.execSQL(
-                "CREATE TRIGGER IF NOT EXISTS `sync_watch_state_$suffix` AFTER $event ON `watch_state` " +
+            createTrigger(
+                db,
+                "sync_watch_state_$suffix",
+                "CREATE TRIGGER `sync_watch_state_$suffix` AFTER $event ON `watch_state` " +
                     "WHEN $NOT_APPLYING BEGIN $TICK ${queue("'${SyncKind.WATCH}'", "NEW")} END",
             )
-            db.execSQL(
-                "CREATE TRIGGER IF NOT EXISTS `sync_favorite_state_$suffix` AFTER $event ON `favorite_state` " +
+            createTrigger(
+                db,
+                "sync_favorite_state_$suffix",
+                "CREATE TRIGGER `sync_favorite_state_$suffix` AFTER $event ON `favorite_state` " +
                     "WHEN $NOT_APPLYING BEGIN $TICK ${queue(favoriteKind, "NEW")} END",
             )
         }
-        db.execSQL(
-            "CREATE TRIGGER IF NOT EXISTS `sync_tombstone_insert` AFTER INSERT ON `sync_tombstone` " +
+        createTrigger(
+            db,
+            "sync_tombstone_insert",
+            "CREATE TRIGGER `sync_tombstone_insert` AFTER INSERT ON `sync_tombstone` " +
                 "WHEN $NOT_APPLYING BEGIN $TICK " +
                 "UPDATE `sync_tombstone` SET `deletedAt` = $CLOCK WHERE NEW.`deletedAt` = 0 " +
                 "AND `providerId` = NEW.`providerId` AND `profileId` = NEW.`profileId` AND `kind` = NEW.`kind` " +

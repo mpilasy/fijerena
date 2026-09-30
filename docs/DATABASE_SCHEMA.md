@@ -455,8 +455,11 @@ moves it to `max(now, hlc + 1)` — and `applying`, set while changes received f
 written so they aren't queued straight back.
 
 ### Sync triggers (v22, installed on every open)
-Room doesn't manage these; `XtreamSyncTriggers.install` creates them (`IF NOT EXISTS`) in the
-database's `onOpen`, so fresh installs, migrations and destructive rebuilds all get them. Each ticks
+Room doesn't manage these; `XtreamSyncTriggers.install` drops and recreates them in the database's
+`onOpen`, so fresh installs, migrations and destructive rebuilds all get them, and an app update
+that changes one replaces it. They queue with delete-then-insert, never `INSERT OR REPLACE`: inside
+a trigger SQLite applies the firing statement's conflict rule, and Room's `@Insert`/`@Update` run as
+`OR ABORT`. Each ticks
 `sync_clock` and upserts the changed key into `sync_outbox` in the writing transaction, unless
 `applying` is set:
 
