@@ -1,5 +1,10 @@
 package org.njarasoa.fijerena.feature.contentselection
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import androidx.compose.runtime.getValue
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -86,8 +91,11 @@ fun MobileContentTypeSelectionScreen(
     onSearch: () -> Unit = {},
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
     onContinueWatchingSelected: (ContinueWatchingItem) -> Unit = {},
+    onChooseProfile: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
     var providerName by remember { mutableStateOf("") }
@@ -274,6 +282,22 @@ fun MobileContentTypeSelectionScreen(
                             Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
                         }
                     )
+                    // Always shown, even with one profile, so profiles are discoverable.
+                    activeProfile?.let { profile ->
+                        val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
+                        CinemaIconButton(
+                            onClick = onChooseProfile,
+                            modifier = Modifier.semantics { contentDescription = switchLabel },
+                            icon = {
+                                ProfileAvatar(
+                                    name = profile.name,
+                                    colorIndex = profile.colorIndex,
+                                    size = MobileDimensions.iconLarge,
+                                    fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                                )
+                            },
+                        )
+                    }
                     CinemaIconButton(onClick = onSettings,
                         icon = {
                             Icon(CinemaIcons.Settings, stringResource(R.string.settings_title), tint = CinemaTextPrimary)

@@ -66,6 +66,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -125,8 +129,11 @@ fun ContentTypeSelectionScreen(
     onProviderChanged: () -> Unit = {},
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
     onContinueWatchingSelected: (ContinueWatchingItem) -> Unit = {},
+    onChooseProfile: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val profilesViewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val activeProfile by profilesViewModel.activeProfile.collectAsStateWithLifecycle()
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
     var providerName by remember { mutableStateOf("") }
@@ -371,6 +378,22 @@ fun ContentTypeSelectionScreen(
                                 )
                             },
                         )
+                        // Always shown, even with one profile, so profiles are discoverable.
+                        activeProfile?.let { profile ->
+                            val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
+                            CinemaIconButton(
+                                onClick = onChooseProfile,
+                                modifier = Modifier.semantics { contentDescription = switchLabel },
+                                icon = {
+                                    ProfileAvatar(
+                                        name = profile.name,
+                                        colorIndex = profile.colorIndex,
+                                        size = TvDimensions.iconMedium,
+                                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                                    )
+                                },
+                            )
+                        }
                         CinemaIconButton(
                             onClick = onSettings,
                             icon = {

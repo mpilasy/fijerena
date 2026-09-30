@@ -42,6 +42,14 @@ sealed interface Screen {
     data object Login : Screen
 
     /**
+     * "Who's watching?" — choose which profile this device uses. TV opens it on every launch when
+     * there are two or more profiles; both apps open it from the home header's avatar. See
+     * docs/plans/20260929_live-sync-plan.md → User profiles.
+     */
+    @Serializable
+    data object ProfilePicker : Screen
+
+    /**
      * Content type selection screen destination.
      * Allows users to choose between Live TV, Movies, or TV Shows.
      */

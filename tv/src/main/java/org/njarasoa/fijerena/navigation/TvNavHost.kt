@@ -1,5 +1,7 @@
 package org.njarasoa.fijerena.navigation
 
+import org.njarasoa.fijerena.core.network.profile.ProfileRepository
+import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -91,6 +93,9 @@ fun TvNavHost(
     // Use mutable states for asynchronous data loading
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
     var initializationComplete by remember { mutableStateOf(false) }
+    // "Who's watching?" on every launch once a second profile exists — the TV is shared, so the
+    // last person's profile is a poor guess (docs/plans/20260929_live-sync-plan.md → User profiles).
+    var pickProfileAtLaunch by remember { mutableStateOf(false) }
     var hasAutoSkippedSingleContentType by rememberSaveable { mutableStateOf(false) }
 
     // Async initialization — use cached provider flag for instant start destination,
@@ -120,6 +125,7 @@ fun TvNavHost(
             hasProvider = providerCount > 0
             appSettings.hasProviderCache = providerCount > 0
         }
+        pickProfileAtLaunch = ProfileRepository(context.applicationContext).count() > 1
         initializationComplete = true
         // Self-healing: quietly sweep orphaned catalog rows left by past deleted providers
         coroutineScope.launch(Dispatchers.IO) {
@@ -142,6 +148,8 @@ fun TvNavHost(
         remember(initializationComplete, hasProvider) {
             if (!initializationComplete) {
                 null
+            } else if (hasProvider == true && pickProfileAtLaunch) {
+                Screen.ProfilePicker
             } else if (hasProvider == true) {
                 Screen.ContentTypeSelection
             } else {
@@ -259,6 +267,9 @@ fun TvNavHost(
                         },
                         onSettings = {
                             navController.navigateOnce(Screen.Settings)
+                        },
+                        onChooseProfile = {
+                            navController.navigateOnce(Screen.ProfilePicker)
                         },
                         onSearch = {
                             navController.navigateOnce(Screen.Search("ALL"))
@@ -680,6 +691,18 @@ fun TvNavHost(
                 }
 
                 // Settings Screen
+                composable<Screen.ProfilePicker> {
+                    ProfilePickerScreen(
+                        onProfileChosen = {
+                            // Every screen below may hold the previous profile's repository;
+                            // start over from home rather than returning to any of them.
+                            navController.navigate(Screen.ContentTypeSelection) {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                            }
+                        },
+                    )
+                }
+
                 composable<Screen.Settings> {
                     // Prevent back from exiting if Settings is the start destination (no provider)
                     BackHandler(enabled = navController.previousBackStackEntry == null) {}

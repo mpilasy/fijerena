@@ -812,4 +812,6 @@
     <string name="profile_delete_confirm_text">Ses favoris, son historique et ses catégories récentes sur tous les fournisseurs seront supprimés. Cette action est irréversible.</string>
     <string name="profile_delete_blocked_active">Cet appareil utilise ce profil. Passez d\'abord à un autre profil.</string>
     <string name="profile_delete_blocked_last">Le dernier profil ne peut pas être supprimé.</string>
+    <string name="profile_picker_title">Qui regarde ?</string>
+    <string name="profile_switch_description">Changer de profil (%1$s)</string>
 </resources>

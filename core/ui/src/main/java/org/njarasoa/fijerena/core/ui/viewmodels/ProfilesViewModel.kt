@@ -7,12 +7,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 
 data class ProfileUi(
@@ -28,13 +30,36 @@ class ProfilesViewModel(
     private val repository: ProfileRepository,
     private val appSettings: AppSettings,
 ) : ViewModel() {
+    private val activeProfileId = MutableStateFlow(appSettings.activeProfileId)
+
     val profiles: StateFlow<List<ProfileUi>> =
-        repository
-            .observeProfiles()
-            .map { rows ->
-                val activeId = appSettings.activeProfileId
-                rows.map { ProfileUi(it.id, it.name, it.colorIndex, it.id == activeId) }
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+        combine(repository.observeProfiles(), activeProfileId) { rows, activeId ->
+            rows.map { ProfileUi(it.id, it.name, it.colorIndex, it.id == activeId) }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+    /** The profile this device uses, or null until the list has loaded. */
+    val activeProfile: StateFlow<ProfileUi?> =
+        profiles
+            .map { list -> list.firstOrNull { it.isActive } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+    /**
+     * Makes [id] this device's profile, then calls [onSwitched] — on the main thread — so the
+     * caller can rebuild its screens. Picking the profile already in use still calls it: from the
+     * launch picker that is the normal way in.
+     */
+    fun switchTo(
+        id: String,
+        onSwitched: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            if (id != activeProfileId.value) {
+                AppContainer.getInstance(context).switchProfile(id)
+                activeProfileId.value = id
+            }
+            onSwitched()
+        }
+    }
 
     // Why the last delete was refused, for the screen to show; null once dismissed.
     private val _message = MutableStateFlow<String?>(null)

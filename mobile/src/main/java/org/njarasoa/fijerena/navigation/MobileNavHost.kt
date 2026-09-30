@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.navigation
 
+import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
@@ -228,6 +229,9 @@ fun MobileNavHost(
                     },
                     onSettings = {
                         navController.navigateOnce(Screen.Settings)
+                    },
+                    onChooseProfile = {
+                        navController.navigateOnce(Screen.ProfilePicker)
                     },
                     onSearch = {
                         navController.navigateOnce(Screen.Search("ALL"))
@@ -471,6 +475,18 @@ fun MobileNavHost(
             }
 
             // Settings Screen
+            composable<Screen.ProfilePicker> {
+                ProfilePickerScreen(
+                    onProfileChosen = {
+                        // Every screen below may hold the previous profile's repository; start
+                        // over from home rather than returning to any of them.
+                        navController.navigate(Screen.ContentTypeSelection) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    },
+                )
+            }
+
             composable<Screen.Settings> {
                 MobileSettingsScreen(
                     onBack = {

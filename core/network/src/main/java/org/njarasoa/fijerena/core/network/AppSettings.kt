@@ -67,8 +67,9 @@ class AppSettings(
      * The profile using this device. Per device and never synced: the TV and a phone are often in
      * different hands at the same time. See docs/plans/20260929_live-sync-plan.md → User profiles.
      */
-    val activeProfileId: String
+    var activeProfileId: String
         get() = prefs.getString(KEY_ACTIVE_PROFILE_ID, null) ?: ProfileEntity.DEFAULT_ID
+        set(value) = prefs.edit { putString(KEY_ACTIVE_PROFILE_ID, value) }
 
     /**
      * Enable or disable developer mode.

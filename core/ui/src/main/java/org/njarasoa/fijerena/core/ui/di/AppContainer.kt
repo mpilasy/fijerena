@@ -110,6 +110,29 @@ class AppContainer(
     }
 
     /**
+     * Makes [profileId] the profile this device uses. Every cached MediaRepository belongs to the
+     * previous profile (see its `profileId`), so all of them are closed and dropped; the next
+     * getMediaRepository() builds one for the new profile. Provider sessions are kept — switching
+     * person doesn't mean logging back in to Xtream. Callers must also drop any screen still
+     * holding a repository, which the nav hosts do by rebuilding the back stack from home.
+     */
+    suspend fun switchProfile(profileId: String) {
+        withContext(Dispatchers.IO) {
+            mutex.withLock {
+                AppSettings(context.applicationContext).activeProfileId = profileId
+                mediaRepositories.values.forEach { repo ->
+                    try {
+                        repo.close()
+                    } catch (e: Exception) {
+                        android.util.Log.w("AppContainer", "Error closing MediaRepository during profile switch", e)
+                    }
+                }
+                mediaRepositories.clear()
+            }
+        }
+    }
+
+    /**
      * Evicts a single cached MediaRepository. Call this after a provider's credentials
      * change (URL/username/password) so the next getMediaRepository() call rebuilds it
      * with a fresh MediaProvider instead of reusing one built from the old credentials.

@@ -167,7 +167,7 @@ fun ProfilesSettingsCard(
 }
 
 @Composable
-private fun ProfileEditDialog(
+internal fun ProfileEditDialog(
     title: String,
     initialName: String,
     initialColorIndex: Int,

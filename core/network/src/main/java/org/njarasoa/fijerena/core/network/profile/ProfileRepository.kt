@@ -20,6 +20,8 @@ class ProfileRepository(
 
     fun observeProfiles(): Flow<List<ProfileEntity>> = dao.observeAll()
 
+    suspend fun count(): Int = dao.count()
+
     /** Returns the new profile's id. */
     suspend fun addProfile(
         name: String,

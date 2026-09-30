@@ -849,4 +849,6 @@
     <string name="profile_delete_confirm_text">Their favourites, watch history and recent categories on every provider will be deleted. This can\'t be undone.</string>
     <string name="profile_delete_blocked_active">This device is using that profile. Switch to another profile first.</string>
     <string name="profile_delete_blocked_last">The last profile can\'t be deleted.</string>
+    <string name="profile_picker_title">Who\'s watching?</string>
+    <string name="profile_switch_description">Switch profile (%1$s)</string>
 </resources>
