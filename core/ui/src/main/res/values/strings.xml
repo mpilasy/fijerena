@@ -501,7 +501,7 @@
     <string name="player_stats_url">URL</string>
     <string name="player_stats_model">Model</string>
     <string name="player_stats_api">API</string>
-    <string name="player_stats_measured_fps">%1$.1f fps (measured)</string>
+    <string name="player_stats_measured_fps">%1$s fps (measured)</string>
     <string name="player_stats_fps_unit">%1$d fps</string>
     <string name="player_stats_seconds_unit">%1$ds</string>
     <string name="player_stats_rebuf_time_format">%1$d.%2$ds</string>
@@ -619,7 +619,7 @@
     <string name="settings_cellular_buffer_warning_desc">Adjusting buffer multipliers affects cellular playback quality. Changes take effect on next playback.</string>
     <string name="settings_cellular_live_buffer_title">Live TV Buffer</string>
     <string name="settings_cellular_live_buffer_desc">Adjust buffer size for cellular Live TV streams</string>
-    <string name="settings_cellular_multiplier_format">Multiplier: %1$.1fx</string>
+    <string name="settings_cellular_multiplier_format">Multiplier: %1$sx</string>
     <string name="settings_cellular_vod_buffer_title">VOD Buffer</string>
     <string name="settings_cellular_vod_buffer_desc">Adjust buffer size for cellular VOD streams</string>
     <string name="settings_apply_changes">Apply Changes</string>
@@ -627,7 +627,7 @@
     <string name="settings_buffer_preview_title">Buffer Preview</string>
     <string name="common_min">Min</string>
     <string name="common_max">Max</string>
-    <string name="common_seconds_decimal_format">%1$.1fs</string>
+    <string name="common_seconds_decimal_format">%1$ss</string>
     <string name="settings_about_section_title">About</string>
     <string name="settings_about_app_version">Fijerena v1.0.0</string>
     <string name="settings_about_tagline">Premium native media player for Android</string>

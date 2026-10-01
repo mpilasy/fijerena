@@ -497,7 +497,7 @@ class PlaybackViewModel(
 
                     val bitrateLabel =
                         if (format.bitrate > 0) {
-                            String.format("%.1f Mbps", format.bitrate / 1_000_000f)
+                            String.format(java.util.Locale.US, "%.1f Mbps", format.bitrate / 1_000_000f)
                         } else {
                             "Unknown"
                         }

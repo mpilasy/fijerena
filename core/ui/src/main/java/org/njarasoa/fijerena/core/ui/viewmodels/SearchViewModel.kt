@@ -205,7 +205,7 @@ class SearchViewModel(
         _searchHistory.value = emptyList()
     }
 
-    private fun formatSeconds(ms: Long): String = "%.1fs".format(ms / 1000.0)
+    private fun formatSeconds(ms: Long): String = String.format(java.util.Locale.US, "%.1fs", ms / 1000.0)
 
     private suspend fun doSearch(
         scope: kotlinx.coroutines.CoroutineScope,

@@ -515,7 +515,7 @@
     <string name="settings_cellular_buffer_warning_desc">Miova ny kalitaon\'ny fandehanan-tsary rehefa ovaina ny multiplier. Manan-kery amin\'ny fandehanana manaraka ny fiovana.</string>
     <string name="settings_cellular_live_buffer_title">Buffer TV Mivantana</string>
     <string name="settings_cellular_live_buffer_desc">Ovay ny haben\'ny buffer ho an\'ny fandefasana TV mivantana amin\'ny finday</string>
-    <string name="settings_cellular_multiplier_format">Multiplier: %1$.1fx</string>
+    <string name="settings_cellular_multiplier_format">Multiplier: %1$sx</string>
     <string name="settings_cellular_vod_buffer_title">Buffer VOD</string>
     <string name="settings_cellular_vod_buffer_desc">Ovay ny haben\'ny buffer ho an\'ny fandefasana VOD amin\'ny finday</string>
     <string name="settings_apply_changes">Ampihariny ny fiovana</string>
@@ -523,7 +523,7 @@
     <string name="settings_buffer_preview_title">Topi-maso momba ny buffer</string>
     <string name="common_min">Farafahakeliny</string>
     <string name="common_max">Farafahabeny</string>
-    <string name="common_seconds_decimal_format">%1$.1fs</string>
+    <string name="common_seconds_decimal_format">%1$ss</string>
     <string name="settings_about_section_title">Momba</string>
     <string name="settings_about_app_version">Fijerena v1.0.0</string>
     <string name="settings_about_tagline">Fitaovana filalaovana horonantsary avo lenta ho an\'ny Android</string>

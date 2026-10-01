@@ -228,7 +228,7 @@ fun MobileStatsOverlay(
                     if (fmt != null && fmt.frameRate > 0) {
                         "${fmt.frameRate.toInt()} fps"
                     } else if (mFps > 0) {
-                        String.format(java.util.Locale.getDefault(), "%.1f fps (measured)", mFps)
+                        String.format(java.util.Locale.US, "%.1f fps (measured)", mFps)
                     } else {
                         naText
                     }
@@ -384,7 +384,7 @@ fun MobileStatsOverlay(
                 SectionHeader(stringResource(R.string.player_stats_performance))
                 StatRowColored(stringResource(R.string.player_stats_dropped), "$droppedFrames / $totalFrames", dropColor)
                 if (totalFrames > 0) {
-                    StatRowColored(stringResource(R.string.player_stats_drop_rate), String.format("%.2f%%", dropRate), dropColor)
+                    StatRowColored(stringResource(R.string.player_stats_drop_rate), String.format(java.util.Locale.US, "%.2f%%", dropRate), dropColor)
                 }
 
                 // Short-window rate: the cumulative one above averages a bad burst away against
@@ -398,7 +398,7 @@ fun MobileStatsOverlay(
                     }
                 StatRowColored(
                     stringResource(R.string.player_stats_drop_rate_recent),
-                    String.format("%.2f%%", recentDropRate),
+                    String.format(java.util.Locale.US, "%.2f%%", recentDropRate),
                     recentDropColor,
                 )
 
@@ -409,7 +409,7 @@ fun MobileStatsOverlay(
                         currentDropFps < 10.0f -> CinemaWarning
                         else -> CinemaError
                     }
-                    StatRowColored(stringResource(R.string.player_stats_drop_rate_per_sec), String.format("%.1f fps", currentDropFps), currentDropColor)
+                    StatRowColored(stringResource(R.string.player_stats_drop_rate_per_sec), String.format(java.util.Locale.US, "%.1f fps", currentDropFps), currentDropColor)
                 }
 
                 SectionHeader(stringResource(R.string.player_stats_app))

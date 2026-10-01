@@ -123,7 +123,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = stringResource(R.string.settings_cellular_multiplier_format, liveMultiplier),
+                            text = stringResource(R.string.settings_cellular_multiplier_format, String.format(java.util.Locale.US, "%.1f", liveMultiplier)),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -164,7 +164,7 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = stringResource(R.string.settings_cellular_multiplier_format, vodMultiplier),
+                            text = stringResource(R.string.settings_cellular_multiplier_format, String.format(java.util.Locale.US, "%.1f", vodMultiplier)),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -252,7 +252,7 @@ private fun CellularBufferPreview(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                     )
                     Text(
-                        text = stringResource(R.string.common_seconds_decimal_format, minBufferSeconds),
+                        text = stringResource(R.string.common_seconds_decimal_format, String.format(java.util.Locale.US, "%.1f", minBufferSeconds)),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -263,7 +263,7 @@ private fun CellularBufferPreview(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                     )
                     Text(
-                        text = stringResource(R.string.common_seconds_decimal_format, maxBufferSeconds),
+                        text = stringResource(R.string.common_seconds_decimal_format, String.format(java.util.Locale.US, "%.1f", maxBufferSeconds)),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

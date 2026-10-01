@@ -723,7 +723,7 @@ class EpgBrowserViewModel(
 
 /** "N programs (M airings) — 1.2s [source]" summary line for the results header. */
 fun EpgBrowserViewModel.UiState.Results.statsLine(): String {
-    val timeStr = "%.1f".format(searchTimeMs / 1000.0)
+    val timeStr = String.format(Locale.US, "%.1f", searchTimeMs / 1000.0)
     val truncatedSuffix = if (truncated) " (truncated)" else ""
     val sourceSuffix =
         when {

@@ -259,7 +259,7 @@ fun TvStatsOverlay(
                     if (fmt != null && fmt.frameRate > 0) {
                         resources.getString(R.string.player_stats_fps_unit, fmt.frameRate.toInt())
                     } else if (mFps > 0) {
-                        resources.getString(R.string.player_stats_measured_fps, mFps)
+                        resources.getString(R.string.player_stats_measured_fps, String.format(java.util.Locale.US, "%.1f", mFps))
                     } else {
                         naText
                     }
@@ -477,7 +477,7 @@ fun TvStatsOverlay(
                             if (totalFrames > 0) {
                                 CompactStatRowColored(
                                     stringResource(R.string.player_stats_drop_rate),
-                                    String.format("%.2f%%", dropRate),
+                                    String.format(java.util.Locale.US, "%.2f%%", dropRate),
                                     dropColor,
                                 )
                             }
@@ -493,7 +493,7 @@ fun TvStatsOverlay(
                                 }
                             CompactStatRowColored(
                                 stringResource(R.string.player_stats_drop_rate_recent),
-                                String.format("%.2f%%", recentDropRate),
+                                String.format(java.util.Locale.US, "%.2f%%", recentDropRate),
                                 recentDropColor,
                             )
 
@@ -506,7 +506,7 @@ fun TvStatsOverlay(
                                 }
                                 CompactStatRowColored(
                                     stringResource(R.string.player_stats_drop_rate_per_sec),
-                                    String.format("%.1f fps", currentDropFps),
+                                    String.format(java.util.Locale.US, "%.1f fps", currentDropFps),
                                     currentDropColor
                                 )
                             }

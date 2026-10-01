@@ -38,6 +38,6 @@ fun SettingsSection(
 
 fun formatProgrammeCount(count: Int): String =
     when {
-        count >= 1000 -> "%.1fk".format(count / 1000.0)
+        count >= 1000 -> String.format(java.util.Locale.US, "%.1fk", count / 1000.0)
         else -> count.toString()
     }
