@@ -78,9 +78,18 @@ class SyncSettingsViewModel(
 
     fun createAccount(setupSecret: String?) =
         action {
-            accounts.createAccount(normalizedUrl(), deviceName, setupSecret?.takeIf { it.isNotBlank() })
+            try {
+                accounts.createAccount(normalizedUrl(), deviceName, setupSecret?.takeIf { it.isNotBlank() })
+            } catch (e: SyncApiException) {
+                // Only creating an account sends the secret, so only here does a 401 mean it's wrong.
+                throw if (e.status == 401) SetupSecretRejected(e) else e
+            }
             manager.onLinkChanged()
         }
+
+    private class SetupSecretRejected(
+        cause: SyncApiException,
+    ) : Exception(cause.message, cause)
 
     /** For a device that can't scan (a TV): shows a handoff QR code and joins when it is scanned. */
     fun startHandoff() {
@@ -224,8 +233,8 @@ class SyncSettingsViewModel(
                 e is kotlinx.serialization.SerializationException -> app.getString(R.string.sync_error_not_a_server)
                 e is SyncApiException && e.status == 404 -> app.getString(R.string.sync_error_not_a_server)
                 e is SyncApiException && e.status == 0 && e.cause != null -> app.getString(R.string.sync_error_unreachable)
-                e is SyncApiException && e.status == 401 && ui.value.setupSecretRequired -> app.getString(R.string.sync_error_setup_secret)
-                e is SyncApiException && e.status == 401 -> app.getString(R.string.sync_error_revoked)
+                e is SetupSecretRejected -> app.getString(R.string.sync_error_setup_secret)
+                e is SyncApiException && e.status == 401 && manager.status.value.linked -> app.getString(R.string.sync_error_revoked)
                 e is SyncApiException && (e.status == 403 || e.status == 410) -> app.getString(R.string.sync_error_code_expired)
                 else -> app.getString(org.njarasoa.fijerena.core.network.R.string.error_generic)
             }
