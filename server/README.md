@@ -17,7 +17,15 @@ npm run typecheck
 ```
 
 The tests start `workerd` with `workerd/config.capnp` — the self-hosted configuration — on a
-temporary data directory, so they exercise exactly what the Docker image runs.
+temporary data directory, so they exercise exactly what the Docker image runs. The image itself
+has its own opt-in tests (each container on a throwaway named volume, removed afterwards):
+
+```sh
+docker build -t fijerena-sync:test .
+RUN_DOCKER_TESTS=1 npx vitest run test/docker.test.ts
+```
+
+The image is Debian slim plus the native `workerd` binary (~290 MB) — no Node at runtime.
 
 ## Deploy to Cloudflare
 

@@ -470,8 +470,10 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
      directory (14 integration tests, restart persistence included), not Miniflare: the
      vitest-Workers integration and Miniflare itself are only published as alpha builds. Stable
      `wrangler` deploys to Cloudflare (it pulls that alpha Miniflare in as its own dependency).
-   - **Docker image not yet built**: Docker isn't installed on the dev machine. `Dockerfile` runs
-     the same `workerd` binary and config the tests use.
+   - **Docker image** (built and tested 2026-09-30): Debian slim + the native `workerd` binary
+     (~290 MB, no Node at runtime), same config as the tests. Opt-in `test/docker.test.ts`
+     (`RUN_DOCKER_TESTS=1`) checks the API, the WebSocket, pairing, data surviving a container
+     restart on its volume, and the setup secret. Runs as root inside the container.
 7. **Sync client** — *landed 2026-09-30.* As built:
    - **`SyncEngine.syncNow()`**: pull all pages and apply them (`SyncApplier`), then push pending
      versions (`LocalRecords.pending`, `providers.db` first so a provider precedes its items).
