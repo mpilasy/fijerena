@@ -135,7 +135,12 @@ dependencies {
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
+    // camera-view needs camera-video, which needs media3 (for recording, which we never do). Its
+    // newer media3 would lift core:player's media3 to that release, which crashes playback
+    // (AbstractMethodError in LoadControl): media3 comes only from core:player.
+    implementation(libs.androidx.camera.view) {
+        exclude(group = "androidx.media3")
+    }
 
     // Testing
     testImplementation(libs.junit)
