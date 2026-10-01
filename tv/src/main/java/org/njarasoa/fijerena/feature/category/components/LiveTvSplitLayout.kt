@@ -29,7 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -242,7 +242,7 @@ internal fun LiveTvSplitLayout(
     // below), not filtered out like the full-screen flyout does. Independent of
     // categoryViewModel's own selectedCategoryId/streams so browsing a real category still works
     // normally everywhere else (the full-screen Category flyout, EPG/search entry, etc.).
-    // D-pad Left/Right (see the onPreviewKeyEvent below) toggles it over to Favorites instead.
+    // D-pad Left/Right (see the onKeyEvent below) toggles it over to Favorites instead.
     var listSource by remember { mutableStateOf(PreviewListSource.RECENT) }
     // Bumped by the panel's own refresh action — the viewer asking for current truth, and so the
     // one place the frozen order below is allowed to re-sort.
@@ -571,15 +571,24 @@ internal fun LiveTvSplitLayout(
                     fullScreen = true
                 },
                 onStreamFocused = { item -> focusedItemFlow.value = item },
+                // Row actions stay hidden until asked for with the key pointing away from the
+                // other list: Left on Recent, Right on Favorites.
+                rowActionsMode =
+                    if (listSource == PreviewListSource.FAVORITES) {
+                        RowActionsMode.REVEAL_RIGHT
+                    } else {
+                        RowActionsMode.REVEAL_LEFT
+                    },
                 modifier =
                     Modifier
                         .weight(0.34f)
                         .fillMaxHeight()
                         // Left/Right toggles Recent <-> Favorites regardless of which row
-                        // in the list is focused — onPreviewKeyEvent intercepts ahead of the
-                        // focused Card, which only handles OK/center, so nothing needs to consume
-                        // this deeper in the tree.
-                        .onPreviewKeyEvent { event ->
+                        // in the list is focused. onKeyEvent (bubble-up), not onPreviewKeyEvent,
+                        // so a row gets first say: it consumes the key that reveals/walks its
+                        // action icons (Left on Recent, Right on Favorites) and lets the other
+                        // one through to here.
+                        .onKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) {
                                 false
                             } else {
@@ -641,6 +650,7 @@ private fun LiveTvChannelList(
     onStreamFocused: (MediaItem) -> Unit,
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier,
+    rowActionsMode: RowActionsMode = RowActionsMode.ON_FOCUS_RIGHT,
 ) {
     StreamList(
         streams = streams,
@@ -673,5 +683,6 @@ private fun LiveTvChannelList(
         onRefreshStreams = onRefreshStreams,
         modifier = modifier,
         thumbnailScale = 0.5f,
+        rowActionsMode = rowActionsMode,
     )
 }

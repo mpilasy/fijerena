@@ -175,6 +175,7 @@ internal fun StreamList(
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier,
     thumbnailScale: Float = 1f,
+    rowActionsMode: RowActionsMode = RowActionsMode.ON_FOCUS_RIGHT,
 ) {
     // Animate rotation when refreshing
     var targetRotation by remember { mutableStateOf(0f) }
@@ -408,6 +409,7 @@ internal fun StreamList(
                                 // Only the last-played item gets a focus requester for auto-scroll
                                 focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null,
                                 thumbnailScale = thumbnailScale,
+                                rowActionsMode = rowActionsMode,
                                 cardStyle = cardStyle,
                                 modifier =
                                     // remember-scoped so a recomposition of an already-visible item
@@ -428,6 +430,24 @@ internal fun StreamList(
     }
 }
 
+/** How a row's action icons (favorite/watched/remove-from-recent) appear and are reached. */
+internal enum class RowActionsMode {
+    /** Shown to the right of the focused row; DPAD Right from the card reaches them. */
+    ON_FOCUS_RIGHT,
+
+    /**
+     * Hidden until DPAD Left from the card reveals them on its left; further Left walks outward
+     * through them, Right walks back to the card and hides them again.
+     */
+    REVEAL_LEFT,
+
+    /** Mirror of [REVEAL_LEFT]: revealed on the card's right by DPAD Right. */
+    REVEAL_RIGHT,
+}
+
+/** Row actions, listed nearest-to-the-card first. */
+private enum class RowAction { FAVORITE, WATCHED, REMOVE_FROM_RECENT }
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun StreamItem(
@@ -445,12 +465,13 @@ private fun StreamItem(
     onFocused: () -> Unit = {},
     focusRequester: FocusRequester? = null,
     thumbnailScale: Float = 1f,
+    rowActionsMode: RowActionsMode = RowActionsMode.ON_FOCUS_RIGHT,
     cardStyle: StreamCardStyle,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
-    // Action row (favorite/watched/remove-from-recent) reveals on focus and is reachable via
-    // DPAD Right from the card — the D-pad-native equivalent of mobile's swipe reveal, replacing
+    // Action row (favorite/watched/remove-from-recent) reveals on focus (or on demand, see
+    // RowActionsMode) and is reachable via the D-pad from the card — the D-pad-native equivalent of mobile's swipe reveal, replacing
     // the old press-and-hold context menu for individual streams (category long-press is
     // unaffected). rowHasFocus (not just the card's own isFocused) keeps the row composed while
     // focus is on one of its action buttons, since it would otherwise vanish the instant focus
@@ -458,7 +479,43 @@ private fun StreamItem(
     var rowHasFocus by remember { mutableStateOf(false) }
     val internalCardFocusRequester = remember { FocusRequester() }
     val cardFocusRequester = focusRequester ?: internalCardFocusRequester
-    val actionsFocusRequester = remember { FocusRequester() }
+    // In the REVEAL_* modes the actions stay hidden even while the row has focus, until the
+    // outward D-pad key asks for them (the Live TV preview pane, where the other horizontal key
+    // switches between Recent and Favorites).
+    val revealOnDemand = rowActionsMode != RowActionsMode.ON_FOCUS_RIGHT
+    val actionsOnLeft = rowActionsMode == RowActionsMode.REVEAL_LEFT
+    val outwardKey = if (actionsOnLeft) Key.DirectionLeft else Key.DirectionRight
+    val inwardKey = if (actionsOnLeft) Key.DirectionRight else Key.DirectionLeft
+    var actionsRevealed by remember { mutableStateOf(false) }
+    // Set by the card's outward key press; the first action only gets composed by the
+    // recomposition that follows, so the focus request has to wait for it.
+    var focusFirstAction by remember { mutableStateOf(false) }
+    val hasRemoveFromRecent = onRemoveFromRecent != null
+    val actions =
+        remember(isWatchable, hasRemoveFromRecent) {
+            buildList {
+                add(RowAction.FAVORITE)
+                if (isWatchable) add(RowAction.WATCHED)
+                if (hasRemoveFromRecent) add(RowAction.REMOVE_FROM_RECENT)
+            }
+        }
+    val actionFocusRequesters = remember { List(RowAction.entries.size) { FocusRequester() } }
+    val showActions = rowHasFocus && (!revealOnDemand || actionsRevealed)
+    // Hide again once focus has really left the row. Not done straight from onFocusChanged: a
+    // focus hop from the card to an action reports a transient hasFocus=false first, and hiding
+    // the actions there would remove the very button focus is landing on.
+    LaunchedEffect(rowHasFocus) {
+        if (!rowHasFocus) actionsRevealed = false
+    }
+    LaunchedEffect(focusFirstAction) {
+        if (focusFirstAction) {
+            try {
+                actionFocusRequesters[0].requestFocus()
+            } catch (_: IllegalStateException) {
+            }
+            focusFirstAction = false
+        }
+    }
     // Marquee only while focused. BounceMarqueeNode runs a withFrameNanos loop that invalidates
     // draw every frame for as long as its text overflows, and IPTV channel names overflow
     // constantly — with it applied unconditionally, every visible row kept two such loops running
@@ -473,10 +530,100 @@ private fun StreamItem(
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
                 .focusGroup()
-                .onFocusChanged { rowHasFocus = it.hasFocus },
+                .onFocusChanged {
+                    rowHasFocus = it.hasFocus
+                },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
     ) {
+        val actionButtons: @Composable () -> Unit = {
+            if (showActions) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
+                    // Laid out left to right, so the left-side variant reverses the list to keep
+                    // the first action next to the card.
+                    val order = if (actionsOnLeft) actions.indices.reversed() else actions.indices
+                    for (index in order) {
+                        val actionModifier =
+                            Modifier
+                                .focusRequester(actionFocusRequesters[index])
+                                .onPreviewKeyEvent { event ->
+                                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                    when (event.key) {
+                                        inwardKey -> {
+                                            if (index == 0) {
+                                                cardFocusRequester.requestFocus()
+                                                actionsRevealed = false
+                                            } else {
+                                                actionFocusRequesters[index - 1].requestFocus()
+                                            }
+                                            true
+                                        }
+                                        outwardKey -> {
+                                            if (index < actions.lastIndex) {
+                                                actionFocusRequesters[index + 1].requestFocus()
+                                                true
+                                            } else {
+                                                // Dead end in the preview pane — don't let focus
+                                                // escape sideways out of the list.
+                                                revealOnDemand
+                                            }
+                                        }
+                                        else -> false
+                                    }
+                                }
+                        when (actions[index]) {
+                            RowAction.FAVORITE ->
+                                CinemaIconButton(
+                                    onClick = onToggleFavorite,
+                                    size = TvDimensions.iconLarge.scaled(scale),
+                                    modifier = actionModifier,
+                                    icon = {
+                                        Icon(
+                                            imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                            contentDescription =
+                                                stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
+                                            tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                        )
+                                    },
+                                )
+                            RowAction.WATCHED ->
+                                CinemaIconButton(
+                                    onClick = onToggleWatched,
+                                    size = TvDimensions.iconLarge.scaled(scale),
+                                    modifier = actionModifier,
+                                    icon = {
+                                        Icon(
+                                            imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                                            contentDescription =
+                                                stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
+                                            tint = if (isWatched) CinemaAccent else CinemaTextPrimary,
+                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                        )
+                                    },
+                                )
+                            RowAction.REMOVE_FROM_RECENT ->
+                                CinemaIconButton(
+                                    onClick = { onRemoveFromRecent?.invoke() },
+                                    size = TvDimensions.iconLarge.scaled(scale),
+                                    modifier = actionModifier,
+                                    icon = {
+                                        Icon(
+                                            imageVector = CinemaIcons.Delete,
+                                            contentDescription = stringResource(R.string.recent_remove),
+                                            tint = CinemaError,
+                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                        )
+                                    },
+                                )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (actionsOnLeft) actionButtons()
+
         Card(
             onClick = onClick,
             modifier =
@@ -488,8 +635,9 @@ private fun StreamItem(
                     }
                     .focusRequester(cardFocusRequester)
                     .onPreviewKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionRight) return@onPreviewKeyEvent false
-                        actionsFocusRequester.requestFocus()
+                        if (event.type != KeyEventType.KeyDown || event.key != outwardKey) return@onPreviewKeyEvent false
+                        actionsRevealed = true
+                        focusFirstAction = true
                         true
                     },
             colors = cardStyle.colors,
@@ -593,61 +741,6 @@ private fun StreamItem(
             }
         }
 
-        if (rowHasFocus) {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                CinemaIconButton(
-                    onClick = onToggleFavorite,
-                    size = TvDimensions.iconLarge.scaled(scale),
-                    modifier =
-                        Modifier
-                            .focusRequester(actionsFocusRequester)
-                            .onPreviewKeyEvent { event ->
-                                if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionLeft) {
-                                    return@onPreviewKeyEvent false
-                                }
-                                cardFocusRequester.requestFocus()
-                                true
-                            },
-                    icon = {
-                        Icon(
-                            imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                            contentDescription =
-                                stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
-                            tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        )
-                    },
-                )
-                if (isWatchable) {
-                    CinemaIconButton(
-                        onClick = onToggleWatched,
-                        size = TvDimensions.iconLarge.scaled(scale),
-                        icon = {
-                            Icon(
-                                imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                                contentDescription =
-                                    stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
-                                tint = if (isWatched) CinemaAccent else CinemaTextPrimary,
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        },
-                    )
-                }
-                if (onRemoveFromRecent != null) {
-                    CinemaIconButton(
-                        onClick = onRemoveFromRecent,
-                        size = TvDimensions.iconLarge.scaled(scale),
-                        icon = {
-                            Icon(
-                                imageVector = CinemaIcons.Delete,
-                                contentDescription = stringResource(R.string.recent_remove),
-                                tint = CinemaError,
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        },
-                    )
-                }
-            }
-        }
+        if (!actionsOnLeft) actionButtons()
     }
 }

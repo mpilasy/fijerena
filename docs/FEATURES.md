@@ -28,6 +28,7 @@ Channels organized by provider-defined categories. D-pad Up/Down switches channe
 
 **Preview pane (embedded playback):** Browsing Live TV always has a channel playing alongside the list, backed by the same `StreamingPlaybackService` connection used for full-screen — promoting/demoting never restarts the stream.
 - **TV:** Focus-driven split layout (`LiveTvSplitLayout`) — arrowing to a channel debounce-previews it; OK/center promotes to full-screen. Entry always lands on a real "browse" screen underneath the preview (a silently-pushed `CategoryList(showPreviewPane=false)`), so Back from the preview never exits Live TV outright.
+  - Channel panel shows Recent; Right switches to Favorites, Left back. A row's favourite/remove icons stay hidden until asked for with the key pointing away from the other list (Left on Recent, Right on Favorites); repeating it walks outward through them.
 - **Mobile:** Tap-driven docked mini-player — tapping a channel docks and plays it immediately above the scrollable list; tapping the dock (or its expand affordance) promotes to full-screen. The dock auto-seeds from the last-played channel on entry so Live TV never opens to a bare list. Back from full-screen collapses to the dock; Back from the dock clears it back to the bare list before a further Back leaves Live TV.
 
 ### Movies (VOD)

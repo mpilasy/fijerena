@@ -18,6 +18,7 @@
 - A finished episode keeps its show on the home shelf, offering the next episode; shows watched on another device fetch their episode list from the provider once.
 
 ### Fixes
+- **TV Live TV preview row icons:** favourite/remove icons were shown on the focused channel but unreachable (Left/Right always switched lists). They now stay hidden and reveal on Left (Recent, icons on the left) or Right (Favorites, icons on the right).
 - **Phone playback crash:** CameraX (QR scanner) pulled in a newer media3, crashing Play/Resume with `AbstractMethodError`; camera-view no longer brings media3.
 - **TV show screen:** opened from Continue Watching it now lands on the card's episode (it landed on Season 1); Back from deep in the episode list no longer gets stuck; the season tab row scrolls instead of squeezing; an episode played from another copy of the show is found by season and episode.
 
