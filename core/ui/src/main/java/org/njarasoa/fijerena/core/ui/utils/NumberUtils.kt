@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.utils
 import android.content.Context
 import android.text.format.DateFormat
 import java.util.Date
+import java.util.Locale
 
 /**
  * Utility for formatting numbers and durations for the UI.
@@ -10,11 +11,13 @@ import java.util.Date
 object NumberUtils {
     /**
      * Format a count (e.g. programs, channels) to a short string (e.g. 1.2k, 5m).
+     * Locale.US, like the byte sizes below and PlaybackFormat's formatRating()/formatBitrate():
+     * a device-locale decimal comma would make "1,2k" sit next to dot-formatted numbers.
      */
     fun formatCount(count: Int): String =
         when {
-            count >= 1_000_000 -> "%.1fm".format(count / 1_000_000.0)
-            count >= 1_000 -> "%.1fk".format(count / 1_000.0)
+            count >= 1_000_000 -> String.format(Locale.US, "%.1fm", count / 1_000_000.0)
+            count >= 1_000 -> String.format(Locale.US, "%.1fk", count / 1_000.0)
             else -> count.toString()
         }
 
@@ -33,13 +36,13 @@ object NumberUtils {
     }
 
     /**
-     * Format bytes to a human-readable string (KB, MB, GB).
+     * Format bytes to a human-readable string (KB, MB, GB). Always a decimal point, see formatCount.
      */
     fun formatBytes(bytes: Long): String =
         when {
-            bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
-            bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
-            bytes >= 1_024 -> "%.1f KB".format(bytes / 1_024.0)
+            bytes >= 1_073_741_824 -> String.format(Locale.US, "%.1f GB", bytes / 1_073_741_824.0)
+            bytes >= 1_048_576 -> String.format(Locale.US, "%.1f MB", bytes / 1_048_576.0)
+            bytes >= 1_024 -> String.format(Locale.US, "%.1f KB", bytes / 1_024.0)
             else -> "$bytes B"
         }
 
