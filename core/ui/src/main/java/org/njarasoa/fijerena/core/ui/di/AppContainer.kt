@@ -136,11 +136,14 @@ class AppContainer(
      */
     suspend fun switchProfile(profileId: String) {
         withContext(Dispatchers.IO) {
+            val started = android.os.SystemClock.elapsedRealtime()
             mutex.withLock {
+                val locked = android.os.SystemClock.elapsedRealtime()
                 val appSettings = AppSettings(context.applicationContext)
                 val previousProfileId = appSettings.activeProfileId
                 appSettings.activeProfileId = profileId
                 providerRepository.applyCategoryFiltersForSwitch(previousProfileId, profileId)
+                val filtered = android.os.SystemClock.elapsedRealtime()
                 mediaRepositories.values.forEach { repo ->
                     try {
                         repo.close()
@@ -150,6 +153,11 @@ class AppContainer(
                 }
                 mediaRepositories.clear()
                 MediaProviderFactory.clearProfileScopedProviders()
+                val done = android.os.SystemClock.elapsedRealtime()
+                android.util.Log.i(
+                    "ProfileSwitch",
+                    "to $profileId: ${done - started} ms (lock wait ${locked - started}, filters ${filtered - locked}, teardown ${done - filtered})",
+                )
             }
         }
     }

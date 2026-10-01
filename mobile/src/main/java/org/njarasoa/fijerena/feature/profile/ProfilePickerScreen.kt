@@ -53,6 +53,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     val context = LocalContext.current
     val viewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
     var adding by remember { mutableStateOf(false) }
 
     Column(
@@ -66,6 +67,18 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
             color = CinemaTextPrimary,
         )
         Spacer(modifier = Modifier.height(CinemaSpacing.xl))
+        switchingTo?.let { name ->
+            // A switch can take a while (it re-applies the profile's category filters): say so,
+            // instead of a list that looks like it ignored the tap.
+            androidx.compose.material3.CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(CinemaSpacing.md))
+            Text(
+                text = stringResource(R.string.profile_switching, name),
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaTextPrimary,
+            )
+            return@Column
+        }
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             contentPadding = PaddingValues(CinemaSpacing.sm),

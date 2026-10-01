@@ -661,6 +661,7 @@ class ProviderRepository(
             val fallback = parseProviderSettings(entity.providerSettings).categoryFilters
             val newFilters = filtersStore.get(entity.id, toProfileId, fallback)
             if (filtersStore.get(entity.id, fromProfileId, fallback) == newFilters) return@forEach
+            val started = android.os.SystemClock.elapsedRealtime()
             withContext(Dispatchers.IO) {
                 val database = XtreamDatabase.getInstance(context)
                 org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
@@ -671,6 +672,7 @@ class ProviderRepository(
                     newFilters,
                 )
             }
+            android.util.Log.i("ProfileSwitch", "filters for provider ${entity.id} (${entity.name}): ${android.os.SystemClock.elapsedRealtime() - started} ms")
             // Same as a filter edit: the cached provider and EPG matcher hold category lists and
             // excluded flags from before.
             MediaProviderFactory.clearCache(entity.id)

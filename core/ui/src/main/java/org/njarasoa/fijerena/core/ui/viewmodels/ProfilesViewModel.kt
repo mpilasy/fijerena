@@ -52,14 +52,27 @@ class ProfilesViewModel(
         id: String,
         onSwitched: () -> Unit,
     ) {
+        // One switch at a time: a second pick while one runs would only queue behind it.
+        if (_switchingTo.value != null) return
+        if (id == activeProfileId.value) {
+            onSwitched()
+            return
+        }
+        _switchingTo.value = profiles.value.firstOrNull { it.id == id }?.name ?: ""
         viewModelScope.launch {
-            if (id != activeProfileId.value) {
+            try {
                 AppContainer.getInstance(context).switchProfile(id)
                 activeProfileId.value = id
+                onSwitched()
+            } finally {
+                _switchingTo.value = null
             }
-            onSwitched()
         }
     }
+
+    // The name of the profile being switched to while a switch runs, for the picker to say so.
+    private val _switchingTo = MutableStateFlow<String?>(null)
+    val switchingTo: StateFlow<String?> = _switchingTo.asStateFlow()
 
     // Why the last delete was refused, for the screen to show; null once dismissed.
     private val _message = MutableStateFlow<String?>(null)

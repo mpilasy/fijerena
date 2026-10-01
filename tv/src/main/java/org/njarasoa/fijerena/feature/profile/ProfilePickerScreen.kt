@@ -63,6 +63,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
     val context = LocalContext.current
     val viewModel: ProfilesViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val switchingTo by viewModel.switchingTo.collectAsStateWithLifecycle()
     val scale = LocalUiScale.current
     var adding by remember { mutableStateOf(false) }
     val activeFocusRequester = remember { FocusRequester() }
@@ -92,6 +93,18 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
+            switchingTo?.let { name ->
+                // A switch can take a while (it re-applies the profile's category filters): say so,
+                // instead of a list that looks like it ignored the pick.
+                androidx.compose.material3.CircularProgressIndicator(color = CinemaAccentLight)
+                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+                Text(
+                    text = stringResource(R.string.profile_switching, name),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CinemaTextPrimary,
+                )
+                return@Column
+            }
             // Lazy and scrollable: a household with many profiles would otherwise run off the screen,
             // with D-pad focus moving onto cards nobody can see.
             LazyRow(
