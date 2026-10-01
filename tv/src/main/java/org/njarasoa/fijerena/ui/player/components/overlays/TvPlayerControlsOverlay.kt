@@ -108,9 +108,9 @@ fun TvPlayerControlsOverlay(
     onShowQualitySelector: () -> Unit,
     onShowChapterSelector: () -> Unit,
     onShowStats: () -> Unit,
-    seekSpeedLabel: String? = null,
     scrubPositionMs: Long? = null,
-    onCommitScrub: (Long) -> Unit = {},
+    onScrubStep: (nativeEvent: android.view.KeyEvent, forward: Boolean) -> Unit = { _, _ -> },
+    onCommitScrub: () -> Unit = {},
     nextEpisode: EpisodeItem? = null,
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
 ) {
@@ -349,16 +349,6 @@ fun TvPlayerControlsOverlay(
             }
         }
 
-        // Seek speed indicator (shown when fast-forwarding/rewinding with D-pad hold)
-        if (seekSpeedLabel != null && !showFullControls) {
-            Text(
-                text = seekSpeedLabel,
-                style = MaterialTheme.typography.headlineMedium,
-                color = CinemaTextPrimary,
-                modifier = Modifier.align(Center),
-            )
-        }
-
         // Center: Play/Pause (VOD only, hidden for live). Also gated to Playing/Paused —
         // showFullControls is driven purely by the OK-key toggle, with no gate on playback state,
         // so pressing OK during Buffering/Error/Ended/Idle used to land this button directly on
@@ -443,19 +433,19 @@ fun TvPlayerControlsOverlay(
                                     .onKeyEvent { event ->
                                         if (event.type == KeyEventType.KeyDown) {
                                             when (event.key) {
+                                                // Same cursor as the hidden-OSD D-pad scrub: Left/Right
+                                                // move it, OK commits, Back cancels.
                                                 Key.DirectionLeft -> {
-                                                    val origin = scrubPositionMs ?: position
-                                                    viewModel.seekTo((origin - 10_000L).coerceAtLeast(0L))
+                                                    onScrubStep(event.nativeKeyEvent, false)
                                                     true
                                                 }
                                                 Key.DirectionRight -> {
-                                                    val origin = scrubPositionMs ?: position
-                                                    viewModel.seekTo((origin + 10_000L).coerceAtMost(duration))
+                                                    onScrubStep(event.nativeKeyEvent, true)
                                                     true
                                                 }
                                                 Key.DirectionCenter, Key.Enter -> {
                                                     if (scrubPositionMs != null) {
-                                                        onCommitScrub(scrubPositionMs)
+                                                        onCommitScrub()
                                                         true
                                                     } else {
                                                         false

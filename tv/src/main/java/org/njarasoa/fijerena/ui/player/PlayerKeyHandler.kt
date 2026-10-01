@@ -73,11 +73,9 @@ private fun handleKeyDown(
                 val isDoubleClick = now - state.lastOkClickTime < 350L
                 state.lastOkClickTime = now
 
-                val pendingScrub = state.scrubPositionMs
-                if (pendingScrub != null && !currentMetadata.isLive) {
+                if (state.scrubPositionMs != null && !currentMetadata.isLive) {
                     // Commit scrub: seek to the cursor position and exit scrub mode
-                    viewModel.seekTo(pendingScrub)
-                    state.scrubPositionMs = null
+                    commitScrub(state, viewModel)
                     state.showStreamInfo = true
                     true
                 } else if (isDoubleClick && state.showStats) {
@@ -165,7 +163,7 @@ private fun handleKeyDown(
                 true
             } else if (!state.showControls && !currentMetadata.isLive) {
                 // VOD: move scrub cursor backward; OK commits the seek
-                stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent.repeatCount, forward = false)
+                stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = false)
                 true
             } else {
                 // When controls are visible, let D-pad navigate between buttons
@@ -185,7 +183,7 @@ private fun handleKeyDown(
                 true
             } else if (!state.showControls && !currentMetadata.isLive) {
                 // VOD: move scrub cursor forward; OK commits the seek
-                stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent.repeatCount, forward = true)
+                stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = true)
                 true
             } else {
                 // When controls are visible, let D-pad navigate between buttons
@@ -206,12 +204,13 @@ private fun handleKeyDown(
             }
             true
         }
+        // FF/REW move the same scrub cursor as D-pad Left/Right; OK commits, Back cancels.
         Key(AndroidKeyEvent.KEYCODE_MEDIA_FAST_FORWARD) -> {
-            if (!currentMetadata.isLive) viewModel.seekRelative(300_000L)
+            if (!currentMetadata.isLive) stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = true)
             true
         }
         Key(AndroidKeyEvent.KEYCODE_MEDIA_REWIND) -> {
-            if (!currentMetadata.isLive) viewModel.seekRelative(-60_000L)
+            if (!currentMetadata.isLive) stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = false)
             true
         }
         else -> false
@@ -220,14 +219,13 @@ private fun handleKeyDown(
 }
 
 /**
- * Move the scrub cursor by a step proportional to how long the user has been holding the key.
- * Initializes the cursor at the current playback position when scrubbing starts.
- * The actual seek happens only when the user presses OK/Center to commit.
+ * Move the scrub cursor one step. Initializes the cursor at the current playback position
+ * when scrubbing starts. The actual seek happens only on [commitScrub] (OK/Center).
  */
-private fun stepScrubCursor(
+internal fun stepScrubCursor(
     state: PlayerScreenState,
     playbackState: PlaybackState,
-    repeatCount: Int,
+    nativeEvent: AndroidKeyEvent,
     forward: Boolean,
 ) {
     val isScrubbableState =
@@ -245,15 +243,39 @@ private fun stepScrubCursor(
 
     if (isScrubbableState && duration > 0L) {
         val origin = state.scrubPositionMs ?: state.livePosition
-        val step =
-            when {
-                repeatCount < 5 -> 10_000L
-                repeatCount < 15 -> 30_000L
-                repeatCount < 30 -> 60_000L
-                else -> 120_000L
-            }
+        val step = scrubStepMs(nativeEvent.repeatCount, nativeEvent.eventTime - nativeEvent.downTime)
         val delta = if (forward) step else -step
         state.scrubPositionMs = (origin + delta).coerceIn(0L, duration)
         state.showStreamInfo = true
     }
+}
+
+/**
+ * Cursor step for one key event. A tap moves 10s. Holding ramps by how long the key has been
+ * held, not by repeatCount: auto-repeat fires every ~50ms, so the old repeatCount tiers hit
+ * 2-minute steps (~40 min/s) within 1.5s and overshot every time.
+ * At ~20 repeats/s: ~1 min/s for the first 2s, ~3 min/s up to 5s, then ~10 min/s.
+ */
+internal fun scrubStepMs(
+    repeatCount: Int,
+    heldMs: Long,
+): Long =
+    when {
+        repeatCount == 0 -> 10_000L
+        heldMs < 2_000L -> 3_000L
+        heldMs < 5_000L -> 10_000L
+        else -> 30_000L
+    }
+
+/** Seek to the scrub cursor and leave scrub mode. No-op when not scrubbing. */
+internal fun commitScrub(
+    state: PlayerScreenState,
+    viewModel: PlaybackViewModel,
+) {
+    val target = state.scrubPositionMs ?: return
+    viewModel.seekTo(target)
+    // The 500ms position poll pauses while Buffering, so without this the bar would snap back
+    // to the pre-seek position until the seek lands, then jump forward again.
+    state.livePosition = target
+    state.scrubPositionMs = null
 }

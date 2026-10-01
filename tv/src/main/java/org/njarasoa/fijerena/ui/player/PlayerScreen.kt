@@ -361,12 +361,9 @@ fun PlayerScreen(
                 onShowQualitySelector = { state.showQualitySelector = true },
                 onShowChapterSelector = { state.showChapterSelector = true },
                 onShowStats = { state.showStats = !state.showStats },
-                seekSpeedLabel = state.seekSpeedLabel,
                 scrubPositionMs = state.scrubPositionMs,
-                onCommitScrub = { target ->
-                    viewModel.seekTo(target)
-                    state.scrubPositionMs = null
-                },
+                onScrubStep = { nativeEvent, forward -> stepScrubCursor(state, currentPs, nativeEvent, forward) },
+                onCommitScrub = { commitScrub(state, viewModel) },
                 nextEpisode = nextEpisode,
                 onPlayNextEpisode = onPlayNextEpisode,
             )

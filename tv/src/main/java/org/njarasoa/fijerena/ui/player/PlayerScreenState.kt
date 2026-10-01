@@ -69,9 +69,6 @@ class PlayerScreenState(
     // handlePlayerKeyEvent, never observed by composition.
     var suppressNextCenterKeyUp: Boolean = false
 
-    // Fast-forward / rewind state
-    var seekSpeedLabel by mutableStateOf<String?>(null)
-
     // Scrub cursor position for VOD: non-null while user is scrubbing with D-pad.
     // OK/Center commits the seek; Back cancels.
     var scrubPositionMs by mutableStateOf<Long?>(null)

@@ -107,19 +107,6 @@ fun PlayerEffects(
         }
     }
 
-    // Reset playback speed when paused, ended, or errored
-    LaunchedEffect(playbackState::class) {
-        if (playbackState is PlaybackState.Paused ||
-            playbackState is PlaybackState.Ended ||
-            playbackState is PlaybackState.Error
-        ) {
-            if (state.seekSpeedLabel != null) {
-                viewModel?.setPlaybackSpeed(1f)
-                state.seekSpeedLabel = null
-            }
-        }
-    }
-
     // Show only stream info when stream starts from menu
     LaunchedEffect(currentMetadata.title, playbackState::class) {
         // Show only stream info when title changes on initial load from menu
