@@ -6,8 +6,8 @@ selected settings follow the user across devices without a manual export/import.
 sharing devices gets **user profiles**: each person's favorites and watch history are their own
 and follow them to any device.
 
-**Status:** design agreed 2026-09-29 (see Decisions); no open questions. Phases 1–2 landed
-2026-09-29; Phases 3–9 not started.
+**Status:** Complete (2026-10-01). All nine phases landed 2026-09-29 – 2026-09-30, deployed to the
+household's TVs and running against the Cloudflare server. Open items below (Open items).
 
 ---
 
@@ -541,7 +541,23 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
 
 Phases 1–5 land without any server and are testable in isolation.
 
+## Open items
+
+- **Account key rotation after revoking a device** — deferred (decided 2026-09-30). A revoked
+  device is cut off by the server but still knows the account key; rotating it means re-encrypting
+  every record and re-pairing every other device.
+- **Clock skew on real devices** — the merge's ordering under a clock ±1 h off is covered by unit
+  tests (Phase 5), not yet tried with a device clock actually set off.
+
 ## Testing
+
+Done (2026-09-30 – 2026-10-01): pause on one device and resume on another; offline edits synced on
+reconnect, including after a server outage; a profile deleted while another device used it; leaving
+and rejoining by QR handoff; the Phase 8 encryption checked on the server's own database; a TV
+joining a Cloudflare-hosted group, two Shields synced for daily use. Not done: a skewed device clock
+(see Open items).
+
+Planned:
 
 - Unit: merge engine (Phase 5) exhaustively.
 - Two emulators + one real device against a local server (Miniflare, then the `workerd` Docker

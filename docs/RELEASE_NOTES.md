@@ -1,5 +1,28 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: User Profiles & Live Sync
+**Release Date:** 2026-10-01
+
+### User Profiles (`docs/plans/20260929_live-sync-plan.md`, Phases 1–2)
+- **"Who's watching?" picker** and header avatar; add, rename, recolour and delete profiles in Settings.
+- **Per profile:** favourites, watch history, category filters per provider, dev mode, Jellyfin login.
+- **Instant switching:** only category rows carry the filter flag now; streams and series follow their category at query time (`xtream_v2.db` v24). A switch went from 32–51 s to 124–225 ms on a Shield (`docs/plans/20261001_fast-profile-switch-plan.md`). The picker shows "Switching to …" and takes only the first pick.
+
+### Live Sync (Phases 3–9)
+- **Sync server** in `server/`: Cloudflare Worker or self-hosted workerd Docker image.
+- **End-to-end encrypted** records (AES-256-GCM, HMAC keys); the server never sees anything readable.
+- **Settings → Live sync:** start a group, join by QR code (TVs show a code for a phone to scan), devices list with Remove, Leave.
+- **Replaces Google Drive settings sync**, removed with its Google libraries.
+
+### Continue Watching "Up next"
+- A finished episode keeps its show on the home shelf, offering the next episode; shows watched on another device fetch their episode list from the provider once.
+
+### Fixes
+- **Phone playback crash:** CameraX (QR scanner) pulled in a newer media3, crashing Play/Resume with `AbstractMethodError`; camera-view no longer brings media3.
+- **TV show screen:** opened from Continue Watching it now lands on the card's episode (it landed on Season 1); Back from deep in the episode list no longer gets stuck; the season tab row scrolls instead of squeezing; an episode played from another copy of the show is found by season and episode.
+
+---
+
 ## Version: Database Compaction & Orphaned Catalog Self-Healing
 **Release Date:** 2026-09-23
 

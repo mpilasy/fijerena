@@ -68,6 +68,9 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Virtual Categories**:
   - Favorites - User-curated collection (configurable size: 10-500 items)
   - Last Watched - Recent viewing history (added after 10s of viewing, configurable size: 1-100 items)
+- **User Profiles** - "Who's watching?" picker; each person has their own favourites, history, category filters and Jellyfin login
+- **Live Sync** - Profiles, favourites, watch progress and settings stay the same across a household's devices, end-to-end encrypted, through a self-hosted or Cloudflare sync server (`server/`); TVs join by QR code from a phone
+- **Continue Watching** - Resume cards, and "Up next" for the episode after a finished one
 - **Playback Resume** - Automatic position restore for VOD content (2-95% range)
 - **Durable Watch State** - Position and watched status stored in SQLite and kept forever; the history-size setting only bounds the Recent row, never what is remembered
 - **Mark Watched / Unwatched** - Manual toggle from movie details, episode lists, content lists, and search
@@ -168,6 +171,7 @@ fijerena/
 │   ├── data/                 # Room database & encrypted storage
 │   ├── ui/                   # Shared Compose components & design tokens
 │   └── navigation/           # Type-safe navigation definitions
+├── server/                   # Live sync server (Cloudflare Worker / workerd Docker image)
 ├── docs/                     # In-depth technical documentation
 ├── AGENTS.md                 # AI agent guide (single source of truth)
 ├── CLAUDE.md                 # → AGENTS.md (Claude)

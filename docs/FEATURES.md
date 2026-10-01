@@ -259,11 +259,48 @@ Appear alongside provider categories in the category list:
 | Category | Content Types | Description |
 |----------|---------------|-------------|
 | **Continue Watching** | Movies, TV Shows | Items with 2–95% progress, most recent first |
+
+The home screen's **Continue Watching** shelf (Movies and TV Shows together) shows one card per
+show: mid-watch, its episode resumes; once an episode is finished, the card offers the next one
+("Up next", next season after a season's last episode), fetching the show's episode list from the
+provider if this device never stored it (a show watched on another device). After a show's last
+episode it leaves the shelf. Movies show only while mid-watch.
 | **Favorites** | All | Starred items, configurable max display (10–500) |
 | **Last Watched** | All | Chronological history (Live: 10s delay; VOD: 2% threshold), configurable display size (1–100) |
 | **Recent Categories** | All | Recently browsed categories (max 20, deduplicated) |
 
 Favorites and Last Watched/Continue Watching persist durably in SQLite via Room (`favorite_state` and `watch_state` tables in `xtream_v2.db` v16). Configurable size settings bound only the rendered category row, never what is stored. Recent Categories is stored as a capped convenience list in per-provider SharedPreferences.
+
+---
+
+## Profiles
+
+"Who's watching?" picker at launch (and from the header avatar). Each profile has its own
+favourites, watch history, category filters per provider, dev-mode switch and Jellyfin login;
+providers, EPG sources and other settings are shared. Which profile is in use is per device.
+Switching takes a fraction of a second: only category rows carry the filter flag, and streams and
+series follow their category at query time (see `docs/plans/20261001_fast-profile-switch-plan.md`).
+
+---
+
+## Live Sync
+
+Settings → Live sync. Keeps profiles, providers, EPG sources, favourites, watch progress, category
+filters and selected settings the same on every device of a group, through a sync server the user
+runs (Cloudflare Worker or self-hosted Docker image, `server/`). Everything is encrypted on the
+device; the server sees only keys and ciphertext. Off on a device until it is set up there.
+
+- **Start a sync group:** enter the server address (checked first; a setup secret if the server
+  asks for one).
+- **Add a device:** a phone scans the invite QR code a member shows; a TV, which can't scan, shows
+  a code for a phone of the group to scan. Codes work once, for 10 minutes.
+- **Manage:** last sync, Sync now, the devices list with Remove, Leave the sync group (local data
+  stays).
+- Changes reach other open devices within seconds; a closed app catches up when opened.
+- Not synced: which profile and provider a device is using, UI scale, cellular settings, and
+  Jellyfin favourites and history (Jellyfin keeps those itself).
+
+Design and protocol: `docs/plans/20260929_live-sync-plan.md`.
 
 ---
 
