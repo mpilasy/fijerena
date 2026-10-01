@@ -1,6 +1,6 @@
 # Comprehensive Adversarial Codebase Review & Remediation Plan (Round 2)
 
-**Status:** Proposed  
+**Status:** Phases 1-3 landed 2026-09-12 (`c07267da`); Phase 4 (single-return cleanup of the five `core:player` functions in S1) not started - overlaps Phase 2 of `20260914_codebase-robustness-plan.md`.  
 **Author:** AI Agent (Adversarial Audit)  
 **Date:** 2026-09-12  
 

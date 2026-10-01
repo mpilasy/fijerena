@@ -298,25 +298,33 @@ Each plan states its own status at the top - trust that over any summary here.
 
 | Plan | Status |
 |------|--------|
-| [docs/plans/20260828_watch-state-durable-storage-plan.md](docs/plans/20260828_watch-state-durable-storage-plan.md) | **Complete** - all six phases landed; kept, see below |
-| [docs/plans/20260827_refresh-change-detection-plan.md](docs/plans/20260827_refresh-change-detection-plan.md) | Phases 0-3 and 5 landed; Phase 4 outstanding |
 | [docs/plans/20260824_codebase-audit-fix-plan.md](docs/plans/20260824_codebase-audit-fix-plan.md) | 29/29 complete (T1-T4) |
-| [docs/plans/20260826_tv-ui-performance-plan.md](docs/plans/20260826_tv-ui-performance-plan.md) | Partially landed; baseline measured on hardware 2026-08-26 |
-| [docs/plans/20260929_live-sync-plan.md](docs/plans/20260929_live-sync-plan.md) | Phases 1-2 (user profiles) landed 2026-09-29; Phases 3-9 (sync) not started |
+| [docs/plans/20260826_tv-ui-performance-plan.md](docs/plans/20260826_tv-ui-performance-plan.md) | Partially landed; baseline measured on hardware 2026-08-26. Open: Live TV back-out animation tail (6b), mobile `RelatedTitlesRow`, Xtream EPG cache sizing |
+| [docs/plans/20260827_refresh-change-detection-plan.md](docs/plans/20260827_refresh-change-detection-plan.md) | Phases 0-3 and 5 landed; Phase 4 (optional) not started |
 | [docs/plans/20260828_favorites-durable-storage-plan.md](docs/plans/20260828_favorites-durable-storage-plan.md) | **Complete** - all four phases landed |
 | [docs/plans/20260828_secret-store-migration-plan.md](docs/plans/20260828_secret-store-migration-plan.md) | Not started, deferred deliberately |
+| [docs/plans/20260828_watch-state-durable-storage-plan.md](docs/plans/20260828_watch-state-durable-storage-plan.md) | **Complete** - all six phases landed; kept, see below |
+| [docs/plans/20260829_mobile-ui-polish-plan.md](docs/plans/20260829_mobile-ui-polish-plan.md) | **Complete** (2026-08-29) |
 | [docs/plans/20260829_ui-look-feel-uplift-plan.md](docs/plans/20260829_ui-look-feel-uplift-plan.md) | **Complete** - all four phases landed (2026-08-29) |
-| [docs/plans/20260914_codebase-robustness-plan.md](docs/plans/20260914_codebase-robustness-plan.md) | Proposed (2026-09-14) |
+| [docs/plans/20260902_tv-detail-hero-ui-plan.md](docs/plans/20260902_tv-detail-hero-ui-plan.md) | **Complete** - all five phases landed (2026-09-11) |
+| [docs/plans/20260908_episode-selection-fragility-plan.md](docs/plans/20260908_episode-selection-fragility-plan.md) | **Complete** - all three phases landed (2026-09-08) |
+| [docs/plans/20260911_provider-copy-duplicate-plan.md](docs/plans/20260911_provider-copy-duplicate-plan.md) | **Landed** (2026-09-11); planned unit tests not written |
+| [docs/plans/20260912_adversarial-codebase-remediation-plan.md](docs/plans/20260912_adversarial-codebase-remediation-plan.md) | **Resolved** - applied, rejected or deferred per finding (U2 spacing literals and C3 timeout guard deferred) |
+| [docs/plans/20260912_adversarial-codebase-review-round2-plan.md](docs/plans/20260912_adversarial-codebase-review-round2-plan.md) | Phases 1-3 landed (2026-09-12); Phase 4 single-return cleanup not started |
+| [docs/plans/20260914_codebase-robustness-plan.md](docs/plans/20260914_codebase-robustness-plan.md) | Phase 1 landed (2026-09-29); Phases 2-5 not started; secret-store part of Phase 6 deferred |
 | [docs/plans/20260918_concurrency-memory-stability-plan.md](docs/plans/20260918_concurrency-memory-stability-plan.md) | **Complete** - all five phases landed (2026-09-18) |
 | [docs/plans/20260918_concurrency-memory-stability-round2-plan.md](docs/plans/20260918_concurrency-memory-stability-round2-plan.md) | **Complete** - all four phases landed (2026-09-18); hardware/unit-test verification outstanding |
 | [docs/plans/20260918_systemic-concurrency-memory-stability-plan.md](docs/plans/20260918_systemic-concurrency-memory-stability-plan.md) | **Mostly complete** - Phases 1-3 and 3/4 of Phase 4 landed (2026-09-18); `LiveTvSplitLayout` early-return item deliberately skipped, hardware/unit-test verification outstanding |
-| [docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md](docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md) | Proposed (2026-09-19) |
+| [docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md](docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md) | **Complete** - all five phases landed (2026-09-21) |
 | [docs/plans/20260920_xtream-concurrency-fixes-plan.md](docs/plans/20260920_xtream-concurrency-fixes-plan.md) | **Complete** - both phases landed (2026-09-21) |
 | [docs/plans/20260921_adversarial-review-findings-plan.md](docs/plans/20260921_adversarial-review-findings-plan.md) | **Complete** - all five phases landed (2026-09-22) |
 | [docs/plans/20260922_codebase-stability-resilience-plan.md](docs/plans/20260922_codebase-stability-resilience-plan.md) | **Complete** - all findings landed except intentionally out-of-scope ones (2026-09-23) |
 | [docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md](docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md) | In Progress (Phases 1-5 complete, Phase 6 item 2a complete 2026-09-23; 6a/2c held back by user) |
+| [docs/plans/20260925_epg-add-to-calendar-plan.md](docs/plans/20260925_epg-add-to-calendar-plan.md) | **Complete** (2026-09-25) |
+| [docs/plans/20260929_live-sync-plan.md](docs/plans/20260929_live-sync-plan.md) | **Complete** - all nine phases landed (2026-10-01) |
 | [docs/plans/20260930_profile-architecture-adversarial-review-plan.md](docs/plans/20260930_profile-architecture-adversarial-review-plan.md) | **Resolved** - findings 3, 5, 6, 7 fixed; rest not defects, by design or deferred (2026-09-30) |
 | [docs/plans/20260930_profile-scoped-settings-plan.md](docs/plans/20260930_profile-scoped-settings-plan.md) | **Complete** - filters and dev mode per profile, verified on emulators (2026-09-30) |
+| [docs/plans/20261001_fast-profile-switch-plan.md](docs/plans/20261001_fast-profile-switch-plan.md) | **Complete** (2026-10-01) |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 

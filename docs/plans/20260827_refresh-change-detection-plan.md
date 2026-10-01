@@ -1,5 +1,7 @@
 # Refresh Change Detection Plan
 
+**Status:** Phases 0-3 and 5 landed (2026-08-27, `18cf8c48`, `ff00ac9c`); Phase 4 (optional catalog response hash, rated lower value) not started.
+
 **Requirement:** when a catalog refresh or an EPG refresh runs a second time a few minutes after
 the first, the app should know whether the remote data actually changed — and when it did not,
 skip the expensive local work and say so.

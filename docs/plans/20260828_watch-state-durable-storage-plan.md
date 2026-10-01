@@ -1,5 +1,7 @@
 # Durable Watch State Plan
 
+**Status:** Complete - all six phases landed. Kept because source comments cite it by phase.
+
 **Requirement:** playback position and completed state must persist indefinitely. Today both are
 fields on a row inside a JSON list truncated to 25 entries on every write, so both are silently
 lost to eviction.

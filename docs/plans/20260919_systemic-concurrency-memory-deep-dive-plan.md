@@ -1,6 +1,6 @@
 # Systemic Concurrency, Memory Pressure & Stability Deep-Dive Plan
 
-**Status:** Phases 1-3 complete (2026-09-20); Phases 4-5 outstanding. Findings 2, 5, and 11 dropped from the roadmap after verification — see notes below and per-phase entries.  
+**Status:** Complete - Phases 1-3 landed 2026-09-20; Phases 4-5 landed 2026-09-20/21 (`9d6d353a`, `0056acd0`, `da55cd57`). Findings 2, 5, and 11 dropped from the roadmap after verification — see notes below and per-phase entries.  
 **Date:** 2026-09-19  
 **Scope:** `core:player`, `core:network`, `core:ui`, `tv`, `mobile`  
 
@@ -404,7 +404,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 ---
 
-### Phase 4: Memory Optimization, Object Lifecycles & Leak Elimination (P1 / P2) — Not started
+### Phase 4: Memory Optimization, Object Lifecycles & Leak Elimination (P1 / P2) — Done (`9d6d353a`, `da55cd57`)
 * **Target Files:**
   - ~~`core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgChannelMatcher.kt`~~ — dropped, Finding 11 is already solved better, see verification note above.
   - `core/network/src/main/java/org/njarasoa/fijerena/core/network/tmdb/TmdbApiService.kt`
@@ -420,7 +420,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 ---
 
-### Phase 5: ViewModel State Robustness & Background Sync Alignment (P1 / P2) — Not started
+### Phase 5: ViewModel State Robustness & Background Sync Alignment (P1 / P2) — Done (`0056acd0`)
 * **Target Files:**
   - `core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt`
   - `core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt`

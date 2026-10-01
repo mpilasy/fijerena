@@ -1,5 +1,7 @@
 # Mobile UI Polish Plan
 
+**Status:** Complete (2026-08-29, `b8e2ba7b`). Items 1-5 fixed (`formatTime` only formats integers, so no decimal-separator risk); item 6 is working as intended - the fraction is dev-mode only (`showTotal = isDevMode`).
+
 Source: screenshot review of Content Type Selection, TV Shows list, Movie Details,
 and Live TV player on mobile. Design system (Deep Night theme, gradient content
 cards, glass surfaces, staggered entrance animations) is already solid — these are

@@ -1,6 +1,6 @@
 # Codebase Robustness & Technical Debt Plan
 
-**Status:** Proposed  
+**Status:** Phase 1 landed 2026-09-29 (`3e78292f`); Phases 2-5 not started. Phase 6: live sync is now complete (`20260929_live-sync-plan.md`), secret-store migration still deferred.  
 **Date:** 2026-09-14  
 **Scope:** Full codebase review (`core:player`, `core:network`, `core:ui`, `core:data`, `core:navigation`, `tv`, `mobile`)
 

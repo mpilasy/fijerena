@@ -1,5 +1,7 @@
 # Provider copy / duplicate plan
 
+**Status:** Landed 2026-09-11 (`0b5ec79c`) - `ProviderCopyManager`, Copy to... and Duplicate on TV and mobile. The unit tests listed under Tests were not written.
+
 On-device only. No JSON export/import, no file I/O — direct Room DAO / EncryptedSharedPreferences
 copies between two `ProviderEntity` rows. Reuses `ProviderRepository`, `FavoriteStateDao`,
 `WatchStateDao`. Does not touch `SettingsExportManager` (that stays the cross-device backup path).

@@ -1,5 +1,7 @@
 # EPG "Add to Calendar" reminder — plan
 
+**Status:** Complete (2026-09-25, `498cd2fd`).
+
 ## Goal
 
 When user taps a matched-but-not-currently-airing program in the EPG Search / browser screen, the existing "Watch now?" dialog gains a third option to add the airing as an event to the device's calendar app (Google Calendar on most devices), so the user gets a native calendar reminder instead of just a channel-switch confirmation.

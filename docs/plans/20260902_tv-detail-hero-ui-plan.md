@@ -1,7 +1,7 @@
 # TV Detail Screens — Hero Layout Uplift Plan
 
 **Date:** 2026-09-02 (updated 2026-09-02: Phase 5's blocker landed, see below)
-**Status:** Phase 1 landed 2026-09-09 (backdrop plumbing — no UI change yet). Phase 2 landed
+**Status:** Complete - all five phases landed by 2026-09-11. Phase 1 landed 2026-09-09 (backdrop plumbing — no UI change yet). Phase 2 landed
 2026-09-11 (`TvDetailHero`, new file, nothing wired in yet). Phase 3 landed 2026-09-11
 (`MovieDetailsScreen` rebuilt on the hero, verified on the TV emulator). Phase 4 landed 2026-09-11
 (tabbed sections on the movie screen; series tabs deferred to Phase 5, which wires the hero there

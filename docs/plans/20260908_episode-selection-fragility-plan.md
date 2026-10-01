@@ -1,5 +1,7 @@
 # Reduce Compose/navigation fragility (episode-selection bug class)
 
+**Status:** Complete (2026-09-08) - Phase 1 regression tests in `EpisodeSelectionScreenTest`, Phase 2 `EpisodeResumeState` (`090cfe05`), Phase 3 await position save (`55488d20`).
+
 ## Context
 
 This session found and fixed two real bugs on the TV episode-selection screen
