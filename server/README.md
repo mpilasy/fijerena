@@ -71,6 +71,9 @@ account (pairing) never needs it.
 | `POST /changes` `{records}` | device | up to 500 records → `{head, accepted, rejected}` |
 | `GET /changes?since=&limit=` | device | records after `since`, in `seq` order → `{records, head, more}`, or `410 {resync: true}` |
 | `GET /ws` | device | WebSocket: `{"head": n}` on connect and after every write; `ping` → `pong` |
+| `POST /handoffs` | — | opens a handoff for a device that can't scan → `{handoffId, expiresAt}` (10 minutes) |
+| `POST /handoffs/:id` `{sealed, senderKey}` | device | fills it: a pairing code and the account key, sealed to the joining device's key |
+| `GET /handoffs/:id` | — | `{ready: false}`, or once only `{ready: true, sealed, senderKey}` |
 | `GET /devices` | device | the account's devices |
 | `DELETE /devices/:id` | device | revokes a device and closes its socket |
 

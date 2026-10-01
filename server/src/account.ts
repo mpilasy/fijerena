@@ -114,6 +114,13 @@ export class Account extends DurableObject<Env> {
     if (route === "GET /ws") return this.openSocket(request, device);
     if (route === "POST /pairings") return this.createPairing(accountId);
     if (route === "GET /devices") return this.listDevices(device);
+    const handoff = url.pathname.match(/^\/handoffs\/([0-9a-f]{32})$/);
+    if (request.method === "POST" && handoff) {
+      // A device of this account hands the account to a joining device (see Handoff).
+      return this.env.HANDOFF.get(this.env.HANDOFF.idFromName(handoff[1])).fetch(
+        new Request(new URL("/internal/fill", request.url).toString(), { method: "POST", body: await request.text() }),
+      );
+    }
     const revoke = url.pathname.match(/^\/devices\/([0-9a-f]{32})$/);
     if (request.method === "DELETE" && revoke) return this.revoke(revoke[1]);
     return error(404, "not found");

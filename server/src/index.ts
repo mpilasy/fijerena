@@ -6,12 +6,14 @@
  * ciphertext, both made on the devices.
  */
 import { Account } from "./account";
+import { Handoff } from "./handoff";
 import { PROTOCOL_VERSION, error, json, randomId, safeEqual, splitCredential } from "./util";
 
-export { Account };
+export { Account, Handoff };
 
 export interface Env {
   ACCOUNT: DurableObjectNamespace<Account>;
+  HANDOFF: DurableObjectNamespace<Handoff>;
   /** If set, creating an account requires it in the `X-Setup-Secret` header. */
   SETUP_SECRET?: string;
   /** Overrides the 90-day tombstone retention (tests). */
@@ -43,6 +45,19 @@ export default {
       return forward(env, code.accountId, request, "/internal/pair");
     }
 
+    // Handoffs — how a device without a camera joins an account (see Handoff).
+    if (route === "POST /handoffs") {
+      const handoffId = randomId();
+      const response = await handoffStub(env, handoffId).fetch(internal(request, "/internal/open"));
+      if (!response.ok) return response;
+      return json({ handoffId, ...(await response.json() as object) }, 201);
+    }
+    const handoff = url.pathname.match(/^\/handoffs\/([0-9a-f]{32})$/);
+    if (handoff && request.method === "GET") {
+      return handoffStub(env, handoff[1]).fetch(internal(request, "/internal/collect"));
+    }
+    // Filling one needs a device of an account: routed through that account, which checks the token.
+
     // Only this worker may reach the Durable Object's internal routes.
     if (url.pathname.startsWith("/internal/")) return error(404, "not found");
 
@@ -52,6 +67,16 @@ export default {
     return forward(env, token.accountId, request, url.pathname);
   },
 } satisfies ExportedHandler<Env>;
+
+function handoffStub(env: Env, handoffId: string) {
+  return env.HANDOFF.get(env.HANDOFF.idFromName(handoffId));
+}
+
+function internal(request: Request, path: string): Request {
+  const url = new URL(request.url);
+  url.pathname = path;
+  return new Request(url.toString(), request);
+}
 
 function forward(env: Env, accountId: string, request: Request, path: string, headers: Record<string, string> = {}): Promise<Response> {
   const stub = env.ACCOUNT.get(env.ACCOUNT.idFromName(accountId));

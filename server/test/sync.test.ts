@@ -156,6 +156,26 @@ describe("sync server", () => {
     ws.close();
   });
 
+  it("hands an account to a device without a camera, once", async () => {
+    const phone = await server.createAccount("phone");
+    // The TV opens a handoff (no account yet) and shows its id in a QR code.
+    const opened = await server.request("POST", "/handoffs", { body: {} });
+    expect(opened.status).toBe(201);
+    const { handoffId } = opened.body;
+    expect((await server.request("GET", `/handoffs/${handoffId}`)).body).toMatchObject({ ready: false });
+
+    // Only a device of an account can fill it, and only once.
+    expect((await server.request("POST", `/handoffs/${handoffId}`, { body: { sealed: "x", senderKey: "y" } })).status).toBe(401);
+    const filled = await server.request("POST", `/handoffs/${handoffId}`, { token: phone.deviceToken, body: { sealed: "for-tv", senderKey: "phone-pub" } });
+    expect(filled.status).toBe(200);
+    expect((await server.request("POST", `/handoffs/${handoffId}`, { token: phone.deviceToken, body: { sealed: "again", senderKey: "z" } })).status).toBe(409);
+
+    // The TV collects it — and nobody can afterwards.
+    expect((await server.request("GET", `/handoffs/${handoffId}`)).body).toEqual({ ready: true, sealed: "for-tv", senderKey: "phone-pub" });
+    expect((await server.request("GET", `/handoffs/${handoffId}`)).status).toBe(404);
+    expect((await server.request("GET", "/handoffs/0123456789abcdef0123456789abcdef")).status).toBe(404);
+  });
+
   it("keeps everything across a restart", async () => {
     const { deviceToken } = await server.createAccount();
     await server.request("POST", "/changes", { token: deviceToken, body: { records: [record("durable", 1)] } });

@@ -7,9 +7,9 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
 /**
- * This device's link to a sync account: the server URL, the device token (a credential — kept in
- * EncryptedSharedPreferences, like provider passwords), and the pull cursor. Per device, never
- * synced. Phase 8 adds the account key.
+ * This device's link to a sync account: the server URL, the device token and the account key
+ * (credentials — kept in EncryptedSharedPreferences, like provider passwords), and the pull cursor.
+ * Per device, never synced.
  */
 class SyncAccountStore(
     context: Context,
@@ -37,25 +37,34 @@ class SyncAccountStore(
         val accountId: String,
         val deviceId: String,
         val deviceToken: String,
+        /** The account key every device of the account shares: payloads, keys and tags are made with it. */
+        val accountKey: ByteArray,
     )
 
+    /**
+     * Null when not linked — and for a link made before Phase 8, which has no account key: its
+     * plaintext records can't be read by an encrypted device anyway, so it must pair again.
+     */
     val link: Link?
         get() {
             val url = prefs.getString(KEY_URL, null) ?: return null
             val token = prefs.getString(KEY_TOKEN, null) ?: return null
-            return Link(url, prefs.getString(KEY_ACCOUNT, "").orEmpty(), prefs.getString(KEY_DEVICE, "").orEmpty(), token)
+            val key = prefs.getString(KEY_ACCOUNT_KEY, null)?.let { runCatching { B64URL.decode(it) }.getOrNull() } ?: return null
+            return Link(url, prefs.getString(KEY_ACCOUNT, "").orEmpty(), prefs.getString(KEY_DEVICE, "").orEmpty(), token, key)
         }
 
     /** Links this device; the next sync pulls everything, then uploads everything local. */
     fun saveLink(
         serverUrl: String,
         credentials: SyncWire.DeviceCredentials,
+        accountKey: ByteArray,
     ) = prefs.edit(commit = true) {
         clear()
         putString(KEY_URL, serverUrl.trimEnd('/'))
         putString(KEY_ACCOUNT, credentials.accountId)
         putString(KEY_DEVICE, credentials.deviceId)
         putString(KEY_TOKEN, credentials.deviceToken)
+        putString(KEY_ACCOUNT_KEY, B64URL.encodeToString(accountKey))
     }
 
     fun unlink() = prefs.edit(commit = true) { clear() }
@@ -89,6 +98,7 @@ class SyncAccountStore(
         const val KEY_ACCOUNT = "account_id"
         const val KEY_DEVICE = "device_id"
         const val KEY_TOKEN = "device_token"
+        const val KEY_ACCOUNT_KEY = "account_key"
         const val KEY_CURSOR = "cursor"
         const val KEY_SEEDED = "seeded"
         const val KEY_DEFERRED = "deferred"

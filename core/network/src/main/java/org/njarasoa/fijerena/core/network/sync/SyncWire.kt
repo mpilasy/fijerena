@@ -70,6 +70,38 @@ object SyncWire {
     )
 
     @Serializable
+    data class HandoffOpened(
+        val handoffId: String,
+        val expiresAt: Long,
+    )
+
+    @Serializable
+    data class HandoffFill(
+        val sealed: String,
+        val senderKey: String,
+    )
+
+    @Serializable
+    data class HandoffFilled(
+        val filled: Boolean = true,
+    )
+
+    @Serializable
+    data class HandoffCollected(
+        val ready: Boolean,
+        val sealed: String? = null,
+        val senderKey: String? = null,
+        val expiresAt: Long? = null,
+    )
+
+    /** What a handoff carries, sealed to the joining device's one-time key. */
+    @Serializable
+    data class HandoffSecret(
+        val pairingCode: String,
+        val accountKey: String,
+    )
+
+    @Serializable
     data class Head(
         val head: Long,
     )

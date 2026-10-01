@@ -76,6 +76,29 @@ class SyncApi(
         limit: Int = 500,
     ): SyncWire.PullResponse = call(serverUrl, "GET", "/changes?since=$since&limit=$limit", token = token, acceptGone = true)
 
+    /** A handoff for this (unlinked) device to be given an account through — see `server/src/handoff.ts`. */
+    suspend fun openHandoff(serverUrl: String): SyncWire.HandoffOpened = call(serverUrl, "POST", "/handoffs", body = "{}")
+
+    suspend fun collectHandoff(
+        serverUrl: String,
+        handoffId: String,
+    ): SyncWire.HandoffCollected = call(serverUrl, "GET", "/handoffs/$handoffId")
+
+    suspend fun fillHandoff(
+        serverUrl: String,
+        token: String,
+        handoffId: String,
+        sealed: String,
+        senderKey: String,
+    ): Unit =
+        call<SyncWire.HandoffFilled>(
+            serverUrl,
+            "POST",
+            "/handoffs/$handoffId",
+            token = token,
+            body = json.encodeToString(SyncWire.HandoffFill(sealed, senderKey)),
+        ).let { }
+
     fun openSocket(
         serverUrl: String,
         token: String,

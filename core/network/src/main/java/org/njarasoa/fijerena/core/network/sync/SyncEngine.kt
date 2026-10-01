@@ -19,7 +19,6 @@ import kotlinx.serialization.json.Json
  */
 class SyncEngine(
     private val context: Context,
-    private val crypto: SyncCrypto = PlainSyncCrypto,
     private val api: SyncApi = SyncApi(),
     private val store: SyncAccountStore = SyncAccountStore(context),
 ) {
@@ -46,13 +45,14 @@ class SyncEngine(
     suspend fun syncNow(listener: Listener? = null): Outcome? =
         mutex.withLock {
             val link = store.link ?: return@withLock null
+            val crypto = AccountKeyCrypto(link.accountKey)
             try {
-                val pull = pull(link, listener)
+                val pull = pull(link, crypto, listener)
                 if (!store.seeded) {
                     LocalRecords(context).seedEverything()
                     store.seeded = true
                 }
-                val pushed = push(link)
+                val pushed = push(link, crypto)
                 store.lastSyncAt = System.currentTimeMillis()
                 store.lastError = null
                 Outcome(pull.applied, pushed, pull.deferred, pull.activeProfileDeleted)
@@ -71,6 +71,7 @@ class SyncEngine(
 
     private suspend fun pull(
         link: SyncAccountStore.Link,
+        crypto: SyncCrypto,
         listener: Listener?,
     ): PullOutcome {
         val applier = SyncApplier(context)
@@ -88,7 +89,7 @@ class SyncEngine(
             }
             // Records waiting for a provider or profile get another go with each page.
             val batch = waiting + page.records
-            val result = applier.apply(batch.mapNotNull(::decode))
+            val result = applier.apply(batch.mapNotNull { decode(it, crypto) })
             applied += result.applied
             activeProfileDeleted = activeProfileDeleted || result.activeProfileDeleted
             if (result.userDataChangedProviderIds.isNotEmpty()) listener?.onUserDataChanged(result.userDataChangedProviderIds)
@@ -102,14 +103,17 @@ class SyncEngine(
         return PullOutcome(applied, waiting.size, activeProfileDeleted)
     }
 
-    private suspend fun push(link: SyncAccountStore.Link): Int {
+    private suspend fun push(
+        link: SyncAccountStore.Link,
+        crypto: SyncCrypto,
+    ): Int {
         val local = LocalRecords(context)
         var pushed = 0
         while (true) {
             val outgoing = local.pending(PUSH_BATCH)
             if (outgoing.isEmpty()) break
             val byKey = outgoing.associateBy { crypto.keyId(it.record.key) }
-            val response = api.push(link.serverUrl, link.deviceToken, outgoing.map { encode(it.record) })
+            val response = api.push(link.serverUrl, link.deviceToken, outgoing.map { encode(it.record, crypto) })
             // Accepted, or rejected as stale — the server has something newer, which the next pull
             // brings: either way this version is done.
             byKey.values.forEach { it.markSent() }
@@ -119,8 +123,12 @@ class SyncEngine(
         return pushed
     }
 
-    private fun encode(record: SyncRecord): SyncWire.Record {
+    private fun encode(
+        record: SyncRecord,
+        crypto: SyncCrypto,
+    ): SyncWire.Record {
         val key = record.key
+        val keyId = crypto.keyId(key)
         val cascade =
             when {
                 !record.deleted -> null
@@ -129,7 +137,7 @@ class SyncEngine(
                 else -> null
             }
         return SyncWire.Record(
-            key = crypto.keyId(key),
+            key = keyId,
             providerTag = key.providerKey.takeIf { it.isNotEmpty() }?.let(crypto::tag),
             profileTag =
                 when {
@@ -139,14 +147,17 @@ class SyncEngine(
                 },
             updatedAt = record.hlc,
             deleted = record.deleted,
-            payload = crypto.seal(json.encodeToString(SyncWire.Envelope.of(record))),
+            payload = crypto.seal(json.encodeToString(SyncWire.Envelope.of(record)), aad = keyId),
             cascade = cascade,
         )
     }
 
     /** Null for a record this device can't open (another account key) or read (a newer app's shape). */
-    private fun decode(wire: SyncWire.Record): SyncRecord? {
-        val opened = crypto.open(wire.payload) ?: return null
+    private fun decode(
+        wire: SyncWire.Record,
+        crypto: SyncCrypto,
+    ): SyncRecord? {
+        val opened = crypto.open(wire.payload, aad = wire.key) ?: return null
         val envelope = runCatching { json.decodeFromString<SyncWire.Envelope>(opened) }.getOrNull() ?: return null
         // The key must be the one the envelope names, or a server could swap payloads between records.
         if (crypto.keyId(envelope.key()) != wire.key) return null

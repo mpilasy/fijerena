@@ -499,7 +499,28 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
      `SyncAccountStore` keeps URL, device token and cursor in EncryptedSharedPreferences.
    - **Debug builds**: `SyncDebugReceiver` drives it over adb (`setup`, `pairing`, `pair`, `now`,
      `status`, `unlink`) until Phase 9's screen.
-8. **Encryption + pairing.** Account key, AES-GCM, HMAC keys, QR pairing UI on `:tv` and `:mobile`.
+8. **Encryption + pairing** — *landed 2026-09-30* (protocol; the screens are Phase 9, decided
+   2026-09-30). As built:
+   - **Account key**: 256 random bits, made by the account's first device, kept in
+     `SyncAccountStore` (EncryptedSharedPreferences). HKDF-SHA256 derives a MAC key and an
+     encryption key. Record keys and tags = HMAC-SHA256, URL-safe Base64; payloads = AES-256-GCM
+     (random 96-bit nonce) with the record's key id as associated data, so a server swapping
+     payloads between records makes them unreadable. Verified on the server's own database: no
+     host, name, id or profile readable.
+   - **Pairing by QR code** (`PairingQr`, `SyncAccountManager`), decided 2026-09-30:
+     an **invite** (`fijerena-sync://join?…`: server URL, single-use pairing code, account key) for
+     a device that can scan; a **handoff** (`fijerena-sync://handoff?…`: server URL, handoff id,
+     one-time P-256 public key) shown by a device that can't (a TV). A device of the account scans
+     the handoff, makes a pairing code, and sends it with the account key through the server's new
+     `/handoffs` endpoint, sealed with AES-GCM under a key from P-256 ECDH + HKDF (bound to the
+     handoff id). The server holds only public keys and ciphertext, and can't substitute its own
+     key: the joining device's public key goes from screen to camera. Handoffs expire after 10
+     minutes and are collected once.
+   - Links from before Phase 8 have no account key: treated as unlinked (local data kept).
+   - Scanner for Phase 9: ML Kit barcode scanning, bundled model (decided 2026-09-30).
+   - **Tested** on the TV and phone emulators against a local server: account created on the phone,
+     the TV joined by handoff (0.7 s after the scan), the phone rejoined by the TV's invite; both
+     converged with nothing pending.
 9. **Settings UI.** Sync server URL (validated via `GET /info`), sync on/off, paired devices
    list, revoke, last-sync time; dev mode shows raw sync errors.
 
