@@ -31,6 +31,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import kotlin.coroutines.resume
 
+import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.UiText
 import org.njarasoa.fijerena.core.ui.R
 
@@ -511,7 +512,7 @@ class EpgManagementViewModel(
                 }
             _hasStrayFiles.value = false
             if (result.filesDeleted > 0) {
-                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_cache_cleaned, result.filesDeleted, formatBytes(result.bytesFreed)))
+                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_cache_cleaned, result.filesDeleted, NumberUtils.formatBytes(result.bytesFreed)))
             } else {
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_stray_files))
             }
@@ -585,14 +586,6 @@ class EpgManagementViewModel(
 
             return next
         }
-
-        private fun formatBytes(bytes: Long): String =
-            when {
-                bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
-                bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
-                bytes >= 1_024 -> "%.1f KB".format(bytes / 1_024.0)
-                else -> "$bytes B"
-            }
 
         private fun formatCount(count: Int): String =
             when {
