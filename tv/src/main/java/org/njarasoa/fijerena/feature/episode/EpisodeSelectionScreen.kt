@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -92,6 +93,12 @@ import androidx.tv.material3.Glow
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.onPlaced
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
 import org.njarasoa.fijerena.feature.category.components.tvLongPress
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
@@ -103,6 +110,7 @@ import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
+import org.njarasoa.fijerena.core.player.domain.episodeIdMatchingName
 import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
 import org.njarasoa.fijerena.core.player.domain.seasonNumberContaining
 import org.njarasoa.fijerena.core.player.domain.seriesYearRange
@@ -325,6 +333,22 @@ internal fun EpisodeListContent(
     // observation isn't trusted here.
     var focusInSection by remember { mutableStateOf(false) }
 
+    // Back from inside a section: to the tab row. The row lives in the LazyColumn, so deep in the
+    // episode list it isn't composed and focusing it does nothing — Back was then swallowed for
+    // good (seen on a Shield, Law & Order season 3). Scroll it back in first, then focus it.
+    val backScope = rememberCoroutineScope()
+    val focusTabRow: () -> Unit = {
+        backScope.launch {
+            listState.scrollToItem(TABS_ITEM_INDEX)
+            withFrameNanos { }
+            try {
+                tabRowFocusRequester.requestFocus()
+            } catch (_: IllegalStateException) {
+                onBack()
+            }
+        }
+    }
+
     // Handle back press: dismiss detail panel first, then navigate back. Two handlers, not one
     // with a branch inside — the base-list case (selectedEpisode == null) needs its own explicit
     // BackHandler too. Fallback only in practice — the real fix is the LazyColumn's
@@ -338,7 +362,7 @@ internal fun EpisodeListContent(
     // here overrides it" finding from MovieDetailsScreen's identical fallback.
     BackHandler(enabled = selectedEpisode == null) {
         if (focusInSection) {
-            tabRowFocusRequester.requestFocus()
+            focusTabRow()
         } else {
             onBack()
         }
@@ -456,6 +480,8 @@ internal fun EpisodeListContent(
     // D-pad focus target for the resume episode card — requested below once it's on screen, so
     // OK is immediately playable without the user having to navigate to it first.
     val resumeCardFocusRequester = remember { FocusRequester() }
+    // True until the screen has placed its first focus — see the focus effect below.
+    var awaitingFirstFocus by remember { mutableStateOf(true) }
 
     // D-pad focus target for the (inner) season-pill row, the last focusable item above the
     // first episode card: Compose's default directional search from there lands on the first
@@ -494,8 +520,12 @@ internal fun EpisodeListContent(
         val seasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: return@LaunchedEffect
         val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
         if (episodeIndex < 0) return@LaunchedEffect
-        val headerItemCount = 1 + if (hasMultipleSeasons) 1 else 0
-        listState.animateScrollToItem(headerItemCount + episodeIndex)
+        // Items above the episodes: the hero and the section tabs, then with several seasons the
+        // pinned season tabs and the gap under them.
+        val headerItemCount = 2 + if (hasMultipleSeasons) 2 else 0
+        // A jump, not an animation: while a slow scroll ran, nothing held focus and the system
+        // put it on a season tab, pulling the list back up (seen on a Shield).
+        listState.scrollToItem(headerItemCount + episodeIndex)
     }
 
     // Per-episode resume fraction, drives the progress bar on each card. Re-read on every
@@ -580,10 +610,24 @@ internal fun EpisodeListContent(
         // to the newest playback timestamp. Either way the anchor moves on when that episode is
         // already finished — re-evaluated on every entry, so backing out of an episode the user
         // just completed lands on the following one.
+        // An episode from another copy of this show (played via an alternate stream) isn't in
+        // this one's list: find the same season and episode here, rather than falling back to
+        // S1E1.
+        val lastPlayed = resumeState.resumeEpisodeId ?: allWatched.maxByOrNull { it.value.timestamp }?.key
+        val lastPlayedHere =
+            if (lastPlayed != null && seriesDetail.seasonNumberContaining(lastPlayed) == null) {
+                mediaRepository
+                    .getPlaybackPositionSuspend(lastPlayed, ContentType.TV_SHOWS)
+                    ?.itemName
+                    ?.let { seriesDetail.episodeIdMatchingName(it) }
+                    ?: lastPlayed
+            } else {
+                lastPlayed
+            }
         seriesDetail
             .resumeAnchorEpisodeId(
                 sortedSeasons = sortedSeasons,
-                lastPlayedEpisodeId = resumeState.resumeEpisodeId ?: allWatched.maxByOrNull { it.value.timestamp }?.key,
+                lastPlayedEpisodeId = lastPlayedHere,
                 isCompleted = { allWatched[it]?.isCompleted == true },
             )?.let { resumeState.applyAnchor(episodeId = it, season = null) }
 
@@ -637,16 +681,32 @@ internal fun EpisodeListContent(
     // selectedSeasonNumber back to season 1 — the bug behind "back from a random season lands
     // on season 1 episode 1". Focusing the resume card instead targets the item the list is
     // actually resting on, so nothing scrolls it away out from under the claim.
+    //
+    // Opened fresh on an episode further down (from Continue Watching, say), the card isn't
+    // composed until the scroll effect above has brought it into view, so asking it first failed
+    // silently and focus drifted to the first season tab — selecting season 1. Wait for the card
+    // to be laid out; if it never is (2 s), take Play instead. While waiting, nothing holds focus
+    // and the system hands it to the first season tab (seen on a Shield): [awaitingFirstFocus]
+    // stops that stray focus from selecting its season.
     LaunchedEffect(resumeState.resumeEpisodeId) {
-        if (streamSwitchSignal == 0) {
+        if (streamSwitchSignal != 0) {
+            awaitingFirstFocus = false
+        } else {
+            val target = resumeState.resumeEpisodeId
+            val cardShown =
+                target != null &&
+                    withTimeoutOrNull(RESUME_CARD_WAIT_MS) {
+                        snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.key == target } }.first { it }
+                    } != null
             try {
-                if (resumeState.resumeEpisodeId != null) {
+                if (cardShown) {
                     resumeCardFocusRequester.requestFocus()
                 } else {
                     playButtonFocusRequester.requestFocus()
                 }
             } catch (_: IllegalStateException) {
             }
+            awaitingFirstFocus = false
         }
     }
 
@@ -716,7 +776,7 @@ internal fun EpisodeListContent(
                             // out of the screen — same interception point as the screen-exit
                             // case, since this handler already runs before any descendant.
                             if (focusInSection) {
-                                tabRowFocusRequester.requestFocus()
+                                focusTabRow()
                             } else {
                                 onBack()
                             }
@@ -977,7 +1037,7 @@ internal fun EpisodeListContent(
                                             // leaves that transaction undisturbed; a real season
                                             // change (left/right to a different tab) still goes
                                             // through normally.
-                                            resumeState.selectSeason(it)
+                                            if (!awaitingFirstFocus) resumeState.selectSeason(it)
                                         },
                                         entryFocusRequester = seasonTabsFocusRequester,
                                     )
@@ -1747,6 +1807,17 @@ private fun SeasonTabs(
         remember(seasons, selectedSeason) {
             seasons.indexOfFirst { it.seasonNumber == selectedSeason }.coerceAtLeast(0)
         }
+    // Scrolls sideways: a long-running show (Law & Order: 20+ seasons) otherwise squeezed its last
+    // tabs to a sliver, "Season 12" drawn one letter per line. A focused tab scrolls itself into
+    // view; the selected one is scrolled to as well, for a season picked without focus (the resume
+    // season on open). Scrolled directly rather than with bringIntoView, which would also scroll
+    // the episode list up to this row — away from the resume episode it was just brought to.
+    val tabScroll = rememberScrollState()
+    val tabStarts = remember(seasons) { IntArray(seasons.size) }
+    LaunchedEffect(selectedIndex) {
+        withFrameNanos { }
+        tabStarts.getOrNull(selectedIndex)?.let { tabScroll.animateScrollTo(it) }
+    }
     Row(
         modifier =
             Modifier
@@ -1755,6 +1826,7 @@ private fun SeasonTabs(
                 // underneath it and need to actually be hidden, not show through.
                 .background(MaterialTheme.colorScheme.background)
                 .padding(vertical = Spacing.sm.scaled(scale))
+                .horizontalScroll(tabScroll)
                 // Entering this row from outside (D-pad down from above, up from below) always
                 // lands on the selected tab, not whichever one the default search prefers.
                 // `onEnter` is only consulted once this Row is itself a focus-search candidate,
@@ -1769,19 +1841,21 @@ private fun SeasonTabs(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         seasons.forEachIndexed { index, season ->
-            SeasonTab(
-                season = season,
-                isSelected = season.seasonNumber == selectedSeason,
-                onSelected = { onSeasonSelected(season.seasonNumber) },
-                focusRequester = focusRequesters[index],
-                previousTabFocusRequester = focusRequesters.getOrNull(index - 1),
-                nextTabFocusRequester = focusRequesters.getOrNull(index + 1),
-                // Second requester on the same node, alongside `focusRequester` above — only the
-                // selected tab gets it, and it moves with selection as `index` changes across
-                // recompositions. This is what the Category chip's explicit `down` (see caller)
-                // actually resolves to.
-                entryFocusRequester = if (index == selectedIndex) entryFocusRequester else null,
-            )
+            Box(modifier = Modifier.onPlaced { tabStarts[index] = it.positionInParent().x.roundToInt() }) {
+                SeasonTab(
+                    season = season,
+                    isSelected = season.seasonNumber == selectedSeason,
+                    onSelected = { onSeasonSelected(season.seasonNumber) },
+                    focusRequester = focusRequesters[index],
+                    previousTabFocusRequester = focusRequesters.getOrNull(index - 1),
+                    nextTabFocusRequester = focusRequesters.getOrNull(index + 1),
+                    // Second requester on the same node, alongside `focusRequester` above — only the
+                    // selected tab gets it, and it moves with selection as `index` changes across
+                    // recompositions. This is what the Category chip's explicit `down` (see caller)
+                    // actually resolves to.
+                    entryFocusRequester = if (index == selectedIndex) entryFocusRequester else null,
+                )
+            }
         }
     }
 }
@@ -2162,3 +2236,8 @@ private fun ErrorScreen(
     }
 }
 
+/** The section tab row's index in the episode list: right after the hero. */
+private const val TABS_ITEM_INDEX = 1
+
+/** How long the screen waits for the resume episode's card to scroll into view before focusing Play instead. */
+private const val RESUME_CARD_WAIT_MS = 2_000L

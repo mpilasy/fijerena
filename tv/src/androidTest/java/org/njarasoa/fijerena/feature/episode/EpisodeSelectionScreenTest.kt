@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollToNode
@@ -17,6 +18,9 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -217,5 +221,111 @@ class EpisodeSelectionScreenTest {
         // switch happened" and stole focus back to Play.
         composeTestRule.onNodeWithTag("stream_name_picker").assertIsFocused()
         composeTestRule.onNodeWithTag("hero_play_button").assertIsNotFocused()
+    }
+
+    /** Twelve episodes in each of four seasons: enough that season 3's tenth is far below the hero. */
+    private val longSeries =
+        SeriesDetail(
+            id = "series-long",
+            name = "Long Series",
+            seasons = (1..4).map { SeasonInfo(it, "Season $it") },
+            episodes =
+                (1..4).associate { season ->
+                    season.toString() to
+                        (1..12).map { n -> EpisodeItem(id = "s${season}e$n", episodeNumber = n, title = "S$season Episode $n", seasonNumber = season) }
+                },
+        )
+
+    private fun setLongSeries(
+        initialEpisodeId: String?,
+        onBack: () -> Unit = {},
+        series: SeriesDetail = longSeries,
+    ) {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val mediaRepository =
+            MediaRepository(
+                context = context,
+                providerId = 999L,
+                profileId = ProfileEntity.DEFAULT_ID,
+                watchStateDao = FakeWatchStateDao(),
+                episodeDao = FakeXtreamEpisodeDao(),
+            )
+        composeTestRule.setContent {
+            EpisodeListContent(
+                seriesDetail = series,
+                relatedTitles = RelatedTitles(),
+                tmdbTitle = null,
+                logoUrl = null,
+                backdropUrl = null,
+                alternateStreams = emptyList(),
+                seriesName = "Long Series",
+                categoryId = "cat1",
+                mediaRepository = mediaRepository,
+                initialEpisodeId = initialEpisodeId,
+                isFavorite = false,
+                categoryName = null,
+                isRefreshing = false,
+                onToggleFavorite = {},
+                onEpisodeSelected = { _, _, _, _ -> },
+                onCategorySelected = {},
+                onRefresh = {},
+                onBack = onBack,
+                onRelatedTitleSelected = {},
+                onAlternateStreamSelected = {},
+            )
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    /**
+     * Opened from Continue Watching on an episode far down a later season (not a return from the
+     * player, so no scroll position to restore): it must land on that season with the episode's
+     * card focused. It used to land on season 1 — the card wasn't composed yet when focus was
+     * requested, focus fell to the first season tab, and a focused season tab selects itself.
+     */
+    @Test
+    fun openingOnALaterSeasonEpisodeLandsOnItsCard() {
+        setLongSeries(initialEpisodeId = "s3e10")
+
+        composeTestRule.onNodeWithTag("episode_s3e10").assertIsFocused()
+        composeTestRule.onNodeWithText("S1 Episode 1").assertDoesNotExist()
+    }
+
+    /**
+     * Back from deep in the episode list goes to the section tabs, then out — it used to be
+     * swallowed for good: the tab row had scrolled out of composition, so focusing it did
+     * nothing while the key still counted as handled.
+     */
+    @Test
+    fun backFromDeepInTheListIsNeverSwallowed() {
+        var backs = 0
+        setLongSeries(initialEpisodeId = "s3e10", onBack = { backs++ })
+
+        repeat(2) {
+            composeTestRule.onRoot().performKeyInput { pressKey(Key.Back) }
+            composeTestRule.waitForIdle()
+        }
+        assertEquals(1, backs)
+    }
+
+    /**
+     * A show with many seasons: the tab row scrolls rather than squeezing its last tabs (seen on a
+     * Shield: "Season 12" drawn one letter per line), and opening on a late season shows its tab.
+     */
+    @Test
+    fun manySeasonsScrollTheirTabsIntoView() {
+        val manySeasons =
+            SeriesDetail(
+                id = "series-many",
+                name = "Many Seasons",
+                seasons = (1..14).map { SeasonInfo(it, "Season $it") },
+                episodes = (1..14).associate { it.toString() to listOf(EpisodeItem(id = "s${it}e1", episodeNumber = 1, title = "S$it Episode 1", seasonNumber = it)) },
+            )
+        setLongSeries(initialEpisodeId = "s14e1", series = manySeasons)
+
+        val season14 = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.series_season_label, 14)
+        composeTestRule.onNodeWithText(season14).assertIsDisplayed()
+        val bounds = composeTestRule.onNodeWithText(season14).fetchSemanticsNode().boundsInRoot
+        assertTrue("Season 14 tab squeezed: ${bounds.width} x ${bounds.height}", bounds.width > bounds.height)
     }
 }
