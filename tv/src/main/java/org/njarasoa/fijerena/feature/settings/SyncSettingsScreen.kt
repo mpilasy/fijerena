@@ -20,6 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -135,6 +137,10 @@ private fun SetupPanel(
 ) {
     val scale = LocalUiScale.current
     var setupSecret by remember { mutableStateOf("") }
+    // Once the server checks out, Check server is gone: land on Join, so the D-pad's nearest pick
+    // (Start a sync group, under the edit button) can't make a new group by accident.
+    val joinFocus = remember { FocusRequester() }
+    LaunchedEffect(ui.serverChecked) { if (ui.serverChecked) joinFocus.requestFocus() }
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
             ReadOnlyFieldWithEdit(
@@ -163,6 +169,7 @@ private fun SetupPanel(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                     CinemaPrimaryButton(
+                        modifier = Modifier.focusRequester(joinFocus),
                         onClick = viewModel::startHandoff,
                         text = stringResource(R.string.live_sync_join_show_code),
                         enabled = !ui.busy,

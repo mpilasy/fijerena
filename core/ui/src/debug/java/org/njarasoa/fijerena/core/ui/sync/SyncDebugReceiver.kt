@@ -87,7 +87,7 @@ class SyncDebugReceiver : BroadcastReceiver() {
                 Log.i(TAG, "status: link=${store.link?.let { "${it.serverUrl} account ${it.accountId} device ${it.deviceId}" }} cursor=${store.cursor} seeded=${store.seeded} lastSync=${store.lastSyncAt} lastError=${store.lastError} waiting=${store.deferred.size}")
             }
             "unlink" -> {
-                accounts.unlink()
+                accounts.leave()
                 SyncManager.getInstance(app).onLinkChanged()
                 Log.i(TAG, "unlink: done")
             }

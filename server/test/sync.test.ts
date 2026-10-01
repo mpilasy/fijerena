@@ -142,6 +142,12 @@ describe("sync server", () => {
     expect((await server.request("GET", "/changes?since=0", { token: phone.deviceToken })).status).toBe(401);
   });
 
+  it("lets a device leave by revoking itself", async () => {
+    const { deviceToken, deviceId } = await server.createAccount("tv");
+    expect((await server.request("DELETE", `/devices/${deviceId}`, { token: deviceToken })).status).toBe(200);
+    expect((await server.request("GET", "/changes?since=0", { token: deviceToken })).status).toBe(401);
+  });
+
   it("counts a socket's pings as the device being seen", async () => {
     const tv = await server.createAccount("tv");
     const { body: pairing } = await server.request("POST", "/pairings", { token: tv.deviceToken });

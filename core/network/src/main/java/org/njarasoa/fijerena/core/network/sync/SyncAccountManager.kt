@@ -107,8 +107,21 @@ class SyncAccountManager(
         api.revoke(link.serverUrl, link.deviceToken, deviceId)
     }
 
-    /** Stops syncing; local data stays as it is. */
-    fun unlink() = store.unlink()
+    /**
+     * Stops syncing; local data stays as it is. The device also takes itself off the account's
+     * list, so it doesn't linger there as a device long gone — unless the server can't be reached,
+     * which mustn't stop anyone leaving: then it stays listed until removed from another device.
+     */
+    suspend fun leave() {
+        store.link?.let { link ->
+            try {
+                api.revoke(link.serverUrl, link.deviceToken, link.deviceId)
+            } catch (e: SyncApiException) {
+                android.util.Log.w("SyncAccountManager", "Left without removing this device from the server: ${e.message}")
+            }
+        }
+        store.unlink()
+    }
 
     private suspend fun handOver(request: PairingQr.HandoffRequest) {
         val link = store.link ?: error("Not linked to a sync account")

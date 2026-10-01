@@ -176,12 +176,13 @@ class SyncSettingsViewModel(
     fun syncNow() = manager.requestSync(0)
 
     /** Leaves the account; local data stays. */
-    fun leave() {
-        inviteJob?.cancel()
-        accounts.unlink()
-        manager.onLinkChanged()
-        ui.value = Ui()
-    }
+    fun leave() =
+        action {
+            inviteJob?.cancel()
+            accounts.leave()
+            manager.onLinkChanged()
+            ui.value = Ui()
+        }
 
     fun dismissError() {
         ui.value = ui.value.copy(error = null)
