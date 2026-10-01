@@ -58,7 +58,8 @@ class FijerenaApplication :
         // Live sync between devices, while the app is in use — a no-op until this device is linked.
         SyncManager.getInstance(this).start()
         // One-time moves of each provider's category filters and the install-wide dev-mode flag to
-        // every profile — see ProviderRepository.migrateCategoryFiltersToProfiles().
+        // every profile, and the install-wide search history to the default profile — see
+        // ProviderRepository.migrateCategoryFiltersToProfiles().
         // SupervisorJob + handler: an uncaught exception in a bare CoroutineScope(Dispatchers.IO)
         // propagates to the thread's uncaught-exception handler and can crash the process on
         // cold boot; log and swallow instead.
@@ -68,7 +69,7 @@ class FijerenaApplication :
             }
         CoroutineScope(SupervisorJob() + Dispatchers.IO + startupExceptionHandler).launch {
             ProviderRepository(this@FijerenaApplication).migrateCategoryFiltersToProfiles()
-            ProfileRepository(this@FijerenaApplication).migrateLegacyDevMode()
+            ProfileRepository(this@FijerenaApplication).migrateLegacyProfileSettings()
             // Live sync keeps deletions for 90 days — see SyncKind.TOMBSTONE_RETENTION_MS.
             pruneSyncTombstones(this@FijerenaApplication)
             // Build the encrypted credential store off the main thread, before the nav host's

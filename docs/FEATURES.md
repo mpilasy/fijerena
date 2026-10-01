@@ -276,7 +276,8 @@ Favorites and Last Watched/Continue Watching persist durably in SQLite via Room 
 ## Profiles
 
 "Who's watching?" picker at launch (and from the header avatar). Each profile has its own
-favourites, watch history, category filters per provider, dev-mode switch and Jellyfin login;
+favourites, watch history, search history, category filters per provider, dev-mode switch and
+Jellyfin login;
 providers, EPG sources and other settings are shared. Which profile is in use is per device.
 Switching takes a fraction of a second: only category rows carry the filter flag, and streams and
 series follow their category at query time (see `docs/plans/20261001_fast-profile-switch-plan.md`).

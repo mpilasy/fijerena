@@ -45,9 +45,14 @@ class ProfileRepository(
         dao.update(id, name.trim(), colorIndex)
     }
 
-    /** See [AppSettings.copyLegacyDevModeToProfiles]; run once at startup. */
-    suspend fun migrateLegacyDevMode() {
-        AppSettings(context).copyLegacyDevModeToProfiles(dao.getAll().map { it.id })
+    /**
+     * See [AppSettings.copyLegacyDevModeToProfiles] and
+     * [AppSettings.moveLegacySearchHistoryToDefaultProfile]; run once at startup.
+     */
+    suspend fun migrateLegacyProfileSettings() {
+        val settings = AppSettings(context)
+        settings.copyLegacyDevModeToProfiles(dao.getAll().map { it.id })
+        settings.moveLegacySearchHistoryToDefaultProfile()
     }
 
     /** Why [deleteProfile] refused, or [NONE] when it went ahead. */
@@ -55,7 +60,7 @@ class ProfileRepository(
 
     /**
      * Deletes a profile with its favourites, watch state, Recent Categories, bookmarks and Jellyfin
-     * logins on every provider, and its developer-mode flag and category filters. Refuses the profile this device is using — switch away first — and the last one
+     * logins on every provider, and its developer-mode flag, search history and category filters. Refuses the profile this device is using — switch away first — and the last one
      * left, since the app always needs somebody to be.
      */
     suspend fun deleteProfile(id: String): DeleteBlocked =
@@ -73,6 +78,7 @@ class ProfileRepository(
                     xtreamDb.syncVersionDao().deleteForProfile(id)
                     deleteProfilePrefs(id)
                     AppSettings(context).removeDevMode(id)
+                    AppSettings(context).removeProfileSearchHistory(id)
                     CategoryFiltersStore(context).removeProfile(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
                     dao.deleteRecordingTombstone(id)

@@ -336,78 +336,106 @@ class AppSettings(
         get() = prefs.getBoolean(KEY_HAS_PROVIDER_CACHE, false)
         set(value) = prefs.edit { putBoolean(KEY_HAS_PROVIDER_CACHE, value) }
 
+    // Search and EPG search history belong to the active profile, like developer mode: stored
+    // under `<key>_<profileId>`. Per device and never synced.
+
     /**
-     * Get the search history as an ordered list (most recent first).
+     * Get the active profile's search history as an ordered list (most recent first).
      */
-    fun getSearchHistory(): List<String> {
-        val joined = prefs.getString(KEY_SEARCH_HISTORY, null) ?: return emptyList()
-        return joined.split("\u001F").filter { it.isNotBlank() }
-    }
+    fun getSearchHistory(): List<String> = readHistory(KEY_SEARCH_HISTORY)
 
     /**
      * Add a search term to history. Deduplicates (case-insensitive) and caps at [MAX_SEARCH_HISTORY].
      */
-    fun addSearchHistory(query: String) {
-        val trimmed = query.trim()
-        if (trimmed.isBlank()) return
-        val current = getSearchHistory().toMutableList()
-        current.removeAll { it.equals(trimmed, ignoreCase = true) }
-        current.add(0, trimmed)
-        val capped = current.take(MAX_SEARCH_HISTORY)
-        prefs.edit { putString(KEY_SEARCH_HISTORY, capped.joinToString("\u001F")) }
-    }
+    fun addSearchHistory(query: String) = addToHistory(KEY_SEARCH_HISTORY, query)
 
     /**
      * Remove a single entry from search history.
      */
-    fun removeSearchHistory(query: String) {
-        val current = getSearchHistory().toMutableList()
-        current.removeAll { it.equals(query, ignoreCase = true) }
-        prefs.edit { putString(KEY_SEARCH_HISTORY, current.joinToString("\u001F")) }
-    }
+    fun removeSearchHistory(query: String) = removeFromHistory(KEY_SEARCH_HISTORY, query)
 
     /**
      * Clear all search history.
      */
     fun clearSearchHistory() {
-        prefs.edit { remove(KEY_SEARCH_HISTORY) }
+        prefs.edit { remove(historyKey(KEY_SEARCH_HISTORY, activeProfileId)) }
     }
 
     /**
-     * Get the EPG search history as an ordered list (most recent first).
+     * Get the active profile's EPG search history as an ordered list (most recent first).
      */
-    fun getEpgSearchHistory(): List<String> {
-        val joined = prefs.getString(KEY_EPG_SEARCH_HISTORY, null) ?: return emptyList()
-        return joined.split("\u001F").filter { it.isNotBlank() }
-    }
+    fun getEpgSearchHistory(): List<String> = readHistory(KEY_EPG_SEARCH_HISTORY)
 
     /**
      * Add a search term to EPG history. Deduplicates (case-insensitive) and caps at [MAX_SEARCH_HISTORY].
      */
-    fun addEpgSearchHistory(query: String) {
-        val trimmed = query.trim()
-        if (trimmed.isBlank()) return
-        val current = getEpgSearchHistory().toMutableList()
-        current.removeAll { it.equals(trimmed, ignoreCase = true) }
-        current.add(0, trimmed)
-        val capped = current.take(MAX_SEARCH_HISTORY)
-        prefs.edit { putString(KEY_EPG_SEARCH_HISTORY, capped.joinToString("\u001F")) }
-    }
+    fun addEpgSearchHistory(query: String) = addToHistory(KEY_EPG_SEARCH_HISTORY, query)
 
     /**
      * Remove a single entry from EPG search history.
      */
-    fun removeEpgSearchHistory(query: String) {
-        val current = getEpgSearchHistory().toMutableList()
-        current.removeAll { it.equals(query, ignoreCase = true) }
-        prefs.edit { putString(KEY_EPG_SEARCH_HISTORY, current.joinToString("\u001F")) }
-    }
+    fun removeEpgSearchHistory(query: String) = removeFromHistory(KEY_EPG_SEARCH_HISTORY, query)
 
     /**
      * Clear all EPG search history.
      */
     fun clearEpgSearchHistory() {
-        prefs.edit { remove(KEY_EPG_SEARCH_HISTORY) }
+        prefs.edit { remove(historyKey(KEY_EPG_SEARCH_HISTORY, activeProfileId)) }
+    }
+
+    /**
+     * One-time upgrade: the install-wide search histories from before they were per profile go to
+     * the default profile (unless it already has its own), so other profiles start empty.
+     */
+    fun moveLegacySearchHistoryToDefaultProfile() {
+        val legacyKeys = listOf(KEY_SEARCH_HISTORY, KEY_EPG_SEARCH_HISTORY).filter { prefs.contains(it) }
+        if (legacyKeys.isEmpty()) return
+        prefs.edit {
+            legacyKeys.forEach { legacy ->
+                val target = historyKey(legacy, ProfileEntity.DEFAULT_ID)
+                if (!prefs.contains(target)) putString(target, prefs.getString(legacy, null))
+                remove(legacy)
+            }
+        }
+    }
+
+    /** Drops a deleted profile's search and EPG search history. */
+    fun removeProfileSearchHistory(profileId: String) =
+        prefs.edit {
+            remove(historyKey(KEY_SEARCH_HISTORY, profileId))
+            remove(historyKey(KEY_EPG_SEARCH_HISTORY, profileId))
+        }
+
+    private fun historyKey(
+        key: String,
+        profileId: String,
+    ) = "${key}_$profileId"
+
+    private fun readHistory(key: String): List<String> {
+        val joined = prefs.getString(historyKey(key, activeProfileId), null) ?: return emptyList()
+        return joined.split("\u001F").filter { it.isNotBlank() }
+    }
+
+    private fun addToHistory(
+        key: String,
+        query: String,
+    ) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return
+        val current = readHistory(key).toMutableList()
+        current.removeAll { it.equals(trimmed, ignoreCase = true) }
+        current.add(0, trimmed)
+        val capped = current.take(MAX_SEARCH_HISTORY)
+        prefs.edit { putString(historyKey(key, activeProfileId), capped.joinToString("\u001F")) }
+    }
+
+    private fun removeFromHistory(
+        key: String,
+        query: String,
+    ) {
+        val current = readHistory(key).toMutableList()
+        current.removeAll { it.equals(query, ignoreCase = true) }
+        prefs.edit { putString(historyKey(key, activeProfileId), current.joinToString("\u001F")) }
     }
 
     /**
