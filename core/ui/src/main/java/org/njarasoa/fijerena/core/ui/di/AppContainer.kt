@@ -2,6 +2,9 @@ package org.njarasoa.fijerena.core.ui.di
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -149,6 +152,21 @@ class AppContainer(
                 MediaProviderFactory.clearProfileScopedProviders()
             }
         }
+    }
+
+    private val _externalProfileSwitches = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+    /**
+     * Profiles switched without the user picking one — live sync moving this device off a profile
+     * another device deleted. The nav hosts rebuild the back stack from home on each, as the
+     * profile picker does after [switchProfile].
+     */
+    val externalProfileSwitches: SharedFlow<String> = _externalProfileSwitches.asSharedFlow()
+
+    /** [switchProfile], for a switch the UI didn't ask for: announces it on [externalProfileSwitches]. */
+    suspend fun switchProfileExternally(profileId: String) {
+        switchProfile(profileId)
+        _externalProfileSwitches.emit(profileId)
     }
 
     /**

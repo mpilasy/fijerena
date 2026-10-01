@@ -75,7 +75,7 @@ class SyncManager private constructor(
                     val active = AppSettings(app).activeProfileId
                     val other = SettingsDatabase.getInstance(app).profileDao().getAll().firstOrNull { it.id != active } ?: return@launch
                     Log.i(TAG, "Active profile deleted on another device; switching to ${other.id}")
-                    AppContainer.getInstance(app).switchProfile(other.id)
+                    AppContainer.getInstance(app).switchProfileExternally(other.id)
                     requestSync(0)
                 }
             }

@@ -80,6 +80,21 @@ fun MobileNavHost(
     onUiStyleChanged: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
+
+    // Live sync moved this device off a profile another device deleted: every screen may hold the
+    // old profile's repository, so start over from home — what the profile picker does.
+    LaunchedEffect(Unit) {
+        org.njarasoa.fijerena.core.ui.di.AppContainer
+            .getInstance(context)
+            .externalProfileSwitches
+            .collect {
+                // Before the graph exists (very first frames) there is nothing to rebuild.
+                if (navController.currentBackStackEntry == null) return@collect
+                navController.navigate(Screen.ContentTypeSelection) {
+                    popUpTo(navController.graph.id) { inclusive = true }
+                }
+            }
+    }
     val accountManager = remember { AccountManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
