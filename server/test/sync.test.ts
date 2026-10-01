@@ -142,6 +142,23 @@ describe("sync server", () => {
     expect((await server.request("GET", "/changes?since=0", { token: phone.deviceToken })).status).toBe(401);
   });
 
+  it("counts a socket's pings as the device being seen", async () => {
+    const tv = await server.createAccount("tv");
+    const { body: pairing } = await server.request("POST", "/pairings", { token: tv.deviceToken });
+    const { body: phone } = await server.request("POST", "/pair", { body: { code: pairing.code, deviceName: "phone" } });
+    const lastSeen = async () =>
+      (await server.request("GET", "/devices", { token: tv.deviceToken })).body.devices.find((d: { id: string }) => d.id === phone.deviceId).lastSeen;
+
+    const ws = server.socket(phone.deviceToken);
+    await nextMessage(ws);
+    const before = await lastSeen();
+    await new Promise((r) => setTimeout(r, 20));
+    ws.send("ping");
+    await nextMessage(ws);
+    expect(await lastSeen()).toBeGreaterThan(before);
+    ws.close();
+  });
+
   it("tells connected devices the new head, and answers pings", async () => {
     const { deviceToken } = await server.createAccount();
     const ws = server.socket(deviceToken);

@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.episode.fixtures
 
 import org.njarasoa.fijerena.core.network.xtream.db.SeriesCompletedCount
+import org.njarasoa.fijerena.core.network.xtream.db.SyncTombstoneEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 
@@ -313,5 +314,13 @@ class FakeWatchStateDao : WatchStateDao {
 
     override suspend fun restoreAll(entities: List<WatchStateEntity>) {
         entities.forEach { seed(it) }
+    }
+
+    /** The `sync_tombstone` rows this DAO wrote. */
+    val tombstones = mutableListOf<SyncTombstoneEntity>()
+
+    override suspend fun insertTombstone(tombstone: SyncTombstoneEntity) {
+        tombstones.removeAll { it.providerId == tombstone.providerId && it.profileId == tombstone.profileId && it.kind == tombstone.kind }
+        tombstones.add(tombstone)
     }
 }

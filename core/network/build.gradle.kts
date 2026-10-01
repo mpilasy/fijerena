@@ -36,20 +36,6 @@ android {
             isReturnDefaultValues = true
         }
     }
-    packaging {
-        resources {
-            // The Google API client / Apache httpcomponents dependency chain (Google Drive API,
-            // for settings sync) ships several duplicate META-INF metadata files across its jars.
-            // Only surfaces once androidTest packaging actually runs, since it wasn't exercised
-            // before this module had an androidTest source set.
-            excludes += "META-INF/INDEX.LIST"
-            excludes += "META-INF/DEPENDENCIES"
-            excludes += "META-INF/LICENSE"
-            excludes += "META-INF/LICENSE.txt"
-            excludes += "META-INF/NOTICE"
-            excludes += "META-INF/NOTICE.txt"
-        }
-    }
 }
 
 dependencies {
@@ -83,14 +69,6 @@ dependencies {
 
     // Paging
     api(libs.paging.runtime)
-
-    // Google Drive API for settings sync
-    implementation(libs.play.services.auth)
-    implementation(libs.google.api.client.android)
-    implementation(libs.google.api.services.drive) {
-        exclude(group = "org.apache.httpcomponents")
-    }
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
 
     // Testing
     testImplementation(libs.junit)

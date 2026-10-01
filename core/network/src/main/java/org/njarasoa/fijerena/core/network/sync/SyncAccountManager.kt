@@ -89,6 +89,24 @@ class SyncAccountManager(
         }
     }
 
+    /** Whether [serverUrl] is a compatible sync server, and whether creating an account needs its setup secret. */
+    suspend fun serverInfo(serverUrl: String): SyncWire.Info = checkServer(serverUrl)
+
+    /** The account's devices, this one marked `current`. */
+    suspend fun devices(): List<SyncWire.Device> {
+        val link = store.link ?: error("Not linked to a sync account")
+        return api.devices(link.serverUrl, link.deviceToken)
+    }
+
+    /**
+     * Cuts a device off: the server refuses its token from now on. It still knows the account key
+     * (rotating it is a later step — see the live-sync plan), but can no longer reach the records.
+     */
+    suspend fun revoke(deviceId: String) {
+        val link = store.link ?: error("Not linked to a sync account")
+        api.revoke(link.serverUrl, link.deviceToken, deviceId)
+    }
+
     /** Stops syncing; local data stays as it is. */
     fun unlink() = store.unlink()
 
@@ -105,11 +123,12 @@ class SyncAccountManager(
         api.fillHandoff(link.serverUrl, link.deviceToken, request.handoffId, sealed, B64URL.encodeToString(own.public.encoded))
     }
 
-    private suspend fun checkServer(serverUrl: String) {
+    private suspend fun checkServer(serverUrl: String): SyncWire.Info {
         val info = api.info(serverUrl)
         if (info.service != "fijerena-sync" || info.protocol != SyncWire.PROTOCOL) {
-            throw SyncApiException(0, "Not a compatible Fijerena sync server (${info.service}, protocol ${info.protocol})")
+            throw SyncApiException(SyncApiException.INCOMPATIBLE, "Not a compatible Fijerena sync server (${info.service}, protocol ${info.protocol})")
         }
+        return info
     }
 
     private suspend fun link(

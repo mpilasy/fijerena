@@ -23,7 +23,6 @@ import androidx.tv.material3.*
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
@@ -45,6 +44,7 @@ fun SettingsScreen(
     onUiStyleChanged: (String) -> Unit = {},
     onUiScaleChanged: (Float) -> Unit = {},
     onManageProviders: () -> Unit = {},
+    onLiveSync: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -56,7 +56,6 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
-    val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -122,33 +121,6 @@ fun SettingsScreen(
                 viewModel.setExportImportMessage(resources.getString(R.string.settings_import_failed, e.message))
             }
         pendingImportPath = null
-    }
-
-    // Drive sync state
-    val syncStatus by syncManager.syncStatus.collectAsStateWithLifecycle()
-    val signedInEmail by syncManager.signedInEmail.collectAsStateWithLifecycle()
-
-    // Sign-in error state
-    var signInError by remember { mutableStateOf<String?>(null) }
-
-    // Google Sign-In launcher
-    val signInLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult(),
-        ) { result ->
-            coroutineScope.launch {
-                val success = syncManager.handleSignInResult(result.data)
-                if (!success) {
-                    signInError = resources.getString(R.string.settings_google_signin_failed)
-                } else {
-                    signInError = null
-                }
-            }
-        }
-
-    // Initialize sync on startup
-    LaunchedEffect(Unit) {
-        syncManager.initialize()
     }
 
     // Re-check provider when returning from provider management screens
@@ -304,20 +276,8 @@ fun SettingsScreen(
                     )
                 }
 
-                // Cloud Sync (Google Drive)
                 item {
-                    CloudSyncSettingsCard(
-                        syncStatus = syncStatus,
-                        signedInEmail = signedInEmail,
-                        signInError = signInError,
-                        onSyncNow = { coroutineScope.launch { syncManager.syncNow() } },
-                        onSignOut = { coroutineScope.launch { syncManager.signOut() } },
-                        onSignIn = {
-                            signInError = null
-                            signInLauncher.launch(syncManager.getSignInIntent())
-                        },
-                        scale = scale,
-                    )
+                    LiveSyncSettingsCard(onOpen = onLiveSync, scale = scale)
                 }
 
                 // Export / Import Settings

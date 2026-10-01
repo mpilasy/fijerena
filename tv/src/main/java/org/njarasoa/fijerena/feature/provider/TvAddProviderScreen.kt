@@ -38,7 +38,6 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
-import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -113,7 +112,6 @@ fun TvAddProviderScreen(
 
     // Cache management state (edit mode only)
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
-    val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
     val coroutineScope = rememberCoroutineScope()
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
     var currentProvider by remember { mutableStateOf<org.njarasoa.fijerena.core.network.provider.ProviderEntity?>(null) }
@@ -326,7 +324,6 @@ fun TvAddProviderScreen(
                                         providerSettings = newSettings
                                         streamOutputFormat = newSettings.streamOutputFormat
                                         playlistType = newSettings.playlistType
-                                        syncManager.syncProviderSettings(editId)
                                     }
                                 },
                                 onClearFavoritesClick = { showClearFavoritesDialog = true },
@@ -625,7 +622,6 @@ fun TvAddProviderScreen(
                                         val newSettings = providerSettings.copy(categoryFilters = newFilters)
                                         providerRepo.updateProviderSettings(editId, newSettings)
                                         providerSettings = newSettings
-                                        syncManager.syncProviderSettings(editId)
                                     }
                                     showCategoryFilterDialog = false
                                 },

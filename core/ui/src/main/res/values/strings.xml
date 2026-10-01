@@ -67,7 +67,6 @@
     <string name="settings_export_success">Settings exported successfully</string>
     <string name="settings_export_failed">Export failed</string>
     <string name="settings_import_failed">Import failed: %1$s</string>
-    <string name="settings_google_signin_failed">Sign-in failed. Check Google Play Services.</string>
 
     <!-- Common -->
     <string name="common_close">Close</string>
@@ -631,13 +630,6 @@
     <string name="settings_about_section_title">About</string>
     <string name="settings_about_app_version">Fijerena v1.0.0</string>
     <string name="settings_about_tagline">Premium native media player for Android</string>
-    <string name="settings_cloud_sync_section_title">Cloud Sync</string>
-    <string name="settings_cloud_sync_desc">Sync provider settings across devices using your Google account</string>
-    <string name="sync_status_synced">Synced</string>
-    <string name="sync_status_ready">Ready</string>
-    <string name="settings_cloud_sync_now_button">Sync Now</string>
-    <string name="common_sign_out">Sign Out</string>
-    <string name="settings_sign_in_google_button">Sign in with Google</string>
     <string name="settings_developer_mode_title">Developer Mode</string>
     <string name="settings_developer_mode_desc">Enable stats for nerds and debug features</string>
     <string name="settings_configure_cellular_buffers_button">Configure Cellular Buffers</string>
@@ -854,4 +846,51 @@
     <string name="profile_switch_description">Switch profile (%1$s)</string>
     <string name="profile_jellyfin_sign_in_prompt">Sign in to %1$s for this profile</string>
     <string name="profile_jellyfin_sign_in_button">Sign in</string>
+    <!-- Live sync (docs/plans/20260929_live-sync-plan.md, Phase 9) -->
+    <string name="live_sync_title">Live sync</string>
+    <string name="live_sync_desc">Keep profiles, providers, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves.</string>
+    <string name="live_sync_open">Set up</string>
+    <string name="live_sync_manage">Manage</string>
+    <string name="live_sync_off">Off</string>
+    <string name="live_sync_server_label">Sync server address</string>
+    <string name="live_sync_server_hint">https://sync.example.com</string>
+    <string name="live_sync_check_server">Check server</string>
+    <string name="live_sync_server_found">Sync server found</string>
+    <string name="live_sync_setup_secret_label">Setup secret</string>
+    <string name="live_sync_create">Start a sync group</string>
+    <string name="live_sync_join_scan">Scan a code to join</string>
+    <string name="live_sync_join_show_code">Join from a phone</string>
+    <string name="live_sync_handoff_instructions">On a phone already in the sync group, open Settings → Live sync → Scan a code, and point it at this code. This device joins as soon as it is scanned.</string>
+    <string name="live_sync_invite_instructions">On the device to add, open Settings → Live sync and scan this code. It works once, for 10 minutes.</string>
+    <string name="live_sync_qr_description">Pairing code</string>
+    <string name="live_sync_waiting">Waiting for the scan…</string>
+    <string name="live_sync_status_syncing">Syncing…</string>
+    <string name="live_sync_status_last">Last synced %1$s</string>
+    <string name="live_sync_just_now">just now</string>
+    <string name="live_sync_status_never">Not synced yet</string>
+    <string name="live_sync_status_failed">The last sync failed. It is retried automatically.</string>
+    <string name="live_sync_server_line">Server: %1$s</string>
+    <string name="live_sync_now">Sync now</string>
+    <string name="live_sync_add_device">Add a device</string>
+    <string name="live_sync_scan_code">Scan a code</string>
+    <string name="live_sync_devices_title">Devices</string>
+    <string name="live_sync_device_this">This device</string>
+    <string name="live_sync_device_last_seen">Last seen %1$s</string>
+    <string name="live_sync_device_remove">Remove</string>
+    <string name="live_sync_device_remove_title">Remove %1$s?</string>
+    <string name="live_sync_device_remove_message">It stops syncing right away. What it already has stays on it.</string>
+    <string name="live_sync_leave">Leave the sync group</string>
+    <string name="live_sync_leave_title">Leave the sync group?</string>
+    <string name="live_sync_leave_message">This device stops syncing. Its profiles, providers, favourites and history stay on it.</string>
+    <string name="live_sync_scan_hint">Point the camera at the code on the other device</string>
+    <string name="live_sync_camera_permission">Camera access is needed to scan the code.</string>
+    <string name="live_sync_camera_grant">Allow camera</string>
+    <string name="live_sync_joined">Joined the sync group</string>
+    <string name="live_sync_handed_over">Sent. The other device joins in a moment.</string>
+    <string name="sync_error_unreachable">Can\'t reach the sync server. Check the address and your connection.</string>
+    <string name="sync_error_not_a_server">That address isn\'t a Fijerena sync server.</string>
+    <string name="sync_error_setup_secret">The setup secret is wrong.</string>
+    <string name="sync_error_revoked">This device was removed from the sync group.</string>
+    <string name="sync_error_code_expired">The code expired or was already used. Show a new one.</string>
+    <string name="sync_error_not_a_code">That isn\'t a Fijerena pairing code.</string>
 </resources>

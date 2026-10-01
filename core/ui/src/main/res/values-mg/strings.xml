@@ -63,7 +63,6 @@
     <string name="settings_export_success">Settings exported successfully</string>
     <string name="settings_export_failed">Export failed</string>
     <string name="settings_import_failed">Import failed: %1$s</string>
-    <string name="settings_google_signin_failed">Sign-in failed. Check Google Play Services.</string>
 
     <!-- Common -->
     <string name="common_close">Akatony</string>
@@ -528,13 +527,6 @@
     <string name="settings_about_section_title">Momba</string>
     <string name="settings_about_app_version">Fijerena v1.0.0</string>
     <string name="settings_about_tagline">Fitaovana filalaovana horonantsary avo lenta ho an\'ny Android</string>
-    <string name="settings_cloud_sync_section_title">Fifandraisana Cloud</string>
-    <string name="settings_cloud_sync_desc">Ampifandraiso amin\'ny fitaovana isan-karazany ny fandrindrana mpampiantrano amin\'ny alalan\'ny kaontinao Google</string>
-    <string name="sync_status_synced">Voarindra</string>
-    <string name="sync_status_ready">Vonona</string>
-    <string name="settings_cloud_sync_now_button">Arindrao izao</string>
-    <string name="common_sign_out">Hiala</string>
-    <string name="settings_sign_in_google_button">Hiditra amin\'ny Google</string>
     <string name="settings_developer_mode_title">Fomba mpamorona</string>
     <string name="settings_developer_mode_desc">Alefaso ny antontan\'isa ho an\'ny mpamorona sy ny endri-javatra fanadiovana</string>
     <string name="settings_configure_cellular_buffers_button">Amboary ny buffer finday</string>

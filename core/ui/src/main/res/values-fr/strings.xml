@@ -63,7 +63,6 @@
     <string name="settings_export_success">Paramètres exportés avec succès</string>
     <string name="settings_export_failed">L\'exportation a échoué</string>
     <string name="settings_import_failed">L\'importation a échoué : %1$s</string>
-    <string name="settings_google_signin_failed">Échec de la connexion. Vérifiez Google Play Services.</string>
 
     <!-- Common -->
     <string name="common_close">Fermer</string>
@@ -602,13 +601,6 @@
     <string name="settings_about_section_title">À propos</string>
     <string name="settings_about_app_version">Fijerena v1.0.0</string>
     <string name="settings_about_tagline">Lecteur multimédia natif premium pour Android</string>
-    <string name="settings_cloud_sync_section_title">Synchronisation cloud</string>
-    <string name="settings_cloud_sync_desc">Synchroniser les paramètres du fournisseur entre appareils avec votre compte Google</string>
-    <string name="sync_status_synced">Synchronisé</string>
-    <string name="sync_status_ready">Prêt</string>
-    <string name="settings_cloud_sync_now_button">Synchroniser maintenant</string>
-    <string name="common_sign_out">Se déconnecter</string>
-    <string name="settings_sign_in_google_button">Se connecter avec Google</string>
     <string name="settings_developer_mode_title">Mode développeur</string>
     <string name="settings_developer_mode_desc">Activer les statistiques techniques et les fonctionnalités de débogage</string>
     <string name="settings_configure_cellular_buffers_button">Configurer les mémoires tampons cellulaires</string>
@@ -817,4 +809,50 @@
     <string name="profile_switch_description">Changer de profil (%1$s)</string>
     <string name="profile_jellyfin_sign_in_prompt">Connectez-vous à %1$s pour ce profil</string>
     <string name="profile_jellyfin_sign_in_button">Se connecter</string>
+    <!-- Live sync (docs/plans/20260929_live-sync-plan.md, Phase 9) -->
+    <string name="live_sync_title">Synchronisation en direct</string>
+    <string name="live_sync_desc">Gardez les profils, fournisseurs, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter.</string>
+    <string name="live_sync_open">Configurer</string>
+    <string name="live_sync_manage">Gérer</string>
+    <string name="live_sync_off">Désactivée</string>
+    <string name="live_sync_server_label">Adresse du serveur de synchronisation</string>
+    <string name="live_sync_check_server">Vérifier le serveur</string>
+    <string name="live_sync_server_found">Serveur de synchronisation trouvé</string>
+    <string name="live_sync_setup_secret_label">Secret de configuration</string>
+    <string name="live_sync_create">Créer un groupe de synchronisation</string>
+    <string name="live_sync_join_scan">Scanner un code pour rejoindre</string>
+    <string name="live_sync_join_show_code">Rejoindre depuis un téléphone</string>
+    <string name="live_sync_handoff_instructions">Sur un téléphone déjà dans le groupe, ouvrez Paramètres → Synchronisation en direct → Scanner un code, et visez ce code. Cet appareil rejoint le groupe dès qu\'il est scanné.</string>
+    <string name="live_sync_invite_instructions">Sur l\'appareil à ajouter, ouvrez Paramètres → Synchronisation en direct et scannez ce code. Il fonctionne une fois, pendant 10 minutes.</string>
+    <string name="live_sync_qr_description">Code d\'appairage</string>
+    <string name="live_sync_waiting">En attente du scan…</string>
+    <string name="live_sync_status_syncing">Synchronisation…</string>
+    <string name="live_sync_status_last">Dernière synchronisation %1$s</string>
+    <string name="live_sync_just_now">à l\'instant</string>
+    <string name="live_sync_status_never">Pas encore synchronisé</string>
+    <string name="live_sync_status_failed">La dernière synchronisation a échoué. Elle est relancée automatiquement.</string>
+    <string name="live_sync_server_line">Serveur : %1$s</string>
+    <string name="live_sync_now">Synchroniser</string>
+    <string name="live_sync_add_device">Ajouter un appareil</string>
+    <string name="live_sync_scan_code">Scanner un code</string>
+    <string name="live_sync_devices_title">Appareils</string>
+    <string name="live_sync_device_this">Cet appareil</string>
+    <string name="live_sync_device_last_seen">Vu %1$s</string>
+    <string name="live_sync_device_remove">Retirer</string>
+    <string name="live_sync_device_remove_title">Retirer %1$s ?</string>
+    <string name="live_sync_device_remove_message">Il cesse de se synchroniser immédiatement. Ce qu\'il a déjà reste dessus.</string>
+    <string name="live_sync_leave">Quitter le groupe de synchronisation</string>
+    <string name="live_sync_leave_title">Quitter le groupe de synchronisation ?</string>
+    <string name="live_sync_leave_message">Cet appareil cesse de se synchroniser. Ses profils, fournisseurs, favoris et historique restent dessus.</string>
+    <string name="live_sync_scan_hint">Visez le code affiché sur l\'autre appareil</string>
+    <string name="live_sync_camera_permission">L\'accès à la caméra est nécessaire pour scanner le code.</string>
+    <string name="live_sync_camera_grant">Autoriser la caméra</string>
+    <string name="live_sync_joined">Groupe de synchronisation rejoint</string>
+    <string name="live_sync_handed_over">Envoyé. L\'autre appareil rejoint le groupe dans un instant.</string>
+    <string name="sync_error_unreachable">Impossible de joindre le serveur de synchronisation. Vérifiez l\'adresse et votre connexion.</string>
+    <string name="sync_error_not_a_server">Cette adresse n\'est pas un serveur de synchronisation Fijerena.</string>
+    <string name="sync_error_setup_secret">Le secret de configuration est incorrect.</string>
+    <string name="sync_error_revoked">Cet appareil a été retiré du groupe de synchronisation.</string>
+    <string name="sync_error_code_expired">Le code a expiré ou a déjà été utilisé. Affichez-en un nouveau.</string>
+    <string name="sync_error_not_a_code">Ce n\'est pas un code d\'appairage Fijerena.</string>
 </resources>

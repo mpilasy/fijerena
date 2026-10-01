@@ -156,6 +156,15 @@ export class Account extends DurableObject<Env> {
     return json({ code: `${accountId}.${secret}`, expiresAt }, 201);
   }
 
+  /**
+   * An idle device with the app open only pings its socket, and pings are answered without waking
+   * this object — so they never reach `last_seen`. The socket remembers the last one.
+   */
+  private lastSeen(device: Device): number {
+    const pings = this.ctx.getWebSockets(device.id).map((ws) => this.ctx.getWebSocketAutoResponseTimestamp(ws)?.getTime() ?? 0);
+    return Math.max(device.last_seen, ...pings);
+  }
+
   private listDevices(current: Device): Response {
     const devices = this.sql.exec<Device>("SELECT id, name, created_at, last_seen, revoked FROM devices ORDER BY created_at").toArray();
     return json({
@@ -163,7 +172,7 @@ export class Account extends DurableObject<Env> {
         id: d.id,
         name: d.name,
         createdAt: d.created_at,
-        lastSeen: d.last_seen,
+        lastSeen: this.lastSeen(d),
         revoked: d.revoked === 1,
         current: d.id === current.id,
       })),

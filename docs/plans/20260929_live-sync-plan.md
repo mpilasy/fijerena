@@ -521,8 +521,23 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
    - **Tested** on the TV and phone emulators against a local server: account created on the phone,
      the TV joined by handoff (0.7 s after the scan), the phone rejoined by the TV's invite; both
      converged with nothing pending.
-9. **Settings UI.** Sync server URL (validated via `GET /info`), sync on/off, paired devices
-   list, revoke, last-sync time; dev mode shows raw sync errors.
+9. **Settings UI** — *landed 2026-09-30*. As built:
+   - **Settings → Live sync** on TV and phone (`SyncSettingsScreen`, `MobileSyncSettingsScreen`,
+     shared `SyncSettingsViewModel`); the Settings card shows the server or "Off".
+   - **Not linked**: server address, checked with `GET /info` before anything is saved (setup
+     secret asked for when the server needs one), then *Start a sync group*. To join, the phone
+     scans an invite (no address needed: the code carries it); the TV shows a handoff code.
+   - **Linked**: last sync / syncing / failed (raw error in dev mode), *Add a device* (invite QR,
+     shown only on demand, closed once the new device appears), *Scan a code* on the phone (to add
+     a TV), *Sync now*, the devices list with *Remove*, and *Leave the sync group* (local data stays).
+   - Sync is off on a device until it is set up there; there is no pause switch, leaving is the off.
+   - Revoking cuts the device off at the server; rotating the account key afterwards is deferred
+     (decided 2026-09-30) — the revoked device still knows the key, but can no longer reach records.
+   - QR codes drawn with ZXing core; scanned with CameraX + ML Kit (bundled model), which ignores
+     QR codes that aren't pairing codes. Camera is optional in the phone's manifest.
+   - Server: an idle device with the app open only pings its socket, which never wakes the
+     account's object, so the devices list takes the socket's last ping as "last seen" too.
+   - The Google Drive settings sync is removed (2026-09-30): live sync replaces it.
 
 Phases 1–5 land without any server and are testable in isolation.
 

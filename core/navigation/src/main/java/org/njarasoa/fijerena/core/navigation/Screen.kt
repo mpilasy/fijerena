@@ -179,6 +179,10 @@ sealed interface Screen {
     @Serializable
     data object CellularBufferSettings : Screen
 
+    /** Settings → Live sync: linking this device to a sync account, pairing, devices. */
+    @Serializable
+    data object SyncSettings : Screen
+
     /**
      * Player screen destination with stream parameters.
      *

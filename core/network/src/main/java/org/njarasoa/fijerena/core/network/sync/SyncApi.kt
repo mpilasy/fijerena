@@ -17,7 +17,12 @@ class SyncApiException(
     val status: Int,
     message: String,
     cause: Throwable? = null,
-) : Exception(message, cause)
+) : Exception(message, cause) {
+    companion object {
+        /** Not an HTTP status: the server answered, but isn't a compatible Fijerena sync server. */
+        const val INCOMPATIBLE = -1
+    }
+}
 
 /**
  * HTTP and WebSocket client of the sync server (protocol 1 — see `server/README.md`). Stateless:
@@ -75,6 +80,17 @@ class SyncApi(
         since: Long,
         limit: Int = 500,
     ): SyncWire.PullResponse = call(serverUrl, "GET", "/changes?since=$since&limit=$limit", token = token, acceptGone = true)
+
+    suspend fun devices(
+        serverUrl: String,
+        token: String,
+    ): List<SyncWire.Device> = call<SyncWire.Devices>(serverUrl, "GET", "/devices", token = token).devices
+
+    suspend fun revoke(
+        serverUrl: String,
+        token: String,
+        deviceId: String,
+    ): Unit = call<SyncWire.Revoked>(serverUrl, "DELETE", "/devices/$deviceId", token = token).let { }
 
     /** A handoff for this (unlinked) device to be given an account through — see `server/src/handoff.ts`. */
     suspend fun openHandoff(serverUrl: String): SyncWire.HandoffOpened = call(serverUrl, "POST", "/handoffs", body = "{}")

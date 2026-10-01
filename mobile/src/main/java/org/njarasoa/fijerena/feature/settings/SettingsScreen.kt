@@ -18,7 +18,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
@@ -27,10 +26,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.feature.settings.components.ImportConflictDialog
 import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
 import org.njarasoa.fijerena.feature.settings.components.LanguageSettingsCard
+import org.njarasoa.fijerena.feature.settings.components.LiveSyncSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.PlaybackSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ProfilesSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.AboutSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.CloudSyncSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.DatabaseMaintenanceCard
 import org.njarasoa.fijerena.feature.settings.components.DeveloperSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.EpgSettingsCard
@@ -47,6 +46,7 @@ fun MobileSettingsScreen(
     onUiStyleChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onCellularBuffers: () -> Unit = {},
+    onLiveSync: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -58,7 +58,6 @@ fun MobileSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
-    val syncManager = remember { DriveSettingsSyncManager(context.applicationContext, providerRepo) }
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -159,33 +158,6 @@ fun MobileSettingsScreen(
         )
     }
 
-    // Drive sync state
-    val syncStatus by syncManager.syncStatus.collectAsStateWithLifecycle()
-    val signedInEmail by syncManager.signedInEmail.collectAsStateWithLifecycle()
-
-    // Sign-in error state
-    var signInError by remember { mutableStateOf<String?>(null) }
-
-    // Google Sign-In launcher
-    val signInLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult(),
-        ) { result ->
-            coroutineScope.launch {
-                val success = syncManager.handleSignInResult(result.data)
-                if (!success) {
-                    signInError = resources.getString(R.string.settings_google_signin_failed)
-                } else {
-                    signInError = null
-                }
-            }
-        }
-
-    // Initialize sync on startup
-    LaunchedEffect(Unit) {
-        syncManager.initialize()
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -257,16 +229,8 @@ fun MobileSettingsScreen(
                 onCellularBuffers = onCellularBuffers,
             )
 
-            // === Cloud Sync (Google Drive) ===
-            CloudSyncSettingsCard(
-                signedInEmail = signedInEmail,
-                syncStatus = syncStatus,
-                signInError = signInError,
-                onSignInErrorChange = { signInError = it },
-                syncManager = syncManager,
-                coroutineScope = coroutineScope,
-                signInLauncher = signInLauncher,
-            )
+            // === Live sync ===
+            LiveSyncSettingsCard(onOpen = onLiveSync)
 
             // === Export / Import ===
             ExportImportSettingsCard(

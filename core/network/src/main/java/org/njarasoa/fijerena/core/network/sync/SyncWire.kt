@@ -102,6 +102,26 @@ object SyncWire {
     )
 
     @Serializable
+    data class Device(
+        val id: String,
+        val name: String,
+        val createdAt: Long,
+        val lastSeen: Long,
+        val revoked: Boolean,
+        val current: Boolean,
+    )
+
+    @Serializable
+    data class Devices(
+        val devices: List<Device>,
+    )
+
+    @Serializable
+    data class Revoked(
+        val revoked: String,
+    )
+
+    @Serializable
     data class Head(
         val head: Long,
     )

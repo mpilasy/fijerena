@@ -30,7 +30,6 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
-import org.njarasoa.fijerena.core.network.sync.DriveSettingsSyncManager
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -61,7 +60,6 @@ fun ColumnScope.ProviderSettingsSection(
     playlistType: String,
     coroutineScope: CoroutineScope,
     providerRepo: ProviderRepository,
-    syncManager: DriveSettingsSyncManager,
     onProviderSettingsChange: (ProviderSettings) -> Unit,
     onAutoResumeEnabledChange: (Boolean) -> Unit,
     onWatchHistorySizeChange: (String) -> Unit,
@@ -112,7 +110,6 @@ fun ColumnScope.ProviderSettingsSection(
                                 val newSettings = providerSettings.copy(autoResumeEnabled = enabled)
                                 providerRepo.updateProviderSettings(editId, newSettings)
                                 onProviderSettingsChange(newSettings)
-                                syncManager.syncProviderSettings(editId)
                             }
                         },
                     )
@@ -170,7 +167,6 @@ fun ColumnScope.ProviderSettingsSection(
                                         val newSettings = providerSettings.copy(watchHistorySize = size)
                                         providerRepo.updateProviderSettings(editId, newSettings)
                                         onProviderSettingsChange(newSettings)
-                                        syncManager.syncProviderSettings(editId)
                                     }
                                 }
                             },
@@ -235,7 +231,6 @@ fun ColumnScope.ProviderSettingsSection(
                                         val newSettings = providerSettings.copy(streamOutputFormat = format)
                                         providerRepo.updateProviderSettings(editId, newSettings)
                                         onProviderSettingsChange(newSettings)
-                                        syncManager.syncProviderSettings(editId)
                                     }
                                 },
                                 label = { Text(format) },
@@ -265,7 +260,6 @@ fun ColumnScope.ProviderSettingsSection(
                                         val newSettings = providerSettings.copy(playlistType = type)
                                         providerRepo.updateProviderSettings(editId, newSettings)
                                         onProviderSettingsChange(newSettings)
-                                        syncManager.syncProviderSettings(editId)
                                     }
                                 },
                                 label = { Text(type) },
@@ -363,7 +357,6 @@ fun ColumnScope.ProviderSettingsSection(
                                     val newSettings = providerSettings.copy(cachingEnabled = enabled)
                                     providerRepo.updateProviderSettings(editId, newSettings)
                                     onProviderSettingsChange(newSettings)
-                                    syncManager.syncProviderSettings(editId)
                                 }
                             },
                         )

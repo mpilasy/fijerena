@@ -578,7 +578,6 @@ The application uses several specialized SharedPreferences files for internal st
 | `epg_file_manager` | `migrated_to_sources_v1` | One-time flag: legacy single-EPG-file state has been migrated to `epg_source` rows. |
 | `epg_indexer_state` | `fts_stale` | Survives process death so an interrupted FTS rebuild is retried on next indexer run. |
 | `category_filters` | `{providerId}_{profileId}` | Category filters (`CategoryFilters` JSON) of one profile on one provider, via `CategoryFiltersStore`. No key = no filters. A new profile copies the creating profile's keys; provider and profile deletion remove theirs. |
-| `drive_sync_prefs` | `sync_enabled`, `last_sync` | Google Drive settings-sync toggle and last successful sync timestamp. |
 | `player_prefs` | `hints_dismissed` | Whether the player control discoverability hints have been dismissed (TV only). |
 | `provider_creds_{id}` | per-provider | (Encrypted) Passwords and sensitive tokens per provider, via `EncryptedSharedPreferences`. |
 | `provider_creds_{id}_profile_{profileId}` | per-provider, per-profile | (Encrypted) A non-Default profile's own Jellyfin login: `username`, `password`, `jellyfin_token`, `jellyfin_user_id`. The Default profile uses `provider_creds_{id}` and `providers.username`. Only Jellyfin logins are per profile. |

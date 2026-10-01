@@ -139,7 +139,6 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 | Navigation | Navigation Compose | 2.8.5 |
 | Coroutines | kotlinx.coroutines | 1.7.3 |
 | SMB Client | smbj (Hierynomus) | 0.13.0 |
-| Settings Sync | Google Drive API + Play Services Auth | v3-rev20241206 / 21.3.0 |
 
 `gradle/libs.versions.toml` is authoritative. The Compose BOM is deliberately pinned to 2025.06.x —
 see the comment in that file before raising it (`tv-foundation` alpha10 calls a prefetch API removed

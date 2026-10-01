@@ -11,6 +11,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.Response
 import okhttp3.WebSocket
@@ -49,6 +52,23 @@ class SyncManager private constructor(
     private val api = SyncApi()
     private val startedActivities = AtomicInteger(0)
 
+    /** What the sync settings screen shows. */
+    data class Status(
+        val linked: Boolean = false,
+        val serverUrl: String? = null,
+        val syncing: Boolean = false,
+        val lastSyncAt: Long = 0,
+        val lastError: String? = null,
+    )
+
+    private val _status = MutableStateFlow(Status())
+    val status: StateFlow<Status> = _status.asStateFlow()
+
+    private fun refreshStatus(syncing: Boolean = false) {
+        val link = store.link
+        _status.value = Status(link != null, link?.serverUrl, syncing, store.lastSyncAt, store.lastError)
+    }
+
     @Volatile private var foreground = false
 
     @Volatile private var socket: WebSocket? = null
@@ -82,6 +102,8 @@ class SyncManager private constructor(
         }
 
     fun start() {
+        // The store is encrypted prefs: read it off the main thread.
+        scope.launch { refreshStatus() }
         app.registerActivityLifecycleCallbacks(
             object : Application.ActivityLifecycleCallbacks {
                 override fun onActivityStarted(activity: Activity) {
@@ -121,6 +143,7 @@ class SyncManager private constructor(
 
     /** Linked or unlinked just now (settings, or the debug receiver): reconnect accordingly. */
     fun onLinkChanged() {
+        scope.launch { refreshStatus() }
         closeSocket()
         if (foreground && engine.isLinked) {
             openSocket()
@@ -162,6 +185,7 @@ class SyncManager private constructor(
     }
 
     private suspend fun runSync() {
+        refreshStatus(syncing = true)
         try {
             val outcome = engine.syncNow(listener) ?: return
             retryDelayMs = INITIAL_RETRY_MS
@@ -181,6 +205,8 @@ class SyncManager private constructor(
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Sync pass crashed", e)
+        } finally {
+            refreshStatus()
         }
     }
 

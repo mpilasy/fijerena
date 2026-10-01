@@ -522,6 +522,9 @@ fun MobileNavHost(
                     onCellularBuffers = {
                         navController.navigateOnce(Screen.CellularBufferSettings)
                     },
+                    onLiveSync = {
+                        navController.navigateOnce(Screen.SyncSettings)
+                    },
                     onProviderChanged = {
                         coroutineScope.launch {
                             val providerRepo = ProviderRepository(context.applicationContext)
@@ -549,6 +552,10 @@ fun MobileNavHost(
                         }
                     },
                 )
+            }
+
+            composable<Screen.SyncSettings> {
+                org.njarasoa.fijerena.feature.settings.MobileSyncSettingsScreen(onBack = { navController.navigateUp() })
             }
 
             // Cellular Buffer Settings Screen

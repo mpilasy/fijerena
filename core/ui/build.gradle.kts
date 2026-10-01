@@ -29,6 +29,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.zxing.core)
     // Core modules
     implementation(project(":core:network"))
     implementation(project(":core:player"))

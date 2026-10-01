@@ -340,6 +340,10 @@ fun TvNavHost(
                 }
 
                 // EPG Browser Screen
+                composable<Screen.SyncSettings> {
+                    org.njarasoa.fijerena.feature.settings.SyncSettingsScreen()
+                }
+
                 composable<Screen.EpgBrowser> {
                     TvEpgBrowserScreen(
                         onBack = { navController.navigateUp() },
@@ -737,6 +741,9 @@ fun TvNavHost(
                         onUiScaleChanged = onUiScaleChanged,
                         onManageProviders = {
                             navController.navigateOnce(Screen.ProviderSelection)
+                        },
+                        onLiveSync = {
+                            navController.navigateOnce(Screen.SyncSettings)
                         },
                         onProviderChanged = {
                             coroutineScope.launch {
