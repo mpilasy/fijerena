@@ -202,7 +202,7 @@ Provides full-text search over `epg_programme`.
 ---
 
 ## 3. Xtream Cache Database (`xtream_v2.db`)
-**Version:** 23
+**Version:** 24
 
 Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
 `watch_state` and `favorite_state` tables. (v10 added FTS4 search tables for streams/series; v11
@@ -218,7 +218,9 @@ re-fetching the whole list on every single open; v20 added `profileId` to the pr
 `watch_state` and `favorite_state`, rebuilding both tables and assigning every existing row to the
 `default` profile — see `docs/plans/20260929_live-sync-plan.md` → User profiles; v21 added
 `sync_tombstone` for live sync; v22 added `sync_outbox` and `sync_clock`, filled by triggers; v23 turned
-`sync_outbox` into `sync_version`.)
+`sync_outbox` into `sync_version`; v24 dropped the indexes on the stream and series `excluded` flags,
+which are no longer used — items follow their category's flag at query time, see
+`docs/plans/20261001_fast-profile-switch-plan.md`.)
 
 Every connection also gets `PRAGMA synchronous = NORMAL` and `PRAGMA journal_size_limit = 10485760`
 (10MB) set on open (added v18, no schema change) — NORMAL trades the fsync-per-transaction durability
@@ -239,7 +241,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `categoryName` | TEXT | Display name |
 | `parentId` | INTEGER | Parent category reference |
 | `contentHash` | INTEGER | For stale data detection |
-| `excluded` | INTEGER | Category exclusion toggle flag (added v11) |
+| `excluded` | INTEGER | Category exclusion flag for this device's active profile (added v11). Since v24 the only exclusion flag read: streams and series in an excluded category are hidden by the queries |
 
 **Indices:** `(providerId, type)`, `(providerId, type, excluded)`
 
@@ -269,14 +271,14 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `rating` | TEXT | Content rating |
 | `duration` | TEXT | Runtime |
 | `youtubeTrailer` | TEXT | YouTube video ID |
-| `excluded` | INTEGER | Exclusion toggle flag (added v11) |
+| `excluded` | INTEGER | Unused since v24 (visibility follows the category); kept because dropping a column needs SQLite 3.35 |
 | `contentRating` | TEXT | Age/content classification rating (added v12) |
 | `tmdbId` | TEXT | Sourced TMDB ID (added v12) |
 | `containerExtension` | TEXT | Extension (e.g. `mp4`, `mkv`) (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 | `posterPath` | TEXT | Sourced TMDB poster path (added v17) |
 
-**Indices:** `(providerId, type)`, `(categoryId, providerId)`, `(providerId, type, categoryId)`, `(providerId, type, categoryId, excluded)`, `(providerId, tmdbId)` (added v15, for TMDB sibling dedup)
+**Indices:** `(providerId, type)`, `(categoryId, providerId)`, `(providerId, type, categoryId)`, `(providerId, tmdbId)` (added v15, for TMDB sibling dedup). `(providerId, type, categoryId, excluded)` was dropped in v24
 
 ### Table: `xtream_series`
 | Column | Type | Description |
@@ -299,14 +301,14 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `episodeRunTime` | TEXT | Nominal episode runtime |
 | `backdropPath` | TEXT | Comma-separated backdrop URLs |
 | `contentHash` | INTEGER | For stale data detection |
-| `excluded` | INTEGER | Exclusion toggle flag (added v11) |
+| `excluded` | INTEGER | Unused since v24 (visibility follows the category); kept because dropping a column needs SQLite 3.35 |
 | `contentRating` | TEXT | Age/content classification rating (added v12) |
 | `tmdbId` | TEXT | Sourced TMDB ID (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 | `posterPath` | TEXT | Sourced TMDB poster path (added v17) |
 | `episodesFetchedAt` | INTEGER | Timestamp episodes were last fetched/persisted for this series; backs the 24-hour episode-list cache in `XtreamMediaProvider.getSeriesDetail` (added v19) |
 
-**Indices:** `(providerId)`, `(categoryId, providerId)`, `(providerId, categoryId, excluded)`, `(providerId, tmdbId)` (added v18, for the TMDB sibling-dedup joins below)
+**Indices:** `(providerId)`, `(categoryId, providerId)`, `(providerId, tmdbId)` (added v18, for the TMDB sibling-dedup joins below). `(providerId, categoryId, excluded)` was dropped in v24
 
 ### Table: `xtream_episodes`
 | Column | Type | Description |

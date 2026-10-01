@@ -11,7 +11,6 @@ import androidx.room.Index
         Index(value = ["categoryId", "providerId"]),
         // Composite index covering getStreamsByCategory query (providerId + type + categoryId)
         Index(value = ["providerId", "type", "categoryId"]),
-        Index(value = ["providerId", "type", "categoryId", "excluded"]),
         // Serves Phase 5 TMDB dedup lookups (see 20260828_watch-state-durable-storage-plan.md)
         Index(value = ["providerId", "tmdbId"]),
     ],
@@ -41,6 +40,8 @@ data class XtreamStreamEntity(
     val rating: String? = null,
     val duration: String? = null,
     val youtubeTrailer: String? = null,
+    // Unused since schema v24: streams follow their category's flag (see XtreamStreamDao).
+    // Dropping the column needs SQLite 3.35; minSdk 30 ships 3.28.
     val excluded: Boolean = false,
     // TMDB-derived / full-detail cache fields — populated once a detail screen fetch completes.
     val contentRating: String? = null,

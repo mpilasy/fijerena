@@ -3,21 +3,19 @@ package org.njarasoa.fijerena.core.network.xtream.manager
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.CategoryMatcher
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamSeriesDao
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
 
-/** Only categories whose flag changes are written — see docs/plans/20260930_profile-scoped-settings-plan.md. */
+/**
+ * Only categories carry the flag, and only those whose flag changes are written — see
+ * docs/plans/20261001_fast-profile-switch-plan.md.
+ */
 class XtreamCategoryExclusionSyncTest {
     private val categoryDao = mockk<XtreamCategoryDao>(relaxed = true)
-    private val streamDao = mockk<XtreamStreamDao>(relaxed = true)
-    private val seriesDao = mockk<XtreamSeriesDao>(relaxed = true)
     private val hideAdultAndGreek = CategoryFilters(rules = listOf(CategoryMatcher("Adult"), CategoryMatcher("Greek")))
 
     @Before
@@ -35,40 +33,21 @@ class XtreamCategoryExclusionSyncTest {
     }
 
     @Test
-    fun `writes only the categories whose flag changes, and only their streams and series`() =
-        runBlocking {
-            XtreamCategoryExclusionSync.recompute(categoryDao, streamDao, seriesDao, PROVIDER, CategoryFilters(rules = listOf(CategoryMatcher("Adult"))))
+    fun `writes only the categories whose flag changes`() {
+        XtreamCategoryExclusionSync.recompute(categoryDao, PROVIDER, CategoryFilters(rules = listOf(CategoryMatcher("Adult"))))
 
-            // Greek News stays visible; Greek Series becomes visible; Adult stays hidden.
-            verify(exactly = 0) { categoryDao.setExcluded(PROVIDER, XtreamCategoryEntity.TYPE_LIVE, any(), any()) }
-            verify(exactly = 0) { streamDao.setExcludedForCategories(any(), any(), any(), any()) }
-            verify { categoryDao.setExcluded(PROVIDER, XtreamCategoryEntity.TYPE_SERIES, listOf("9"), false) }
-            verify { seriesDao.setExcludedForCategories(PROVIDER, listOf("9"), false) }
-            verify(exactly = 0) { streamDao.syncExcludedFromCategories(any(), any()) }
-            verify(exactly = 0) { seriesDao.syncExcludedFromCategories(any()) }
-        }
+        // Greek News stays visible; Greek Series becomes visible; Adult stays hidden.
+        verify(exactly = 0) { categoryDao.setExcluded(PROVIDER, XtreamCategoryEntity.TYPE_LIVE, any(), any()) }
+        verify { categoryDao.setExcluded(PROVIDER, XtreamCategoryEntity.TYPE_SERIES, listOf("9"), false) }
+    }
 
     @Test
-    fun `a newly hidden category hides its streams`() =
-        runBlocking {
-            XtreamCategoryExclusionSync.recompute(categoryDao, streamDao, seriesDao, PROVIDER, hideAdultAndGreek)
+    fun `a newly hidden category is flagged`() {
+        XtreamCategoryExclusionSync.recompute(categoryDao, PROVIDER, hideAdultAndGreek)
 
-            verify { categoryDao.setExcluded(PROVIDER, XtreamCategoryEntity.TYPE_LIVE, listOf("2"), true) }
-            verify { streamDao.setExcludedForCategories(PROVIDER, XtreamCategoryEntity.TYPE_LIVE, listOf("2"), true) }
-            verify(exactly = 0) { seriesDao.setExcludedForCategories(any(), any(), any()) }
-        }
-
-    @Test
-    fun `full stream sync re-derives every stream and series flag`() =
-        runBlocking {
-            XtreamCategoryExclusionSync.recompute(categoryDao, streamDao, seriesDao, PROVIDER, hideAdultAndGreek, fullStreamSync = true)
-
-            verify { categoryDao.setExcluded(PROVIDER, XtreamCategoryEntity.TYPE_LIVE, listOf("2"), true) }
-            verify(exactly = 0) { streamDao.setExcludedForCategories(any(), any(), any(), any()) }
-            verify { streamDao.syncExcludedFromCategories(PROVIDER, XtreamCategoryEntity.TYPE_LIVE) }
-            verify { streamDao.syncExcludedFromCategories(PROVIDER, XtreamCategoryEntity.TYPE_VOD) }
-            verify { seriesDao.syncExcludedFromCategories(PROVIDER) }
-        }
+        verify { categoryDao.setExcluded(PROVIDER, XtreamCategoryEntity.TYPE_LIVE, listOf("2"), true) }
+        verify(exactly = 0) { categoryDao.setExcluded(PROVIDER, XtreamCategoryEntity.TYPE_SERIES, any(), any()) }
+    }
 
     private fun category(
         id: String,

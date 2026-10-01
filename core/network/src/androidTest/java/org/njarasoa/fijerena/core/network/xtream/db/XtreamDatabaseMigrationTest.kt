@@ -91,6 +91,11 @@ class XtreamDatabaseMigrationTest {
         seedDb.close()
     }
 
+    private fun stream(
+        id: Int,
+        categoryId: String,
+    ) = XtreamStreamEntity(id, 42L, XtreamStreamEntity.TYPE_LIVE, id, "Channel $id", "live", categoryId = categoryId)
+
     private fun indexSql(
         db: androidx.sqlite.db.SupportSQLiteDatabase,
         name: String,
@@ -153,9 +158,9 @@ class XtreamDatabaseMigrationTest {
         // No fallbackToDestructiveMigration: a schema mismatch must throw, not silently wipe.
         val migratedDb =
             Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_19_20, XtreamDatabase.MIGRATION_20_21, XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23)
+                .addMigrations(XtreamDatabase.MIGRATION_19_20, XtreamDatabase.MIGRATION_20_21, XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23, XtreamDatabase.MIGRATION_23_24)
                 .build()
-        assertEquals(23, migratedDb.openHelper.writableDatabase.version)
+        assertEquals(24, migratedDb.openHelper.writableDatabase.version)
 
         val default = ProfileEntity.DEFAULT_ID
         runBlocking {
@@ -192,9 +197,9 @@ class XtreamDatabaseMigrationTest {
 
         val migratedDb =
             Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_20_21, XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23)
+                .addMigrations(XtreamDatabase.MIGRATION_20_21, XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23, XtreamDatabase.MIGRATION_23_24)
                 .build()
-        assertEquals(23, migratedDb.openHelper.writableDatabase.version)
+        assertEquals(24, migratedDb.openHelper.writableDatabase.version)
 
         val dao = migratedDb.favoriteStateDao()
         assertEquals(listOf("m1"), dao.getAll(42L, ProfileEntity.DEFAULT_ID).map { it.itemId })
@@ -219,9 +224,9 @@ class XtreamDatabaseMigrationTest {
 
         val migratedDb =
             Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23)
+                .addMigrations(XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23, XtreamDatabase.MIGRATION_23_24)
                 .build()
-        assertEquals(23, migratedDb.openHelper.writableDatabase.version)
+        assertEquals(24, migratedDb.openHelper.writableDatabase.version)
         runBlocking { assertTrue(migratedDb.syncVersionDao().getPending(10).isEmpty()) }
         migratedDb.close()
     }
@@ -244,12 +249,47 @@ class XtreamDatabaseMigrationTest {
 
         val migratedDb =
             Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_22_23)
+                .addMigrations(XtreamDatabase.MIGRATION_22_23, XtreamDatabase.MIGRATION_23_24)
                 .build()
-        assertEquals(23, migratedDb.openHelper.writableDatabase.version)
+        assertEquals(24, migratedDb.openHelper.writableDatabase.version)
         val version = runBlocking { migratedDb.syncVersionDao().getPending(10) }.single()
         assertEquals(123L, version.hlc)
         assertTrue(version.pending)
+        migratedDb.close()
+    }
+
+    /**
+     * [XtreamDatabase.MIGRATION_23_24] drops the two indexes on the item-level `excluded` flags
+     * (streams and series now follow their category's flag), keeping every row.
+     */
+    @Test
+    fun migration23To24_dropsItemExclusionIndexesKeepingRows() {
+        val seedDb = Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName).build()
+        seedDb.categoryDao().insertAll(listOf(XtreamCategoryEntity("c1", 42L, "News", type = XtreamCategoryEntity.TYPE_LIVE)))
+        seedDb.streamDao().insertAll(listOf(stream(1, "c1")))
+        val rawDb = seedDb.openHelper.writableDatabase
+        rawDb.execSQL(
+            "CREATE INDEX `index_xtream_streams_providerId_type_categoryId_excluded` " +
+                "ON `xtream_streams` (`providerId`, `type`, `categoryId`, `excluded`)",
+        )
+        rawDb.execSQL(
+            "CREATE INDEX `index_xtream_series_providerId_categoryId_excluded` " +
+                "ON `xtream_series` (`providerId`, `categoryId`, `excluded`)",
+        )
+        rawDb.execSQL("PRAGMA user_version = 23")
+        seedDb.close()
+
+        val migratedDb =
+            Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
+                .addMigrations(XtreamDatabase.MIGRATION_23_24)
+                .build()
+        val db = migratedDb.openHelper.writableDatabase
+        assertEquals(24, db.version)
+        db.query(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN " +
+                "('index_xtream_streams_providerId_type_categoryId_excluded', 'index_xtream_series_providerId_categoryId_excluded')",
+        ).use { assertEquals(0, it.count) }
+        assertEquals(listOf(1), migratedDb.streamDao().getAllStreams(42L, XtreamStreamEntity.TYPE_LIVE).map { it.streamId })
         migratedDb.close()
     }
 }

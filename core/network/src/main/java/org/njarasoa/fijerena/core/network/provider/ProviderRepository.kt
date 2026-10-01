@@ -563,8 +563,6 @@ class ProviderRepository(
                 val database = XtreamDatabase.getInstance(context)
                 org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
                     database.categoryDao(),
-                    database.streamDao(),
-                    database.seriesDao(),
                     providerId,
                     filters,
                 )
@@ -626,8 +624,6 @@ class ProviderRepository(
                 val database = org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase.getInstance(context)
                 org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
                     database.categoryDao(),
-                    database.streamDao(),
-                    database.seriesDao(),
                     providerId,
                     settings.categoryFilters,
                 )
@@ -666,8 +662,6 @@ class ProviderRepository(
                 val database = XtreamDatabase.getInstance(context)
                 org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
                     database.categoryDao(),
-                    database.streamDao(),
-                    database.seriesDao(),
                     entity.id,
                     newFilters,
                 )

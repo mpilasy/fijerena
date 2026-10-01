@@ -6,16 +6,23 @@ import androidx.room.MapColumn
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
+/**
+ * A stream is hidden by category filters when its category is: only `xtream_categories` carries
+ * the `excluded` flag (see XtreamCategoryExclusionSync). Queries that hide them filter with
+ * `categoryId NOT IN (… excluded categories …)`, looked up once per query — measured within ~10%
+ * of the old per-row flag on a 180k-movie catalogue. `xtream_streams.excluded` is unused since
+ * schema v24. See docs/plans/20261001_fast-profile-switch-plan.md.
+ */
 @Dao
 interface XtreamStreamDao {
-    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId AND excluded = 0 ORDER BY num ASC")
+    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1) ORDER BY num ASC")
     fun getStreamsByCategory(
         providerId: Long,
         type: String,
         categoryId: String,
     ): List<XtreamStreamEntity>
 
-    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND excluded = 0 ORDER BY num ASC")
+    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1) ORDER BY num ASC")
     fun getAllStreams(
         providerId: Long,
         type: String,
@@ -26,21 +33,6 @@ interface XtreamStreamDao {
         providerId: Long,
         type: String,
     ): List<XtreamStreamEntity>
-
-    @Query("UPDATE xtream_streams SET excluded = COALESCE((SELECT c.excluded FROM xtream_categories c WHERE c.categoryId = xtream_streams.categoryId AND c.providerId = xtream_streams.providerId AND c.type = :type), 0) WHERE providerId = :providerId AND type = :type")
-    fun syncExcludedFromCategories(
-        providerId: Long,
-        type: String,
-    )
-
-    /** Sets [excluded] on the streams of [categoryIds] only — see XtreamCategoryExclusionSync. */
-    @Query("UPDATE xtream_streams SET excluded = :excluded WHERE providerId = :providerId AND type = :type AND categoryId IN (:categoryIds)")
-    fun setExcludedForCategories(
-        providerId: Long,
-        type: String,
-        categoryIds: List<String>,
-        excluded: Boolean,
-    )
 
     @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND streamId = :streamId LIMIT 1")
     fun getStreamById(
@@ -56,7 +48,7 @@ interface XtreamStreamDao {
      */
     @Query(
         "SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type " +
-            "AND tmdbId = :tmdbId AND streamId != :excludeStreamId AND excluded = 0 ORDER BY name ASC",
+            "AND tmdbId = :tmdbId AND streamId != :excludeStreamId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1) ORDER BY name ASC",
     )
     fun getByTmdbId(
         providerId: Long,
@@ -91,7 +83,8 @@ interface XtreamStreamDao {
             "AND c.tmdbId IS NOT NULL " +
             "GROUP BY c.tmdbId" +
             ") done ON s.tmdbId = done.tmdbId " +
-            "WHERE s.providerId = :providerId AND s.type = :streamType AND s.excluded = 0",
+            "WHERE s.providerId = :providerId AND s.type = :streamType " +
+            "AND s.categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :streamType AND excluded = 1)",
     )
     suspend fun getSiblingCompletedStreamIds(
         providerId: Long,
@@ -187,7 +180,7 @@ interface XtreamStreamDao {
             SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
         )
         AND s.providerId = :providerId AND s.type = :type
-        AND (s.excluded = 0 OR :includeExcluded = 1)
+        AND (:includeExcluded = 1 OR s.categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1))
         LIMIT 200
     """)
     fun searchByFts(
@@ -203,7 +196,7 @@ interface XtreamStreamDao {
             SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
         )
         AND s.providerId = :providerId AND s.type = :type
-        AND s.excluded = 1
+        AND s.categoryId IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1)
     """)
     fun countExcludedByFts(
         providerId: Long,

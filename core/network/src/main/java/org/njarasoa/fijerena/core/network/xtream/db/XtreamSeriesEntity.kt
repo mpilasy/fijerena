@@ -9,7 +9,6 @@ import androidx.room.Index
     indices = [
         Index(value = ["providerId"]),
         Index(value = ["categoryId", "providerId"]),
-        Index(value = ["providerId", "categoryId", "excluded"]),
         // Backs XtreamSeriesDao.getByTmdbId() and the sibling-series lookups in
         // XtreamEpisodeDao (getSiblingCompletedEpisodeIds/getSiblingCompletedCountsBySeries/
         // clearGroupCompletion) — none of the existing indices cover tmdbId at all.
@@ -35,6 +34,7 @@ data class XtreamSeriesEntity(
     val categoryId: String,
     val backdropPath: String? = null, // Comma separated URLs
     val contentHash: Int = 0,
+    // Unused since schema v24: series follow their category's flag (see XtreamSeriesDao).
     val excluded: Boolean = false,
     // TMDB-derived / full-detail cache fields — populated once a detail screen fetch completes.
     val contentRating: String? = null,

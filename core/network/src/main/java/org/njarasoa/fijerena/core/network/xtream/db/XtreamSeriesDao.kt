@@ -6,27 +6,17 @@ import androidx.room.MapColumn
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
+/** Series follow their category's `excluded` flag, as streams do — see [XtreamStreamDao]. */
 @Dao
 interface XtreamSeriesDao {
-    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId AND excluded = 0 ORDER BY name ASC")
+    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1) ORDER BY name ASC")
     fun getSeriesByCategory(
         providerId: Long,
         categoryId: String,
     ): List<XtreamSeriesEntity>
 
-    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND excluded = 0 ORDER BY name ASC")
+    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1) ORDER BY name ASC")
     fun getAllSeries(providerId: Long): List<XtreamSeriesEntity>
-
-    @Query("UPDATE xtream_series SET excluded = COALESCE((SELECT c.excluded FROM xtream_categories c WHERE c.categoryId = xtream_series.categoryId AND c.providerId = xtream_series.providerId AND c.type = 'SERIES'), 0) WHERE providerId = :providerId")
-    fun syncExcludedFromCategories(providerId: Long)
-
-    /** Sets [excluded] on the series of [categoryIds] only — see XtreamCategoryExclusionSync. */
-    @Query("UPDATE xtream_series SET excluded = :excluded WHERE providerId = :providerId AND categoryId IN (:categoryIds)")
-    fun setExcludedForCategories(
-        providerId: Long,
-        categoryIds: List<String>,
-        excluded: Boolean,
-    )
 
     @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND seriesId = :seriesId LIMIT 1")
     fun getSeriesById(
@@ -37,7 +27,7 @@ interface XtreamSeriesDao {
     /** As [XtreamStreamDao.getByTmdbId], for series. */
     @Query(
         "SELECT * FROM xtream_series WHERE providerId = :providerId " +
-            "AND tmdbId = :tmdbId AND seriesId != :excludeSeriesId AND excluded = 0 ORDER BY name ASC",
+            "AND tmdbId = :tmdbId AND seriesId != :excludeSeriesId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1) ORDER BY name ASC",
     )
     fun getByTmdbId(
         providerId: Long,
@@ -91,7 +81,7 @@ interface XtreamSeriesDao {
             SELECT docid FROM xtream_series_fts WHERE xtream_series_fts MATCH :query
         )
         AND s.providerId = :providerId
-        AND (s.excluded = 0 OR :includeExcluded = 1)
+        AND (:includeExcluded = 1 OR s.categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1))
         LIMIT 200
     """)
     fun searchByFts(
@@ -106,7 +96,7 @@ interface XtreamSeriesDao {
             SELECT docid FROM xtream_series_fts WHERE xtream_series_fts MATCH :query
         )
         AND s.providerId = :providerId
-        AND s.excluded = 1
+        AND s.categoryId IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1)
     """)
     fun countExcludedByFts(
         providerId: Long,

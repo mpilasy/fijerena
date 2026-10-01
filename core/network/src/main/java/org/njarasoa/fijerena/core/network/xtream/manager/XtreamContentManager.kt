@@ -263,7 +263,6 @@ class XtreamContentManager(
                             rating = it.rating.asString(),
                             duration = it.duration.asString(),
                             youtubeTrailer = it.youtubeTrailer,
-                            excluded = it.categoryId in excludedCategoryIds,
                         )
                     },
                 )
@@ -300,9 +299,6 @@ class XtreamContentManager(
 
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
                 val streams = service.getStreams(categoryId)
-                val categoryExcluded =
-                    categoryDao.getAllCategoriesIncludingExcluded(providerId, XtreamCategoryEntity.TYPE_LIVE)
-                        .firstOrNull { it.categoryId == categoryId }?.excluded ?: false
 
                 streamDao.insertAll(
                     streams.map {
@@ -329,7 +325,6 @@ class XtreamContentManager(
                             rating = it.rating.asString(),
                             duration = it.duration.asString(),
                             youtubeTrailer = it.youtubeTrailer,
-                            excluded = categoryExcluded,
                         )
                     },
                 )
@@ -366,9 +361,6 @@ class XtreamContentManager(
 
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
                 val streams = service.getVodStreams(categoryId)
-                val categoryExcluded =
-                    categoryDao.getAllCategoriesIncludingExcluded(providerId, XtreamCategoryEntity.TYPE_VOD)
-                        .firstOrNull { it.categoryId == categoryId }?.excluded ?: false
 
                 streamDao.insertAll(
                     streams.map {
@@ -395,7 +387,6 @@ class XtreamContentManager(
                             rating = it.rating.asString(),
                             duration = it.duration.asString(),
                             youtubeTrailer = it.youtubeTrailer,
-                            excluded = categoryExcluded,
                             tmdbId = it.tmdb.asString().normalizeTmdbId(),
                         )
                     },
@@ -432,9 +423,6 @@ class XtreamContentManager(
 
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated. Please login first.")
                 val seriesList = service.getSeries(categoryId)
-                val categoryExcluded =
-                    categoryDao.getAllCategoriesIncludingExcluded(providerId, XtreamCategoryEntity.TYPE_SERIES)
-                        .firstOrNull { it.categoryId == categoryId }?.excluded ?: false
 
                 seriesDao.insertAll(
                     seriesList.map {
@@ -455,7 +443,6 @@ class XtreamContentManager(
                             youtubeTrailer = it.youtubeTrailer,
                             episodeRunTime = it.episodeRunTime.asString(),
                             categoryId = it.categoryId,
-                            excluded = categoryExcluded,
                             tmdbId = it.tmdb.asString().normalizeTmdbId(),
                         )
                     },
@@ -599,22 +586,8 @@ class XtreamContentManager(
                             var inserted = 0
                             var updated = 0
 
-                            val filters = categoryFilters()
-                            val allowedCategoryIds: Set<String>? =
-                                if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) {
-                                    null
-                                } else {
-                                    val categories =
-                                        when (type) {
-                                            XtreamStreamEntity.TYPE_LIVE -> service.getCategories()
-                                            XtreamStreamEntity.TYPE_VOD -> service.getVodCategories()
-                                            else -> emptyList()
-                                        }
-                                    categories.filter { filters.shouldShowCategory(it.categoryName) }.map { it.categoryId }.toSet()
-                                }
 
                             val onStreamItem: suspend (XtreamStream) -> Unit = { it ->
-                                val itemExcluded = allowedCategoryIds != null && it.categoryId !in allowedCategoryIds
                                 val tmdbId = it.tmdb.asString().normalizeTmdbId()
                                 val contentHash =
                                     XtreamStreamEntity.computeHash(
@@ -672,7 +645,6 @@ class XtreamContentManager(
                                             duration = it.duration.asString(),
                                             youtubeTrailer = it.youtubeTrailer,
                                             contentHash = contentHash,
-                                            excluded = itemExcluded,
                                             tmdbId = tmdbId,
                                         ),
                                     )
@@ -748,19 +720,8 @@ class XtreamContentManager(
                             var inserted = 0
                             var updated = 0
 
-                            val filters = categoryFilters()
-                            val allowedCategoryIds: Set<String>? =
-                                if (filters.rules.isEmpty() && filters.allowedScripts.isEmpty()) {
-                                    null
-                                } else {
-                                    service.getSeriesCategories()
-                                        .filter { filters.shouldShowCategory(it.categoryName) }
-                                        .map { it.categoryId }
-                                        .toSet()
-                                }
 
                             service.getSeriesStreaming(null) { it ->
-                                val itemExcluded = allowedCategoryIds != null && it.categoryId !in allowedCategoryIds
                                 val tmdbId = it.tmdb.asString().normalizeTmdbId()
                                 val contentHash =
                                     XtreamSeriesEntity.computeHash(
@@ -807,7 +768,6 @@ class XtreamContentManager(
                                             categoryId = it.categoryId,
                                             backdropPath = it.backdropPath?.joinToString(","),
                                             contentHash = contentHash,
-                                            excluded = itemExcluded,
                                             tmdbId = tmdbId,
                                         ),
                                     )
@@ -1234,7 +1194,7 @@ class XtreamContentManager(
         }
 
     suspend fun recomputeExclusions() = withContext(Dispatchers.IO) {
-        XtreamCategoryExclusionSync.recompute(categoryDao, streamDao, seriesDao, providerId, categoryFilters(), fullStreamSync = true)
+        XtreamCategoryExclusionSync.recompute(categoryDao, providerId, categoryFilters())
     }
 
     /** Total category count for [type], including excluded ones — for "X of Y" style UI counts. */
