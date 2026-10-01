@@ -16,8 +16,13 @@ data class ContinueWatchingItem(
     val contentType: String,
     val categoryId: String,
     val thumbnailUrl: String?,
-    /** 0f..1f, always inside the resumable band — never 0 (not started) or 1 (finished). */
+    /** 0f..1f, inside the resumable band — never 1 (finished); 0 only for an [upNext] card. */
     val progress: Float,
     val remainingMs: Long,
     val target: BrowseTarget,
+    /**
+     * A show's next episode to start ([subtitle] is its title), not one to resume: the shelf shows
+     * "Up next" instead of a progress bar and time remaining.
+     */
+    val upNext: Boolean = false,
 )

@@ -32,6 +32,18 @@ class FakeXtreamEpisodeDao : XtreamEpisodeDao {
 
     override fun countEpisodes(providerId: Long): Int = 0
 
+    override suspend fun getEpisode(
+        providerId: Long,
+        episodeId: String,
+    ): XtreamEpisodeEntity? = null
+
+    override suspend fun getNextEpisode(
+        providerId: Long,
+        seriesId: Int,
+        season: Int,
+        episodeNum: Int,
+    ): XtreamEpisodeEntity? = null
+
     override suspend fun getSeriesIdForEpisode(
         providerId: Long,
         episodeId: String,

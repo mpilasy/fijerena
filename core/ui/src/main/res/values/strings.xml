@@ -397,6 +397,7 @@
     <string name="series_continue_watching_badge">Continue Watching</string>
     <string name="series_present">ongoing</string>
     <string name="series_next_up_title">Next Up</string>
+    <string name="continue_watching_up_next">Up next</string>
     <string name="series_remaining_format">%1$s remaining</string>
     <string name="content_watched_badge">Watched</string>
     <string name="content_untitled">Untitled</string>

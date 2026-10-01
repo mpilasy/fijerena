@@ -53,6 +53,29 @@ interface XtreamEpisodeDao {
      * `getSeriesCompletedCounts`'s `seriesId IS NOT NULL` filter would silently drop it from the
      * series' progress rollup.
      */
+    @Query("SELECT * FROM xtream_episodes WHERE providerId = :providerId AND id = :episodeId LIMIT 1")
+    suspend fun getEpisode(
+        providerId: Long,
+        episodeId: String,
+    ): XtreamEpisodeEntity?
+
+    /**
+     * The episode after ([season], [episodeNum]) in [seriesId], in season then episode order — for
+     * Continue Watching's "Up next" card. A missing season counts as 0, as in [getEpisodes]'s
+     * ordering. Null after the last episode, or when the series' episodes aren't cached.
+     */
+    @Query(
+        "SELECT * FROM xtream_episodes WHERE providerId = :providerId AND seriesId = :seriesId " +
+            "AND (COALESCE(season, 0) > :season OR (COALESCE(season, 0) = :season AND episodeNum > :episodeNum)) " +
+            "ORDER BY COALESCE(season, 0) ASC, episodeNum ASC LIMIT 1",
+    )
+    suspend fun getNextEpisode(
+        providerId: Long,
+        seriesId: Int,
+        season: Int,
+        episodeNum: Int,
+    ): XtreamEpisodeEntity?
+
     @Query("SELECT seriesId FROM xtream_episodes WHERE providerId = :providerId AND id = :episodeId LIMIT 1")
     suspend fun getSeriesIdForEpisode(
         providerId: Long,

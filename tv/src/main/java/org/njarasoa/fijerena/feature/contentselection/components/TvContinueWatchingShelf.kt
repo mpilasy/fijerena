@@ -5,6 +5,7 @@ package org.njarasoa.fijerena.feature.contentselection.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -115,12 +116,17 @@ private fun TvContinueWatchingCard(
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f),
             )
-            LinearProgressIndicator(
-                progress = { item.progress },
-                modifier = Modifier.fillMaxWidth().height(TvDimensions.resumeBarHeight),
-                color = CinemaAccent,
-                trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
-            )
+            if (item.upNext) {
+                // Nothing watched of it yet: no bar, but its height, so cards in the row line up.
+                Spacer(modifier = Modifier.height(TvDimensions.resumeBarHeight))
+            } else {
+                LinearProgressIndicator(
+                    progress = { item.progress },
+                    modifier = Modifier.fillMaxWidth().height(TvDimensions.resumeBarHeight),
+                    color = CinemaAccent,
+                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
+                )
+            }
             Column(modifier = Modifier.padding(Spacing.sm)) {
                 Text(
                     text = item.name,
@@ -129,8 +135,14 @@ private fun TvContinueWatchingCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val remainingLabel = stringResource(R.string.series_remaining_format, formatDuration((item.remainingMs / 1000).toString()))
-                val subtitleLine = item.subtitle?.let { "$it • $remainingLabel" } ?: remainingLabel
+                val subtitleLine =
+                    if (item.upNext) {
+                        val upNext = stringResource(R.string.continue_watching_up_next)
+                        item.subtitle?.let { "$upNext • $it" } ?: upNext
+                    } else {
+                        val remainingLabel = stringResource(R.string.series_remaining_format, formatDuration((item.remainingMs / 1000).toString()))
+                        item.subtitle?.let { "$it • $remainingLabel" } ?: remainingLabel
+                    }
                 Text(
                     text = subtitleLine,
                     style = MaterialTheme.typography.bodySmall,
