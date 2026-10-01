@@ -24,7 +24,9 @@ import org.njarasoa.fijerena.core.network.sync.SyncEngine
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Runs live sync while the app is in use — see `docs/plans/20260929_live-sync-plan.md` → Flow.
@@ -51,7 +53,13 @@ class SyncManager private constructor(
 
     @Volatile private var socket: WebSocket? = null
     private var socketJob: Job? = null
-    private var syncJob: Job? = null
+
+    /** A pass waiting for its delay; replaced by each new request. Never the pass that is running. */
+    private var scheduled: Job? = null
+    private val passRunning = AtomicBoolean(false)
+
+    /** Something asked for a pass while one was running: run another when it ends. */
+    @Volatile private var passAgain = false
     private var retryDelayMs = INITIAL_RETRY_MS
 
     private val listener =
@@ -120,16 +128,36 @@ class SyncManager private constructor(
         }
     }
 
-    /** A sync pass as soon as possible — or after [delayMs], merging with any already scheduled. */
+    /**
+     * A sync pass as soon as possible — or after [delayMs], merging with any request still waiting.
+     * A pass already running is never cancelled (its own writes count as local changes); it runs
+     * once more when it ends instead.
+     */
     fun requestSync(delayMs: Long = 0) {
         if (!engine.isLinked) return
         synchronized(this) {
-            syncJob?.cancel()
-            syncJob =
+            scheduled?.cancel()
+            scheduled =
                 scope.launch {
                     delay(delayMs)
-                    runSync()
+                    // Its own job, so that cancelling the next schedule can't reach it.
+                    scope.launch { runPasses() }
                 }
+        }
+    }
+
+    private suspend fun runPasses() {
+        if (!passRunning.compareAndSet(false, true)) {
+            passAgain = true
+            return
+        }
+        try {
+            do {
+                passAgain = false
+                runSync()
+            } while (passAgain)
+        } finally {
+            passRunning.set(false)
         }
     }
 
@@ -149,6 +177,8 @@ class SyncManager private constructor(
                 retryDelayMs = (retryDelayMs * 2).coerceAtMost(MAX_RETRY_MS)
                 requestSync(wait)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Sync pass crashed", e)
         }
