@@ -63,7 +63,9 @@ object ProviderSyncRunner {
         var attempt = 1
         while (true) {
             try {
-                val mediaProvider = MediaProviderFactory.create(provider, context, password)
+                // A Jellyfin provider opens its encrypted session prefs here (Keystore) — keep it off Main,
+                // which is where ProviderSyncManager's scope runs this.
+                val mediaProvider = withContext(Dispatchers.IO) { MediaProviderFactory.create(provider, context, password) }
                 if (mediaProvider !is XtreamMediaProvider) return Outcome.Success()
 
                 if (!mediaProvider.isConnected()) {
