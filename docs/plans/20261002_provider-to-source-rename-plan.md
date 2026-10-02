@@ -1,6 +1,6 @@
 # Rename "Provider" to "Source" in the UI Plan
 
-**Status:** Not started. Decisions taken 2026-10-02 (all recommendations accepted, see below).
+**Status:** Phase 1 done (2026-10-02); Phase 2 in progress. Decisions taken 2026-10-02 (all recommendations accepted, see below).
 
 The app calls everything it plays from a "provider". That word sounds like a paid company, but
 the app's providers include Xtream services, M3U playlists, the user's own Jellyfin server, SMB
@@ -209,6 +209,15 @@ One decision gate, then two commits so the EPG rename lands before "Source" is r
 
 If the user prefers, do both in one commit; do phase 1 edits before phase 2 so a search for
 "Source" is never ambiguous during the edit.
+
+**Phase 1 done (2026-10-02).** 25 English, 25 French and 22 Malagasy string values now say
+"guide source" ("source de guide", "loharanon'ny fitarihana"); the Malagasy pass also translated
+the 11 that were still English, and moved the 3 that already used "loharano" for guide sources
+off it, so "loharano" is free for Phase 2. `docs/FEATURES.md` says "guide source(s)" where it
+meant the user-facing EPG sources; `docs/epg_guide.md` is technical and keeps "source". Left as
+is: Malagasy "fantsakana" where it means a channel or stream. Checked: `:tv` builds and the TV
+EPG management screen reads "Add Guide Source", "… 3 guide sources in …". French and Malagasy
+were reviewed as text only, not on screen.
 
 ### Check step
 

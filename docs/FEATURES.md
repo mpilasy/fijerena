@@ -122,7 +122,7 @@ Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 
 Settings → Export Settings / Import Settings.
 
-**Exported:** all provider configs (name, URL, username, type, config JSON, per-provider settings), all EPG source URLs, per-provider favorites (item ID, name, category, content type), and global AppSettings (theme, UI scale, the active profile's dev mode, EPG auto-refresh, cellular buffer multipliers).
+**Exported:** all provider configs (name, URL, username, type, config JSON, per-provider settings), all guide source URLs, per-provider favorites (item ID, name, category, content type), and global AppSettings (theme, UI scale, the active profile's dev mode, EPG auto-refresh, cellular buffer multipliers).
 
 **Not exported:** passwords (EncryptedSharedPreferences), cache, EPG programme data.
 
@@ -139,14 +139,14 @@ A custom, manual dependency injection container (`AppContainer`) provides single
 ### Asynchronous UI State
 All ViewModels (e.g., `CategoryViewModel`, `SearchViewModel`, `EpgViewModel`) initialize their repository dependencies asynchronously. This completely eliminates UI thread blocking (`runBlocking`) during the crucial composition phase, ensuring the app remains perfectly smooth and responsive on constrained TV hardware (like older Fire TV sticks or Sony Bravia TVs) during startup or intensive search operations.
 
-**Selective import:** On import, a "Select What to Import" dialog presents checkboxes for each section — General Settings, Providers, EPG Sources, Favorites. Only checked sections are imported.
+**Selective import:** On import, a "Select What to Import" dialog presents checkboxes for each section — General Settings, Providers, Guide sources, Favorites. Only checked sections are imported.
 
 **Import conflict resolution:** when an imported provider name matches an existing one, a dialog offers:
 - **Overwrite** — update URL, username, type, config, and per-provider settings in place
 - **Duplicate** — add as a new provider with `(imported)` suffix
 - **Skip** — leave the existing entry unchanged
 
-EPG sources are merged by URL; duplicates are skipped silently. Favorites are merged with existing ones; duplicates (by item ID) are skipped.
+Guide sources are merged by URL; duplicates are skipped silently. Favorites are merged with existing ones; duplicates (by item ID) are skipped.
 
 ---
 
@@ -281,7 +281,7 @@ Favorites and Last Watched/Continue Watching persist durably in SQLite via Room 
 "Who's watching?" picker at launch (and from the header avatar). Each profile has its own
 favourites, watch history, search history, category filters per provider, dev-mode switch,
 "Play next episode automatically" switch and Jellyfin login;
-providers, EPG sources and other settings are shared. Which profile is in use is per device.
+providers, guide sources and other settings are shared. Which profile is in use is per device.
 Each profile also remembers the provider it last picked (or added), on every device: switching to
 a profile moves the device to that provider. A profile that hasn't picked one yet, or whose
 provider was deleted, stays on the device's current provider. Another device's pick never moves a
@@ -294,7 +294,7 @@ series follow their category at query time (see `docs/plans/20261001_fast-profil
 
 ## Live Sync
 
-Settings → Live sync. Keeps profiles, providers, EPG sources, favourites, watch progress, category
+Settings → Live sync. Keeps profiles, providers, guide sources, favourites, watch progress, category
 filters and selected settings the same on every device of a group, through a sync server the user
 runs (Cloudflare Worker or self-hosted Docker image, `server/`). Everything is encrypted on the
 device; the server sees only keys and ciphertext. Off on a device until it is set up there.
@@ -345,7 +345,7 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 
 - **Payload size tracking:** API response sizes shown in category grid
 - **EPG DB stats:** programme and channel counts in EPG Browser header
-- **Source labels:** EPG source name shown on each airing in EPG Browser
+- **Source labels:** guide source name shown on each airing in EPG Browser
 - **Cellular Buffer Settings:** multiplier sliders (0.5×–3.0×) for Live and VOD profiles (mobile)
 - **Diagnostics:** the on-device crash log and Android's record of why the app last closed (ANR, crash, low-memory kill), newest first; Share on mobile. See `docs/RUN_GUIDE.md` → Crash log and Diagnostics
 
@@ -360,7 +360,7 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 | Manage Providers | CRUD for all providers; set active |
 | Theme | Select from 4 dark themes |
 | Manage EPG Data | Add/edit/delete XMLTV sources, trigger refresh |
-| Export Settings | Save providers + EPG sources + global config to JSON |
+| Export Settings | Save providers + guide sources + global config to JSON |
 | Import Settings | Load JSON; conflict dialog for name clashes |
 | Cache Management | View size breakdown; clear per content type or all |
 | Shrink Database | Purges orphaned catalog rows from deleted providers and compacts `xtream_v2.db` with WAL truncation |

@@ -29,7 +29,7 @@
     <string name="settings_export_item_added_format">%1$d ajouté(s)</string>
     <string name="settings_export_item_overwritten_format">%1$d écrasé(s)</string>
     <string name="settings_export_item_skipped_format">%1$d ignoré(s)</string>
-    <string name="settings_export_summary_epg_sources_format">Sources EPG : %1$s</string>
+    <string name="settings_export_summary_epg_sources_format">Sources de guide : %1$s</string>
     <string name="settings_export_summary_favorites_format">%1$d favori(s) restauré(s)</string>
     <string name="settings_export_summary_watch_state_format">%1$d élément(s) d\'historique restauré(s)</string>
     <string name="settings_export_summary_updated">Paramètres mis à jour</string>
@@ -43,7 +43,7 @@
     <string name="provider_copy_result_nothing">Rien à copier</string>
 
     <!-- EPG freshness label -->
-    <string name="epg_freshness_no_sources">Aucune source EPG</string>
+    <string name="epg_freshness_no_sources">Aucune source de guide</string>
     <string name="epg_freshness_never_refreshed">Jamais actualisé</string>
     <string name="epg_freshness_just_now">à l\'instant</string>
     <string name="epg_freshness_minutes_ago_format">il y a %1$dm</string>
@@ -56,7 +56,7 @@
     <!-- EpgFileManager error fallbacks -->
     <string name="epg_error_unknown">Erreur inconnue</string>
     <string name="epg_error_task_failed_retries_format">Échec après %1$d tentatives</string>
-    <string name="epg_error_no_sources">Aucune source à traiter</string>
+    <string name="epg_error_no_sources">Aucune source de guide à traiter</string>
     <string name="epg_error_processing_failed">Échec du traitement</string>
-    <string name="epg_error_source_not_found">Source introuvable</string>
+    <string name="epg_error_source_not_found">Source de guide introuvable</string>
 </resources>

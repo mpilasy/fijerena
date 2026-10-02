@@ -28,7 +28,7 @@
     <string name="settings_export_item_added_format">%1$d nampidirina</string>
     <string name="settings_export_item_overwritten_format">%1$d nosoloana</string>
     <string name="settings_export_item_skipped_format">%1$d nihoarana</string>
-    <string name="settings_export_summary_epg_sources_format">Fantsakana EPG: %1$s</string>
+    <string name="settings_export_summary_epg_sources_format">Loharanon\'ny fitarihana: %1$s</string>
     <string name="settings_export_summary_favorites_format">%1$d tiana indrindra naverina</string>
     <string name="settings_export_summary_watch_state_format">%1$d tantara fijerena naverina</string>
     <string name="settings_export_summary_updated">Voavaozina ny fandrindrana</string>
@@ -42,7 +42,7 @@
     <string name="provider_copy_result_nothing">Tsy misy azo adika</string>
 
     <!-- EPG freshness label -->
-    <string name="epg_freshness_no_sources">Tsy misy fantsakana EPG</string>
+    <string name="epg_freshness_no_sources">Tsy misy loharanon\'ny fitarihana</string>
     <string name="epg_freshness_never_refreshed">Mbola tsy navaozina</string>
     <string name="epg_freshness_just_now">vao haingana</string>
     <string name="epg_freshness_minutes_ago_format">%1$dm lasa</string>
@@ -55,7 +55,7 @@
     <!-- EpgFileManager error fallbacks -->
     <string name="epg_error_unknown">Fahadisoana tsy fantatra</string>
     <string name="epg_error_task_failed_retries_format">Tsy nahomby aorian\'ny fanandramana %1$d</string>
-    <string name="epg_error_no_sources">Tsy misy fantsakana hodinihina</string>
+    <string name="epg_error_no_sources">Tsy misy loharanon\'ny fitarihana hodinihina</string>
     <string name="epg_error_processing_failed">Tsy nahomby ny fanodinana</string>
-    <string name="epg_error_source_not_found">Tsy hita ny fantsakana</string>
+    <string name="epg_error_source_not_found">Tsy hita ny loharanon\'ny fitarihana</string>
 </resources>
