@@ -318,7 +318,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `tmdbId` | TEXT | Sourced TMDB ID (added v12) |
 | `detailFetchedAt` | INTEGER | Timestamp of detail cache fetch (added v12) |
 | `posterPath` | TEXT | Sourced TMDB poster path (added v17) |
-| `episodesFetchedAt` | INTEGER | Timestamp episodes were last fetched/persisted for this series; backs the 24-hour episode-list cache in `XtreamMediaProvider.getSeriesDetail` (added v19) |
+| `episodesFetchedAt` | INTEGER | Timestamp episodes were last fetched/persisted for this series; backs the episode-list cache in `XtreamMediaProvider.getSeriesDetail` (30 days; cleared by a catalogue sync when the series changes; added v19) |
 
 **Indices:** `(providerId)`, `(categoryId, providerId)`, `(providerId, tmdbId)` (added v18, for the TMDB sibling-dedup joins below). `(providerId, categoryId, excluded)` was dropped in v24
 

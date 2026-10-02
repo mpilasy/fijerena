@@ -115,6 +115,8 @@ JELLYFIN_URL=https://other.host BRIDGE_PORT=8081 tools/jellyfin-xtream/restart.s
 
 In the app, add an Xtream provider with Server URL `http://10.0.2.2:8080` (emulator → host; use the host's LAN IP from real devices) and the Jellyfin username/password. Movie and TV-show libraries become one category each; Live TV and EPG appear only if Jellyfin has Live TV. Playback redirects to Jellyfin, so the device must reach `JELLYFIN_URL` too. Keep `xtream_ids_<host>.db`: it maps Xtream ids to Jellyfin GUIDs, and losing it changes every id (orphaning watch history and favourites).
 
+Like a real panel, a series' `last_modified` moves when episodes are added (Jellyfin's `DateLastMediaAdded`, else `DateCreated`), so adding an episode in Jellyfin makes the app fetch that show's episodes again after its next sync. An item that sits in two Jellyfin libraries is listed once, under the first library by name. After editing the bridge, rerun `restart.sh`.
+
 ### 2. Physical Android TV (NVIDIA Shield, Chromecast, Sony Bravia)
 
 TV devices connect via ADB over TCP/IP (port 5555). Because TV IP addresses drift across sessions via DHCP (on development subnet `192.168.68.0/24`):

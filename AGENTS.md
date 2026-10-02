@@ -340,6 +340,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20261001_live-sync-now-playing-plan.md](docs/plans/20261001_live-sync-now-playing-plan.md) | **Complete** - Phases 0-4 landed, verified on emulators (2026-10-01) |
 | [docs/plans/20261002_profile-last-provider-plan.md](docs/plans/20261002_profile-last-provider-plan.md) | **Complete** - each profile returns to the provider it last picked (synced), verified on emulators (2026-10-02) |
 | [docs/plans/20261002_epg-search-during-refresh-plan.md](docs/plans/20261002_epg-search-during-refresh-plan.md) | **Complete** - all three phases landed (2026-10-02); emulator verification outstanding |
+| [docs/plans/20261002_catalog-sync-cache-churn-plan.md](docs/plans/20261002_catalog-sync-cache-churn-plan.md) | **Complete** - all four phases landed (2026-10-02); Phase 1 verified on bears, Phase 4 on jellyxtream |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 
@@ -368,6 +369,10 @@ Hard-won lessons from production debugging. Read these before making changes in 
 ### contentHash self-referential hash bug in XtreamContentManager
 **Context:** `hashCode()` on a data class that includes the `contentHash` field (defaulting to 0). The stored entity has a non-zero `contentHash`, so `hashCode()` never matches — causing spurious DB re-inserts on every sync.
 **Fix:** Exclude the hash field itself from `hashCode()` computation.
+
+### Every catalog sync rewrote most rows and wiped their detail cache
+**Context:** Xtream's `num` is a position in the provider's list; it shifts for tens of thousands of rows whenever the provider adds one (38,888 of 47,513 series between two bears syncs 3h apart). It was in `contentHash`, and a changed row is rewritten with `@Insert(REPLACE)` from a fresh entity, which reset `episodesFetchedAt`, `detailFetchedAt`, `contentRating`, `posterPath` and `containerExtension`.
+**Fix:** `computeHash` leaves `num` out; a stream whose position alone moved gets `updateNums` (lists are ordered by `num`); changed rows go through `insertKeepingDetailCache`, which carries the detail columns over (a changed series still clears `episodesFetchedAt`, the "fetch its episodes again" trigger). **Rule:** a catalog hash covers content only, never list position; never write a catalog row with a bare `insertAll` from sync code. See `docs/plans/20261002_catalog-sync-cache-churn-plan.md`.
 
 ### Clear All EPG Data takes 10+ minutes with DELETE FROM
 **Context:** 4M+ rows on NVIDIA Shield with low-IOPS flash storage.
