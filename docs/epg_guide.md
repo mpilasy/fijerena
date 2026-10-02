@@ -48,7 +48,7 @@ Fijerena has two EPG systems: a **Live TV Grid** for browsing channel schedules,
    │  XmltvEpgService │              │   XmltvSearchService  │
    │  → EpgViewModel  │              │   → EpgBrowserVM      │
    │  (24h window,    │              │   (FTS raw→FTS safe)   │
-   │   50 channels)   │              │   (7-day window,      │
+   │   50 channels)   │              │   (no upper limit,    │
    │                  │              │    500 results max)    │
    └─────────────────┘              └───────────────────────┘
 ```
@@ -103,7 +103,7 @@ Each active source has real-time progress tracked in a `ConcurrentHashMap<Long, 
 | Field | Type | Description |
 |-------|------|-------------|
 | `label` | String | Source display name |
-| `phase` | String | `"Downloading"` or `"Ingesting"` |
+| `phase` | String | `"Downloading"`, `"Awaiting Ingestion"` or `"Ingesting"` |
 | `progressPercent` | Int | 0-100 from bytes read, or -1 if unknown |
 | `downloadedBytes` | Long | Bytes downloaded so far |
 | `downloadTotalBytes` | Long | Content-Length from server, or -1 |
@@ -129,15 +129,16 @@ Download progress is computed from `downloadedBytes / contentLength`. Ingestion 
 `cancelProcessing()` cancels the coroutine `processJob` and calls `RefreshQueue.cancelAll()`, which cancels every currently executing task (up to 3 concurrently) and clears all pending tasks. The state is immediately set to `Idle`.
 
 **Lifecycle:**
-- `initialize()` — called from `MainActivity.onCreate()`, migrates legacy single-URL config, schedules auto-refresh coroutine, schedules WorkManager periodic sync based on user-selected interval
+- `initialize()` — called from `MainActivity.onCreate()`, migrates legacy single-URL config, schedules the WorkManager periodic sync based on the user-selected interval
 - `launchRefreshStale()` — refresh all sources older than `staleThresholdMs` (interval/2)
 - `launchRefreshFailed()` — retry sources whose last attempt errored
 - `launchRefreshSelected(selectedIds)` — refresh a user-selected subset of sources
 - `launchProcessSingleSource(sourceId)` — process one source (download then ingest, no pipeline)
 - `launchClearAllData()` — cancel processing, set state to `Clearing`, delegate to `EpgIndexer.clearAll()`
 - `cancelProcessing()` — cancel the current processing job and all queued tasks
-- `updateAutoRefreshSchedule()` — cancel and restart the WorkManager periodic sync with the latest interval
-- Auto-refresh: a coroutine loop wakes at the user-configured refresh time, calls `awaitRefreshOutdatedSources()` (direct, bypasses RefreshQueue to avoid wake-lock loss), then retries any failed sources after 1 hour
+- `updateAutoRefreshSchedule(forceReschedule)` — (re)schedules the periodic `EpgSyncWorker` (`epg_sync`) at the selected interval; on a forced reschedule the first run is delayed to the configured refresh time (`epgRefreshTime`). "Never" cancels it.
+- `refreshOutdatedSources(providerId)` — on Xtream session start (`XtreamSessionManager`), submits the stale sources to `RefreshQueue` as `epg_auto_refresh`
+- Auto-refresh: `EpgSyncWorker` calls `processAllSources(staleSources)`, which runs `processAllSourcesInternal` directly (not through `RefreshQueue`) so the work stays under the worker's wake lock
 
 Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync via `EpgSyncWorker` (WorkManager, periodic interval from settings).
 
@@ -156,7 +157,6 @@ Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync
 
 **Key functions:**
 - `parse(inputStream, channelFilter, timeWindow)` — full parse with filters applied during parsing to minimize memory
-- `searchByTitle(inputStream, query, timeWindowSeconds)` — streaming title search (fallback when no SQLite index)
 - `parseChannelForIndex(parser)` -> `EpgChannelEntity` — used by EpgIndexer
 - `parseProgrammeForIndex(parser, sourceId, timezoneOverrideHours)` -> `EpgProgrammeEntity` — used by EpgIndexer, accepts per-source timezone override
 - `parseTimestamp(str)` — XMLTV timestamp parser with timezone override support
@@ -169,7 +169,7 @@ Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync
 
 ### Database Schema
 
-**Room database** `epg_index.db` (version 16, WAL mode):
+**Room database** `epg_index.db` (version 17, WAL mode):
 
 ```
 epg_channel
@@ -253,7 +253,7 @@ The FTS4 virtual table with `unicode61` tokenizer enables sub-100ms full-text se
 **Key functions:**
 - `initialize()` — restores `Indexed` state from metadata without re-indexing
 - `setIndexing()` — sets state to `Indexing` if not already `Indexed`. Called once before parallel ingestion begins to coordinate state across concurrent source processing.
-- `ingestFromStream(inputStream, sourceId, timezoneOverrideHours, onProgress)` — returns `IngestionStats(channelsIngested, programmesIngested)`. Uses 500-row batch INSERTs with Room `withTransaction`. Commits per-batch (not one giant transaction). Inserts channels with `IGNORE` conflict strategy, programmes with `REPLACE` on unique `(channel_id, start_epoch)`. Yields CPU between batches (`delay(5)` for channels, `delay(100)` for programmes) to avoid starving video playback. Skips programmes that ended more than 12 hours ago; no future limit.
+- `ingestFromStream(inputStream, sourceId, timezoneOverrideHours, onProgress)` — returns `IngestionStats(channelsIngested, programmesIngested)`. Uses 500-row batch INSERTs with Room `withTransaction`. Commits per-batch (not one giant transaction). Inserts channels with `IGNORE` conflict strategy, programmes with `REPLACE` on unique `(channel_id, source_id, start_epoch)`. Yields CPU between batches (`delay(5)` for channels, `delay(100)` for programmes) to avoid starving video playback. Skips programmes that ended more than 12 hours ago; no future limit.
 - `ingestFromXtreamEpg(epgByStreamId, streamInfo, providerId)` — ingests EPG data from the Xtream API. Creates/upserts an `EpgSource` with `ingestMethod=XTREAM_API`, clears old data for that source, then batch-inserts.
 - `swapAndRebuildFts(sourceIds)` — staging path: moves the sources' staging rows into the primary tables, rebuilds FTS and writes metadata in **one** transaction. WAL readers see the old guide + old FTS until the commit, then the new pair, so nothing is marked stale and search keeps working through the refresh. Failure rolls both back and restores the previous state; throws.
 - `rebuildFtsAndUpdateState()` — direct (low-storage) path and standalone rebuilds: rebuild FTS index and update metadata after all sources processed. Internally calls `markFtsStale()` at entry (so the old index remains valid during the dispatch gap, degrading only for the actual rebuild window) and `markFtsClean()` on success. Callers do not call these flags themselves. Triggers an update to `EpgPipelineStatsEntity` in `providers.db` with the final run summary.
@@ -289,8 +289,8 @@ The EPG Grid is a 24-hour channel schedule view accessible from the Category Gri
 
 **Three-layer data resolution:**
 1. **Parsed results cache** (SharedPreferences, 12h TTL) — instant return
-2. **Local XMLTV file** — parse from `xmltv_global.xml` with channel + time filters
-3. **Provider-native EPG** — fallback to Xtream `get_simple_data_table` API
+2. **SQLite index** — `epg_index.db` queried for the requested channels (needs `EpgIndexState.Indexed`); no XMLTV file is kept or parsed here
+3. **Provider-native EPG** — fallback to Xtream `get_simple_data_table` API (via `MediaRepository.getEpgBulkForItems`)
 
 **Channel matching** (4-tier fallback): exact `epgChannelId` -> case-insensitive `epgChannelId` -> exact display name -> normalized name match.
 
@@ -318,7 +318,7 @@ The EPG Grid is a 24-hour channel schedule view accessible from the Category Gri
 
 ## EPG Browser (Search)
 
-Standalone screen for full-text searching across the entire XMLTV dataset. Accessed from Content Type Selection via the book icon (only visible when `EpgIndexer.state` is `Indexed`).
+Standalone screen for full-text searching across the entire XMLTV dataset. Accessed from the home screen (`ContentTypeSelection`) via the date-range icon (only visible when `EpgIndexer.state` is `Indexed`).
 
 ### XmltvSearchService
 
@@ -373,7 +373,7 @@ EPG is configured via **Settings -> Manage EPG Data** (`Screen.EpgManagement(pro
 
 **Actions:** Refresh All, Refresh Selected, Cleanup Files, Purge >2 days, Clear All Data (with confirmation dialog), Cancel (visible during processing).
 
-**Refresh Interval:** User-selectable interval (4h, 8h, 12h, 24h, 48h) or "Never". The **stale threshold** (`staleThresholdMs`) is set to **interval/2** — a source is considered stale after half its refresh period has elapsed. This gives the auto-refresh coroutine and WorkManager a wide catch-up window if they fire slightly off-schedule. If the interval is ≤0 ("Never"), the threshold defaults to 24h. The WorkManager periodic schedule also updates to the selected interval.
+**Refresh Interval:** User-selectable interval (4h, 8h, 12h, 24h, 48h) or "Never". The **stale threshold** (`staleThresholdMs`) is set to **interval/2** — a source is considered stale after half its refresh period has elapsed. This gives the periodic `EpgSyncWorker` a wide catch-up window if they fire slightly off-schedule. If the interval is ≤0 ("Never"), the threshold defaults to 24h. The WorkManager periodic schedule also updates to the selected interval.
 
 **Selective refresh:** Checkboxes on each source row allow selecting multiple sources. A "Refresh Selected (N)" button appears when sources are selected, triggering refresh only for chosen sources.
 
@@ -381,7 +381,7 @@ EPG is configured via **Settings -> Manage EPG Data** (`Screen.EpgManagement(pro
 
 **Import date filter:** During ingestion, programmes that ended more than 12 hours ago are skipped; nothing ahead is dropped. This reduces database size and speeds up indexing.
 
-**Per-source progress:** Both mobile and TV show per-source progress with percentage, phase label ("Downloading"/"Ingesting"), byte counts, and channel/programme counts. A cancel button is visible during processing. During `Clearing` state, a blocking overlay is shown.
+**Per-source progress:** Both mobile and TV show per-source progress with percentage, phase label ("Downloading"/"Awaiting Ingestion"/"Ingesting"), byte counts, and channel/programme counts. A cancel button is visible during processing. During `Clearing` state, a blocking overlay is shown.
 
 **Timezone override behavior:** The per-source offset is applied at parse time. Changing it requires re-ingesting the source because epoch values stored in SQLite depend on the parse-time timezone.
 
@@ -528,30 +528,29 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 | `XmltvEpgService.kt` | Class | XMLTV -> EpgResponse adapter for grid |
 | `XmltvModels.kt` | Data | XMLTV channel/programme/search models |
 | `EpgBrowserModels.kt` | Data | Browser UI models (program + airings) |
-| `EpgSyncWorker.kt` | CoroutineWorker | Mobile background EPG sync (WorkManager); calls `getStaleSources()` (or `getAllSources()` when `force=true` input data) + `processAllSources()` directly in `doWork()` to hold the wake lock for the full download + ingestion cycle |
+| `EpgSyncWorker.kt` | CoroutineWorker | Periodic background EPG sync on TV and mobile (WorkManager, foreground service so DNS works in Doze); calls `getStaleSources()` (or `getAllSources()` when `force=true` input data) + `processAllSources()` directly in `doWork()` to hold the wake lock for the full download + ingestion cycle |
 | `EpgSyncDebugReceiver.kt` | BroadcastReceiver | Debug-only receiver (`DEBUG` builds); enqueues an immediate `EpgSyncWorker` OneTimeWorkRequest with `force=true`. Trigger: `adb shell am broadcast -a org.njarasoa.fijerena.DEBUG_EPG_SYNC -p org.njarasoa.fijerena` |
 
 ### Queue (`core/network/.../queue/`)
 
 | File | Type | Description |
 |------|------|-------------|
-| `RefreshQueue.kt` | Singleton | Priority-based sequential task executor with cancel support |
-| `RefreshTask.kt` | Interface | Task contract (id, priority, execute) |
-| `RefreshPriority.kt` | Enum | Task priority levels |
+| `RefreshQueue.kt` | Singleton | Priority-based task executor, up to 3 tasks at once, de-duplicated by id, with cancel support |
+| `RefreshTask.kt` | Interface + object | Task contract (id, priority, execute) and the `RefreshPriority` constants |
 
 ### SQLite Indexing (`core/network/.../xmltv/epgindex/`)
 
 | File | Type | Description |
 |------|------|-------------|
 | `EpgIndexer.kt` | Singleton | Index builder (streaming + batch transactional) |
-| `EpgIndexDatabase.kt` | Room DB | Database singleton (v16, WAL, with destroy/recreate) |
-| `EpgSourceEntity.kt` | Entity | EPG source config (URL, label, tz, enabled, stats, ingestMethod) |
-| `EpgSourceDao.kt` | DAO | CRUD for EPG sources, resetAllIngestionState() |
+| `EpgIndexDatabase.kt` | Room DB | Database singleton (v17, WAL, incremental auto-vacuum, with destroy/recreate) |
 | `EpgIndexDao.kt` | DAO | FTS MATCH, LIKE, paged queries |
 | `EpgProgrammeEntity.kt` | Entity | Programme table + FTS4 virtual table |
 | `EpgChannelEntity.kt` | Entity | Channel table |
 | `EpgIndexMetadata.kt` | Entity | File state tracking for staleness |
 | `EpgIndexState.kt` | Sealed | Indexing state machine |
+
+`EpgSourceEntity.kt` and `EpgSourceDao.kt` (guide source config and its CRUD, `resetAllIngestionState()`) live in `core/network/.../provider/`, since `epg_source` is a `providers.db` table.
 | `EpgSearchResultRow.kt` | Data | JOIN query result model |
 
 ### ViewModels (`core/ui/.../viewmodels/`)
