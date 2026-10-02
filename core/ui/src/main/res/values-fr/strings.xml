@@ -902,4 +902,11 @@
     <string name="safe_mode_cleared">Caches vidés. Choisissez Continuer pour démarrer normalement.</string>
     <string name="safe_mode_clear_failed">Certains caches n\'ont pas pu être vidés. Les détails sont dans les diagnostics.</string>
     <string name="safe_mode_diagnostics">Afficher les diagnostics</string>
+    <string name="newer_data_title">Données d\'une version plus récente</string>
+    <string name="newer_data_message">Vos sources sur cet appareil ont été enregistrées par une version plus récente de Fijerena (version des données %1$d ; cette version lit jusqu\'à %2$d). Installez la version plus récente pour continuer à les utiliser.</string>
+    <string name="newer_data_hint">Ou réinitialisez les sources pour utiliser cette version maintenant : les sources et leurs réglages sont mis de côté en sauvegarde et vous repartez sans aucune. Les favoris et l\'historique de visionnage restent sur l\'appareil.</string>
+    <string name="newer_data_reset">Réinitialiser les sources</string>
+    <string name="newer_data_reset_confirm_title">Réinitialiser les sources ?</string>
+    <string name="newer_data_reset_confirm_message">Toutes les sources, tous les profils et toutes les sources de guide de cet appareil sont mis de côté, et l\'application redémarre sans aucune. Installer la version plus récente et restaurer la sauvegarde les fait revenir.</string>
+    <string name="newer_data_reset_confirm">Réinitialiser</string>
 </resources>

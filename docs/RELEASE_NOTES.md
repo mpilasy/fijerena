@@ -1,5 +1,15 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Data-loss and launch-crash fixes
+**Release Date:** 2026-10-02
+
+- **The automatic clean-up can no longer delete favourites or watch history:** at every start (and during guide refreshes) the app swept away data belonging to sources that no longer exist, judging by the sources database. Whenever that database didn't match — reset, restored from a backup, or a source arriving from live sync at the same moment — it deleted every favourite and every history entry, for good. The automatic clean-up now removes only downloaded catalogue it can fetch again; favourites and history go only when you delete a source. Saved passwords and guide sources are no longer removed automatically either (only by Settings → Shrink Database), and the clean-up no longer sends guide-source deletions to your other devices. → R-02.
+- **A failing clean-up can't crash the app at every start:** the start-up clean-up ran with no error handling, so a full disk (common on TVs) or a busy database crashed the app on every launch. It is now guarded and logged, and it runs at start only when a source deletion was interrupted, instead of scanning the whole catalogue on every launch while Home loads. → R-03, R-17.
+- **An older version opened over newer data no longer crash-loops:** installing an older build over a newer one (or restoring a newer backup) made the app crash at every start, fixable only by clearing all its data. It now opens a "Data from a newer version" screen: Close keeps everything for the newer version; Reset sources (confirmed) sets the sources aside as a backup and starts with none, keeping favourites and history. In English, French and Malagasy. → R-01.
+- **A flaky unit test fixed (developers):** `MediaRepositoryTest.saveLastPlayedItem_updatesCache` checked an asynchronous preferences write without waiting for it and failed now and then.
+
+---
+
 ## Version: Resilience guardrails
 **Release Date:** 2026-10-02
 

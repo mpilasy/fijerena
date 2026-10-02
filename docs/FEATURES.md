@@ -359,6 +359,7 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 - **Cellular Buffer Settings:** multiplier sliders (0.5×–3.0×) for Live and VOD profiles (mobile)
 - **Diagnostics:** the on-device crash log and Android's record of why the app last closed (ANR, crash, low-memory kill), newest first; Share on mobile. See `docs/RUN_GUIDE.md` → Crash log and Diagnostics
 - **Crash-loop safe mode** (always on, not a developer setting): when three launches within 10 minutes each end within 30 s of starting, the next launch opens a safe-mode screen instead of Home and skips the startup work that could be the cause — EPG initialisation and auto-refresh, catalogue sync, live sync, the now-playing publisher, the startup migrations, and the nav host's source lookups and orphan sweep. **Continue** restarts the app normally; **Clear caches** (confirmed) removes the EPG index, every source's downloaded catalogue and the poster cache, keeping sources, profiles, favourites and watch history; **Show diagnostics** opens Diagnostics. See `docs/RUN_GUIDE.md` → Crash-loop safe mode
+- **Data from a newer version:** if this device's sources were saved by a newer version of Fijerena (an older build installed over a newer one, or a newer backup restored), the app opens a screen saying so instead of crashing on every start. **Close** leaves everything as it is (install the newer version to keep using it); **Reset sources** (confirmed) sets the sources database aside as a backup and restarts with no sources, keeping favourites and watch history on the device
 
 ---
 
@@ -376,7 +377,7 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 | Export Settings | Save sources + guide sources + global config to JSON |
 | Import Settings | Load JSON; conflict dialog for name clashes |
 | Cache Management | View size breakdown; clear per content type or all |
-| Shrink Database | Purges orphaned catalog rows from deleted sources and compacts `xtream_v2.db` with WAL truncation |
+| Shrink Database | Purges orphaned catalog rows, cache files, credential files and guide sources of deleted sources and compacts `xtream_v2.db` with WAL truncation. Never touches favourites or watch history |
 | UI Scale | 40%, 60%, 80% (default) or 100%; scales category grid and item cards |
 | Play next episode automatically | (Playback) Per profile and synced, off by default: near the end of an episode the next one is offered and starts when it ends (Xtream TV shows) |
 | Developer Mode | Enables debug overlays and advanced settings |

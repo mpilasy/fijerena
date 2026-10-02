@@ -23,7 +23,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
@@ -33,6 +32,7 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
 import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import org.njarasoa.fijerena.feature.provider.MobileAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.MobileProviderSelectionScreen
+import org.njarasoa.fijerena.feature.safemode.MobileNewerDataScreen
 import org.njarasoa.fijerena.feature.safemode.MobileSafeModeScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileCellularBufferSettingsScreen
@@ -119,14 +120,11 @@ fun MobileNavHost(
             }
         }
         hasProvider = providerRepo.getProviderCount() > 0
-        // Self-healing: quietly sweep orphaned catalog rows left by past deleted providers
-        coroutineScope.launch(Dispatchers.IO) {
-            providerRepo.pruneOrphanedCatalogData(forceVacuum = false)
-        }
     }
 
     LaunchedEffect(Unit) {
-        if (SafeMode.isActive) {
+        // A providers.db from a newer build can't be opened: same skip, its own screen.
+        if (SafeMode.isActive || ProvidersDbGuard.isBlocked) {
             // Crash-loop safe mode: none of initializeStartup()'s provider lookups, migration or
             // orphan sweep — any of them may be what kept crashing. The safe-mode screen is the
             // start destination; hasProvider only needs to stop being null.
@@ -154,7 +152,9 @@ fun MobileNavHost(
 
     // Determine initial destination based on provider configuration
     val startDestination =
-        if (SafeMode.isActive) {
+        if (ProvidersDbGuard.isBlocked) {
+            Screen.NewerData
+        } else if (SafeMode.isActive) {
             Screen.SafeMode
         } else if (hasProvider == true) {
             Screen.ContentTypeSelection
@@ -602,6 +602,10 @@ fun MobileNavHost(
             composable<Screen.SyncSettings> {
                 org.njarasoa.fijerena.feature.settings
                     .MobileSyncSettingsScreen(onBack = { navController.navigateUp() })
+            }
+
+            composable<Screen.NewerData> {
+                MobileNewerDataScreen()
             }
 
             composable<Screen.SafeMode> {

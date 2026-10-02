@@ -50,6 +50,7 @@ class AppSettings(
         private const val KEY_LANGUAGE = "app_language"
         private const val KEY_SHARE_NOW_PLAYING = "share_now_playing"
         private const val KEY_LAST_SHRINK_AT_MS = "last_shrink_at_ms"
+        private const val KEY_ORPHAN_SWEEP_PENDING = "orphan_sweep_pending"
         private const val KEY_LAST_SHRINK_DURATION_MS = "last_shrink_duration_ms"
         private const val KEY_LAST_SHRINK_ROWS_REMOVED = "last_shrink_rows_removed"
         private const val KEY_LAST_SHRINK_BYTES_RECLAIMED = "last_shrink_bytes_reclaimed"
@@ -410,6 +411,15 @@ class AppSettings(
     var hasProviderCache: Boolean
         get() = prefs.getBoolean(KEY_HAS_PROVIDER_CACHE, false)
         set(value) = prefs.edit { putBoolean(KEY_HAS_PROVIDER_CACHE, value) }
+
+    /**
+     * A provider deletion started and hasn't finished its catalogue cleanup: the next app start
+     * sweeps for orphaned catalogue rows. Per device, never synced. See
+     * `ProviderRepository.sweepOrphanedCatalogData`.
+     */
+    var orphanSweepPending: Boolean
+        get() = prefs.getBoolean(KEY_ORPHAN_SWEEP_PENDING, false)
+        set(value) = prefs.edit { putBoolean(KEY_ORPHAN_SWEEP_PENDING, value) }
 
     /** One-time flag: [FavoriteCategoryRowCleanup] has run on this install. Per device, never synced. */
     var favoriteCategoryRowsPurged: Boolean

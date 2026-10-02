@@ -1,6 +1,6 @@
 # Next-Level Rock-Solid Resilience & Professionalism Plan
 
-**Status:** In progress. Phase 0 done 2026-10-02 (R-07, R-19, R-10); R-10 verified on the TV emulator, mobile and the GitHub Actions run not yet checked. Every finding was traced in source at `33ffd673`; none of Phases 1-6 has been reproduced on a device yet.
+**Status:** In progress. Phase 0 done 2026-10-02 (R-07, R-19, R-10); R-10 verified on the TV emulator. Phase 1 code done 2026-10-02 (R-02, R-03, R-17, R-01), device check outstanding. Every finding was traced in source at `33ffd673`; none of Phases 1-6 has been reproduced on a device yet.
 **Date:** 2026-10-02
 **Scope:** `core:player`, `core:network`, `core:ui`, `tv`, `mobile`, manifests, CI. The sync server only where the client depends on it.
 **Goal:** Close the remaining crash loops, silent data loss and silent failures; make focus and error recovery on TV dependable; and add the guardrails (exception boundaries, crash-loop safe mode, CI gates) that keep it that way.
@@ -66,6 +66,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 - **Trigger:** installing an older debug build over a newer one, which happens whenever a worktree or branch build is deployed to a household TV; or `scripts/restore-app-data.sh` putting back a newer `providers.db`.
 - **Impact:** the app can't open. The only way out is `pm clear`, which deletes everything.
 - **Fix:** do not rebuild an empty `providers.db`; see R-02. Before Room opens the file, read its header (`PRAGMA user_version` through a raw `SQLiteDatabase`, as `XtreamDatabase.setAsideIfNewer` does). If it is newer than this build, keep the file and show a full-screen, D-pad-focusable "This data belongs to a newer version of Fijerena. Install the newer version." screen. That screen offers an explicit, confirmed "Reset sources" action that sets the file aside as `.v<N>.bak`. Test it alongside `XtreamDatabaseUpgradeTest` (instrumented, not run without asking).
+- **Done 2026-10-02 (Phase 1):** `ProvidersDbGuard` (`core:network/provider`) reads `providers.db`'s header read-only in `Application.onCreate` (after `SafeMode.init`) against `SettingsDatabase.DB_VERSION` (now a constant the `@Database` annotation uses). When newer, `startBackgroundWork()` and the nav hosts' `initializeStartup()` don't run and the start destination is `Screen.NewerData`: TV `NewerDataScreen` (focus on Close) / mobile `MobileNewerDataScreen`, with Close (finish) and Reset sources (confirmed: `providers.db{,-wal,-shm}` → `providers.db.v<N>.bak`, latest kept, then `restartProcess`, shared with `SafeMode.leave`). Background workers in a blocked process still fail on open, but WorkManager catches that. Strings en/fr/mg (fr/mg not reviewed). Not yet run on a device; the instrumented test was not added.
 
 #### 🆕 R-02: The automatic orphan sweep deletes watch history and favourites by inference [P0, CONFIRMED mechanism / PLAUSIBLE trigger]
 - **Complexity:** Medium · **Risk:** Medium — changes deletion rules and adds a lock shared with sync; too loose and orphans pile up, too tight and it deadlocks a sync pass.
@@ -76,12 +77,14 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
   3. Deletes go through raw SQL, so no tombstone is written and the user sees no trace.
 - **Impact:** permanent, silent loss of the data `xtream_v2.db` exists to protect (AGENTS.md constraint 9).
 - **Fix:** the automatic sweep removes only catalogue caches (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `xtream_epg_cache`). It never removes `watch_state` or `favorite_state`. Those go only in `deleteProvider` (an explicit user action or a received tombstone), and the sweep may remove them only for provider ids that have a provider tombstone in `providers.db`. Hold the snapshot and the delete under one lock that `SyncApplier.applyProvider` also takes. Add a regression test: an empty-then-repopulated `providers.db` keeps every `watch_state` row.
+- **Done 2026-10-02 (Phase 1), simpler than the fix above:** the sweep never touches `favorite_state` or `watch_state` at all (`ProviderRepository.ORPHAN_SWEEP_TABLES` = the five catalogue tables), instead of matching provider tombstones — `deleteProvider` already removes both, so anything left over is harmless and small. The same inference also deleted credential files (a password lost for good) and orphaned EPG sources **with sync tombstones**, which pushed those deletions to every linked device; now credential files and EPG sources (no tombstones) are removed only by the user's Shrink Database (`userRequested`, formerly `forceVacuum`). No shared lock with `SyncApplier`: the provider list is read again before each step, and with user data out of reach the worst a race does is drop a few catalogue rows the new provider fetches again. Tests: `OrphanSweepRulesTest` (4) locks in the table list and the credential rule — Room isn't available to JVM tests here, so the "repopulated providers.db" test became these rule tests. Not yet run on a device.
 
 #### 🆕 R-03: A failing startup sweep crashes every launch [P0, PLAUSIBLE]
 - **Complexity:** Low · **Risk:** Low — moves one call and wraps it.
 - **Where:** `TvNavHost.kt:146-148`, `MobileNavHost.kt:121-123`, via `rememberCoroutineScope().launch(Dispatchers.IO) { pruneOrphanedCatalogData() }` with no try/catch. Only the `VACUUM` branch inside is guarded.
 - **Mechanism:** an exception that escapes a composition-scoped coroutine goes to the thread's uncaught-exception handler. The sweep's batched `DELETE`s need WAL space, so on a TV with little free storage (an existing concern: `EpgFileManager.shouldUseStaging`) they can throw `SQLiteFullException`, or `SQLiteDatabaseLockedException` while a worker is writing. The sweep runs on every launch, so a persistent cause gives a persistent crash loop.
 - **Fix:** move the sweep off the composition into `AppScopes` (or into the worker only, see R-17), wrapped so that a storage error is recorded and skipped. Repro: fill the emulator's `/data` (`fallocate`) and cold-start.
+- **Done 2026-10-02 (Phase 1, with R-17):** the launch sweep left the nav hosts. `ProviderRepository.sweepOrphanedCatalogData(onlyIfPending)` never throws (records to `CrashLog`) and is called from its own coroutine in `FijerenaApplication.startBackgroundWork()` (so it is skipped in safe mode and when `providers.db` is blocked) and from `EpgSyncWorker`, where a failure used to fail the guide refresh too. Not yet reproduced with a full `/data`.
 
 #### 🆕 R-10: No crash-loop safe mode [P1, design]
 - **Complexity:** Medium · **Risk:** Medium — new startup branch on both apps; a miscounted launch could drop a healthy app into safe mode.
@@ -231,6 +234,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 - **Complexity:** Low · **Risk:** Low — a persisted flag around an existing call.
 - **Where:** `pruneOrphanedCatalogData` is called on every launch (`TvNavHost.kt:146`, `MobileNavHost.kt:121`). It runs `DELETE … WHERE rowid IN (SELECT rowid FROM t WHERE providerId NOT IN (…) LIMIT 1000)` (`ProviderRepository.kt:265-276`) over six tables, each a full scan, because `NOT IN` can't use the `providerId` index. That is a 250k+ row scan of `xtream_streams` and `xtream_episodes` on the writer connection, while Home makes its first queries.
 - **Fix:** the sweep is needed only after a deletion. Persist a `needs_orphan_sweep` flag in `deleteProvider` and in sync's provider tombstone handling, run the sweep only when the flag is set, and keep the worker's run as the safety net. Folds into R-02 and R-03.
+- **Done 2026-10-02 (Phase 1):** `AppSettings.orphanSweepPending` (`orphan_sweep_pending`, documented in `docs/DATABASE_SCHEMA.md` §4) is set when `deleteProvider` starts and cleared when it finishes; app start sweeps only while it is set. Sync's remote deletion goes through `deleteProvider`, so it is covered.
 
 #### Deferred, unchanged
 - Prior F-13, the `runBlocking` favourite snapshot. Still deferred: revisit only if Diagnostics shows main-thread stalls. **Next level:** route StrictMode violations (debug) into `CrashLog`, so main-thread disk regressions show up in Diagnostics rather than only in logcat.
@@ -293,7 +297,7 @@ Order: first stop data loss and launch crashes, then make failures visible and r
 2. **R-19** CI: JDK 21, `lintDebug` with a baseline, widen the cancellation gate.
 3. **R-10** crash-loop counter and safe-mode screen (TV and mobile).
 
-### Phase 1: Data loss & launch crashes (P0)
+### Phase 1: Data loss & launch crashes (P0) — ✅ code done 2026-10-02 (not yet verified on a device)
 **Complexity:** Medium · **Risk:** Medium — all on the launch and deletion paths; R-02 must land before R-01.
 1. **R-02** the sweep never touches user tables, sweeps by tombstone only, and is locked against sync; regression test.
 2. **R-03 + R-17** sweep moved off the composition, flag-driven, guarded.

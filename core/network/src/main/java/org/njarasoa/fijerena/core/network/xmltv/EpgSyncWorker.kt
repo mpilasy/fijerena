@@ -99,8 +99,9 @@ class EpgSyncWorker(
         }
 
         return try {
-            // Routine maintenance: sweep orphaned catalog data left by deleted providers
-            providerRepo.pruneOrphanedCatalogData(forceVacuum = false)
+            // Routine maintenance: sweep orphaned catalog data left by deleted providers. Never
+            // throws, so a full disk can't fail the guide refresh along with it.
+            providerRepo.sweepOrphanedCatalogData(onlyIfPending = false)
             val staleSources =
                 if (force) {
                     Log.i(TAG, "doWork: force=true, refreshing all sources of provider $providerId")

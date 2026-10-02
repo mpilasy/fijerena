@@ -173,6 +173,8 @@ class MediaRepositoryTest {
 
             // Add item
             repository.saveLastPlayedItem("cat1", "1", "Test", ContentType.LIVE_TV)
+            // The prefs write is queued on the write dispatcher: verifying before it ran was flaky.
+            repository.awaitPendingWrites()
 
             // Verify SharedPreferences updates for last played state
             verify { editor.putString(KEY_LAST_LIVE_CATEGORY, "cat1") }

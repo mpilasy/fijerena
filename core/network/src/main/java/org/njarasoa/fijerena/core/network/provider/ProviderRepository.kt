@@ -47,6 +47,52 @@ class ProviderRepository(
         private val CATALOG_TABLES =
             listOf("xtream_streams", "xtream_series", "xtream_episodes", "xtream_categories", "favorite_state", "xtream_epg_cache")
 
+        /**
+         * What the orphan sweep may delete: downloaded catalogue only, everything the app fetches
+         * again by itself. Never `favorite_state` or `watch_state`: the sweep decides what is
+         * orphaned by comparing against `providers.db`, and whenever the two databases disagree
+         * (providers.db reset or restored, a provider synced in between the sweep's read and its
+         * delete) that inference is wrong — it used to delete every favourite and every history
+         * row. Those go only with [deleteProvider]. See
+         * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-02.
+         */
+        internal val ORPHAN_SWEEP_TABLES =
+            listOf("xtream_streams", "xtream_series", "xtream_episodes", "xtream_categories", "xtream_epg_cache")
+
+        private val CACHE_PREFS_PREFIXES = listOf("media_cache_", "xtream_cache_")
+        private const val CREDENTIALS_PREFS_PREFIX = "provider_creds_"
+
+        /**
+         * The SharedPreferences files (names with `.xml`) among [fileNames] that belong to no
+         * provider in [validProviderIds]. Credential files only when [includeCredentials]: deleting
+         * one by inference loses a password for good, so only the user's own Shrink Database does.
+         */
+        internal fun orphanedPrefsFiles(
+            fileNames: List<String>,
+            validProviderIds: Set<Long>,
+            includeCredentials: Boolean,
+        ): List<String> {
+            val prefixes = if (includeCredentials) CACHE_PREFS_PREFIXES + CREDENTIALS_PREFS_PREFIX else CACHE_PREFS_PREFIXES
+            return fileNames.filter { name ->
+                name.endsWith(".xml") &&
+                    prefixes.any { prefix ->
+                        // substringBefore: a non-Default profile's file is
+                        // media_cache_<id>_profile_<profileId> (MediaRepository.profileCacheName).
+                        val id =
+                            if (name.startsWith(prefix)) {
+                                name
+                                    .removePrefix(prefix)
+                                    .removeSuffix(".xml")
+                                    .substringBefore('_')
+                                    .toLongOrNull()
+                            } else {
+                                null
+                            }
+                        id != null && id !in validProviderIds
+                    }
+            }
+        }
+
         private const val KEY_USERNAME = "username"
         private const val KEY_PASSWORD = "password"
         private const val KEY_JELLYFIN_TOKEN = "jellyfin_token"
@@ -219,6 +265,9 @@ class ProviderRepository(
     ) {
         val entity = dao.getProviderById(id)
         if (entity != null) {
+            // Cleared at the end: a deletion interrupted below leaves orphaned catalogue rows for
+            // the next start's sweep (sweepOrphanedCatalogData).
+            AppSettings(context).orphanSweepPending = true
             dao.deleteProviderRecordingTombstone(entity)
             db.settingsSyncDao().deleteForProviderKey(entity.providerKey)
             deleteProviderEpgSources(id, recordTombstones = !fromRemote)
@@ -230,6 +279,7 @@ class ProviderRepository(
             filtersStore.removeProvider(id)
             // Clear cached provider instance
             MediaProviderFactory.clearCache(id)
+            AppSettings(context).orphanSweepPending = false
         }
     }
 
@@ -277,17 +327,21 @@ class ProviderRepository(
     }
 
     /**
-     * Sweeps `xtream_v2.db` for rows whose `providerId` doesn't match any provider that exists
-     * right now, covering both drift from before [clearProviderCatalog] started running on every
-     * deletion, and any other divergence this class doesn't already know to clean up on its own.
-     * Guarded so it never runs if providers cannot be loaded, protecting good data.
+     * Sweeps `xtream_v2.db` for downloaded catalogue rows whose `providerId` doesn't match any
+     * provider that exists right now — drift from before [clearProviderCatalog] ran on every
+     * deletion, or a deletion interrupted midway. Never runs if providers cannot be loaded.
+     *
+     * Deletes only [ORPHAN_SWEEP_TABLES] and cache SharedPreferences: never favourites or watch
+     * history, never sync state. [userRequested] (Settings → Shrink Database) also removes orphaned
+     * credential files and EPG sources, and VACUUMs. The provider list is read again for each step,
+     * so a provider added meanwhile (by the user or live sync) loses at most a few catalogue rows
+     * it fetches again. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-02.
      */
-    suspend fun pruneOrphanedCatalogData(forceVacuum: Boolean = false): OrphanedDataPruneResult {
+    suspend fun pruneOrphanedCatalogData(userRequested: Boolean = false): OrphanedDataPruneResult {
         val result =
             withContext(Dispatchers.IO) {
                 val startMs = System.currentTimeMillis()
-                val validProviderIds = dao.getAllProvidersList().map { it.id }
-                if (validProviderIds.isEmpty()) {
+                if (validProviderIds().isEmpty()) {
                     OrphanedDataPruneResult(0L, 0L)
                 } else {
                     val db = XtreamDatabase.getInstance(context)
@@ -296,25 +350,28 @@ class ProviderRepository(
                     val sizeBeforeBytes =
                         (if (dbFile.exists()) dbFile.length() else 0L) + (if (walFile.exists()) walFile.length() else 0L)
 
-                    val orphaned = "providerId NOT IN (${validProviderIds.joinToString()})"
-                    val rowsRemoved = (CATALOG_TABLES + "watch_state").sumOf { table -> deleteInBatches(db, table, orphaned) }
+                    val rowsRemoved =
+                        ORPHAN_SWEEP_TABLES.sumOf { table ->
+                            deleteInBatches(db, table, "providerId NOT IN (${validProviderIds().joinToString()})")
+                        }
                     if (rowsRemoved > 0) db.invalidationTracker.refreshAsync()
 
-                    cleanupOrphanedPrefs(validProviderIds.toSet())
+                    cleanupOrphanedPrefs(validProviderIds(), includeCredentials = userRequested)
 
-                    val sourceDao = this@ProviderRepository.db.epgSourceDao()
-                    val allSourceProviderIds = sourceDao.getAllSourcesOnce().map { it.providerId }.toSet()
-                    val orphanSourceProviderIds = allSourceProviderIds - validProviderIds.toSet()
-                    for (orphanId in orphanSourceProviderIds) {
-                        deleteProviderEpgSources(orphanId)
-                    }
+                    if (userRequested) {
+                        val sourceDao = this@ProviderRepository.db.epgSourceDao()
+                        val allSourceProviderIds = sourceDao.getAllSourcesOnce().map { it.providerId }.toSet()
+                        // No tombstones: an orphan source's provider is gone, and that provider's
+                        // own tombstone already covers it on the other devices (see F-11).
+                        for (orphanId in allSourceProviderIds - validProviderIds()) {
+                            deleteProviderEpgSources(orphanId, recordTombstones = false)
+                        }
 
-                    // Only when asked for (Settings → Shrink Database): auto_vacuum = FULL already
-                    // returns freed pages to the file as rows go, so a VACUUM here only defragments,
-                    // and in WAL mode it rewrites the whole database into the WAL first — a spike as
-                    // big as the database itself (measured: 258 MB) that a low-storage TV may not
-                    // have room for. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-35.
-                    if (forceVacuum) {
+                        // auto_vacuum = FULL already returns freed pages to the file as rows go, so
+                        // a VACUUM here only defragments, and in WAL mode it rewrites the whole
+                        // database into the WAL first — a spike as big as the database itself
+                        // (measured: 258 MB) that a low-storage TV may not have room for. See
+                        // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-35.
                         try {
                             val sdb = db.openHelper.writableDatabase
                             sdb.execSQL("VACUUM")
@@ -337,27 +394,39 @@ class ProviderRepository(
         return result
     }
 
-    private fun cleanupOrphanedPrefs(validProviderIds: Set<Long>) {
+    /**
+     * [pruneOrphanedCatalogData] for the automatic callers — app start and the EPG worker — which
+     * must never fail on its account: a full disk or a locked database is recorded and skipped.
+     * [onlyIfPending] (app start) runs it only after an interrupted provider deletion: every other
+     * start skipped a full scan of the catalogue tables competing with Home's first queries. See
+     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-03, R-17.
+     */
+    suspend fun sweepOrphanedCatalogData(onlyIfPending: Boolean) {
+        val appSettings = AppSettings(context)
+        if (!onlyIfPending || appSettings.orphanSweepPending) {
+            try {
+                pruneOrphanedCatalogData(userRequested = false)
+                appSettings.orphanSweepPending = false
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("ProviderRepository", "Orphan sweep failed; skipped", e)
+                org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+                    .record("orphan sweep", e)
+            }
+        }
+    }
+
+    private suspend fun validProviderIds(): Set<Long> = dao.getAllProvidersList().map { it.id }.toSet()
+
+    private fun cleanupOrphanedPrefs(
+        validProviderIds: Set<Long>,
+        includeCredentials: Boolean,
+    ) {
         try {
             val prefsDir = java.io.File(context.applicationInfo.dataDir, "shared_prefs")
-            if (prefsDir.exists() && prefsDir.isDirectory) {
-                val files = prefsDir.listFiles() ?: emptyArray()
-                val prefixPatterns = listOf("provider_creds_", "media_cache_", "xtream_cache_")
-                for (file in files) {
-                    val name = file.name
-                    for (prefix in prefixPatterns) {
-                        if (name.startsWith(prefix) && name.endsWith(".xml")) {
-                            // substringBefore: a non-Default profile's file is
-                            // media_cache_<id>_profile_<profileId> (MediaRepository.profileCacheName).
-                            val idStr = name.removePrefix(prefix).removeSuffix(".xml").substringBefore('_')
-                            val id = idStr.toLongOrNull()
-                            if (id != null && id !in validProviderIds) {
-                                file.delete()
-                            }
-                        }
-                    }
-                }
-            }
+            val names = prefsDir.listFiles()?.map { it.name }.orEmpty()
+            orphanedPrefsFiles(names, validProviderIds, includeCredentials).forEach { java.io.File(prefsDir, it).delete() }
         } catch (e: Exception) {
             // cancellation-ok: non-suspend
             android.util.Log.w("ProviderRepository", "Failed cleaning up orphaned prefs", e)

@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.core.player.diagnostics
 
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -51,7 +50,6 @@ object SafeMode {
      */
     fun leave(activity: Activity) {
         counter?.markHealthy()
-        activity.startActivity(Intent.makeRestartActivityTask(activity.componentName))
-        Runtime.getRuntime().exit(0)
+        restartProcess(activity)
     }
 }

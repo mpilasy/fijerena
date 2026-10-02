@@ -191,6 +191,10 @@ sealed interface Screen {
     @Serializable
     data object SafeMode : Screen
 
+    /** Start destination when providers.db was written by a newer build (`ProvidersDbGuard.isBlocked`). */
+    @Serializable
+    data object NewerData : Screen
+
     /**
      * Player screen destination with stream parameters.
      *

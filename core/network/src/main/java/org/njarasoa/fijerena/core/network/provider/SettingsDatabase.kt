@@ -20,7 +20,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.SyncClockEntity
         SettingsVersionEntity::class,
         SyncClockEntity::class,
     ],
-    version = 15,
+    version = SettingsDatabase.DB_VERSION,
     exportSchema = true,
 )
 abstract class SettingsDatabase : RoomDatabase() {
@@ -35,6 +35,7 @@ abstract class SettingsDatabase : RoomDatabase() {
     abstract fun settingsSyncDao(): SettingsSyncDao
 
     companion object {
+        const val DB_VERSION = 15
         private const val DB_NAME = "providers.db"
 
         @Volatile

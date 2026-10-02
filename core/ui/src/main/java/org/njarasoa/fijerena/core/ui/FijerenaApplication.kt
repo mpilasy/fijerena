@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.FavoriteCategoryRowCleanup
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
 import org.njarasoa.fijerena.core.network.sync.pruneSyncTombstones
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -48,6 +49,9 @@ class FijerenaApplication :
         // Next, before anything that could be what keeps crashing: counts this launch and decides
         // whether it starts in safe mode — see SafeMode.
         SafeMode.init(this)
+        // Before anything opens providers.db: one written by a newer build can't be opened at all —
+        // see ProvidersDbGuard.
+        ProvidersDbGuard.check(this)
         // Debug-only: log any main-thread disk/DB access (with a stack trace) to pinpoint UI-thread
         // jank/ANRs. Gated on the debuggable flag so it never runs in release.
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
@@ -67,7 +71,8 @@ class FijerenaApplication :
         RemoteStopFallback.start(this)
         // Safe mode (the last launches kept crashing): none of the startup work below, any of which
         // may be the cause. The safe-mode screen's Continue restarts the process to run it.
-        if (!SafeMode.isActive) startBackgroundWork()
+        // Nor with a providers.db from a newer build, which every one of those steps would open.
+        if (!SafeMode.isActive && !ProvidersDbGuard.isBlocked) startBackgroundWork()
     }
 
     private fun startBackgroundWork() {
@@ -84,7 +89,8 @@ class FijerenaApplication :
         // ProviderRepository.migrateCategoryFiltersToProfiles().
         // AppScopes, not a bare CoroutineScope(Dispatchers.IO): an uncaught exception there would
         // reach the thread's uncaught-exception handler and crash the process on cold boot.
-        AppScopes.create("FijerenaApplication.startup", Dispatchers.IO).launch {
+        val startupScope = AppScopes.create("FijerenaApplication.startup", Dispatchers.IO)
+        startupScope.launch {
             ProviderRepository(this@FijerenaApplication).migrateCategoryFiltersToProfiles()
             ProfileRepository(this@FijerenaApplication).migrateLegacyProfileSettings()
             // Live sync keeps deletions for 90 days — see SyncKind.TOMBSTONE_RETENTION_MS.
@@ -101,6 +107,12 @@ class FijerenaApplication :
                 AppSettings(this@FijerenaApplication),
                 XtreamDatabase.getInstance(this@FijerenaApplication).favoriteStateDao(),
             ) { AppContainer.getInstance(this@FijerenaApplication).reloadAfterRemoteChange(it) }
+        }
+        // Its own coroutine, so nothing above can skip it: finishes a provider deletion the app was
+        // killed in the middle of. Used to run from the nav hosts' composition on every start,
+        // unguarded — see docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-03.
+        startupScope.launch {
+            ProviderRepository(this@FijerenaApplication).sweepOrphanedCatalogData(onlyIfPending = true)
         }
     }
 

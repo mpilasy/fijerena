@@ -940,4 +940,11 @@
     <string name="safe_mode_cleared">Caches cleared. Choose Continue to start normally.</string>
     <string name="safe_mode_clear_failed">Some caches couldn\'t be cleared. Diagnostics has the details.</string>
     <string name="safe_mode_diagnostics">Show diagnostics</string>
+    <string name="newer_data_title">Data from a newer version</string>
+    <string name="newer_data_message">Your sources on this device were saved by a newer version of Fijerena (data version %1$d; this version reads up to %2$d). Install the newer version to keep using them.</string>
+    <string name="newer_data_hint">Or reset sources to use this version now: the sources and their settings are set aside as a backup and you start with none. Favourites and watch history stay on the device.</string>
+    <string name="newer_data_reset">Reset sources</string>
+    <string name="newer_data_reset_confirm_title">Reset sources?</string>
+    <string name="newer_data_reset_confirm_message">Every source, profile and guide source on this device is set aside, and the app restarts with none. Installing the newer version and restoring the backup brings them back.</string>
+    <string name="newer_data_reset_confirm">Reset</string>
 </resources>

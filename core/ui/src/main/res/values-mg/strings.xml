@@ -739,4 +739,11 @@
     <string name="safe_mode_cleared">Voafafa ny cache. Safidio Tohizo mba hanombohana ara-dalàna.</string>
     <string name="safe_mode_clear_failed">Misy cache tsy voafafa. Ao amin\'ny Diagnostics ny antsipiriany.</string>
     <string name="safe_mode_diagnostics">Asehoy ny diagnostics</string>
+    <string name="newer_data_title">Angona avy amin\'ny dikan-teny vaovao kokoa</string>
+    <string name="newer_data_message">Dikan-teny vaovao kokoa an\'i Fijerena no nitahiry ny loharanonao amin\'ity fitaovana ity (dikan\'ny angona %1$d; ity dikan-teny ity dia mamaky hatramin\'ny %2$d). Apetraho ny dikan-teny vaovao kokoa mba hampiasana azy ireo hatrany.</string>
+    <string name="newer_data_hint">Na averina amin\'ny voalohany ny loharano mba hampiasana ity dikan-teny ity izao: atokana ho tahiry ny loharano sy ny fikirakirana azy ary manomboka tsy misy ianao. Mijanona eo amin\'ny fitaovana ny ankafizina sy ny tantaran\'ny fijerena.</string>
+    <string name="newer_data_reset">Avereno ny loharano</string>
+    <string name="newer_data_reset_confirm_title">Haverina ve ny loharano?</string>
+    <string name="newer_data_reset_confirm_message">Atokana avokoa ny loharano, ny mombamomba ary ny loharanon\'ny fitarihana rehetra amin\'ity fitaovana ity, ary miverina manomboka tsy misy ny fampiharana. Raha apetraka ny dikan-teny vaovao kokoa ary averina ny tahiry dia miverina izy ireo.</string>
+    <string name="newer_data_reset_confirm">Avereno</string>
 </resources>

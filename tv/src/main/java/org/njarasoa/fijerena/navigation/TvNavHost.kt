@@ -25,7 +25,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.data.AuthViewModel
@@ -37,6 +36,7 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.ProvidersDbGuard
 import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -55,6 +55,7 @@ import org.njarasoa.fijerena.feature.player.TvPlayerScreen
 import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import org.njarasoa.fijerena.feature.provider.TvAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.TvProviderSelectionScreen
+import org.njarasoa.fijerena.feature.safemode.NewerDataScreen
 import org.njarasoa.fijerena.feature.safemode.SafeModeScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
 import org.njarasoa.fijerena.feature.settings.EditProviderScreen
@@ -144,14 +145,11 @@ fun TvNavHost(
         }
         pickProfileAtLaunch = ProfileRepository(context.applicationContext).count() > 1
         initializationComplete = true
-        // Self-healing: quietly sweep orphaned catalog rows left by past deleted providers
-        coroutineScope.launch(Dispatchers.IO) {
-            providerRepo.pruneOrphanedCatalogData(forceVacuum = false)
-        }
     }
 
     LaunchedEffect(Unit) {
-        if (SafeMode.isActive) {
+        // A providers.db from a newer build can't be opened: same skip, its own screen.
+        if (SafeMode.isActive || ProvidersDbGuard.isBlocked) {
             // Crash-loop safe mode: none of initializeStartup()'s provider lookups, migration or
             // orphan sweep — any of them may be what kept crashing. The safe-mode screen is the
             // start destination.
@@ -176,6 +174,8 @@ fun TvNavHost(
         remember(initializationComplete, hasProvider) {
             if (!initializationComplete) {
                 null
+            } else if (ProvidersDbGuard.isBlocked) {
+                Screen.NewerData
             } else if (SafeMode.isActive) {
                 Screen.SafeMode
             } else if (hasProvider == true && pickProfileAtLaunch) {
@@ -370,6 +370,9 @@ fun TvNavHost(
                         .SyncSettingsScreen()
                 }
 
+                composable<Screen.NewerData> {
+                    NewerDataScreen()
+                }
                 composable<Screen.SafeMode> {
                     SafeModeScreen(onShowDiagnostics = { navController.navigateOnce(Screen.Diagnostics) })
                 }
