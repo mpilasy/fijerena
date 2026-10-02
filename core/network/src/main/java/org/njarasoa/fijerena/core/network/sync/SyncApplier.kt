@@ -1,7 +1,9 @@
 package org.njarasoa.fijerena.core.network.sync
 
 import android.content.Context
+import android.util.Log
 import androidx.room.withTransaction
+import kotlinx.coroutines.CancellationException
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
@@ -20,6 +22,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SyncTombstoneEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SyncVersionEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
  * Applies records received from another device: looks up what this device knows about each key,
@@ -38,6 +41,13 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 class SyncApplier(
     private val context: Context,
 ) {
+    private companion object {
+        const val TAG = "SyncApplier"
+
+        /** See [applyGuarded]. */
+        val reportedFailures: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    }
+
     private val settingsDb = SettingsDatabase.getInstance(context)
     private val xtreamDb = XtreamDatabase.getInstance(context)
     private val sync = settingsDb.settingsSyncDao()
@@ -85,7 +95,7 @@ class SyncApplier(
                 skipped++ // a kind from a newer app version
                 continue
             }
-            when (val outcome = applyOne(record)) {
+            when (val outcome = applyGuarded(record)) {
                 Outcome.Applied -> applied++
                 is Outcome.AppliedUserData -> {
                     applied++
@@ -117,6 +127,27 @@ class SyncApplier(
 
         data object ActiveProfileDeleted : Outcome
     }
+
+    /**
+     * [applyOne], but a record that throws — a payload shape from another app version, or a
+     * provider deleted locally mid-apply — waits with the deferred ones instead of failing the
+     * pass. Before, the exception aborted the whole pull before the page's cursor was saved, so
+     * every later pass refetched the same record and failed on it again: sync stuck for good on
+     * that device, with no error shown. Deferred rather than skipped so a newer app version can
+     * still apply it. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-08.
+     */
+    private suspend fun applyGuarded(record: SyncRecord): Outcome =
+        try {
+            applyOne(record)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Couldn't apply a ${record.key.kind} record; it waits for a later pass", e)
+            // Once per kind and exception type per process: a record retried every pass must not
+            // flood the crash log.
+            if (reportedFailures.add("${record.key.kind}/${e.javaClass.name}")) CrashLog.record("sync apply ${record.key.kind}", e)
+            Outcome.Deferred
+        }
 
     private suspend fun applyOne(record: SyncRecord): Outcome {
         val key = record.key
@@ -197,7 +228,8 @@ class SyncApplier(
         if (resolution !is Resolution.Upsert && resolution !is Resolution.Delete && resolution !is Resolution.ClearWatch) {
             return skippedOrDeferred(resolution)
         }
-        val providerId = provider!!.id
+        // Null only if the provider was deleted here between the lookup and now.
+        val providerId = provider?.id ?: return Outcome.Deferred
         xtreamDb.withTransaction {
             versions.setApplying(true)
             when (resolution) {
@@ -358,7 +390,7 @@ class SyncApplier(
         return when (val resolution = SyncMerge.resolve(record, local)) {
             Resolution.Upsert -> {
                 val remote = payload!!
-                val providerId = sync.providerByKey(remote.providerKey)!!.id
+                val providerId = sync.providerByKey(remote.providerKey)?.id ?: return Outcome.Deferred
                 inSettingsApply {
                     val dao = settingsDb.epgSourceDao()
                     // First sync: the same source added on both devices before linking adopts this key.
@@ -438,7 +470,7 @@ class SyncApplier(
             )
         return when (val resolution = SyncMerge.resolve(record, local)) {
             Resolution.Upsert, Resolution.Delete -> {
-                val providerId = sync.providerByKey(key.providerKey)!!.id
+                val providerId = sync.providerByKey(key.providerKey)?.id ?: return Outcome.Deferred
                 inSettingsApply {
                     if (key.kind == SyncKind.PROVIDER_LOGIN) {
                         val login = if (record.deleted) null else SyncPayloads.decode<SyncPayloads.Login>(record.payload)
