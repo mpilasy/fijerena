@@ -14,11 +14,9 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -62,6 +60,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import androidx.work.NetworkType as WorkNetworkType
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Singleton managing multi-source EPG download-ingest pipeline.
@@ -214,7 +213,7 @@ class EpgFileManager private constructor(
     // Lazy: this class is built in Application.onCreate, ahead of everything else on startup.
     private val prefs: SharedPreferences by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
     private val appSettings by lazy { AppSettings(context) }
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val scope = AppScopes.create("EpgFileManager", Dispatchers.Default)
 
     val staleThresholdMs: Long
         get() {

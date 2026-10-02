@@ -2,9 +2,7 @@ package org.njarasoa.fijerena.core.network.xmltv
 
 import android.content.Context
 import android.util.Log
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -14,6 +12,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSearchResultRow
 import java.util.Locale
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Thrown when a search hits the FTS index while it's marked stale (mid-ingest or mid-rebuild).
@@ -30,7 +29,7 @@ class XmltvSearchService(
     private val context: Context,
 ) {
     private val rebuildDispatcher = Dispatchers.IO.limitedParallelism(1)
-    private val rebuildScope = CoroutineScope(SupervisorJob() + rebuildDispatcher)
+    private val rebuildScope = AppScopes.create("XmltvSearchService.rebuild", rebuildDispatcher)
 
     companion object {
         private const val TAG = "XmltvSearchService"

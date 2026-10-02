@@ -16,7 +16,6 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.njarasoa.fijerena.core.player.R
@@ -33,6 +32,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Thrown by [StreamingPlaybackService.awaitInstance] when the service was torn down while a
@@ -262,7 +262,7 @@ class StreamingPlaybackService : MediaSessionService() {
     }
 
     private fun observeNetworkChanges() {
-        val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+        val scope = AppScopes.create("StreamingPlaybackService", Dispatchers.Main)
         serviceScope = scope
         scope.launch {
             healthMonitor?.state?.collect {

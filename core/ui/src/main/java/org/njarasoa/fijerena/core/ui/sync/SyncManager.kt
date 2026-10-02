@@ -5,10 +5,8 @@ import android.app.Application
 import android.os.Bundle
 import android.util.Log
 import androidx.room.InvalidationTracker
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +28,7 @@ import org.njarasoa.fijerena.core.ui.di.AppContainer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.cancellation.CancellationException
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Runs live sync while the app is in use — see `docs/plans/20260929_live-sync-plan.md` → Flow.
@@ -46,7 +45,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class SyncManager private constructor(
     private val app: Application,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = AppScopes.create("SyncManager", Dispatchers.IO)
     private val store = SyncAccountStore(app)
     private val engine = SyncEngine(app, store = store)
     private val api = SyncApi()

@@ -10,13 +10,14 @@ import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
 import java.util.*
 import java.util.concurrent.TimeUnit
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Manages periodic background synchronization for Xtream IPTV providers.
  * Handles scheduling of XtreamSyncWorker.
  */
 class ProviderSyncManager private constructor(private val context: Context) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val scope = AppScopes.create("ProviderSyncManager", Dispatchers.Main)
     private var autoRefreshJob: Job? = null
 
     /** Manual syncs currently running, keyed by provider id. Guarded by [inFlightLock]. */

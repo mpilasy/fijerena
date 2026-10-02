@@ -14,10 +14,7 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
@@ -26,6 +23,8 @@ import org.njarasoa.fijerena.core.network.sync.pruneSyncTombstones
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.network.NetworkModule
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -37,6 +36,9 @@ class FijerenaApplication :
     SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
+        // First, so anything that goes wrong from here on — startup included — is recorded.
+        // Settings → Diagnostics (developer mode) shows it.
+        CrashLog.install(this)
         // Debug-only: log any main-thread disk/DB access (with a stack trace) to pinpoint UI-thread
         // jank/ANRs. Gated on the debuggable flag so it never runs in release.
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
@@ -60,14 +62,9 @@ class FijerenaApplication :
         // One-time moves of each provider's category filters and the install-wide dev-mode flag to
         // every profile, and the install-wide search history to the default profile — see
         // ProviderRepository.migrateCategoryFiltersToProfiles().
-        // SupervisorJob + handler: an uncaught exception in a bare CoroutineScope(Dispatchers.IO)
-        // propagates to the thread's uncaught-exception handler and can crash the process on
-        // cold boot; log and swallow instead.
-        val startupExceptionHandler =
-            CoroutineExceptionHandler { _, throwable ->
-                Log.e("FijerenaApplication", "Startup coroutine failed", throwable)
-            }
-        CoroutineScope(SupervisorJob() + Dispatchers.IO + startupExceptionHandler).launch {
+        // AppScopes, not a bare CoroutineScope(Dispatchers.IO): an uncaught exception there would
+        // reach the thread's uncaught-exception handler and crash the process on cold boot.
+        AppScopes.create("FijerenaApplication.startup", Dispatchers.IO).launch {
             ProviderRepository(this@FijerenaApplication).migrateCategoryFiltersToProfiles()
             ProfileRepository(this@FijerenaApplication).migrateLegacyProfileSettings()
             // Live sync keeps deletions for 90 days — see SyncKind.TOMBSTONE_RETENTION_MS.

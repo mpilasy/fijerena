@@ -2,11 +2,9 @@ package org.njarasoa.fijerena.core.network.queue
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,13 +14,14 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import java.util.PriorityQueue
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Singleton queue manager that processes tasks based on priority.
  * Supports concurrent execution of multiple tasks up to a maximum limit.
  */
 object RefreshQueue {
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = AppScopes.create("RefreshQueue", Dispatchers.IO)
     private val queue = PriorityQueue<QueuedTask>()
     private val queueMutex = Mutex()
     private val processChannel = Channel<Unit>(Channel.CONFLATED)

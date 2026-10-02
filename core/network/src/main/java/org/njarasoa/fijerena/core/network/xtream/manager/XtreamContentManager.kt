@@ -2,10 +2,8 @@ package org.njarasoa.fijerena.core.network.xtream.manager
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,6 +25,7 @@ import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaMetadata
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.*
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Data-hygiene guard, demoted from Phase 5 dedup (docs/plans/20260828_watch-state-durable-storage-plan.md) to a
@@ -70,7 +69,7 @@ class XtreamContentManager(
     // timestamps are written on the same cold-entry path (category/stream load) as several
     // Media3-triggered startForegroundService() dispatches, so keeping this backlog at zero here
     // matters as much as in MediaRepository.
-    private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+    private val writeScope = AppScopes.create("XtreamContentManager.write", Dispatchers.IO.limitedParallelism(1))
 
     private fun commitAsync(action: SharedPreferences.Editor.() -> Unit) {
         writeScope.launch { sharedPreferences.edit(commit = true, action = action) }

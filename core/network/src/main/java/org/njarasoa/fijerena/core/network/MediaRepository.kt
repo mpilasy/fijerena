@@ -5,9 +5,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import kotlinx.coroutines.cancel
 import java.io.Closeable
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -52,6 +50,7 @@ import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import java.util.concurrent.ConcurrentHashMap
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 @Serializable
 data class WatchedItem(
@@ -255,7 +254,7 @@ class MediaRepository(
     // (rather than inlined into writeScope's constructor) so [awaitPendingWrites] can queue onto
     // the exact same serialized dispatcher without going through writeScope's Job.
     private val writeDispatcher = Dispatchers.IO.limitedParallelism(1)
-    private val writeScope = CoroutineScope(SupervisorJob() + writeDispatcher)
+    private val writeScope = AppScopes.create("MediaRepository.write", writeDispatcher)
 
     private fun SharedPreferences.commitAsync(action: SharedPreferences.Editor.() -> Unit) {
         val prefs = this

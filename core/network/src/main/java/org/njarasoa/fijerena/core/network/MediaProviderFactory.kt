@@ -7,7 +7,6 @@ import android.provider.Settings
 import java.util.concurrent.ConcurrentHashMap
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -22,6 +21,7 @@ import org.njarasoa.fijerena.core.network.smb.SmbClient
 import org.njarasoa.fijerena.core.network.smb.SmbMediaProvider
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Resolves the correct [MediaProvider] implementation based on the provider entity type.
@@ -37,6 +37,9 @@ object MediaProviderFactory {
     // ConcurrentHashMap: create() is called from background workers, IO dispatchers, and
     // composables, while trimMemory()/clearCache() mutate/iterate it from other threads.
     private val providerCache = ConcurrentHashMap<Long, MediaProvider>()
+
+    // Disconnects of evicted providers run here, off the caller's thread.
+    private val disconnectScope = AppScopes.create("MediaProviderFactory.disconnect", kotlinx.coroutines.Dispatchers.IO)
 
     /**
      * Get or create a [MediaProvider] for the given [ProviderEntity].
@@ -95,7 +98,7 @@ object MediaProviderFactory {
         val removed = providerCache.remove(providerId)
         EpgChannelMatcher.clearCache()
         if (removed != null) {
-            CoroutineScope(Dispatchers.IO).launch {
+            disconnectScope.launch {
                 try {
                     removed.disconnect()
                 } catch (_: Exception) {
@@ -113,7 +116,7 @@ object MediaProviderFactory {
         val removed = providerCache.entries.filter { it.value is JellyfinMediaProvider }
         removed.forEach { providerCache.remove(it.key, it.value) }
         if (removed.isNotEmpty()) {
-            CoroutineScope(Dispatchers.IO).launch {
+            disconnectScope.launch {
                 removed.forEach { entry ->
                     try {
                         entry.value.disconnect()
@@ -132,7 +135,7 @@ object MediaProviderFactory {
         providerCache.clear()
         EpgChannelMatcher.clearCache()
         if (removed.isNotEmpty()) {
-            CoroutineScope(Dispatchers.IO).launch {
+            disconnectScope.launch {
                 removed.forEach { provider ->
                     try {
                         provider.disconnect()

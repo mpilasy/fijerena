@@ -2,11 +2,9 @@ package org.njarasoa.fijerena.core.network.xtream.manager
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -22,6 +20,7 @@ import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.EPG_CAC
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_EPG_PREFIX
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_LEGACY_EPG_PREFS_PURGED
 import org.njarasoa.fijerena.core.player.model.EpgResponse
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 class XtreamEpgManager(
     private val sessionManager: XtreamSessionManager,
@@ -39,7 +38,7 @@ class XtreamEpgManager(
     // See MediaRepository's identical writeScope/commitAsync for the full rationale. Kept here
     // only for the one-time legacy-prefs purge and for the fire-and-forget cache invalidations,
     // which must not block the caller.
-    private val writeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+    private val writeScope = AppScopes.create("XtreamEpgManager.write", Dispatchers.IO.limitedParallelism(1))
 
     /** Whether caching is enabled for this provider */
     private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
