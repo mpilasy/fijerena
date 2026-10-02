@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): Phase 4 done 2026-10-01 as agreed (F-35, F-28, F-33 reduced, F-14; F-13 deferred). Phase 5 in progress: F-27 done 2026-10-01; F-32 code done 2026-10-02 (smoke pass pending). Phase 6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): Phase 4 done 2026-10-01 as agreed (F-35, F-28, F-33 reduced, F-14; F-13 deferred). Phase 5 in progress: F-27 done 2026-10-01; F-32 code done 2026-10-02 (smoke pass pending); F-34 (pending emulator check), F-37 done 2026-10-02, F-10 skipped, F-36 sweep declined. Phase 6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -275,6 +275,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `jellyfin/JellyfinApiService.kt:56-73, 642-646`.
 - **Correction to draft:** OkHttp dispatcher threads idle out after 60 s and pooled connections after 5 min; this is not an unbounded thread leak / `pthread_create` OOM. Jellyfin is out of scope per `20260922_codebase-stability-resilience-plan.md` scope note.
 - **Fix (optional):** mirror `XtreamApiService.close()`; call it from `JellyfinMediaProvider.disconnect()`. Same for `TmdbApiService`.
+- **Skipped 2026-10-02, not clean:** `MediaProviderFactory.clearCache()`/`clearAllCaches()` drop a provider from the cache and `disconnect()` it, but a holder that already has the instance (the active `MediaRepository`, a playing item reporting progress) keeps using it and today just re-authenticates; a closed Ktor client would throw `ClientEngineClosedException` there instead. The leak it fixes is bounded (idle threads out after 60 s, pool after 5 min). `TmdbApiService` is a process-wide singleton with no owner to close it. Revisit only if Jellyfin gets a real provider lifecycle.
 
 #### 🆕 F-38: TV Switch Provider dialog shows no D-pad focus [P2, PLAUSIBLE]
 - **Where:** the Home provider chip's "Switch Provider" dialog (TV).
@@ -284,6 +285,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - `ProviderRepository(...)` is constructed directly at 37 sites (e.g. `TvNavHost.kt:177, 670, 752`) despite AGENTS.md rule 4 — each instance builds its own `MasterKey`/encrypted-prefs cache. Route through `AppContainer.providerRepository` when touching those files; no sweep.
 - `tv/.../ui/components/modifiers/FocusModifiers.kt` `tvFocusable*()`: the focus-event node is chained *after* `focusable()`, so it never receives focus events and never draws its ring. No screen uses it (found when Diagnostics tried to, 2026-10-01). Fix the order or delete the helpers.
 - `MobileCategoryListScreen.kt:245, 274, 284` hard-cast `context as ComponentActivity`. Use `LocalActivity.current` / a `findActivity()` helper. Low risk today (always hosted in `MainActivity`).
+- **Done 2026-10-02 (F-37, F-36 sweep declined as planned):** `MobileCategoryListScreen` resolves `LocalActivity.current as? ComponentActivity` once (activity-compose 1.13.0 provides `LocalActivity`) and every use is null-safe. `tvFocusable*()` kept rather than deleted — AGENTS.md and `docs/design.md` name `FocusModifiers.kt` as the focus reference and `MovieDetailsScreen` still imports it — and fixed by putting the focus-event node before `focusable()`; still no screen applies it, so no visible change. The 37 `ProviderRepository(...)` sites are untouched.
 
 ---
 
@@ -334,7 +336,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 1. **F-27** `suspendRunCatching` + convert the listed files + CI grep gate. ✅ (18 other files allow-listed in `scripts/check-cancellation-allowlist.txt`)
 2. **F-32** align Compose BOM (stable) + emulator D-pad smoke pass; refresh AGENTS.md version table. ✅ code done 2026-10-02 (smoke pass pending)
 3. **F-34** after Google TV emulator reproduction. ✅ code 2026-10-02, pending emulator check.
-4. **F-10**, **F-36**, **F-37** opportunistically when those files are touched.
+4. **F-10**, **F-36**, **F-37** opportunistically when those files are touched. F-37 ✅ and F-10 skipped (with reason) 2026-10-02; F-36 sweep declined;
 
 ### Phase 6 — Regression tests that lock it in (written alongside each phase, listed here as the gate)
 - `StreamingPlaybackService` retry/recycle state machine behind a fake `Player` (F-01, F-02).

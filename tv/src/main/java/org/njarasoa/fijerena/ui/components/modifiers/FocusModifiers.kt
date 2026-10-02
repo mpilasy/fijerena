@@ -44,9 +44,11 @@ fun Modifier.tvFocusable(
     borderColor: Color = CinemaAccentLight,
     cornerRadius: Dp = CornerRadius.medium,
 ): Modifier =
+    // The focus-event node must sit *before* focusable(): onFocusEvent reports the focus state of
+    // the focus target below it in the chain, so placed after it the node never saw an event.
     this
-        .focusable()
         .then(TvFocusableElement(focusScale, borderWidth, borderColor, cornerRadius))
+        .focusable()
 
 /**
  * No Scale Focus Modifier

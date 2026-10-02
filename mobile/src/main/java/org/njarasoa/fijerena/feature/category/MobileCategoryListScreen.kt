@@ -95,6 +95,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -196,6 +197,8 @@ fun MobileCategoryListScreen(
     val favoriteCategoryIdsSet by viewModel.favoriteCategoryIds.collectAsStateWithLifecycle()
     val favoriteCategoryIds = remember(favoriteCategoryIdsSet) { ImmutableStringSet(favoriteCategoryIdsSet) }
     val context = LocalContext.current
+    // Null-safe instead of a hard `context as ComponentActivity` cast (F-37).
+    val activity = LocalActivity.current as? ComponentActivity
     val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
     val epgIndexState by epgIndexer.state.collectAsStateWithLifecycle()
 
@@ -246,7 +249,7 @@ fun MobileCategoryListScreen(
         // dock (and its lifecycle observer with it) but left the stream playing, with nothing
         // left to ever stop it — even after leaving the app. Resolved directly since
         // dockPlayback is declared further down; it's the same Activity-scoped instance.
-        ViewModelProvider(context as ComponentActivity)[PlaybackViewModel::class.java].stop()
+        activity?.let { ViewModelProvider(it)[PlaybackViewModel::class.java].stop() }
         dockTarget = null
     }
     // The toolbar's Back, Search and TV Guide leave this screen without going through the
@@ -257,7 +260,7 @@ fun MobileCategoryListScreen(
     // See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-17.
     val stopDockThen: (() -> Unit) -> Unit = { leave ->
         if (isLiveTv && dockTarget != null) {
-            ViewModelProvider(context as ComponentActivity)[PlaybackViewModel::class.java].stop()
+            activity?.let { ViewModelProvider(it)[PlaybackViewModel::class.java].stop() }
         }
         leave()
     }
@@ -287,7 +290,7 @@ fun MobileCategoryListScreen(
     // destination's back-stack entry, so MainActivity was always checking a viewmodel that
     // never actually played anything — PiP could never trigger.
     val dockPlayback: PlaybackViewModel? =
-        if (isLiveTv && target != null) viewModel(viewModelStoreOwner = context as ComponentActivity) else null
+        if (isLiveTv && target != null && activity != null) viewModel(viewModelStoreOwner = activity) else null
 
     // Auto-enter PiP (Android 12+) was hardcoded off at Activity creation and never turned back
     // on — MainActivity.onUserLeaveHint()'s manual fallback only runs below SDK 31, so without
@@ -297,7 +300,7 @@ fun MobileCategoryListScreen(
         val dockPlaybackState = dockPlayback?.playbackState?.collectAsStateWithLifecycle()?.value
         LaunchedEffect(dockPlaybackState) {
             val isPlaying = dockPlaybackState is PlaybackState.Playing || dockPlaybackState is PlaybackState.Buffering
-            (context as ComponentActivity).setPictureInPictureParams(
+            activity?.setPictureInPictureParams(
                 android.app.PictureInPictureParams.Builder()
                     .setAutoEnterEnabled(isPlaying)
                     .build(),
