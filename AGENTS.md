@@ -345,6 +345,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20261002_epg-search-during-refresh-plan.md](docs/plans/20261002_epg-search-during-refresh-plan.md) | **Complete** - all three phases landed (2026-10-02); emulator verification outstanding |
 | [docs/plans/20261002_catalog-sync-cache-churn-plan.md](docs/plans/20261002_catalog-sync-cache-churn-plan.md) | **Complete** - all four phases landed (2026-10-02); Phase 1 verified on bears, Phase 4 on jellyxtream |
 | [docs/plans/20261002_provider-to-source-rename-plan.md](docs/plans/20261002_provider-to-source-rename-plan.md) | **Complete** - both phases landed (2026-10-02); French and Malagasy reviewed as text only |
+| [docs/plans/20261002_next-level-rock-solid-resilience-plan.md](docs/plans/20261002_next-level-rock-solid-resilience-plan.md) | Proposed (2026-10-02) - 26 findings traced in source, none reproduced on a device; only R-23's history removal of `fijerena_settings.json` done |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 
