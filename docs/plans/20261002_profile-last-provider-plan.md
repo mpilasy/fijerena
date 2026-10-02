@@ -1,6 +1,6 @@
 # Profile Remembers Its Provider Plan
 
-**Status:** Complete (2026-10-02) — instrumented test not yet run on an emulator
+**Status:** Complete (2026-10-02)
 
 Each profile comes back to the provider it last picked, on every device. Profile A picks
 provider X, profile B moves the device to provider Y; when A is picked again the device goes back
@@ -171,4 +171,5 @@ Single phase, one commit.
   `ProfileSwitch` log line reports `provider moved`.
 - Profile deletion removes the key.
 - Tests: `AppSettingsLastProviderTest` (JVM, passing); `ProfileLastProviderTest` (instrumented,
-  compiles, not run — needs an emulator, which wipes the test APK's data).
+  2/2 passing on a read-only Pixel_10 emulator, with the rest of the `provider` and `profile`
+  instrumented tests: 13 + 1 passing).
