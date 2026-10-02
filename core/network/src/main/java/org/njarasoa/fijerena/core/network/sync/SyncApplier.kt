@@ -306,7 +306,6 @@ class SyncApplier(
                         SyncTombstoneEntity(providerId, key.profileKey, SyncKind.WATCH_CLEAR, "", "", resolution.before),
                     )
                 }
-                else -> Unit
             }
             versions.upsert(SyncVersionEntity(providerId, key.profileKey, key.kind, key.itemId, key.contentType, record.hlc, pending = false))
             versions.setApplying(false)
