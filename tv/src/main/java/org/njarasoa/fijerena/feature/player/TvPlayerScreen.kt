@@ -116,7 +116,7 @@ fun TvPlayerScreen(
     // Use derived state or specific key to avoid re-triggering on EPG updates
     val currentStreamId = lastSuccessState?.streamId
 
-    // The last position setPositionSaveListener reported for the *current* stream, reset to null
+    // The last position the service's positionSaves reported for the *current* stream, reset to null
     // on a channel/title change. lastSuccessState.resumePosition (used below) only ever reflects
     // where this stream stood when it was first loaded — recordHistory() writes fresh positions
     // to the DB but never back into loaderViewModel's own state, so without this a screensaver
@@ -185,11 +185,9 @@ fun TvPlayerScreen(
     // buffers) has no reason to outlive this screen — see stopAndRelease's kdoc.
     DisposableEffect(Unit) {
         onDispose {
+            // The teardown's own final position save finds no collector by now (the
+            // positionSaves effect below has left composition): finalizeSession is that save.
             finalizeSession(playbackViewModel.playbackState.value, loaderViewModel)
-            // stopAndRelease() clears this too, but it's async (awaits the service instance
-            // first) — clearing synchronously here closes the window where the closure (and the
-            // ViewModel/context it captures) stays reachable from the still-alive service.
-            StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
             playbackViewModel.stopAndRelease()
         }
     }
@@ -214,11 +212,15 @@ fun TvPlayerScreen(
         StreamingPlaybackService.awaitInstanceOrNull()?.setContentType(playerContentType)
     }
 
-    // Set up auto-save listener for playback position
-    LaunchedEffect(Unit) {
-        StreamingPlaybackService.awaitInstanceOrNull()?.setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
-            lastKnownPositionMs = position
-            loaderViewModel.recordHistory(position, duration, isPaused, audioIndex, subtitleIndex)
+    // Save playback position and track choices. Collected from the service's process-wide flow,
+    // not a listener set on one instance: Home → return destroys the service (MainActivity.onStop)
+    // and ON_RESUME plays on a new one. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-04.
+    // Keyed on the stream: lastKnownPositionMs is a fresh state per stream, and a collector
+    // started for the previous one would keep writing that one's.
+    LaunchedEffect(currentStreamId) {
+        StreamingPlaybackService.positionSaves.collect { save ->
+            lastKnownPositionMs = save.positionMs
+            loaderViewModel.recordHistory(save.positionMs, save.durationMs, save.isPaused, save.audioTrackIndex, save.subtitleTrackIndex)
         }
     }
 

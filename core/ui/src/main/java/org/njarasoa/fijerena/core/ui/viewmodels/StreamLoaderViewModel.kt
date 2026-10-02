@@ -19,6 +19,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -106,8 +108,9 @@ class StreamLoaderViewModel(
     private var mediaRepository: MediaRepository? = null
     private val appSettings = AppSettings(context)
 
-    private var currentStreamIndex = -1
-    private var streamList: List<MediaItem> = emptyList()
+    // Live TV channel list and the position in it, as one snapshot: written from IO coroutines,
+    // read by the D-pad handlers on Main. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-13.
+    private val channels = MutableStateFlow(ChannelCursor())
     private var currentCategoryId: String = categoryId
 
     // Avoid re-fetching EPG too often
@@ -176,9 +179,7 @@ class StreamLoaderViewModel(
                     val result = repo.getItems(currentCategoryId, contentType)
                     result.fold(
                         onSuccess = { items ->
-                            streamList = items
-                            currentStreamIndex = items.indexOfFirst { it.id == initialStreamId }
-                            if (currentStreamIndex == -1 && items.isNotEmpty()) currentStreamIndex = 0
+                            channels.value = ChannelCursor.at(items, initialStreamId)
                             updateCategoryStreams(items)
                         },
                         onFailure = { Log.e("StreamLoader", "Failed to load category streams", it) },
@@ -254,7 +255,7 @@ class StreamLoaderViewModel(
 
                     // Check Favorite
                     val isFav = repo.isFavoriteSuspend(streamId, contentType)
-                    val activeStreams = if (currentStreams.isNotEmpty()) currentStreams else streamList
+                    val activeStreams = if (currentStreams.isNotEmpty()) currentStreams else channels.value.items
 
                     // A superseded load must not publish over the load that replaced it.
                     currentCoroutineContext().ensureActive()
@@ -468,7 +469,7 @@ class StreamLoaderViewModel(
                 val previousState = _state.value
                 _state.value = StreamState.Loading
 
-                val currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else streamList
+                val currentStreams = if (previousState is StreamState.Success) previousState.categoryStreams else channels.value.items
 
                 // Fast path: start loading stream immediately
                 loadStreamInternal(item.id, item.name, currentStreams)
@@ -484,16 +485,14 @@ class StreamLoaderViewModel(
                             val result = repo.getItems(currentCategoryId, contentType)
                             result.fold(
                                 onSuccess = { items ->
-                                    streamList = items
-                                    currentStreamIndex = items.indexOfFirst { it.id == item.id }
-                                    if (currentStreamIndex == -1 && items.isNotEmpty()) currentStreamIndex = 0
+                                    channels.value = ChannelCursor.at(items, item.id)
                                     updateCategoryStreams(items)
                                 },
                                 onFailure = { Log.e("StreamLoader", "Failed to refresh category streams", it) },
                             )
                         }
                 } else {
-                    currentStreamIndex = streamList.indexOfFirst { it.id == item.id }
+                    channels.update { it.pointingAt(item.id) }
                 }
             }
     }
@@ -553,15 +552,11 @@ class StreamLoaderViewModel(
     }
 
     fun nextChannel() {
-        if (streamList.isEmpty()) return
-        currentStreamIndex = (currentStreamIndex + 1) % streamList.size
-        loadStream(streamList[currentStreamIndex])
+        channels.updateAndGet { it.next() }.current?.let(::loadStream)
     }
 
     fun prevChannel() {
-        if (streamList.isEmpty()) return
-        currentStreamIndex = if (currentStreamIndex <= 0) streamList.size - 1 else currentStreamIndex - 1
-        loadStream(streamList[currentStreamIndex])
+        channels.updateAndGet { it.previous() }.current?.let(::loadStream)
     }
 
     fun toggleFavorite() {
@@ -880,3 +875,35 @@ class StreamLoaderViewModelFactory(
 
 /** The synopsis to show for [episode]: its own plot, or null — never the series' plot. */
 internal fun episodeDescription(episode: EpisodeItem?): String? = episode?.metadata?.plot?.takeIf { it.isNotBlank() }
+
+/**
+ * A channel list and the position in it, replaced as one value so a reader never pairs a new list
+ * with an old index. Stepping clamps the index to the list it came with.
+ */
+internal data class ChannelCursor(
+    val items: List<MediaItem> = emptyList(),
+    val index: Int = -1,
+) {
+    /** The channel at [index], or null when the list is empty or nothing is selected. */
+    val current: MediaItem?
+        get() = items.getOrNull(index)
+
+    /** One channel down the list, wrapping past the last. */
+    fun next(): ChannelCursor = if (items.isEmpty()) this else copy(index = (clamped() + 1) % items.size)
+
+    /** One channel up the list, wrapping past the first. */
+    fun previous(): ChannelCursor = if (items.isEmpty()) this else copy(index = clamped().let { if (it <= 0) items.lastIndex else it - 1 })
+
+    /** The same list, positioned on [id] (-1 when it isn't in it). */
+    fun pointingAt(id: String): ChannelCursor = copy(index = items.indexOfFirst { it.id == id })
+
+    private fun clamped(): Int = index.coerceIn(-1, items.lastIndex)
+
+    companion object {
+        /** [items] positioned on [id], or on the first channel when [id] isn't in it. */
+        fun at(
+            items: List<MediaItem>,
+            id: String,
+        ): ChannelCursor = ChannelCursor(items, items.indexOfFirst { it.id == id }.takeIf { it >= 0 || items.isEmpty() } ?: 0)
+    }
+}

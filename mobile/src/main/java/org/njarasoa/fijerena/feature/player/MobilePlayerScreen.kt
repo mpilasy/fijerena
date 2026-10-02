@@ -154,10 +154,6 @@ fun MobilePlayerScreen(
             if (!activityScopedViewModel.isInPictureInPictureMode.value) {
                 finalizeSession(activityScopedViewModel.playbackState.value, loaderViewModel)
                 activityScopedViewModel.stop()
-                // Service outlives this screen — drop the listener so it doesn't keep
-                // this loaderViewModel (and everything it references) pinned in memory
-                // until the next player screen overwrites it.
-                StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
             }
         }
     }
@@ -167,7 +163,6 @@ fun MobilePlayerScreen(
     RemoteStopEffect {
         finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
         activityScopedViewModel.stop()
-        StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
         onHome()
     }
 
@@ -185,7 +180,6 @@ fun MobilePlayerScreen(
             scope.launch {
                 finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
                 activityScopedViewModel.stop()
-                StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
                 onBack()
             }
         },
@@ -473,14 +467,13 @@ fun MobilePlayerContent(
         }
     }
 
-    // Set up auto-save listener for playback position and track settings
-    DisposableEffect(loaderViewModel) {
-        val service = StreamingPlaybackService.getInstance()
-        service?.setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
-            loaderViewModel.recordHistory(position, duration, isPaused, audioIndex, subtitleIndex)
-        }
-        onDispose {
-            StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
+    // Save playback position and track choices. Collected from the service's process-wide flow,
+    // not a listener set on one instance: on the first playback after a cold start this screen
+    // composes before the service exists. Composition-scoped, not lifecycle-gated, so PiP keeps
+    // saving. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-04.
+    LaunchedEffect(loaderViewModel) {
+        StreamingPlaybackService.positionSaves.collect { save ->
+            loaderViewModel.recordHistory(save.positionMs, save.durationMs, save.isPaused, save.audioTrackIndex, save.subtitleTrackIndex)
         }
     }
 

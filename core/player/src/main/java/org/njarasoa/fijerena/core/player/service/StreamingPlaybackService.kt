@@ -17,9 +17,13 @@ import androidx.media3.session.MediaSessionService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
@@ -30,9 +34,11 @@ import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.PositionSave
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 import java.util.UUID
@@ -124,8 +130,6 @@ class StreamingPlaybackService : MediaSessionService() {
                 .StreamHealthState(),
         )
     val streamHealthState: StateFlow<org.njarasoa.fijerena.core.player.network.StreamHealthState> = _streamHealthState.asStateFlow()
-
-    private var onPositionSaveListener: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null
 
     private var retryCount = 0
     private var autoRetryAttempted = false
@@ -273,16 +277,13 @@ class StreamingPlaybackService : MediaSessionService() {
 
         initializePlayer()
         // Only publish the instance after initializePlayer() so getInstance()/awaitInstance()
-        // callers (e.g. PlaybackViewModel.playStream(), and TvPlayerScreen's setContentType()/
-        // setPositionSaveListener() calls fired from a LaunchedEffect right as the player
-        // screen mounts) can't resolve to a service whose mediaSession/adaptiveLoadControl is
-        // still null. Those callers silently no-op on null (`?: return`, `?.`) with no log, so
-        // the previous early-publish made failures invisible — playStream()'s case produced a
-        // black screen stuck in Idle forever, with no diagnostic trail.
-        synchronized(instanceLock) {
-            instance = this
-            instanceReady.complete(this)
-        }
+        // callers (e.g. PlaybackViewModel.playStream(), and TvPlayerScreen's setContentType()
+        // call fired from a LaunchedEffect right as the player screen mounts) can't resolve to a
+        // service whose mediaSession/adaptiveLoadControl is still null. Those callers silently
+        // no-op on null (`?: return`, `?.`) with no log, so the previous early-publish made
+        // failures invisible — playStream()'s case produced a black screen stuck in Idle
+        // forever, with no diagnostic trail.
+        publishInstance()
         // Not acquired here: the service can be created well before any stream is requested
         // (e.g. StreamingPlaybackService.awaitInstance() callers racing service startup), and a
         // PARTIAL_WAKE_LOCK held during that idle stretch outlasts nothing useful. PlayerListener
@@ -290,6 +291,25 @@ class StreamingPlaybackService : MediaSessionService() {
         // onWakeLockRequired below, fired from onIsPlayingChanged/onPlayWhenReadyChanged.
         observeNetworkChanges()
         serviceScope?.let(::publishNowPlaying)
+    }
+
+    /** Makes this instance the one [getInstance]/[awaitInstance] return. */
+    internal fun publishInstance() {
+        synchronized(instanceLock) {
+            instance = this
+            instanceReady.complete(this)
+        }
+    }
+
+    /** Publishes a position (and a track choice) for the player screen to save — see [positionSaves]. */
+    private fun savePosition(
+        position: Long,
+        duration: Long,
+        isPaused: Boolean,
+        audioIndex: Int? = null,
+        subtitleIndex: Int? = null,
+    ) {
+        _positionSaves.tryEmit(PositionSave(position, duration, isPaused, audioIndex, subtitleIndex))
     }
 
     /** Feeds [nowPlaying] from this instance's metadata and state until it is released. */
@@ -348,7 +368,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 delay(POSITION_SAVE_INTERVAL_MS)
                 val player = getPlayer() ?: continue
                 if (player.isPlaying && player.playbackState == Player.STATE_READY) {
-                    onPositionSaveListener?.invoke(player.currentPosition, player.duration, false, null, null)
+                    savePosition(player.currentPosition, player.duration, isPaused = false)
                 }
             }
         }
@@ -473,9 +493,7 @@ class StreamingPlaybackService : MediaSessionService() {
                     acquireWakeLock()
                 },
                 player = player,
-                onPositionSave = { position, duration, isPaused, audioIndex, subtitleIndex ->
-                    onPositionSaveListener?.invoke(position, duration, isPaused, audioIndex, subtitleIndex)
-                },
+                onPositionSave = ::savePosition,
                 onStreamEndedOrError = { errorMessage ->
                     handleStreamEndedOrError(errorMessage)
                 },
@@ -558,12 +576,6 @@ class StreamingPlaybackService : MediaSessionService() {
 
     fun setContentType(contentType: PlayerConfigFactory.ContentType) {
         adaptiveLoadControl?.updateContentType(contentType)
-    }
-
-    fun setPositionSaveListener(
-        listener: ((position: Long, duration: Long, isPaused: Boolean, audioIndex: Int?, subtitleIndex: Int?) -> Unit)?,
-    ) {
-        onPositionSaveListener = listener
     }
 
     fun playStream(
@@ -965,12 +977,11 @@ class StreamingPlaybackService : MediaSessionService() {
         // resumes it on restore, and that overload indexes into getAudioTracks()'s flattened
         // list, not per-group.
         val consolidatedIndex = getAudioTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
-        onPositionSaveListener?.invoke(
+        savePosition(
             player.currentPosition,
             player.duration,
             !player.isPlaying,
-            consolidatedIndex.takeIf { it >= 0 },
-            null,
+            audioIndex = consolidatedIndex.takeIf { it >= 0 },
         )
     }
 
@@ -1011,12 +1022,11 @@ class StreamingPlaybackService : MediaSessionService() {
         // what resumes it on restore, and that overload indexes into getSubtitleTracks()'s
         // flattened list, not per-group.
         val consolidatedIndex = getSubtitleTracks().indexOfFirst { it.groupIndex == groupIndex && it.trackIndex == trackIndex }
-        onPositionSaveListener?.invoke(
+        savePosition(
             player.currentPosition,
             player.duration,
             !player.isPlaying,
-            null,
-            consolidatedIndex.takeIf { it >= 0 },
+            subtitleIndex = consolidatedIndex.takeIf { it >= 0 },
         )
     }
 
@@ -1033,7 +1043,7 @@ class StreamingPlaybackService : MediaSessionService() {
         trackSelector.parameters = parameters
 
         // Save choice immediately (-1 for disabled)
-        onPositionSaveListener?.invoke(player.currentPosition, player.duration, !player.isPlaying, null, -1)
+        savePosition(player.currentPosition, player.duration, !player.isPlaying, subtitleIndex = -1)
     }
 
     fun selectVideoQuality(
@@ -1128,36 +1138,40 @@ class StreamingPlaybackService : MediaSessionService() {
     private fun releasePlayerAndSession() {
         if (isReleased) return
         isReleased = true
-        cancelPendingRetry()
-        mainHandler.removeCallbacks(recycleHandler)
-        _playbackState.value = PlaybackState.Idle
-        mediaSession?.player?.let {
-            if (it.isPlaying || it.playbackState == Player.STATE_READY) {
-                onPositionSaveListener?.invoke(it.currentPosition, it.duration, !it.isPlaying, null, null)
+        // Each stage runs in its own try: one that throws (the native player.release(), say) is
+        // recorded and the rest still run, so the wake lock, the scope and the singleton below are
+        // never left behind and a teardown never crashes the app on exit. See
+        // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-12.
+        releaseStage("cancelRetries") {
+            cancelPendingRetry()
+            mainHandler.removeCallbacks(recycleHandler)
+            _playbackState.value = PlaybackState.Idle
+        }
+        val session = mediaSession
+        releaseStage("finalSave") {
+            session?.player?.let {
+                if (it.isPlaying || it.playbackState == Player.STATE_READY) {
+                    savePosition(it.currentPosition, it.duration, !it.isPlaying)
+                }
             }
         }
-
-        mediaSession?.run {
-            // mediaSession is assigned before playerListener/analyticsListener in
-            // initializePlayer(), so a re-entrant/concurrent releasePlayerAndSession() landing in
-            // that window would see a non-null mediaSession but a still-null listener — the old
-            // !! would NPE right here and abort every cleanup line below it (wake lock release,
-            // scope cancellation), leaking both.
-            playerListener?.let { player.removeListener(it) }
-            analyticsListener?.let { (player as? androidx.media3.exoplayer.ExoPlayer)?.removeAnalyticsListener(it) }
-            player.release()
-            release()
+        // mediaSession is assigned before playerListener/analyticsListener in initializePlayer(),
+        // so a re-entrant/concurrent releasePlayerAndSession() landing in that window sees a
+        // non-null mediaSession but a still-null listener — hence the ?.let on each.
+        releaseStage("removeListeners") {
+            session?.player?.let { player ->
+                playerListener?.let { player.removeListener(it) }
+                analyticsListener?.let { (player as? androidx.media3.exoplayer.ExoPlayer)?.removeAnalyticsListener(it) }
+            }
         }
+        releaseStage("releasePlayer") { session?.player?.release() }
+        releaseStage("releaseSession") { session?.release() }
         mediaSession = null
-        releaseWakeLock()
+        releaseStage("releaseWakeLock") { releaseWakeLock() }
         wakeLock = null
         playerListener = null
         analyticsListener = null
-        // Otherwise the closure set by the last screen's setPositionSaveListener() call (which
-        // captures that screen's ViewModel, and transitively its Activity context) stays pinned
-        // on this long-lived singleton until the next screen overwrites it.
-        onPositionSaveListener = null
-        serviceScope?.cancel()
+        releaseStage("cancelScope") { serviceScope?.cancel() }
         serviceScope = null
         adaptiveLoadControl = null
         // NetworkMonitor.release() used to run here, but it's a process-wide singleton other
@@ -1190,6 +1204,20 @@ class StreamingPlaybackService : MediaSessionService() {
             }
             // else: a newer instance has already published itself — this stale teardown must not
             // touch its instance/instanceReady (see this function's kdoc).
+        }
+    }
+
+    /** One step of [releasePlayerAndSession]: a failure is logged and recorded, never thrown. */
+    private inline fun releaseStage(
+        stage: String,
+        block: () -> Unit,
+    ) {
+        try {
+            block()
+        } catch (e: Exception) {
+            // cancellation-ok: not suspend code, runs on the main thread
+            Log.e(TAG, "Teardown stage $stage failed", e)
+            CrashLog.record("StreamingPlaybackService.release.$stage", e)
         }
     }
 
@@ -1615,6 +1643,7 @@ class StreamingPlaybackService : MediaSessionService() {
         private const val SEAMLESS_RECYCLE_GRACE_MS = 7000L
         private const val POSITION_SAVE_INTERVAL_MS = 10_000L
         private const val AWAIT_INSTANCE_TIMEOUT_MS = 10_000L
+        private const val POSITION_SAVE_BUFFER = 16
 
         // Guards `instance`/`instanceReady` publication as one atomic unit. Every current call
         // site happens to run on Main (Service lifecycle callbacks, viewModelScope's default
@@ -1655,6 +1684,20 @@ class StreamingPlaybackService : MediaSessionService() {
          * module can't depend on sync. See docs/plans/20261001_live-sync-now-playing-plan.md.
          */
         val nowPlaying: StateFlow<NowPlayingSnapshot?> = _nowPlaying.asStateFlow()
+
+        // No replay: a save nobody collects (no player screen on screen) is dropped, never handed
+        // to the next screen. DROP_OLDEST so the main-thread tryEmit never fails or blocks.
+        private val _positionSaves =
+            MutableSharedFlow<PositionSave>(extraBufferCapacity = POSITION_SAVE_BUFFER, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+        /**
+         * Positions and track choices the playing session wants saved — process-wide, so the
+         * player screen keeps receiving them after the service is destroyed and started again
+         * (TV Home → return, or the first playback after a cold start, when the screen composes
+         * before the service exists). The player screen collects it for as long as it's composed.
+         * See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-04.
+         */
+        val positionSaves: SharedFlow<PositionSave> = _positionSaves.asSharedFlow()
 
         /** Atomically claims the right to call startService(). Returns false if already claimed. */
         fun tryClaimStart(): Boolean = serviceStartRequested.compareAndSet(false, true)
