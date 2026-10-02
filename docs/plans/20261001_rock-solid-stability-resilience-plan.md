@@ -108,10 +108,12 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Mechanism:** The applier calls `deleteProvider()` without `applying = 1`, so each EPG source row deletion queues a pending tombstone that is pushed back. Redundant traffic, not a feedback loop (the server accepts once, other devices skip as already-deleted).
 - **Fix:** **Not** the draft's "wrap in `inSettingsApply`" — `deleteProvider` also clears `xtream_v2.db`, prefs and runs `VACUUM`; holding a `providers.db` write transaction across all that blocks every settings write for seconds. Instead add `deleteProvider(id, fromRemote = true)` that deletes the EPG sources inside a short `inSettingsApply` and skips re-tombstoning.
 
-#### 🆕 F-21: Sync credential store has no failure handling → crash loop at startup [P0, PLAUSIBLE]
+#### 🆕 F-21: Sync credential store has no failure handling → crash loop at startup [P0, CONFIRMED]
 - **Where:** `sync/SyncAccountStore.kt:19-33` (`EncryptedSharedPreferences.create` in a bare `lazy`), `SyncManager.kt:49` (scope without handler), `:107` (`scope.launch { refreshStatus() }` on every start).
 - **Mechanism:** If the Keystore master key is lost or the file can't be decrypted (memory note: already observed after `pm clear`; also OEM Keystore resets), `prefs` throws on first access. That happens inside `SyncManager.scope`, which has no `CoroutineExceptionHandler` → uncaught → process dies — on every launch, before any UI. `AccountManager` and `ProviderRepository` already guard the same call; this store doesn't.
 - **Fix:** Same recovery pattern: catch, delete the file, recreate; report `link = null` with a "Sync link lost — pair again" status. Add a handler to `SyncManager.scope` (F-24).
+- **Reproduced 2026-10-01** on the TV emulator by zeroing the Tink keysets in `sync_account.xml`: `InvalidProtocolBufferException` on the main thread at launch (`SyncManager.onForeground` → `engine.isLinked`), every launch — F-24's scope handler alone didn't cover it.
+- **Done 2026-10-01:** the store resets itself (delete + recreate) and is recorded in Diagnostics; the device shows as unlinked and can pair again. If even the reset fails, the store is absent: unlinked, writes ignored, pairing fails with an error — never a plaintext fallback. Verified on the emulator, original link restored afterwards.
 
 #### 🆕 F-22: One invalid record blocks pushing forever [P1, PLAUSIBLE]
 - **Where:** `server/src/account.ts:224-229` (whole batch → 400 if any record fails `invalid()`), `MAX_PAYLOAD = 64 KiB` (`:10`); `SyncEngine.kt:107-124` (always retries the same oldest-first batch).
