@@ -69,7 +69,7 @@ done
 ./gradlew :tv:assembleDebug
 mkdir -p "$BACKUP_DIR"
 # Keep a week of backups: anything older than 7 days goes before this run adds its own.
-find "$BACKUP_DIR" -maxdepth 1 -name '*.tar' -mtime +7 -print -delete
+find "$BACKUP_DIR" -maxdepth 1 \( -name '*.tar' -o -name '*.tar.gz' \) -mtime +7 -print -delete
 
 # Installs run in parallel — safe now that the build (the part that was actually racing before,
 # via a shared output directory) has already finished: each install only reads the finished APK
@@ -84,9 +84,12 @@ for TARGET in "${REACHABLE[@]}"; do
         # every device had actually wiped all of them). Back up first, every time, unprompted.
         SAFE_NAME="${TARGET//[:.]/_}"
         if adb -s "$TARGET" shell pm path org.njarasoa.fijerena >/dev/null 2>&1; then
-            BACKUP_FILE="$BACKUP_DIR/${SAFE_NAME}-$(date +%Y%m%d-%H%M%S).tar"
-            if adb -s "$TARGET" exec-out "run-as org.njarasoa.fijerena tar -c -C /data/data/org.njarasoa.fijerena shared_prefs databases/providers.db databases/providers.db-wal databases/providers.db-shm" > "$BACKUP_FILE" 2>/dev/null \
-                && [ -s "$BACKUP_FILE" ]; then
+            # xtream_v2.db holds watch state and favourites; its -wal can hold commits not yet
+            # checkpointed into the main file, so it goes with it. Gzipped: ~150 MB -> ~60 MB on bears.
+            BACKUP_FILE="$BACKUP_DIR/${SAFE_NAME}-$(date +%Y%m%d-%H%M%S).tar.gz"
+            if adb -s "$TARGET" exec-out "run-as org.njarasoa.fijerena tar -c -C /data/data/org.njarasoa.fijerena shared_prefs databases/providers.db databases/providers.db-wal databases/providers.db-shm databases/xtream_v2.db databases/xtream_v2.db-wal databases/xtream_v2.db-shm" 2>/dev/null | gzip -1 > "$BACKUP_FILE" \
+                && tar -tzf "$BACKUP_FILE" 2>/dev/null | grep -qx 'databases/providers.db'; then
+                # (gzip of an empty stream is still a non-empty file, so check the archive's contents.)
                 echo "Backed up $TARGET data -> $BACKUP_FILE"
             else
                 rm -f "$BACKUP_FILE"
