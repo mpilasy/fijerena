@@ -3,6 +3,7 @@ import android.content.Context
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -74,7 +75,7 @@ fun parseUrlCredentials(input: String): ParsedUrlCredentials? {
 
                     ParsedUrlCredentials(baseUrl, username, password, streamOutputFormat, playlistType)
                 }
-            } catch (_: Exception) {
+            } catch (_: Exception) { // cancellation-ok: non-suspend URL parsing
                 null
             }
         }
@@ -211,6 +212,8 @@ class ProviderViewModel(
                 providerRepository.addProvider(name, url, username, password, type, config)
                 loadProviders()
                 onComplete()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
@@ -223,6 +226,8 @@ class ProviderViewModel(
                 providerRepository.setActiveProvider(id)
                 _activeProvider.value = providerRepository.getProviderById(id)
                 loadProviders()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
@@ -239,6 +244,8 @@ class ProviderViewModel(
                     providerRepository.setActiveProvider(remaining.first().id)
                 }
                 loadProviders()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
@@ -254,6 +261,8 @@ class ProviderViewModel(
                 copyManager.duplicateProvider(sourceId, newName)
                 loadProviders()
                 _copyResultMessage.value = context.getString(R.string.provider_duplicate_result_format, newName)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
@@ -270,6 +279,8 @@ class ProviderViewModel(
                 val result = copyManager.copyProviderData(sourceId, targetId, options)
                 loadProviders()
                 _copyResultMessage.value = result.toSummary(context)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
@@ -291,6 +302,8 @@ class ProviderViewModel(
                 providerRepository.updateProvider(id, name, url, username, password, type, config)
                 loadProviders()
                 onComplete()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
@@ -373,6 +386,8 @@ class ProviderViewModel(
                 loadProviders()
                 _saveState.value = SaveState.Idle
                 onComplete()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _saveState.value = SaveState.Idle
                 _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
@@ -448,6 +463,8 @@ class ProviderViewModel(
             loadProviders()
             _saveState.value = SaveState.Idle
             onComplete()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             _saveState.value = SaveState.Idle
             _uiState.value = ProviderUiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
@@ -474,6 +491,8 @@ class ProviderViewModel(
                         } else {
                             Result.success(Unit)
                         }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
                     } finally {
@@ -507,6 +526,8 @@ class ProviderViewModel(
                         } finally {
                             connection.disconnect()
                         }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
                     }
@@ -530,11 +551,15 @@ class ProviderViewModel(
                         val result = provider.connect()
                         try {
                             provider.disconnect()
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             android.util.Log.e("ProviderViewModel", "Error disconnecting provider", e)
                         }
                         MediaProviderFactory.clearCache(tempEntity.id)
                         result
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         MediaProviderFactory.clearCache(tempEntity.id)
                         Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))

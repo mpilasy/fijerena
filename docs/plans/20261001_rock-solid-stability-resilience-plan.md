@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): Phase 4 done 2026-10-01 as agreed (F-35, F-28, F-33 reduced, F-14; F-13 deferred). Phases 5-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): Phase 4 done 2026-10-01 as agreed (F-35, F-28, F-33 reduced, F-14; F-13 deferred). Phase 5 in progress: F-27 done 2026-10-01. Phase 6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -232,6 +232,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** 194 `catch (e: Exception)` sites; files with many and no `CancellationException` handling: `ProviderViewModel.kt` (13), `EpgIndexer.kt` (11), `ProviderRepository.kt` (9), `XtreamMediaProvider.kt` (8), `SettingsExportManager.kt` (7), `MediaRepository.kt` (6); `runCatching` wrapping suspend calls in `MovieDetailsViewModel`, `SeriesDetailsViewModel`, `XtreamMediaProvider` (TMDB).
 - **Mechanism:** A cancelled job (screen left, newer load started) catches its own `CancellationException`, carries on, and publishes stale state or writes after its owner is gone — a common root of "wrong item shown after fast navigation" bugs.
 - **Fix:** Add `suspendRunCatching {}` (rethrows `CancellationException`) to `core:network`; convert the listed files first; add a grep gate to CI that flags `catch (e: Exception)` in files containing `suspend fun` without a preceding `CancellationException` catch (allow-list for intentional cases).
+- **Done 2026-10-01:** `suspendRunCatching {}` in `core/network/.../SuspendRunCatching.kt` (rethrows `CancellationException`, wraps every other throwable like `runCatching`; `SuspendRunCatchingTest`). The six listed files' catch sites in suspend code got a `catch (e: CancellationException) { throw e }` clause ahead of the existing one — the idiom already used in `SyncApplier`/`XtreamContentManager` — so logging and fallback values are unchanged; the `runCatching` calls in `MovieDetailsViewModel`, `SeriesDetailsViewModel` and `XtreamMediaProvider` (TMDB) are now `suspendRunCatching`. One behaviour kept on purpose: a cancelled `EpgIndexer.rebuildFtsAndUpdateState()` still sets `Failed` before rethrowing, so the state isn't left on `Optimizing` (the FTS stays marked stale and is rebuilt next start). Catches in non-suspend helpers of those files carry `// cancellation-ok: <reason>`. Gate: `scripts/check-cancellation.sh`, run by the manual workflow; it also accepts `if (e is CancellationException) throw e` as a catch's first line. 18 files outside the listed set still trip it and sit in `scripts/check-cancellation-allowlist.txt` with a reason each (EPG file/search/XMLTV services, Xtream managers, M3U/local/SMB providers, `AppContainer`, a few view models; `StreamLoaderViewModel` until the now-playing work lands) — the list should only shrink.
 
 #### 🆕 F-28: Credential store silently wipes or downgrades to plaintext [P2, CONFIRMED]
 - **Where:** `ProviderRepository.kt:816-839` (delete on failure, then **plain `SharedPreferences` fallback**), `AccountManager.kt:62-80` (delete on failure), `MediaProviderFactory.kt:228-248` (delete, return null).
@@ -328,7 +329,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 5. **F-28** no plaintext fallback; "sign in again" state. ✅ *(`6d2b3d61`)*
 
 ### Phase 5 — Systemic hygiene
-1. **F-27** `suspendRunCatching` + convert the listed files + CI grep gate.
+1. **F-27** `suspendRunCatching` + convert the listed files + CI grep gate. ✅ (18 other files allow-listed in `scripts/check-cancellation-allowlist.txt`)
 2. **F-32** align Compose BOM (stable) + emulator D-pad smoke pass; refresh AGENTS.md version table.
 3. **F-34** after Google TV emulator reproduction.
 4. **F-10**, **F-36**, **F-37** opportunistically when those files are touched.

@@ -1,5 +1,12 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Stability & Resilience (Phase 5 — systemic hygiene)
+**Release Date:** 2026-10-01
+
+- **Cancelled background work stops instead of carrying on (developers):** provider management, EPG indexing, settings import/export, the repositories and the movie/series detail screens no longer catch their own coroutine cancellation and go on to publish stale results (e.g. an empty "related titles" row from a superseded load). New `suspendRunCatching {}` in `core:network`; the manual CI run fails on a `catch (e: Exception)` in suspend code that doesn't rethrow `CancellationException` (`scripts/check-cancellation.sh`).
+
+---
+
 ## Version: Live Sync — Now Playing
 **Release Date:** 2026-10-01
 

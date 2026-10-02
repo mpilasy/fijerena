@@ -1,0 +1,26 @@
+# F-27 cancellation gate allow-list (scripts/check-cancellation.sh).
+# One path per line, then "# reason". Whole files are skipped, so keep this list shrinking:
+# a file leaves the list once its catch sites rethrow CancellationException (or carry
+# `// cancellation-ok: <reason>`). Single deliberate sites use that marker, not this list.
+#
+# Not in F-27's first-pass list (docs/plans/20261001_rock-solid-stability-resilience-plan.md):
+core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/EpgFileManager.kt # 15 sites, some already rethrow inline or clean up NonCancellable; needs its own pass
+core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/XmltvEpgService.kt # index-query fallbacks to empty/null
+core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/XmltvSearchService.kt # background FTS rebuild + fallback searches; the FTS query paths already rethrow
+core/network/src/main/java/org/njarasoa/fijerena/core/network/xmltv/epgindex/EpgIndexDatabase.kt # page-size seed and DB maintenance, best effort
+core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamEpgManager.kt # EPG fetch fallbacks to null, cache sweep
+core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamSessionManager.kt # auth failure logging, XMLTV auto-add
+core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/manager/XtreamContentManager.kt # API calls mapped to XtreamResponse.Failed; RefreshQueue paths already rethrow
+core/network/src/main/java/org/njarasoa/fijerena/core/network/xtream/ProviderSyncManager.kt # schedule-delay parse and manual-sync logging
+core/network/src/main/java/org/njarasoa/fijerena/core/network/remote/RemoteM3uMediaProvider.kt # connect/download mapped to Result.failure
+core/network/src/main/java/org/njarasoa/fijerena/core/network/local/LocalMediaProvider.kt # connect mapped to Result.failure
+core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt # blocking smbj calls and close(); SMB out of scope (20260922 plan)
+core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbMediaProvider.kt # directory scans; SMB out of scope (20260922 plan)
+core/player/src/main/java/org/njarasoa/fijerena/core/player/api/XtreamApiService.kt # API call mapped to XtreamResponse.Failed; core:player cannot use suspendRunCatching
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/di/AppContainer.kt # best-effort auto-connect and repository close, log only
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt # best-effort label/provider-name loads; the search path already rethrows
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt # DB stats fallback
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt # early return@launch on repo failure; the query path already rethrows
+#
+# Being edited by the live-sync now-playing work; convert once that lands:
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt # stream init/load error reporting

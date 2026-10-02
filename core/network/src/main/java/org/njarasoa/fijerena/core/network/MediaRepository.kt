@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import java.io.Closeable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -456,7 +457,7 @@ class MediaRepository(
         val raw = cache.getString(key, null) ?: return emptyList()
         return try {
             json.decodeFromString<List<T>>(raw)
-        } catch (_: Exception) {
+        } catch (_: Exception) { // cancellation-ok: non-suspend
             emptyList()
         }
     }
@@ -622,6 +623,8 @@ class MediaRepository(
             if (items.any { xmltvResult.containsKey(it.id) }) {
                 return kotlin.Result.success(xmltvResult)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             // Fall through to provider EPG
         }
@@ -642,6 +645,8 @@ class MediaRepository(
     suspend fun getNowPlayingFromIndex(items: List<MediaItem>): Map<String, EpgProgram> =
         try {
             xmltvEpgService.getNowPlayingForItems(items)
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             emptyMap()
         }
@@ -785,7 +790,7 @@ class MediaRepository(
         val raw = profileCache.getString(key, null) ?: return emptyList()
         return try {
             json.decodeFromString(raw)
-        } catch (_: Exception) {
+        } catch (_: Exception) { // cancellation-ok: non-suspend
             emptyList()
         }
     }
@@ -818,7 +823,7 @@ class MediaRepository(
             val loaded = if (v3Json != null) {
                 try {
                     json.decodeFromString<List<WatchedItem>>(v3Json)
-                } catch (e: Exception) {
+                } catch (e: Exception) { // cancellation-ok: non-suspend
                     emptyList()
                 }
             } else {
@@ -835,7 +840,7 @@ class MediaRepository(
                         }
                         cache.commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(normalized)) }
                         normalized
-                    } catch (e: Exception) {
+                    } catch (e: Exception) { // cancellation-ok: non-suspend
                         emptyList()
                     }
                 } else {

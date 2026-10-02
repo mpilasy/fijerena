@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.core.network
 import android.content.Context
+import kotlinx.coroutines.CancellationException
 import org.njarasoa.fijerena.core.network.R
 import android.net.Uri
 import android.util.Log
@@ -377,6 +378,8 @@ class SettingsExportManager(
                     output.write(jsonString.toByteArray(Charsets.UTF_8))
                 }
                 true
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Export failed", e)
                 false
@@ -406,6 +409,8 @@ class SettingsExportManager(
                 kotlin.Result.success(ParsedImport(exported, jsonString, conflicts))
             } catch (e: kotlinx.serialization.SerializationException) {
                 kotlin.Result.failure(Exception("Invalid settings file format"))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 kotlin.Result.failure(e)
             }
@@ -435,6 +440,8 @@ class SettingsExportManager(
                 kotlin.Result.success(ParsedImport(exported, jsonString, conflicts))
             } catch (e: kotlinx.serialization.SerializationException) {
                 kotlin.Result.failure(Exception("Invalid settings file format"))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 kotlin.Result.failure(e)
             }
@@ -457,6 +464,8 @@ class SettingsExportManager(
                     } ?: return@withContext ImportResult(error = context.getString(R.string.settings_export_error_read_file))
 
                 importFromJson(jsonString, conflictResolution, options)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Import failed", e)
                 ImportResult(error = e.message ?: context.getString(R.string.settings_export_error_import_failed))
@@ -529,6 +538,8 @@ class SettingsExportManager(
                                                     ep.providerSettings,
                                                 )
                                             providerRepo.updateProviderSettings(existing.id, settings)
+                                        } catch (e: CancellationException) {
+                                            throw e
                                         } catch (e: Exception) {
                                             android.util.Log.e("SettingsExportManager", "Failed to update provider settings", e)
                                         }
@@ -760,6 +771,8 @@ class SettingsExportManager(
             } catch (e: kotlinx.serialization.SerializationException) {
                 Log.e(TAG, "Invalid settings file format", e)
                 ImportResult(error = context.getString(R.string.settings_export_error_invalid_format))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Import failed", e)
                 ImportResult(error = e.message ?: context.getString(R.string.settings_export_error_import_failed))
@@ -783,6 +796,8 @@ class SettingsExportManager(
             try {
                 val settings = json.decodeFromString<org.njarasoa.fijerena.core.network.provider.ProviderSettings>(ep.providerSettings)
                 providerRepo.updateProviderSettings(newId, settings)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e("SettingsExportManager", "Failed to update provider settings", e)
             }

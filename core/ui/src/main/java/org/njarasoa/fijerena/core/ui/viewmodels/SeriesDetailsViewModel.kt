@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.suspendRunCatching
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesId
@@ -112,7 +114,7 @@ class SeriesDetailsViewModel(
      */
     fun refreshSeriesInfo() {
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { ensureRepo().invalidateCachedDetail(seriesId) }
+            suspendRunCatching { ensureRepo().invalidateCachedDetail(seriesId) }
             // Deliberately not from the cache: an explicit refresh that redraws the stored copy
             // first is the "refresh appears to do nothing" bug 6f031cf6 fixed.
             loadSeriesDetail(useCache = false, isSwitch = false)
@@ -168,7 +170,7 @@ class SeriesDetailsViewModel(
             // restart — showing episodes it already had on disk the whole time. The fetch below
             // still runs: only it can notice episodes added since.
             val cached =
-                if (useCache) runCatching { repo.getCachedSeriesDetail(SeriesId(seriesId)) }.getOrNull() else null
+                if (useCache) suspendRunCatching { repo.getCachedSeriesDetail(SeriesId(seriesId)) }.getOrNull() else null
             if (cached != null) {
                 _uiState.value =
                     UiState.Success(
@@ -211,6 +213,8 @@ class SeriesDetailsViewModel(
                 // it must surface the error rather than silently leave that mismatch on screen.
                 onFailure = { e -> if (isSwitch) reportSwitchFailure(e) else reportFailure(e) },
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (isSwitch) reportSwitchFailure(e) else reportFailure(e)
         }
@@ -228,7 +232,7 @@ class SeriesDetailsViewModel(
         relatedTitlesJob =
             viewModelScope.launch(Dispatchers.IO) {
                 _relatedTitles.value =
-                    runCatching {
+                    suspendRunCatching {
                         ensureRepo().getRelatedTitles(seriesId, tmdbId, "TV_SHOWS")
                     }.getOrDefault(RelatedTitles())
             }
@@ -246,7 +250,7 @@ class SeriesDetailsViewModel(
         tmdbTitleJob =
             viewModelScope.launch(Dispatchers.IO) {
                 _tmdbTitle.value =
-                    runCatching {
+                    suspendRunCatching {
                         ensureRepo().getTmdbTitle(tmdbId, "TV_SHOWS")
                     }.getOrNull()
             }
@@ -270,9 +274,9 @@ class SeriesDetailsViewModel(
         artworkJob =
             viewModelScope.launch(Dispatchers.IO) {
                 val repo = ensureRepo()
-                _logoUrl.value = runCatching { repo.getTmdbLogoUrl(tmdbId, "TV_SHOWS") }.getOrNull()
+                _logoUrl.value = suspendRunCatching { repo.getTmdbLogoUrl(tmdbId, "TV_SHOWS") }.getOrNull()
                 _backdropUrl.value =
-                    runCatching { repo.getTmdbBackdropUrl(tmdbId, "TV_SHOWS") }.getOrNull()
+                    suspendRunCatching { repo.getTmdbBackdropUrl(tmdbId, "TV_SHOWS") }.getOrNull()
                         ?: detail.backdropUrl
                         ?: detail.coverUrl
             }
@@ -290,7 +294,7 @@ class SeriesDetailsViewModel(
         alternateStreamsJob =
             viewModelScope.launch(Dispatchers.IO) {
                 _alternateStreams.value =
-                    runCatching {
+                    suspendRunCatching {
                         ensureRepo().getAlternateStreams(seriesId, tmdbId, "TV_SHOWS")
                     }.getOrDefault(emptyList())
             }

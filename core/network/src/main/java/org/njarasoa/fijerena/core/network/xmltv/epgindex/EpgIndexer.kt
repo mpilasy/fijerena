@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.core.content.edit
 import androidx.room.withTransaction
 import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -189,6 +190,8 @@ class EpgIndexer private constructor(
                     }
                 }
 
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to restore index state", e)
                 _state.value = EpgIndexState.NotIndexed
@@ -346,6 +349,8 @@ class EpgIndexer private constructor(
                 Log.e(TAG, msg, e)
                 lastIngestionStats = IngestionStats(channelCount, programmeCount)
                 throw java.io.IOException(msg, e)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 val msg = "Stream indexing failed: ${e.message} ($channelCount ch, $programmeCount prg ingested before failure)"
                 Log.e(TAG, msg, e)
@@ -380,6 +385,8 @@ class EpgIndexer private constructor(
                 Log.i(TAG, "purgeXtreamApiSources: removed ${ids.size} self-created source(s)")
 
                 rebuildFtsAndUpdateState()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "purgeXtreamApiSources failed: ${e.message}", e)
             }
@@ -466,6 +473,11 @@ class EpgIndexer private constructor(
                 }
                 markFtsClean()
                 Log.i(TAG, "rebuildFtsAndUpdateState: FTS complete in ${System.currentTimeMillis() - startMs}ms")
+            } catch (e: CancellationException) {
+                // Stopped mid-rebuild: show Failed, as before, rather than leaving the state on
+                // Optimizing. The FTS stays marked stale, so the next start rebuilds it.
+                _state.value = EpgIndexState.Failed(e.message ?: "FTS rebuild cancelled")
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 _state.value = EpgIndexState.Failed(e.message ?: "FTS rebuild failed")
@@ -570,6 +582,8 @@ class EpgIndexer private constructor(
                     sdb.execSQL("PRAGMA cache_size = -32000") // 32 MB during bulk
                 }
                 Log.i(TAG, "beginBulkIngestion: setup complete in ${System.currentTimeMillis() - startMs}ms")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "beginBulkIngestion setup failed: ${e.message}", e)
                 // Non-fatal but will make ingestion much slower as triggers/indexes remain active
@@ -611,6 +625,8 @@ class EpgIndexer private constructor(
                     FTS_TRIGGER_DDL.forEach { ddl -> sdb.execSQL(ddl) }
                 }
                 Log.i(TAG, "endBulkIngestion: restore complete in ${System.currentTimeMillis() - startMs}ms")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "endBulkIngestion teardown failed: ${e.message}", e)
             }
@@ -633,6 +649,8 @@ class EpgIndexer private constructor(
 
                     _state.value = EpgIndexState.NotIndexed
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to clear EPG data: ${e.message}", e)
             }
@@ -645,6 +663,8 @@ class EpgIndexer private constructor(
         withContext(Dispatchers.IO) {
             try {
                 EpgIndexDatabase.getInstance(context).epgIndexDao().countStaleProgrammes(cutoffEpoch)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 0
             }
@@ -690,6 +710,8 @@ class EpgIndexer private constructor(
                     incrementalVacuumLocked()
                     deleted
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Purge failed: ${e.message}", e)
                 0
@@ -709,6 +731,8 @@ class EpgIndexer private constructor(
         withContext(Dispatchers.IO) {
             try {
                 SettingsDatabase.getInstance(context).epgSourceDao().getSourceCount()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to get source count: ${e.message}")
                 0
@@ -758,7 +782,7 @@ class EpgIndexer private constructor(
             if (started > 0) {
                 Log.i(TAG, "Incremental vacuum reclaimed ${started - remaining} of $started free pages")
             }
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend helper
             Log.w(TAG, "Incremental vacuum failed: ${e.message}", e)
         }
     }

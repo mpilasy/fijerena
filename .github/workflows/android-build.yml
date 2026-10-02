@@ -46,6 +46,10 @@ jobs:
             exit 1
           fi
 
+      # docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-27.
+      - name: Suspend code does not swallow cancellation
+        run: scripts/check-cancellation.sh
+
       - name: Room schemas are committed and current
         run: |
           if [ -n "$(git status --porcelain -- core/network/schemas)" ]; then

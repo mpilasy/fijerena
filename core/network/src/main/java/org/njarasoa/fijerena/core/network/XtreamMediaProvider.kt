@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -266,7 +267,7 @@ class XtreamMediaProvider(
                     if (certification != null) {
                         enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
                     }
-                    val tmdbDetails = runCatching { tmdb.getTvDetails(tmdbSeriesId) }.getOrNull()
+                    val tmdbDetails = suspendRunCatching { tmdb.getTvDetails(tmdbSeriesId) }.getOrNull()
                     if (tmdbDetails != null) {
                         val newReleaseDate = enriched.metadata.releaseDate ?: tmdbDetails.firstAirDate
                         val newYear = enriched.metadata.year ?: tmdbDetails.year
@@ -310,13 +311,13 @@ class XtreamMediaProvider(
     }
 
     private suspend fun fetchTvCertification(tmdbSeriesId: Int): String? =
-        runCatching { tmdb.getTvContentRatings(tmdbSeriesId) }
+        suspendRunCatching { tmdb.getTvContentRatings(tmdbSeriesId) }
             .onFailure { Log.w("XtreamMediaProvider", "TMDB content rating fetch failed for series $tmdbSeriesId", it) }
             .getOrNull()
             ?.let { extractCertification(it.results.map { r -> r.country to r.rating }) }
 
     private suspend fun fetchMovieCertification(tmdbMovieId: Int): String? =
-        runCatching { tmdb.getMovieReleaseDates(tmdbMovieId) }
+        suspendRunCatching { tmdb.getMovieReleaseDates(tmdbMovieId) }
             .onFailure { Log.w("XtreamMediaProvider", "TMDB release dates fetch failed for movie $tmdbMovieId", it) }
             .getOrNull()
             ?.let { response ->
@@ -404,7 +405,7 @@ class XtreamMediaProvider(
             seasons
                 .map { season ->
                     async {
-                        runCatching { inFlight.withPermit { tmdb.getSeason(tmdbSeriesId, season) } }
+                        suspendRunCatching { inFlight.withPermit { tmdb.getSeason(tmdbSeriesId, season) } }
                             .onFailure { Log.w("XtreamMediaProvider", "TMDB season $season fetch failed for series $tmdbSeriesId", it) }
                             .getOrNull()
                             ?.episodes
@@ -450,7 +451,7 @@ class XtreamMediaProvider(
                     val (certification, tmdbDetails) =
                         coroutineScope {
                             val certificationDeferred = async { fetchMovieCertification(tmdbMovieId) }
-                            val detailsDeferred = async { runCatching { tmdb.getMovieDetails(tmdbMovieId) }.getOrNull() }
+                            val detailsDeferred = async { suspendRunCatching { tmdb.getMovieDetails(tmdbMovieId) }.getOrNull() }
                             certificationDeferred.await() to detailsDeferred.await()
                         }
                     if (certification != null) {
@@ -591,6 +592,8 @@ class XtreamMediaProvider(
         return try {
             val results = repository.searchByFts(contentType, ftsQuery, includeExcluded)
             kotlin.Result.success(results.map { it.toDomain(mediaType) })
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             null
         }
@@ -662,6 +665,8 @@ class XtreamMediaProvider(
         return try {
             val details = if (contentType == ContentType.MOVIES) tmdb.getMovieDetails(id) else tmdb.getTvDetails(id)
             details.originalDisplayTitle
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w("XtreamMediaProvider", "TMDB title for $contentType $id: ${e.message}")
             null
@@ -701,6 +706,8 @@ class XtreamMediaProvider(
             val images = if (contentType == ContentType.MOVIES) tmdb.getMovieImages(id) else tmdb.getTvImages(id)
             tmdbImagesCache.put(cacheKey, images)
             images
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w("XtreamMediaProvider", "TMDB images for $contentType $id: ${e.message}")
             null
@@ -718,6 +725,8 @@ class XtreamMediaProvider(
 
         return try {
             repository.getAlternateStreams(contentType, tmdbId, excludeId).map { it.toDomain(getMediaType(contentType)) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w("XtreamMediaProvider", "Alternate streams for $contentType tmdb $tmdbId: ${e.message}")
             emptyList()
@@ -736,6 +745,8 @@ class XtreamMediaProvider(
                 similar -> tmdb.getTvSimilar(tmdbId)
                 else -> tmdb.getTvRecommendations(tmdbId)
             }.results
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             // A title filed under the wrong type 404s here. The rows are a bonus, never an error,
             // and one endpoint failing must not cost the other its row.
@@ -754,6 +765,8 @@ class XtreamMediaProvider(
             val collectionId = tmdb.getMovieDetails(movieId).belongsToCollection?.id ?: return CollectionFetch()
             val collection = tmdb.getCollection(collectionId)
             CollectionFetch(name = collection.name, parts = collection.parts)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w("XtreamMediaProvider", "TMDB collection for movie $movieId: ${e.message}")
             CollectionFetch()
@@ -787,6 +800,8 @@ class XtreamMediaProvider(
                             val ftsQuery = buildFtsQuery(title) ?: return@async null
                             try {
                                 repository.searchByFts(contentType, ftsQuery, includeExcluded = false)
+                            } catch (e: CancellationException) {
+                                throw e
                             } catch (e: Exception) {
                                 null
                             }
@@ -827,6 +842,8 @@ class XtreamMediaProvider(
         val ftsQuery = buildFtsQuery(query) ?: return 0
         return try {
             repository.countExcludedByFts(contentType, ftsQuery)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             0
         }

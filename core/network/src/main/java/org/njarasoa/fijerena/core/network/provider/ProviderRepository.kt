@@ -6,6 +6,7 @@ import androidx.room.withTransaction
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -310,6 +311,8 @@ class ProviderRepository(
                             val sdb = db.openHelper.writableDatabase
                             sdb.execSQL("VACUUM")
                             sdb.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() }
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             android.util.Log.w("ProviderRepository", "VACUUM during orphan prune failed", e)
                         }
@@ -347,7 +350,7 @@ class ProviderRepository(
                     }
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend
             android.util.Log.w("ProviderRepository", "Failed cleaning up orphaned prefs", e)
         }
     }
@@ -681,7 +684,7 @@ class ProviderRepository(
         if (settingsJson.isBlank() || settingsJson == "{}") return ProviderSettings.DEFAULT
         return try {
             json.decodeFromString<ProviderSettings>(settingsJson)
-        } catch (_: Exception) {
+        } catch (_: Exception) { // cancellation-ok: non-suspend
             ProviderSettings.DEFAULT
         }
     }
@@ -802,7 +805,7 @@ class ProviderRepository(
                     encryptedPrefsCache.remove(name)
                     context.deleteSharedPreferences(name)
                 }
-        } catch (_: Exception) {
+        } catch (_: Exception) { // cancellation-ok: non-suspend
             // Ignore errors clearing prefs for deleted provider
         }
     }
@@ -813,7 +816,7 @@ class ProviderRepository(
             context
                 .getSharedPreferences(cacheName, Context.MODE_PRIVATE)
                 .edit { clear() }
-        } catch (_: Exception) {
+        } catch (_: Exception) { // cancellation-ok: non-suspend
             // Ignore errors clearing cache for deleted provider
         }
     }
@@ -846,7 +849,7 @@ class ProviderRepository(
                 ?.map { it.name.removeSuffix(".xml") }
                 ?.filter { it.startsWith(profilePrefix) }
                 ?.forEach { context.deleteSharedPreferences(it) }
-        } catch (_: Exception) {
+        } catch (_: Exception) { // cancellation-ok: no suspend call in try
             // Ignore errors clearing cache for deleted provider
         }
     }
@@ -866,7 +869,7 @@ class ProviderRepository(
                         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
                     )
-                } catch (e: Exception) {
+                } catch (e: Exception) { // cancellation-ok: non-suspend
                     org.njarasoa.fijerena.core.network.CredentialStoreHealth.markLost(context, fileName, e)
                     context.deleteSharedPreferences(fileName)
                     try {
@@ -877,7 +880,7 @@ class ProviderRepository(
                             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
                         )
-                    } catch (_: Exception) {
+                    } catch (_: Exception) { // cancellation-ok: non-suspend
                         // Never a plaintext file — see CredentialStoreHealth.InMemoryPrefs.
                         org.njarasoa.fijerena.core.network.CredentialStoreHealth.InMemoryPrefs()
                     }

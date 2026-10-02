@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.network.suspendRunCatching
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
@@ -88,7 +90,7 @@ class MovieDetailsViewModel(
     /** Explicit user refresh — see SeriesDetailsViewModel.refreshSeriesInfo. */
     fun refreshMovieInfo() {
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { getRepository().invalidateCachedDetail(movieId) }
+            suspendRunCatching { getRepository().invalidateCachedDetail(movieId) }
             loadMovieInfo()
         }
     }
@@ -162,6 +164,8 @@ class MovieDetailsViewModel(
                     _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
                 },
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
         }
@@ -171,7 +175,7 @@ class MovieDetailsViewModel(
         relatedTitlesJob =
             viewModelScope.launch(Dispatchers.IO) {
                 _relatedTitles.value =
-                    runCatching {
+                    suspendRunCatching {
                         getRepository().getRelatedTitles(movieId, detail.metadata.tmdbId, "MOVIES")
                     }.getOrDefault(RelatedTitles())
             }
@@ -180,7 +184,7 @@ class MovieDetailsViewModel(
     private fun loadTmdbTitle(detail: MovieDetail) {
         viewModelScope.launch(Dispatchers.IO) {
             _tmdbTitle.value =
-                runCatching {
+                suspendRunCatching {
                     getRepository().getTmdbTitle(detail.metadata.tmdbId, "MOVIES")
                 }.getOrNull()
         }
@@ -196,16 +200,16 @@ class MovieDetailsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val repo = getRepository()
             val tmdbId = detail.metadata.tmdbId
-            _logoUrl.value = runCatching { repo.getTmdbLogoUrl(tmdbId, "MOVIES") }.getOrNull()
+            _logoUrl.value = suspendRunCatching { repo.getTmdbLogoUrl(tmdbId, "MOVIES") }.getOrNull()
             _backdropUrl.value =
-                runCatching { repo.getTmdbBackdropUrl(tmdbId, "MOVIES") }.getOrNull() ?: detail.coverUrl
+                suspendRunCatching { repo.getTmdbBackdropUrl(tmdbId, "MOVIES") }.getOrNull() ?: detail.coverUrl
         }
     }
 
     private fun loadAlternateStreams(detail: MovieDetail) {
         viewModelScope.launch(Dispatchers.IO) {
             _alternateStreams.value =
-                runCatching {
+                suspendRunCatching {
                     getRepository().getAlternateStreams(movieId, detail.metadata.tmdbId, "MOVIES")
                 }.getOrDefault(emptyList())
         }
