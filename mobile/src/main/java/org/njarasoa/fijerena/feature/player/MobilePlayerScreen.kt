@@ -811,6 +811,7 @@ fun MobilePlayerContent(
                     MobileUpNextOverlay(
                         episode = next,
                         secondsLeft = upNextSecondsLeft(livePosition, liveDuration),
+                        belowClock = showControls,
                         onPlayNow = { playUpNext(next) },
                         onCancel = cancelUpNext,
                     )

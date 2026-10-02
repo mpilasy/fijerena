@@ -925,4 +925,5 @@
     <string name="player_up_next_title">Up next</string>
     <string name="player_up_next_countdown_format">Starts in %1$d s</string>
     <string name="player_up_next_play_now">Play now</string>
+    <string name="player_up_next_compact_format">Up next · %1$s · %2$d s</string>
 </resources>

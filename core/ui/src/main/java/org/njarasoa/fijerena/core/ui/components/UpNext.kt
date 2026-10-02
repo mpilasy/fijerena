@@ -64,9 +64,9 @@ fun upNextOnEnd(
     dismissed: Boolean,
 ): EpisodeItem? = if (autoplayEnabled && providerSupportsAutoplay && !dismissed) nextEpisode else null
 
-/** "S2:E3 · Title" for the up-next card; just the title when the season is unknown. */
-fun upNextLabel(episode: EpisodeItem): String =
-    episode.seasonNumber?.let { "S$it:E${episode.episodeNumber} · ${episode.title}" } ?: episode.title
+/** "S2:E3" for the compact up-next card; "E3" when the season is unknown. */
+fun upNextCode(episode: EpisodeItem): String =
+    episode.seasonNumber?.let { "S$it:E${episode.episodeNumber}" } ?: "E${episode.episodeNumber}"
 
 /** Suspends until the screen is at least STARTED — the next episode never starts unseen. */
 suspend fun Lifecycle.awaitStarted() {

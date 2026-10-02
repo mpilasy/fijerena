@@ -79,8 +79,8 @@ class UpNextTest {
     }
 
     @Test
-    fun `the card names season, episode and title`() {
-        assertEquals("S1:E2 · The Return", upNextLabel(next))
-        assertEquals("The Return", upNextLabel(next.copy(seasonNumber = null)))
+    fun `the card names season and episode`() {
+        assertEquals("S1:E2", upNextCode(next))
+        assertEquals("E2", upNextCode(next.copy(seasonNumber = null)))
     }
 }

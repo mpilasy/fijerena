@@ -724,4 +724,5 @@
     <string name="player_up_next_title">Manaraka</string>
     <string name="player_up_next_countdown_format">Manomboka afaka %1$d s</string>
     <string name="player_up_next_play_now">Alefaso izao</string>
+    <string name="player_up_next_compact_format">Manaraka · %1$s · %2$d s</string>
 </resources>

@@ -887,4 +887,5 @@
     <string name="player_up_next_title">À suivre</string>
     <string name="player_up_next_countdown_format">Démarre dans %1$d s</string>
     <string name="player_up_next_play_now">Lire maintenant</string>
+    <string name="player_up_next_compact_format">À suivre · %1$s · %2$d s</string>
 </resources>

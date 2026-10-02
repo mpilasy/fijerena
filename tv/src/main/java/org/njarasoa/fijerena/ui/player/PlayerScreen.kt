@@ -466,6 +466,7 @@ fun PlayerScreen(
             TvUpNextOverlay(
                 episode = next,
                 secondsLeft = upNextSecondsLeft(state.livePosition, state.liveDuration),
+                belowClock = state.showControls && !(state.showCategoryOverlay || state.showLastWatchedOverlay),
                 playNowFocus = upNextFocus,
                 onFocusChanged = { upNextFocused = it },
                 onPlayNow = { playUpNext(next) },
