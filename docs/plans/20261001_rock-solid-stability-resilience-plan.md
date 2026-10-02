@@ -241,6 +241,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 
 #### 🆕 F-36 / F-37: DI and cast hygiene [P3]
 - `ProviderRepository(...)` is constructed directly at 37 sites (e.g. `TvNavHost.kt:177, 670, 752`) despite AGENTS.md rule 4 — each instance builds its own `MasterKey`/encrypted-prefs cache. Route through `AppContainer.providerRepository` when touching those files; no sweep.
+- `tv/.../ui/components/modifiers/FocusModifiers.kt` `tvFocusable*()`: the focus-event node is chained *after* `focusable()`, so it never receives focus events and never draws its ring. No screen uses it (found when Diagnostics tried to, 2026-10-01). Fix the order or delete the helpers.
 - `MobileCategoryListScreen.kt:245, 274, 284` hard-cast `context as ComponentActivity`. Use `LocalActivity.current` / a `findActivity()` helper. Low risk today (always hosted in `MainActivity`).
 
 ---
