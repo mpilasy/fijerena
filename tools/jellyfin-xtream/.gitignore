@@ -1,2 +1,4 @@
 xtream_ids*.db
-bridge.log
+bridge*.log
+bridge-*.pid
+__pycache__/
