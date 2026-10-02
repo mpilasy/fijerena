@@ -116,7 +116,7 @@ The `SearchViewModel` manages categories and individual stream results across al
 3. **ContentTypeSelection → CategoryList**: Standard push.
 4. **CategoryList → Player**: Standard push (content-type aware routing).
 5. **Settings → ProviderSelection → AddProvider**: Standard push chain.
-6. **Provider switch**: Navigate to ContentTypeSelection, clearing back stack — `popUpTo(navController.graph.id) { inclusive = true }`, as a profile switch does, so no screen holding the previous provider's (closed) repository survives underneath.
+6. **Provider switch**: Navigate to ContentTypeSelection, clearing back stack — `popUpTo(navController.graph.id) { inclusive = true }`, as a profile switch does, so no screen holding the previous provider's (closed) repository survives underneath. A profile switch can itself change provider: the device moves to the provider the new profile last picked, when it differs from the current one (`docs/plans/20261002_profile-last-provider-plan.md`).
 7. **Logout**: Clear auth session, navigate to Settings, clear back stack to ContentTypeSelection.
 8. **Remote Stop (Live sync)**: when another device of the sync group stops this device's playback, whichever playing screen is up — TV `TvPlayerScreen` or the `LiveTvSplitLayout` preview/promoted player, mobile `MobilePlayerScreen` or the Live TV dock (docked or promoted) — finalises the session as Back does, stops, and pops back to ContentTypeSelection (`popBackStack(Screen.ContentTypeSelection, inclusive = false)`, the screens' `onHome`), with a "Playback stopped from <device>" toast. See `RemoteStopEffect` and `docs/plans/20261001_live-sync-now-playing-plan.md` → Remote Stop.
 

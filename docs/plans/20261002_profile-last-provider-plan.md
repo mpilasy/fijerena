@@ -173,3 +173,12 @@ Single phase, one commit.
 - Tests: `AppSettingsLastProviderTest` (JVM, passing); `ProfileLastProviderTest` (instrumented,
   2/2 passing on a read-only Pixel_10 emulator, with the rest of the `provider` and `profile`
   instrumented tests: 13 + 1 passing).
+- Verified by hand on the TV emulator (`Television_1080p`, profiles atr and Kid, three
+  providers): a pick is remembered per profile; switching to a profile with no pick stays put
+  (`provider moved false`); switching between profiles on different providers moves the device
+  and home opens on the right provider (`provider moved true`, 23–52 ms for the switch itself);
+  two profiles on the same provider switch without touching it (`provider moved false`).
+- **A switch only changes provider when it actually differs** (UX requirement, 2026-10-02):
+  `activateLastProvider` returns before `setActiveProvider` when the remembered provider is already
+  active, so no provider caches are cleared and no Xtream session reconnects; picking the
+  already-active provider in a picker is a no-op as before.
