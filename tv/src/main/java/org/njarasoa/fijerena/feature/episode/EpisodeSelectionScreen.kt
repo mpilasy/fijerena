@@ -759,7 +759,29 @@ internal fun EpisodeListContent(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                // Same Back interception as the list below, for the detail panel: its focused
+                // Buttons swallow the first Back before the BackHandler sees it, so close here,
+                // top-down, before any descendant gets the key.
+                .then(
+                    if (selectedEpisode != null) {
+                        Modifier.onPreviewKeyEvent { event ->
+                            if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
+                                closeEpisodePanel()
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                    } else {
+                        Modifier
+                    },
+                ),
+    ) {
         if (selectedEpisode != null) {
             val current = selectedEpisode!!
             val currentIdx =
