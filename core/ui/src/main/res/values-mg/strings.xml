@@ -219,7 +219,7 @@
     <string name="provider_clear_cache_tvshows_message">This will remove all cached TV Shows data (categories and streams).</string>
     <string name="provider_clear_button">Clear</string>
     <string name="provider_clear_favorites_title">Clear All Favorites?</string>
-    <string name="provider_clear_favorites_message">This will remove all favorited streams from all content types (Live TV, Movies, TV Shows). This action cannot be undone.</string>
+    <string name="provider_clear_favorites_message">Hofafana daholo ny ankafizina ao amin\'ny Live TV, Sarimihetsika ary Andian-tantara. Tsy azo averina intsony izany.</string>
     <string name="provider_clear_progress_label">Fafao ny fandrosoan\'ny filalaovana</string>
     <string name="provider_clear_progress_title">Clear All Playback Progress?</string>
     <string name="provider_clear_progress_message">This will remove all saved playback positions. You will start from the beginning when playing any VOD content.</string>
@@ -265,7 +265,7 @@
     <string name="provider_edit_button">Edit</string>
     <string name="provider_queue_size_label">Queue Size</string>
     <string name="provider_max_size_label">Max Size</string>
-    <string name="provider_clear_favorites_desc">Remove all favorited streams from all content types</string>
+    <string name="provider_clear_favorites_desc">Hofafana daholo ny ankafizina</string>
     <string name="provider_clear_favorites_button">Clear All Favorites</string>
     <string name="provider_clear_progress_desc">Remove all saved positions (Continue Watching will be empty)</string>
     <string name="provider_clear_progress_button">Clear All Progress</string>
@@ -556,7 +556,7 @@
     <string name="settings_ui_style_desc">Safidio ny fomba fisehony</string>
 
     <!-- Content Type Selection -->
-    <string name="content_select_type_title">Safidio ny karazana atiny</string>
+    <string name="content_select_type_title">Fandraisana</string>
     <string name="content_switch_provider_title">Ovao ny loharano</string>
     <string name="content_switch_provider_description_format">Ovao ny loharano, loharano ampiasaina izao: %1$s</string>
     <string name="content_type_live_tv_description">Jereo ny fandaharana mivantana</string>

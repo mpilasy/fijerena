@@ -50,7 +50,7 @@ Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute 
 ## Search
 
 ### Global Search ("ALL")
-Unified search across all content types (Live TV, Movies, TV Shows) and categories. Accessible via the search button on the Content Type Selection screen.
+Unified search across all content types (Live TV, Movies, TV Shows) and categories. Accessible via the search button on the Home screen.
 - **Grouped Results:** Results are organized by content type headers.
 - **Collapsible Headers:** Each group (Live TV, Movies, TV Shows) can be expanded or collapsed to manage long result lists.
 - **Combined View:** Matches for both categories and individual streams are shown within their respective content type groups.
@@ -75,7 +75,7 @@ No provider-level search; falls back to `SearchViewModel`'s client-side cache sc
 
 Standalone programme title search across all indexed XMLTV data.
 
-- Access: Content Type Selection → calendar / date range icon (visible when EPG index is ready)
+- Access: Home screen → calendar / date range icon (visible when EPG index is ready)
 - **Freshness Tracking:** Displays last index update time in the header.
 - **Customizable Refresh:** Configurable refresh interval (4h, 8h, 12h, 24h, 48h) or "Never".
 - **Robust Retries:** Automatic retry mechanism (5 attempts with exponential backoff: 1m to 16m) for failed updates.

@@ -85,7 +85,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **VOD Seek Controls** - Rewind −30s and Fast-forward +1min via buttons or remote media keys
 - **Pause via Double-Tap** - Mobile double-tap pauses/resumes VOD content
 - **VOD Time Display** - Current position, remaining time, estimated end time
-- **Cross-Type Search** - Unified "ALL" search across Live TV, Movies, and TV Shows from content type selection
+- **Cross-Type Search** - Unified "ALL" search across Live TV, Movies, and TV Shows from the Home screen
 - **Developer Mode** - Payload size tracking and debug information
 - **Cache Management** - Per-content-type cache with statistics
 - **Robust EPG Retries** - Automatic 5-attempt retry loop with exponential backoff for EPG updates

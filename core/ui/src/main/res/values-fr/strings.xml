@@ -219,7 +219,7 @@
     <string name="provider_clear_cache_tvshows_message">Ceci supprimera toutes les séries du cache.</string>
     <string name="provider_clear_button">Effacer</string>
     <string name="provider_clear_favorites_title">Effacer tous les favoris ?</string>
-    <string name="provider_clear_favorites_message">Ceci supprimera tous les favoris de tous les types de contenu. Cette action est irréversible.</string>
+    <string name="provider_clear_favorites_message">Ceci supprimera tous les favoris de TV en direct, Films et Séries. Cette action est irréversible.</string>
     <string name="provider_clear_progress_label">Effacer la progression de lecture</string>
     <string name="provider_clear_progress_title">Effacer la progression ?</string>
     <string name="provider_clear_progress_message">Ceci supprimera toutes les positions de lecture enregistrées. La lecture reprendra au début.</string>
@@ -265,7 +265,7 @@
     <string name="provider_edit_button">Modifier</string>
     <string name="provider_queue_size_label">Taille de la file</string>
     <string name="provider_max_size_label">Taille Max</string>
-    <string name="provider_clear_favorites_desc">Supprimer tous les favoris de tous les types de contenu</string>
+    <string name="provider_clear_favorites_desc">Supprimer tous les favoris</string>
     <string name="provider_clear_favorites_button">Effacer tous les favoris</string>
     <string name="provider_clear_progress_desc">Supprimer toutes les positions enregistrées</string>
     <string name="provider_clear_progress_button">Effacer la progression</string>
@@ -636,7 +636,7 @@
     <string name="settings_ui_style_desc">Choisir une apparence</string>
 
     <!-- Content Type Selection -->
-    <string name="content_select_type_title">Sélectionner le type de contenu</string>
+    <string name="content_select_type_title">Accueil</string>
     <string name="content_switch_provider_title">Changer de source</string>
     <string name="content_switch_provider_description_format">Changer de source, source actuelle : %1$s</string>
     <string name="content_type_live_tv_description">Regarder des chaînes de télévision en direct</string>
