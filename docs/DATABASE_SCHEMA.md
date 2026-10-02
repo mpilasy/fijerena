@@ -578,6 +578,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `search_history` | TEXT | Last 20 search terms, U+001F-separated |
 | `epg_search_history` | TEXT | Last 20 EPG search terms, U+001F-separated |
 | `has_seen_favorite_hint` | BOOLEAN | One-time long-press-to-favorite hint dismissed |
+| `favorite_category_rows_purged_v1` | BOOLEAN | One-time flag, per install (never synced): `FavoriteCategoryRowCleanup` has removed the bogus `fav_cat_<categoryId>` stream favourites from `favorite_state` (every provider and profile, each with a `sync_tombstone`). Set only after the purge succeeds |
 
 The active provider is **not** stored here — it is the `providers.isActive` column in `providers.db`.
 

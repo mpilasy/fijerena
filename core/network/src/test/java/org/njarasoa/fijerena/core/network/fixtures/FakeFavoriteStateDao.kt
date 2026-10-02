@@ -82,6 +82,11 @@ class FakeFavoriteStateDao : FavoriteStateDao {
         kind: String,
     ): List<FavoriteStateEntity> = rows.values.filter { it.providerId == providerId && it.profileId == profileId && it.kind == kind }
 
+    override fun getAllOfKindWithIdPrefix(
+        kind: String,
+        prefix: String,
+    ): List<FavoriteStateEntity> = rows.values.filter { it.kind == kind && it.itemId.startsWith(prefix) }
+
     override fun insertTombstone(tombstone: SyncTombstoneEntity) {
         tombstones[listOf(tombstone.providerId, tombstone.profileId, tombstone.kind, tombstone.itemId, tombstone.contentType)] = tombstone
     }

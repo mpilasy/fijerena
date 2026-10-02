@@ -41,6 +41,7 @@ class AppSettings(
         private const val KEY_CELLULAR_LIVE_MULTIPLIER = "cellular_live_multiplier"
         private const val KEY_CELLULAR_VOD_MULTIPLIER = "cellular_vod_multiplier"
         private const val KEY_HAS_PROVIDER_CACHE = "has_provider_cache"
+        private const val KEY_FAVORITE_CATEGORY_ROWS_PURGED = "favorite_category_rows_purged_v1"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
@@ -345,6 +346,11 @@ class AppSettings(
     var hasProviderCache: Boolean
         get() = prefs.getBoolean(KEY_HAS_PROVIDER_CACHE, false)
         set(value) = prefs.edit { putBoolean(KEY_HAS_PROVIDER_CACHE, value) }
+
+    /** One-time flag: [FavoriteCategoryRowCleanup] has run on this install. Per device, never synced. */
+    var favoriteCategoryRowsPurged: Boolean
+        get() = prefs.getBoolean(KEY_FAVORITE_CATEGORY_ROWS_PURGED, false)
+        set(value) = prefs.edit(commit = true) { putBoolean(KEY_FAVORITE_CATEGORY_ROWS_PURGED, value) }
 
     // Search and EPG search history belong to the active profile, like developer mode: stored
     // under `<key>_<profileId>`. Per device and never synced.

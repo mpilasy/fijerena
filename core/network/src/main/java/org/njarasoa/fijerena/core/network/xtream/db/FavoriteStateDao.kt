@@ -68,6 +68,16 @@ interface FavoriteStateDao {
         kind: String,
     ): List<FavoriteStateEntity>
 
+    /**
+     * Every provider's and profile's rows of [kind] whose `itemId` starts with [prefix], compared
+     * literally (not `LIKE`, where `_` is a wildcard). Backs `FavoriteCategoryRowCleanup`.
+     */
+    @Query("SELECT * FROM favorite_state WHERE kind = :kind AND substr(itemId, 1, length(:prefix)) = :prefix")
+    fun getAllOfKindWithIdPrefix(
+        kind: String,
+        prefix: String,
+    ): List<FavoriteStateEntity>
+
     // --- Live sync tombstones: see SyncTombstoneEntity. The production writers use these. ---
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

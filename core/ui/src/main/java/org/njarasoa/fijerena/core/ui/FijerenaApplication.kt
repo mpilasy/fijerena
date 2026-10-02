@@ -17,12 +17,15 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.FavoriteCategoryRowCleanup
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.sync.pruneSyncTombstones
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -81,6 +84,12 @@ class FijerenaApplication :
             // Drop the EPG sources the app used to create for itself — see
             // EpgIndexer.purgeXtreamApiSources().
             EpgIndexer.getInstance(this@FijerenaApplication).purgeXtreamApiSources()
+            // Once per install: drop the bogus stream favourites the Favourite categories list
+            // used to save — see FavoriteCategoryRowCleanup. Last, so a failure here skips nothing.
+            FavoriteCategoryRowCleanup.runOnce(
+                AppSettings(this@FijerenaApplication),
+                XtreamDatabase.getInstance(this@FijerenaApplication).favoriteStateDao(),
+            ) { AppContainer.getInstance(this@FijerenaApplication).reloadAfterRemoteChange(it) }
         }
     }
 
