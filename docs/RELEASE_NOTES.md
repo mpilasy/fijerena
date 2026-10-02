@@ -1,5 +1,12 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Fixes
+**Release Date:** 2026-10-02
+
+- **EPG screens keep updating during a guide import:** each import switched the guide database's `temp_store` and back, and SQLite drops every temporary table when that setting changes — including Room's change tracker. Logcat filled with `no such table: room_table_modification_log` (768 errors in 24 s) and screens watching the guide could stop refreshing. `temp_store = FILE` (kept for low-memory TVs) is now set once when the database opens, before Room creates its tracker.
+
+---
+
 ## Version: Stability & Resilience (Phase 5 — systemic hygiene)
 **Release Date:** 2026-10-01
 

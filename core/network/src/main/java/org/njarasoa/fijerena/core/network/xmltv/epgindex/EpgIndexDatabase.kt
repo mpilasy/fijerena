@@ -156,6 +156,12 @@ private class CreationPragmaFactory(
             object : SupportSQLiteOpenHelper.Callback(inner.version) {
                 override fun onConfigure(db: SupportSQLiteDatabase) {
                     db.execPragma("PRAGMA auto_vacuum = INCREMENTAL")
+                    // FILE, not MEMORY: temp B-trees for a large XMLTV ingest or FTS rebuild pushed
+                    // native RSS past what the Low Memory Killer tolerates on 1-2GB TV devices. Set
+                    // once, here, before Room creates its TEMP `room_table_modification_log`:
+                    // changing temp_store drops every TEMP table, so switching it per ingest broke
+                    // the invalidation tracker ("no such table: room_table_modification_log").
+                    db.execSQL("PRAGMA temp_store = FILE")
                     inner.onConfigure(db)
                 }
 

@@ -428,10 +428,6 @@ class EpgIndexer private constructor(
                     // over 150MB during rebuild, risking the Low Memory Killer on 1-2GB Android TV
                     // devices.
                     sdb.execSQL("PRAGMA synchronous = OFF")
-                    // FILE, not MEMORY — see beginBulkIngestion()'s identical note. The FTS
-                    // rebuild's own temp B-trees are exactly the ones that were spiking native
-                    // RSS past the Low Memory Killer's tolerance on this rebuild specifically.
-                    sdb.execSQL("PRAGMA temp_store = FILE")
                     sdb.execSQL("PRAGMA cache_size = -16000")
 
                     try {
@@ -446,7 +442,6 @@ class EpgIndexer private constructor(
                         // on success.
                         sdb.execSQL("PRAGMA synchronous = NORMAL")
                         sdb.execSQL("PRAGMA cache_size = -2000")
-                        sdb.execSQL("PRAGMA temp_store = DEFAULT")
                     }
 
                     val now = System.currentTimeMillis()
@@ -575,10 +570,6 @@ class EpgIndexer private constructor(
                         }
                     }
                     sdb.execSQL("PRAGMA synchronous = OFF")
-                    // FILE, not MEMORY: temp B-trees for a large XMLTV ingest were pushing native
-                    // RSS past what the Android Low Memory Killer tolerates on 1-2GB TV devices —
-                    // MEMORY keeps every temp structure off disk entirely regardless of size.
-                    sdb.execSQL("PRAGMA temp_store = FILE")
                     sdb.execSQL("PRAGMA cache_size = -32000") // 32 MB during bulk
                 }
                 Log.i(TAG, "beginBulkIngestion: setup complete in ${System.currentTimeMillis() - startMs}ms")
@@ -620,7 +611,6 @@ class EpgIndexer private constructor(
                         }
                     }
                     sdb.execSQL("PRAGMA synchronous = NORMAL")
-                    sdb.execSQL("PRAGMA temp_store = DEFAULT")
                     sdb.execSQL("PRAGMA cache_size = -8000") // restore 8 MB
                     FTS_TRIGGER_DDL.forEach { ddl -> sdb.execSQL(ddl) }
                 }
