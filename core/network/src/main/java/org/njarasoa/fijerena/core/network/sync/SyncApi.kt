@@ -11,6 +11,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.njarasoa.fijerena.core.player.network.NetworkModule
+import java.util.concurrent.TimeUnit
+
+private const val SOCKET_PING_SECONDS = 30L
 
 /** The sync server failed a request; [status] is the HTTP status, 0 when it was never reached. */
 class SyncApiException(
@@ -121,8 +124,16 @@ class SyncApi(
         listener: WebSocketListener,
     ): WebSocket {
         val url = serverUrl.trimEnd('/').toHttpUrl().newBuilder().addPathSegment("ws").build()
-        return client.newWebSocket(Request.Builder().url(url).header("Authorization", "Bearer $token").build(), listener)
+        return socketClient.newWebSocket(Request.Builder().url(url).header("Authorization", "Bearer $token").build(), listener)
     }
+
+    /**
+     * With protocol-level pings, a socket that died without a close (Wi-Fi dropped, a NAT entry
+     * expired) fails once a pong is missed and reconnects. Without them, sends kept succeeding into
+     * the void and live updates silently stopped until the app next came to the foreground. See
+     * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-26.
+     */
+    private val socketClient: OkHttpClient by lazy { client.newBuilder().pingInterval(SOCKET_PING_SECONDS, TimeUnit.SECONDS).build() }
 
     private suspend inline fun <reified T> call(
         serverUrl: String,

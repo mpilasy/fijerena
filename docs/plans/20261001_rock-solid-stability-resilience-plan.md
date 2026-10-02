@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 in progress: F-08, F-09, F-23, F-22 done. Phases 3-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 in progress: F-08, F-09, F-23, F-22, F-12, F-26 done. Phases 3-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -143,6 +143,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `SyncManager.kt:240-251` — app-level `"ping"` text every 30 s, nobody checks for the `"pong"`.
 - **Mechanism:** After a NAT/Wi-Fi drop without FIN, `send()` succeeds into the buffer; no read ever fails. Live updates stop until the app is backgrounded/foregrounded.
 - **Fix:** Build the socket client with `NetworkModule.okHttpClient.newBuilder().pingInterval(30, SECONDS)` (OkHttp fails the socket on a missed pong → `onFailure` → reconnect via F-12's backoff). Keep the server's text auto-response for old clients or drop it.
+- **Done 2026-10-01**: the socket client pings every 30 s at protocol level. The app's text `ping` stays — the server keeps its auto-response time as the device's "last seen". Not reproduced: simulating a silent connection drop needs packet filtering the rig doesn't have.
 
 ### C. Data layer & storage
 
