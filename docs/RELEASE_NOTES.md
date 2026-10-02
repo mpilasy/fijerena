@@ -3,7 +3,7 @@
 ## Version: Autoplay next episode
 **Release Date:** 2026-10-02
 
-- **Play next episode automatically:** a new switch in Settings → Playback, per profile and off by default. With it on, an episode that ends shows an "Up next" card naming the next one (the episode the player's Next button plays, crossing into the next season when needed) and counts down 10 seconds before playing it, saving the ended episode as watched first. "Play now" starts it straight away; "Cancel" or Back returns to the episode list, as before. The countdown pauses while the app is in the background (picture-in-picture keeps counting). On TV the card takes focus on "Play now". The choice follows the profile to every device of the sync group, like developer mode; older app versions ignore it. With it off, or at a show's last episode, nothing changes; movies and Live TV are unaffected.
+- **Play next episode automatically:** a new switch in Settings → Playback, per profile and off by default, for Xtream TV shows (not Jellyfin). With it on, an "Up next" card appears over the playing video near the end of an episode — in the last 90 seconds, or the last 15 % of a short one — naming the next episode (the one the player's Next button plays, crossing into the next season when needed) and counting down the playback time left. "Play now" skips straight to it; "Cancel" or Back hides the card and lets the episode finish, then returns to the episode list as before. Otherwise the next episode starts as soon as this one ends. On TV the card takes focus on "Play now". The choice follows the profile to every device of the sync group, like developer mode; older app versions ignore it. With it off, or at a show's last episode, nothing changes; movies and Live TV are unaffected.
 
 ---
 

@@ -330,6 +330,10 @@ class MediaRepository(
     val supportsRemoveFromRecent: Boolean
         get() = !usesServerUserData
 
+    /** Whether this provider's episodes may roll on to the next one — see ProviderCapabilities. */
+    val supportsAutoplayNextEpisode: Boolean
+        get() = provider?.capabilities?.supportsAutoplayNextEpisode == true
+
     fun setProvider(mediaProvider: MediaProvider) {
         provider = mediaProvider
         backfillAndPurgeWatchState()

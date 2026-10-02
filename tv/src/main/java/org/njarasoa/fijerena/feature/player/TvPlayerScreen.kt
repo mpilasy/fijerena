@@ -371,6 +371,7 @@ private fun PlayerContent(
                 loaderViewModel.playNextEpisode(nextEp)
             }
         },
+        autoplayNextSupported = data.supportsAutoplayNext,
         upNextState = upNextState,
     )
 }

@@ -19,7 +19,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.components.rememberUpNextCountdown
 import org.njarasoa.fijerena.core.ui.components.upNextLabel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -29,22 +28,23 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * "Up next" card shown when an episode ends with the profile's autoplay on: names [episode],
- * counts down, then calls [onPlayNow]. Back is a BackHandler in the player that calls [onCancel].
+ * "Up next" card shown over the playing episode near its end (autoplay next episode): names
+ * [episode] and the playback time left ([secondsLeft]). Back is a BackHandler in the player that
+ * calls [onCancel]. Sits mid-right, clear of the controls' bottom bar.
  */
 @Composable
 fun MobileUpNextOverlay(
     episode: EpisodeItem,
+    secondsLeft: Int,
     onPlayNow: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val secondsLeft = rememberUpNextCountdown(episode, onPlayNow)
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .padding(Spacing.lg),
-        contentAlignment = Alignment.BottomEnd,
+        contentAlignment = Alignment.CenterEnd,
     ) {
         GlassPanel(modifier = Modifier.widthIn(max = MobileDimensions.statsOverlayMaxWidth)) {
             Column(modifier = Modifier.padding(Spacing.md)) {

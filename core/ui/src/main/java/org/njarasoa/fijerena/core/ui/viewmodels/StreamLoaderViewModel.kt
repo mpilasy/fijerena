@@ -82,6 +82,9 @@ class StreamLoaderViewModel(
             val logoUrl: String? = null,
             // Next episode in sequence for TV shows, if one exists.
             val nextEpisode: EpisodeItem? = null,
+            // Whether the provider lets episodes roll on to [nextEpisode] (autoplay next episode):
+            // Xtream yes, Jellyfin no. Set with [nextEpisode].
+            val supportsAutoplayNext: Boolean = false,
         ) : StreamState()
 
         data class Error(
@@ -404,6 +407,7 @@ class StreamLoaderViewModel(
                     description = description,
                     episodeLabel = episodeLabel,
                     nextEpisode = nextEpisode,
+                    supportsAutoplayNext = repo.supportsAutoplayNextEpisode,
                 )
         }
     }

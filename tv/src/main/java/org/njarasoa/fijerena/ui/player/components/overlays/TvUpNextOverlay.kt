@@ -12,13 +12,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.MaterialTheme
@@ -26,7 +24,6 @@ import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.components.rememberUpNextCountdown
 import org.njarasoa.fijerena.core.ui.components.upNextLabel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -37,32 +34,33 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * "Up next" card shown when an episode ends with the profile's autoplay on: names [episode],
- * counts down, then calls [onPlayNow]. Takes D-pad focus on "Play now" as it appears. Back is
- * intercepted by the player's root (see PlayerScreen), which calls [onCancel] like the button.
+ * "Up next" card shown over the playing episode near its end (autoplay next episode): names
+ * [episode] and the playback time left. The player owns its focus ([playNowFocus], moved here as
+ * the card appears) and its keys — see PlayerScreen; [onFocusChanged] reports whether focus is
+ * inside the card. Sits mid-right, clear of the controls' bottom row.
  */
 @Composable
 fun TvUpNextOverlay(
     episode: EpisodeItem,
+    secondsLeft: Int,
+    playNowFocus: FocusRequester,
+    onFocusChanged: (Boolean) -> Unit,
     onPlayNow: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val secondsLeft = rememberUpNextCountdown(episode, onPlayNow)
-    val playNowFocus = remember { FocusRequester() }
-    LaunchedEffect(episode.id) {
-        // One frame so the button is attached before focus is asked of it.
-        withFrameMillis {}
-        playNowFocus.requestFocus()
-    }
-
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
-        contentAlignment = Alignment.BottomEnd,
+        contentAlignment = Alignment.CenterEnd,
     ) {
-        GlassPanel(modifier = Modifier.width(TvDimensions.dialogWidth)) {
+        GlassPanel(
+            modifier =
+                Modifier
+                    .width(TvDimensions.dialogWidth)
+                    .onFocusChanged { onFocusChanged(it.hasFocus) },
+        ) {
             Column(modifier = Modifier.padding(Spacing.lg)) {
                 Text(
                     text = stringResource(R.string.player_up_next_title),

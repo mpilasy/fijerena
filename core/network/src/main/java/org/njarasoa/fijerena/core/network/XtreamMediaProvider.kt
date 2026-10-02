@@ -68,6 +68,7 @@ class XtreamMediaProvider(
             supportsSearch = true,
             supportsAuthentication = true,
             supportsProgressSync = false,
+            supportsAutoplayNextEpisode = true,
         )
 
     override suspend fun connect(): kotlin.Result<Unit> =

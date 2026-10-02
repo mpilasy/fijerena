@@ -61,7 +61,10 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.components.awaitStarted
+import org.njarasoa.fijerena.core.ui.components.showUpNext
 import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
+import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -355,40 +358,65 @@ fun MobilePlayerContent(
         }
     }
 
-    // Autoplay next episode: the episode the "Up next" countdown runs for, if any. Play now
-    // clears it before the player leaves Ended, and this effect only re-runs when the playback
-    // state changes, so the same end never starts a second countdown.
-    var upNext by remember { mutableStateOf<EpisodeItem?>(null) }
-    val playUpNext: () -> Unit = {
-        upNext?.let { next ->
-            upNext = null
-            // Same path as the Next button: awaited finalise (the ended episode is saved as
-            // watched), then load the next one.
-            scope.launch {
-                finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
-                loaderViewModel.playNextEpisode(next)
-            }
+    // Autoplay next episode. The "Up next" card shows over the playing episode once little enough
+    // is left (see showUpNext); its countdown is the playback time left, from the polled position,
+    // so it stops with the video. Per playing stream: the one whose card was cancelled or used
+    // (stays hidden for that episode), and the one a next episode is starting from until the new
+    // one plays — the player keeps reading the old episode, or Ended, until then.
+    val shownSuccess = displayState as? StreamLoaderViewModel.StreamState.Success
+    val autoplayNext = remember { appSettings.autoplayNextEpisode }
+    var upNextDismissedFor by remember { mutableStateOf<String?>(null) }
+    var upNextStartingFrom by remember { mutableStateOf<String?>(null) }
+    val upNextDismissed = upNextDismissedFor != null && upNextDismissedFor == shownSuccess?.streamId
+    // Hidden in picture-in-picture (nothing there to tap); the episode still rolls on at its end.
+    val upNext =
+        shownSuccess?.nextEpisode?.takeIf {
+            !isInPipMode &&
+                upNextStartingFrom == null &&
+                (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused) &&
+                showUpNext(autoplayNext, shownSuccess.supportsAutoplayNext, it, livePosition, liveDuration, upNextDismissed)
+        }
+    val playUpNext: (EpisodeItem) -> Unit = { next ->
+        upNextDismissedFor = shownSuccess?.streamId
+        upNextStartingFrom = shownSuccess?.streamId
+        // Same path as the Next button: awaited finalise (the current episode is saved), then
+        // load the next one.
+        scope.launch {
+            finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
+            loaderViewModel.playNextEpisode(next)
         }
     }
-    // Cancel leaves as an ended episode always has: back to the episode list.
-    val cancelUpNext: () -> Unit = {
-        upNext = null
-        onBack()
-    }
+    // Cancel (or Back) hides the card for this episode; it plays on and ends as it always has.
+    val cancelUpNext: () -> Unit = { upNextDismissedFor = shownSuccess?.streamId }
     BackHandler(enabled = upNext != null) { cancelUpNext() }
+
+    // The next episode is playing: forget the one it started from, and its stale position.
+    LaunchedEffect(currentPs, shownSuccess?.streamId) {
+        val startingFrom = upNextStartingFrom
+        if (startingFrom != null && currentPs !is PlaybackState.Ended && shownSuccess?.streamId != startingFrom) {
+            upNextStartingFrom = null
+            livePosition = 0L
+            liveDuration = 0L
+        }
+    }
 
     // Natural end of a movie/episode (never fires for live TV — handleStreamEndedOrError only
     // emits Ended for !metadata.isLive) — leave the player rather than sit on a frozen last
     // frame with no controls (see the `else` branch below that deliberately renders nothing
-    // for Ended), unless the profile plays the next episode automatically and there is one:
-    // then the "Up next" countdown.
+    // for Ended), unless the profile plays the next episode automatically, there is one and its
+    // card wasn't cancelled: then it plays at once (once the app is at least STARTED — PiP is).
     LaunchedEffect(currentPs) {
-        if (currentPs is PlaybackState.Ended) {
-            val next = upNextOnEnd(appSettings.autoplayNextEpisode, (streamState as? StreamLoaderViewModel.StreamState.Success)?.nextEpisode)
+        if (currentPs is PlaybackState.Ended && upNextStartingFrom == null) {
+            val next =
+                upNextOnEnd(
+                    autoplayNext,
+                    shownSuccess?.supportsAutoplayNext == true,
+                    shownSuccess?.nextEpisode,
+                    upNextDismissed,
+                )
             if (next != null) {
-                showControls = false
-                showStats = false
-                upNext = next
+                lifecycleOwner.lifecycle.awaitStarted()
+                playUpNext(next)
             } else {
                 onBack()
             }
@@ -778,11 +806,12 @@ fun MobilePlayerContent(
                     )
                 }
 
-                // Autoplay next episode: the countdown card.
+                // Autoplay next episode: the "Up next" card.
                 upNext?.let { next ->
                     MobileUpNextOverlay(
                         episode = next,
-                        onPlayNow = playUpNext,
+                        secondsLeft = upNextSecondsLeft(livePosition, liveDuration),
+                        onPlayNow = { playUpNext(next) },
                         onCancel = cancelUpNext,
                     )
                 }

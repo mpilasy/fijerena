@@ -921,7 +921,7 @@
     <string name="sync_error_not_a_code">That isn\'t a Fijerena pairing code.</string>
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Play next episode automatically</string>
-    <string name="settings_autoplay_next_episode_desc">When an episode ends, the next one starts after a short countdown. For this profile.</string>
+    <string name="settings_autoplay_next_episode_desc">Near the end of an episode, the next one is offered and starts when it ends. For this profile.</string>
     <string name="player_up_next_title">Up next</string>
     <string name="player_up_next_countdown_format">Starts in %1$d s</string>
     <string name="player_up_next_play_now">Play now</string>

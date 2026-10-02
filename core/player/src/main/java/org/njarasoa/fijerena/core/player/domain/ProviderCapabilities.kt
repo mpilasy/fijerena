@@ -7,4 +7,7 @@ data class ProviderCapabilities(
     val supportsAuthentication: Boolean,
     val supportsProgressSync: Boolean,
     val supportsServerUserData: Boolean = false,
+    // TV-show episodes may roll on to the next one ("Play next episode automatically"). Xtream
+    // only: Jellyfin keeps its own play state and up-next server-side.
+    val supportsAutoplayNextEpisode: Boolean = false,
 )

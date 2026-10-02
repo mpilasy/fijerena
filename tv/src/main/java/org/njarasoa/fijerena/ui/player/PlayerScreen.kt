@@ -23,9 +23,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -36,6 +38,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -45,7 +48,10 @@ import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.awaitStarted
+import org.njarasoa.fijerena.core.ui.components.showUpNext
 import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
+import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -87,6 +93,8 @@ fun PlayerScreen(
     onStreamSelected: ((MediaItem) -> Unit)? = null,
     nextEpisode: EpisodeItem? = null,
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
+    // Whether the provider lets episodes roll on to [nextEpisode] — Xtream, not Jellyfin.
+    autoplayNextSupported: Boolean = false,
     upNextState: UpNextState = remember { UpNextState() },
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
@@ -101,19 +109,36 @@ fun PlayerScreen(
 
     val state = rememberPlayerScreenState(context, currentMetadata)
 
-    // Autoplay next episode — see UpNextState.
-    val upNext = upNextState.episode
-    val playUpNext: () -> Unit = {
-        upNextState.episode?.let { next ->
-            upNextState.episode = null
-            upNextState.starting = true
-            onPlayNextEpisode?.invoke(next)
+    // Autoplay next episode — see UpNextState. The "Up next" card shows over the playing episode
+    // once little enough is left; its countdown is the playback time left, from the polled
+    // position, so it stops with the video.
+    val autoplayNext = remember { AppSettings(context.applicationContext).autoplayNextEpisode }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val upNextDismissed = upNextState.dismissedFor != null && upNextState.dismissedFor == currentStreamId
+    val upNext =
+        nextEpisode?.takeIf {
+            onPlayNextEpisode != null &&
+                upNextState.startingFrom == null &&
+                (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused) &&
+                showUpNext(autoplayNext, autoplayNextSupported, it, state.livePosition, state.liveDuration, upNextDismissed)
         }
+    val upNextVisible = upNext != null
+    val upNextFocus = remember { FocusRequester() }
+    var upNextFocused by remember { mutableStateOf(false) }
+    // Same path as the Next button (TvPlayerScreen's onPlayNextEpisode: awaited finalise, then load).
+    val playUpNext: (EpisodeItem) -> Unit = { next ->
+        upNextState.dismissedFor = currentStreamId
+        upNextState.startingFrom = currentStreamId
+        onPlayNextEpisode?.invoke(next)
     }
-    // Cancel leaves as an ended episode always has: back to the episode list.
+    // Cancel hides the card for this episode; it plays on and ends as it always has. Focus leaves
+    // with the card, so the OSD closes too and focus returns to the player.
     val cancelUpNext: () -> Unit = {
-        upNextState.episode = null
-        onBack()
+        upNextState.dismissedFor = currentStreamId
+        if (upNextFocused) {
+            state.showControls = false
+            state.showStreamInfo = false
+        }
     }
 
     // Proper BackHandler (not the onKeyEvent below) so this composes correctly whether
@@ -126,7 +151,7 @@ fun PlayerScreen(
     // ever runs per press.
     BackHandler {
         when {
-            upNext != null -> cancelUpNext()
+            upNextVisible -> cancelUpNext()
             state.scrubPositionMs != null -> state.scrubPositionMs = null
             state.showCategoryOverlay -> state.showCategoryOverlay = false
             state.showLastWatchedOverlay -> state.showLastWatchedOverlay = false
@@ -152,12 +177,23 @@ fun PlayerScreen(
         onPreviousChannel = onPreviousChannel,
     )
 
-    // Ensure focus is requested when no overlays are visible
-    LaunchedEffect(state.showControls, state.showCategoryOverlay, state.showLastWatchedOverlay, upNext) {
-        val noOverlays = !state.showControls && !state.showCategoryOverlay && !state.showLastWatchedOverlay && upNext == null
-        if (noOverlays) {
+    // Ensure focus is requested when no overlays are visible — on the "Up next" card while it is up.
+    LaunchedEffect(state.showControls, state.showCategoryOverlay, state.showLastWatchedOverlay, upNextVisible) {
+        if (!upNextVisible) upNextFocused = false
+        val noOverlays = !state.showControls && !state.showCategoryOverlay && !state.showLastWatchedOverlay
+        if (noOverlays && upNextVisible) {
+            withFrameMillis {}
+            upNextFocus.requestFocus()
+        } else if (noOverlays) {
             android.util.Log.i("PlayerScreen", "Requesting focus for main Box")
             state.focusRequester.requestFocus()
+        }
+    }
+    // The card appearing while the OSD is up takes focus too ("Play now"), unless a picker is open.
+    LaunchedEffect(upNextVisible) {
+        if (upNextVisible && state.showControls && !state.isModalOpen) {
+            withFrameMillis {}
+            upNextFocus.requestFocus()
         }
     }
 
@@ -188,23 +224,31 @@ fun PlayerScreen(
                 // the OSD and toggled play/pause. Preview phase always wins that race.
                 .onPreviewKeyEvent { keyEvent ->
                     android.util.Log.i("PlayerScreen", "onPreviewKeyEvent: action=${keyEvent.nativeKeyEvent.action}, code=${keyEvent.nativeKeyEvent.keyCode}")
-                    if (upNext != null) {
-                        // The "Up next" card owns the D-pad: its focused buttons get every key
-                        // but Back, which is taken here, top-down, because a focused TV Button
-                        // swallows the first Back before BackHandler sees it (AGENTS.md → Back on TV).
-                        val isBackUp = keyEvent.key == Key.Back && keyEvent.type == KeyEventType.KeyUp
-                        if (isBackUp) cancelUpNext()
-                        isBackUp
-                    } else {
-                        handlePlayerKeyEvent(
-                            keyEvent = keyEvent,
-                            state = state,
-                            viewModel = viewModel,
-                            playbackState = playbackState,
-                            currentMetadata = currentMetadata,
-                            onNextChannel = onNextChannel,
-                            onPreviousChannel = onPreviousChannel,
-                        )
+                    when {
+                        // "Up next" card up: Back hides it and playback carries on. Taken here,
+                        // top-down, because a focused TV Button swallows the first Back before
+                        // BackHandler sees it (AGENTS.md → Back on TV).
+                        upNextVisible && keyEvent.key == Key.Back -> {
+                            if (keyEvent.type == KeyEventType.KeyUp) cancelUpNext()
+                            true
+                        }
+                        // Focus is on the card: its buttons get the D-pad and OK.
+                        upNextVisible && upNextFocused && keyEvent.key in UP_NEXT_CARD_KEYS -> false
+                        // Card up, OSD hidden, focus on the player: Down moves onto the card.
+                        upNextVisible && !state.showControls && !state.isModalOpen && keyEvent.key == Key.DirectionDown -> {
+                            if (keyEvent.type == KeyEventType.KeyDown) upNextFocus.requestFocus()
+                            true
+                        }
+                        else ->
+                            handlePlayerKeyEvent(
+                                keyEvent = keyEvent,
+                                state = state,
+                                viewModel = viewModel,
+                                playbackState = playbackState,
+                                currentMetadata = currentMetadata,
+                                onNextChannel = onNextChannel,
+                                onPreviousChannel = onPreviousChannel,
+                            )
                     }
                 },
     ) {
@@ -249,24 +293,25 @@ fun PlayerScreen(
 
             // Natural end of a movie/episode (never fires for live TV — handleStreamEndedOrError
             // only emits Ended for !metadata.isLive) — leave the player instead of waiting on a
-            // manual Back press, unless the profile plays the next episode automatically and
-            // there is one: then the "Up next" countdown below. EndedContent below still renders
-            // for the brief window before this fires.
-            LaunchedEffect(currentPs) {
-                if (currentPs is PlaybackState.Ended && !upNextState.starting) {
-                    val autoplay = AppSettings(context.applicationContext).autoplayNextEpisode
-                    val next = upNextOnEnd(autoplay, nextEpisode)?.takeIf { onPlayNextEpisode != null }
+            // manual Back press, unless the profile plays the next episode automatically, there
+            // is one and its card wasn't cancelled: then it plays at once (once the screen is in
+            // the foreground). EndedContent below still renders for the brief window before this
+            // fires. While a next episode is starting, the player still reads Ended (and this
+            // screen re-mounts) — nothing to do until it plays.
+            LaunchedEffect(currentPs, currentStreamId) {
+                val startingFrom = upNextState.startingFrom
+                if (startingFrom != null) {
+                    if (currentPs !is PlaybackState.Ended && currentStreamId != startingFrom) upNextState.startingFrom = null
+                } else if (currentPs is PlaybackState.Ended) {
+                    val next =
+                        upNextOnEnd(autoplayNext, autoplayNextSupported, nextEpisode, upNextDismissed)
+                            ?.takeIf { onPlayNextEpisode != null }
                     if (next != null) {
-                        state.showControls = false
-                        state.showStreamInfo = false
-                        state.showStats = false
-                        state.scrubPositionMs = null
-                        upNextState.episode = next
+                        lifecycle.awaitStarted()
+                        playUpNext(next)
                     } else {
                         onBack()
                     }
-                } else if (currentPs !is PlaybackState.Ended) {
-                    upNextState.starting = false
                 }
             }
 
@@ -278,11 +323,7 @@ fun PlayerScreen(
                     }
                 }
                 is PlaybackState.Ended ->
-                    when {
-                        upNextState.starting -> BufferingContent()
-                        upNext == null -> EndedContent(onBack)
-                        else -> { /* The "Up next" card below */ }
-                    }
+                    if (upNextState.startingFrom != null) BufferingContent() else EndedContent(onBack)
                 is PlaybackState.Error ->
                     ErrorContent(
                         error = ps,
@@ -420,11 +461,14 @@ fun PlayerScreen(
             )
         }
 
-        // Autoplay next episode: the countdown card, above the controls.
+        // Autoplay next episode: the "Up next" card, above the controls.
         upNext?.let { next ->
             TvUpNextOverlay(
                 episode = next,
-                onPlayNow = playUpNext,
+                secondsLeft = upNextSecondsLeft(state.livePosition, state.liveDuration),
+                playNowFocus = upNextFocus,
+                onFocusChanged = { upNextFocused = it },
+                onPlayNow = { playUpNext(next) },
                 onCancel = cancelUpNext,
             )
         }
@@ -469,14 +513,20 @@ fun PlayerScreen(
     }
 }
 
+/** Keys the "Up next" card's buttons get while it holds focus. */
+private val UP_NEXT_CARD_KEYS =
+    setOf(Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight, Key.DirectionCenter, Key.Enter)
+
 /**
- * Autoplay next episode: the episode the "Up next" countdown runs for, if any, and whether its
- * playback was asked for and hasn't started yet — the player reads Ended until it does, which must
- * neither bring back the "Playback ended" panel nor start a second countdown. Held by the route
- * (TvPlayerScreen) because PlayerScreen is re-mounted while the next episode loads.
+ * Autoplay next episode, per playing stream: the one whose "Up next" card was cancelled or used
+ * ([dismissedFor] — it stays hidden for that episode), and the one a next episode is starting
+ * from ([startingFrom]) until the new one plays. The player keeps reading the old episode, or
+ * Ended, until then, which must neither show the card again nor run the end-of-episode logic.
+ * Held by the route (TvPlayerScreen) because PlayerScreen is re-mounted while the next episode
+ * loads.
  */
 @Stable
 class UpNextState {
-    var episode by mutableStateOf<EpisodeItem?>(null)
-    var starting by mutableStateOf(false)
+    var dismissedFor by mutableStateOf<String?>(null)
+    var startingFrom by mutableStateOf<String?>(null)
 }
