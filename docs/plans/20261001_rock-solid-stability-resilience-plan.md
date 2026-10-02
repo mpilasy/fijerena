@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phases 3-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 in progress: F-16 done. Phases 4-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -186,6 +186,8 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `tv/.../category/components/LiveTvSplitLayout.kt:343-351`.
 - **Mechanism:** `ON_PAUSE` → `onFocusLost()` pauses and starts a 30 s stop timer. `ON_RESUME` only cancels the timer — it never calls `resume()` and never re-plays. Short absence (Home, a notification panel, a dialog activity): preview stays **paused on a stale frame**. Long absence (screensaver, HDMI input switch): stopped → **black, Idle**. `TvPlayerScreen` handles the Idle case (`TvPlayerScreen.kt:131-155`); the split layout doesn't handle either.
 - **Fix:** On `ON_RESUME`: if `Paused` and live → `playStream(current metadata)` (resuming a stale live buffer is wrong for live — same rule as the service's external-pause handler); if `Idle` and a resolved stream exists → `playStream(...)`. Apply the same live-`Paused` rule to `TvPlayerScreen`.
+- **Reproduced 2026-10-01** on the TV emulator (provider streaming again): Live TV preview playing → Home 5 s → back: stays `Paused` on a frozen frame.
+- **Done 2026-10-01**: `LiveTvSplitLayout` remembers at `ON_PAUSE` whether the preview was playing and, if so, plays the current channel again at the live edge on `ON_RESUME` (Paused or Idle alike); a user's own pause in full screen stays paused. `TvPlayerScreen` also restarts a live stream left `Paused` by a short absence (it already recovered from Idle); VOD unchanged. Verified: Home 5 s and 35 s → back → `Playing` both times.
 
 #### F-17: Mobile docked Live TV keeps playing after leaving the screen [P0, CONFIRMED — widened]
 - **Where:** `mobile/.../category/MobileCategoryListScreen.kt:240-247` (system Back is handled), `:486` (toolbar Back → `onBack` with no stop), `:503-511` (EPG/Search actions navigate away with the dock playing), `:399-412` (lifecycle observer removed on dispose).
@@ -291,7 +293,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 - **Server changes (F-22, F-25) take effect only once the sync server is redeployed.** The client-side fixes don't depend on them.
 
 ### Phase 3 — Playback & lifecycle
-1. **F-16** TV Live TV resume (split layout + player live-paused rule).
+1. **F-16** TV Live TV resume (split layout + player live-paused rule). ✅
 2. **F-18** TV provider switch pops to graph root.
 3. **F-15** drain-then-close repositories; debug assertion on post-close writes.
 4. **F-06** local future per `callbackFlow`.

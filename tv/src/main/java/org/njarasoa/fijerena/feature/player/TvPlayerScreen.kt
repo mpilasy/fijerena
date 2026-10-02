@@ -121,11 +121,16 @@ fun TvPlayerScreen(
     var lastKnownPositionMs by remember(currentStreamId) { mutableStateOf<Long?>(null) }
 
     // Observe app focus/lifecycle to pause on background and stop after timeout
+    // Live only: whether the stream was playing as the screen paused — see ON_RESUME below.
+    var liveWasPlaying by remember { mutableStateOf(false) }
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
                 when (event) {
                     Lifecycle.Event.ON_PAUSE -> {
+                        val state = playbackViewModel.playbackState.value
+                        liveWasPlaying =
+                            lastSuccessState?.isLive == true && (state is PlaybackState.Playing || state is PlaybackState.Buffering)
                         playbackViewModel.onFocusLost(false)
                     }
                     Lifecycle.Event.ON_RESUME -> {
@@ -134,10 +139,15 @@ fun TvPlayerScreen(
                         // 30s timer fire stop() while we were away, tearing playback down to Idle
                         // with nothing bringing it back — the screen stayed mounted showing a
                         // black frame forever. Resume with the last known-good stream if that's
-                        // what happened; a short absence never reaches Idle, so this is a no-op
-                        // then.
+                        // what happened. A short absence leaves it Paused instead: right for VOD
+                        // (the viewer resumes), but a paused live stream is a frozen, stale frame,
+                        // so live that was playing restarts at the live edge too. See
+                        // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-16.
                         val success = lastSuccessState
-                        if (playbackViewModel.playbackState.value is PlaybackState.Idle && success != null) {
+                        val state = playbackViewModel.playbackState.value
+                        val restart = state is PlaybackState.Idle || (liveWasPlaying && state is PlaybackState.Paused)
+                        liveWasPlaying = false
+                        if (restart && success != null) {
                             playbackViewModel.playStream(
                                 PlayerMetadata(
                                     title = success.streamName,

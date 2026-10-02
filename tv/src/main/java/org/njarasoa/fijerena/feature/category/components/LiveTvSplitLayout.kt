@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -291,17 +292,7 @@ internal fun LiveTvSplitLayout(
                 playback.playbackState.value !is PlaybackState.Idle &&
                 playback.playbackState.value !is PlaybackState.Error
         if (s != null && !alreadyPlayingThis) {
-            playback.playStream(
-                PlayerMetadata(
-                    title = s.streamName,
-                    channelName = s.streamName,
-                    description = s.description,
-                    streamUrl = s.streamUrl,
-                    isLive = s.isLive,
-                    headers = s.streamHeaders,
-                ),
-                s.resumePosition,
-            )
+            playback.playStream(previewMetadata(s), s.resumePosition)
         }
     }
 
@@ -328,13 +319,30 @@ internal fun LiveTvSplitLayout(
     // preview), so this is the one place that actually tears it down. Leaving it on plain stop()
     // kept the native decoder/renderer buffers resident indefinitely after leaving Live TV,
     // verified on-device: service still alive, memory unchanged, after fully backing out to home.
+    //
+    // Resume on return means play again, at the live edge: ON_PAUSE pauses the preview and, after
+    // 30 s away (screensaver, HDMI input switch), stops it — and ON_RESUME used to only cancel that
+    // timer, so a short absence came back to a frozen frame and a long one to a black, idle pane.
+    // Only when it was playing as the screen paused: a user's own pause in full screen stays put.
+    // See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-16.
     val lifecycleOwner = LocalLifecycleOwner.current
+    val currentSuccess by rememberUpdatedState(success)
+    var resumeOnReturn by remember { mutableStateOf(false) }
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
                 when (event) {
-                    Lifecycle.Event.ON_PAUSE -> playback.onFocusLost(false)
-                    Lifecycle.Event.ON_RESUME -> playback.onFocusRegained()
+                    Lifecycle.Event.ON_PAUSE -> {
+                        val state = playback.playbackState.value
+                        resumeOnReturn = state is PlaybackState.Playing || state is PlaybackState.Buffering
+                        playback.onFocusLost(false)
+                    }
+                    Lifecycle.Event.ON_RESUME -> {
+                        playback.onFocusRegained()
+                        val s = currentSuccess
+                        if (resumeOnReturn && s != null) playback.playStream(previewMetadata(s))
+                        resumeOnReturn = false
+                    }
                     else -> {}
                 }
             }
@@ -675,3 +683,14 @@ private fun LiveTvChannelList(
         rowActionsMode = rowActionsMode,
     )
 }
+
+/** What the preview pane plays for a resolved channel. */
+private fun previewMetadata(s: StreamLoaderViewModel.StreamState.Success) =
+    PlayerMetadata(
+        title = s.streamName,
+        channelName = s.streamName,
+        description = s.description,
+        streamUrl = s.streamUrl,
+        isLive = s.isLive,
+        headers = s.streamHeaders,
+    )
