@@ -228,12 +228,18 @@ fun TvEpgManagementScreen(
                                                         } else {
                                                             stringResource(R.string.epg_automation_freq_hours, interval)
                                                         }
+                                                    // 0 = no next run (a malformed start time, or not computed yet):
+                                                    // formatted, it read as the epoch, "Next at 6:00 PM" (R-09).
                                                     val timeStr =
                                                         android.text.format.DateFormat
                                                             .getTimeFormat(
                                                                 context,
                                                             ).format(java.util.Date(nextRefreshAtMs))
-                                                    freq + stringResource(R.string.epg_automation_next_at, timeStr)
+                                                    if (nextRefreshAtMs > 0L) {
+                                                        freq + stringResource(R.string.epg_automation_next_at, timeStr)
+                                                    } else {
+                                                        freq
+                                                    }
                                                 }
                                             }
                                         Text(
