@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 in progress: F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25 done. Phases 3-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phases 3-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -115,6 +115,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `SyncApplier.kt:301-303` → `provider/ProviderRepository.kt:193-208` (`deleteProviderEpgSources`) → `SettingsSyncTriggers` `epg_source` delete trigger.
 - **Mechanism:** The applier calls `deleteProvider()` without `applying = 1`, so each EPG source row deletion queues a pending tombstone that is pushed back. Redundant traffic, not a feedback loop (the server accepts once, other devices skip as already-deleted).
 - **Fix:** **Not** the draft's "wrap in `inSettingsApply`" — `deleteProvider` also clears `xtream_v2.db`, prefs and runs `VACUUM`; holding a `providers.db` write transaction across all that blocks every settings write for seconds. Instead add `deleteProvider(id, fromRemote = true)` that deletes the EPG sources inside a short `inSettingsApply` and skips re-tombstoning.
+- **Done 2026-10-01**: `deleteProvider(id, fromRemote = true)` from the applier deletes the provider's EPG sources in a short `providers.db` transaction with `applying` set, so no tombstones are queued; the EPG index rows are deleted outside it. A local deletion still queues them — EPG source records carry no provider tag, so the server's provider cascade doesn't cover them. Not reproduced end to end: that means deleting an emulator's provider from another device, which wasn't done without asking.
 
 #### 🆕 F-21: Sync credential store has no failure handling → crash loop at startup [P0, CONFIRMED]
 - **Where:** `sync/SyncAccountStore.kt:19-33` (`EncryptedSharedPreferences.create` in a bare `lazy`), `SyncManager.kt:49` (scope without handler), `:107` (`scope.launch { refreshStatus() }` on every start).

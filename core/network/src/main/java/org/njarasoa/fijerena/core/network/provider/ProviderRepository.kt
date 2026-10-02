@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.core.network.provider
 import android.content.Context
+import androidx.room.withTransaction
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -190,12 +191,15 @@ class ProviderRepository(
      * Delete a provider and clean up its encrypted prefs and cache. The deletion is recorded for
      * live sync; its favourite and history tombstones go with it, the provider's own covers them.
      */
-    suspend fun deleteProvider(id: Long) {
+    suspend fun deleteProvider(
+        id: Long,
+        fromRemote: Boolean = false,
+    ) {
         val entity = dao.getProviderById(id)
         if (entity != null) {
             dao.deleteProviderRecordingTombstone(entity)
             db.settingsSyncDao().deleteForProviderKey(entity.providerKey)
-            deleteProviderEpgSources(id)
+            deleteProviderEpgSources(id, recordTombstones = !fromRemote)
             clearProviderPassword(id)
             clearProviderCache(id)
             clearProviderWatchState(id)
@@ -333,13 +337,31 @@ class ProviderRepository(
      * EPG sources belong to a single provider, and their indexed channels/programmes live in a
      * separate database ([EpgIndexDatabase]), so no SQL cascade is possible - delete both by hand.
      */
-    private suspend fun deleteProviderEpgSources(id: Long) {
+    /**
+     * EPG source records carry no provider tag, so the server's provider cascade doesn't reach
+     * them: a deletion made here must queue a tombstone per source ([recordTombstones]). Applying
+     * another device's provider deletion must not — that device already sent them, and queueing
+     * them again pushed every one back. See
+     * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-11.
+     */
+    private suspend fun deleteProviderEpgSources(
+        id: Long,
+        recordTombstones: Boolean = true,
+    ) {
         val sourceDao = db.epgSourceDao()
         val sourceIds = sourceDao.getSourceIdsForProvider(id)
         if (sourceIds.isNotEmpty()) {
             EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceIds(sourceIds)
         }
-        sourceDao.deleteSourcesForProvider(id)
+        if (recordTombstones) {
+            sourceDao.deleteSourcesForProvider(id)
+        } else {
+            db.withTransaction {
+                db.settingsSyncDao().setApplying(true)
+                sourceDao.deleteSourcesForProvider(id)
+                db.settingsSyncDao().setApplying(false)
+            }
+        }
     }
 
     /**

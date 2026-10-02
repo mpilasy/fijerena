@@ -331,7 +331,7 @@ class SyncApplier(
                 Outcome.Applied
             }
             Resolution.Delete -> {
-                sync.providerByKey(providerKey)?.let { providers.deleteProvider(it.id) }
+                sync.providerByKey(providerKey)?.let { providers.deleteProvider(it.id, fromRemote = true) }
                 recordReceivedDeletion(SyncKind.PROVIDER, providerKey, record.hlc)
                 Outcome.Applied
             }
