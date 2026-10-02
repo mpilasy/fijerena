@@ -57,8 +57,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
@@ -208,7 +210,7 @@ fun MobileAddProviderScreen(
                 name = provider.name
                 url = provider.url
                 // This profile's login: its own for Jellyfin, the shared one otherwise.
-                val login = providerRepo.getLogin(provider)
+                val login = withContext(Dispatchers.IO) { providerRepo.getLogin(provider) }
                 username = login.username
                 password = login.password
                 selectedType =

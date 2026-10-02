@@ -110,7 +110,8 @@ class ProviderSyncManager private constructor(
         val providers = providerRepo.getAllProvidersList()
 
         providers.filter { it.type == "XTREAM" }.forEach { provider ->
-            val password = providerRepo.getPassword(provider.id)
+            // The first encrypted-prefs open touches the Keystore (disk I/O) — keep it off Main.
+            val password = withContext(Dispatchers.IO) { providerRepo.getPassword(provider.id) }
             if (password != null) {
                 val startTime = System.currentTimeMillis()
                 val outcome = ProviderSyncRunner.syncProvider(context, provider, password)
@@ -241,7 +242,7 @@ class ProviderSyncManager private constructor(
                     providerRepo.getProviderById(providerId)
                         ?: return@async SyncResult.Failed("Provider no longer exists")
                 val password =
-                    providerRepo.getPassword(providerId)
+                    withContext(Dispatchers.IO) { providerRepo.getPassword(providerId) }
                         ?: return@async SyncResult.Failed("Stored credentials could not be read")
 
                 val startTime = System.currentTimeMillis()

@@ -34,7 +34,9 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
@@ -173,7 +175,7 @@ fun TvAddProviderScreen(
                 name = provider.name
                 url = provider.url
                 // This profile's login: its own for Jellyfin, the shared one otherwise.
-                val login = providerRepo.getLogin(provider)
+                val login = withContext(Dispatchers.IO) { providerRepo.getLogin(provider) }
                 username = login.username
                 password = login.password
                 selectedType =
