@@ -231,7 +231,7 @@ class SearchViewModel(
                     listOf(contentType)
                 }
 
-            _uiState.value = UiState.Loading()
+            _uiState.value = UiState.Loading(context.getString(org.njarasoa.fijerena.core.ui.R.string.search_searching))
 
             // The background prefetch may not have populated the category list yet (a search fired
             // right after the screen opened). Fall back to loading categories now — they're

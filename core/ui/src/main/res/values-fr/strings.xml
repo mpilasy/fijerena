@@ -35,6 +35,7 @@
     <string name="loading_searching">Recherche</string>
     <string name="search_fallback_local">Basculement vers la recherche locale…</string>
     <string name="search_loading_categories">Chargement des catégories…</string>
+    <string name="search_searching">Recherche…</string>
 
     <!-- Player Common -->
     <string name="player_select_audio">Sélectionner la piste audio</string>
