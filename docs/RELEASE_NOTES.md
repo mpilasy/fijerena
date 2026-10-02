@@ -5,6 +5,7 @@
 
 - **EPG screens keep updating during a guide import:** each import switched the guide database's `temp_store` and back, and SQLite drops every temporary table when that setting changes — including Room's change tracker. Logcat filled with `no such table: room_table_modification_log` (768 errors in 24 s) and screens watching the guide could stop refreshing. `temp_store = FILE` (kept for low-memory TVs) is now set once when the database opens, before Room creates its tracker.
 - **TV: Back from movie or series details returns to the item you opened:** focus used to land on the category list, because the list only restored focus to the last *played* item. It now remembers the opened row too (Movies and TV Shows; Live TV still returns to the playing channel).
+- **Favourite categories list:** unfavouriting the last favourite category while the list is open now shows the empty list at once (the pane used to keep the old row under "Select a category"), and removing one of several drops its row straight away. The star on a row inside the list now unfavourites that category and shows as on — it used to save a bogus movie/channel favourite named after the category. Favourites saved that way before this fix are not removed.
 
 ---
 

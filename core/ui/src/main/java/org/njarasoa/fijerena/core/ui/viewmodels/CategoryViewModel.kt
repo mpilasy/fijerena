@@ -35,6 +35,9 @@ class CategoryViewModel(
         const val RECENT_CATEGORY_ID = "recent"
         const val FAVORITES_CATEGORY_ID = "favorites"
         const val FAVORITE_CATEGORIES_ID = "favorite_categories"
+
+        /** Id prefix of the Favorite Categories list's rows — each one stands for a category, not a stream. */
+        private const val FAVORITE_CATEGORY_ROW_PREFIX = "fav_cat_"
         const val RECENTLY_VIEWED_CATEGORIES_ID = "recently_viewed_categories"
 
         val VIRTUAL_CATEGORY_IDS =
@@ -390,18 +393,7 @@ class CategoryViewModel(
                 true
             }
             FAVORITE_CATEGORIES_ID -> {
-                val favCategories = repo.getFavoriteCategoriesForContentType(contentType)
-                emitStreams(
-                    favCategories.map { cat ->
-                        MediaItem(
-                            id = "fav_cat_${cat.id}",
-                            name = cat.name,
-                            mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
-                            categoryId = FAVORITE_CATEGORIES_ID,
-                            target = BrowseTarget.CategoryRef(cat.id),
-                        )
-                    },
-                )
+                emitStreams(favoriteCategoryRows(repo))
                 true
             }
             RECENTLY_VIEWED_CATEGORIES_ID -> {
@@ -520,15 +512,16 @@ class CategoryViewModel(
         val cats = categories
 
         withContext(Dispatchers.Default) {
-            // Build favorite IDs set using single-lock batch lookup
+            // Build favorite IDs set using single-lock batch lookups. A Favorite Categories row
+            // is starred by its category, not by its own id.
             val favItemIds = repo.getFavoriteItemIds(ct)
+            val favCatIds = repo.getFavoriteCategoryIds(ct)
             _favoriteIds.value =
                 streams
-                    .filter { it.id in favItemIds }
+                    .filter { it.id in favItemIds || (it.target as? BrowseTarget.CategoryRef)?.categoryId in favCatIds }
                     .mapTo(HashSet()) { it.id }
 
-            // Build favorite category IDs set using single-lock batch lookup
-            val favCatIds = repo.getFavoriteCategoryIds(ct)
+            // Build favorite category IDs set
             _favoriteCategoryIds.value =
                 cats
                     .filter { it.id in favCatIds }
@@ -600,7 +593,10 @@ class CategoryViewModel(
         contentType: String,
     ) {
         val repo = repositoryOrNull
-        if (repo != null) {
+        if (itemId.startsWith(FAVORITE_CATEGORY_ROW_PREFIX)) {
+            // A Favorite Categories row: its star is the category's, never a stream favourite.
+            toggleFavoriteCategory(itemId.removePrefix(FAVORITE_CATEGORY_ROW_PREFIX), itemName, contentType)
+        } else if (repo != null) {
             if (repo.isFavorite(itemId, contentType)) {
                 repo.removeFavorite(itemId, contentType)
             } else {
@@ -689,6 +685,18 @@ class CategoryViewModel(
         viewModelScope.launch { refreshPerItemData() }
     }
 
+    /** The Favorite Categories list's rows: one browse-only row per favorited category. */
+    private fun favoriteCategoryRows(repo: MediaRepository): List<MediaItem> =
+        repo.getFavoriteCategoriesForContentType(contentType).map { cat ->
+            MediaItem(
+                id = "$FAVORITE_CATEGORY_ROW_PREFIX${cat.id}",
+                name = cat.name,
+                mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
+                categoryId = FAVORITE_CATEGORIES_ID,
+                target = BrowseTarget.CategoryRef(cat.id),
+            )
+        }
+
     private fun rebuildVirtualCategories(
         repo: MediaRepository,
         regularCategories: List<MediaCategory>,
@@ -709,7 +717,9 @@ class CategoryViewModel(
             ),
         )
         val favCategories = repo.getFavoriteCategoriesForContentType(contentType)
-        if (favCategories.isNotEmpty()) {
+        // Kept while it's the open list even once empty: dropping it left that list selected
+        // but unnamed in the header ("Select a category") and its pane showing the old rows.
+        if (favCategories.isNotEmpty() || currentCategoryId == FAVORITE_CATEGORIES_ID) {
             virtualCats.add(
                 MediaCategory(
                     id = FAVORITE_CATEGORIES_ID,
@@ -736,6 +746,11 @@ class CategoryViewModel(
         val repo = repositoryOrNull ?: return
         val regularCategories = categories.filter { !it.isVirtual }
         categories = rebuildVirtualCategories(repo, regularCategories)
+        // The Favorite Categories list is built from exactly what a category (un)favorite just
+        // changed, so its rows have to follow along here — nothing else reloads them.
+        if (currentCategoryId == FAVORITE_CATEGORIES_ID) {
+            currentStreams = favoriteCategoryRows(repo)
+        }
         val lastItemId = repo.getLastItemId(contentType)
         _uiState.value =
             UiState.Success(
