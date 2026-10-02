@@ -32,6 +32,23 @@ jobs:
       - name: Remove local Java home from gradle.properties
         run: sed -i '/^org.gradle.java.home=/d' gradle.properties
 
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Lint
+        run: ./gradlew ktlintCheck
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Sync server tests
+        working-directory: server
+        run: npm ci && npm test
+
       - name: Build debug APKs
         run: ./gradlew assembleDebug
 
