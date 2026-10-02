@@ -330,7 +330,7 @@ Standalone screen for full-text searching across the entire XMLTV dataset. Acces
 
 If the index isn't built yet (`EpgIndexState.NotIndexed`), `search()` returns `null` directly. If the FTS index is stale (`isFtsStale()` — direct-path refresh, or an interrupted rebuild being redone), both FTS steps are skipped for a title-only `LIKE '%…%'` scan of `epg_programme.title_lowercase` (`EpgIndexDao.searchByTitleLike`, `EpgSearchPath.LIKE_FALLBACK`; `\ % _` escaped) — seconds on 2M+ rows, same 10 s timeout. Only if that times out or fails does it throw `EpgIndexBusyException`; `EpgBrowserViewModel` shows why (`UiState.IndexBusy`) and reruns the query once the index is `Indexed`. The staging path never marks it stale.
 
-All queries time-windowed: past 1 day to future 6 days. Max 500 results.
+Programme search covers every programme that hasn't ended yet, with no upper limit (ingest keeps up to 7 days ahead). Channel search covers now to 2 hours ahead. Max 500 results.
 
 ### EpgBrowserViewModel
 

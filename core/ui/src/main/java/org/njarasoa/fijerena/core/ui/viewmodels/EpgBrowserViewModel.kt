@@ -558,7 +558,7 @@ class EpgBrowserViewModel(
         if (indexer.state.value is EpgIndexState.Indexed) {
             val now = System.currentTimeMillis() / 1000L
             val windowStart = now
-            val windowEnd = now + 6 * 86400L
+            val windowEnd = Long.MAX_VALUE // no upper limit, as in XmltvSearchService.search
 
             val sanitized =
                 query

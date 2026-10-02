@@ -507,7 +507,7 @@ private fun EpgBrowserContent(
                         val hintText =
                             when (searchMode) {
                                 EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_hint_search_titles_local)
-                                EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_hint_search_channels_6h)
+                                EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_hint_search_channels_2h)
                             }
                         Text(
                             text = hintText,

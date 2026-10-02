@@ -688,7 +688,7 @@
     <string name="epg_browser_building_index_label">Construction de l\'index de recherche…</string>
     <string name="epg_browser_optimizing_index_label">Optimisation de l\'index de recherche…</string>
     <string name="epg_browser_hint_search_titles_local">Rechercher les titres de programmes dans vos données EPG locales</string>
-    <string name="epg_browser_hint_search_channels_6h">Rechercher par nom de chaîne pour voir ce qui passe dans les 6 prochaines heures</string>
+    <string name="epg_browser_hint_search_channels_2h">Rechercher par nom de chaîne pour voir ce qui passe dans les 2 prochaines heures</string>
 
     <!-- TV Player -->
     <string name="player_back_to_categories">Retour aux catégories</string>

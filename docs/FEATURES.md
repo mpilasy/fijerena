@@ -79,7 +79,7 @@ Standalone programme title search across all indexed XMLTV data.
 - **Robust Retries:** Automatic retry mechanism (5 attempts with exponential backoff: 1m to 16m) for failed updates.
 - **Smart Refresh:** Shows a "Refresh Data" button when indexed programmes are stale according to the selected interval.
 - Results grouped by start date (Today, Tomorrow, weekday name, or "EEEE, MMM d" for later dates), then by programme within each date
-- Time window: −1 to +6 days from now, max 500 results per query
+- Time window: every programme that hasn't ended yet, no upper limit (the guide itself holds up to 7 days ahead — ingest drops later programmes), max 500 results per query. Channel search: what's on now or starts in the next 2 hours
 - SQLite FTS4 MATCH for fast search (<100ms): a raw query first, then a sanitized "safe" AND-style retry if that returns nothing — no XML-scan fallback
 - **During a refresh:** search keeps working on the previous guide — the new guide and its FTS index are switched in together, in one transaction. When the index can't be used (a low-storage refresh writing straight into the guide, or an interrupted rebuild), search falls back to a slower title-only scan, flagged on screen as possibly incomplete and rerun in full once the index is ready. If even that times out, the search says why ("The guide is updating…" or, after an interrupted rebuild, "The search index is being rebuilt…") and reruns by itself once the index is ready. Opening the browser mid-refresh no longer claims there is no guide.
 - Programme titles and channel names scroll with `basicMarquee` when they overflow

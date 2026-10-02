@@ -66,7 +66,7 @@ class XmltvSearchService(
     }
 
     /**
-     * Search channels by name and return the next 6 hours of programmes
+     * Search channels by name and return the programmes on now or starting in the next 2 hours
      * on all matching channels.
      *
      * @param query Case-insensitive substring to match against channel display names
@@ -115,7 +115,8 @@ class XmltvSearchService(
     }
 
     /**
-     * Search programme titles in the local EPG index.
+     * Search programme titles in the local EPG index: every programme that hasn't ended yet, with
+     * no upper limit — however far ahead the guide goes (ingest keeps up to 7 days).
      *
      * @param query Case-insensitive substring to match
      * @return [XmltvSearchResult] or null if no index is available.
@@ -128,10 +129,9 @@ class XmltvSearchService(
         }
 
         val now = System.currentTimeMillis() / 1000L
-        val futureSixDays = now + 6 * 86400L
 
         return try {
-            searchFromIndex(query, now, futureSixDays)
+            searchFromIndex(query, now, Long.MAX_VALUE)
         } catch (e: EpgIndexBusyException) {
             throw e
         } catch (e: CancellationException) {

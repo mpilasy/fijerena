@@ -608,7 +608,7 @@
     <string name="epg_browser_building_index_label">Manangana ny tahirin-kevitra fikarohana…</string>
     <string name="epg_browser_optimizing_index_label">Manatsara ny tahirin-kevitra fikarohana…</string>
     <string name="epg_browser_hint_search_titles_local">Karohy ny lohatenin\'ny fandaharana ao amin\'ny angon-drakitra EPG eto an-toerana</string>
-    <string name="epg_browser_hint_search_channels_6h">Karohy amin\'ny anaran\'ny fantsakana mba hahitana izay mandeha ao anatin\'ny 6 ora manaraka</string>
+    <string name="epg_browser_hint_search_channels_2h">Karohy amin\'ny anaran\'ny fantsakana mba hahitana izay mandeha ao anatin\'ny 2 ora manaraka</string>
 
     <!-- TV Player -->
     <string name="player_back_to_categories">Miverina any amin\'ny sokajy</string>
