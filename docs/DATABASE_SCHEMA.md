@@ -556,6 +556,8 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `dev_mode_<profileId>` | BOOLEAN | Toggles developer features for that profile (absent = off). Replaced the install-wide `dev_mode`, copied to every profile on upgrade |
 | `autoplay_next_episode_<profileId>` | BOOLEAN | "Play next episode automatically" for that profile (absent = off): near an episode's end the next one is offered and starts when it ends (Xtream). Synced per profile, like `dev_mode` |
 | `active_profile_id` | TEXT | Profile using this device; absent means `default`. Per device, never synced |
+| `last_provider_<profileId>` | TEXT | `providerKey` of the provider that profile last picked; applied on profile switch. Synced per profile — see `docs/plans/20261002_profile-last-provider-plan.md` |
+| `last_shrink_at_ms`, `last_shrink_duration_ms`, `last_shrink_rows_removed`, `last_shrink_bytes_reclaimed` | INTEGER | Stats of the last "Shrink Database" run, shown in dev mode. Per device |
 | `share_now_playing` | BOOLEAN | Live sync: publish what this device is playing to its sync group (default off). Per device, never synced — see `docs/plans/20261001_live-sync-now-playing-plan.md` |
 | `theme_id` | TEXT | Current dark theme variant (default `deep_night`) |
 | `ui_style_id` | TEXT | Look-and-feel preset, independent of color (default `material`) |
@@ -579,7 +581,6 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `cellular_vod_multiplier` | FLOAT | VOD buffer multiplier on cellular (0.5-3.0) |
 | `search_history` | TEXT | Last 20 search terms, U+001F-separated |
 | `epg_search_history` | TEXT | Last 20 EPG search terms, U+001F-separated |
-| `has_seen_favorite_hint` | BOOLEAN | One-time long-press-to-favorite hint dismissed |
 | `favorite_category_rows_purged_v1` | BOOLEAN | One-time flag, per install (never synced): `FavoriteCategoryRowCleanup` has removed the bogus `fav_cat_<categoryId>` stream favourites from `favorite_state` (every provider and profile, each with a `sync_tombstone`). Set only after the purge succeeds |
 
 The active provider is **not** stored here — it is the `providers.isActive` column in `providers.db`.
