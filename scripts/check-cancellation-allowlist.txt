@@ -6,4 +6,3 @@
 # Not in F-27's first-pass list (docs/plans/20261001_rock-solid-stability-resilience-plan.md):
 core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbClient.kt # blocking smbj calls and close(); SMB out of scope (20260922 plan)
 core/network/src/main/java/org/njarasoa/fijerena/core/network/smb/SmbMediaProvider.kt # directory scans; SMB out of scope (20260922 plan)
-core/ui/src/main/java/org/njarasoa/fijerena/core/ui/di/AppContainer.kt # best-effort auto-connect and repository close, log only

@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.ui.di
 
 import android.content.Context
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -88,6 +89,8 @@ class AppContainer(
             if (!repo.isConnected()) {
                 try {
                     repo.connect()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     android.util.Log.e("AppContainer", "Auto-connect failed for provider $resolvedId", e)
                 }
@@ -105,7 +108,7 @@ class AppContainer(
             mediaRepositories.values.forEach { repo ->
                 try {
                     repo.close()
-                } catch (e: Exception) {
+                } catch (e: Exception) { // cancellation-ok: non-suspend
                     android.util.Log.w("AppContainer", "Error closing MediaRepository during clearAllCaches", e)
                 }
             }
@@ -150,7 +153,7 @@ class AppContainer(
                 mediaRepositories.values.forEach { repo ->
                     try {
                         repo.close()
-                    } catch (e: Exception) {
+                    } catch (e: Exception) { // cancellation-ok: non-suspend
                         android.util.Log.w("AppContainer", "Error closing MediaRepository during profile switch", e)
                     }
                 }
@@ -200,7 +203,7 @@ class AppContainer(
             val repo = mediaRepositories.remove(providerId)
             try {
                 repo?.close()
-            } catch (e: Exception) {
+            } catch (e: Exception) { // cancellation-ok: non-suspend
                 android.util.Log.w("AppContainer", "Error closing MediaRepository during eviction for provider $providerId", e)
             }
         }
