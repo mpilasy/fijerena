@@ -30,6 +30,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Jellyfin** - Self-hosted media server integration with playback progress sync and Quick Connect auth
 - **SMB/CIFS** - Direct access to network shares (SMB2/3)
 - **Local Storage** - Local media files and M3U playlist support
+- **Remote M3U** - Live TV from an M3U playlist URL (e.g. iptv-org)
 - Seamlessly switch between multiple sources
 - Per-source encrypted credential storage
 - Automatic session restoration
@@ -47,17 +48,17 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Subtitles/Captions** - Support for SRT, VTT, TTML, CEA-608/708
 - **Adaptive Quality** - Manual and automatic bitrate selection
 - **Episode Navigation** - Swipe or D-pad Left/Right to skip between episodes in-player
-- **Content-Type Aware Buffering**:
-  - Live TV: Fast zapping profile (2-5s buffer)
-  - VOD: Smooth playback profile (15-50s buffer)
+- **Content-Type and Network Aware Buffering** (`NetworkBufferProfile`):
+  - Wi-Fi/Ethernet: Live TV 15-30s buffer, VOD 30-60s
+  - Cellular: deeper buffers (Live TV 50s, VOD 40-100s), scaled by the dev-mode multipliers
 - **Codec Prioritization**:
-  - NVIDIA Shield: AV1 → HEVC → AVC
+  - NVIDIA Shield, Chromecast with Google TV: AV1 → HEVC → AVC
   - Sony Bravia: HEVC → AVC
   - Generic: AVC (H.264)
 
 ### 🎨 Modern UI/UX
 - **100% Jetpack Compose** - Fully declarative UI
-- **4 Dark Themes** - Deep Night (default), AMOLED Black, Emerald, Crimson
+- **4 Dark Themes** - Deep Night (default), AMOLED Black, Amethyst, Teal
 - **Material 3 Design** - Google TV optimized with Electric Blue accents
 - **D-Pad Navigation** - Full remote control support for TV devices
 - **Focus Indicators** - Animated scale, border, and glow effects
@@ -67,7 +68,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 ### 🔧 Advanced Features
 - **Virtual Categories**:
   - Favorites - User-curated collection (configurable size: 10-500 items)
-  - Last Watched - Recent viewing history (added after 10s of viewing, configurable size: 1-100 items)
+  - Last Watched - Recent viewing history (Live TV: added after 10s of viewing by default, adjustable in Settings → Playback; configurable size: 1-100 items)
 - **User Profiles** - "Who's watching?" picker; each person has their own favourites, history, category filters and Jellyfin login
 - **Live Sync** - Profiles, favourites, watch progress and settings stay the same across a household's devices, end-to-end encrypted, through a self-hosted or Cloudflare sync server (`server/`); TVs join by QR code from a phone
 - **Continue Watching** - Resume cards, and "Up next" for the episode after a finished one
@@ -82,16 +83,16 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
   - **Build**: Compile time and git hash for version tracking
 - **Channel Switching** - D-pad up/down for live TV channel navigation
 - **Channel Overlays** - Category and last-watched side panels (D-pad Left/Right on TV, swipe on mobile)
-- **VOD Seek Controls** - Rewind −30s and Fast-forward +1min via buttons or remote media keys
-- **Pause via Double-Tap** - Mobile double-tap pauses/resumes VOD content
+- **VOD Seek Controls** - TV: Left/Right scrubs a cursor (10s per press, faster while held) and seeks on release; mobile: −1 min / +5 min buttons
+- **Double-Tap Seek** - Mobile double-tap on the left or right of the video seeks 10s back or forward
 - **VOD Time Display** - Current position, remaining time, estimated end time
 - **Cross-Type Search** - Unified "ALL" search across Live TV, Movies, and TV Shows from the Home screen
 - **Developer Mode** - Payload size tracking and debug information
 - **Cache Management** - Per-content-type cache with statistics
-- **Robust EPG Retries** - Automatic 5-attempt retry loop with exponential backoff for EPG updates
+- **Robust EPG Retries** - Each guide source download is retried up to 3 times; the background guide refresh (`EpgSyncWorker`) is retried up to 5 times with WorkManager backoff
 - **EPG Change Detection** - Conditional requests (`If-None-Match` / `If-Modified-Since`) plus a content hash; an unchanged source skips download and ingestion entirely and is shown as "Unchanged"
 - **Sync Delta Reporting** - Source screens show what the last catalog sync actually changed ("No changes since last sync", or added/updated/removed counts)
-- **UI Scale Adjustment** - 70%-100% sizing options
+- **UI Scale Adjustment** - 40%, 60%, 80% (default) or 100% sizing for category and grid views (TV)
 - **Cellular Buffer Tuning** - Adjustable cellular buffer multipliers (0.5x-3.0x) in dev mode
 
 ### 📱 Platform-Specific
@@ -136,8 +137,8 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 | Serialization | kotlinx.serialization | 1.11.0 |
 | Database | Room (FTS4) | 2.8.4 |
 | SQLite | Bundled requery build (FTS5 capable) | 3.49.0 |
-| Background Work | WorkManager | 2.10.1 |
-| Paging | androidx.paging | 3.3.6 |
+| Background Work | WorkManager | 2.11.2 |
+| Paging | androidx.paging | 3.5.1 |
 | Image Loading | Coil | 3.5.0 |
 | Navigation | Navigation Compose | 2.8.5 |
 | Coroutines | kotlinx.coroutines | 1.11.0 |
@@ -168,7 +169,7 @@ fijerena/
 │   │   ├── jellyfin/                 # Jellyfin REST API client
 │   │   ├── smb/                      # SMB network share client
 │   │   └── local/                    # Local media & M3U parser
-│   ├── data/                 # Room database & encrypted storage
+│   ├── data/                 # AuthViewModel only (Room databases live in core/network)
 │   ├── ui/                   # Shared Compose components & design tokens
 │   └── navigation/           # Type-safe navigation definitions
 ├── server/                   # Live sync server (Cloudflare Worker / workerd Docker image)
@@ -186,13 +187,13 @@ fijerena/
 
 ### Prerequisites
 - **Java Development Kit (JDK)** - Version 17 or higher
-- **Android Studio** - Ladybug (2024.2.1) or newer
+- **Android Studio** - a release that supports AGP 9.4
 - **Android SDK** - API Level 36 (Android 16)
 - **Git** - For version control
 
 ### Clone the Repository
 ```bash
-git clone https://github.com/yourusername/fijerena.git
+git clone https://github.com/mpilasy/fijerena.git
 cd fijerena
 ```
 
@@ -297,7 +298,9 @@ adb devices
 # Unit tests
 ./gradlew test
 
-# Instrumentation tests (requires connected device/emulator)
+# Instrumentation tests (requires connected device/emulator).
+# WARNING: this uninstalls the app and wipes its data on EVERY connected device;
+# disconnect real devices first, or target one emulator with ANDROID_SERIAL.
 ./gradlew connectedAndroidTest
 ```
 
@@ -305,7 +308,7 @@ adb devices
 All UI values (colors, spacing, dimensions, animations) **must** come from design token files:
 
 **Shared Tokens (core/ui):**
-- `CinemaColors.kt` - Color palette
+- `CinemaColors.kt` - Color tokens (`CinemaAccent`, `CinemaSurface`, …) backed by the active theme
 - `CinemaSpacing.kt` - Padding/margins
 - `CinemaAlpha.kt` - Opacity values
 - `CinemaAnimation.kt` - Animation durations
@@ -325,7 +328,7 @@ All UI values (colors, spacing, dimensions, animations) **must** come from desig
 3. Implement mapper to convert to domain models (`MediaCategory`, `MediaItem`)
 4. Add provider type to `ProviderType` enum
 5. Register in `MediaProviderFactory`
-6. Add UI form fields in `AddProviderScreen`
+6. Add UI form fields in `TvAddProviderScreen` and `MobileAddProviderScreen`
 7. Update `ProviderCapabilities` for feature support
 
 ## 📚 Documentation
@@ -360,12 +363,12 @@ Fijerena supports 4 dark theme variants, selectable at runtime from Settings:
 | Theme | Primary Accent | Surfaces | Use Case |
 |-------|---------------|----------|----------|
 | **Deep Night** (default) | Electric Blue `#2979FF` | `#0F1014`, `#161A20` | Balanced contrast |
-| **AMOLED Black** | Electric Blue `#2979FF` | `#000000`, `#0A0A0A` | Battery saving on OLED |
-| **Emerald** | Green `#00C853` | `#0F1014`, `#161A20` | Nature-inspired |
-| **Crimson** | Red `#FF1744` | `#0F1014`, `#161A20` | Bold & dramatic |
+| **AMOLED Black** | Near-white `#E0E0E0` | `#000000`, `#0A0A0A` | Battery saving on OLED |
+| **Amethyst** | Purple `#9C6BFF` | `#0F1014`, `#161A20` | Warm, softer accent |
+| **Teal** | Teal `#26C6DA` | `#0F1014`, `#161A20` | Cool, calm accent |
 
 All themes feature:
-- **Electric Blue** primary for focus states and CTAs
+- The theme's accent for focus states and CTAs (AMOLED Black uses near-white `#E0E0E0` instead of blue)
 - **Vivid Orange** `#FF6D00` for LIVE badges and destructive actions
 - Consistent status colors (success/warning/error) across themes
 - Dynamic theme switching without app restart
@@ -385,7 +388,7 @@ Contributions are welcome! Please follow these guidelines:
 9. **Submit a Pull Request** - Include screenshots/recordings for UI changes
 
 ### Code Review Checklist
-- [ ] No hardcoded colors (use `CinemaColors` or `MaterialTheme.colorScheme`)
+- [ ] No hardcoded colors (use the `Cinema*` color tokens or `MaterialTheme.colorScheme`)
 - [ ] No hardcoded dimensions (use `CinemaSpacing`, `TvDimensions`, etc.)
 - [ ] All interactive elements have focus indicators
 - [ ] TV screens respect safe margins (56dp horizontal, 32dp vertical)

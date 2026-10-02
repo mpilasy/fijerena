@@ -35,7 +35,7 @@ Refer to `gradle/libs.versions.toml` for authoritative versions.
 | Image Loading | Coil | 3.5.0 |
 | Navigation | Navigation Compose | 2.8.5 |
 | SMB Client | smbj | 0.15.0 |
-| Theming | CinemaThemeHolder + CinemaThemePalette | — |
+| Theming | CinemaThemeHolder + CinemaThemePalette (color); UiStyleHolder + UiStyle (look and feel) | — |
 
 ---
 
@@ -50,11 +50,10 @@ fijerena/
 │   ├── network/     # Provider implementations, API clients, EPG pipeline, Room DBs
 │   ├── navigation/  # Type-safe Screen definitions (shared)
 │   ├── ui/          # Shared ViewModels, design tokens, and components
-│   └── data/        # Shared session and auth data
+│   └── data/        # AuthViewModel only
 ├── server/          # Live sync server (TypeScript; Cloudflare Worker or workerd in Docker) — see server/README.md
 ├── docs/            # In-depth technical documentation (see below)
 ├── gradle/          # Version catalog (libs.versions.toml)
-└── build/           # APK outputs collected here after assembleDebug
 ```
 
 ### Critical Architectural Constraints
@@ -78,7 +77,7 @@ fijerena/
 
 Every color, dimension, spacing, and animation duration **must** come from design token constants. Never use raw literals like `16.dp` or `Color.White`.
 
-- **Shared Tokens (core/ui):** `CinemaColors`, `CinemaAlpha`, `CinemaAnimation`, `CinemaCornerRadius`, `CinemaSpacing`.
+- **Shared Tokens (core/ui):** the `Cinema*` color values in `CinemaColors.kt` (`CinemaAccent`, `CinemaSurface`, … read from `CinemaThemeHolder`), `CinemaAlpha`, `CinemaAnimation`, `CinemaCornerRadius`, `CinemaSpacing`; look-and-feel tokens from `LocalUiStyle` (`UiStyle.kt`).
 - **TV Tokens:** `TvDimensions`, `TvFocusTokens`.
 - **Mobile Tokens:** `MobileDimensions`.
 - **Platform re-exports:** TV `CinemaColors.kt`/`Spacing.kt`, mobile `Color.kt`/`Spacing.kt`.
@@ -88,7 +87,7 @@ Every color, dimension, spacing, and animation duration **must** come from desig
 
 Every interactive `@Composable` must be D-pad navigable.
 - Use `focusRestorer()` and `focusable()`.
-- Implement clear focus indicators: Scale 1.0 -> 1.1 (200ms tween), 2dp blue border, 8dp glow. See `FocusModifiers.kt`.
+- Implement clear focus indicators from `TvFocusTokens`: the focus scale, outline and shadow come from the active look and feel (`LocalUiStyle.current.grid`: scale 1.0-1.09, outline at least `minFocusBorderWidth` 2dp, since the Roku style scales by 1.0 and relies on the outline alone). See `FocusModifiers.kt`.
 - Avoid complex animations on mid-range TV chipsets (e.g., Sony Bravia).
 - **Lists are plain `LazyColumn`/`LazyRow`.** Never `TvLazyColumn`/`TvLazyRow`: `tv-foundation` 1.0.0-alpha10 calls a prefetch API removed in Compose 1.9 and crashes on scroll.
 - **Back on TV:** where a focused `Button`/`Surface` exists, intercept Back in `onPreviewKeyEvent` on the root — `BackHandler` misses the first press. See `docs/NAVIGATION_GUIDE.md` → "TV Back on Detail Screens".
@@ -122,7 +121,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **Source Creation:** Always use `StreamingMediaSourceFactory.createMediaSource()`.
 - **Formats:** HLS (`.m3u8`), DASH (`.mpd`), MPEG-TS (`.ts`, `.mpeg`).
 - **Buffer Strategy:** `AdaptiveLoadControl` dynamically swaps buffer profiles (Live TV vs VOD, WiFi vs Cellular) at runtime.
-- **Codec Priority:** Optimized per device (Shield: AV1 -> HEVC -> AVC; Sony: HEVC -> AVC).
+- **Codec Priority:** Optimized per device (`DeviceCapabilities`: Shield and Chromecast with Google TV: AV1 -> HEVC -> AVC; Sony: HEVC -> AVC; others: AVC).
 
 ### Controls & Navigation
 
@@ -143,10 +142,10 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **Stream Info Overlay:** Top-left panel showing resolution and codec underneath the title.
 - **Auto-resume:** Saves position every 10s (Live) or based on progress (VOD); resumes if 2-95% progress.
 - **Watch History Rules:**
-  - **Live TV:** Added to history after **10 seconds** of continuous playback.
+  - **Live TV:** Added to history after `watchDelaySeconds` of continuous playback (default **10 seconds**, 5-120, Settings → Playback).
   - **VOD (Movies/Series):** Added to history only after reaching a **2% watch threshold**.
   - **Session Finalization:** `loaderViewModel.stopPlayback()` MUST be called when exiting the player or switching streams to ensure final progress is reported and history is flushed to disk.
-- **Watch State Storage:** Position and completion live in the durable `watch_state` Room table (`xtream_v2.db` v17), **not** in SharedPreferences — the old `watch_history_v3` blob truncated to `watchHistorySize` on every write and is now migrated and purged on first `setProvider()`. `watchHistorySize` still bounds the *Recent* row's length, never what is stored. Reads go through `MediaRepository`; never re-introduce a blob writer.
+- **Watch State Storage:** Position and completion live in the durable `watch_state` Room table (`xtream_v2.db`, added in v15), **not** in SharedPreferences — the old `watch_history_v3` blob truncated to `watchHistorySize` on every write and is now migrated and purged on first `setProvider()`. `watchHistorySize` still bounds the *Recent* row's length, never what is stored. Reads go through `MediaRepository`; never re-introduce a blob writer.
   - **Completion is sticky:** progress upserts do `MAX(existing, new)` on `isCompleted`. Only `setWatched(false)` clears it.
   - **Manual marking:** `MediaRepository.setWatched(itemId, contentType, watched)`. No-ops for server-backed providers (Jellyfin owns that state). A manual mark leaves `lastPlayedAt` null so it never pollutes the Recent row.
   - **TMDB dedup:** movies join `xtream_streams` on shared `tmdbId`; episodes join `xtream_series` on **series-level** `tmdbId`, then match `(season, episodeNum)` — episode-level `tmdbId` is effectively never populated by providers and must not be used for this.
@@ -156,15 +155,15 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ## EPG & Indexing System
 
-- **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion using a Channel-based producer-consumer architecture. Downloads run concurrently (Semaphore-gated: 3 on mobile, 2 on TV), and ingestion into the DB is parallelized (2 workers) via an `UNLIMITED` Channel queue. User-initiated refreshes are submitted through `RefreshQueue`; the coroutine-based auto-refresh (`awaitRefreshOutdatedSources`) and `EpgSyncWorker` call `processAllSourcesInternal` directly to avoid releasing the wake lock on Shield/Doze.
+- **Pipeline:** `EpgFileManager` manages multi-source XMLTV ingestion using a Channel-based producer-consumer architecture. Downloads run concurrently (Semaphore-gated: 3 on mobile, 2 on TV), and ingestion into the DB is parallelized (2 workers) via an `UNLIMITED` Channel queue. User-initiated refreshes are submitted through `RefreshQueue`; the coroutine-based auto-refresh (`refreshOutdatedSources`) and `EpgSyncWorker` call `processAllSourcesInternal` directly to avoid releasing the wake lock on Shield/Doze.
 - **Stale Threshold:** `staleThresholdMs` = user refresh interval / 2. Sources older than this are picked up by auto-refresh and `EpgSyncWorker`. Defaults to 24h when the interval is "Never" (≤ 0).
-- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 16) using FTS4. The `ingest_method` column tracks how each source was ingested.
+- **Indexing:** `EpgIndexer` parses XMLTV into `epg_index.db` (Room, version 17) using FTS4. The `ingest_method` column tracks how each source was ingested.
 - **Search:** Two-tier strategy, both via SQLite **FTS4 MATCH** in `XmltvSearchService`: a raw query preserving FTS operators (OR/NEAR/NOT, prefix wildcard), then a sanitized "safe" AND-style retry if the raw query returns nothing. If the index isn't built yet (`EpgIndexState.NotIndexed`), search returns null. If the FTS index is stale (`isFtsStale()` — a low-storage direct-path refresh, or an interrupted rebuild), search falls back to a title-only `LIKE` scan of `epg_programme.title_lowercase` (`EpgSearchPath.LIKE_FALLBACK`, same window/500 cap/10 s timeout; the screens note results may be incomplete); only if that times out or fails does it throw `EpgIndexBusyException`. `EpgBrowserViewModel` shows `UiState.IndexBusy` (why, not "no results") and reruns a busy or `LIKE_FALLBACK` query when `EpgIndexer.state` reaches `Indexed` — so `rebuildFtsAndUpdateState()` clears the stale flag *before* publishing `Indexed`. The staging path never goes stale: `EpgIndexer.swapAndRebuildFts()` does the staging→primary swap and the FTS `'rebuild'` in one transaction, so WAL readers never see new rows with the old FTS — keep them together. No XML-scan fallback exists.
 - **Timezone:** Per-source `timezoneOffsetHours` override applied at parse time.
 - **State Machine:** `MultiSourceState` sealed interface: `Idle` -> `Processing` -> `Completed`/`Error`, plus `Clearing` state. Per-source progress tracked via `ActiveSourceProgress(label, phase, channels, programmes)`.
 - **Change Detection:** `downloadSource` sends `If-None-Match`/`If-Modified-Since` from the source's stored `etag`/`last_modified_header`; a `304` short-circuits with no body read. Otherwise a SHA-256 of the payload is compared to `last_content_sha256` (computed during the download pass for plain sources, after decompression for `.gz` — gzip's mtime header taints the raw bytes). A confirmed-unchanged source skips `ingestFromStream` entirely, is excluded from `swapAndRebuildFts`'s id list (its staging table was never populated), and carries its previous counts forward via `EpgSourceDao.markUnchanged`. A hash match only skips within 24h of the last real ingest — ingestion drops programmes that ended more than 12h ago (wall-clock), so a byte-identical file is still re-ingested daily or long-ended programmes pile up. There is no future limit on ingest: everything ahead the source provides is kept.
 - **Download Integrity:** `read()` returning -1 alone can't distinguish a clean EOF from a cut connection. `totalRead` is checked against `Content-Length` when the server sends one; a mismatch is a download error and takes the normal retry path.
-- **Persistent Stats:** Pipeline completion triggers an update to `EpgPipelineStatsEntity` in `providers.db` (version 10).
+- **Persistent Stats:** Pipeline completion triggers an update to `EpgPipelineStatsEntity` in `providers.db` (`SettingsDatabase`, version 15).
 - **Clear All Data:** Uses DB `destroy()` + `getInstance()` (recreate) instead of `DELETE FROM` — critical for performance on large databases (4M+ rows). Cancel in-flight work via `RefreshQueue.cancelAll()`.
 - **ViewModel Resilience:** `EpgManagementViewModel` uses a `db()` function (always calls `EpgIndexDatabase.getInstance()`) and `_dbGeneration` StateFlow counter. After DB destroy/recreate, bumping the generation causes `flatMapLatest` to re-subscribe all Room Flows to the new DB instance.
 - **Management:** Multi-source EPG management in `Screen.EpgManagement`.
@@ -175,22 +174,22 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ### Flow
 
-1. **Startup:** Always lands on the Content Type Selection screen if a provider is configured; otherwise, navigates to Settings.
+1. **Startup:** Always lands on the home screen (`ContentTypeSelection`; titled "Home" on mobile) if a provider is configured; otherwise, navigates to Settings.
 2. **Selection:** Content Type -> Category Grid -> Details (VOD) -> Player.
 3. **Navigation IDs:** Always use `String` for IDs.
 
 ### Features
 
 - **Search:**
-  - **Global Search:** Unified "ALL" search across Live TV, Movies, and TV Shows from the Content Type Selection screen.
+  - **Global Search:** Unified "ALL" search across Live TV, Movies, and TV Shows from the home screen (`ContentTypeSelection`).
   - **Collapsible Groups:** Results grouped by source with collapsible headers (saved via `rememberSaveable`).
   - **Xtream:** Local FTS4 prefix search over the synced catalogue (`xtream_streams_fts` / `xtream_series_fts`), no network call; a second FTS query counts matches hidden by category filters.
   - **Jellyfin:** Server-side search.
 - **Virtual Categories:** Favorites (configurable 10-500), Last Watched (1-100), Continue Watching (VOD), Recent Categories.
-- **Mark Watched/Unwatched:** Manual toggle on movie details (icon beside the favorite toggle), TV content lists and search (`FavoriteContextMenuDialog`/`SearchFavoriteDialog` second action row), TV episode cards (long-press), and the mobile episode watched badge (itself the tap target). Each surface reuses its existing affordance — do not invent a new one.
+- **Mark Watched/Unwatched:** Manual toggle on movie details (icon beside the favorite toggle), TV content lists and search (`FavoriteContextMenuDialog` on TV, `MobileSearchFavoriteDialog` on mobile, second action row), TV episode cards (long-press), and the mobile episode watched badge (itself the tap target). Each surface reuses its existing affordance — do not invent a new one.
 - **Sync Feedback:** Provider screens show the last sync's catalog delta ("No changes since last sync", or "N added • N updated • N removed"), gated on Xtream and on `lastSyncError` being null. EPG management shows "Unchanged" in place of durations for a source the last run confirmed unchanged.
 - **Jellyfin Quick Connect:** Supported for easy auth.
-- **Settings:** Provider management, theme selection, EPG management, cache management, database maintenance ("Shrink Database"), UI scale, export/import (JSON).
+- **Settings:** Source (provider) management, color theme, look and feel (Material, Cupertino, Roku, BRAVIA), language (English, French, Malagasy), EPG management, cache management, database maintenance ("Shrink Database"), UI scale, export/import (JSON).
 - **Database Maintenance & Compaction:** When providers are deleted, `ProviderRepository.deleteProvider` cascades through all catalog tables in `xtream_v2.db` (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `favorite_state`, `xtream_epg_cache`), clears orphaned SharedPreferences (`provider_creds_*`, `media_cache_*`, `xtream_cache_*`), deleting catalogue rows 1,000 per commit; no automatic `VACUUM` (`auto_vacuum = FULL` already returns space, and a WAL-mode `VACUUM` needs room for the whole database — see `docs/DATABASE_SCHEMA.md` §3). A background self-healing sweep (`pruneOrphanedCatalogData`) runs on app launch and during `EpgSyncWorker` to clean up past orphaned rows. The "Shrink Database" button in Settings is the only place a `VACUUM` runs. A circuit breaker prevents deletions if the valid provider list is empty.
 
 ---
@@ -215,8 +214,9 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 ```bash
 ./gradlew assembleDebug              # Build both targets
-./gradlew :tv:installDebug            # Install to TV (requires adb connect)
-./gradlew :mobile:installDebug        # Install to Mobile
+scripts/deploy-tv-emulator.sh         # Build + install on the TV emulator
+scripts/deploy-tv-ip.sh <ip>          # Build + install on a network TV (playback check, backup)
+scripts/deploy-mobile-usb.sh          # Build + install on a USB phone
 ```
 
 ### Quality Control
@@ -239,10 +239,10 @@ Standard AGP outputs generated per module:
 TV and Mobile share the same `applicationId` (`org.njarasoa.fijerena`). Use `adb -s <device_id>` when multiple devices are connected.
 
 **Strict Deployment Rules:**
-- **Always Use Official Deploy Scripts:** Whenever deploying to network TVs or USB hardware, always use `scripts/deploy-tv-ip.sh <ip>` or `scripts/deploy-mobile-usb.sh`. Never run raw `adb install` commands manually. The deploy scripts check `dumpsys media_session` for active playback (`state=PlaybackState {state=3}`) to prevent interrupting someone streaming in the household, confirm with the user before deploying, and automatically manage backups.
+- **Always Use Official Deploy Scripts:** Whenever deploying to network TVs or USB hardware, always use `scripts/deploy-tv-ip.sh <ip>` or `scripts/deploy-mobile-usb.sh`. Never run raw `adb install` commands manually. The deploy scripts check `dumpsys media_session` for active playback (`state=PlaybackState {state=3}`) to prevent interrupting someone streaming in the household and confirm with the user before deploying. Only `deploy-tv-ip.sh` backs up first, and only `shared_prefs` + `providers.db*` (not `xtream_v2.db`, which holds watch state and favourites); `deploy-mobile-usb.sh` makes no backup, so back up by hand before using it on a real phone.
 - **Incremental deploys:** the deploy scripts no longer run `clean` (2026-10-02). If an install crashes with `NoClassDefFoundError` after changes across modules (`core:*` consumed by `:tv`/`:mobile`), that is a stale DEX shard: run `./gradlew clean` and deploy again.
 - **No Auto-Launch on Install:** Never automatically launch the app or inject monkey/activity launch intents after installing via `adb install -r` unless explicitly instructed by the user. Let the user launch the app manually when ready.
-- **NEVER install to real hardware without backing up app data first.** `adb install -r` is *not* guaranteed to preserve app data — a signing-key mismatch (or other cause) can make it install-fresh with no warning, silently wiping providers/favorites/watch history. This happened for real on 2026-09-08: a deploy to all three household TVs (2 Shields + 1 Bravia, all daily-use, real config) came back "Success" on every device but had actually wiped every one (`firstInstallTime == lastUpdateTime == the deploy timestamp` — a fresh install, not an update). No backup existed. Nothing was recoverable. Before *any* `adb install`/`gradle install*` targeting a device that isn't a disposable emulator, back up first — `shared_prefs/*` + `providers.db*` via `run-as tar` (see `docs/RUN_GUIDE.md` or ask if unsure of the exact command). Explicit permission to deploy is not permission to skip this — do it every time, unprompted, or say why you can't and ask before installing.
+- **NEVER install to real hardware without backing up app data first.** `adb install -r` is *not* guaranteed to preserve app data — a signing-key mismatch (or other cause) can make it install-fresh with no warning, silently wiping providers/favorites/watch history. This happened for real on 2026-09-08: a deploy to all three household TVs (2 Shields + 1 Bravia, all daily-use, real config) came back "Success" on every device but had actually wiped every one (`firstInstallTime == lastUpdateTime == the deploy timestamp` — a fresh install, not an update). No backup existed. Nothing was recoverable. Before *any* `adb install`/`gradle install*` targeting a device that isn't a disposable emulator, back up first — `shared_prefs/*`, `providers.db*` and `xtream_v2.db*` via `run-as tar` (see `docs/RUN_GUIDE.md` or ask if unsure of the exact command). Explicit permission to deploy is not permission to skip this — do it every time, unprompted, or say why you can't and ask before installing.
 
 ### Device-Specific Tips
 
@@ -326,8 +326,8 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20260912_adversarial-codebase-review-round2-plan.md](docs/plans/20260912_adversarial-codebase-review-round2-plan.md) | Phases 1-3 landed (2026-09-12); Phase 4 single-return cleanup not started |
 | [docs/plans/20260914_codebase-robustness-plan.md](docs/plans/20260914_codebase-robustness-plan.md) | Phase 1 landed (2026-09-29); Phases 2-5 not started; secret-store part of Phase 6 deferred |
 | [docs/plans/20260918_concurrency-memory-stability-plan.md](docs/plans/20260918_concurrency-memory-stability-plan.md) | **Complete** - all five phases landed (2026-09-18) |
-| [docs/plans/20260918_concurrency-memory-stability-round2-plan.md](docs/plans/20260918_concurrency-memory-stability-round2-plan.md) | **Complete** - all four phases landed (2026-09-18); hardware/unit-test verification outstanding |
-| [docs/plans/20260918_systemic-concurrency-memory-stability-plan.md](docs/plans/20260918_systemic-concurrency-memory-stability-plan.md) | **Mostly complete** - Phases 1-3 and 3/4 of Phase 4 landed (2026-09-18); `LiveTvSplitLayout` early-return item deliberately skipped, hardware/unit-test verification outstanding |
+| [docs/plans/20260918_concurrency-memory-stability-round2-plan.md](docs/plans/20260918_concurrency-memory-stability-round2-plan.md) | **Complete** - all four phases landed (2026-09-18); Xtream paths verified on the TV emulator (2026-10-02), SMB/Local/M3U not exercised |
+| [docs/plans/20260918_systemic-concurrency-memory-stability-plan.md](docs/plans/20260918_systemic-concurrency-memory-stability-plan.md) | **Mostly complete** - Phases 1-3 and 3/4 of Phase 4 landed (2026-09-18); `LiveTvSplitLayout` early-return item deliberately skipped; Xtream paths verified on the TV emulator (2026-10-02) |
 | [docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md](docs/plans/20260919_systemic-concurrency-memory-deep-dive-plan.md) | **Complete** - all five phases landed (2026-09-21) |
 | [docs/plans/20260920_xtream-concurrency-fixes-plan.md](docs/plans/20260920_xtream-concurrency-fixes-plan.md) | **Complete** - both phases landed (2026-09-21) |
 | [docs/plans/20260921_adversarial-review-findings-plan.md](docs/plans/20260921_adversarial-review-findings-plan.md) | **Complete** - all five phases landed (2026-09-22) |
@@ -363,7 +363,7 @@ Hard-won lessons from production debugging. Read these before making changes in 
 
 ### SharedPreferences JSON deserialization is the #1 hotspot
 **Context:** `getFavoriteCategoryItems()`, `getFavoriteItems()`, and `getFavoriteShowItems()` all deserialize JSON from SharedPreferences on every call with no in-memory cache. Called per-chip inside `LazyRow items {}` — 500+ deserializations per recompose for large providers.
-**Fix:** Apply in-memory cache + dirty-flag + debounced-write pattern (same as `cachedWatchHistory`).
+**Fix:** Apply in-memory cache + dirty-flag + debounced-write pattern (same as `cachedWatchHistory`). Since 2026-08-28 favourites and watch state live in Room (`favorite_state`, `watch_state`), so these blobs are gone; the rule still applies to any SharedPreferences JSON read in a hot path.
 
 ### Watch history lookups were O(n*m) in refreshPerItemData
 **Context:** `MediaRepository.getPlaybackPosition()` did a linear scan of the watch-history blob per call, and `refreshPerItemData()` called it in a loop over every stream.
@@ -383,7 +383,7 @@ Hard-won lessons from production debugging. Read these before making changes in 
 
 ### EPG pipeline lacked feedback between download and ingestion
 **Context:** Channel-based producer-consumer pipeline decouples downloads from ingestion. Large source finishes downloading but sits silently queued.
-**Fix:** Add explicit `AwaitingIngestion` phase emitted after source is sent to the ingestion channel.
+**Fix:** `EpgFileManager` emits an explicit `"Awaiting Ingestion"` phase (`ActiveSourceProgress.phase`) once a source is sent to the ingestion channel.
 
 ### Compose recomposition hotspots from un-hoisted allocations
 **Patterns to avoid:**

@@ -1,6 +1,6 @@
 # Catalog Sync Cache Churn Plan
 
-**Status:** Complete (2026-10-02). All four phases landed; Phase 4 checked against a stub Jellyfin only.
+**Status:** Complete (2026-10-02). All four phases landed; Phase 1 verified on bears, Phase 4 against the real Jellyfin through the bridge.
 
 Opening a show the app already has on disk should not re-download it. Today it does: a
 finished 18-season show like Law & Order is fetched again in full from Xtream, plus several TMDB
