@@ -1,5 +1,16 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Progress that sticks, sources that follow
+**Release Date:** 2026-10-02
+
+- **Watch progress and track choices keep saving:** on TV, after you pressed Home and came back to a film, and on mobile, for the first video after opening the app, progress stopped being saved until you left the player — a crash or kill mid-film lost your place, and audio/subtitle choices weren't remembered. Saving no longer depends on the player engine that happened to be running. → R-04.
+- **Leaving the player can't crash the app** if the video engine fails to shut down cleanly, and switching channels while the channel list refreshes can't crash either. → R-12, R-13.
+- **Source settings follow everywhere:** a category filter or source setting changed in one part of the app, or on another linked device, now applies everywhere at once; parts of the app used to keep the old one until a restart. → R-06.
+- **Logins and addresses changed on another device take effect right away:** a new password, server address, Jellyfin login or category filter from another linked device is used the next time a screen loads, without a restart; the app no longer reconnects with the old login. A video already playing isn't interrupted. → R-06.
+- **Deleting the source you're using moves you to the next one:** if the active source is deleted on this device or another linked one, the app switches to the next remaining source and returns to its Home, instead of showing "No source set". → R-06.
+
+---
+
 ## Version: Failures you can see
 **Release Date:** 2026-10-02
 
