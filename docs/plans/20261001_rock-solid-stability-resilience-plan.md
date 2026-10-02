@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): F-35, F-28, F-33 (reduced) done; F-14 next. Phases 5-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): Phase 4 done 2026-10-01 as agreed (F-35, F-28, F-33 reduced, F-14; F-13 deferred). Phases 5-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -171,6 +171,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `profile/ProfileRepository.kt:66-88`, `provider/ProviderRepository.kt:193-208, 220-245`.
 - **Correction to draft:** these span two databases plus SharedPreferences, so one `withTransaction` cannot make them atomic. Orphans from a killed provider deletion are already swept by `pruneOrphanedCatalogData()` (run by `EpgSyncWorker`), so the real gap is profile deletion.
 - **Fix:** Order for crash-safety: (1) write the profile tombstone + mark the profile `deleting` first, (2) `xtreamDb.withTransaction { watch/favorite/tombstone/version deletes }`, (3) prefs cleanup, (4) delete the row. On startup, resume any profile left `deleting`. Same shape for providers: catalog deletes in one `xtreamDb.withTransaction`.
+- **Done 2026-10-01, without the startup resume (lower risk than planned):** the existing order already deletes the profile row *last* and every step is an idempotent delete, so a profile left half-deleted is still listed and deleting it again finishes the job (a received deletion is re-pulled and re-applied). The missing piece was atomicity per database: the four `xtream_v2.db` deletes now run in one transaction, and the profile row + tombstone + its pending `sync_version` rows in one `providers.db` transaction. No code runs deletions at startup. Verified on the TV emulator: throwaway profile "ZZTest" created and deleted, atr and Kid untouched, no errors.
 
 #### F-15: A closed `MediaRepository` silently drops writes [P1, CONFIRMED — scope widened]
 - **Where:** `MediaRepository.kt:258, 1875-1877` (`close()` = `writeScope.cancel()`); callers `AppContainer.kt` `clearAllCaches()` (provider switch), `switchProfile()`, `evictMediaRepository()`.
@@ -319,12 +320,12 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 6. **F-02** after HLS live reproduction only. — not reproduced on a throttled live HLS stream, no change. *(`448bbbf2`)*
 7. **F-19** mobile player Back closes panels. ✅
 
-### Phase 4 — Storage hardening
-1. **F-33** export schemas + CI gates (no Robolectric conversion — reduced as agreed). ✅
-2. **F-14** crash-safe profile deletion order + startup resume.
-3. **F-13** favourite `StateFlow` snapshot; remove `runBlocking`.
-4. **F-35** no automatic `VACUUM`; catalogue deletes batched (no migration needed — `auto_vacuum = FULL` already). ✅
-5. **F-28** no plaintext fallback; "sign in again" state. ✅
+### Phase 4 — Storage hardening — ✅ done 2026-10-01 (F-13 deferred)
+1. **F-33** export schemas + CI gates (no Robolectric conversion — reduced as agreed). ✅ *(`30aa2ec8`)*
+2. **F-14** crash-safe profile deletion: per-database transactions, row last — no startup resume needed. ✅
+3. **F-13** favourite `StateFlow` snapshot; remove `runBlocking`. — **deferred**: 20 synchronous UI call sites, deliberate and pre-warmed; revisit only if Diagnostics shows main-thread stalls.
+4. **F-35** no automatic `VACUUM`; catalogue deletes batched (no migration needed — `auto_vacuum = FULL` already). ✅ *(`65e1f0c2`)*
+5. **F-28** no plaintext fallback; "sign in again" state. ✅ *(`6d2b3d61`)*
 
 ### Phase 5 — Systemic hygiene
 1. **F-27** `suspendRunCatching` + convert the listed files + CI grep gate.

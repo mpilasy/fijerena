@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.profile
 
 import android.content.Context
+import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -68,21 +69,32 @@ class ProfileRepository(
             when {
                 id == AppSettings(context).activeProfileId -> DeleteBlocked.ACTIVE
                 dao.getAll().size <= 1 -> DeleteBlocked.LAST
+                // Crash-safe by ordering, not by one transaction (it spans two databases and
+                // SharedPreferences): each database's part is atomic, every step is an idempotent
+                // delete, and the profile's own row goes last. Killed part-way, the profile is
+                // still listed and deleting it again finishes the job; a deletion received from
+                // another device is re-pulled and re-applied the same way. See
+                // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-14.
                 else -> {
                     val xtreamDb = XtreamDatabase.getInstance(context)
-                    xtreamDb.watchStateDao().deleteProfile(id)
-                    xtreamDb.favoriteStateDao().deleteProfile(id)
-                    // The profile's own tombstone (below) covers its favourite and history ones, and
-                    // anything of it still waiting to be sent.
-                    xtreamDb.syncTombstoneDao().deleteForProfile(id)
-                    xtreamDb.syncVersionDao().deleteForProfile(id)
+                    xtreamDb.withTransaction {
+                        xtreamDb.watchStateDao().deleteProfile(id)
+                        xtreamDb.favoriteStateDao().deleteProfile(id)
+                        // The profile's own tombstone (below) covers its favourite and history
+                        // ones, and anything of it still waiting to be sent.
+                        xtreamDb.syncTombstoneDao().deleteForProfile(id)
+                        xtreamDb.syncVersionDao().deleteForProfile(id)
+                    }
                     deleteProfilePrefs(id)
                     AppSettings(context).removeDevMode(id)
                     AppSettings(context).removeProfileSearchHistory(id)
                     CategoryFiltersStore(context).removeProfile(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()
-                    dao.deleteRecordingTombstone(id)
-                    SettingsDatabase.getInstance(context).settingsSyncDao().deleteForProfile(id)
+                    val settingsDb = SettingsDatabase.getInstance(context)
+                    settingsDb.withTransaction {
+                        dao.deleteRecordingTombstone(id)
+                        settingsDb.settingsSyncDao().deleteForProfile(id)
+                    }
                     DeleteBlocked.NONE
                 }
             }

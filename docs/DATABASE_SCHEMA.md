@@ -37,6 +37,8 @@ bookmarks are per profile; providers, EPG sources and settings are shared. See
 | `createdAt` | INTEGER | Creation timestamp |
 | `colorIndex` | INTEGER | Avatar colour, an index into `CinemaProfileColors.palette` in core:ui; default 0 (added v12) |
 
+**Deleting a profile** (`ProfileRepository.deleteProfile`) spans both databases and SharedPreferences, so it is crash-safe by ordering: its `xtream_v2.db` rows (watch, favourites, sync tombstones/versions) go in one transaction, then its prefs, then — last, in one `providers.db` transaction — the `profiles` row with its tombstone and its pending `sync_version` rows. Every step is an idempotent delete: killed part-way, the profile is still listed and deleting it again completes it.
+
 The `default` row is inserted by `MIGRATION_10_11` on upgrade and by the database's `onCreate`
 callback on a fresh install (`INSERT OR IGNORE` in both). A fixed id rather than a per-device UUID,
 so that once sync lands every device's pre-existing data converges on one profile. Which profile a
