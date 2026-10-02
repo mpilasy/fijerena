@@ -1,6 +1,6 @@
 # Catalog Sync Cache Churn Plan
 
-**Status:** Phases 1-2 done (2026-10-02). Phases 3-4 not started.
+**Status:** Phases 1, 2 and 4 done (2026-10-02). Phase 3 in progress.
 
 Opening a show the app already has on disk should not re-download it. Today it does: a
 finished 18-season show like Law & Order is fetched again in full from Xtream, plus several TMDB
@@ -109,6 +109,14 @@ it needs a provider to change a series between two syncs.
 `tools/jellyfin-xtream`: send the newest episode's `DateCreated` as the series' `last_modified`, so
 jellyxtream exercises the Phase 1/2 trigger on the emulators.
 
+**Done (2026-10-02).** The bridge now sends the series' `DateLastMediaAdded` as `last_modified`
+(falling back to `DateCreated`), and `LIST_FIELDS` requests it, so no extra HTTP call per series.
+Jellyfin fills it for Series (it is the newest media added under the folder), so the newest-episode
+fallback was not needed. Verified only against a local stub Jellyfin on a spare port (a series with
+`DateLastMediaAdded` 2026-09-30 got that epoch, one without kept its `DateCreated` epoch; the
+`Fields` list is honoured as in Jellyfin): the Jellyfin password is not stored anywhere on disk, so
+the real `sm.njarasoa.org` data was not queried. Restart the :8080 bridge to pick it up.
+
 ## Open questions
 
 1. ~~Safety-net age for Phase 2~~ — decided 2026-10-02: 30 days.
@@ -122,4 +130,4 @@ jellyxtream exercises the Phase 1/2 trigger on the emulators.
 | 1 | Hash without `num`, keep cache columns — **done 2026-10-02** | — |
 | 2 | Episode list refresh on change — **done 2026-10-02** | 1 |
 | 3 | TMDB repeat calls | — |
-| 4 | Bridge `last_modified` | — (useful for testing 2) |
+| 4 | Bridge `last_modified` — **done 2026-10-02** | — (useful for testing 2) |

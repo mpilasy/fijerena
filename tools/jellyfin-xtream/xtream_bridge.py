@@ -38,7 +38,7 @@ DB_PATH = os.environ.get("BRIDGE_DB", f"xtream_ids_{urllib.parse.urlparse(JF_URL
 CACHE_TTL = int(os.environ.get("CACHE_TTL", "300"))
 
 AUTH_BASE = 'MediaBrowser Client="xtream-bridge", Device="xtream-bridge", DeviceId="xtream-bridge", Version="1.0"'
-LIST_FIELDS = "Overview,Genres,ProviderIds,DateCreated,PremiereDate"
+LIST_FIELDS = "Overview,Genres,ProviderIds,DateCreated,DateLastMediaAdded,PremiereDate"
 INFO_FIELDS = "Overview,Genres,People,ProviderIds,DateCreated,PremiereDate,MediaSources"
 
 
@@ -311,7 +311,8 @@ def series_list(category_id):
             "director": "",
             "genre": ", ".join(it.get("Genres", [])),
             "releaseDate": release_date(it),
-            "last_modified": str(epoch(it.get("DateCreated")) or ""),
+            # Moves when an episode is added, like a real panel's last_modified (DateCreated never does).
+            "last_modified": str(epoch(it.get("DateLastMediaAdded") or it.get("DateCreated")) or ""),
             "rating": rating(it),
             "rating_5based": round(rating(it) / 2, 1),
             "backdrop_path": backdrops(it),
