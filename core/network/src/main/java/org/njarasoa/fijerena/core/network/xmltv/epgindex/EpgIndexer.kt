@@ -459,6 +459,9 @@ class EpgIndexer private constructor(
                         ),
                     )
 
+                    // Clean before Indexed, not after: a search waiting on Indexed reruns the
+                    // moment it's published and must not still find the index marked stale.
+                    markFtsClean()
                     _state.value =
                         EpgIndexState.Indexed(
                             channelCount = finalChannelCount,
@@ -466,7 +469,6 @@ class EpgIndexer private constructor(
                             indexedAtMs = now,
                         )
                 }
-                markFtsClean()
                 Log.i(TAG, "rebuildFtsAndUpdateState: FTS complete in ${System.currentTimeMillis() - startMs}ms")
             } catch (e: CancellationException) {
                 // Stopped mid-rebuild: show Failed, as before, rather than leaving the state on

@@ -57,6 +57,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -98,6 +99,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -517,6 +519,24 @@ private fun EpgBrowserContent(
                             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                         )
                     }
+                }
+            }
+            is EpgBrowserViewModel.UiState.IndexBusy -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = uiState.message(),
+                        style =
+                            MaterialTheme.typography.bodyLarge.copy(
+                                fontSize =
+                                    MaterialTheme.typography.bodyLarge.fontSize
+                                        .scaled(scale),
+                            ),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
             is EpgBrowserViewModel.UiState.Searching -> {

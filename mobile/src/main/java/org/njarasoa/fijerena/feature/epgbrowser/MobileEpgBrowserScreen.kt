@@ -54,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -79,6 +80,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -365,9 +367,7 @@ fun MobileEpgBrowserScreen(
             }
 
             when (val state = uiState) {
-                is EpgBrowserViewModel.UiState.Idle,
-                is EpgBrowserViewModel.UiState.Indexing,
-                -> {
+                is EpgBrowserViewModel.UiState.Idle -> {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                     ) {
@@ -398,6 +398,19 @@ fun MobileEpgBrowserScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                    }
+                }
+                is EpgBrowserViewModel.UiState.IndexBusy -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = CinemaSpacing.lg),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = state.message(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
                     }
                 }
                 is EpgBrowserViewModel.UiState.NoEpgFile -> {

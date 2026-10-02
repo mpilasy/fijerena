@@ -109,9 +109,14 @@ class EpgBrowserViewModel(
 
         data object Searching : UiState
 
-        data class Indexing(
-            val progressPercent: Int,
-            val programmesIndexed: Int,
+        /**
+         * [query] couldn't run because the search index is being rebuilt. [refreshing] is true
+         * while an EPG refresh is in progress, false when an interrupted rebuild is being redone.
+         * The search reruns by itself once the index is ready.
+         */
+        data class IndexBusy(
+            val query: String,
+            val refreshing: Boolean,
         ) : UiState
 
         data class Results(
@@ -297,11 +302,19 @@ class EpgBrowserViewModel(
 
     init {
         val indexer = EpgIndexer.getInstance(context)
-        if (indexer.state.value is EpgIndexState.Indexed) {
+        when (indexer.state.value) {
             // Set up paged "Now Playing" flow when index is available
-            initPagedNowPlaying()
-        } else {
-            _uiState.value = UiState.NoEpgFile
+            is EpgIndexState.Indexed -> initPagedNowPlaying()
+            // Indexing/Optimizing/Failed still have a guide on disk — a refresh is no reason to
+            // claim there isn't one.
+            is EpgIndexState.NotIndexed -> _uiState.value = UiState.NoEpgFile
+            else -> {}
+        }
+        viewModelScope.launch {
+            indexer.state.collect { state ->
+                val busy = _uiState.value as? UiState.IndexBusy
+                if (state is EpgIndexState.Indexed && busy != null) performSearch(busy.query)
+            }
         }
         _epgSearchHistory.value = appSettings.getEpgSearchHistory()
         loadSourceLabels()
@@ -494,14 +507,28 @@ class EpgBrowserViewModel(
                     System.gc()
                     _uiState.value = UiState.Error(context.getString(R.string.epg_error_file_too_large))
                 } catch (e: EpgIndexBusyException) {
-                    // Index is being rebuilt (mid-sync) — not "no results", tell the user to wait.
-                    _uiState.value = UiState.Indexing(progressPercent = 0, programmesIndexed = 0)
+                    // Index is being rebuilt — not "no results": say so, and rerun the query when
+                    // the index state reaches Indexed (see init).
+                    _uiState.value = UiState.IndexBusy(query, isRefreshInProgress())
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
                 }
             }
     }
+
+    private fun isRefreshInProgress(): Boolean =
+        when (epgFileManager.state.value) {
+            is EpgFileManager.MultiSourceState.Pending,
+            is EpgFileManager.MultiSourceState.Processing,
+            is EpgFileManager.MultiSourceState.Finalizing,
+            is EpgFileManager.MultiSourceState.Retrying,
+            -> true
+            else ->
+                EpgIndexer.getInstance(context).state.value.let {
+                    it is EpgIndexState.Indexing || it is EpgIndexState.Optimizing
+                }
+        }
 
     fun clearSearch() {
         searchJob?.cancel()
@@ -744,6 +771,15 @@ fun EpgBrowserViewModel.UiState.Results.statsLine(): String {
         }
     return "$totalPrograms programs ($totalAirings airings) — ${timeStr}s$truncatedSuffix$sourceSuffix"
 }
+
+/** Why [EpgBrowserViewModel.UiState.IndexBusy.query] hasn't run yet. */
+@androidx.compose.runtime.Composable
+fun EpgBrowserViewModel.UiState.IndexBusy.message(): String =
+    if (refreshing) {
+        androidx.compose.ui.res.stringResource(R.string.epg_browser_busy_refreshing_format, query)
+    } else {
+        androidx.compose.ui.res.stringResource(R.string.epg_browser_busy_rebuilding_format, query)
+    }
 
 /** Empty-state message when there are no (matched) results for the query. */
 @androidx.compose.runtime.Composable

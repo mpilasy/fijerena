@@ -710,6 +710,8 @@
     <string name="epg_error_file_too_large">Lehibe loatra ny rakitra EPG. Andramo fangatahana mazava kokoa.</string>
     <string name="epg_browser_no_matched_results_format">Tsy nahita valiny mifanandrify amin\'ny \'%1$s\'</string>
     <string name="epg_browser_no_results_format">Tsy nahita valiny ho an\'ny \'%1$s\'</string>
+    <string name="epg_browser_busy_refreshing_format">Eo am-panavaozana ny fandaharana. Hotanterahina rehefa vonona izy ny fikarohanao \'%1$s\'.</string>
+    <string name="epg_browser_busy_rebuilding_format">Eo am-panamboarana indray ny fanondroana fikarohana. Hotanterahina rehefa vonona izy ny fikarohanao \'%1$s\'.</string>
     <string name="provider_error_add_failed">Tsy nahomby ny fampidirana ny mpanome</string>
     <string name="provider_error_select_failed">Tsy nahomby ny fisafidianana ny mpanome</string>
     <string name="provider_error_delete_failed">Tsy nahomby ny famafana ny mpanome</string>

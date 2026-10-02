@@ -828,6 +828,8 @@
     <string name="epg_error_file_too_large">EPG file too large for search. Try a more specific query.</string>
     <string name="epg_browser_no_matched_results_format">No matched results for \'%1$s\'</string>
     <string name="epg_browser_no_results_format">No results found for \'%1$s\'</string>
+    <string name="epg_browser_busy_refreshing_format">The guide is updating. Your search for \'%1$s\' will run as soon as it\'s ready.</string>
+    <string name="epg_browser_busy_rebuilding_format">The search index is being rebuilt. Your search for \'%1$s\' will run as soon as it\'s ready.</string>
     <string name="provider_error_add_failed">Failed to add provider</string>
     <string name="provider_error_select_failed">Failed to select provider</string>
     <string name="provider_error_delete_failed">Failed to delete provider</string>
