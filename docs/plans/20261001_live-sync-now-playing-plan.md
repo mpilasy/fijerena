@@ -1,8 +1,8 @@
 # Live Sync "Now Playing" Plan
 
-**Status:** 📋 **PROPOSED** — not started. Open questions answered 2026-10-01 (see §6).
+**Status:** 📋 **PROPOSED** — not started. Open questions answered 2026-10-01 (see §6); remote Stop added as Phase 4.
 **Date:** 2026-10-01
-**Scope:** `core:player` (one flow), `core:network/sync`, `core:ui/sync`, TV + mobile Live sync screens. No server change.
+**Scope:** `core:player` (one flow), `core:network/sync`, `core:ui/sync`, TV + mobile Live sync screens, mobile-only Stop button, TV/mobile player exit on remote stop. No server change.
 
 ---
 
@@ -95,12 +95,47 @@ Today the devices list only shows each device's last-seen time.
   devices list no longer lists it anyway (records are only shown joined to a listed device).
 - On **Leave sync group**, send `stopped` first (best effort).
 
+### 3.5 Remote Stop (Phase 4)
+
+The parent can stop what a device is playing from the **phone app only** — the Stop button is
+never shown in the TV app (§6). Any device obeys a valid command; only phones can send one.
+
+- **Session id.** Each playback on the sender gets a random `sessionId` (new on every
+  `playStream`), published in its `now_playing` payload.
+- **Command record.** Kind `SyncKind.REMOTE_COMMAND = "remote_command"`, key
+  `SyncKey(SHARED, "", REMOTE_COMMAND, <targetDeviceId>, "")`; payload `{command: "stop",
+  sessionId, fromDeviceName, issuedBy}`. Volatile like `now_playing`: pushed from memory, no
+  `sync_version`, no tombstone.
+- **Never fires twice, no clocks.** The target obeys only if `sessionId` equals the session it is
+  playing *right now*. Records stay on the server, so a device that reinstalls or re-syncs from 0
+  re-reads old commands — none can match a new session. Wall-clock windows are deliberately not
+  used: TV clocks are often wrong (see the stability plan's F-25).
+- **Delivery.** A playing device is in the foreground with its sync socket open, so the server's
+  head broadcast makes it pull within seconds. Each 60 s `now_playing` heartbeat also runs a sync
+  pass, which pulls — so even with the socket down the worst case is about a minute. Offline: the
+  command waits; if that playback has ended by the time it arrives, it no longer matches and is
+  ignored.
+- **On the target.** `SyncApplier` hands a matching command to a `RemoteCommands` event flow in
+  `core:ui`. The player screens (TV `TvPlayerScreen` / `LiveTvSplitLayout`, mobile
+  `MobilePlayerScreen` / the Live TV dock) collect it: finalise the session as on Back
+  (`finalizeSession`, so the watch position is saved), stop playback, leave the player for Home,
+  and show **"Playback stopped from <device name>"**. The target then publishes `stopped`, so the
+  phone's line clears.
+- **On the phone.** The devices list (mobile `MobileSyncSettingsScreen` `DevicesPanel`) shows a
+  **Stop** button on any other device's row that is `▶ Playing` or `⏸ Paused` (not stale); tapping
+  it asks for confirmation, sends the command and shows "Stopping…" until that device's
+  `now_playing` turns `stopped` (or "Couldn't reach <device>" after ~90 s).
+- **Trust model.** Any device of the group can send it — the group shares one account key and is
+  trusted by design. It only stops: playback can be started again on the TV straight away (a
+  lock is out of scope, §7).
+
 ## 4. What it costs
 
 - **Network:** one small record per minute per *playing* device, plus one per state change.
 - **Server:** one row per device, upserted; nothing accumulates (no tombstones — `stopped` is a
   normal record).
 - **Battery:** nothing new runs in the background; heartbeats only while video is playing.
+- **Remote Stop:** one record per tap; one row per target device on the server, upserted.
 
 ## 5. Phases
 
@@ -132,6 +167,18 @@ stability plan's Phase 2): play on the TV emulator, watch the phone emulator's d
 starts within seconds, follows a channel change, shows paused, goes idle on stop, and goes stale
 3 minutes after force-stopping the TV app. Then on the real devices with permission.
 
+### Phase 4 — Remote Stop (phone app only)
+1. `sessionId` in `NowPlayingSnapshot` / the `now_playing` payload, new per `playStream`.
+2. `SyncKind.REMOTE_COMMAND` + payload; volatile push like `now_playing`.
+3. `SyncApplier` → `RemoteCommands` event flow, only when `sessionId` matches the current
+   session; tests: matching command fires once, a stale or replayed one (old session id) never
+   does, an unknown command is ignored.
+4. Player screens on TV and mobile react: finalise, stop, back to Home, message.
+5. Mobile devices list: Stop button + confirmation + "Stopping…" / "Couldn't reach" states. No
+   Stop button anywhere in the TV app.
+6. End to end on the emulators: phone stops the TV emulator's movie within seconds; the TV's
+   watch position is saved; re-syncing the TV from 0 afterwards does not stop the next playback.
+
 ## 6. Decisions (answered 2026-10-01)
 
 1. **Share setting: off by default**, turned on per device (e.g. once on the kids' TV). Device-local,
@@ -140,10 +187,13 @@ starts within seconds, follows a channel change, shows paused, goes idle on stop
    available; channel only otherwise.
 3. **Shown on both phone and TV** devices lists.
 4. **Profile name shown** ("· Kid").
+5. **Remote Stop: yes, button in the phone app only** (never in the TV app). Any device obeys a
+   valid stop command for its current session.
 
 ## 7. Out of scope
 
-- Remote control (pause or stop the TV from the phone).
+- Remote control beyond Stop (pause, resume, change channel), and a Stop button in the TV app.
+- Keeping playback stopped (a lock or timer) — Stop is one-shot; the device can play again at once.
 - Push notifications when something starts playing — would need background work, which Live sync
   deliberately doesn't do.
 - History or reports of past viewing per device.
