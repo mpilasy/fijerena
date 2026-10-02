@@ -16,10 +16,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -65,8 +67,17 @@ fun TvContinueWatchingShelf(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 contentPadding = PaddingValues(horizontal = Spacing.xxs),
             ) {
-                items(items, key = { it.id }) { item ->
-                    TvContinueWatchingCard(item = item, onClick = { onItemSelected(item) })
+                itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+                    TvContinueWatchingCard(
+                        item = item,
+                        onClick = { onItemSelected(item) },
+                        // Right on the last card stays put: without this the focus search leaves
+                        // the row and lands on the top bar (Settings).
+                        modifier =
+                            Modifier.focusProperties {
+                                if (index == items.lastIndex) right = FocusRequester.Cancel
+                            },
+                    )
                 }
             }
         }
@@ -77,10 +88,11 @@ fun TvContinueWatchingShelf(
 private fun TvContinueWatchingCard(
     item: ContinueWatchingItem,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.width(TvDimensions.continueWatchingCardWidth),
+        modifier = modifier.width(TvDimensions.continueWatchingCardWidth),
         colors =
             CardDefaults.colors(
                 containerColor = CinemaSurface,
