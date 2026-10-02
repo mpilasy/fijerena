@@ -5,6 +5,7 @@ import android.util.Log
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
  * One sync pass with the server this device is linked to: pull everything new and apply it, then
@@ -118,12 +119,26 @@ class SyncEngine(
         while (true) {
             val outgoing = local.pending(PUSH_BATCH)
             if (outgoing.isEmpty()) break
-            val byKey = outgoing.associateBy { crypto.keyId(it.record.key) }
-            val response = api.push(link.serverUrl, link.deviceToken, outgoing.map { encode(it.record, crypto) })
-            // Accepted, or rejected as stale — the server has something newer, which the next pull
-            // brings: either way this version is done.
-            byKey.values.forEach { it.markSent() }
-            pushed += response.accepted
+            val encoded = outgoing.map { it to encode(it.record, crypto) }
+            // The server refuses payloads over its limit. Sending one anyway used to fail the whole
+            // batch, and since the oldest pending records always go first, nothing from this
+            // device was ever pushed again. It can't succeed later either: drop it, loudly. See
+            // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-22.
+            val (sendable, oversized) = encoded.partition { (_, wire) -> wire.payload.length <= MAX_PAYLOAD_CHARS }
+            oversized.forEach { (pending, wire) ->
+                val e = IllegalStateException("${pending.record.key.kind} record not synced: ${wire.payload.length} chars sealed, over the server's $MAX_PAYLOAD_CHARS")
+                Log.e(TAG, e.message, e)
+                CrashLog.record("sync push", e)
+                pending.markSent()
+            }
+            if (sendable.isNotEmpty()) {
+                val response = api.push(link.serverUrl, link.deviceToken, sendable.map { it.second })
+                response.rejected.filter { it.reason != "stale" }.forEach { Log.w(TAG, "Server rejected a record: ${it.reason}") }
+                // Accepted, rejected as stale (the server has something newer, which the next pull
+                // brings) or rejected as invalid (it would be every time): this version is done.
+                sendable.forEach { it.first.markSent() }
+                pushed += response.accepted
+            }
             if (outgoing.size < PUSH_BATCH) break
         }
         return pushed
@@ -174,5 +189,8 @@ class SyncEngine(
         const val TAG = "SyncEngine"
         const val PUSH_BATCH = 200
         const val MAX_DEFERRED = 1000
+
+        /** The server's `MAX_PAYLOAD` (server/src/account.ts). */
+        const val MAX_PAYLOAD_CHARS = 64 * 1024
     }
 }
