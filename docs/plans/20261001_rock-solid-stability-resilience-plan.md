@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 in progress: F-16 done. Phases 4-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 in progress: F-16, F-18 done. Phases 4-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -199,6 +199,8 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `tv/.../navigation/TvNavHost.kt:689-691` (`popUpTo(ProviderSelection) { inclusive = true }`), `:768-770` (`popUpTo(Settings) { inclusive = false }`).
 - **Mechanism:** Home → Settings → (Providers →) switch ⇒ back stack `[Home(old provider), Settings, Home(new)]`. Back walks through Settings into the **old** Home, whose ViewModels hold a `MediaRepository` that `clearAllCaches()` just closed — every favourite/progress write from there is dropped (F-15b). Mobile already does it right (`MobileNavHost.kt:479, 549` pop to the graph start).
 - **Fix:** `popUpTo(navController.graph.id) { inclusive = true }`, as mobile does.
+- **Correction 2026-10-01:** Back can't reach the old Home — TV Home swallows Back on purpose (`BackHandler {}`, `TvNavHost.kt:222`). The real effect is smaller: the old Home and Settings entries stay alive under the new Home for the rest of the session, their ViewModels holding a repository `clearAllCaches()` closed (writes from any work they still run go nowhere — F-15). P1 → P2.
+- **Done 2026-10-01**: both Settings provider-switch paths pop to the graph root, as profile switches already do. The Home chip's Switch Provider dialog switches in place and was never affected. Checked on the TV emulator: Settings → Manage Providers → activate another provider → new Home, Back stays there; switched back afterwards.
 
 #### F-19: Mobile player Back exits the player instead of closing an open panel [P2, CONFIRMED]
 - **Where:** `mobile/.../player/MobilePlayerScreen.kt:261-262, 735-778` — no `BackHandler` while `showCategoryOverlay`/`showLastWatchedOverlay` are open (only the stats overlay has one).
@@ -258,6 +260,10 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Correction to draft:** OkHttp dispatcher threads idle out after 60 s and pooled connections after 5 min; this is not an unbounded thread leak / `pthread_create` OOM. Jellyfin is out of scope per `20260922_codebase-stability-resilience-plan.md` scope note.
 - **Fix (optional):** mirror `XtreamApiService.close()`; call it from `JellyfinMediaProvider.disconnect()`. Same for `TmdbApiService`.
 
+#### 🆕 F-38: TV Switch Provider dialog shows no D-pad focus [P2, PLAUSIBLE]
+- **Where:** the Home provider chip's "Switch Provider" dialog (TV).
+- **Seen 2026-10-01** on the TV emulator: with the dialog open, D-pad Down showed no focused row, and Center on what should have been the second row didn't switch; a touch tap did. Either focus isn't entering the dialog or the rows have no focus styling. Needs a look before anything else is concluded.
+
 #### 🆕 F-36 / F-37: DI and cast hygiene [P3]
 - `ProviderRepository(...)` is constructed directly at 37 sites (e.g. `TvNavHost.kt:177, 670, 752`) despite AGENTS.md rule 4 — each instance builds its own `MasterKey`/encrypted-prefs cache. Route through `AppContainer.providerRepository` when touching those files; no sweep.
 - `tv/.../ui/components/modifiers/FocusModifiers.kt` `tvFocusable*()`: the focus-event node is chained *after* `focusable()`, so it never receives focus events and never draws its ring. No screen uses it (found when Diagnostics tried to, 2026-10-01). Fix the order or delete the helpers.
@@ -294,7 +300,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 
 ### Phase 3 — Playback & lifecycle
 1. **F-16** TV Live TV resume (split layout + player live-paused rule). ✅
-2. **F-18** TV provider switch pops to graph root.
+2. **F-18** TV provider switch pops to graph root. ✅
 3. **F-15** drain-then-close repositories; debug assertion on post-close writes.
 4. **F-06** local future per `callbackFlow`.
 5. **F-29** atomic final progress write.

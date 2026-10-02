@@ -691,8 +691,12 @@ fun TvNavHost(
                                 }
 
                                 // Navigate to content selection for all provider types
+                                // From the root, like a profile switch: every screen below holds
+                                // a repository clearAllCaches() just closed, so Back used to walk
+                                // into the old provider's Home, where writes went nowhere. See
+                                // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-18.
                                 navController.navigateOnce(Screen.ContentTypeSelection) {
-                                    popUpTo(Screen.ProviderSelection) { inclusive = true }
+                                    popUpTo(navController.graph.id) { inclusive = true }
                                 }
                             }
                         },
@@ -772,8 +776,9 @@ fun TvNavHost(
                                     }
                                 }
 
+                                // From the root — see the provider-selection switch above.
                                 navController.navigateOnce(Screen.ContentTypeSelection) {
-                                    popUpTo(Screen.Settings) { inclusive = false }
+                                    popUpTo(navController.graph.id) { inclusive = true }
                                 }
                             }
                         },
