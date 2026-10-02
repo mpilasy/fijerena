@@ -169,7 +169,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
   - `core/ui/src/debug/AndroidManifest.xml`: `SyncDebugReceiver`, also exported with no permission.
 - **Mechanism:** the household devices run **debug** builds (R8 and release are parked). Any app installed on the TV can broadcast `DEBUG_SYNC` with `cmd=setup --es url <attacker server>`. This device then links to the attacker's account and pushes every provider record, **passwords included**, sealed with a key the attacker holds. Alternatively, `cmd=scan --es qr <attacker handoff code>` hands the existing account (key and all) to the attacker's device. `DEBUG_EPG_SYNC` lets any app force full EPG downloads (`ExistingWorkPolicy.REPLACE`) at will.
 - **Fix:** add `android:permission="android.permission.DUMP"` to both receivers. The adb shell holds `DUMP`; third-party apps can't. Move `EpgSyncDebugReceiver` into a `debug` source set. Fix its kdoc.
-- **Done 2026-10-02 (Phase 0):** `EpgSyncDebugReceiver` moved to `core/network/src/debug` with its own debug manifest; both receivers require `DUMP`. Merged manifests checked: both debug APKs carry both receivers with the permission, neither release APK carries either. Side effect: mobile debug builds now get the EPG receiver too (harmless, mobile runs the same worker). `am broadcast` from the adb shell not yet tried on a device. `docs/epg_guide.md` and `docs/RUN_GUIDE.md` updated.
+- **Done 2026-10-02 (Phase 0):** `EpgSyncDebugReceiver` moved to `core/network/src/debug` with its own debug manifest; both receivers require `DUMP`. Merged manifests checked: both debug APKs carry both receivers with the permission, neither release APK carries either. Side effect: mobile debug builds now get the EPG receiver too (harmless, mobile runs the same worker). **Checked 2026-10-02 on the TV emulator:** `adb shell am broadcast` still reaches both (`DEBUG_SYNC status` logged the link; `DEBUG_EPG_SYNC` ran `EpgSyncWorker`), and the installed debug APK's manifest carries `permission="android.permission.DUMP"` on both. Refusal of a different app's broadcast is not tested end to end: the emulator is a `user` build (no `su`) with no other debuggable app, so it would take installing a throwaway sender app. Note for anyone retrying with `run-as org.njarasoa.fijerena am broadcast …`: it is delivered, because Android always lets an app's own uid through its own permission, so it proves nothing. `docs/epg_guide.md` and `docs/RUN_GUIDE.md` updated.
 
 ### D. TV focus & UX (UI/UX)
 
@@ -287,7 +287,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 
 Order: first stop data loss and launch crashes, then make failures visible and recoverable, then fix stale state and focus, then hardening. One commit per phase on `main`; R-23's file removal can go on its own branch.
 
-### Phase 0: Guardrails (small, first) — ✅ done 2026-10-02 (R-10 verified on the TV emulator; R-07 broadcast and the GitHub Actions run not yet checked; mobile safe mode unverified)
+### Phase 0: Guardrails (small, first) — ✅ done 2026-10-02 (R-10 verified on the TV emulator; R-07 adb path verified, third-party refusal checked in the manifest only; GitHub Actions run not yet done; mobile safe mode unverified)
 **Complexity:** Medium · **Risk:** Low — receivers and CI are trivial; safe mode is the one real piece of work.
 1. **R-07** protect both debug receivers and move the EPG one into a debug source set.
 2. **R-19** CI: JDK 21, `lintDebug` with a baseline, widen the cancellation gate.
