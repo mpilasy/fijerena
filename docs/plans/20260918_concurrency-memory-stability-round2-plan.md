@@ -218,9 +218,11 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 
 **Status: not yet done.** Each phase's touched modules passed `ktlintCheck` + `compileDebugKotlin` before commit, but nothing below has been run.
 
-1. **Unit & Concurrency Tests:** — outstanding
+1. **Unit & Concurrency Tests:** — partly done (the two bullets below)
    - Add concurrency tests for `RefreshQueue` validating that simultaneous task completions never leave dangling IDs in `activeTaskIds`.
+     **Done:** `RefreshQueueConcurrencyTest` (core/network, real threads on the singleton): simultaneous completions, simultaneous failures, `cancelAll()` during runs and racing completions, and parallel-submission dedup (running and queued ids). One test is `@Ignore`d on a bug it found: a task parked on the semaphore when `cancelAll()` runs never has its `Deferred` completed, so awaiters hang. Also observed: `cancelAll()` empties the queue in a second critical section, so a still-queued task can start after it.
    - Add unit tests for `ProviderSyncRunner` ensuring `CancellationException` is rethrown without writing permanent database errors.
+     **Done:** `ProviderSyncRunnerCancellationTest` (core/network): a cancellation from `syncAll()`, from provider creation, or from cancelling the caller mid-sync is rethrown and yields no `Outcome`, so the callers' `updateSyncStats(..., outcome.errorOrNull())` is never reached.
 2. **Build & Style Integrity:** — outstanding
    - Execute `./gradlew ktlintCheck` and `./gradlew ktlintFormat` (repo-wide, not just touched modules).
    - Compile both TV and Mobile targets via `./gradlew assembleDebug`.
