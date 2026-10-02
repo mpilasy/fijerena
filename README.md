@@ -186,7 +186,7 @@ fijerena/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Java Development Kit (JDK)** - Version 17 or higher
+- **Java Development Kit (JDK)** - Version 21 (sources target Java 21)
 - **Android Studio** - a release that supports AGP 9.4
 - **Android SDK** - API Level 36 (Android 16)
 - **Git** - For version control
