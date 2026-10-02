@@ -13,9 +13,18 @@ import kotlinx.coroutines.flow.callbackFlow
 class PlaybackServiceConnection(
     private val context: Context,
 ) {
-    private var controllerFuture: ListenableFuture<MediaController>? = null
-    private var controller: MediaController? = null
+    @Volatile private var controllerFuture: ListenableFuture<MediaController>? = null
 
+    @Volatile private var controller: MediaController? = null
+
+    /**
+     * Each collection owns its own controller future. They used to share [controllerFuture]: when
+     * PlaybackViewModel restarted a collection after a service restart, the old collection's
+     * cleanup ran after the new one had started and released the *new* future through the shared
+     * field, leaving the ViewModel holding a released controller (no audio or subtitle tracks, no
+     * chapters). Cleanup now releases only its own future, and clears the shared fields only if
+     * they still point at it. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-06.
+     */
     fun connect(): Flow<MediaController?> =
         callbackFlow {
             val sessionToken =
@@ -23,30 +32,33 @@ class PlaybackServiceConnection(
                     context,
                     ComponentName(context, StreamingPlaybackService::class.java),
                 )
-            controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+            val future = MediaController.Builder(context, sessionToken).buildAsync()
+            controllerFuture = future
 
-            controllerFuture?.addListener(
+            future.addListener(
                 {
-                    try {
-                        controller = controllerFuture?.get()
-                        trySend(controller)
-                    } catch (e: Exception) {
-                        trySend(null)
-                    }
+                    val built =
+                        try {
+                            future.get()
+                        } catch (e: Exception) {
+                            null
+                        }
+                    if (controllerFuture === future) controller = built
+                    trySend(built)
                 },
                 MoreExecutors.directExecutor(),
             )
 
             awaitClose {
-                controllerFuture?.let { future ->
-                    try {
-                        MediaController.releaseFuture(future)
-                    } catch (e: Exception) {
-                        // Ignore
-                    }
+                try {
+                    MediaController.releaseFuture(future)
+                } catch (e: Exception) {
+                    // Ignore
                 }
-                controllerFuture = null
-                controller = null
+                if (controllerFuture === future) {
+                    controllerFuture = null
+                    controller = null
+                }
             }
         }
 
