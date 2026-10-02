@@ -25,6 +25,8 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
@@ -46,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -215,37 +218,40 @@ fun EpgGridLayout(
             val horizontalScrollState = rememberLazyListState()
             val verticalScrollState = rememberLazyListState()
 
-            // Initial focus: the first channel's on-air programme (its first programme when none is
-            // on air), falling back to that channel's name cell if the programme isn't composed.
+            // Initial focus: the on-air programme (first programme when none is on air) of the first
+            // channel that HAS programmes - category-marker rows ("##### 4K #####") have none. Falls
+            // back to that row's channel name cell, then to the first focusable cell.
             val firstChannelFocusRequester = remember { FocusRequester() }
             val firstProgramFocusRequester = remember { FocusRequester() }
+            val focusManager = LocalFocusManager.current
             var initialFocusDone by remember { mutableStateOf(false) }
-            val firstRowPrograms = channelRows.first().programs
+            val initialRowIndex = channelRows.indexOfFirst { it.programs.isNotEmpty() }.coerceAtLeast(0)
+            val initialRowPrograms = channelRows[initialRowIndex].programs
             val initialProgramId =
                 (
-                    firstRowPrograms.firstOrNull { nowEpochSeconds.value in it.startTime..it.endTime }
-                        ?: firstRowPrograms.firstOrNull()
+                    initialRowPrograms.firstOrNull { nowEpochSeconds.value in it.startTime..it.endTime }
+                        ?: initialRowPrograms.firstOrNull()
                 )?.id
 
-            // Auto-scroll to current time on load, then take initial focus once
+            // Auto-scroll to current time on load
             LaunchedEffect(currentTimeSlot) {
                 if (currentTimeSlot > 0 && currentTimeSlot < timeSlots.size) {
                     horizontalScrollState.animateScrollToItem(
                         currentTimeSlot.coerceIn(0, timeSlots.lastIndex),
                     )
                 }
+            }
+
+            // Keyed on the data, not run once: rows may arrive after the first composition.
+            LaunchedEffect(initialRowIndex, channelRows.size) {
                 if (!initialFocusDone) {
-                    initialFocusDone = true
-                    withFrameNanos { }
-                    try {
-                        firstProgramFocusRequester.requestFocus()
-                    } catch (_: IllegalStateException) {
-                        try {
-                            firstChannelFocusRequester.requestFocus()
-                        } catch (_: IllegalStateException) {
-                            // Nothing composed yet; leave focus to the system.
-                        }
-                    }
+                    verticalScrollState.scrollToItem(initialRowIndex)
+                    initialFocusDone =
+                        requestInitialFocus(
+                            programRequester = firstProgramFocusRequester,
+                            channelRequester = firstChannelFocusRequester,
+                            focusManager = focusManager,
+                        )
                 }
             }
 
@@ -296,7 +302,7 @@ fun EpgGridLayout(
                                 modifier =
                                     Modifier
                                         .width(TvDimensions.epgChannelColumnWidth.scaled(scale))
-                                        .then(if (index == 0) Modifier.focusRequester(firstChannelFocusRequester) else Modifier),
+                                        .then(if (index == initialRowIndex) Modifier.focusRequester(firstChannelFocusRequester) else Modifier),
                             )
 
                             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
@@ -311,7 +317,7 @@ fun EpgGridLayout(
                                 onProgramSelected = { program ->
                                     onProgramSelected(program, row.channel)
                                 },
-                                initialFocusProgramId = if (index == 0) initialProgramId else null,
+                                initialFocusProgramId = if (index == initialRowIndex) initialProgramId else null,
                                 initialFocusRequester = firstProgramFocusRequester,
                                 modifier = Modifier.weight(1f),
                             )
@@ -322,6 +328,35 @@ fun EpgGridLayout(
         }
     }
 }
+
+/**
+ * Retries over a few frames because the target cells attach only once the lazy rows have been
+ * composed (after the scroll above). Returns true once something took focus.
+ */
+private suspend fun requestInitialFocus(
+    programRequester: FocusRequester,
+    channelRequester: FocusRequester,
+    focusManager: FocusManager,
+): Boolean {
+    var focused = false
+    var attempt = 0
+    while (!focused && attempt < INITIAL_FOCUS_ATTEMPTS) {
+        withFrameNanos { }
+        focused = tryRequestFocus(programRequester) || tryRequestFocus(channelRequester)
+        attempt++
+    }
+    if (!focused) focused = focusManager.moveFocus(FocusDirection.Down)
+    return focused
+}
+
+private fun tryRequestFocus(requester: FocusRequester): Boolean =
+    try {
+        requester.requestFocus()
+    } catch (_: IllegalStateException) {
+        false
+    }
+
+private const val INITIAL_FOCUS_ATTEMPTS = 20
 
 @Composable
 private fun EpgHeader(
