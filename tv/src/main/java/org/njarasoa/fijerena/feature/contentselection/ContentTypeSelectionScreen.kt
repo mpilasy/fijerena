@@ -43,6 +43,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -518,7 +521,13 @@ fun ContentTypeSelectionScreen(
 
             // Provider picker dialog
             if (showProviderPicker && allProviders.size > 1) {
+                // A new dialog window starts with focus on the Close button *below* the list, so
+                // D-pad Down had nowhere to go and Center just closed the dialog. Land on the
+                // current provider's row instead (F-38).
+                val pickerInitialFocus = remember { FocusRequester() }
+                val pickerFocusId = (allProviders.firstOrNull { it.id == activeProviderId } ?: allProviders.first()).id
                 CinemaAlertDialog(
+                    initialFocus = pickerInitialFocus,
                     onDismissRequest = { showProviderPicker = false },
                     containerColor = CinemaSurface,
                     titleContentColor = CinemaTextPrimary,
@@ -537,7 +546,10 @@ fun ContentTypeSelectionScreen(
                                     } else {
                                         provider.name
                                     }
-                                androidx.compose.material3.Surface(
+                                TvOptionRow(
+                                    title = label,
+                                    selected = isActive,
+                                    activeLabel = stringResource(R.string.provider_active_label),
                                     onClick = {
                                         if (!isActive) {
                                             coroutineScope.launch {
@@ -551,36 +563,8 @@ fun ContentTypeSelectionScreen(
                                             showProviderPicker = false
                                         }
                                     },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    color =
-                                        if (isActive) {
-                                            CinemaAccent.copy(alpha = CinemaAlpha.focusedTint)
-                                        } else {
-                                            CinemaSurfaceVariant
-                                        },
-                                    shape = RoundedCornerShape(CinemaCornerRadius.small),
-                                ) {
-                                    Row(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .padding(Spacing.md),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        androidx.compose.material3.Text(
-                                            text = label,
-                                            color = if (isActive) CinemaAccent else CinemaTextPrimary,
-                                        )
-                                        if (isActive) {
-                                            androidx.compose.material3.Text(
-                                                text = stringResource(R.string.provider_active_label),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = CinemaAccent,
-                                            )
-                                        }
-                                    }
-                                }
+                                    modifier = if (provider.id == pickerFocusId) Modifier.focusRequester(pickerInitialFocus) else Modifier,
+                                )
                             }
                         }
                     },

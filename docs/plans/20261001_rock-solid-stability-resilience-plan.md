@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): Phase 4 done 2026-10-01 as agreed (F-35, F-28, F-33 reduced, F-14; F-13 deferred). Phase 5 in progress: F-27 done 2026-10-01; F-32 code done 2026-10-02 (smoke pass pending); F-34 (pending emulator check), F-37 done 2026-10-02, F-10 skipped, F-36 sweep declined. Phase 6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): Phase 4 done 2026-10-01 as agreed (F-35, F-28, F-33 reduced, F-14; F-13 deferred). Phase 5 in progress: F-27 done 2026-10-01; F-32 code done 2026-10-02 (smoke pass pending); F-34 (pending emulator check), F-37, F-38 (pending emulator check) done 2026-10-02, F-10 skipped, F-36 sweep declined. Phase 6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -280,6 +280,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 #### 🆕 F-38: TV Switch Provider dialog shows no D-pad focus [P2, PLAUSIBLE]
 - **Where:** the Home provider chip's "Switch Provider" dialog (TV).
 - **Seen 2026-10-01** on the TV emulator: with the dialog open, D-pad Down showed no focused row, and Center on what should have been the second row didn't switch; a touch tap did. Either focus isn't entering the dialog or the rows have no focus styling. Needs a look before anything else is concluded.
+- **Done 2026-10-02 (pending emulator check):** root cause, from code: `ContentTypeSelectionScreen.kt` showed the dialog with `CinemaAlertDialog` and no `initialFocus`, so the dialog's one-shot focus request went to the *Close* button, which sits below the list; D-pad Down from it has nowhere to go and Center on it just closes the dialog. The rows were bare material3 `Surface(onClick)` with no focus styling, so nothing showed even when reached with Up. Fix: rows are now `TvOptionRow` (the shared styled, focusable option row) and the current provider's row (first row if none is current) takes `initialFocus`. Touch is unchanged. **Emulator steps (TV, 2+ providers):** Home → focus the provider chip → Center. Expect the current provider row focused (lifted container + outline) straight away; Down/Up move between rows, Center on another row switches provider and closes the dialog, Center on the current row closes it, Back closes it, Down from the last row reaches Close.
 
 #### 🆕 F-36 / F-37: DI and cast hygiene [P3]
 - `ProviderRepository(...)` is constructed directly at 37 sites (e.g. `TvNavHost.kt:177, 670, 752`) despite AGENTS.md rule 4 — each instance builds its own `MasterKey`/encrypted-prefs cache. Route through `AppContainer.providerRepository` when touching those files; no sweep.
@@ -336,7 +337,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 1. **F-27** `suspendRunCatching` + convert the listed files + CI grep gate. ✅ (18 other files allow-listed in `scripts/check-cancellation-allowlist.txt`)
 2. **F-32** align Compose BOM (stable) + emulator D-pad smoke pass; refresh AGENTS.md version table. ✅ code done 2026-10-02 (smoke pass pending)
 3. **F-34** after Google TV emulator reproduction. ✅ code 2026-10-02, pending emulator check.
-4. **F-10**, **F-36**, **F-37** opportunistically when those files are touched. F-37 ✅ and F-10 skipped (with reason) 2026-10-02; F-36 sweep declined;
+4. **F-10**, **F-36**, **F-37** opportunistically when those files are touched. F-37 ✅ and F-10 skipped (with reason) 2026-10-02; F-36 sweep declined; F-38 ✅ pending emulator check.
 
 ### Phase 6 — Regression tests that lock it in (written alongside each phase, listed here as the gate)
 - `StreamingPlaybackService` retry/recycle state machine behind a fake `Player` (F-01, F-02).
