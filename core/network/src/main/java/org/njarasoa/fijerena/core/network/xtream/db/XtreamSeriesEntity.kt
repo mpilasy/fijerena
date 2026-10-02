@@ -50,10 +50,14 @@ data class XtreamSeriesEntity(
     val episodesFetchedAt: Long? = null,
 ) {
     companion object {
+        /**
+         * Hash of the provider's catalogue fields, compared on each sync to skip unchanged rows.
+         * `num` is left out: it is the series' position in the provider's list, which shifts for
+         * tens of thousands of rows whenever the provider adds one, and series are listed by name.
+         */
         fun computeHash(
             seriesId: Int,
             providerId: Long,
-            num: Int?,
             name: String,
             cover: String?,
             plot: String?,
@@ -72,7 +76,6 @@ data class XtreamSeriesEntity(
         ): Int {
             var result = seriesId
             result = 31 * result + providerId.hashCode()
-            result = 31 * result + (num ?: 0)
             result = 31 * result + name.hashCode()
             result = 31 * result + (cover?.hashCode() ?: 0)
             result = 31 * result + (plot?.hashCode() ?: 0)
@@ -92,3 +95,31 @@ data class XtreamSeriesEntity(
         }
     }
 }
+
+/** The columns a detail-screen fetch fills in (see [XtreamSeriesDao.updateDetailCache]). */
+data class XtreamSeriesDetailCache(
+    val seriesId: Int,
+    val contentRating: String?,
+    val tmdbId: String?,
+    val detailFetchedAt: Long?,
+    val posterPath: String?,
+)
+
+/**
+ * This catalogue row with [cache]'s detail-screen columns carried over, so a sync that rewrites a
+ * changed series doesn't throw away its TMDB details. The catalogue's own `tmdbId` wins when it has one.
+ *
+ * `episodesFetchedAt` is deliberately not carried over: the provider changed this series (usually
+ * new episodes), so the stored episode list must be fetched again on the next open.
+ */
+fun XtreamSeriesEntity.withDetailCache(cache: XtreamSeriesDetailCache?): XtreamSeriesEntity =
+    if (cache == null) {
+        this
+    } else {
+        copy(
+            contentRating = cache.contentRating,
+            tmdbId = tmdbId ?: cache.tmdbId,
+            detailFetchedAt = cache.detailFetchedAt,
+            posterPath = cache.posterPath,
+        )
+    }

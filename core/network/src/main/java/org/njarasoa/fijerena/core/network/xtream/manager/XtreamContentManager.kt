@@ -598,8 +598,9 @@ class XtreamContentManager(
                             val batch = mutableListOf<XtreamStreamEntity>()
                             val BATCH_SIZE = 2000
 
-                            val currentHashes = streamDao.getStreamHashes(providerId, type)
+                            val currentState = streamDao.getStreamSyncState(providerId, type).associateBy { it.streamId }
                             val seenIds = mutableSetOf<Int>()
+                            val movedNums = mutableMapOf<Int, Int>()
                             var inserted = 0
                             var updated = 0
 
@@ -610,7 +611,6 @@ class XtreamContentManager(
                                         streamId = it.streamId,
                                         providerId = providerId,
                                         type = type,
-                                        num = it.num,
                                         name = it.name,
                                         streamType = it.streamType,
                                         streamIcon = it.streamIcon,
@@ -633,7 +633,11 @@ class XtreamContentManager(
                                     )
 
                                 seenIds.add(it.streamId)
-                                val oldHash = currentHashes[it.streamId]
+                                val old = currentState[it.streamId]
+                                val oldHash = old?.contentHash
+                                if (old != null && oldHash == contentHash && old.num != it.num) {
+                                    movedNums[it.streamId] = it.num
+                                }
                                 if (oldHash == null || oldHash != contentHash) {
                                     if (oldHash == null) inserted++ else updated++
                                     batch.add(
@@ -665,8 +669,7 @@ class XtreamContentManager(
                                         ),
                                     )
                                     if (batch.size >= BATCH_SIZE) {
-                                        // ⚡ Bolt: Pass the mutable list directly without .toList() to avoid allocating a new list of 2000 elements
-                                        streamDao.insertAll(batch)
+                                        streamDao.insertKeepingDetailCache(providerId, type, batch)
                                         batch.clear()
                                     }
                                 }
@@ -678,23 +681,26 @@ class XtreamContentManager(
                                 service.getVodStreamsStreaming(null, onStreamItem)
                             }
 
-                            if (seenIds.isEmpty() && currentHashes.isNotEmpty()) {
+                            if (seenIds.isEmpty() && currentState.isNotEmpty()) {
                                 android.util.Log.w(
                                     TAG,
-                                    "syncStreams($type): server returned 0 streams but ${currentHashes.size} exist locally — treating as a failed sync, not deleting",
+                                    "syncStreams($type): server returned 0 streams but ${currentState.size} exist locally — treating as a failed sync, not deleting",
                                 )
                                 return@coroutineScope
                             }
-                            if (isSuspiciousPartialSync(seenIds.size, currentHashes.size)) {
+                            if (isSuspiciousPartialSync(seenIds.size, currentState.size)) {
                                 android.util.Log.w(
                                     TAG,
-                                    "syncStreams($type): server returned only ${seenIds.size} of ${currentHashes.size} known streams — treating as a partial/glitched sync, not deleting",
+                                    "syncStreams($type): server returned only ${seenIds.size} of ${currentState.size} known streams — treating as a partial/glitched sync, not deleting",
                                 )
                                 return@coroutineScope
                             }
 
                             if (batch.isNotEmpty()) {
-                                streamDao.insertAll(batch)
+                                streamDao.insertKeepingDetailCache(providerId, type, batch)
+                            }
+                            if (movedNums.isNotEmpty()) {
+                                streamDao.updateNums(providerId, type, movedNums)
                             }
 
                             // Cleanup deleted
@@ -742,7 +748,6 @@ class XtreamContentManager(
                                     XtreamSeriesEntity.computeHash(
                                         seriesId = it.seriesId,
                                         providerId = providerId,
-                                        num = it.num,
                                         name = it.name,
                                         cover = it.cover,
                                         plot = it.plot.asString(),
@@ -787,8 +792,7 @@ class XtreamContentManager(
                                         ),
                                     )
                                     if (batch.size >= BATCH_SIZE) {
-                                        // ⚡ Bolt: Pass the mutable list directly without .toList() to avoid allocating a new list of 1000 elements
-                                        seriesDao.insertAll(batch)
+                                        seriesDao.insertKeepingDetailCache(providerId, batch)
                                         batch.clear()
                                     }
                                 }
@@ -810,7 +814,7 @@ class XtreamContentManager(
                             }
 
                             if (batch.isNotEmpty()) {
-                                seriesDao.insertAll(batch)
+                                seriesDao.insertKeepingDetailCache(providerId, batch)
                             }
 
                             val allIds = seriesDao.getSeriesIds(providerId)

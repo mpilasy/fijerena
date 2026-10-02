@@ -5,6 +5,10 @@ import androidx.room.Insert
 import androidx.room.MapColumn
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+
+/** Bound parameters per statement: SQLite before 3.32 (minSdk 30 ships 3.28) allows 999. */
+internal const val SQLITE_MAX_VARIABLES = 900
 
 /**
  * A stream is hidden by category filters when its category is: only `xtream_categories` carries
@@ -140,16 +144,58 @@ interface XtreamStreamDao {
         type: String,
     ): List<Int>
 
-    @Query("SELECT streamId, contentHash FROM xtream_streams WHERE providerId = :providerId AND type = :type")
-    fun getStreamHashes(
+    @Query("SELECT streamId, num, contentHash FROM xtream_streams WHERE providerId = :providerId AND type = :type")
+    fun getStreamSyncState(
         providerId: Long,
         type: String,
-    ): Map<
-        @MapColumn(columnName = "streamId")
-        Int,
-        @MapColumn(columnName = "contentHash")
-        Int,
-    >
+    ): List<XtreamStreamSyncState>
+
+    @Query("UPDATE xtream_streams SET num = :num WHERE streamId = :streamId AND providerId = :providerId AND type = :type")
+    fun updateNum(
+        providerId: Long,
+        type: String,
+        streamId: Int,
+        num: Int,
+    )
+
+    /** New list positions (streamId to num) for rows whose content didn't change; see [XtreamStreamEntity.computeHash]. */
+    @Transaction
+    fun updateNums(
+        providerId: Long,
+        type: String,
+        nums: Map<Int, Int>,
+    ) {
+        nums.forEach { (streamId, num) -> updateNum(providerId, type, streamId, num) }
+    }
+
+    @Query(
+        "SELECT streamId, contentRating, tmdbId, containerExtension, detailFetchedAt, posterPath FROM xtream_streams " +
+            "WHERE providerId = :providerId AND type = :type AND streamId IN (:ids)",
+    )
+    fun getDetailCaches(
+        providerId: Long,
+        type: String,
+        ids: List<Int>,
+    ): List<XtreamStreamDetailCache>
+
+    /**
+     * [insertAll] for a catalogue sync: rows that already exist keep their detail-screen columns
+     * (TMDB rating, poster, container extension, fetch time) instead of being reset by REPLACE.
+     */
+    @Transaction
+    fun insertKeepingDetailCache(
+        providerId: Long,
+        type: String,
+        streams: List<XtreamStreamEntity>,
+    ) {
+        val caches =
+            streams
+                .map { it.streamId }
+                .chunked(SQLITE_MAX_VARIABLES)
+                .flatMap { getDetailCaches(providerId, type, it) }
+                .associateBy { it.streamId }
+        insertAll(streams.map { it.withDetailCache(caches[it.streamId]) })
+    }
 
     @Query(
         "SELECT streamId, streamIcon FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids) AND streamIcon IS NOT NULL",

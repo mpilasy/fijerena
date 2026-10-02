@@ -274,7 +274,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `directSource` | TEXT | Direct source URL override from provider |
 | `tvArchive` | INTEGER | Boolean (0/1) for catch-up support |
 | `tvArchiveDuration` | INTEGER | Catch-up window in days |
-| `contentHash` | INTEGER | For stale data detection |
+| `contentHash` | INTEGER | Catalogue fields hash; a sync rewrites the row only when it changes. Excludes `num` (list position). A rewrite keeps the detail-cache columns |
 | `description` | TEXT | Enriched VOD plot/summary |
 | `cast` | TEXT | Comma-separated cast members |
 | `director` | TEXT | Director name |
@@ -312,7 +312,7 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 | `youtubeTrailer` | TEXT | YouTube video ID |
 | `episodeRunTime` | TEXT | Nominal episode runtime |
 | `backdropPath` | TEXT | Comma-separated backdrop URLs |
-| `contentHash` | INTEGER | For stale data detection |
+| `contentHash` | INTEGER | Catalogue fields hash; a sync rewrites the row only when it changes. Excludes `num` (list position). A rewrite keeps the detail-cache columns but clears `episodesFetchedAt` |
 | `excluded` | INTEGER | Unused since v24 (visibility follows the category); kept because dropping a column needs SQLite 3.35 |
 | `contentRating` | TEXT | Age/content classification rating (added v12) |
 | `tmdbId` | TEXT | Sourced TMDB ID (added v12) |

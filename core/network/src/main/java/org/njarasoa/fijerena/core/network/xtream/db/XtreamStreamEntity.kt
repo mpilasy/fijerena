@@ -54,11 +54,16 @@ data class XtreamStreamEntity(
         const val TYPE_LIVE = "LIVE"
         const val TYPE_VOD = "VOD"
 
+        /**
+         * Hash of the provider's catalogue fields, compared on each sync to skip unchanged rows.
+         * `num` is left out: it is the stream's position in the provider's list, which shifts for
+         * tens of thousands of rows whenever the provider adds one. Position changes go through
+         * [XtreamStreamDao.updateNums] instead of rewriting the row.
+         */
         fun computeHash(
             streamId: Int,
             providerId: Long,
             type: String,
-            num: Int,
             name: String,
             streamType: String,
             streamIcon: String?,
@@ -82,7 +87,6 @@ data class XtreamStreamEntity(
             var result = streamId
             result = 31 * result + providerId.hashCode()
             result = 31 * result + type.hashCode()
-            result = 31 * result + num
             result = 31 * result + name.hashCode()
             result = 31 * result + streamType.hashCode()
             result = 31 * result + (streamIcon?.hashCode() ?: 0)
@@ -106,3 +110,37 @@ data class XtreamStreamEntity(
         }
     }
 }
+
+/** Stored state a catalogue sync compares against: the content hash, and the list position kept outside it. */
+data class XtreamStreamSyncState(
+    val streamId: Int,
+    val num: Int,
+    val contentHash: Int,
+)
+
+/** The columns a detail-screen fetch fills in (see [XtreamStreamDao.updateDetailCache]). */
+data class XtreamStreamDetailCache(
+    val streamId: Int,
+    val contentRating: String?,
+    val tmdbId: String?,
+    val containerExtension: String?,
+    val detailFetchedAt: Long?,
+    val posterPath: String?,
+)
+
+/**
+ * This catalogue row with [cache]'s detail-screen columns carried over, so a sync that rewrites a
+ * changed movie doesn't throw away its TMDB details. The catalogue's own `tmdbId` wins when it has one.
+ */
+fun XtreamStreamEntity.withDetailCache(cache: XtreamStreamDetailCache?): XtreamStreamEntity =
+    if (cache == null) {
+        this
+    } else {
+        copy(
+            contentRating = cache.contentRating,
+            tmdbId = tmdbId ?: cache.tmdbId,
+            containerExtension = cache.containerExtension,
+            detailFetchedAt = cache.detailFetchedAt,
+            posterPath = cache.posterPath,
+        )
+    }

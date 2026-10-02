@@ -1,6 +1,6 @@
 # Catalog Sync Cache Churn Plan
 
-**Status:** Not started.
+**Status:** Phase 1 done (2026-10-02). Phases 2-4 not started.
 
 Opening a show the app already has on disk should not re-download it. Today it does: a
 finished 18-season show like Law & Order is fetched again in full from Xtream, plus several TMDB
@@ -60,6 +60,23 @@ change → cache columns kept, series `episodesFetchedAt` cleared; unchanged →
 Check: after two bears syncs on one device, `lastSyncUpdated` drops from ~40k to the hundreds and
 `episodesFetchedAt` survives on an opened, unchanged series.
 
+**Done (2026-10-02).** `computeHash` drops `num` for series and streams. Stream sync collects
+position-only moves and applies them with `XtreamStreamDao.updateNums`; series `num` is left as
+first stored (series are listed by name). Changed and new rows go through
+`insertKeepingDetailCache` on both DAOs, which reads the detail columns of the existing rows
+(chunked at 900 ids) and carries them over via `withDetailCache`; a changed series still gets
+`episodesFetchedAt = null`. Unit tests: `CatalogDetailCacheCarryOverTest` (the carry-over rules;
+the fake-DAO sync test was not written, there is no Room unit-test setup in `core:network`).
+
+Verified on the TV emulator, bears, Kid profile:
+- Sync 1 (one-time, new hash formula): 20 added, 282,998 updated, 23s.
+- Opened `AR-SUBS - Law & Order (1990)` and `4K-AR - Inception (2010)`: both got their stamps.
+- Sync 2, 5 minutes later: 0 added, **17 updated**, 11s. Both stamps, content rating, poster and
+  container extension survived.
+- Not exercised on device: no list positions moved in those 5 minutes (0 `num` changes), so the
+  `updateNums` path and carry-over on a really changed row are covered by code review and the
+  unit tests only.
+
 ## Phase 2 — Episode list refreshes on change, not on a clock
 
 Replace the 24h `EPISODE_LIST_CACHE_TTL_MS` rule in `getSeriesDetail`. Use the stored episodes
@@ -93,7 +110,7 @@ jellyxtream exercises the Phase 1/2 trigger on the emulators.
 
 | Phase | What | Depends on |
 |---|---|---|
-| 1 | Hash without `num`, keep cache columns | — |
+| 1 | Hash without `num`, keep cache columns — **done 2026-10-02** | — |
 | 2 | Episode list refresh on change | 1 |
 | 3 | TMDB repeat calls | — |
 | 4 | Bridge `last_modified` | — (useful for testing 2) |

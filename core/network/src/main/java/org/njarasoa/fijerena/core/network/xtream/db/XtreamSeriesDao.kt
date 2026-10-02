@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.MapColumn
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 
 /** Series follow their category's `excluded` flag, as streams do — see [XtreamStreamDao]. */
 @Dao
@@ -47,6 +48,34 @@ interface XtreamSeriesDao {
 
     @Query("SELECT seriesId FROM xtream_series WHERE providerId = :providerId")
     fun getSeriesIds(providerId: Long): List<Int>
+
+    @Query(
+        "SELECT seriesId, contentRating, tmdbId, detailFetchedAt, posterPath FROM xtream_series " +
+            "WHERE providerId = :providerId AND seriesId IN (:ids)",
+    )
+    fun getDetailCaches(
+        providerId: Long,
+        ids: List<Int>,
+    ): List<XtreamSeriesDetailCache>
+
+    /**
+     * [insertAll] for a catalogue sync: rows that already exist keep their detail-screen columns
+     * (TMDB rating, poster, fetch time) instead of being reset by REPLACE. `episodesFetchedAt` is
+     * still reset, on purpose; see [withDetailCache].
+     */
+    @Transaction
+    fun insertKeepingDetailCache(
+        providerId: Long,
+        series: List<XtreamSeriesEntity>,
+    ) {
+        val caches =
+            series
+                .map { it.seriesId }
+                .chunked(SQLITE_MAX_VARIABLES)
+                .flatMap { getDetailCaches(providerId, it) }
+                .associateBy { it.seriesId }
+        insertAll(series.map { it.withDetailCache(caches[it.seriesId]) })
+    }
 
     @Query("SELECT seriesId, contentHash FROM xtream_series WHERE providerId = :providerId")
     fun getSeriesHashes(
