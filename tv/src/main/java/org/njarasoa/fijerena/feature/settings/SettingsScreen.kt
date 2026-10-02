@@ -18,7 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.foundation.lazy.list.TvLazyColumn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.tv.material3.*
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.SettingsExportManager
@@ -170,7 +170,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
             // Settings List
-            TvLazyColumn(
+            LazyColumn(
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                 // Scrolling a focused card out of view and back otherwise loses it: the item is

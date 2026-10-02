@@ -62,9 +62,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.items
-import androidx.tv.foundation.lazy.list.itemsIndexed
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -667,13 +667,13 @@ private fun SearchResultsList(
                 )
             }
 
-            // Pre-compute grouped results outside TvLazyColumn to avoid O(N×types) per recomposition
+            // Pre-compute grouped results outside LazyColumn to avoid O(N×types) per recomposition
             val groupedByType =
                 remember(categoryResults, results) {
                     buildGroupedSearchResults(categoryResults, results)
                 }
 
-            TvLazyColumn(
+            LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 modifier = Modifier.fillMaxSize(),
             ) {

@@ -47,8 +47,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.rememberTvLazyListState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardColors
@@ -211,7 +211,7 @@ fun EpgGridLayout(
             EmptyEpgMessage()
         } else {
             val horizontalScrollState = rememberLazyListState()
-            val verticalScrollState = rememberTvLazyListState()
+            val verticalScrollState = rememberLazyListState()
 
             // Auto-scroll to current time on load
             LaunchedEffect(currentTimeSlot) {
@@ -240,7 +240,7 @@ fun EpgGridLayout(
                 Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
 
                 // Single unified vertical list: each item is channel + programs
-                TvLazyColumn(
+                LazyColumn(
                     state = verticalScrollState,
                     modifier = Modifier.fillMaxSize().focusRestorer(),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xxs.scaled(scale)),
@@ -636,7 +636,7 @@ private fun EpgSearchContent(
                 )
             }
         } else {
-            TvLazyColumn(
+            LazyColumn(
                 modifier = Modifier.fillMaxSize().focusRestorer(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
             ) {

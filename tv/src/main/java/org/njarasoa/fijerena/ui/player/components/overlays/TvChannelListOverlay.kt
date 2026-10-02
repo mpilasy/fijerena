@@ -24,9 +24,9 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.itemsIndexed
-import androidx.tv.foundation.lazy.list.rememberTvLazyListState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -50,7 +50,7 @@ fun TvChannelListOverlay(
     currentStreamId: String? = null,
 ) {
     val targetFocusRequester = remember { FocusRequester() }
-    val listState = rememberTvLazyListState()
+    val listState = rememberLazyListState()
 
     LaunchedEffect(streams, currentStreamId) {
         if (streams.isNotEmpty()) {
@@ -117,7 +117,7 @@ fun TvChannelListOverlay(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                     )
                 } else {
-                    TvLazyColumn(
+                    LazyColumn(
                         state = listState,
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs),

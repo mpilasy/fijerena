@@ -12,8 +12,8 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -109,7 +109,7 @@ fun TvEpgManagementScreen(
 
             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
-            TvLazyColumn(
+            LazyColumn(
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                 modifier = Modifier.fillMaxSize().focusRestorer(),

@@ -42,9 +42,9 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.itemsIndexed
-import androidx.tv.foundation.lazy.list.rememberTvLazyListState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardColors
 import androidx.tv.material3.CardDefaults
@@ -195,7 +195,7 @@ internal fun StreamList(
         animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
         label = "refresh_rotation",
     )
-    val listState = rememberTvLazyListState()
+    val listState = rememberLazyListState()
     // FocusRequester for auto-scroll target — cleared on each category switch to avoid unbounded growth
     val lastPlayedFocusRequester = remember { FocusRequester() }
 
@@ -388,7 +388,7 @@ internal fun StreamList(
                     }
                 }
                 else -> {
-                    TvLazyColumn(
+                    LazyColumn(
                         state = listState,
                         contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
                         verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing.scaled(scale)),

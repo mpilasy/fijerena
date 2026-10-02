@@ -20,21 +20,21 @@ Refer to `gradle/libs.versions.toml` for authoritative versions.
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
-| Language | Kotlin | 2.3.0 |
-| Build System | Gradle | 9.4.1 |
-| Build System | Android Gradle Plugin (AGP) | 9.2.1 |
-| UI Framework | Jetpack Compose | 2025.06.01 BOM |
+| Language | Kotlin (compiler/plugin; stdlib resolves 2.4.0) | 2.3.0 |
+| Build System | Gradle | 9.6.0 |
+| Build System | Android Gradle Plugin (AGP) | 9.4.1 |
+| UI Framework | Jetpack Compose | 2026.03.01 BOM (ui/foundation/runtime/animation 1.10.6) |
 | Material Design | Material 3 | 1.4.0 |
-| TV Components | androidx.tv.material3 | 1.0.0-alpha10 |
+| TV Components | androidx.tv.material3 (tv-foundation only as its transitive dep; the app uses plain LazyColumn/LazyRow) | 1.0.0-alpha10 |
 | Video Player | Media3 (ExoPlayer) | 1.7.1 |
-| Networking | Ktor (OkHttp engine) | 3.4.0 |
-| Serialization | kotlinx.serialization | 1.8.0 |
-| Coroutines | kotlinx.coroutines | 1.7.3 |
+| Networking | Ktor (OkHttp engine) | 3.5.2 |
+| Serialization | kotlinx.serialization | 1.11.0 |
+| Coroutines | kotlinx.coroutines | 1.11.0 |
 | Database | Room (with FTS4) | 2.8.4 |
 | SQLite | Bundled (FTS5 capable) | 3.49.0 |
-| Image Loading | Coil | 3.1.0 |
+| Image Loading | Coil | 3.5.0 |
 | Navigation | Navigation Compose | 2.8.5 |
-| SMB Client | smbj | 0.13.0 |
+| SMB Client | smbj | 0.15.0 |
 | Theming | CinemaThemeHolder + CinemaThemePalette | — |
 
 ---

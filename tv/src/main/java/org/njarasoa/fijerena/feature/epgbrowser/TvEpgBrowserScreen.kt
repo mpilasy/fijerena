@@ -60,10 +60,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.items
-import androidx.tv.foundation.lazy.list.itemsIndexed
-import androidx.tv.foundation.lazy.list.rememberTvLazyListState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -715,7 +715,7 @@ private fun ResultsContent(
                     }
                     indices
                 }
-            val listState = rememberTvLazyListState()
+            val listState = rememberLazyListState()
             val pinnedHeaderLabel by remember {
                 derivedStateOf {
                     val firstVisible = listState.firstVisibleItemIndex
@@ -724,7 +724,7 @@ private fun ResultsContent(
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
-                TvLazyColumn(
+                LazyColumn(
                     state = listState,
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                     modifier = Modifier.fillMaxSize(),

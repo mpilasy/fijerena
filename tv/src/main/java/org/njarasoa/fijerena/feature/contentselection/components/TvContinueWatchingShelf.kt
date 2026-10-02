@@ -18,8 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.tv.foundation.lazy.list.TvLazyRow
-import androidx.tv.foundation.lazy.list.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -61,7 +61,7 @@ fun TvContinueWatchingShelf(
                 color = CinemaTextPrimary,
                 modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xxs),
             )
-            TvLazyRow(
+            LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 contentPadding = PaddingValues(horizontal = Spacing.xxs),
             ) {

@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): Phase 4 done 2026-10-01 as agreed (F-35, F-28, F-33 reduced, F-14; F-13 deferred). Phase 5 in progress: F-27 done 2026-10-01. Phase 6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): Phase 4 done 2026-10-01 as agreed (F-35, F-28, F-33 reduced, F-14; F-13 deferred). Phase 5 in progress: F-27 done 2026-10-01; F-32 code done 2026-10-02 (smoke pass pending). Phase 6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -257,6 +257,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `gradle/libs.versions.toml:36` (`composeBom = "2025.06.01"` → foundation 1.8.3), but transitive deps pull `ui`/`runtime` to **1.10.0** (`:tv:dependencyInsight`). Foundation 1.8.3 runs against UI 1.10.0.
 - **Impact:** Unsupported combination; behaviour already differs from what the code assumes (e.g. `FocusRequester.requestFocus()` on an unattached node *throws* in 1.8.x and only logs in 1.9+ — which is why the draft's F-18 doesn't crash today). AGENTS.md's version table is also stale (coroutines resolve to 1.11.0, not 1.7.3).
 - **Fix:** Move to the latest **stable** BOM that ships UI 1.10.x so every Compose artifact is aligned; re-run focus/D-pad smoke tests on emulator after. Update AGENTS.md table.
+- **Done 2026-10-02:** `composeBom` 2025.06.01 → **2026.03.01** (latest stable BOM on ui 1.10.x; ui 1.10.6). `:tv` and `:mobile` `dependencyInsight` before: foundation 1.8.3, ui/runtime 1.10.0 (animation 1.10.0 on tv, 1.8.3 on mobile); after: foundation, ui, runtime and animation all **1.10.6** on both. `material3` stays `strictly 1.4.0` (it is what every recent BOM maps it to). Newer BOMs (2026.04+, ui 1.11/1.12) were not used: they require `compileSdk` 37, a separate bump. The pin only existed because `androidx.tv:tv-foundation:1.0.0-alpha10`'s `TvLazyListState` calls `schedulePrefetch`, removed in Compose 1.9, so the 10 TV files using `TvLazyColumn`/`TvLazyRow` now use plain `LazyColumn`/`LazyRow` (no `pivotOffsets` were in use), the `tv/build.gradle.kts` foundation pin and the direct `tv-foundation` dependency are gone (it still arrives transitively via `tv-material` alpha10, which the app uses only for Card/Surface/Button/ListItem/Switch etc., none lazy). AGENTS.md table refreshed (coroutines 1.11.0, AGP 9.4.1, Gradle 9.6.0, Ktor 3.5.2, serialization 1.11.0, Coil 3.5.0, smbj 0.15.0; Kotlin plugin 2.3.0, stdlib resolves 2.4.0). `testDebugUnitTest`, `assembleDebug`, `ktlintCheck` and `check-cancellation.sh` pass. **Emulator D-pad smoke pass still pending** (list scrolling and focus in category/stream/EPG/search lists and the continue-watching row).
 
 #### 🆕 F-33: No exported Room schemas; migration test not in any gate [P2]
 - **Where:** `exportSchema = false` in `XtreamDatabase.kt:28`, `SettingsDatabase.kt:24`, `EpgIndexDatabase.kt:22`; `XtreamDatabaseMigrationTest` is `androidTest` and never run by CI.
@@ -330,7 +331,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 
 ### Phase 5 — Systemic hygiene
 1. **F-27** `suspendRunCatching` + convert the listed files + CI grep gate. ✅ (18 other files allow-listed in `scripts/check-cancellation-allowlist.txt`)
-2. **F-32** align Compose BOM (stable) + emulator D-pad smoke pass; refresh AGENTS.md version table.
+2. **F-32** align Compose BOM (stable) + emulator D-pad smoke pass; refresh AGENTS.md version table. ✅ code done 2026-10-02 (smoke pass pending)
 3. **F-34** after Google TV emulator reproduction.
 4. **F-10**, **F-36**, **F-37** opportunistically when those files are touched.
 

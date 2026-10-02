@@ -35,8 +35,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -318,7 +318,7 @@ private fun ProviderList(
     onMoreActions: (ProviderEntity) -> Unit,
 ) {
     val scale = LocalUiScale.current
-    TvLazyColumn(
+    LazyColumn(
         contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
         modifier = Modifier.fillMaxSize().focusRestorer(),

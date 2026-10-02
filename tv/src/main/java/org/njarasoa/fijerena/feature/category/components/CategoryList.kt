@@ -43,9 +43,9 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.tv.foundation.lazy.list.TvLazyColumn
-import androidx.tv.foundation.lazy.list.itemsIndexed
-import androidx.tv.foundation.lazy.list.rememberTvLazyListState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardColors
 import androidx.tv.material3.CardDefaults
@@ -102,7 +102,7 @@ internal fun CategoryList(
             categories.partitionVirtual()
         }
 
-    val listState = rememberTvLazyListState()
+    val listState = rememberLazyListState()
     // Keyed to categories so switching category lists (refresh, content-type switch) drops
     // stale FocusRequesters instead of accumulating one per category id ever seen this session.
     val focusRequesters = remember(categories) { mutableMapOf<String, FocusRequester>() }
@@ -258,7 +258,7 @@ internal fun CategoryList(
                 }
 
                 // Scrollable regular categories section
-                TvLazyColumn(
+                LazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
                     verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing.scaled(scale)),
