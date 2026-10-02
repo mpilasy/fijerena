@@ -1,12 +1,14 @@
 package org.njarasoa.fijerena.core.player.viewmodel
 import android.app.Application
 import android.content.Intent
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.session.MediaController
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.R
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
 import org.njarasoa.fijerena.core.player.model.ChapterInfo
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -243,6 +246,12 @@ class PlaybackViewModel(
                 // no-op: service never came up in time
             } catch (e: ServiceDestroyedException) {
                 // no-op: service died mid-wait or mid-call
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // A Media3 call failing here must not take the app down with it (R-25).
+                Log.e("PlaybackViewModel", "Service action failed", e)
+                CrashLog.record("PlaybackViewModel.launchServiceAction", e)
             }
         }
     }

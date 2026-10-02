@@ -1,0 +1,22 @@
+# R-09 ViewModel launch gate allow-list (scripts/check-viewmodel-launch.sh).
+# One "path count" per line, then "# reason": how many bare `viewModelScope.launch` calls the file
+# may still have. Counts only go down: convert a site to `launchGuarded` (or mark a deliberate one
+# `// launch-ok: <reason>`) and lower the count in the same change; a file at 0 leaves the list.
+# A file not listed may have none. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-09.
+#
+# Left after the first pass (2026-10-02, 98 → 60): mostly loads that already catch their own
+# failures or return a Result, and user actions with no init-path impact.
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/DiagnosticsViewModel.kt 1 # clear(): local file delete
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt 5 # refresh/search actions; provider name and source labels catch their own
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt 1 # refreshDbStats catches its own
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt 2 # forceRefresh, search
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/LoginViewModel.kt 2 # login flows catch their own
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/MovieDetailsViewModel.kt 9 # loadMovieDetail catches its own; favourite/watched actions
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProfilesViewModel.kt 4 # profile actions
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProviderViewModel.kt 12 # incl. init; deferred while the R-08 sync-error work is in this file
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SafeModeViewModel.kt 1 # safe-mode actions
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt 4 # search jobs; repo results
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SeriesDetailsViewModel.kt 8 # loadSeriesDetail catches its own; episode actions
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SettingsViewModel.kt 3 # incl. init; deferred while the R-08 sync-error work is in this file
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt 4 # loadStream/playNextEpisode/loadStreamLight: loadStreamInternal catches its own
+core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SyncSettingsViewModel.kt 4 # sync actions catch their own

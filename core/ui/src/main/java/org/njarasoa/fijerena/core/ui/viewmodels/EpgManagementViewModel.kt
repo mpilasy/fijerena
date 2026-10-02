@@ -33,6 +33,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.UiText
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import kotlin.coroutines.resume
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -218,7 +219,7 @@ class EpgManagementViewModel(
     init {
         refreshDbStats()
         refreshMaintenanceState()
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgManagementViewModel.init") {
             processingState.collect { state ->
                 if (state is EpgFileManager.MultiSourceState.Completed) {
                     _dbGeneration.value++
@@ -228,7 +229,7 @@ class EpgManagementViewModel(
     }
 
     fun refreshMaintenanceState() {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgManagementViewModel.refreshMaintenanceState") {
             withContext(Dispatchers.IO) {
                 _hasStrayFiles.value = epgFileManager.getStrayFiles().isNotEmpty()
                 val twoDaysAgo = (System.currentTimeMillis() / 1000) - (2 * 24 * 3600)
@@ -276,7 +277,7 @@ class EpgManagementViewModel(
         ingestMethod: String = "DOWNLOADED",
         enabled: Boolean = true,
     ) {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgManagementViewModel.addSource") {
             withContext(Dispatchers.IO) {
                 val urls =
                     url
@@ -307,7 +308,7 @@ class EpgManagementViewModel(
     }
 
     fun updateSource(source: EpgSourceEntity) {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgManagementViewModel.updateSource") {
             withContext(Dispatchers.IO) {
                 settingsDb().epgSourceDao().updateSource(source)
             }
@@ -315,7 +316,7 @@ class EpgManagementViewModel(
     }
 
     fun deleteSource(id: Long) {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgManagementViewModel.deleteSource") {
             withContext(Dispatchers.IO) {
                 // Delete from persistent settings
                 settingsDb().epgSourceDao().deleteSource(id)
@@ -328,7 +329,7 @@ class EpgManagementViewModel(
 
     fun deleteSelected(selectedIds: Set<Long>) {
         if (selectedIds.isEmpty()) return
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgManagementViewModel.deleteSelected") {
             withContext(Dispatchers.IO) {
                 val ids = selectedIds.toList()
                 settingsDb().epgSourceDao().deleteSources(ids)
@@ -348,7 +349,7 @@ class EpgManagementViewModel(
             return
         }
 
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgManagementViewModel.refreshStale") {
             // Instant feedback: calculate which IDs will be refreshed and put them in the map
             val thresholdMs = System.currentTimeMillis() - epgFileManager.staleThresholdMs
             val sourcesToRefresh =
@@ -358,7 +359,7 @@ class EpgManagementViewModel(
 
             if (sourcesToRefresh.isEmpty()) {
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_stale_sources))
-                return@launch
+                return@launchGuarded
             }
 
             _taskSourceIds.value += (taskId to sourcesToRefresh.map { it.id }.toSet())
@@ -397,11 +398,11 @@ class EpgManagementViewModel(
             return
         }
 
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgManagementViewModel.refreshFailed") {
             val sources = withContext(Dispatchers.IO) { settingsDb().epgSourceDao().getFailedSources(providerId) }
             if (sources.isEmpty()) {
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_failed_sources))
-                return@launch
+                return@launchGuarded
             }
 
             _taskSourceIds.value += (taskId to sources.map { it.id }.toSet())
@@ -508,7 +509,7 @@ class EpgManagementViewModel(
     }
 
     fun cleanupFiles() {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgManagementViewModel.cleanupFiles") {
             val result =
                 withContext(Dispatchers.IO) {
                     epgFileManager.cleanupStrayFiles()
@@ -543,7 +544,7 @@ class EpgManagementViewModel(
     }
 
     fun purgeOldProgrammes() {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgManagementViewModel.purgeOldProgrammes") {
             val deleted =
                 withContext(Dispatchers.IO) {
                     val twoDaysAgo = (System.currentTimeMillis() / 1000) - (2 * 24 * 3600)
@@ -564,14 +565,15 @@ class EpgManagementViewModel(
             anchorTime: String,
             intervalHours: Int,
         ): Long {
-            val parts = anchorTime.split(":")
+            // A malformed time (an older record, another app version) means no schedule, not a
+            // crash every time this screen opens (R-09).
+            val parsed = AppSettings.parseRefreshTime(anchorTime)
             var next = 0L
 
-            if (intervalHours > 0 && parts.size == 2) {
+            if (intervalHours > 0 && parsed != null) {
                 val now = java.util.Calendar.getInstance()
                 val anchor = java.util.Calendar.getInstance()
-                val hour = parts[0].toInt()
-                val minute = parts[1].toInt()
+                val (hour, minute) = parsed
 
                 anchor.set(java.util.Calendar.HOUR_OF_DAY, hour)
                 anchor.set(java.util.Calendar.MINUTE, minute)

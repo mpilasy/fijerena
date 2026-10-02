@@ -54,6 +54,10 @@ jobs:
       - name: Suspend code does not swallow cancellation
         run: scripts/check-cancellation.sh
 
+      # docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-09.
+      - name: ViewModel coroutines have an exception boundary
+        run: scripts/check-viewmodel-launch.sh
+
       - name: Room schemas are committed and current
         run: |
           if [ -n "$(git status --porcelain -- core/network/schemas)" ]; then

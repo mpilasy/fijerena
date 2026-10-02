@@ -17,6 +17,7 @@
     <string name="error_unauthorized">Login failed. Check your username and password.</string>
     <string name="error_saved_login_lost">This device lost a saved login (its secure key store was reset). Edit the source and enter the password again.</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_catalog_sync_failed">Catalog sync failed. %1$s</string>
     <string name="sync_error_download_failed">Download failed</string>
     <string name="sync_error_upload_failed">Upload failed</string>
 

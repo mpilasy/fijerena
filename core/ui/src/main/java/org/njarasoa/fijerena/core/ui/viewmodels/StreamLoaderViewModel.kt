@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -35,6 +36,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 class StreamLoaderViewModel(
     private val context: Context,
@@ -143,48 +145,45 @@ class StreamLoaderViewModel(
     }
 
     private fun initializeAndLoad() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // 1. Initialize Repository
-                val container =
-                    org.njarasoa.fijerena.core.ui.di.AppContainer
-                        .getInstance(context)
-                val repo = container.getMediaRepository()
-                mediaRepository = repo
+        viewModelScope.launchGuarded(
+            "StreamLoaderViewModel.init",
+            Dispatchers.IO,
+            onError = { _state.value = StreamState.Error(friendlyErrorMessage(it, context, appSettings.isDevMode)) },
+        ) {
+            // 1. Initialize Repository
+            val container =
+                org.njarasoa.fijerena.core.ui.di.AppContainer
+                    .getInstance(context)
+            val repo = container.getMediaRepository()
+            mediaRepository = repo
 
-                // 2. Load Channel List (Live TV only) and start mirroring the shared Recent list
-                if (contentType == ContentType.LIVE_TV) {
-                    launch { repo.recentItems(contentType).collect { _recentItems.value = it.orEmpty() } }
-                    repo.refreshRecentItems(contentType)
+            // 2. Load Channel List (Live TV only) and start mirroring the shared Recent list
+            if (contentType == ContentType.LIVE_TV) {
+                launch { repo.recentItems(contentType).collect { _recentItems.value = it.orEmpty() } }
+                repo.refreshRecentItems(contentType)
+            }
+
+            // 3. Resolve Initial Stream on FAST PATH
+            loadStreamInternal(
+                streamId = initialStreamId,
+                streamName = initialStreamName,
+                currentStreams = emptyList(),
+            )
+
+            // 4. Asynchronously fetch Category Channel list in background (Live TV only)
+            if (contentType == ContentType.LIVE_TV) {
+                launch {
+                    val result = repo.getItems(currentCategoryId, contentType)
+                    result.fold(
+                        onSuccess = { items ->
+                            streamList = items
+                            currentStreamIndex = items.indexOfFirst { it.id == initialStreamId }
+                            if (currentStreamIndex == -1 && items.isNotEmpty()) currentStreamIndex = 0
+                            updateCategoryStreams(items)
+                        },
+                        onFailure = { Log.e("StreamLoader", "Failed to load category streams", it) },
+                    )
                 }
-
-                // 3. Resolve Initial Stream on FAST PATH
-                loadStreamInternal(
-                    streamId = initialStreamId,
-                    streamName = initialStreamName,
-                    currentStreams = emptyList(),
-                )
-
-                // 4. Asynchronously fetch Category Channel list in background (Live TV only)
-                if (contentType == ContentType.LIVE_TV) {
-                    launch {
-                        val result = repo.getItems(currentCategoryId, contentType)
-                        result.fold(
-                            onSuccess = { items ->
-                                streamList = items
-                                currentStreamIndex = items.indexOfFirst { it.id == initialStreamId }
-                                if (currentStreamIndex == -1 && items.isNotEmpty()) currentStreamIndex = 0
-                                updateCategoryStreams(items)
-                            },
-                            onFailure = { Log.e("StreamLoader", "Failed to load category streams", it) },
-                        )
-                    }
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e("StreamLoader", "Initialization error", e)
-                _state.value = StreamState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
             }
         }
     }
@@ -281,7 +280,7 @@ class StreamLoaderViewModel(
 
                     // Notify provider that playback started (e.g. for Jellyfin session tracking)
                     if (notifyProviderStarted) {
-                        viewModelScope.launch(Dispatchers.IO) {
+                        viewModelScope.launchGuarded("StreamLoaderViewModel.onPlaybackStarted", Dispatchers.IO) {
                             repo.onPlaybackStarted(streamId)
                         }
                     }
@@ -290,7 +289,7 @@ class StreamLoaderViewModel(
                     historyJob?.cancel()
                     if (contentType == ContentType.LIVE_TV) {
                         historyJob =
-                            viewModelScope.launch(Dispatchers.IO) {
+                            viewModelScope.launchGuarded("StreamLoaderViewModel.liveHistory", Dispatchers.IO) {
                                 delay(AppSettings(context).watchDelaySeconds * 1000L)
                                 repo.saveLastPlayedItem(
                                     categoryId = currentCategoryId,
@@ -310,7 +309,7 @@ class StreamLoaderViewModel(
                     // Enrich metadata (EPG & Plot description) asynchronously in background
                     enrichJob?.cancel()
                     enrichJob =
-                        viewModelScope.launch(Dispatchers.IO) {
+                        viewModelScope.launchGuarded("StreamLoaderViewModel.enrich", Dispatchers.IO) {
                             enrichStreamMetadata(streamId, streamName, activeStreams)
                             if (contentType == ContentType.LIVE_TV) followProgrammes(streamId, streamName, activeStreams)
                         }
@@ -566,9 +565,9 @@ class StreamLoaderViewModel(
     }
 
     fun toggleFavorite() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val currentState = _state.value as? StreamState.Success ?: return@launch
-            val repo = mediaRepository ?: return@launch
+        viewModelScope.launchGuarded("StreamLoaderViewModel.toggleFavorite", Dispatchers.IO) {
+            val currentState = _state.value as? StreamState.Success ?: return@launchGuarded
+            val repo = mediaRepository ?: return@launchGuarded
 
             if (currentState.isFavorite) {
                 if (repo.removeFavoriteSuspend(currentState.streamId, contentType)) {
@@ -595,9 +594,9 @@ class StreamLoaderViewModel(
         audioTrackIndex: Int? = null,
         subtitleTrackIndex: Int? = null,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val currentState = _state.value as? StreamState.Success ?: return@launch
-            val repo = mediaRepository ?: return@launch
+        viewModelScope.launchGuarded("StreamLoaderViewModel.recordHistory", Dispatchers.IO) {
+            val currentState = _state.value as? StreamState.Success ?: return@launchGuarded
+            val repo = mediaRepository ?: return@launchGuarded
 
             // Save playback position (Resume Point) - Only for VOD/Series
             if (contentType != ContentType.LIVE_TV) {
@@ -661,7 +660,7 @@ class StreamLoaderViewModel(
         // a screen's onDispose, this launch can be cancelled with viewModelScope before the IO
         // dispatcher ever runs it — a DEFAULT start then never runs the body at all, and the
         // final position is lost. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-29.
-        viewModelScope.launch(Dispatchers.IO, start = CoroutineStart.ATOMIC) {
+        viewModelScope.launchGuarded("StreamLoaderViewModel.stopPlayback", Dispatchers.IO, CoroutineStart.ATOMIC) {
             // NonCancellable: this coroutine is a child of viewModelScope, which gets cancelled
             // the moment the screen popping back (e.g. Back press) clears this ViewModel —
             // without this, that cancellation could land mid-write and truncate the
@@ -688,7 +687,16 @@ class StreamLoaderViewModel(
         subtitleTrackIndex: Int? = null,
     ) {
         withContext(Dispatchers.IO) {
-            doStopPlayback(position, duration, audioTrackIndex, subtitleTrackIndex)
+            // Caught here, not by the caller: it navigates back once this returns, and a failed
+            // write must neither crash the app nor strand the viewer on the player.
+            try {
+                doStopPlayback(position, duration, audioTrackIndex, subtitleTrackIndex)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("StreamLoader", "Final playback write failed", e)
+                CrashLog.record("StreamLoaderViewModel.stopPlaybackAwaited", e)
+            }
         }
     }
 

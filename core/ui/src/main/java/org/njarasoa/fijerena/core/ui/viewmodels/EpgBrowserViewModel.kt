@@ -51,6 +51,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.UiText
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import java.util.Date
 import java.util.Locale
 
@@ -323,7 +324,7 @@ class EpgBrowserViewModel(
 
             else -> {}
         }
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgBrowserViewModel.indexState") {
             indexer.state.collect { state ->
                 if (state !is EpgIndexState.Indexed) return@collect
                 // A busy search, or a LIKE-fallback one that may be incomplete, gets the full
@@ -343,7 +344,7 @@ class EpgBrowserViewModel(
         }
         _epgSearchHistory.value = appSettings.getEpgSearchHistory()
         loadSourceLabels()
-        viewModelScope.launch { ensureChannelMatcherCurrent() }
+        viewModelScope.launchGuarded("EpgBrowserViewModel.channelMatcher") { ensureChannelMatcherCurrent() }
         loadActiveProviderName()
     }
 
@@ -420,7 +421,7 @@ class EpgBrowserViewModel(
 
     private fun initPagedNowPlaying() {
         val indexer = EpgIndexer.getInstance(context)
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgBrowserViewModel.pagedNowPlaying") {
             indexer.state.collect { state ->
                 if (state is EpgIndexState.Indexed) {
                     loadNowPlaying()
@@ -430,7 +431,7 @@ class EpgBrowserViewModel(
     }
 
     private fun loadNowPlaying() {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgBrowserViewModel.loadNowPlaying") {
             val db = EpgIndexDatabase.getInstance(context)
             val dao = db.epgIndexDao()
 

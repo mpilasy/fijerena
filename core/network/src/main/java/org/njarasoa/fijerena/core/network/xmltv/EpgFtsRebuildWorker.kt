@@ -12,6 +12,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.CancellationException
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.trySetForeground
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 
 /**
@@ -54,7 +55,7 @@ class EpgFtsRebuildWorker(
     }
 
     override suspend fun doWork(): Result {
-        setForeground(getForegroundInfo())
+        trySetForeground(TAG)
         Log.i(TAG, "doWork: starting FTS rebuild under foreground service wake lock")
         return try {
             val indexer = EpgIndexer.getInstance(applicationContext)

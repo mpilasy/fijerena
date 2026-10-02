@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 class SearchViewModel(
     private val context: android.content.Context,
@@ -112,14 +113,14 @@ class SearchViewModel(
             )
         _searchHistory.value = appSettings.getSearchHistory()
         // Pre-fetch category list + all missing/stale category items in background.
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launchGuarded("SearchViewModel.prefetch", Dispatchers.IO) {
             val repo =
                 try {
                     ensureRepo()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
-                    return@launch
+                    return@launchGuarded
                 }
 
             if (!repo.isConnected()) {

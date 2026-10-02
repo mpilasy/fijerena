@@ -23,6 +23,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 class CategoryViewModel(
     private val context: Context,
@@ -189,22 +190,15 @@ class CategoryViewModel(
     private var loadStreamsJob: Job? = null
     private var nowPlayingJob: Job? = null
 
+    // The init coroutine. If building the repository fails (Keystore, credential store,
+    // providers.db) the screen shows the error, and Retry ([loadCategories]) runs it again —
+    // repositoryDeferred stays pending until it succeeds, so nothing awaiting it sees a failure.
+    private var repositoryJob: Job? = null
+
     init {
-        viewModelScope.launch {
-            val repo = AppContainer.getInstance(context).getMediaRepository()
-            repositorySnapshot = repo
-            repositoryDeferred.complete(repo)
-            launch { repo.recentItems(contentType).collect { _recentItems.value = it } }
-            loadCategoriesInternal()
-            // Entering on a real category (from the EPG, search, or a saved selection) never
-            // loads the Recent row, but the Live TV preview panel shows that list regardless of
-            // what was browsed into — without this warm-up it would sit on its spinner forever.
-            if (repo.recentItems(contentType).value == null) {
-                repo.refreshRecentItems(contentType)
-            }
-        }
+        repositoryJob = startRepository()
         // Refresh pre-computed per-item data only when the actual stream list changes
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("CategoryViewModel.perItemData") {
             var lastStreams: List<MediaItem>? = null
             _uiState.collect { state ->
                 if (state is UiState.Success) {
@@ -218,9 +212,32 @@ class CategoryViewModel(
         }
     }
 
-    fun loadCategories() {
-        viewModelScope.launch {
+    private fun startRepository(): Job =
+        viewModelScope.launchGuarded("CategoryViewModel.init", onError = ::showError) {
+            val repo = AppContainer.getInstance(context).getMediaRepository()
+            repositorySnapshot = repo
+            repositoryDeferred.complete(repo)
+            launch { repo.recentItems(contentType).collect { _recentItems.value = it } }
             loadCategoriesInternal()
+            // Entering on a real category (from the EPG, search, or a saved selection) never
+            // loads the Recent row, but the Live TV preview panel shows that list regardless of
+            // what was browsed into — without this warm-up it would sit on its spinner forever.
+            if (repo.recentItems(contentType).value == null) {
+                repo.refreshRecentItems(contentType)
+            }
+        }
+
+    private fun showError(e: Throwable) {
+        _uiState.value = UiState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
+    }
+
+    fun loadCategories() {
+        if (repositoryDeferred.isCompleted || repositoryJob?.isActive == true) {
+            viewModelScope.launchGuarded("CategoryViewModel.loadCategories", onError = ::showError) {
+                loadCategoriesInternal()
+            }
+        } else {
+            repositoryJob = startRepository()
         }
     }
 
@@ -327,7 +344,7 @@ class CategoryViewModel(
         loadStreamsJob?.cancel()
         nowPlayingJob?.cancel()
         loadStreamsJob =
-            viewModelScope.launch {
+            viewModelScope.launchGuarded("CategoryViewModel.loadStreams") {
                 loadStreamsInternal(categoryId, isRetryEnabled = true)
             }
     }
@@ -459,7 +476,7 @@ class CategoryViewModel(
         if (contentType != ContentType.LIVE_TV) return
         nowPlayingJob?.cancel()
         nowPlayingJob =
-            viewModelScope.launch {
+            viewModelScope.launchGuarded("CategoryViewModel.loadNowPlaying") {
                 val repo = awaitRepository()
                 // Phase 1: Fast SQLite query for indexed channels
                 val indexResult = repo.getNowPlayingFromIndex(items.take(50))
@@ -469,10 +486,10 @@ class CategoryViewModel(
 
                 // Phase 2: Xtream API fallback for unmatched items
                 val caps = repo.getCapabilities()
-                if (caps?.supportsEpg != true) return@launch
+                if (caps?.supportsEpg != true) return@launchGuarded
 
                 val unmatchedItems = items.take(50).filter { it.id !in indexResult }
-                if (unmatchedItems.isEmpty()) return@launch
+                if (unmatchedItems.isEmpty()) return@launchGuarded
 
                 val now = System.currentTimeMillis() / 1000
                 // Accumulate across chunks and emit once. Emitting per chunk published a fresh map up
@@ -587,7 +604,7 @@ class CategoryViewModel(
             } else {
                 repo.addFavoriteCategory(categoryId, categoryName, contentType)
             }
-            viewModelScope.launch { refreshPerItemData() }
+            viewModelScope.launchGuarded("CategoryViewModel.refreshPerItemData") { refreshPerItemData() }
             // Local rebuild only — no network fetch needed for a local favorite change
             refreshCategoriesLocal()
         }
@@ -609,7 +626,7 @@ class CategoryViewModel(
             } else {
                 repo.addFavorite(itemId, itemName, categoryId, contentType)
             }
-            viewModelScope.launch { refreshPerItemData() }
+            viewModelScope.launchGuarded("CategoryViewModel.refreshPerItemData") { refreshPerItemData() }
             // Local rebuild only — no network fetch needed for a local favorite change
             refreshCategoriesLocal()
         }
@@ -627,7 +644,7 @@ class CategoryViewModel(
         contentType: String,
     ) {
         val nowWatched = itemId !in _watchedIds.value
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("CategoryViewModel.toggleWatchedStream") {
             val repo = awaitRepository()
             repo.setWatched(itemId, contentType, nowWatched)
             refreshPerItemData()
@@ -643,7 +660,7 @@ class CategoryViewModel(
         contentType: String,
         seriesId: String? = null,
     ) {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("CategoryViewModel.removeFromRecent") {
             // The Recent row (unlike category streams) can be visible before loadCategories()
             // has run — e.g. the Live TV preview panel shows it regardless of what was browsed
             // into — so this used to silently drop the removal if it raced ahead of
@@ -690,7 +707,7 @@ class CategoryViewModel(
      */
     fun refreshWatchStateOnResume() {
         // refreshPerItemData no-ops on its own until repository is initialized.
-        viewModelScope.launch { refreshPerItemData() }
+        viewModelScope.launchGuarded("CategoryViewModel.refreshPerItemData") { refreshPerItemData() }
     }
 
     /** The Favorite Categories list's rows: one browse-only row per favorited category. */
@@ -778,7 +795,7 @@ class CategoryViewModel(
         refreshCategoriesLocal()
 
         // Also refresh from network in the background
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("CategoryViewModel.refreshCategories") {
             val repo = awaitRepository()
             val result = repo.getFilteredCategories(contentType)
             result.onSuccess { fetchedCategories ->
@@ -803,7 +820,7 @@ class CategoryViewModel(
         loadStreamsJob?.cancel()
         nowPlayingJob?.cancel()
         loadStreamsJob =
-            viewModelScope.launch {
+            viewModelScope.launchGuarded("CategoryViewModel.refreshStreams") {
                 loadStreamsInternal(categoryId, isRetryEnabled = false)
             }
     }

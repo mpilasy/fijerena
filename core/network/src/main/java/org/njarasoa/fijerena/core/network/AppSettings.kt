@@ -82,6 +82,18 @@ class AppSettings(
         val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_LAST_PROVIDER, KEY_AUTOPLAY_NEXT_EPISODE)
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
+
+        /** [epgRefreshTime] as (hour, minute), or null when it isn't a valid `HH:mm` (e.g. "4:00 AM"). */
+        fun parseRefreshTime(value: String): Pair<Int, Int>? {
+            val parts = value.split(":")
+            val hour = parts.getOrNull(0)?.toIntOrNull()
+            val minute = parts.getOrNull(1)?.toIntOrNull()
+            return if (parts.size == 2 && hour != null && minute != null && hour in 0..23 && minute in 0..59) {
+                hour to minute
+            } else {
+                null
+            }
+        }
     }
 
     /**
@@ -156,7 +168,10 @@ class AppSettings(
     /**
      * A setting received from another device (live sync): written straight to prefs, not through
      * the setters, which would queue it to be sent back. Keys other than [SYNCED_SETTING_KEYS] are
-     * ignored — a newer app version may sync more.
+     * ignored — a newer app version may sync more. A value this version can't use (a refresh time
+     * that isn't `HH:mm`, an interval it doesn't offer, a blank theme) is dropped, so the local
+     * value stays: one bad record must not break every linked device (R-09). An unknown theme id
+     * is kept, since `paletteById` already falls back to the default palette.
      */
     fun applyRemoteSetting(
         key: String,
@@ -168,9 +183,10 @@ class AppSettings(
                 KEY_DEV_MODE -> value.booleanOrNull?.let { putBoolean(devModeKey(profileId), it) }
                 KEY_AUTOPLAY_NEXT_EPISODE -> value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
                 KEY_LAST_PROVIDER -> if (value.isString) putString(profileKey(key, profileId), value.content)
-                KEY_THEME_ID, KEY_EPG_REFRESH_TIME -> if (value.isString) putString(key, value.content)
+                KEY_THEME_ID -> if (value.isString && value.content.isNotBlank()) putString(key, value.content)
+                KEY_EPG_REFRESH_TIME -> if (value.isString && parseRefreshTime(value.content) != null) putString(key, value.content)
                 KEY_EPG_AUTO_REFRESH -> value.booleanOrNull?.let { putBoolean(key, it) }
-                KEY_EPG_REFRESH_INTERVAL -> value.intOrNull?.let { putInt(key, it) }
+                KEY_EPG_REFRESH_INTERVAL -> value.intOrNull?.takeIf { it in EPG_REFRESH_INTERVAL_OPTIONS }?.let { putInt(key, it) }
             }
         }
     }

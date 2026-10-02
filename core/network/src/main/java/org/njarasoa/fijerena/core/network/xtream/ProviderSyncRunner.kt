@@ -106,14 +106,31 @@ object ProviderSyncRunner {
                     continue
                 }
                 Log.e(TAG, "Sync failed for ${provider.name} (attempt $attempt, transient=$transient)", e)
-                val message = friendlyErrorMessage(e, context, AppSettings(context).isDevMode)
+                val message = failureMessage(context, e)
                 return if (transient) Outcome.Transient(message) else Outcome.Permanent(message)
             }
         }
     }
 
+    /** A catalogue failure says so up front: the reason alone ("Network error") could read as a connect problem. */
+    private fun failureMessage(
+        context: Context,
+        e: Exception,
+    ): String {
+        val devMode = AppSettings(context).isDevMode
+        return if (e is CatalogSyncException) {
+            // Describe the failure that decided the classification, so the text and the retry agree.
+            val cause = e.failures.firstOrNull { isTransient(it) } ?: e.failures.first()
+            context.getString(R.string.error_catalog_sync_failed, friendlyErrorMessage(cause, context, devMode))
+        } else {
+            friendlyErrorMessage(e, context, devMode)
+        }
+    }
+
+    /** A catalogue run with any transient task failure is transient: a retry can fix that task. */
     private fun isTransient(e: Throwable): Boolean =
         when (e) {
+            is CatalogSyncException -> e.failures.any { isTransient(it) }
             is UnknownHostException, is SocketTimeoutException, is IOException -> true
             else -> false
         }

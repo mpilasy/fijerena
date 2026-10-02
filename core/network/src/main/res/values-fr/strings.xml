@@ -17,6 +17,7 @@
     <string name="error_unauthorized">Échec de la connexion. Vérifiez votre nom d\'utilisateur et votre mot de passe.</string>
     <string name="error_saved_login_lost">Cet appareil a perdu un identifiant enregistré (son coffre de clés sécurisé a été réinitialisé). Modifiez la source et saisissez à nouveau le mot de passe.</string>
     <string name="error_generic">Une erreur s\'est produite. Veuillez réessayer.</string>
+    <string name="error_catalog_sync_failed">Échec de la synchronisation du catalogue. %1$s</string>
     <string name="sync_error_download_failed">Échec du téléchargement</string>
     <string name="sync_error_upload_failed">Échec de l\'envoi</string>
 

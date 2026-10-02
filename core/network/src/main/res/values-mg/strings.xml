@@ -16,6 +16,7 @@
     <string name="error_network">Nisy olana tamin\'ny tambajotra. Jereo ny fifandraisanao ary andramo indray.</string>
     <string name="error_unauthorized">Tsy nahomby ny fidirana. Jereo ny anaranao sy ny tenimiafinao.</string>
     <string name="error_generic">Nisy olana. Andramo indray.</string>
+    <string name="error_catalog_sync_failed">Tsy nahomby ny fanavaozana ny lisitra. %1$s</string>
     <string name="sync_error_download_failed">Tsy nahomby ny fakana</string>
     <string name="sync_error_upload_failed">Tsy nahomby ny fandefasana</string>
 

@@ -1,5 +1,16 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Failures you can see
+**Release Date:** 2026-10-02
+
+- **Screens no longer close the app when something fails in the background:** a source that can't be opened (a lost saved login, an unreadable settings database) now shows an error with Retry instead of crashing or spinning forever. Saving watch progress, favourites and the final position when you leave the player can't crash the app any more, and a failed Shrink Database shows the reason. Failures are recorded in Settings → Diagnostics. → R-09, R-25.
+- **Settings from another device are checked before they're used:** a malformed EPG refresh time synced from another device (or another app version) crashed EPG management every time it opened, on every linked device. Synced values this version can't use — a time that isn't HH:mm, an unknown refresh interval, a blank theme — are now ignored and your own value stays. → R-09.
+- **Catalogue sync no longer reports success when it fails:** if the connection drops or times out partway through downloading channels, movies or series, or the provider refuses the account, Settings now says "Catalog sync failed" with the reason instead of "No changes since last sync". A network failure is retried automatically; a refused login isn't. Whatever arrived before the failure is kept, nothing is deleted on a failed run, and a failed run no longer counts as fresh, so the next sync isn't held off for 4 hours. In English, French and Malagasy. → R-08.
+- **Background sync keeps going when Android won't promote it:** background catalogue sync and the EPG search-index rebuild now carry on, as the EPG download already did, when Android refuses to run them as a foreground service. → R-11.
+- **New CI check (developers):** `scripts/check-viewmodel-launch.sh` fails the build when a ViewModel gains a bare `viewModelScope.launch` instead of `launchGuarded`; its per-file allow-list (60 left, from 98) only shrinks.
+
+---
+
 ## Version: Data-loss and launch-crash fixes
 **Release Date:** 2026-10-02
 

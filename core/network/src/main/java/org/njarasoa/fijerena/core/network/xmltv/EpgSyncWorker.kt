@@ -15,7 +15,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+import org.njarasoa.fijerena.core.network.trySetForeground
 
 /**
  * WorkManager worker for background EPG sync (all device types).
@@ -62,17 +62,7 @@ class EpgSyncWorker(
     }
 
     override suspend fun doWork(): Result {
-        // Android 12+ refuses a foreground start from a background-started worker
-        // (ForegroundServiceStartNotAllowedException). That must not fail the run: carry on
-        // without foreground status — the sync itself still works while the process is alive.
-        try {
-            setForeground(getForegroundInfo())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w(TAG, "doWork: setForeground refused — continuing without foreground (${e.javaClass.simpleName})", e)
-            CrashLog.record("EpgSyncWorker setForeground", e)
-        }
+        trySetForeground(TAG)
 
         // ConnectivityManager.activeNetwork can return null briefly on cold start while
         // the network stack initialises for the new process. Wait up to 15s before proceeding.

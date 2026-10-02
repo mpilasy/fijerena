@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.ProcessExits
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
  * Settings → Diagnostics (developer mode): exceptions this app recorded itself ([CrashLog]) and
@@ -35,7 +36,7 @@ class DiagnosticsViewModel(
     }
 
     fun reload() {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("DiagnosticsViewModel.reload") {
             _entries.value = withContext(Dispatchers.IO) { load() }
         }
     }

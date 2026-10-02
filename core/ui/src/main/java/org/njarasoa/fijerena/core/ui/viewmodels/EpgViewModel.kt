@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
@@ -21,6 +23,7 @@ import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -70,14 +73,18 @@ class EpgViewModel(
     private var searchJob: Job? = null
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgViewModel.init", onError = ::showError) {
             repository = AppContainer.getInstance(context).getMediaRepository()
             loadEpgDataInternal(currentDate)
         }
     }
 
+    private fun showError(e: Throwable) {
+        _uiState.value = UiState.Error(friendlyErrorMessage(e, context, AppSettings(context).isDevMode))
+    }
+
     fun loadEpgData(date: LocalDate = currentDate) {
-        viewModelScope.launch {
+        viewModelScope.launchGuarded("EpgViewModel.loadEpgData", onError = ::showError) {
             if (!::repository.isInitialized) {
                 repository = AppContainer.getInstance(context).getMediaRepository()
             }

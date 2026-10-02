@@ -11,6 +11,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.trySetForeground
 
 /**
  * WorkManager worker for periodic Xtream catalog sync (all device types).
@@ -54,7 +55,7 @@ class XtreamSyncWorker(
     }
 
     override suspend fun doWork(): Result {
-        setForeground(getForegroundInfo())
+        trySetForeground(TAG)
 
         val providerRepo = ProviderRepository(applicationContext)
         val providers = providerRepo.getAllProvidersList()
@@ -92,6 +93,7 @@ class XtreamSyncWorker(
     }
 
     companion object {
+        private const val TAG = "XtreamSyncWorker"
         private const val CHANNEL_ID = "xtream_sync"
         private const val NOTIFICATION_ID = 0x5854_0001
         const val MAX_RETRIES = 5

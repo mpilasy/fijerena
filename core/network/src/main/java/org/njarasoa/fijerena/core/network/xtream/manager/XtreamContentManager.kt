@@ -579,6 +579,9 @@ class XtreamContentManager(
                         throw e
                     } catch (e: Exception) {
                         android.util.Log.e("XtreamContentManager", "Error syncing data", e)
+                        // Fails this task's deferred, so syncAll() reports the run as failed and the
+                        // freshness stamp above stays unwritten (R-08).
+                        throw e
                     }
                 }
             }
@@ -719,6 +722,8 @@ class XtreamContentManager(
                         throw e
                     } catch (e: Exception) {
                         android.util.Log.e("XtreamContentManager", "Error syncing streams", e)
+                        // See syncCategories: the failure must reach syncAll() (R-08).
+                        throw e
                     }
                 }
             }
@@ -832,6 +837,8 @@ class XtreamContentManager(
                         throw e
                     } catch (e: Exception) {
                         android.util.Log.e("XtreamContentManager", "Error syncing series", e)
+                        // See syncCategories: the failure must reach syncAll() (R-08).
+                        throw e
                     }
                 }
             }

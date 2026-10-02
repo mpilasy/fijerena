@@ -1,6 +1,6 @@
 # Next-Level Rock-Solid Resilience & Professionalism Plan
 
-**Status:** In progress. Phase 0 done 2026-10-02 (R-07, R-19, R-10); R-10 verified on the TV emulator. Phase 1 done 2026-10-02 (R-02, R-03, R-17, R-01); R-01 verified on the TV emulator. Phase 0's GitHub Actions run passed (JDK 21, Lint). Every finding was traced in source at `33ffd673`; none of Phases 1-6 has been reproduced on a device yet.
+**Status:** In progress. Phase 0 done 2026-10-02 (R-07, R-19, R-10); R-10 verified on the TV emulator. Phase 1 done 2026-10-02 (R-02, R-03, R-17, R-01); R-01 verified on the TV emulator. Phase 0's GitHub Actions run passed (JDK 21, Lint). Phase 2 code done 2026-10-02 (R-09, R-25, R-08, R-11); 449 unit tests. Every finding was traced in source at `33ffd673`; none of Phases 1-6 has been reproduced on a device yet.
 **Date:** 2026-10-02
 **Scope:** `core:player`, `core:network`, `core:ui`, `tv`, `mobile`, manifests, CI. The sync server only where the client depends on it.
 **Goal:** Close the remaining crash loops, silent data loss and silent failures; make focus and error recovery on TV dependable; and add the guardrails (exception boundaries, crash-loop safe mode, CI gates) that keep it that way.
@@ -122,12 +122,14 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 - **Where:** `XtreamSyncWorker.kt:57` and `EpgFtsRebuildWorker.kt:57` call `setForeground(getForegroundInfo())` unguarded. `EpgSyncWorker.kt:68-75` has the guarded version.
 - **Impact:** on Google TV and Android 12+, a background start refused with `ForegroundServiceStartNotAllowedException` fails the whole run. The catalogue then isn't refreshed until the next period, and the FTS rebuild left by an interrupted run isn't retried with backoff.
 - **Fix:** extract `trySetForeground()` (log it, record it in `CrashLog`, then continue) and use it in all three workers. A unit test asserts that each worker's `doWork` reaches its body when `setForeground` throws.
+- **Done 2026-10-02 (Phase 2):** `CoroutineWorker.trySetForeground(tag)` (`core:network/TrySetForeground.kt`) in all three workers; `EpgSyncWorker`'s inline copy removed. Tests: `TrySetForegroundTest` (3, including `EpgFtsRebuildWorker` still rebuilding when `setForeground` throws); the other two workers use the same helper but have no worker-level test (their bodies need the network).
 
 #### R-25: `PlaybackViewModel.launchServiceAction` has no catch-all [P3, downgraded from the draft's P1] (draft F-04)
 - **Complexity:** Low · **Risk:** Low — one catch clause.
 - **Where:** `PlaybackViewModel.kt:238-250`.
 - **Correction:** the track, quality and subtitle calls already bounds-check group and track indices and return early when the session is null (`StreamingPlaybackService.kt:936-1075`). A runtime exception from Media3 here is possible, but no trigger was found.
 - **Fix (defence in depth, folded into R-09):** a catch-all that records to `CrashLog`, after the `CancellationException` rethrow.
+- **Done 2026-10-02 (Phase 2):** as above.
 
 ### C. Provider & sync state (architect)
 
@@ -151,6 +153,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 - **Where:** `XtreamContentManager.syncStreams`/`syncSeries`/`syncCategories` catch every exception and only log it (`:719-722`, `:832-835`). `XtreamMediaProvider.syncAll` (`:1007-1020`) awaits the results and returns a delta. `ProviderSyncRunner.syncProvider` (`ProviderSyncRunner.kt:59-107`) then returns `Outcome.Success`.
 - **Impact:** a timeout or cut connection halfway through `get_vod_streams`, or an expired account (HTTP 403 with `expectSuccess`), leaves `lastSyncError` null. Settings then shows "No changes since last sync" over a failed run, `XtreamSyncWorker` doesn't retry a transient error, and the 4 h freshness stamp blocks the next attempt.
 - **Fix:** each task records its failure (rethrow from `execute()` so `RefreshQueue` completes the deferred exceptionally, keeping `CancellationException` separate). `syncAll` collects the per-task failures, and the runner classifies them as `Transient` or `Permanent` as it already does for `connect()`. Partial success still commits what arrived. Repro: jellyxtream on the host with `tc qdisc` or a kill during `get_vod_streams`.
+- **Done 2026-10-02 (Phase 2):** the three sync tasks rethrow after logging, so `RefreshQueue` completes their deferreds exceptionally; the 4 h freshness stamp is written only at the end of a successful task. `syncAll` waits for all six (`awaitCatalogTasks`, cancellation rethrown), still runs the exclusion pass, and throws `CatalogSyncException(failures)`; `ProviderSyncRunner` counts it transient if any failure is (IOException family → in-run retries, then `XtreamSyncWorker` `Result.retry()`), permanent otherwise (401/403), message "Catalog sync failed. <reason>" (`error_catalog_sync_failed`, en/fr/mg). Every caller already goes through `syncProvider`, which never throws, and records `updateSyncStats`. A failed task keeps the batches it flushed and never runs its delete phase; the partial delta is dropped (Settings shows the error, not a delta). Each in-run retry downloads the whole catalogue again — up to 3 downloads before the error shows on a flaky line. Tests: `CatalogSyncFailureTest` (8). Not yet reproduced on a device.
 
 #### 🆕 R-18: Watch progress is pushed to the sync server every ~13 s while playing [P2, CONFIRMED mechanism]
 - **Complexity:** Low · **Risk:** Medium — small change in SyncManager, but cross-device resume lags by up to 60 s and pause/stop must still flush.
@@ -168,6 +171,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
   1. A `launchGuarded {}` extension for `viewModelScope` (and `rememberCoroutineScope`) that rethrows cancellation, records to `CrashLog` and turns a failure into the screen's `Error` state. Adopt it in the `init` blocks first.
   2. A CI grep gate (alongside `check-cancellation.sh`) that rejects new bare `viewModelScope.launch` in `core/ui/viewmodels`, with an allow-list that only shrinks.
   3. `applyRemoteSetting` goes through the same clamps and parsers as the setters, and drops a value it can't parse.
+- **Done 2026-10-02 (Phase 2):** `CoroutineScope.launchGuarded(name, context, start, onError, block)` in `core:ui/utils` runs the block in `coroutineScope` (so a failing child is caught too), rethrows cancellation, logs, records `coroutine <name>` in `CrashLog` and calls `onError`. Converted: all 12 sites of `CategoryViewModel` (init moved to a retryable `startRepository()` that shows `UiState.Error`; `repositoryDeferred` is deliberately not failed, since the Live TV preview panels await it from composition and would crash), `StreamLoaderViewModel` (init, `recordHistory`, `toggleFavorite`, history/enrich jobs, `stopPlayback` keeping ATOMIC + NonCancellable; `stopPlaybackAwaited` got its own try), `SettingsViewModel.pruneDatabase`, `EpgManagementViewModel`, `EpgViewModel`, `EpgBrowserViewModel`, `SearchViewModel` init, `DiagnosticsViewModel`. The setters turned out to validate nothing, so `applyRemoteSetting` gained its own checks: `AppSettings.parseRefreshTime` (HH:mm, 0-23/0-59), the interval must be one of `EPG_REFRESH_INTERVAL_OPTIONS` (0 would schedule every 15 minutes, so dropped rather than clamped), theme non-blank; anything else is dropped and the local value stays. `calculateNextRefreshTime` uses the same parser (malformed → no schedule). Gate: `scripts/check-viewmodel-launch.sh` + allow-list (98 → 60 bare launches in 14 files; `ProviderViewModel`/`SettingsViewModel` init still bare), in CI after the cancellation gate. Tests: `LaunchGuardedTest` (5), `AppSettingsRemoteSettingTest` (5). Composition-scope sites in tv/mobile not swept. Not yet run on a device.
 
 #### 🆕 R-07: Exported debug receivers allow account takeover [P1, CONFIRMED, security]
 - **Complexity:** Low · **Risk:** Low — manifest only; check the adb debug commands still work (shell holds DUMP).
@@ -308,7 +312,7 @@ Order: first stop data loss and launch crashes, then make failures visible and r
 3. **R-01** refuse-to-open screen for a newer `providers.db`, with explicit reset. Lands only after R-02.
 - **Acceptance:** emulator install of an older build over a newer `providers.db` → "newer version" screen, no crash, `xtream_v2.db` rows intact. Full `/data` → app starts, sweep skipped and logged. Unit test: empty, then repopulated, `providers.db` → `watch_state` and `favorite_state` row counts unchanged.
 
-### Phase 2: Silent failures become visible (P1)
+### Phase 2: Silent failures become visible (P1) — ✅ code done 2026-10-02 (not yet run on a device)
 **Complexity:** Medium · **Risk:** Medium — changes error semantics; failures that were hidden will now show, so expect new user-visible errors.
 1. **R-09** `launchGuarded` + `init` blocks + validated `applyRemoteSetting` + grep gate.
 2. **R-08** catalogue sync failures propagate, with transient/permanent classification.

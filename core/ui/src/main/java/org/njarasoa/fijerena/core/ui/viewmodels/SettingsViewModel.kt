@@ -10,9 +10,11 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 data class SettingsUiState(
     val providerName: String = "",
@@ -201,7 +203,17 @@ class SettingsViewModel(
 
     /** Settings → "Shrink Database" — see [ProviderRepository.pruneOrphanedCatalogData]. */
     fun pruneDatabase() {
-        viewModelScope.launch {
+        // A failed shrink (full disk, locked database) ends the spinner with the reason instead of crashing.
+        viewModelScope.launchGuarded(
+            "SettingsViewModel.pruneDatabase",
+            onError = { e ->
+                _uiState.value =
+                    _uiState.value.copy(
+                        isPruningDatabase = false,
+                        databaseMaintenanceMessage = friendlyErrorMessage(e, context, appSettings.isDevMode),
+                    )
+            },
+        ) {
             _uiState.value = _uiState.value.copy(isPruningDatabase = true, databaseMaintenanceMessage = null)
             val result = providerRepo.pruneOrphanedCatalogData(userRequested = true)
             val message =

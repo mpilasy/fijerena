@@ -15,7 +15,9 @@ import org.njarasoa.fijerena.core.network.tmdb.TitleMatcher
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.tmdb.TmdbImagesResponse
 import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
+import org.njarasoa.fijerena.core.network.xtream.CatalogSyncException
 import org.njarasoa.fijerena.core.network.xtream.SyncDelta
+import org.njarasoa.fijerena.core.network.xtream.awaitCatalogTasks
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.api.XtreamResponse
@@ -1003,6 +1005,9 @@ class XtreamMediaProvider(
      * Triggers a full sync of categories and streams/series.
      * Used by background worker. Returns how many rows actually changed, summed across all six
      * sync tasks — all-zero means the provider's catalog didn't change since the last sync.
+     *
+     * Throws [CatalogSyncException] if any task failed. The tasks that succeeded have committed
+     * their rows by then; the delta is dropped, since Settings shows the error instead of it.
      */
     suspend fun syncAll(): SyncDelta {
         val jobs =
@@ -1014,9 +1019,11 @@ class XtreamMediaProvider(
                 repository.syncStreams(XtreamStreamEntity.TYPE_VOD),
                 repository.syncSeries(),
             )
-        jobs.forEach { it.await() }
+        val failures = awaitCatalogTasks(jobs)
         repository.recomputeExclusions()
-        return repository.consumeSyncDelta()
+        val delta = repository.consumeSyncDelta()
+        if (failures.isNotEmpty()) throw CatalogSyncException(failures)
+        return delta
     }
 
     /** Total category count for [contentType], including any excluded by category filters — for "X of Y" UI counts. */
