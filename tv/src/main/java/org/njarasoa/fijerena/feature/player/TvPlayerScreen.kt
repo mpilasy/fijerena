@@ -50,6 +50,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.player.PlayerScreen
+import org.njarasoa.fijerena.ui.player.UpNextState
 import org.njarasoa.fijerena.ui.theme.*
 import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 
@@ -289,13 +290,16 @@ fun TvPlayerScreen(
         }
     }
 
+    // Autoplay next episode — held here, not in PlayerScreen, which the Loading branch below
+    // re-mounts while the next episode loads.
+    val upNextState = remember { UpNextState() }
     when (val state = streamState) {
         is StreamLoaderViewModel.StreamState.Loading -> {
             val previous = lastSuccessState
             if (previous == null) {
                 LoadingScreen()
             } else {
-                PlayerContent(previous, playbackViewModel, loaderViewModel, onBack)
+                PlayerContent(previous, playbackViewModel, loaderViewModel, onBack, upNextState)
             }
         }
         is StreamLoaderViewModel.StreamState.Error -> {
@@ -306,7 +310,7 @@ fun TvPlayerScreen(
             )
         }
         is StreamLoaderViewModel.StreamState.Success -> {
-            PlayerContent(state, playbackViewModel, loaderViewModel, onBack)
+            PlayerContent(state, playbackViewModel, loaderViewModel, onBack, upNextState)
         }
     }
 }
@@ -317,6 +321,7 @@ private fun PlayerContent(
     playbackViewModel: PlaybackViewModel,
     loaderViewModel: StreamLoaderViewModel,
     onBack: () -> Unit,
+    upNextState: UpNextState,
 ) {
     // The flyout offers channels to switch to, so the one already playing is filtered out —
     // unlike the split preview panel, which keeps it as the highlighted row. Held in display
@@ -366,6 +371,7 @@ private fun PlayerContent(
                 loaderViewModel.playNextEpisode(nextEp)
             }
         },
+        upNextState = upNextState,
     )
 }
 

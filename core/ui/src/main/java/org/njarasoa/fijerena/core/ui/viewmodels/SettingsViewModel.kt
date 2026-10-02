@@ -27,6 +27,7 @@ data class SettingsUiState(
     val themeId: String = "deep_night",
     val uiStyleId: String = "material",
     val isDevMode: Boolean = false,
+    val autoplayNextEpisode: Boolean = false,
     val language: String = "en",
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
     val uiScale: Float = AppSettings.DEFAULT_UI_SCALE,
@@ -52,6 +53,7 @@ class SettingsViewModel(
                 themeId = appSettings.themeId,
                 uiStyleId = appSettings.uiStyleId,
                 isDevMode = appSettings.isDevMode,
+                autoplayNextEpisode = appSettings.autoplayNextEpisode,
                 language = appSettings.language,
                 watchDelaySeconds = appSettings.watchDelaySeconds,
                 uiScale = appSettings.uiScale,
@@ -123,6 +125,12 @@ class SettingsViewModel(
     fun updateDevMode(enabled: Boolean) {
         appSettings.isDevMode = enabled
         _uiState.value = _uiState.value.copy(isDevMode = enabled)
+    }
+
+    /** The active profile's "Play next episode automatically". */
+    fun updateAutoplayNextEpisode(enabled: Boolean) {
+        appSettings.autoplayNextEpisode = enabled
+        _uiState.value = _uiState.value.copy(autoplayNextEpisode = enabled)
     }
 
     fun updateLanguage(language: String) {

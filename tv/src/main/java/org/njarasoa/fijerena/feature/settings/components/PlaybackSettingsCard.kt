@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
+import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
@@ -24,6 +25,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun PlaybackSettingsCard(
     watchDelaySeconds: Int,
     onWatchDelayChanged: (Int) -> Unit,
+    autoplayNextEpisode: Boolean,
+    onAutoplayNextEpisodeChanged: (Boolean) -> Unit,
     scale: Float,
 ) {
     Column {
@@ -70,5 +73,12 @@ fun PlaybackSettingsCard(
                 }
             }
         }
+        Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+        TvSwitchRow(
+            checked = autoplayNextEpisode,
+            onCheckedChange = onAutoplayNextEpisodeChanged,
+            label = stringResource(R.string.settings_autoplay_next_episode_title),
+            description = stringResource(R.string.settings_autoplay_next_episode_desc),
+        )
     }
 }

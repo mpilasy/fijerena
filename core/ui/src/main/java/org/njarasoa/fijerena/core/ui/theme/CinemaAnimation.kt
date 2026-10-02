@@ -22,6 +22,12 @@ object CinemaAnimation {
 
     /** How long the double-tap seek ripple pill stays up after the last tap in a burst. */
     const val seekRippleDismissMs = 600L
+
+    /** How long the "Up next" countdown runs before the next episode starts on its own. */
+    const val upNextCountdownMs = 10_000L
+
+    /** One step of a visible seconds countdown. */
+    const val countdownTickMs = 1_000L
     const val imageLoadCrossfadeMs = 300
     const val shimmerDurationMs = 1200
 

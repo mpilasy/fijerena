@@ -38,6 +38,7 @@ Movie details screen with plot, cast, director, genre, rating, year, duration, v
 Season accordion with episode list. Auto-expands the next unwatched season. Episode thumbnails, per-episode metadata, resume support. Series-level metadata with season fallback.
 - **TMDB Enrichment:** Fetches per-episode synopses from TMDB when available, ensuring high-quality metadata even when IPTV providers offer minimal descriptions.
 - **Episode Navigation:** Swipe (mobile) or D-pad Left/Right (TV) to jump between episodes directly from the player.
+- **Play next episode automatically** (Settings → Playback, per profile, off by default): when an episode ends and a next one exists — the one the player's Next button plays, into the next season if needed — an "Up next" card names it and counts down 10 s (`CinemaAnimation.upNextCountdownMs`), then plays it the way Next does (the ended episode is saved as watched first). The countdown pauses while the app is in the background and resumes on return, so the next episode never starts unseen; a phone in picture-in-picture keeps counting. "Play now" starts it at once; "Cancel" or Back returns to the episode list, as an ended episode always has. On TV the card takes focus on "Play now". Off, or with no next episode, the player leaves at the end as before; movies and Live TV are unaffected.
 - **Mark Watched:** TV — long-press an episode card (the existing D-pad long-press convention). Mobile — tap the watched badge itself, shown filled or outline.
 
 ### EPG Guide (TV Guide)
@@ -221,7 +222,7 @@ Position saved every 10 seconds (Live TV) or based on progress (VOD). On re-open
 - **Swipe up/down** = switch channel (Live TV only)
 - **Swipe right** = open category channel overlay (Live TV)
 - **Swipe left** = open last-watched channel overlay (Live TV)
-- **FF / Rewind buttons** = +1 min / −30s seek (VOD only, shown in controls bar when `duration > 0`)
+- **FF / Rewind buttons** = +5 min / −1 min seek (VOD only, shown in controls bar when `duration > 0`)
 
 ### Channel Overlays (Live TV)
 Two side-panel overlays available during Live TV playback:
@@ -277,8 +278,8 @@ Favorites and Last Watched/Continue Watching persist durably in SQLite via Room 
 ## Profiles
 
 "Who's watching?" picker at launch (and from the header avatar). Each profile has its own
-favourites, watch history, search history, category filters per provider, dev-mode switch and
-Jellyfin login;
+favourites, watch history, search history, category filters per provider, dev-mode switch,
+"Play next episode automatically" switch and Jellyfin login;
 providers, EPG sources and other settings are shared. Which profile is in use is per device.
 Each profile also remembers the provider it last picked (or added), on every device: switching to
 a profile moves the device to that provider. A profile that hasn't picked one yet, or whose
@@ -363,6 +364,7 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 | Cache Management | View size breakdown; clear per content type or all |
 | Shrink Database | Purges orphaned catalog rows from deleted providers and compacts `xtream_v2.db` with WAL truncation |
 | UI Scale | 70–100%; scales category grid and item cards |
+| Play next episode automatically | (Playback) Per profile and synced, off by default: an ended episode counts down 10 s, then plays the next one |
 | Developer Mode | Enables debug overlays and advanced settings |
 | Cellular Buffer Settings | (dev mode) Tune cellular buffer multipliers |
 

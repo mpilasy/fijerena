@@ -718,4 +718,10 @@
     <string name="provider_error_delete_failed">Tsy nahomby ny famafana ny mpanome</string>
     <string name="provider_error_update_failed">Tsy nahomby ny fanavaozana ny mpanome</string>
     <string name="provider_error_save_failed">Tsy nahomby ny fitehirizana ny mpanome</string>
+    <!-- Autoplay next episode (per profile) -->
+    <string name="settings_autoplay_next_episode_title">Alefaso ho azy ny fizarana manaraka</string>
+    <string name="settings_autoplay_next_episode_desc">Rehefa vita ny fizarana iray, manomboka ho azy ny manaraka aorian\'ny fanisana fohy. Ho an\'ity mombamomba ity.</string>
+    <string name="player_up_next_title">Manaraka</string>
+    <string name="player_up_next_countdown_format">Manomboka afaka %1$d s</string>
+    <string name="player_up_next_play_now">Alefaso izao</string>
 </resources>

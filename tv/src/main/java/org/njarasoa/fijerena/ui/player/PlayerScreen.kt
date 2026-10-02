@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -27,7 +28,10 @@ import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -39,7 +43,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -61,6 +67,7 @@ import org.njarasoa.fijerena.ui.player.components.overlays.TvChannelListOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.ControlHintsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvPlayerControlsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvStatsOverlay
+import org.njarasoa.fijerena.ui.player.components.overlays.TvUpNextOverlay
 import org.njarasoa.fijerena.ui.theme.Spacing
 import java.util.Date
 
@@ -80,6 +87,7 @@ fun PlayerScreen(
     onStreamSelected: ((MediaItem) -> Unit)? = null,
     nextEpisode: EpisodeItem? = null,
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
+    upNextState: UpNextState = remember { UpNextState() },
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentMetadata by viewModel.currentMetadata.collectAsStateWithLifecycle()
@@ -93,6 +101,21 @@ fun PlayerScreen(
 
     val state = rememberPlayerScreenState(context, currentMetadata)
 
+    // Autoplay next episode — see UpNextState.
+    val upNext = upNextState.episode
+    val playUpNext: () -> Unit = {
+        upNextState.episode?.let { next ->
+            upNextState.episode = null
+            upNextState.starting = true
+            onPlayNextEpisode?.invoke(next)
+        }
+    }
+    // Cancel leaves as an ended episode always has: back to the episode list.
+    val cancelUpNext: () -> Unit = {
+        upNextState.episode = null
+        onBack()
+    }
+
     // Proper BackHandler (not the onKeyEvent below) so this composes correctly whether
     // PlayerScreen is reached via nav (Screen.Player) or embedded full-screen inside
     // LiveTvSplitLayout's own BackHandler. A raw onKeyEvent consuming KEYCODE_BACK does not
@@ -103,6 +126,7 @@ fun PlayerScreen(
     // ever runs per press.
     BackHandler {
         when {
+            upNext != null -> cancelUpNext()
             state.scrubPositionMs != null -> state.scrubPositionMs = null
             state.showCategoryOverlay -> state.showCategoryOverlay = false
             state.showLastWatchedOverlay -> state.showLastWatchedOverlay = false
@@ -129,8 +153,8 @@ fun PlayerScreen(
     )
 
     // Ensure focus is requested when no overlays are visible
-    LaunchedEffect(state.showControls, state.showCategoryOverlay, state.showLastWatchedOverlay) {
-        val noOverlays = !state.showControls && !state.showCategoryOverlay && !state.showLastWatchedOverlay
+    LaunchedEffect(state.showControls, state.showCategoryOverlay, state.showLastWatchedOverlay, upNext) {
+        val noOverlays = !state.showControls && !state.showCategoryOverlay && !state.showLastWatchedOverlay && upNext == null
         if (noOverlays) {
             android.util.Log.i("PlayerScreen", "Requesting focus for main Box")
             state.focusRequester.requestFocus()
@@ -164,15 +188,24 @@ fun PlayerScreen(
                 // the OSD and toggled play/pause. Preview phase always wins that race.
                 .onPreviewKeyEvent { keyEvent ->
                     android.util.Log.i("PlayerScreen", "onPreviewKeyEvent: action=${keyEvent.nativeKeyEvent.action}, code=${keyEvent.nativeKeyEvent.keyCode}")
-                    handlePlayerKeyEvent(
-                        keyEvent = keyEvent,
-                        state = state,
-                        viewModel = viewModel,
-                        playbackState = playbackState,
-                        currentMetadata = currentMetadata,
-                        onNextChannel = onNextChannel,
-                        onPreviousChannel = onPreviousChannel,
-                    )
+                    if (upNext != null) {
+                        // The "Up next" card owns the D-pad: its focused buttons get every key
+                        // but Back, which is taken here, top-down, because a focused TV Button
+                        // swallows the first Back before BackHandler sees it (AGENTS.md → Back on TV).
+                        val isBackUp = keyEvent.key == Key.Back && keyEvent.type == KeyEventType.KeyUp
+                        if (isBackUp) cancelUpNext()
+                        isBackUp
+                    } else {
+                        handlePlayerKeyEvent(
+                            keyEvent = keyEvent,
+                            state = state,
+                            viewModel = viewModel,
+                            playbackState = playbackState,
+                            currentMetadata = currentMetadata,
+                            onNextChannel = onNextChannel,
+                            onPreviousChannel = onPreviousChannel,
+                        )
+                    }
                 },
     ) {
         // SurfaceView (EmbeddedPlayerSurface's default), always — full-screen playback is
@@ -216,11 +249,24 @@ fun PlayerScreen(
 
             // Natural end of a movie/episode (never fires for live TV — handleStreamEndedOrError
             // only emits Ended for !metadata.isLive) — leave the player instead of waiting on a
-            // manual Back press. EndedContent below still renders for the brief window before
-            // this fires.
+            // manual Back press, unless the profile plays the next episode automatically and
+            // there is one: then the "Up next" countdown below. EndedContent below still renders
+            // for the brief window before this fires.
             LaunchedEffect(currentPs) {
-                if (currentPs is PlaybackState.Ended) {
-                    onBack()
+                if (currentPs is PlaybackState.Ended && !upNextState.starting) {
+                    val autoplay = AppSettings(context.applicationContext).autoplayNextEpisode
+                    val next = upNextOnEnd(autoplay, nextEpisode)?.takeIf { onPlayNextEpisode != null }
+                    if (next != null) {
+                        state.showControls = false
+                        state.showStreamInfo = false
+                        state.showStats = false
+                        state.scrubPositionMs = null
+                        upNextState.episode = next
+                    } else {
+                        onBack()
+                    }
+                } else if (currentPs !is PlaybackState.Ended) {
+                    upNextState.starting = false
                 }
             }
 
@@ -231,7 +277,12 @@ fun PlayerScreen(
                         BufferingContent()
                     }
                 }
-                is PlaybackState.Ended -> EndedContent(onBack)
+                is PlaybackState.Ended ->
+                    when {
+                        upNextState.starting -> BufferingContent()
+                        upNext == null -> EndedContent(onBack)
+                        else -> { /* The "Up next" card below */ }
+                    }
                 is PlaybackState.Error ->
                     ErrorContent(
                         error = ps,
@@ -369,6 +420,15 @@ fun PlayerScreen(
             )
         }
 
+        // Autoplay next episode: the countdown card, above the controls.
+        upNext?.let { next ->
+            TvUpNextOverlay(
+                episode = next,
+                onPlayNow = playUpNext,
+                onCancel = cancelUpNext,
+            )
+        }
+
         // Category streams overlay — slides in from the left
         AnimatedVisibility(
             visible = state.showCategoryOverlay,
@@ -407,4 +467,16 @@ fun PlayerScreen(
             )
         }
     }
+}
+
+/**
+ * Autoplay next episode: the episode the "Up next" countdown runs for, if any, and whether its
+ * playback was asked for and hasn't started yet — the player reads Ended until it does, which must
+ * neither bring back the "Playback ended" panel nor start a second countdown. Held by the route
+ * (TvPlayerScreen) because PlayerScreen is re-mounted while the next episode loads.
+ */
+@Stable
+class UpNextState {
+    var episode by mutableStateOf<EpisodeItem?>(null)
+    var starting by mutableStateOf(false)
 }

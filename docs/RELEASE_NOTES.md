@@ -1,5 +1,12 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Autoplay next episode
+**Release Date:** 2026-10-02
+
+- **Play next episode automatically:** a new switch in Settings → Playback, per profile and off by default. With it on, an episode that ends shows an "Up next" card naming the next one (the episode the player's Next button plays, crossing into the next season when needed) and counts down 10 seconds before playing it, saving the ended episode as watched first. "Play now" starts it straight away; "Cancel" or Back returns to the episode list, as before. The countdown pauses while the app is in the background (picture-in-picture keeps counting). On TV the card takes focus on "Play now". The choice follows the profile to every device of the sync group, like developer mode; older app versions ignore it. With it off, or at a show's last episode, nothing changes; movies and Live TV are unaffected.
+
+---
+
 ## Version: Fixes
 **Release Date:** 2026-10-02
 

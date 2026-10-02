@@ -137,6 +137,8 @@ On TV, `BackHandler` alone is **not** enough on a screen where a `Button`/`Surfa
 
 Use this pattern for any new TV screen whose base state has focusable buttons and a Back action — and for overlays/panels that *replace* that root (the episode detail panel in `EpisodeSelectionScreen` intercepts on the screen's root `Box` while it is open, since the `LazyColumn` with the interceptor isn't composed then).
 
+The player's "Up next" card (Play next episode automatically) follows it too: while the card is up, `PlayerScreen`'s root `onPreviewKeyEvent` takes Back (cancel: leave for the episode list, as an ended episode always has) and leaves every other key to the card's buttons, skipping the player's own D-pad handling. The card takes focus on "Play now" when it appears. On mobile a `BackHandler` cancels it.
+
 ## AuthViewModel
 
 Shared authentication state across Mobile and TV modules.

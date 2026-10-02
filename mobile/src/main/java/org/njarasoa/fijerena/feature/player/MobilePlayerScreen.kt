@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -60,6 +61,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -77,6 +79,7 @@ import org.njarasoa.fijerena.feature.player.components.LoadingScreen
 import org.njarasoa.fijerena.feature.player.components.MobileChannelListSheet
 import org.njarasoa.fijerena.feature.player.components.MobileControlsOverlay
 import org.njarasoa.fijerena.feature.player.components.MobileStatsOverlay
+import org.njarasoa.fijerena.feature.player.components.MobileUpNextOverlay
 import org.njarasoa.fijerena.feature.player.components.QualitySelectorDialog
 import org.njarasoa.fijerena.feature.player.components.SubtitleSelectorDialog
 
@@ -352,13 +355,43 @@ fun MobilePlayerContent(
         }
     }
 
+    // Autoplay next episode: the episode the "Up next" countdown runs for, if any. Play now
+    // clears it before the player leaves Ended, and this effect only re-runs when the playback
+    // state changes, so the same end never starts a second countdown.
+    var upNext by remember { mutableStateOf<EpisodeItem?>(null) }
+    val playUpNext: () -> Unit = {
+        upNext?.let { next ->
+            upNext = null
+            // Same path as the Next button: awaited finalise (the ended episode is saved as
+            // watched), then load the next one.
+            scope.launch {
+                finalizeSessionAndAwait(viewModel.playbackState.value, loaderViewModel)
+                loaderViewModel.playNextEpisode(next)
+            }
+        }
+    }
+    // Cancel leaves as an ended episode always has: back to the episode list.
+    val cancelUpNext: () -> Unit = {
+        upNext = null
+        onBack()
+    }
+    BackHandler(enabled = upNext != null) { cancelUpNext() }
+
     // Natural end of a movie/episode (never fires for live TV — handleStreamEndedOrError only
     // emits Ended for !metadata.isLive) — leave the player rather than sit on a frozen last
     // frame with no controls (see the `else` branch below that deliberately renders nothing
-    // for Ended).
+    // for Ended), unless the profile plays the next episode automatically and there is one:
+    // then the "Up next" countdown.
     LaunchedEffect(currentPs) {
         if (currentPs is PlaybackState.Ended) {
-            onBack()
+            val next = upNextOnEnd(appSettings.autoplayNextEpisode, (streamState as? StreamLoaderViewModel.StreamState.Success)?.nextEpisode)
+            if (next != null) {
+                showControls = false
+                showStats = false
+                upNext = next
+            } else {
+                onBack()
+            }
         }
     }
 
@@ -742,6 +775,15 @@ fun MobilePlayerContent(
                                 loaderViewModel.playNextEpisode(nextEp)
                             }
                         },
+                    )
+                }
+
+                // Autoplay next episode: the countdown card.
+                upNext?.let { next ->
+                    MobileUpNextOverlay(
+                        episode = next,
+                        onPlayNow = playUpNext,
+                        onCancel = cancelUpNext,
                     )
                 }
 

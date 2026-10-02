@@ -217,6 +217,10 @@ fun SettingsScreen(
                         onWatchDelayChanged = { seconds ->
                             viewModel.updateWatchDelay(seconds)
                         },
+                        autoplayNextEpisode = uiState.autoplayNextEpisode,
+                        onAutoplayNextEpisodeChanged = { enabled ->
+                            viewModel.updateAutoplayNextEpisode(enabled)
+                        },
                         scale = scale,
                     )
                 }
