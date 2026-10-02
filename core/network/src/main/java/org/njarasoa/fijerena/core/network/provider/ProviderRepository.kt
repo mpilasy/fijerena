@@ -93,6 +93,16 @@ class ProviderRepository(
             }
         }
 
+        /**
+         * Keyed by (providerId, profileId): the category filters in each entry are that profile's.
+         * One for the whole process, shared by every instance: sync, Settings and the import each
+         * build their own ProviderRepository, and with a cache per instance a write through one
+         * left the others — `AppContainer.providerRepository` among them — serving the old
+         * settings until a restart. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md
+         * → R-06 step 1.
+         */
+        private val settingsCache = java.util.concurrent.ConcurrentHashMap<Pair<Long, String>, ProviderSettings>()
+
         private const val KEY_USERNAME = "username"
         private const val KEY_PASSWORD = "password"
         private const val KEY_JELLYFIN_TOKEN = "jellyfin_token"
@@ -130,8 +140,6 @@ class ProviderRepository(
     // Keyed by file name: one provider can have several — see [credsFileName].
     private val encryptedPrefsCache = java.util.concurrent.ConcurrentHashMap<String, android.content.SharedPreferences>()
 
-    // Keyed by (providerId, profileId): the category filters in each entry are that profile's.
-    private val settingsCache = java.util.concurrent.ConcurrentHashMap<Pair<Long, String>, ProviderSettings>()
     private val filtersStore = CategoryFiltersStore(context)
 
     fun getAllProviders(): Flow<List<ProviderEntity>> = dao.getAllProviders()
