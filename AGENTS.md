@@ -384,3 +384,7 @@ Hard-won lessons from production debugging. Read these before making changes in 
 ### Category references treated as streams on long-press
 **Context:** Virtual categories render entries as `MediaItem` with `providerData["isCategoryRef"] = "true"`. Long-press handlers were creating `Stream` favorite targets for ALL items.
 **Fix:** Always check `providerData["isCategoryRef"]` before deciding the favorite target type.
+
+### FTS count crossed with an indexed IN-list took seconds per query
+**Context:** Search showed "Loading categories…" (the default `UiState.Loading()` label) for ~45 s for "the" on a 250k-row Xtream provider. Not the category load and not the search: `countExcludedByFts` (`s.rowid IN (fts MATCH) AND s.categoryId IN (excluded categories)`) let SQLite pick the `(providerId, type, categoryId)` index and probe every excluded category × every FTS docid. Host test DB: 4.95 s (VOD) + 5.6 s (Live) for "the*" vs ~20 ms for the LIMIT 200 search itself.
+**Fix:** `+s.categoryId` (unary plus disables that index) so the FTS docids drive the lookup: 0.05 s / 0.02 s, same counts. **Rule:** when a query combines an FTS `rowid IN (… MATCH …)` with another `IN` list on an indexed column, run `EXPLAIN QUERY PLAN` on a full-size catalogue with a short common prefix before shipping.

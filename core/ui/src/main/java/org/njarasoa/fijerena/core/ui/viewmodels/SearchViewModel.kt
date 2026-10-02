@@ -303,6 +303,7 @@ class SearchViewModel(
                 // Return server results
                 val elapsed = System.currentTimeMillis() - startTime
                 val sortedResults = sortResults(serverResults, normalizedQuery, parsedQuery)
+                android.util.Log.i("SearchViewModel", "Search \"$query\": ${sortedResults.size} results in ${elapsed}ms")
                 _uiState.value =
                     UiState.Success(
                         categoryResults = matchingCategories,
@@ -348,6 +349,7 @@ class SearchViewModel(
 
             val finalResults = sortResults(results, normalizedQuery, parsedQuery).take(TARGET_RESULTS)
             val elapsed = System.currentTimeMillis() - startTime
+            android.util.Log.i("SearchViewModel", "Search \"$query\": ${finalResults.size} results in ${elapsed}ms")
             _uiState.value =
                 UiState.Success(
                     categoryResults = matchingCategories,

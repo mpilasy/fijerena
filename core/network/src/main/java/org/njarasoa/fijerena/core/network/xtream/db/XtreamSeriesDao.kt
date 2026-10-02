@@ -87,13 +87,14 @@ interface XtreamSeriesDao {
         includeExcluded: Boolean,
     ): List<XtreamSeriesEntity>
 
+    /** The unary `+` keeps SQLite off the categoryId index — see [XtreamStreamDao.countExcludedByFts]. */
     @Query("""
         SELECT COUNT(*) FROM xtream_series s
         WHERE s.rowid IN (
             SELECT docid FROM xtream_series_fts WHERE xtream_series_fts MATCH :query
         )
         AND s.providerId = :providerId
-        AND s.categoryId IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1)
+        AND +s.categoryId IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1)
     """)
     fun countExcludedByFts(
         providerId: Long,

@@ -184,13 +184,20 @@ interface XtreamStreamDao {
         includeExcluded: Boolean,
     ): List<XtreamStreamEntity>
 
+    /**
+     * The unary `+` on `s.categoryId` is load-bearing: without it SQLite drives the count from
+     * the (providerId, type, categoryId) index and probes every excluded category against every
+     * FTS docid — excluded categories × matches index seeks. For a short prefix like "the*" on a
+     * 250k-row catalogue that was ~5 s per type on a desktop and tens of seconds on a TV box,
+     * all spent before the search results could show.
+     */
     @Query("""
         SELECT COUNT(*) FROM xtream_streams s
         WHERE s.rowid IN (
             SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
         )
         AND s.providerId = :providerId AND s.type = :type
-        AND s.categoryId IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1)
+        AND +s.categoryId IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1)
     """)
     fun countExcludedByFts(
         providerId: Long,

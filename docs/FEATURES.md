@@ -53,11 +53,10 @@ Unified search across all content types (Live TV, Movies, TV Shows) and categori
 - **Collapsible Headers:** Each group (Live TV, Movies, TV Shows) can be expanded or collapsed to manage long result lists.
 - **Combined View:** Matches for both categories and individual streams are shown within their respective content type groups.
 
-### Xtream (two-phase client-side)
-1. **Phase 1 (instant):** Sweeps cached categories for matches
-2. **Phase 2 (network):** Fetches uncached categories in background
+### Xtream (local FTS)
+Each word becomes an FTS4 prefix term (`the*`) matched against the synced catalogue (`xtream_streams_fts` / `xtream_series_fts`), up to 200 results per content type; no network call. Matches in categories hidden by the provider's category filters are counted per type (the "N hidden" note on each group) with a second FTS query.
 
-Minimum 2 characters to trigger. Background pre-fetch warms cache on category screen load.
+Minimum 2 characters to trigger.
 
 ### Jellyfin (server-side)
 Native Jellyfin REST search. Returns movies and series matching the query.
