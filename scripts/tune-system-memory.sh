@@ -28,6 +28,12 @@ swapon -a
 echo "==> Starting zramswap service..."
 systemctl restart zramswap
 
+echo "==> Configuring noatime on root NVMe filesystem..."
+if grep -q 'ext4[[:space:]]\+defaults[[:space:]]' /etc/fstab; then
+    sed -i 's|ext4[[:space:]]\+defaults[[:space:]]|ext4    defaults,noatime |' /etc/fstab
+fi
+mount -o remount,noatime /
+
 echo "==> Done! Current status:"
 echo "--- Swappiness ---"
 cat /proc/sys/vm/swappiness
