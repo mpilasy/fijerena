@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.MediaType
@@ -551,6 +552,12 @@ class MediaRepository(
     suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> =
         provider?.getSeriesDetail(seriesId)
             ?: kotlin.Result.failure(Exception("No provider set"))
+
+    /** See [MediaProvider.fetchEpisodePlot]. */
+    suspend fun fetchEpisodePlot(
+        seriesId: SeriesId,
+        episode: EpisodeItem,
+    ): String? = provider?.fetchEpisodePlot(seriesId, episode)
 
     suspend fun getMovieDetail(movieId: String): kotlin.Result<MovieDetail> =
         provider?.getMovieDetail(movieId)

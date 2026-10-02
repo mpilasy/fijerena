@@ -25,6 +25,7 @@ import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
@@ -251,7 +252,7 @@ class XtreamMediaProvider(
                 // again. Without this the season fetches below repeat on every cold start, since
                 // their in-memory cache dies with the process.
                 val detail = result.value.toDomain(rawSeriesId).withPlots(repository.getPersistedEpisodePlots(id))
-                val tmdbSeriesId = result.value.info?.tmdb.asString().normalizeTmdbId()?.toIntOrNull()
+                val tmdbSeriesId = resolveSeriesTmdbId(result.value.info?.tmdb.asString(), cachedEntity?.tmdbId)
                 var enriched = detail
                 if (tmdb.hasApiKey() && tmdbSeriesId != null) {
                     if (detail.hasEpisodeWithoutPlot()) {
@@ -309,6 +310,33 @@ class XtreamMediaProvider(
                 kotlin.Result.failure(result.asThrowable())
             }
         }
+    }
+
+    /**
+     * The synopsis of [episode], or null when TMDB has none (or can't be asked). Playback calls this
+     * for an episode that has no plot yet — one the series screen never enriched, because its
+     * season list came from the 24 h cache or its info carried no TMDB id. It is the same season
+     * lookup [getSeriesDetail] runs, narrowed to the episode's season, and the result is persisted
+     * the same way so the next visit has it.
+     */
+    override suspend fun fetchEpisodePlot(
+        seriesId: SeriesId,
+        episode: EpisodeItem,
+    ): String? {
+        val id = seriesId.raw.toIntOrNull()
+        val season = episode.seasonNumber
+        val tmdbSeriesId = id?.let { resolveSeriesTmdbId(null, repository.getCachedSeriesEntity(it)?.tmdbId) }
+        val overview =
+            if (tmdb.hasApiKey() && season != null && tmdbSeriesId != null) {
+                fetchTmdbOverviews(tmdbSeriesId, setOf(season))[season to episode.episodeNumber]
+            } else {
+                null
+            }
+        if (overview != null) {
+            repository.persistEpisodeOverviews(mapOf(episode.id to listOf(episode.copy(metadata = episode.metadata.copy(plot = overview)))))
+            seriesDetailCache.remove(seriesId.raw)
+        }
+        return overview
     }
 
     private suspend fun fetchTvCertification(tmdbSeriesId: Int): String? =
@@ -927,3 +955,13 @@ class XtreamMediaProvider(
         private const val MIN_RELATED_TITLES = 3
     }
 }
+
+/**
+ * The TMDB id to enrich a series with: the one `get_series_info` carries, else the one the series
+ * listing stored. Some panels leave it out of the info block while the listing has it, which used to
+ * skip the whole TMDB enrichment — no episode synopses, certification or details — for that series.
+ */
+internal fun resolveSeriesTmdbId(
+    infoTmdb: String?,
+    storedTmdb: String?,
+): Int? = infoTmdb.normalizeTmdbId()?.toIntOrNull() ?: storedTmdb.normalizeTmdbId()?.toIntOrNull()

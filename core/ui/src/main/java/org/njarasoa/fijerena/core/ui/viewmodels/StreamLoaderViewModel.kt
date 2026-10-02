@@ -362,6 +362,7 @@ class StreamLoaderViewModel(
         var episodeLabel: String? = null
         var logoUrl: String? = null
         var nextEpisode: EpisodeItem? = null
+        var plotlessEpisode: EpisodeItem? = null
         if (contentType != ContentType.LIVE_TV) {
             val currentItem = currentStreams.find { it.id == streamId }
             description = currentItem?.metadata?.plot
@@ -373,7 +374,9 @@ class StreamLoaderViewModel(
                     val curEp = detail.episodes.values.firstNotNullOfOrNull { seasonEpisodes ->
                         seasonEpisodes.find { it.id == curEpisodeId }
                     }
-                    description = curEp?.metadata?.plot ?: detail.metadata.plot
+                    // Never the series' synopsis: it would read as this episode's.
+                    description = episodeDescription(curEp)
+                    plotlessEpisode = curEp?.takeIf { description == null }
                     curEp?.seasonNumber?.let { season ->
                         episodeLabel = "S$season:E${curEp.episodeNumber}"
                     }
@@ -409,6 +412,17 @@ class StreamLoaderViewModel(
                     nextEpisode = nextEpisode,
                     supportsAutoplayNext = repo.supportsAutoplayNextEpisode,
                 )
+        }
+
+        // The episode's synopsis hasn't been fetched yet: ask for it now and patch it in on arrival.
+        val missing = plotlessEpisode
+        val seriesRaw = seriesId
+        if (missing != null && seriesRaw != null) {
+            val plot = repo.fetchEpisodePlot(SeriesId(seriesRaw), missing)
+            val latest = _state.value
+            if (plot != null && latest is StreamState.Success && latest.streamId == streamId) {
+                _state.value = latest.copy(description = plot)
+            }
         }
     }
 
@@ -849,3 +863,6 @@ class StreamLoaderViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+/** The synopsis to show for [episode]: its own plot, or null — never the series' plot. */
+internal fun episodeDescription(episode: EpisodeItem?): String? = episode?.metadata?.plot?.takeIf { it.isNotBlank() }

@@ -30,6 +30,16 @@ interface MediaProvider {
      */
     suspend fun getCachedSeriesDetail(seriesId: SeriesId): SeriesDetail? = null
 
+    /**
+     * A synopsis for [episode] fetched on demand, or null when there is none or the provider has no
+     * source for it. Called when playback starts on an episode that has no plot yet, so the OSD can
+     * describe the episode rather than the show.
+     */
+    suspend fun fetchEpisodePlot(
+        seriesId: SeriesId,
+        episode: EpisodeItem,
+    ): String? = null
+
     suspend fun getMovieDetail(movieId: String): Result<MovieDetail>
 
     /**
