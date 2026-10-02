@@ -482,23 +482,72 @@ class EpgIndexer private constructor(
         }
 
     /**
-     * Perform the atomic swap from staging to primary tables.
+     * Move [sourceIds]' staging rows into the primary tables and rebuild FTS, in **one**
+     * transaction. In WAL mode a reader keeps seeing the last committed snapshot until the commit,
+     * so a search during this sees the old guide with the old FTS, then the new guide with the
+     * new FTS — never the new rows with the old FTS that a separate swap and rebuild exposed. That
+     * is why nothing is marked stale here, and why search keeps working through the whole refresh.
+     * A failure or a killed process rolls the swap and the rebuild back together.
      *
-     * Marks FTS stale here, not in [beginBulkIngestion] — this is the actual moment
-     * `epg_programme` (and therefore the FTS shadow table) is mutated on the staging path;
-     * ingestion itself only ever wrote to the staging tables. Marking earlier blocked search for
-     * the entire download+ingest window even though the live guide hadn't changed yet.
+     * Costs: the WAL grows by roughly the FTS size before it can checkpoint (the staging path is
+     * only taken with 1.5× the database size free — see EpgFileManager.shouldUseStaging), and
+     * other writers wait on the write lock for the rebuild, as they did before.
+     *
+     * Throws if the swap or the rebuild fails, leaving the previous guide and state in place.
      */
-    suspend fun executeSwapToMain(sourceIds: List<Long>) = withContext(Dispatchers.IO) {
-        val db = EpgIndexDatabase.getInstance(context)
-        val dao = db.epgIndexDao()
-        writeMutex.withLock {
-            markFtsStale()
-            Log.i(TAG, "executeSwapToMain: swapping staging to primary for sources: $sourceIds")
-            dao.executeSwap(sourceIds)
-            Log.i(TAG, "executeSwapToMain: swap complete")
+    suspend fun swapAndRebuildFts(sourceIds: List<Long>) =
+        withContext(Dispatchers.IO) {
+            val startMs = System.currentTimeMillis()
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            writeMutex.withLock {
+                val previousState = _state.value
+                val sdb = db.openHelper.writableDatabase
+                _state.value = EpgIndexState.Optimizing(dao.getChannelCount(), dao.getProgrammeCount())
+
+                // Same pragmas as rebuildFtsAndUpdateState(), set outside the transaction: SQLite
+                // refuses to change `synchronous` inside one.
+                sdb.execPragma("PRAGMA wal_checkpoint(PASSIVE)")
+                sdb.execSQL("PRAGMA synchronous = OFF")
+                sdb.execSQL("PRAGMA cache_size = -16000")
+                val now = System.currentTimeMillis()
+                var channelCount = 0
+                var programmeCount = 0
+                try {
+                    Log.i(TAG, "swapAndRebuildFts: swapping and rebuilding FTS for sources: $sourceIds")
+                    db.withTransaction {
+                        dao.executeSwap(sourceIds)
+                        // Same connection and thread as the transaction (Room runs this block on
+                        // its transaction thread), so the rebuild commits or rolls back with the swap.
+                        sdb.execSQL("INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')")
+                        channelCount = dao.getChannelCount()
+                        programmeCount = dao.getProgrammeCount()
+                        dao.insertMetadata(
+                            EpgIndexMetadata(
+                                fileSizeBytes = 0,
+                                fileLastModifiedMs = 0,
+                                indexedAtMs = now,
+                                channelCount = channelCount,
+                                programmeCount = programmeCount,
+                                timezoneOffsetHours = 0,
+                            ),
+                        )
+                    }
+                } catch (e: Throwable) {
+                    // Rolled back: the previous guide is still the live one.
+                    _state.value = previousState
+                    throw e
+                } finally {
+                    sdb.execSQL("PRAGMA synchronous = NORMAL")
+                    sdb.execSQL("PRAGMA cache_size = -2000")
+                }
+                // The rebuild covered every row, so a flag left by an earlier interrupted rebuild
+                // is resolved too. Before Indexed, as in rebuildFtsAndUpdateState().
+                markFtsClean()
+                _state.value = EpgIndexState.Indexed(channelCount, programmeCount, now)
+            }
+            Log.i(TAG, "swapAndRebuildFts: complete in ${System.currentTimeMillis() - startMs}ms")
         }
-    }
 
     /**
      * Clear all staging tables.
@@ -559,7 +608,7 @@ class EpgIndexer private constructor(
                         // path) no longer keep the FTS shadow table in sync. Mark stale now, not
                         // just when rebuildFtsAndUpdateState() later runs, so a search mid-ingest
                         // gets "still updating" instead of silently querying a mismatched index.
-                        // The staging path marks stale later instead — see executeSwapToMain().
+                        // The staging path never marks stale — see swapAndRebuildFts().
                         markFtsStale()
                     }
 

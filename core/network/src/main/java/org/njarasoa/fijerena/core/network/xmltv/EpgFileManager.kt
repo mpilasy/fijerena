@@ -769,7 +769,7 @@ class EpgFileManager private constructor(
                 indexer.markFtsClean()
             }
 
-            // Perform Atomic Swap before FTS rebuild
+            // Swap and FTS rebuild in one transaction, so search keeps working throughout.
             if (anyIngested && useStaging) {
                 _state.value = MultiSourceState.Finalizing(
                     phase = "Swapping to primary guide\u2026",
@@ -777,11 +777,11 @@ class EpgFileManager private constructor(
                     totalProgrammes = totalProgrammes,
                     totalDownloadBytes = totalBytes,
                 )
-                // A skipped (unchanged) source must never appear here: executeSwapToMain deletes
+                // A skipped (unchanged) source must never appear here: swapAndRebuildFts deletes
                 // that source's primary rows before transferring staging, and staging has nothing
                 // for it \u2014 including it would wipe its guide instead of leaving it alone.
                 val syncedIds = allStats.filter { it.error == null && !it.unchanged }.map { it.sourceId }
-                indexer.executeSwapToMain(syncedIds)
+                indexer.swapAndRebuildFts(syncedIds)
             }
 
             if (anyIngested) {
@@ -791,9 +791,10 @@ class EpgFileManager private constructor(
             // FTS rebuild runs in the caller's coroutine so the WorkManager wake lock
             // covers the full operation. Killing the process mid-rebuild leaves fts_stale=true
             // persisted to prefs, which on Shield causes permanent LIKE fallback via Doze.
+            // The staging path already rebuilt inside swapAndRebuildFts() above.
             if (anyIngested) {
                 try {
-                    indexer.rebuildFtsAndUpdateState()
+                    if (!useStaging) indexer.rebuildFtsAndUpdateState()
                     indexer.incrementalVacuum()
                 } catch (e: CancellationException) {
                     throw e
@@ -805,7 +806,7 @@ class EpgFileManager private constructor(
             // Restore the FTS sync triggers dropped in beginBulkIngestion() only now, after both
             // the staging→primary swap and the full FTS rebuild — not before. 'rebuild' above
             // repopulates FTS by scanning epg_programme directly and doesn't need the triggers at
-            // all, so leaving them off through the swap means executeSwapToMain()'s bulk
+            // all, so leaving them off through the swap means swapAndRebuildFts()'s bulk
             // INSERT…SELECT no longer fires an AFTER_INSERT trigger per row, only to have the
             // very next step throw all of that away and rebuild from scratch anyway. Still
             // unconditional (not inside `if (anyIngested)`): a run where nothing changed still
@@ -999,7 +1000,7 @@ class EpgFileManager private constructor(
                     totalDownloadBytes = stats.downloadBytes,
                 )
 
-            // Perform Atomic Swap before FTS rebuild (only if staging was used). `unchanged` must
+            // Swap and FTS rebuild in one transaction (only if staging was used). `unchanged` must
             // be excluded here \u2014 staging has nothing for a skipped source, so swapping it would
             // delete its primary rows and transfer nothing back (see processAllSourcesInternal).
             if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0) && useStaging) {
@@ -1009,17 +1010,17 @@ class EpgFileManager private constructor(
                     totalProgrammes = stats.programmesIngested,
                     totalDownloadBytes = stats.downloadBytes,
                 )
-                indexer.executeSwapToMain(listOf(sourceId))
+                indexer.swapAndRebuildFts(listOf(sourceId))
             }
 
             if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
                 invalidateXmltvCache(listOf(source), listOf(stats))
             }
 
-            // Inline — same reasoning as processAllSourcesInternal.
+            // Inline — same reasoning as processAllSourcesInternal (staging path already rebuilt).
             if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
                 try {
-                    indexer.rebuildFtsAndUpdateState()
+                    if (!useStaging) indexer.rebuildFtsAndUpdateState()
                     indexer.incrementalVacuum()
                 } catch (e: CancellationException) {
                     throw e

@@ -1,6 +1,6 @@
 # EPG Search During Refresh Plan
 
-**Status:** In progress — Phase 1 landed (2026-10-02)
+**Status:** In progress — Phases 1-2 landed (2026-10-02)
 
 While an EPG refresh was running, the EPG browser's programme search showed nothing — no
 results and no reason. The user asked for search to work through every stage of a refresh, and
@@ -53,6 +53,12 @@ screen previously drew nothing at all for this state (it fell to `else -> {}`).
 - Cost: the WAL grows by roughly the FTS size before it can checkpoint. The staging path is only
   taken with 1.5× the database size free, which covers it. Other EPG writers wait on the writer
   lock for the rebuild, as before.
+
+**Done (2026-10-02).** `executeSwapToMain` is gone (its only callers were the two swap sites).
+A failed rebuild on the staging path now fails the refresh (the swap rolls back with it, the old
+guide stays live) instead of being logged and leaving a swapped guide with a stale index. The
+Finalizing phase label stays "Swapping to primary guide…" — the screens map that exact text to a
+translated string.
 
 ## Phase 3 — low-storage refresh: slower title search
 

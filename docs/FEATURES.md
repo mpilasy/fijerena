@@ -81,7 +81,7 @@ Standalone programme title search across all indexed XMLTV data.
 - Results grouped by start date (Today, Tomorrow, weekday name, or "EEEE, MMM d" for later dates), then by programme within each date
 - Time window: −1 to +6 days from now, max 500 results per query
 - SQLite FTS4 MATCH for fast search (<100ms): a raw query first, then a sanitized "safe" AND-style retry if that returns nothing — no LIKE or XML-scan fallback
-- **During a refresh:** a search that can't run yet says why ("The guide is updating…" or, after an interrupted rebuild, "The search index is being rebuilt…") and reruns by itself once the index is ready. Opening the browser mid-refresh no longer claims there is no guide.
+- **During a refresh:** search keeps working on the previous guide — the new guide and its FTS index are switched in together, in one transaction. When it can't (a low-storage refresh writing straight into the guide, or an interrupted rebuild), a search says why ("The guide is updating…" or, after an interrupted rebuild, "The search index is being rebuilt…") and reruns by itself once the index is ready. Opening the browser mid-refresh no longer claims there is no guide.
 - Programme titles and channel names scroll with `basicMarquee` when they overflow
 - Mobile: sticky date headers with expandable programme cards showing up to 3 airings (tap to expand all)
 - TV: date headers with GlassPanel programme cards in a LazyColumn

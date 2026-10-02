@@ -162,7 +162,7 @@ Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast
 **Index:** `idx_channel_source` on `(source_id)`
 
 ### Table: `epg_channel_staging`
-Mirrors `epg_channel` exactly (same columns). Used as a write target during ingestion when staging is enabled, so the live `epg_channel` table stays queryable until the atomic swap (`executeSwapToMain()`) promotes staged rows.
+Mirrors `epg_channel` exactly (same columns). Used as a write target during ingestion when staging is enabled, so the live `epg_channel` table stays queryable until the atomic swap (`swapAndRebuildFts()`, which rebuilds FTS in the same transaction) promotes staged rows.
 
 **Index (added v17):** `idx_channel_staging_source` on `(source_id)` — backs `EpgIndexDao`'s per-source staging queries (`clearStagingChannelsForSources`, `transferChannelsFromStaging`); `source_id` is the second column of the primary key, not the leading one, so those queries had no usable index before this.
 

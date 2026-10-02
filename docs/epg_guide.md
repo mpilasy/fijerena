@@ -81,7 +81,7 @@ A refresh that would re-download and re-parse an unchanged source is pure waste.
 
 A confirmed-unchanged source:
 - skips `EpgIndexer.ingestFromStream` entirely,
-- is **excluded** from `executeSwapToMain`'s id list at every call site — including it would delete its primary rows and transfer nothing back, since staging was never populated for it,
+- is **excluded** from `swapAndRebuildFts`'s id list at every call site — including it would delete its primary rows and transfer nothing back, since staging was never populated for it,
 - carries its last known channel/programme counts forward via `EpgSourceDao.markUnchanged` rather than resetting them to zero,
 - is flagged `unchanged = true` in its result, which the EPG management screens render as "Unchanged" in place of download/ingest durations (which would otherwise be stale numbers from whenever it last actually ran).
 
@@ -179,7 +179,7 @@ epg_channel
 └── icon_url       TEXT?
 
 epg_channel_staging  (mirrors epg_channel; write target during staged ingestion,
-                      promoted by the atomic swap in executeSwapToMain())
+                      promoted by the atomic swap in swapAndRebuildFts())
 
 epg_programme
 ├── id               INTEGER  (PK, autoGenerate)
@@ -255,7 +255,8 @@ The FTS4 virtual table with `unicode61` tokenizer enables sub-100ms full-text se
 - `setIndexing()` — sets state to `Indexing` if not already `Indexed`. Called once before parallel ingestion begins to coordinate state across concurrent source processing.
 - `ingestFromStream(inputStream, sourceId, timezoneOverrideHours, onProgress)` — returns `IngestionStats(channelsIngested, programmesIngested)`. Uses 500-row batch INSERTs with Room `withTransaction`. Commits per-batch (not one giant transaction). Inserts channels with `IGNORE` conflict strategy, programmes with `REPLACE` on unique `(channel_id, start_epoch)`. Yields CPU between batches (`delay(5)` for channels, `delay(100)` for programmes) to avoid starving video playback. Skips programmes whose end time is before yesterday.
 - `ingestFromXtreamEpg(epgByStreamId, streamInfo, providerId)` — ingests EPG data from the Xtream API. Creates/upserts an `EpgSource` with `ingestMethod=XTREAM_API`, clears old data for that source, then batch-inserts.
-- `rebuildFtsAndUpdateState()` — rebuild FTS index and update metadata after all sources processed. Internally calls `markFtsStale()` at entry (so the old index remains valid during the dispatch gap, degrading only for the actual rebuild window) and `markFtsClean()` on success. Callers do not call these flags themselves. Triggers an update to `EpgPipelineStatsEntity` in `providers.db` with the final run summary.
+- `swapAndRebuildFts(sourceIds)` — staging path: moves the sources' staging rows into the primary tables, rebuilds FTS and writes metadata in **one** transaction. WAL readers see the old guide + old FTS until the commit, then the new pair, so nothing is marked stale and search keeps working through the refresh. Failure rolls both back and restores the previous state; throws.
+- `rebuildFtsAndUpdateState()` — direct (low-storage) path and standalone rebuilds: rebuild FTS index and update metadata after all sources processed. Internally calls `markFtsStale()` at entry (so the old index remains valid during the dispatch gap, degrading only for the actual rebuild window) and `markFtsClean()` on success. Callers do not call these flags themselves. Triggers an update to `EpgPipelineStatsEntity` in `providers.db` with the final run summary.
 - `clearAll()` — saves source configs, destroys DB file (instant regardless of data size), Room recreates schema, restores sources with stats reset
 - `purgeOldProgrammes(cutoffEpoch)` — delete old programmes with FTS rebuild and incremental vacuum
 - `incrementalVacuum()` — reclaims free pages via `PRAGMA incremental_vacuum`
@@ -271,7 +272,7 @@ Uses DB destroy+recreate instead of `DELETE FROM` (which takes 10+ minutes on 4M
 
 The ViewModel uses a `_dbGeneration` counter with `flatMapLatest` so the sources `Flow` re-subscribes after DB recreation.
 
-After all sources are ingested, `EpgFileManager` launches `rebuildFtsAndUpdateState()` in a background coroutine. The old FTS index remains usable until the rebuild actually starts (stale is set inside the function at entry, not at dispatch time), so a search only throws during the actual rebuild window (`isFtsStale()`) rather than during the scheduling gap:
+After all sources are ingested, `EpgFileManager` runs (inline, under the worker's wake lock) `swapAndRebuildFts()` on the staging path — search is never blocked — or `rebuildFtsAndUpdateState()` on the direct path, where FTS has been stale since `beginBulkIngestion()` dropped its triggers:
 ```sql
 INSERT INTO epg_programme_fts(epg_programme_fts) VALUES('rebuild')
 ```
@@ -327,7 +328,7 @@ Standalone screen for full-text searching across the entire XMLTV dataset. Acces
 1. **Raw FTS query** — preserves user-provided FTS operators (OR/NEAR/NOT), appends a prefix wildcard `*` to the last token. Typically <100ms.
 2. **Safe FTS retry** — if the raw query returns nothing (or throws, e.g. malformed syntax), strips `" * ( ) :` and retries as a quoted AND-style phrase query.
 
-If the index isn't built yet (`EpgIndexState.NotIndexed`), `search()` returns `null` directly. If the FTS index is mid-rebuild (`isFtsStale()`), the query throws rather than scanning — the old index remains usable right up until the rebuild actually starts.
+If the index isn't built yet (`EpgIndexState.NotIndexed`), `search()` returns `null` directly. If the FTS index is stale (`isFtsStale()` — direct-path refresh, or an interrupted rebuild being redone), the query throws `EpgIndexBusyException`; `EpgBrowserViewModel` shows why (`UiState.IndexBusy`) and reruns the query once the index is `Indexed`. The staging path never marks it stale.
 
 All queries time-windowed: past 1 day to future 6 days. Max 500 results.
 
