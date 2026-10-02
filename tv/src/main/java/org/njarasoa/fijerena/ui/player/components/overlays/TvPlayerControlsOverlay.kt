@@ -4,6 +4,7 @@ package org.njarasoa.fijerena.ui.player.components.overlays
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,9 +27,7 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material.icons.rounded.Tune
-import androidx.tv.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,7 +41,6 @@ import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
@@ -56,8 +54,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.C
 import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -65,6 +65,8 @@ import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.formatEpochTime
+import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
@@ -73,19 +75,17 @@ import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
-import org.njarasoa.fijerena.core.player.model.formatEpochTime
-import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
-import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import java.util.Date
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 // Frame-count budget for the OSD's initial-focus retry loop — see its LaunchedEffect below.
 private const val FOCUS_REQUEST_MAX_ATTEMPTS = 5
@@ -410,9 +410,10 @@ fun TvPlayerControlsOverlay(
                         color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = Spacing.sm),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = Spacing.sm),
                     )
                 }
 
@@ -439,10 +440,12 @@ fun TvPlayerControlsOverlay(
                                                     onScrubStep(event.nativeKeyEvent, false)
                                                     true
                                                 }
+
                                                 Key.DirectionRight -> {
                                                     onScrubStep(event.nativeKeyEvent, true)
                                                     true
                                                 }
+
                                                 Key.DirectionCenter, Key.Enter -> {
                                                     if (scrubPositionMs != null) {
                                                         onCommitScrub()
@@ -451,7 +454,10 @@ fun TvPlayerControlsOverlay(
                                                         false
                                                     }
                                                 }
-                                                else -> false
+
+                                                else -> {
+                                                    false
+                                                }
                                             }
                                         } else {
                                             false
@@ -506,11 +512,12 @@ fun TvPlayerControlsOverlay(
                             horizontalArrangement = Arrangement.End,
                         ) {
                             Text(
-                                text = stringResource(
-                                    R.string.player_remaining_ends_at_format,
-                                    formatTime(remainingTime),
-                                    TimeFormat.formatClockTime(Date(estimatedEndTimeMillis))
-                                ),
+                                text =
+                                    stringResource(
+                                        R.string.player_remaining_ends_at_format,
+                                        formatTime(remainingTime),
+                                        TimeFormat.formatClockTime(Date(estimatedEndTimeMillis)),
+                                    ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CinemaAccent,
                             )
@@ -521,9 +528,10 @@ fun TvPlayerControlsOverlay(
                                 text = stringResource(R.string.player_seek_hint),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = Spacing.xxs),
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = Spacing.xxs),
                             )
                         }
 
@@ -570,12 +578,13 @@ fun TvPlayerControlsOverlay(
                             val nowStart = formatEpochTime(epgContext, currentEpgProgram.startTime)
                             val nowEnd = formatEpochTime(epgContext, currentEpgProgram.endTime)
                             Text(
-                                text = stringResource(
-                                    R.string.player_now_playing_format,
-                                    currentEpgProgram.title,
-                                    nowStart,
-                                    nowEnd
-                                ),
+                                text =
+                                    stringResource(
+                                        R.string.player_now_playing_format,
+                                        currentEpgProgram.title,
+                                        nowStart,
+                                        nowEnd,
+                                    ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                 modifier = Modifier.padding(top = Spacing.xxs),
@@ -603,11 +612,12 @@ fun TvPlayerControlsOverlay(
                             )
                             if (nextEpgProgram != null) {
                                 Text(
-                                    text = stringResource(
-                                        R.string.player_up_next_format,
-                                        nextEpgProgram.title,
-                                        formatEpochTime(epgContext, nextEpgProgram.startTime)
-                                    ),
+                                    text =
+                                        stringResource(
+                                            R.string.player_up_next_format,
+                                            nextEpgProgram.title,
+                                            formatEpochTime(epgContext, nextEpgProgram.startTime),
+                                        ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                                     modifier = Modifier.padding(top = Spacing.xxs),
@@ -713,7 +723,14 @@ fun TvPlayerControlsOverlay(
                             ) {
                                 Icon(
                                     imageVector = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
-                                    contentDescription = if (isFavorite) stringResource(R.string.player_remove_favorite) else stringResource(R.string.player_add_favorite),
+                                    contentDescription =
+                                        if (isFavorite) {
+                                            stringResource(
+                                                R.string.player_remove_favorite,
+                                            )
+                                        } else {
+                                            stringResource(R.string.player_add_favorite)
+                                        },
                                     tint =
                                         if (isFavorite &&
                                             !isProgressBarFocused

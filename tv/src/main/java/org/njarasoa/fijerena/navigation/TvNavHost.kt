@@ -1,7 +1,5 @@
 package org.njarasoa.fijerena.navigation
 
-import org.njarasoa.fijerena.core.network.profile.ProfileRepository
-import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -37,6 +35,7 @@ import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
@@ -52,6 +51,7 @@ import org.njarasoa.fijerena.feature.epgbrowser.TvEpgBrowserScreen
 import org.njarasoa.fijerena.feature.episode.EpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.movie.MovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.TvPlayerScreen
+import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import org.njarasoa.fijerena.feature.provider.TvAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.TvProviderSelectionScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
@@ -180,9 +180,10 @@ fun TvNavHost(
             if (activeProvider != null && activeProvider.type == "XTREAM") {
                 // Use AppContainer to get the shared repository instance.
                 // AppContainer.getMediaRepository() now handles connect() internally.
-                val repo = org.njarasoa.fijerena.core.ui.di.AppContainer
-                    .getInstance(context)
-                    .getMediaRepository(activeProvider.id)
+                val repo =
+                    org.njarasoa.fijerena.core.ui.di.AppContainer
+                        .getInstance(context)
+                        .getMediaRepository(activeProvider.id)
 
                 if (repo.isConnected()) {
                     // Update AuthViewModel for UI consistency
@@ -303,7 +304,7 @@ fun TvNavHost(
                             // Same dispatch as CategoryList's Recent row (below) — a shelf card is
                             // just another resumable entry, and should route exactly like one.
                             when (val target = item.target) {
-                                is BrowseTarget.Series ->
+                                is BrowseTarget.Series -> {
                                     navController.navigateOnce(
                                         Screen.EpisodeSelection(
                                             seriesId = target.seriesId.raw,
@@ -312,7 +313,9 @@ fun TvNavHost(
                                             initialEpisodeId = target.resumeEpisodeId?.raw,
                                         ),
                                     )
-                                is BrowseTarget.Episode ->
+                                }
+
+                                is BrowseTarget.Episode -> {
                                     navController.navigateOnce(
                                         Screen.Player(
                                             streamId = target.episodeId.raw,
@@ -325,7 +328,9 @@ fun TvNavHost(
                                             seriesName = target.seriesName,
                                         ),
                                     )
-                                is BrowseTarget.Movie ->
+                                }
+
+                                is BrowseTarget.Movie -> {
                                     navController.navigateOnce(
                                         Screen.MovieDetails(
                                             movieId = target.movieId,
@@ -333,7 +338,11 @@ fun TvNavHost(
                                             categoryId = item.categoryId,
                                         ),
                                     )
-                                is BrowseTarget.Channel, is BrowseTarget.CategoryRef -> Unit
+                                }
+
+                                is BrowseTarget.Channel, is BrowseTarget.CategoryRef -> {
+                                    Unit
+                                }
                             }
                         },
                     )
@@ -341,11 +350,13 @@ fun TvNavHost(
 
                 // EPG Browser Screen
                 composable<Screen.SyncSettings> {
-                    org.njarasoa.fijerena.feature.settings.SyncSettingsScreen()
+                    org.njarasoa.fijerena.feature.settings
+                        .SyncSettingsScreen()
                 }
 
                 composable<Screen.Diagnostics> {
-                    org.njarasoa.fijerena.feature.settings.DiagnosticsScreen()
+                    org.njarasoa.fijerena.feature.settings
+                        .DiagnosticsScreen()
                 }
 
                 composable<Screen.EpgBrowser> {
@@ -392,7 +403,7 @@ fun TvNavHost(
                                 // Continue Watching: the card represents the show, not the
                                 // episode — open episode selection with the last-watched
                                 // episode's detail/resume panel already up.
-                                is BrowseTarget.Series ->
+                                is BrowseTarget.Series -> {
                                     navController.navigateOnce(
                                         Screen.EpisodeSelection(
                                             seriesId = target.seriesId.raw,
@@ -401,9 +412,11 @@ fun TvNavHost(
                                             initialEpisodeId = target.resumeEpisodeId?.raw,
                                         ),
                                     )
+                                }
+
                                 // The card represents one episode — play it, whether or not it
                                 // can name the show it belongs to.
-                                is BrowseTarget.Episode ->
+                                is BrowseTarget.Episode -> {
                                     navController.navigateOnce(
                                         Screen.Player(
                                             streamId = target.episodeId.raw,
@@ -416,7 +429,9 @@ fun TvNavHost(
                                             seriesName = target.seriesName,
                                         ),
                                     )
-                                is BrowseTarget.Movie ->
+                                }
+
+                                is BrowseTarget.Movie -> {
                                     navController.navigateOnce(
                                         Screen.MovieDetails(
                                             movieId = target.movieId,
@@ -424,11 +439,13 @@ fun TvNavHost(
                                             categoryId = categoryId,
                                         ),
                                     )
+                                }
+
                                 // Live TV: land on the preview pane, not full-screen. Reachable
                                 // from the classic browse screen too (showPreviewPane=false,
                                 // e.g. the one silently pushed under the main-menu preview) —
                                 // same rule applies there as everywhere else.
-                                is BrowseTarget.Channel ->
+                                is BrowseTarget.Channel -> {
                                     navController.navigateOnce(
                                         Screen.CategoryList(
                                             contentType = categoryListScreen.contentType,
@@ -436,8 +453,12 @@ fun TvNavHost(
                                             initialStreamId = target.streamId,
                                         ),
                                     )
+                                }
+
                                 // Browsed into by the list screen itself; it never reaches nav.
-                                is BrowseTarget.CategoryRef -> Unit
+                                is BrowseTarget.CategoryRef -> {
+                                    Unit
+                                }
                             }
                         },
                         onSearchClick = {
@@ -471,7 +492,7 @@ fun TvNavHost(
                         onStreamSelected = { itemId, streamName, categoryId, streamContentType ->
                             // Navigate based on content type
                             when (streamContentType) {
-                                ContentType.TV_SHOWS ->
+                                ContentType.TV_SHOWS -> {
                                     navController.navigateOnce(
                                         Screen.EpisodeSelection(
                                             seriesId = itemId,
@@ -479,7 +500,9 @@ fun TvNavHost(
                                             categoryId = categoryId,
                                         ),
                                     )
-                                ContentType.MOVIES ->
+                                }
+
+                                ContentType.MOVIES -> {
                                     navController.navigateOnce(
                                         Screen.MovieDetails(
                                             movieId = itemId,
@@ -487,7 +510,9 @@ fun TvNavHost(
                                             categoryId = categoryId,
                                         ),
                                     )
-                                else ->
+                                }
+
+                                else -> {
                                     // Live TV: land on the preview pane, not full-screen. Pushing
                                     // (not popUpTo) means Back from the preview pops back to these
                                     // search results for free via normal nav-stack semantics.
@@ -498,6 +523,7 @@ fun TvNavHost(
                                             initialStreamId = itemId,
                                         ),
                                     )
+                                }
                             }
                         },
                         onCategorySelected = { categoryId, contentType ->
@@ -677,7 +703,9 @@ fun TvNavHost(
                                 providerRepo.pickProvider(provider.id)
 
                                 // Clear AppContainer caches to force a fresh repository for the new provider
-                                val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+                                val container =
+                                    org.njarasoa.fijerena.core.ui.di.AppContainer
+                                        .getInstance(context)
                                 container.clearAllCaches()
 
                                 // For Xtream providers, restore session to update AuthViewModel
@@ -764,7 +792,9 @@ fun TvNavHost(
                                 val activeProvider = providerRepo.getActiveProvider()
 
                                 // Clear AppContainer caches for the new provider
-                                val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+                                val container =
+                                    org.njarasoa.fijerena.core.ui.di.AppContainer
+                                        .getInstance(context)
                                 container.clearAllCaches()
 
                                 if (activeProvider != null && activeProvider.type == "XTREAM") {

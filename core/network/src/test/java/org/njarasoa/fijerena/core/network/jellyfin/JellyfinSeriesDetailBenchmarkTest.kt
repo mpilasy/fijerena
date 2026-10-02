@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.network.jellyfin
 
-import org.njarasoa.fijerena.core.player.domain.SeriesId
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -8,6 +7,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import kotlin.system.measureTimeMillis
 
 /**

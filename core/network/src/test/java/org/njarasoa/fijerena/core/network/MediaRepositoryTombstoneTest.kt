@@ -74,7 +74,12 @@ class MediaRepositoryTombstoneTest {
             repo.removeFavoriteCategory("c1", ContentType.LIVE_TV)
             repo.awaitPendingWrites()
 
-            assertEquals(SyncKind.FAVORITE_CATEGORY, favoriteDao.tombstones.values.single().kind)
+            assertEquals(
+                SyncKind.FAVORITE_CATEGORY,
+                favoriteDao.tombstones.values
+                    .single()
+                    .kind,
+            )
         }
 
     @Test
@@ -87,7 +92,12 @@ class MediaRepositoryTombstoneTest {
             repo.clearFavorites()
             repo.awaitPendingWrites()
 
-            assertEquals(setOf("m1", "m2"), favoriteDao.tombstones.values.map { it.itemId }.toSet())
+            assertEquals(
+                setOf("m1", "m2"),
+                favoriteDao.tombstones.values
+                    .map { it.itemId }
+                    .toSet(),
+            )
         }
 
     @Test

@@ -3,7 +3,6 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 class EpgBrowserViewModelFactory(

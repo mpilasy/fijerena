@@ -32,8 +32,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
@@ -82,12 +82,13 @@ fun CinemaOutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    colors: ButtonColors = ButtonDefaults.outlinedButtonColors(
-        contentColor = CinemaTextPrimary,
-        containerColor = CinemaTextPrimary.copy(alpha = 0.15f),
-        disabledContentColor = CinemaTextDisabled,
-        disabledContainerColor = Color.Transparent,
-    ),
+    colors: ButtonColors =
+        ButtonDefaults.outlinedButtonColors(
+            contentColor = CinemaTextPrimary,
+            containerColor = CinemaTextPrimary.copy(alpha = 0.15f),
+            disabledContentColor = CinemaTextDisabled,
+            disabledContainerColor = Color.Transparent,
+        ),
     elevation: ButtonElevation? = null,
     border: BorderStroke? =
         BorderStroke(1.dp, CinemaTextPrimary.copy(alpha = if (enabled) CinemaAlpha.textFaint else CinemaAlpha.divider)),
@@ -152,15 +153,16 @@ fun CinemaIconButton(
         modifier = modifier,
         enabled = enabled,
         shape = CircleShape,
-        colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = CinemaTextPrimary.copy(alpha = 0.15f),
-            contentColor = CinemaTextPrimary,
-            disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
-            disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
-        )
+        colors =
+            IconButtonDefaults.filledIconButtonColors(
+                containerColor = CinemaTextPrimary.copy(alpha = 0.15f),
+                contentColor = CinemaTextPrimary,
+                disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
+                disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
+            ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.compose.material3.LocalContentColor provides if (enabled) CinemaTextPrimary else CinemaTextDisabled
+            androidx.compose.material3.LocalContentColor provides if (enabled) CinemaTextPrimary else CinemaTextDisabled,
         ) {
             icon()
         }
@@ -212,15 +214,16 @@ fun CinemaDangerIconButton(
         modifier = modifier,
         enabled = enabled,
         shape = CircleShape,
-        colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = CinemaOrange.copy(alpha = 0.4f),
-            contentColor = CinemaTextPrimary,
-            disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
-            disabledContentColor = CinemaOrange.copy(alpha = CinemaAlpha.textFaint),
-        )
+        colors =
+            IconButtonDefaults.filledIconButtonColors(
+                containerColor = CinemaOrange.copy(alpha = 0.4f),
+                contentColor = CinemaTextPrimary,
+                disabledContainerColor = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.scrim),
+                disabledContentColor = CinemaOrange.copy(alpha = CinemaAlpha.textFaint),
+            ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.compose.material3.LocalContentColor provides CinemaTextPrimary
+            androidx.compose.material3.LocalContentColor provides CinemaTextPrimary,
         ) {
             icon()
         }

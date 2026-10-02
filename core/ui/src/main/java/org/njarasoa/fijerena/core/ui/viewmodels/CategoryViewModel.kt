@@ -381,38 +381,45 @@ class CategoryViewModel(
         }
 
         // Handle virtual categories
-        val handledVirtual = when (categoryId) {
-            RECENT_CATEGORY_ID -> {
-                emitStreams(repo.refreshRecentItems(contentType))
-                loadNowPlaying(currentStreams)
-                true
+        val handledVirtual =
+            when (categoryId) {
+                RECENT_CATEGORY_ID -> {
+                    emitStreams(repo.refreshRecentItems(contentType))
+                    loadNowPlaying(currentStreams)
+                    true
+                }
+
+                FAVORITES_CATEGORY_ID -> {
+                    emitStreams(repo.getFavoritesForContentTypeSuspend(contentType))
+                    loadNowPlaying(currentStreams)
+                    true
+                }
+
+                FAVORITE_CATEGORIES_ID -> {
+                    emitStreams(favoriteCategoryRows(repo))
+                    true
+                }
+
+                RECENTLY_VIEWED_CATEGORIES_ID -> {
+                    val recentCategories = repo.getRecentlyViewedCategories(contentType)
+                    emitStreams(
+                        recentCategories.map { recent ->
+                            MediaItem(
+                                id = "recent_cat_${recent.categoryId}",
+                                name = recent.categoryName,
+                                mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
+                                categoryId = RECENTLY_VIEWED_CATEGORIES_ID,
+                                target = BrowseTarget.CategoryRef(recent.categoryId),
+                            )
+                        },
+                    )
+                    true
+                }
+
+                else -> {
+                    false
+                }
             }
-            FAVORITES_CATEGORY_ID -> {
-                emitStreams(repo.getFavoritesForContentTypeSuspend(contentType))
-                loadNowPlaying(currentStreams)
-                true
-            }
-            FAVORITE_CATEGORIES_ID -> {
-                emitStreams(favoriteCategoryRows(repo))
-                true
-            }
-            RECENTLY_VIEWED_CATEGORIES_ID -> {
-                val recentCategories = repo.getRecentlyViewedCategories(contentType)
-                emitStreams(
-                    recentCategories.map { recent ->
-                        MediaItem(
-                            id = "recent_cat_${recent.categoryId}",
-                            name = recent.categoryName,
-                            mediaType = org.njarasoa.fijerena.core.player.domain.MediaType.VIDEO_FILE,
-                            categoryId = RECENTLY_VIEWED_CATEGORIES_ID,
-                            target = BrowseTarget.CategoryRef(recent.categoryId),
-                        )
-                    },
-                )
-                true
-            }
-            else -> false
-        }
 
         if (!handledVirtual) {
             // Track non-virtual category views
@@ -531,16 +538,16 @@ class CategoryViewModel(
             val itemIds = streams.map { it.id }
             val positions = repo.getPlaybackPositions(itemIds, ct)
 
-                val progressMap = HashMap<String, Float>(positions.size)
-                val watched = HashSet<String>()
-                for ((id, item) in positions) {
-                    // Resumable band only, so a card's bar means the same thing everywhere:
-                    // barely-started and finished items get no bar rather than a sliver or a full one.
-                    item.resumeProgress()?.let { progressMap[id] = it }
-                    if (item.isCompleted) watched.add(id)
-                }
-                // Series rows track episodes completed, not minutes: watch history is keyed by
-                // episode, so a series id never resolves through the lookup above. A fully watched
+            val progressMap = HashMap<String, Float>(positions.size)
+            val watched = HashSet<String>()
+            for ((id, item) in positions) {
+                // Resumable band only, so a card's bar means the same thing everywhere:
+                // barely-started and finished items get no bar rather than a sliver or a full one.
+                item.resumeProgress()?.let { progressMap[id] = it }
+                if (item.isCompleted) watched.add(id)
+            }
+            // Series rows track episodes completed, not minutes: watch history is keyed by
+            // episode, so a series id never resolves through the lookup above. A fully watched
             // series drops out of the bar map and gets the check instead, matching movies.
             if (ct == ContentType.TV_SHOWS) {
                 val seriesProgress = repo.getSeriesWatchProgress()
@@ -646,10 +653,11 @@ class CategoryViewModel(
             val currentState = _uiState.value
             if (currentState is UiState.Success && currentState.selectedCategoryId == RECENT_CATEGORY_ID) {
                 val updatedStreams = repo.recentItems(contentType).value
-                _uiState.value = currentState.copy(
-                    streams = updatedStreams,
-                    streamsLoading = false,
-                )
+                _uiState.value =
+                    currentState.copy(
+                        streams = updatedStreams,
+                        streamsLoading = false,
+                    )
             }
         }
     }

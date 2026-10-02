@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.network
 
-import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -9,6 +8,7 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.PlayableStream
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 
 abstract class BaseM3uMediaProvider : MediaProvider {
     protected var categories = emptyList<MediaCategory>()
@@ -62,6 +62,7 @@ abstract class BaseM3uMediaProvider : MediaProvider {
                         }
                     categories.filter { it.id in liveCategoryIds }
                 }
+
                 else -> {
                     val videoCategoryIds =
                         items.mapNotNullTo(HashSet()) {
@@ -129,9 +130,10 @@ abstract class BaseM3uMediaProvider : MediaProvider {
         contentType: String,
         includeExcluded: Boolean,
     ): kotlin.Result<List<MediaItem>> {
-        val matched = items.filter { item ->
-            SearchUtils.matchesQuery(item.name, query)
-        }
+        val matched =
+            items.filter { item ->
+                SearchUtils.matchesQuery(item.name, query)
+            }
         return kotlin.Result.success(matched)
     }
 }

@@ -81,11 +81,12 @@ fun CacheManagementSection(
         if (isXtream) {
             CinemaPrimaryButton(
                 onClick = onSyncClick,
-                text = if (syncState is SyncState.Syncing) {
-                    stringResource(R.string.provider_syncing)
-                } else {
-                    stringResource(R.string.provider_sync_now_button)
-                },
+                text =
+                    if (syncState is SyncState.Syncing) {
+                        stringResource(R.string.provider_syncing)
+                    } else {
+                        stringResource(R.string.provider_sync_now_button)
+                    },
                 enabled = syncState !is SyncState.Syncing,
             )
 
@@ -186,11 +187,12 @@ fun CacheManagementSection(
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = stringResource(
-                        R.string.provider_live_tv_stats,
-                        NumberUtils.formatCount(stats.liveTv.categoryCount),
-                        NumberUtils.formatCount(stats.liveTv.itemsCount),
-                    ),
+                    text =
+                        stringResource(
+                            R.string.provider_live_tv_stats,
+                            NumberUtils.formatCount(stats.liveTv.categoryCount),
+                            NumberUtils.formatCount(stats.liveTv.itemsCount),
+                        ),
                     style = styles.bodyMedium,
                     color = CinemaAccent,
                 )
@@ -217,11 +219,12 @@ fun CacheManagementSection(
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = stringResource(
-                        R.string.provider_movies_stats,
-                        NumberUtils.formatCount(stats.movies.categoryCount),
-                        NumberUtils.formatCount(stats.movies.itemsCount),
-                    ),
+                    text =
+                        stringResource(
+                            R.string.provider_movies_stats,
+                            NumberUtils.formatCount(stats.movies.categoryCount),
+                            NumberUtils.formatCount(stats.movies.itemsCount),
+                        ),
                     style = styles.bodyMedium,
                     color = CinemaAccent,
                 )
@@ -248,12 +251,13 @@ fun CacheManagementSection(
                     color = CinemaTextPrimary,
                 )
                 Text(
-                    text = stringResource(
-                        R.string.provider_tv_shows_stats,
-                        NumberUtils.formatCount(stats.tvShows.categoryCount),
-                        NumberUtils.formatCount(stats.tvShows.itemsCount),
-                        NumberUtils.formatCount(stats.tvShows.episodesCount),
-                    ),
+                    text =
+                        stringResource(
+                            R.string.provider_tv_shows_stats,
+                            NumberUtils.formatCount(stats.tvShows.categoryCount),
+                            NumberUtils.formatCount(stats.tvShows.itemsCount),
+                            NumberUtils.formatCount(stats.tvShows.episodesCount),
+                        ),
                     style = styles.bodyMedium,
                     color = CinemaAccent,
                 )

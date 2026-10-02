@@ -154,8 +154,6 @@ interface FavoriteStateDao {
     @Query("DELETE FROM favorite_state WHERE profileId = :profileId")
     fun deleteProfile(profileId: String)
 
-
-
     /** Restore path: rewrites `providerId` before insert, so it takes whole rows. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun restoreAll(entities: List<FavoriteStateEntity>)

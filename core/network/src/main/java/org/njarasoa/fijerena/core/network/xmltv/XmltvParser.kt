@@ -58,6 +58,7 @@ object XmltvParser {
                             channels[channel.id] = channel
                         }
                     }
+
                     "programme" -> {
                         // Resolve channel filter on first programme element
                         // (XMLTV DTD guarantees all <channel> come before <programme>)
@@ -139,6 +140,7 @@ object XmltvParser {
                                 depth-- // nextText() consumes the end tag
                             }
                         }
+
                         "icon" -> {
                             if (iconUrl == null) {
                                 iconUrl = parser.getAttributeValue(null, "src")
@@ -146,8 +148,14 @@ object XmltvParser {
                         }
                     }
                 }
-                XmlPullParser.END_TAG -> depth--
-                XmlPullParser.END_DOCUMENT -> break
+
+                XmlPullParser.END_TAG -> {
+                    depth--
+                }
+
+                XmlPullParser.END_DOCUMENT -> {
+                    break
+                }
             }
         }
 
@@ -199,12 +207,14 @@ object XmltvParser {
                                 depth--
                             }
                         }
+
                         "desc" -> {
                             if (description == null) {
                                 description = safeNextText(parser)
                                 depth--
                             }
                         }
+
                         "category" -> {
                             if (category == null) {
                                 category = safeNextText(parser)
@@ -213,8 +223,14 @@ object XmltvParser {
                         }
                     }
                 }
-                XmlPullParser.END_TAG -> depth--
-                XmlPullParser.END_DOCUMENT -> break
+
+                XmlPullParser.END_TAG -> {
+                    depth--
+                }
+
+                XmlPullParser.END_DOCUMENT -> {
+                    break
+                }
             }
         }
 

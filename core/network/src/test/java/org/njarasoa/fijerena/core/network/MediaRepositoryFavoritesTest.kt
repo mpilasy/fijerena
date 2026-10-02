@@ -1,14 +1,13 @@
 package org.njarasoa.fijerena.core.network
 
-import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import io.mockk.verify
 import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -18,10 +17,11 @@ import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeFavoriteStateDao
 import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
-import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateDao
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -109,7 +109,8 @@ class MediaRepositoryFavoritesTest {
                         favoriteDao.upsertClearingTombstone(entity)
                     }
                 }
-            val gatedRepository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = FakeWatchStateDao(), favoriteStateDao = gated)
+            val gatedRepository =
+                MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = FakeWatchStateDao(), favoriteStateDao = gated)
 
             gatedRepository.addFavorite("first", "First", "cat1", ContentType.MOVIES)
             assertTrue(started.await(5, TimeUnit.SECONDS))

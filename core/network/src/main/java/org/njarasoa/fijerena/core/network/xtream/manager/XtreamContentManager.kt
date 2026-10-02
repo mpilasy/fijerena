@@ -10,7 +10,6 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.asString
 import org.njarasoa.fijerena.core.network.normalizeTmdbId
-import org.njarasoa.fijerena.core.network.toJsonPrimitive
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
@@ -18,14 +17,15 @@ import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.resultOf
 import org.njarasoa.fijerena.core.network.suspendResultOf
+import org.njarasoa.fijerena.core.network.toJsonPrimitive
 import org.njarasoa.fijerena.core.network.xtream.SyncDelta
-import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.network.xtream.db.*
+import org.njarasoa.fijerena.core.player.api.XtreamResponse
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaMetadata
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.model.*
-import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Data-hygiene guard, demoted from Phase 5 dedup (docs/plans/20260828_watch-state-durable-storage-plan.md) to a
@@ -80,7 +80,9 @@ class XtreamContentManager(
     // only — a sync triggered outside syncAll() (e.g. a lazy-load cache-miss refresh) adds into
     // the same counter, so a reading taken while such a sync overlaps a syncAll() run can include
     // a few rows that aren't actually syncAll()'s. Acceptable for "did anything change" reporting.
-    private val pendingDelta = java.util.concurrent.atomic.AtomicReference(SyncDelta())
+    private val pendingDelta =
+        java.util.concurrent.atomic
+            .AtomicReference(SyncDelta())
 
     private fun addDelta(delta: SyncDelta) {
         pendingDelta.updateAndGet { it + delta }
@@ -95,9 +97,11 @@ class XtreamContentManager(
         private const val KEY_VOD_CATEGORIES_TIMESTAMP = "vod_categories_ts"
         private const val KEY_SERIES_CATEGORIES_TIMESTAMP = "series_categories_ts"
         private const val KEY_STREAMS_TIMESTAMP_PREFIX = "streams_ts_"
+
         // Matches the scheduled sync cadence in ProviderSyncManager, so a screen opened between
         // scheduled runs still tops the catalogue up rather than sitting on day-old data.
         private const val CACHE_EXPIRATION_MS = 4 * 3600 * 1000L // 4 hours
+
         // Episode synopses are written once and essentially never revised, so they get a much
         // longer life than the catalogue itself — long enough to make refetching rare, short
         // enough that a correction upstream still lands eventually.
@@ -142,7 +146,11 @@ class XtreamContentManager(
                 categoryDao.insertAll(
                     categories.map {
                         XtreamCategoryEntity(
-                            it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_LIVE,
+                            it.categoryId,
+                            providerId,
+                            it.categoryName,
+                            it.parentId,
+                            XtreamCategoryEntity.TYPE_LIVE,
                             excluded = !filters.shouldShowCategory(it.categoryName),
                         )
                     },
@@ -168,7 +176,11 @@ class XtreamContentManager(
                 categoryDao.insertAll(
                     categories.map {
                         XtreamCategoryEntity(
-                            it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_VOD,
+                            it.categoryId,
+                            providerId,
+                            it.categoryName,
+                            it.parentId,
+                            XtreamCategoryEntity.TYPE_VOD,
                             excluded = !filters.shouldShowCategory(it.categoryName),
                         )
                     },
@@ -194,7 +206,11 @@ class XtreamContentManager(
                 categoryDao.insertAll(
                     categories.map {
                         XtreamCategoryEntity(
-                            it.categoryId, providerId, it.categoryName, it.parentId, XtreamCategoryEntity.TYPE_SERIES,
+                            it.categoryId,
+                            providerId,
+                            it.categoryName,
+                            it.parentId,
+                            XtreamCategoryEntity.TYPE_SERIES,
                             excluded = !filters.shouldShowCategory(it.categoryName),
                         )
                     },
@@ -281,7 +297,8 @@ class XtreamContentManager(
                     return@suspendResultOf if (ftsQuery.isEmpty()) {
                         emptyList()
                     } else {
-                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_LIVE, ftsQuery, false)
+                        streamDao
+                            .searchByFts(providerId, XtreamStreamEntity.TYPE_LIVE, ftsQuery, false)
                             .map { mapStreamEntityToModel(it) }
                     }
                 }
@@ -343,7 +360,8 @@ class XtreamContentManager(
                     return@suspendResultOf if (ftsQuery.isEmpty()) {
                         emptyList()
                     } else {
-                        streamDao.searchByFts(providerId, XtreamStreamEntity.TYPE_VOD, ftsQuery, false)
+                        streamDao
+                            .searchByFts(providerId, XtreamStreamEntity.TYPE_VOD, ftsQuery, false)
                             .map { mapStreamEntityToModel(it) }
                     }
                 }
@@ -585,7 +603,6 @@ class XtreamContentManager(
                             var inserted = 0
                             var updated = 0
 
-
                             val onStreamItem: suspend (XtreamStream) -> Unit = { it ->
                                 val tmdbId = it.tmdb.asString().normalizeTmdbId()
                                 val contentHash =
@@ -718,7 +735,6 @@ class XtreamContentManager(
                             val seenIds = mutableSetOf<Int>()
                             var inserted = 0
                             var updated = 0
-
 
                             service.getSeriesStreaming(null) { it ->
                                 val tmdbId = it.tmdb.asString().normalizeTmdbId()
@@ -956,7 +972,16 @@ class XtreamContentManager(
         fetchedAt: Long,
         posterPath: String? = null,
     ) = withContext(Dispatchers.IO) {
-        streamDao.updateDetailCache(providerId, vodId, XtreamStreamEntity.TYPE_VOD, contentRating, tmdbId, containerExtension, fetchedAt, posterPath)
+        streamDao.updateDetailCache(
+            providerId,
+            vodId,
+            XtreamStreamEntity.TYPE_VOD,
+            contentRating,
+            tmdbId,
+            containerExtension,
+            fetchedAt,
+            posterPath,
+        )
     }
 
     /**
@@ -1105,7 +1130,8 @@ class XtreamContentManager(
         excludeStreamId: Int,
     ): List<XtreamStream> =
         withContext(Dispatchers.IO) {
-            streamDao.getByTmdbId(providerId, XtreamStreamEntity.TYPE_VOD, tmdbId, excludeStreamId)
+            streamDao
+                .getByTmdbId(providerId, XtreamStreamEntity.TYPE_VOD, tmdbId, excludeStreamId)
                 .map { mapStreamEntityToModel(it) }
         }
 
@@ -1124,7 +1150,9 @@ class XtreamContentManager(
     }
 
     private fun mapStreamEntityToModel(it: XtreamStreamEntity): XtreamStream {
-        val tmdbPoster = org.njarasoa.fijerena.core.network.tmdb.TmdbApiService.posterUrl(it.posterPath)
+        val tmdbPoster =
+            org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+                .posterUrl(it.posterPath)
         return XtreamStream(
             num = it.num,
             name = it.name,
@@ -1150,7 +1178,9 @@ class XtreamContentManager(
     }
 
     private fun mapSeriesEntityToStream(it: XtreamSeriesEntity): XtreamStream {
-        val tmdbPoster = org.njarasoa.fijerena.core.network.tmdb.TmdbApiService.posterUrl(it.posterPath)
+        val tmdbPoster =
+            org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+                .posterUrl(it.posterPath)
         return XtreamStream(
             num = it.num ?: 0,
             name = it.name,
@@ -1175,18 +1205,28 @@ class XtreamContentManager(
         )
     }
 
-    suspend fun searchStreams(type: String, query: String, includeExcluded: Boolean = false): List<XtreamStream> =
+    suspend fun searchStreams(
+        type: String,
+        query: String,
+        includeExcluded: Boolean = false,
+    ): List<XtreamStream> =
         withContext(Dispatchers.IO) {
             streamDao.searchByFts(providerId, type, query, includeExcluded).map { mapStreamEntityToModel(it) }
         }
 
-    suspend fun searchSeries(query: String, includeExcluded: Boolean = false): List<XtreamStream> =
+    suspend fun searchSeries(
+        query: String,
+        includeExcluded: Boolean = false,
+    ): List<XtreamStream> =
         withContext(Dispatchers.IO) {
             seriesDao.searchByFts(providerId, query, includeExcluded).map { mapSeriesEntityToStream(it) }
         }
 
     /** How many matches for [query] are hidden because their category is excluded. */
-    suspend fun countExcludedStreams(type: String, query: String): Int =
+    suspend fun countExcludedStreams(
+        type: String,
+        query: String,
+    ): Int =
         withContext(Dispatchers.IO) {
             streamDao.countExcludedByFts(providerId, type, query)
         }
@@ -1196,9 +1236,10 @@ class XtreamContentManager(
             seriesDao.countExcludedByFts(providerId, query)
         }
 
-    suspend fun recomputeExclusions() = withContext(Dispatchers.IO) {
-        XtreamCategoryExclusionSync.recompute(categoryDao, providerId, categoryFilters())
-    }
+    suspend fun recomputeExclusions() =
+        withContext(Dispatchers.IO) {
+            XtreamCategoryExclusionSync.recompute(categoryDao, providerId, categoryFilters())
+        }
 
     /** Total category count for [type], including excluded ones — for "X of Y" style UI counts. */
     suspend fun getCategoryTotalCount(type: String): Int =
@@ -1207,12 +1248,17 @@ class XtreamContentManager(
         }
 
     private fun formatFtsQuery(query: String): String {
-        val words = query.trim().split("\\s+".toRegex())
-            .filter { it.isNotBlank() && !it.startsWith("-") }
+        val words =
+            query
+                .trim()
+                .split("\\s+".toRegex())
+                .filter { it.isNotBlank() && !it.startsWith("-") }
         // Sanitize input to prevent SQLite FTS syntax errors (like **) that trigger fallback hangs
-        val ftsQuery = words.map { it.replace(Regex("[*\"'()\\^]"), "") }
-            .filter { it.isNotBlank() }
-            .joinToString(" ") { "$it*" }
+        val ftsQuery =
+            words
+                .map { it.replace(Regex("[*\"'()\\^]"), "") }
+                .filter { it.isNotBlank() }
+                .joinToString(" ") { "$it*" }
         return ftsQuery
     }
 

@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -21,20 +22,19 @@ import org.njarasoa.fijerena.core.network.EPG_REFRESH_INTERVAL_OPTIONS
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.*
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import org.njarasoa.fijerena.core.ui.R
-import androidx.compose.ui.res.stringResource
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -176,7 +176,11 @@ fun MobileEpgManagementScreen(
                         // Maintenance Card
                         GlassPanel {
                             Column(modifier = Modifier.padding(CinemaSpacing.md)) {
-                                Text(stringResource(R.string.epg_maintenance_title), style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                                Text(
+                                    stringResource(R.string.epg_maintenance_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = CinemaAccentLight,
+                                )
                                 Text(
                                     stringResource(R.string.epg_maintenance_desc),
                                     style = MaterialTheme.typography.bodySmall,
@@ -226,15 +230,34 @@ fun MobileEpgManagementScreen(
                             Column(modifier = Modifier.padding(CinemaSpacing.md)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(stringResource(R.string.epg_auto_refresh_title), style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
-                                        val intervalText = when (val interval = epgSettings.epgRefreshInterval) {
-                                            -1 -> stringResource(R.string.epg_automation_disabled)
-                                            else -> {
-                                                val freq = if (interval == 24) stringResource(R.string.epg_automation_freq_daily) else stringResource(R.string.epg_automation_freq_hours, interval)
-                                                val timeStr = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(nextRefreshAtMs))
-                                                freq + stringResource(R.string.epg_automation_next_at, timeStr)
+                                        Text(
+                                            stringResource(R.string.epg_auto_refresh_title),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = CinemaAccentLight,
+                                        )
+                                        val intervalText =
+                                            when (val interval = epgSettings.epgRefreshInterval) {
+                                                -1 -> {
+                                                    stringResource(R.string.epg_automation_disabled)
+                                                }
+
+                                                else -> {
+                                                    val freq =
+                                                        if (interval ==
+                                                            24
+                                                        ) {
+                                                            stringResource(R.string.epg_automation_freq_daily)
+                                                        } else {
+                                                            stringResource(R.string.epg_automation_freq_hours, interval)
+                                                        }
+                                                    val timeStr =
+                                                        android.text.format.DateFormat
+                                                            .getTimeFormat(
+                                                                context,
+                                                            ).format(java.util.Date(nextRefreshAtMs))
+                                                    freq + stringResource(R.string.epg_automation_next_at, timeStr)
+                                                }
                                             }
-                                        }
                                         Text(
                                             intervalText,
                                             style = MaterialTheme.typography.bodySmall,
@@ -251,11 +274,30 @@ fun MobileEpgManagementScreen(
                                     horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
                                 ) {
                                     CinemaOutlinedButton(onClick = { showIntervalPicker = true }) {
-                                        Text(when (val interval = epgSettings.epgRefreshInterval) {
-                                            -1 -> stringResource(R.string.epg_automation_frequency, stringResource(R.string.epg_automation_freq_never))
-                                            24 -> stringResource(R.string.epg_automation_frequency, stringResource(R.string.epg_automation_freq_daily))
-                                            else -> stringResource(R.string.epg_automation_frequency, stringResource(R.string.epg_automation_freq_hours, interval))
-                                        })
+                                        Text(
+                                            when (val interval = epgSettings.epgRefreshInterval) {
+                                                -1 -> {
+                                                    stringResource(
+                                                        R.string.epg_automation_frequency,
+                                                        stringResource(R.string.epg_automation_freq_never),
+                                                    )
+                                                }
+
+                                                24 -> {
+                                                    stringResource(
+                                                        R.string.epg_automation_frequency,
+                                                        stringResource(R.string.epg_automation_freq_daily),
+                                                    )
+                                                }
+
+                                                else -> {
+                                                    stringResource(
+                                                        R.string.epg_automation_frequency,
+                                                        stringResource(R.string.epg_automation_freq_hours, interval),
+                                                    )
+                                                }
+                                            },
+                                        )
                                     }
                                     if (epgSettings.epgRefreshInterval != -1) {
                                         CinemaOutlinedButton(onClick = { showTimePicker = true }) {
@@ -270,7 +312,11 @@ fun MobileEpgManagementScreen(
 
                 // Source rows
                 item {
-                    Text(stringResource(R.string.epg_sources_header), style = MaterialTheme.typography.titleMedium, color = CinemaAccentLight)
+                    Text(
+                        stringResource(R.string.epg_sources_header),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = CinemaAccentLight,
+                    )
                 }
 
                 items(sources, key = { it.id }) { source ->
@@ -373,11 +419,12 @@ fun MobileEpgManagementScreen(
 
     if (showTimePicker) {
         val parts = epgSettings.epgRefreshTime.split(":")
-        val timePickerState = rememberTimePickerState(
-            initialHour = parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 0,
-            initialMinute = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 59) ?: 0,
-            is24Hour = true,
-        )
+        val timePickerState =
+            rememberTimePickerState(
+                initialHour = parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 0,
+                initialMinute = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 59) ?: 0,
+                is24Hour = true,
+            )
         CinemaAlertDialog(
             onDismissRequest = { showTimePicker = false },
             title = { Text(stringResource(R.string.epg_set_refresh_time_title)) },
@@ -403,26 +450,33 @@ fun MobileEpgManagementScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                     intervalOptions.forEach { interval ->
-                        val label = if (interval == -1) stringResource(R.string.epg_automation_freq_never) else stringResource(R.string.epg_refresh_interval_hours_format, interval)
+                        val label =
+                            if (interval ==
+                                -1
+                            ) {
+                                stringResource(R.string.epg_automation_freq_never)
+                            } else {
+                                stringResource(R.string.epg_refresh_interval_hours_format, interval)
+                            }
                         val isSelected = epgSettings.epgRefreshInterval == interval
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { 
-                                    viewModel.setEpgRefreshInterval(interval)
-                                    if (interval == -1) {
-                                        viewModel.setAutoRefreshEnabled(false)
-                                    } else {
-                                        viewModel.setAutoRefreshEnabled(true)
-                                    }
-                                    showIntervalPicker = false
-                                }
-                                .padding(vertical = CinemaSpacing.sm),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.setEpgRefreshInterval(interval)
+                                        if (interval == -1) {
+                                            viewModel.setAutoRefreshEnabled(false)
+                                        } else {
+                                            viewModel.setAutoRefreshEnabled(true)
+                                        }
+                                        showIntervalPicker = false
+                                    }.padding(vertical = CinemaSpacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             RadioButton(
                                 selected = isSelected,
-                                onClick = null
+                                onClick = null,
                             )
                             Spacer(modifier = Modifier.width(CinemaSpacing.sm))
                             Text(label, style = MaterialTheme.typography.bodyLarge)
@@ -432,7 +486,7 @@ fun MobileEpgManagementScreen(
             },
             confirmButton = {
                 CinemaDialogTextButton(onClick = { showIntervalPicker = false }) { Text(stringResource(R.string.common_close)) }
-            }
+            },
         )
     }
 }
@@ -558,18 +612,22 @@ private fun EpgSourceCard(
                     val stats =
                         listOf(
                             stringResource(R.string.epg_source_stat_label) to lastIngested,
-                        ) + if (wasUnchanged) {
-                            listOf("" to stringResource(R.string.epg_source_stat_unchanged))
-                        } else {
+                        ) +
+                            if (wasUnchanged) {
+                                listOf("" to stringResource(R.string.epg_source_stat_unchanged))
+                            } else {
+                                listOf(
+                                    stringResource(R.string.epg_source_stat_download) to
+                                        NumberUtils.formatDuration(source.lastDownloadDurationMs),
+                                    stringResource(R.string.epg_source_stat_ingest) to
+                                        NumberUtils.formatDuration(source.lastIngestionDurationMs),
+                                )
+                            } +
                             listOf(
-                                stringResource(R.string.epg_source_stat_download) to NumberUtils.formatDuration(source.lastDownloadDurationMs),
-                                stringResource(R.string.epg_source_stat_ingest) to NumberUtils.formatDuration(source.lastIngestionDurationMs),
+                                stringResource(R.string.epg_source_stat_latest) to latestProgStr,
+                                stringResource(R.string.epg_source_stat_channels) to NumberUtils.formatCount(source.lastChannels),
+                                stringResource(R.string.epg_source_stat_programmes) to NumberUtils.formatCount(source.lastProgrammes),
                             )
-                        } + listOf(
-                            stringResource(R.string.epg_source_stat_latest) to latestProgStr,
-                            stringResource(R.string.epg_source_stat_channels) to NumberUtils.formatCount(source.lastChannels),
-                            stringResource(R.string.epg_source_stat_programmes) to NumberUtils.formatCount(source.lastProgrammes),
-                        )
                     // Fixed 6-item stat grid, chunked into rows instead of FlowRow — see
                     // MatchTypeChipRow note in tv/ProviderDialogs.kt for why.
                     Column(
@@ -689,11 +747,31 @@ private fun EpgStatusCard(
             // Indexer State
             val indexText =
                 when (indexState) {
-                    is EpgIndexState.Indexed -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_ready, NumberUtils.formatCount(indexState.programmeCount)))
-                    is EpgIndexState.Indexing -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_indexing))
-                    is EpgIndexState.Optimizing -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_optimizing))
-                    is EpgIndexState.NotIndexed -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_empty))
-                    is EpgIndexState.Failed -> stringResource(R.string.epg_database_error_prefixed, indexState.reason)
+                    is EpgIndexState.Indexed -> {
+                        stringResource(
+                            R.string.epg_database_label,
+                            stringResource(R.string.epg_database_ready, NumberUtils.formatCount(indexState.programmeCount)),
+                        )
+                    }
+
+                    is EpgIndexState.Indexing -> {
+                        stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_indexing))
+                    }
+
+                    is EpgIndexState.Optimizing -> {
+                        stringResource(
+                            R.string.epg_database_label,
+                            stringResource(R.string.epg_database_optimizing),
+                        )
+                    }
+
+                    is EpgIndexState.NotIndexed -> {
+                        stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_empty))
+                    }
+
+                    is EpgIndexState.Failed -> {
+                        stringResource(R.string.epg_database_error_prefixed, indexState.reason)
+                    }
                 }
             Text(indexText, style = MaterialTheme.typography.bodySmall)
 
@@ -702,18 +780,52 @@ private fun EpgStatusCard(
                 when (multiState) {
                     is MultiSourceState.Idle -> {
                         val queued = queuedTaskIds.count { it.startsWith("epg_refresh_") }
-                        if (queued > 0) stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_tasks_queued, queued)) else stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
+                        if (queued >
+                            0
+                        ) {
+                            stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_tasks_queued, queued))
+                        } else {
+                            stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
+                        }
                     }
-                    is MultiSourceState.Processing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_processing, multiState.completedCount, multiState.totalSources))
+
+                    is MultiSourceState.Processing -> {
+                        stringResource(
+                            R.string.epg_current_status,
+                            stringResource(R.string.epg_status_processing, multiState.completedCount, multiState.totalSources),
+                        )
+                    }
+
                     is MultiSourceState.Retrying -> {
                         val nextRetry = NumberUtils.formatTimestamp(LocalContext.current, multiState.nextRetryAtMs)
-                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_retrying, multiState.attempt, multiState.maxAttempts, nextRetry))
+                        stringResource(
+                            R.string.epg_current_status,
+                            stringResource(R.string.epg_status_retrying, multiState.attempt, multiState.maxAttempts, nextRetry),
+                        )
                     }
-                    is MultiSourceState.Completed -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finished))
-                    is MultiSourceState.Finalizing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finalizing, localizedEpgPhase(multiState.phase)))
-                    is MultiSourceState.Clearing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_clearing))
-                    is MultiSourceState.Error -> stringResource(R.string.epg_current_status_error, multiState.reason)
-                    else -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
+
+                    is MultiSourceState.Completed -> {
+                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finished))
+                    }
+
+                    is MultiSourceState.Finalizing -> {
+                        stringResource(
+                            R.string.epg_current_status,
+                            stringResource(R.string.epg_status_finalizing, localizedEpgPhase(multiState.phase)),
+                        )
+                    }
+
+                    is MultiSourceState.Clearing -> {
+                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_clearing))
+                    }
+
+                    is MultiSourceState.Error -> {
+                        stringResource(R.string.epg_current_status_error, multiState.reason)
+                    }
+
+                    else -> {
+                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
+                    }
                 }
             Text(currentStatusText, style = MaterialTheme.typography.bodySmall)
 
@@ -745,7 +857,17 @@ private fun EpgSourceEditDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialSource == null) stringResource(R.string.epg_add_source_title) else stringResource(R.string.epg_edit_source_title)) },
+        title = {
+            Text(
+                if (initialSource ==
+                    null
+                ) {
+                    stringResource(R.string.epg_add_source_title)
+                } else {
+                    stringResource(R.string.epg_edit_source_title)
+                },
+            )
+        },
         confirmButton = {
             CinemaDialogActionButton(
                 onClick = {

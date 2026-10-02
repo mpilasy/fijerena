@@ -235,32 +235,34 @@ fun ProviderSettingsSection(
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = stringResource(
-                        R.string.provider_filter_mode_value,
-                        if (providerSettings.categoryFilters.mode == FilterMode.EXCLUDE) {
-                            stringResource(R.string.provider_filter_exclude)
-                        } else {
-                            stringResource(R.string.provider_filter_include)
-                        },
-                    ),
+                    text =
+                        stringResource(
+                            R.string.provider_filter_mode_value,
+                            if (providerSettings.categoryFilters.mode == FilterMode.EXCLUDE) {
+                                stringResource(R.string.provider_filter_exclude)
+                            } else {
+                                stringResource(R.string.provider_filter_include)
+                            },
+                        ),
                     style = styles.bodyMedium,
                     color = CinemaTextPrimary,
                 )
                 Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                 Text(
-                    text = if (providerSettings.categoryFilters.rules.isEmpty()) {
-                        stringResource(R.string.provider_no_filters)
-                    } else {
-                        val rules = providerSettings.categoryFilters.rules
-                        val preview = rules.take(CATEGORY_FILTER_PREVIEW_COUNT).joinToString(", ") { it.value }
-                        val remaining = rules.size - CATEGORY_FILTER_PREVIEW_COUNT
-                        val suffix = if (remaining > 0) ", +$remaining more" else ""
-                        stringResource(
-                            R.string.provider_prefixes_value,
-                            rules.size,
-                            "$preview$suffix",
-                        )
-                    },
+                    text =
+                        if (providerSettings.categoryFilters.rules.isEmpty()) {
+                            stringResource(R.string.provider_no_filters)
+                        } else {
+                            val rules = providerSettings.categoryFilters.rules
+                            val preview = rules.take(CATEGORY_FILTER_PREVIEW_COUNT).joinToString(", ") { it.value }
+                            val remaining = rules.size - CATEGORY_FILTER_PREVIEW_COUNT
+                            val suffix = if (remaining > 0) ", +$remaining more" else ""
+                            stringResource(
+                                R.string.provider_prefixes_value,
+                                rules.size,
+                                "$preview$suffix",
+                            )
+                        },
                     style = styles.bodyMedium,
                     color = CinemaTextSecondary,
                     maxLines = 2,
@@ -268,14 +270,15 @@ fun ProviderSettingsSection(
                 )
             }
             Text(
-                text = stringResource(
-                    R.string.provider_scripts_value,
-                    if (providerSettings.categoryFilters.allowedScripts.isEmpty()) {
-                        stringResource(R.string.common_all)
-                    } else {
-                        providerSettings.categoryFilters.allowedScripts.joinToString(", ") { it.displayName }
-                    },
-                ),
+                text =
+                    stringResource(
+                        R.string.provider_scripts_value,
+                        if (providerSettings.categoryFilters.allowedScripts.isEmpty()) {
+                            stringResource(R.string.common_all)
+                        } else {
+                            providerSettings.categoryFilters.allowedScripts.joinToString(", ") { it.displayName }
+                        },
+                    ),
                 style = styles.bodyMedium,
                 color = CinemaTextSecondary,
                 maxLines = 1,

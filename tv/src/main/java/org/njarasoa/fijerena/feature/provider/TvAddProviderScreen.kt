@@ -40,18 +40,18 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
-import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
+import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.feature.provider.components.CacheManagementSection
 import org.njarasoa.fijerena.feature.provider.components.CategoryFilterDialog
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
@@ -115,7 +115,7 @@ fun TvAddProviderScreen(
     val coroutineScope = rememberCoroutineScope()
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
     var currentProvider by remember { mutableStateOf<org.njarasoa.fijerena.core.network.provider.ProviderEntity?>(null) }
-    
+
     // Update currentProvider when providers list changes
     LaunchedEffect(providers, editId) {
         if (isEditMode) {
@@ -227,7 +227,14 @@ fun TvAddProviderScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = if (isEditMode) stringResource(R.string.provider_edit_title) else stringResource(R.string.provider_add_title),
+                            text =
+                                if (isEditMode) {
+                                    stringResource(
+                                        R.string.provider_edit_title,
+                                    )
+                                } else {
+                                    stringResource(R.string.provider_add_title)
+                                },
                             style = scaledDisplaySmall,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
@@ -380,7 +387,7 @@ fun TvAddProviderScreen(
                                     // Validate based on selected provider type
                                     val validationError =
                                         when (selectedType) {
-                                            ProviderType.XTREAM ->
+                                            ProviderType.XTREAM -> {
                                                 when {
                                                     name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                                     url.isBlank() -> resources.getString(R.string.provider_error_url_required)
@@ -388,7 +395,9 @@ fun TvAddProviderScreen(
                                                     password.isBlank() -> resources.getString(R.string.provider_error_password_required)
                                                     else -> null
                                                 }
-                                            ProviderType.JELLYFIN ->
+                                            }
+
+                                            ProviderType.JELLYFIN -> {
                                                 when {
                                                     name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                                     url.isBlank() -> resources.getString(R.string.provider_error_url_required)
@@ -396,24 +405,31 @@ fun TvAddProviderScreen(
                                                     password.isBlank() -> resources.getString(R.string.provider_error_password_required)
                                                     else -> null
                                                 }
-                                            ProviderType.SMB ->
+                                            }
+
+                                            ProviderType.SMB -> {
                                                 when {
                                                     name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                                     host.isBlank() -> resources.getString(R.string.provider_error_host_required)
                                                     shareName.isBlank() -> resources.getString(R.string.provider_error_share_required)
                                                     else -> null
                                                 }
-                                            ProviderType.LOCAL ->
+                                            }
+
+                                            ProviderType.LOCAL -> {
                                                 when {
                                                     name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                                     else -> null
                                                 }
-                                            ProviderType.REMOTE_M3U ->
+                                            }
+
+                                            ProviderType.REMOTE_M3U -> {
                                                 when {
                                                     name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                                     url.isBlank() -> resources.getString(R.string.provider_error_m3u_url_required)
                                                     else -> null
                                                 }
+                                            }
                                         }
 
                                     if (validationError != null) {
@@ -449,9 +465,23 @@ fun TvAddProviderScreen(
                                 enabled = !isBusy,
                                 text =
                                     when (saveState) {
-                                        is SaveState.Validating -> stringResource(R.string.provider_connecting)
-                                        is SaveState.Saving -> stringResource(R.string.provider_saving)
-                                        else -> if (isEditMode) stringResource(R.string.common_update) else stringResource(R.string.common_add)
+                                        is SaveState.Validating -> {
+                                            stringResource(R.string.provider_connecting)
+                                        }
+
+                                        is SaveState.Saving -> {
+                                            stringResource(R.string.provider_saving)
+                                        }
+
+                                        else -> {
+                                            if (isEditMode) {
+                                                stringResource(
+                                                    R.string.common_update,
+                                                )
+                                            } else {
+                                                stringResource(R.string.common_add)
+                                            }
+                                        }
                                     },
                             )
                         }

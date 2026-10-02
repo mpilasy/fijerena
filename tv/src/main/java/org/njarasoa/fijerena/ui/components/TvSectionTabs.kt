@@ -31,13 +31,13 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 
 /**
  * One row of section-tab pills (Cast / Details / Similar / ...), TV detail screens' equivalent of
@@ -145,16 +145,13 @@ private fun SectionTab(
                 .focusProperties {
                     previousTabFocusRequester?.let { left = it }
                     nextTabFocusRequester?.let { right = it }
-                }
-                .graphicsLayer {
+                }.graphicsLayer {
                     scaleX = focusScale
                     scaleY = focusScale
-                }
-                .background(
+                }.background(
                     color = containerColor,
                     shape = RoundedCornerShape(CornerRadius.medium),
-                )
-                .then(
+                ).then(
                     if (isFocused) {
                         Modifier.border(
                             width = TvFocusTokens.focusBorderWidth,
@@ -181,7 +178,9 @@ private fun SectionTab(
             text = label,
             style =
                 MaterialTheme.typography.titleMedium.copy(
-                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale),
+                    fontSize =
+                        MaterialTheme.typography.titleMedium.fontSize
+                            .scaled(scale),
                 ),
             color = textColor,
         )

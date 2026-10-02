@@ -251,7 +251,12 @@ private fun ColorSwatch(
                     this.selected = selected
                 },
     ) {
-        ProfileAvatar(name = "", colorIndex = index, size = MobileDimensions.iconLarge, fontSize = MaterialTheme.typography.titleSmall.fontSize)
+        ProfileAvatar(
+            name = "",
+            colorIndex = index,
+            size = MobileDimensions.iconLarge,
+            fontSize = MaterialTheme.typography.titleSmall.fontSize,
+        )
     }
 }
 

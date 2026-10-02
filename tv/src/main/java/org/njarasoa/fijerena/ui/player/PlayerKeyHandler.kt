@@ -39,15 +39,22 @@ fun handlePlayerKeyEvent(
             // KeyDown just revealed the OSD (see suppressNextCenterKeyUp's kdoc). Un-consumed, it
             // falls through to the button focus just landed on and activates it — a single press
             // should only open the OSD, never also toggle favourite or pause.
-            keyEvent.type == KeyEventType.KeyUp ->
+            keyEvent.type == KeyEventType.KeyUp -> {
                 if ((keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter) && state.suppressNextCenterKeyUp) {
                     state.suppressNextCenterKeyUp = false
                     true
                 } else {
                     false
                 }
-            keyEvent.type != KeyEventType.KeyDown -> false
-            else -> handleKeyDown(keyEvent, state, viewModel, playbackState, currentMetadata, onNextChannel, onPreviousChannel)
+            }
+
+            keyEvent.type != KeyEventType.KeyDown -> {
+                false
+            }
+
+            else -> {
+                handleKeyDown(keyEvent, state, viewModel, playbackState, currentMetadata, onNextChannel, onPreviousChannel)
+            }
         }
     return handled
 }
@@ -61,160 +68,177 @@ private fun handleKeyDown(
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
 ): Boolean {
-    val handled = when (keyEvent.key) {
-        Key.DirectionCenter, Key.Enter -> {
-            // Let D-pad OK activate whatever's focused inside an open modal (e.g. select a
-            // channel in the category/last-watched overlay) instead of revealing the OSD —
-            // mirrors the isModalOpen guard on Up/Down/Left/Right below.
-            if (state.isModalOpen) {
-                false
-            } else {
-                val now = System.currentTimeMillis()
-                val isDoubleClick = now - state.lastOkClickTime < 350L
-                state.lastOkClickTime = now
+    val handled =
+        when (keyEvent.key) {
+            Key.DirectionCenter, Key.Enter -> {
+                // Let D-pad OK activate whatever's focused inside an open modal (e.g. select a
+                // channel in the category/last-watched overlay) instead of revealing the OSD —
+                // mirrors the isModalOpen guard on Up/Down/Left/Right below.
+                if (state.isModalOpen) {
+                    false
+                } else {
+                    val now = System.currentTimeMillis()
+                    val isDoubleClick = now - state.lastOkClickTime < 350L
+                    state.lastOkClickTime = now
 
-                if (state.scrubPositionMs != null && !currentMetadata.isLive) {
-                    // Commit scrub: seek to the cursor position and exit scrub mode
-                    commitScrub(state, viewModel)
-                    state.showStreamInfo = true
-                    true
-                } else if (isDoubleClick && state.showStats) {
-                    // Double-click ONLY dismisses stats if they are already showing
-                    state.showStats = false
-                    true
-                } else if (state.showStats) {
-                    // Single-click while stats are showing: pass to player/controls
-                    if (state.showControls) {
-                        false
-                    } else {
-                        state.showControls = true
+                    if (state.scrubPositionMs != null && !currentMetadata.isLive) {
+                        // Commit scrub: seek to the cursor position and exit scrub mode
+                        commitScrub(state, viewModel)
                         state.showStreamInfo = true
-                        state.suppressNextCenterKeyUp = true
                         true
-                    }
-                } else {
-                    // Single-click (or double-click when stats are NOT showing):
-                    // Let it pass if controls are visible, or show controls if not
-                    if (state.showControls) {
-                        false
+                    } else if (isDoubleClick && state.showStats) {
+                        // Double-click ONLY dismisses stats if they are already showing
+                        state.showStats = false
+                        true
+                    } else if (state.showStats) {
+                        // Single-click while stats are showing: pass to player/controls
+                        if (state.showControls) {
+                            false
+                        } else {
+                            state.showControls = true
+                            state.showStreamInfo = true
+                            state.suppressNextCenterKeyUp = true
+                            true
+                        }
                     } else {
-                        state.showControls = true
-                        state.showStreamInfo = true
-                        state.suppressNextCenterKeyUp = true
-                        true
+                        // Single-click (or double-click when stats are NOT showing):
+                        // Let it pass if controls are visible, or show controls if not
+                        if (state.showControls) {
+                            false
+                        } else {
+                            state.showControls = true
+                            state.showStreamInfo = true
+                            state.suppressNextCenterKeyUp = true
+                            true
+                        }
                     }
                 }
             }
-        }
-        Key.DirectionUp -> {
-            // Let D-pad navigate inside anything modal that is open
-            if (state.isModalOpen) {
-                false
-            } else if (!state.showControls && currentMetadata.isLive) {
-                // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
-                if (keyEvent.nativeKeyEvent.repeatCount == 0) {
-                    onPreviousChannel()
-                } else {
-                    state.pendingChannelDelta -= 1
-                }
-                state.showStreamInfo = true
-                true
-            } else if (!state.showControls && !currentMetadata.isLive) {
-                state.showControls = true
-                state.showStreamInfo = true
-                true
-            } else {
-                false
-            }
-        }
-        Key.DirectionDown -> {
-            // Let D-pad navigate inside anything modal that is open
-            if (state.isModalOpen) {
-                false
-            } else if (!state.showControls) {
-                if (currentMetadata.isLive) {
+
+            Key.DirectionUp -> {
+                // Let D-pad navigate inside anything modal that is open
+                if (state.isModalOpen) {
+                    false
+                } else if (!state.showControls && currentMetadata.isLive) {
                     // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
                     if (keyEvent.nativeKeyEvent.repeatCount == 0) {
-                        onNextChannel()
+                        onPreviousChannel()
                     } else {
-                        state.pendingChannelDelta += 1
+                        state.pendingChannelDelta -= 1
                     }
                     state.showStreamInfo = true
                     true
-                } else {
+                } else if (!state.showControls && !currentMetadata.isLive) {
                     state.showControls = true
                     state.showStreamInfo = true
                     true
+                } else {
+                    false
                 }
-            } else {
+            }
+
+            Key.DirectionDown -> {
+                // Let D-pad navigate inside anything modal that is open
+                if (state.isModalOpen) {
+                    false
+                } else if (!state.showControls) {
+                    if (currentMetadata.isLive) {
+                        // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
+                        if (keyEvent.nativeKeyEvent.repeatCount == 0) {
+                            onNextChannel()
+                        } else {
+                            state.pendingChannelDelta += 1
+                        }
+                        state.showStreamInfo = true
+                        true
+                    } else {
+                        state.showControls = true
+                        state.showStreamInfo = true
+                        true
+                    }
+                } else {
+                    false
+                }
+            }
+
+            Key.DirectionLeft -> {
+                if (state.isModalOpen) {
+                    // A track picker or overlay owns the D-pad; do not also seek or swap overlays.
+                    false
+                } else if (!state.showControls && currentMetadata.isLive) {
+                    // Live TV: Left opens category overlay (or closes last-watched)
+                    when {
+                        state.showLastWatchedOverlay -> state.showLastWatchedOverlay = false
+                        else -> state.showCategoryOverlay = true
+                    }
+                    true
+                } else if (!state.showControls && !currentMetadata.isLive) {
+                    // VOD: move scrub cursor backward; OK commits the seek
+                    stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = false)
+                    true
+                } else {
+                    // When controls are visible, let D-pad navigate between buttons
+                    false
+                }
+            }
+
+            Key.DirectionRight -> {
+                if (state.isModalOpen) {
+                    // A track picker or overlay owns the D-pad; do not also seek or swap overlays.
+                    false
+                } else if (!state.showControls && currentMetadata.isLive) {
+                    // Live TV: Right opens last-watched overlay (or closes category)
+                    when {
+                        state.showCategoryOverlay -> state.showCategoryOverlay = false
+                        else -> state.showLastWatchedOverlay = true
+                    }
+                    true
+                } else if (!state.showControls && !currentMetadata.isLive) {
+                    // VOD: move scrub cursor forward; OK commits the seek
+                    stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = true)
+                    true
+                } else {
+                    // When controls are visible, let D-pad navigate between buttons
+                    false
+                }
+            }
+
+            // Key.Back is intentionally NOT handled here — see the BackHandler in PlayerScreen.kt.
+            // A raw onKeyEvent consume doesn't stop the separate OnBackPressedDispatcher chain, so
+            // handling it in both places raced an outer BackHandler (e.g. LiveTvSplitLayout's) into
+            // seeing already-mutated state and double-popping past it.
+            Key(AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) -> {
+                if (!currentMetadata.isLive) {
+                    when (playbackState) {
+                        is PlaybackState.Playing -> {
+                            viewModel.pause()
+                        }
+
+                        is PlaybackState.Paused -> {
+                            viewModel.resume()
+                        }
+
+                        else -> {}
+                    }
+                }
+                true
+            }
+
+            // FF/REW move the same scrub cursor as D-pad Left/Right; OK commits, Back cancels.
+            Key(AndroidKeyEvent.KEYCODE_MEDIA_FAST_FORWARD) -> {
+                if (!currentMetadata.isLive) stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = true)
+                true
+            }
+
+            Key(AndroidKeyEvent.KEYCODE_MEDIA_REWIND) -> {
+                if (!currentMetadata.isLive) stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = false)
+                true
+            }
+
+            else -> {
                 false
             }
         }
-        Key.DirectionLeft -> {
-            if (state.isModalOpen) {
-                // A track picker or overlay owns the D-pad; do not also seek or swap overlays.
-                false
-            } else if (!state.showControls && currentMetadata.isLive) {
-                // Live TV: Left opens category overlay (or closes last-watched)
-                when {
-                    state.showLastWatchedOverlay -> state.showLastWatchedOverlay = false
-                    else -> state.showCategoryOverlay = true
-                }
-                true
-            } else if (!state.showControls && !currentMetadata.isLive) {
-                // VOD: move scrub cursor backward; OK commits the seek
-                stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = false)
-                true
-            } else {
-                // When controls are visible, let D-pad navigate between buttons
-                false
-            }
-        }
-        Key.DirectionRight -> {
-            if (state.isModalOpen) {
-                // A track picker or overlay owns the D-pad; do not also seek or swap overlays.
-                false
-            } else if (!state.showControls && currentMetadata.isLive) {
-                // Live TV: Right opens last-watched overlay (or closes category)
-                when {
-                    state.showCategoryOverlay -> state.showCategoryOverlay = false
-                    else -> state.showLastWatchedOverlay = true
-                }
-                true
-            } else if (!state.showControls && !currentMetadata.isLive) {
-                // VOD: move scrub cursor forward; OK commits the seek
-                stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = true)
-                true
-            } else {
-                // When controls are visible, let D-pad navigate between buttons
-                false
-            }
-        }
-        // Key.Back is intentionally NOT handled here — see the BackHandler in PlayerScreen.kt.
-        // A raw onKeyEvent consume doesn't stop the separate OnBackPressedDispatcher chain, so
-        // handling it in both places raced an outer BackHandler (e.g. LiveTvSplitLayout's) into
-        // seeing already-mutated state and double-popping past it.
-        Key(AndroidKeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) -> {
-            if (!currentMetadata.isLive) {
-                when (playbackState) {
-                    is PlaybackState.Playing -> viewModel.pause()
-                    is PlaybackState.Paused -> viewModel.resume()
-                    else -> {}
-                }
-            }
-            true
-        }
-        // FF/REW move the same scrub cursor as D-pad Left/Right; OK commits, Back cancels.
-        Key(AndroidKeyEvent.KEYCODE_MEDIA_FAST_FORWARD) -> {
-            if (!currentMetadata.isLive) stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = true)
-            true
-        }
-        Key(AndroidKeyEvent.KEYCODE_MEDIA_REWIND) -> {
-            if (!currentMetadata.isLive) stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = false)
-            true
-        }
-        else -> false
-    }
     return handled
 }
 

@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.network
 
-import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
@@ -13,6 +12,7 @@ import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import kotlin.system.measureNanoTime
 
 class MediaRepositoryBenchmarkTest {

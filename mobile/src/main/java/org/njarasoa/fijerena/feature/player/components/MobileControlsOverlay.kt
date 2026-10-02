@@ -37,9 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,18 +47,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.formatEpochTime
+import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
@@ -70,18 +72,16 @@ import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
-import org.njarasoa.fijerena.core.player.model.formatEpochTime
-import org.njarasoa.fijerena.core.player.model.formatTime
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 import java.util.Date
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -322,7 +322,10 @@ fun MobileControlsOverlay(
                                 } else {
                                     CinemaIcons.Pause
                                 },
-                            contentDescription = stringResource(if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause),
+                            contentDescription =
+                                stringResource(
+                                    if (playbackState is PlaybackState.Paused) R.string.player_play else R.string.player_pause,
+                                ),
                             tint = CinemaTextPrimary,
                             modifier = Modifier.size(MobileDimensions.iconPlayIcon),
                         )
@@ -363,11 +366,12 @@ fun MobileControlsOverlay(
 
                         if (duration > 0) {
                             Text(
-                                text = stringResource(
-                                    R.string.movie_ends_at_format,
-                                    org.njarasoa.fijerena.core.ui.theme.TimeFormat
-                                        .formatClockTime(Date(System.currentTimeMillis() + (duration - position))),
-                                ),
+                                text =
+                                    stringResource(
+                                        R.string.movie_ends_at_format,
+                                        org.njarasoa.fijerena.core.ui.theme.TimeFormat
+                                            .formatClockTime(Date(System.currentTimeMillis() + (duration - position))),
+                                    ),
                                 style = labelStyle,
                                 color = MaterialTheme.colorScheme.primary,
                                 maxLines = 1,
@@ -421,7 +425,11 @@ fun MobileControlsOverlay(
                                         SliderDefaults.Thumb(
                                             interactionSource = scrubberInteractionSource,
                                             colors = scrubberColors,
-                                            thumbSize = DpSize(MobileDimensions.playerScrubberThumbSize, MobileDimensions.playerScrubberThumbSize),
+                                            thumbSize =
+                                                DpSize(
+                                                    MobileDimensions.playerScrubberThumbSize,
+                                                    MobileDimensions.playerScrubberThumbSize,
+                                                ),
                                         )
                                     },
                                 )
@@ -468,10 +476,11 @@ fun MobileControlsOverlay(
                                 val nowEpoch = remember(livePosition) { System.currentTimeMillis() / 1000 }
                                 val epgProgress =
                                     if (currentEpgProgram.duration > 0) {
-                                        ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat()).coerceIn(
-                                            0f,
-                                            1f,
-                                        )
+                                        ((nowEpoch - currentEpgProgram.startTime).toFloat() / currentEpgProgram.duration.toFloat())
+                                            .coerceIn(
+                                                0f,
+                                                1f,
+                                            )
                                     } else {
                                         0f
                                     }
@@ -487,11 +496,12 @@ fun MobileControlsOverlay(
                                 )
                                 if (nextEpgProgram != null) {
                                     Text(
-                                        text = stringResource(
-                                            R.string.player_up_next_format,
-                                            nextEpgProgram.title,
-                                            formatEpochTime(epgContext, nextEpgProgram.startTime),
-                                        ),
+                                        text =
+                                            stringResource(
+                                                R.string.player_up_next_format,
+                                                nextEpgProgram.title,
+                                                formatEpochTime(epgContext, nextEpgProgram.startTime),
+                                            ),
                                         style = labelStyle,
                                         color = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
                                         maxLines = 1,
@@ -514,28 +524,31 @@ fun MobileControlsOverlay(
                     ) {
                         // Audio track selector (only if multiple tracks)
                         if (audioTrackCount > 1) {
-                            CinemaIconButton(onClick = onAudioTrack,
+                            CinemaIconButton(
+                                onClick = onAudioTrack,
                                 icon = {
                                     Icon(CinemaIcons.VolumeUp, stringResource(R.string.player_audio), tint = CinemaTextPrimary)
-                                }
+                                },
                             )
                         }
 
                         // Subtitle selector (only if subtitles available)
                         if (subtitleTrackCount > 0) {
-                            CinemaIconButton(onClick = onSubtitle,
+                            CinemaIconButton(
+                                onClick = onSubtitle,
                                 icon = {
                                     Icon(CinemaIcons.Subtitles, stringResource(R.string.player_subtitles), tint = CinemaTextPrimary)
-                                }
+                                },
                             )
                         }
 
                         // Quality selector (only if multiple qualities)
                         if (qualityCount > 1) {
-                            CinemaIconButton(onClick = onQuality,
+                            CinemaIconButton(
+                                onClick = onQuality,
                                 icon = {
                                     Icon(CinemaIcons.Tune, stringResource(R.string.player_quality), tint = CinemaTextPrimary)
-                                }
+                                },
                             )
                         }
 
@@ -548,25 +561,30 @@ fun MobileControlsOverlay(
                             icon = {
                                 Icon(
                                     imageVector = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
-                                    contentDescription = stringResource(if (isFavorite) R.string.player_remove_favorite else R.string.player_add_favorite),
+                                    contentDescription =
+                                        stringResource(
+                                            if (isFavorite) R.string.player_remove_favorite else R.string.player_add_favorite,
+                                        ),
                                     tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
                                 )
-                            }
+                            },
                         )
 
                         // Stats for nerds (always visible)
-                        CinemaIconButton(onClick = onStats,
+                        CinemaIconButton(
+                            onClick = onStats,
                             icon = {
                                 Icon(CinemaIcons.BarChart, stringResource(R.string.player_stats), tint = CinemaTextPrimary)
-                            }
+                            },
                         )
 
                         // Info: title + synopsis popover (only if there's a synopsis to show)
                         if (!metadata.description.isNullOrBlank()) {
-                            CinemaIconButton(onClick = { showInfo = true },
+                            CinemaIconButton(
+                                onClick = { showInfo = true },
                                 icon = {
                                     Icon(CinemaIcons.Info, stringResource(R.string.player_info), tint = CinemaTextPrimary)
-                                }
+                                },
                             )
                         }
 
@@ -613,8 +631,7 @@ fun MobileControlsOverlay(
                             .background(
                                 color = CinemaSurface.copy(alpha = CinemaAlpha.scrim),
                                 shape = RoundedCornerShape(Spacing.sm),
-                            )
-                            .padding(CinemaSpacing.lg),
+                            ).padding(CinemaSpacing.lg),
                 ) {
                     Column {
                         Text(

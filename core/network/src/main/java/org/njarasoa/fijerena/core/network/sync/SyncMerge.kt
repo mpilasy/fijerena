@@ -36,13 +36,19 @@ object SyncMerge {
         data object Delete : Resolution
 
         /** Drop this provider and profile's watch rows older than [before]; keep the marker. */
-        data class ClearWatch(val before: Long) : Resolution
+        data class ClearWatch(
+            val before: Long,
+        ) : Resolution
 
         /** Nothing to do, ever. */
-        data class Skip(val reason: SkipReason) : Resolution
+        data class Skip(
+            val reason: SkipReason,
+        ) : Resolution
 
         /** Can't apply yet: retry once what it depends on has arrived. */
-        data class Defer(val reason: DeferReason) : Resolution
+        data class Defer(
+            val reason: DeferReason,
+        ) : Resolution
     }
 
     enum class SkipReason {
@@ -85,11 +91,21 @@ object SyncMerge {
         if (remote.hlc <= localLatest) return Resolution.Skip(SkipReason.STALE)
 
         return when {
-            remote.key.kind == SyncKind.WATCH_CLEAR -> Resolution.ClearWatch(remote.hlc)
-            remote.deleted -> Resolution.Delete
-            remote.key.kind == SyncKind.WATCH && local.watchClearedAt != null && remote.hlc <= local.watchClearedAt ->
+            remote.key.kind == SyncKind.WATCH_CLEAR -> {
+                Resolution.ClearWatch(remote.hlc)
+            }
+
+            remote.deleted -> {
+                Resolution.Delete
+            }
+
+            remote.key.kind == SyncKind.WATCH && local.watchClearedAt != null && remote.hlc <= local.watchClearedAt -> {
                 Resolution.Skip(SkipReason.CLEARED)
-            else -> Resolution.Upsert
+            }
+
+            else -> {
+                Resolution.Upsert
+            }
         }
     }
 }

@@ -30,7 +30,7 @@ fun ImportOptionsDialog(
     parsed: SettingsExportManager.ParsedImport,
     initialOptions: SettingsExportManager.ImportOptions,
     onDismiss: () -> Unit,
-    onConfirm: (SettingsExportManager.ImportOptions) -> Unit
+    onConfirm: (SettingsExportManager.ImportOptions) -> Unit,
 ) {
     var optProviders by remember { mutableStateOf(initialOptions.importProviders) }
     var optEpg by remember { mutableStateOf(initialOptions.importEpgSources) }
@@ -100,7 +100,7 @@ fun ImportConflictDialog(
     onDismiss: () -> Unit,
     onOverwrite: () -> Unit,
     onDuplicate: () -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
 ) {
     CinemaAlertDialog(
         onDismissRequest = onDismiss,

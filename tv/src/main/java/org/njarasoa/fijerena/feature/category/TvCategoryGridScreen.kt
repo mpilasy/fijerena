@@ -29,8 +29,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
@@ -194,46 +194,26 @@ private fun CategoryGridContent(
             },
             label = "category_state_crossfade",
         ) { state ->
-        when (state) {
-            is CategoryViewModel.UiState.Loading -> {
-                AmbientBackdrop(modifier = Modifier.fillMaxSize())
-                Box(modifier = safeMarginModifier) {
-                    LoadingScreen()
-                }
-            }
-            is CategoryViewModel.UiState.Success -> {
-                val immutableCategories = remember(state.categories) { ImmutableCategoryList(state.categories) }
-                val immutableStreams = remember(state.streams) { state.streams?.let { ImmutableMediaList(it) } }
-                if (contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV && showPreviewPane) {
-                    val ctx = LocalContext.current
-                    val devMode = remember { org.njarasoa.fijerena.core.network.AppSettings(ctx.applicationContext).isDevMode }
-                    LiveTvSplitLayout(
-                        categoryViewModel = catViewModel,
-                        categories = immutableCategories,
-                        selectedCategoryId = state.selectedCategoryId,
-                        streams = immutableStreams,
-                        streamsLoading = state.streamsLoading,
-                        categoriesRefreshing = state.categoriesRefreshing,
-                        lastPlayedItemId = state.lastPlayedItemId,
-                        nowPlaying = nowPlaying,
-                        contentType = contentType,
-                        isDevMode = devMode,
-                        favoriteIds = favoriteIds,
-                        favoriteCategoryIds = favoriteCategoryIds,
-                        watchProgress = watchProgress,
-                        watchedIds = watchedIds,
-                        onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
-                        onStreamSelected = onStreamSelected,
-                        onRefreshCategories = { catViewModel.refreshCategories() },
-                        onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
-                        onBack = onBack,
-                        onHome = onHome,
-                        initialStreamId = initialStreamId,
-                    )
-                } else {
+            when (state) {
+                is CategoryViewModel.UiState.Loading -> {
                     AmbientBackdrop(modifier = Modifier.fillMaxSize())
                     Box(modifier = safeMarginModifier) {
-                        TwoColumnLayout(
+                        LoadingScreen()
+                    }
+                }
+
+                is CategoryViewModel.UiState.Success -> {
+                    val immutableCategories = remember(state.categories) { ImmutableCategoryList(state.categories) }
+                    val immutableStreams = remember(state.streams) { state.streams?.let { ImmutableMediaList(it) } }
+                    if (contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV && showPreviewPane) {
+                        val ctx = LocalContext.current
+                        val devMode =
+                            remember {
+                                org.njarasoa.fijerena.core.network
+                                    .AppSettings(ctx.applicationContext)
+                                    .isDevMode
+                            }
+                        LiveTvSplitLayout(
                             categoryViewModel = catViewModel,
                             categories = immutableCategories,
                             selectedCategoryId = state.selectedCategoryId,
@@ -243,41 +223,68 @@ private fun CategoryGridContent(
                             lastPlayedItemId = state.lastPlayedItemId,
                             nowPlaying = nowPlaying,
                             contentType = contentType,
+                            isDevMode = devMode,
                             favoriteIds = favoriteIds,
                             favoriteCategoryIds = favoriteCategoryIds,
                             watchProgress = watchProgress,
                             watchedIds = watchedIds,
-                            supportsNativeEpg = supportsNativeEpg,
-                            epgIndexState = epgIndexState,
-                            onCategorySelected = { categoryId ->
-                                catViewModel.loadStreams(categoryId)
-                            },
-                            onStreamSelected = { streamId, streamName, categoryId, target ->
-                                onStreamSelected(streamId, streamName, categoryId, target)
-                            },
-                            onRefreshCategories = {
-                                catViewModel.refreshCategories()
-                            },
-                            onRefreshStreams = { categoryId ->
-                                catViewModel.refreshStreams(categoryId)
-                            },
-                            onSearchClick = onSearchClick,
-                            onEpgClick = onEpgClick,
+                            onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
+                            onStreamSelected = onStreamSelected,
+                            onRefreshCategories = { catViewModel.refreshCategories() },
+                            onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
                             onBack = onBack,
+                            onHome = onHome,
+                            initialStreamId = initialStreamId,
+                        )
+                    } else {
+                        AmbientBackdrop(modifier = Modifier.fillMaxSize())
+                        Box(modifier = safeMarginModifier) {
+                            TwoColumnLayout(
+                                categoryViewModel = catViewModel,
+                                categories = immutableCategories,
+                                selectedCategoryId = state.selectedCategoryId,
+                                streams = immutableStreams,
+                                streamsLoading = state.streamsLoading,
+                                categoriesRefreshing = state.categoriesRefreshing,
+                                lastPlayedItemId = state.lastPlayedItemId,
+                                nowPlaying = nowPlaying,
+                                contentType = contentType,
+                                favoriteIds = favoriteIds,
+                                favoriteCategoryIds = favoriteCategoryIds,
+                                watchProgress = watchProgress,
+                                watchedIds = watchedIds,
+                                supportsNativeEpg = supportsNativeEpg,
+                                epgIndexState = epgIndexState,
+                                onCategorySelected = { categoryId ->
+                                    catViewModel.loadStreams(categoryId)
+                                },
+                                onStreamSelected = { streamId, streamName, categoryId, target ->
+                                    onStreamSelected(streamId, streamName, categoryId, target)
+                                },
+                                onRefreshCategories = {
+                                    catViewModel.refreshCategories()
+                                },
+                                onRefreshStreams = { categoryId ->
+                                    catViewModel.refreshStreams(categoryId)
+                                },
+                                onSearchClick = onSearchClick,
+                                onEpgClick = onEpgClick,
+                                onBack = onBack,
+                            )
+                        }
+                    }
+                }
+
+                is CategoryViewModel.UiState.Error -> {
+                    AmbientBackdrop(modifier = Modifier.fillMaxSize())
+                    Box(modifier = safeMarginModifier) {
+                        ErrorScreen(
+                            message = state.message,
+                            onRetry = { catViewModel.retry() },
                         )
                     }
                 }
             }
-            is CategoryViewModel.UiState.Error -> {
-                AmbientBackdrop(modifier = Modifier.fillMaxSize())
-                Box(modifier = safeMarginModifier) {
-                    ErrorScreen(
-                        message = state.message,
-                        onRetry = { catViewModel.retry() },
-                    )
-                }
-            }
-        }
         }
     }
 }

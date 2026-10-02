@@ -27,9 +27,9 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaOrangeLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextDisabled
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -200,7 +200,9 @@ fun CinemaIconButton(
                 focusedScale = TvFocusTokens.focusedScale,
                 pressedScale = TvFocusTokens.pressedScale,
             ),
-        shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+        shape =
+            androidx.tv.material3.ClickableSurfaceDefaults
+                .shape(shape = androidx.compose.foundation.shape.CircleShape),
         border =
             androidx.tv.material3.ClickableSurfaceDefaults.border(
                 border = Border(BorderStroke(TvFocusTokens.borderDefault.scaled(scale), CinemaTextPrimary.copy(alpha = 0.3f))),
@@ -208,7 +210,7 @@ fun CinemaIconButton(
             ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.tv.material3.LocalContentColor provides if (enabled) CinemaTextPrimary else CinemaTextDisabled
+            androidx.tv.material3.LocalContentColor provides if (enabled) CinemaTextPrimary else CinemaTextDisabled,
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -247,7 +249,9 @@ fun CinemaDangerIconButton(
             androidx.tv.material3.ClickableSurfaceDefaults.scale(
                 focusedScale = 1.1f,
             ),
-        shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+        shape =
+            androidx.tv.material3.ClickableSurfaceDefaults
+                .shape(shape = androidx.compose.foundation.shape.CircleShape),
         border =
             androidx.tv.material3.ClickableSurfaceDefaults.border(
                 border = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaOrange.copy(alpha = 0.6f))),
@@ -255,7 +259,7 @@ fun CinemaDangerIconButton(
             ),
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
-            androidx.tv.material3.LocalContentColor provides CinemaTextPrimary
+            androidx.tv.material3.LocalContentColor provides CinemaTextPrimary,
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),

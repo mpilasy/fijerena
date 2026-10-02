@@ -11,7 +11,8 @@ class SyncRemoteStopStateTest {
     private val sentAt = 1_000_000L
     private val requests = mapOf("tv" to StopRequest("session-1", sentAt))
 
-    private fun playing(sessionId: String) = mapOf("tv" to SyncPayloads.NowPlaying(state = SyncPayloads.NowPlaying.PLAYING, sentAt = sentAt, sessionId = sessionId))
+    private fun playing(sessionId: String) =
+        mapOf("tv" to SyncPayloads.NowPlaying(state = SyncPayloads.NowPlaying.PLAYING, sentAt = sentAt, sessionId = sessionId))
 
     @Test
     fun `stopping while the device still shows that playback, unreachable after the timeout`() {

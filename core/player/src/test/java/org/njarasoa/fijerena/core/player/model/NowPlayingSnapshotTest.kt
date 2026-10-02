@@ -9,7 +9,14 @@ import org.junit.Test
 /** See docs/plans/20261001_live-sync-now-playing-plan.md → Phase 1. */
 class NowPlayingSnapshotTest {
     private val movie = PlayerMetadata(title = "Malcolm X", streamUrl = "http://h/u/p/1.mkv")
-    private val live = PlayerMetadata(title = "BBC World News", channelName = "Provider", streamUrl = "http://h/u/p/2", isLive = true, programTitle = "Newsday")
+    private val live =
+        PlayerMetadata(
+            title = "BBC World News",
+            channelName = "Provider",
+            streamUrl = "http://h/u/p/2",
+            isLive = true,
+            programTitle = "Newsday",
+        )
 
     @Test
     fun `playing and paused map to the snapshot's state`() {

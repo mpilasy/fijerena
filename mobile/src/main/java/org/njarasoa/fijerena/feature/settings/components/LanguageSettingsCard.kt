@@ -23,19 +23,21 @@ fun LanguageSettingsCard(
 
     SettingsSection(title = stringResource(R.string.settings_language)) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showLanguageDialog = true }
-                .padding(vertical = Spacing.xs),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { showLanguageDialog = true }
+                    .padding(vertical = Spacing.xs),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val languageLabel = when (uiState.language) {
-                "en" -> stringResource(R.string.settings_language_en)
-                "mg" -> stringResource(R.string.settings_language_mg)
-                "fr" -> stringResource(R.string.settings_language_fr)
-                else -> uiState.language
-            }
+            val languageLabel =
+                when (uiState.language) {
+                    "en" -> stringResource(R.string.settings_language_en)
+                    "mg" -> stringResource(R.string.settings_language_mg)
+                    "fr" -> stringResource(R.string.settings_language_fr)
+                    else -> uiState.language
+                }
             Text(text = languageLabel, style = MaterialTheme.typography.bodyLarge)
         }
     }
@@ -68,7 +70,7 @@ fun LanguageSettingsCard(
                 CinemaDialogTextButton(onClick = { showLanguageDialog = false }) {
                     Text(stringResource(R.string.player_back))
                 }
-            }
+            },
         )
     }
 }
@@ -78,18 +80,19 @@ private fun LanguageOption(
     code: String,
     label: String,
     selectedCode: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(
             selected = (code == selectedCode),
-            onClick = null // handled by Row clickable
+            onClick = null, // handled by Row clickable
         )
         Spacer(modifier = Modifier.width(Spacing.sm))
         Text(text = label, style = MaterialTheme.typography.bodyLarge)

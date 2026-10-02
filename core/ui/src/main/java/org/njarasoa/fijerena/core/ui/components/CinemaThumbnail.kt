@@ -144,22 +144,29 @@ fun TypographyFallback(
     val gradient =
         remember(contentType, palette) {
             when (contentType) {
-                ThumbnailContentType.LIVE_TV ->
+                ThumbnailContentType.LIVE_TV -> {
                     Brush.verticalGradient(
                         colors = listOf(palette.orange, palette.orangeDark),
                     )
-                ThumbnailContentType.MOVIE ->
+                }
+
+                ThumbnailContentType.MOVIE -> {
                     Brush.verticalGradient(
                         colors = listOf(palette.accent, palette.accentDark),
                     )
-                ThumbnailContentType.TV_SHOW ->
+                }
+
+                ThumbnailContentType.TV_SHOW -> {
                     Brush.verticalGradient(
                         colors = listOf(palette.accentLight, palette.accent),
                     )
-                ThumbnailContentType.DEFAULT ->
+                }
+
+                ThumbnailContentType.DEFAULT -> {
                     Brush.verticalGradient(
                         colors = listOf(palette.surfaceVariant, palette.surface),
                     )
+                }
             }
         }
 

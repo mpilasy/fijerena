@@ -30,6 +30,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -37,14 +39,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
-import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.performance.AppPerformanceMonitor
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.formatBitrate
+import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.performance.AppPerformanceMonitor
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -54,8 +56,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
-import org.njarasoa.fijerena.core.player.model.formatBitrate
-import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
@@ -118,7 +118,7 @@ fun TvStatsOverlay(
                 streamElapsed = "0:00",
                 heap = AppPerformanceMonitor.heapSnapshot(),
                 uiFramesSkipped = 0L,
-            )
+            ),
         )
     }
 
@@ -145,8 +145,16 @@ fun TvStatsOverlay(
         ?: remember { mutableStateOf(0f) }
     val serviceMeasuredDroppedFps by StreamingPlaybackService.getInstance()?.measuredDroppedFps?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
-    val streamHealthState by StreamingPlaybackService.getInstance()?.streamHealthState?.collectAsStateWithLifecycle(org.njarasoa.fijerena.core.player.network.StreamHealthState())
-        ?: remember { mutableStateOf(org.njarasoa.fijerena.core.player.network.StreamHealthState()) }
+    val streamHealthState by StreamingPlaybackService.getInstance()?.streamHealthState?.collectAsStateWithLifecycle(
+        org.njarasoa.fijerena.core.player.network
+            .StreamHealthState(),
+    )
+        ?: remember {
+            mutableStateOf(
+                org.njarasoa.fijerena.core.player.network
+                    .StreamHealthState(),
+            )
+        }
     val serviceRecentDropRate by StreamingPlaybackService.getInstance()?.recentDropRate?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
 
@@ -364,10 +372,10 @@ fun TvStatsOverlay(
                     Text(
                         text = "📊 " + stringResource(R.string.player_stats_title),
                         style =
-                             MaterialTheme.typography.titleMedium.copy(
-                                 fontSize = 14.sp,
-                                 fontFamily = FontFamily.Monospace,
-                             ),
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontSize = 14.sp,
+                                fontFamily = FontFamily.Monospace,
+                            ),
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
@@ -414,8 +422,20 @@ fun TvStatsOverlay(
                             SectionHeader(stringResource(R.string.player_stats_network))
                             CompactStatRow(stringResource(R.string.player_stats_speed), stats.networkSpeed)
                             val bwEstimate = serviceBandwidth
-                            CompactStatRow(stringResource(R.string.player_stats_bandwidth), if (bwEstimate > 0) formatBitrate(bwEstimate.toInt()) else naText)
-                            CompactStatRow(stringResource(R.string.player_stats_buffer), stringResource(R.string.player_stats_seconds_unit, stats.bufferHealth))
+                            CompactStatRow(
+                                stringResource(R.string.player_stats_bandwidth),
+                                if (bwEstimate >
+                                    0
+                                ) {
+                                    formatBitrate(bwEstimate.toInt())
+                                } else {
+                                    naText
+                                },
+                            )
+                            CompactStatRow(
+                                stringResource(R.string.player_stats_buffer),
+                                stringResource(R.string.player_stats_seconds_unit, stats.bufferHealth),
+                            )
                             CompactStatRow(stringResource(R.string.player_stats_buffered), formatTime(stats.bufferedPosition))
                             val rebuffers = serviceRebufferCount
                             val rebufferTimeMs = serviceRebufferTimeMs
@@ -429,7 +449,11 @@ fun TvStatsOverlay(
                             if (rebufferTimeMs > 0) {
                                 CompactStatRowColored(
                                     stringResource(R.string.player_stats_rebuf_time),
-                                    stringResource(R.string.player_stats_rebuf_time_format, rebufferTimeMs / 1000, (rebufferTimeMs % 1000) / 100),
+                                    stringResource(
+                                        R.string.player_stats_rebuf_time_format,
+                                        rebufferTimeMs / 1000,
+                                        (rebufferTimeMs % 1000) / 100,
+                                    ),
                                     rebufferColor,
                                 )
                             }
@@ -449,7 +473,7 @@ fun TvStatsOverlay(
                             CompactStatRow(stringResource(R.string.player_stats_pos), formatTime(position))
                             CompactStatRow(
                                 stringResource(R.string.player_stats_dur),
-                                if (duration > 0) formatTime(duration) else stringResource(R.string.player_live)
+                                if (duration > 0) formatTime(duration) else stringResource(R.string.player_live),
                             )
 
                             // Performance metrics with color coding
@@ -464,8 +488,12 @@ fun TvStatsOverlay(
 
                             val dropColor =
                                 when {
-                                    dropRate < 0.5f -> CinemaSuccess // Green - Good
-                                    dropRate < 2.0f -> CinemaWarning // Yellow - Warning
+                                    dropRate < 0.5f -> CinemaSuccess
+
+                                    // Green - Good
+                                    dropRate < 2.0f -> CinemaWarning
+
+                                    // Yellow - Warning
                                     else -> CinemaError // Red - Poor
                                 }
 
@@ -481,7 +509,7 @@ fun TvStatsOverlay(
                                     dropColor,
                                 )
                             }
-                            
+
                             // Short-window rate: the cumulative one above averages a bad burst
                             // away against however long the stream has already been clean.
                             val recentDropRate = serviceRecentDropRate
@@ -499,15 +527,16 @@ fun TvStatsOverlay(
 
                             val currentDropFps = serviceMeasuredDroppedFps
                             if (currentDropFps > 0f) {
-                                val currentDropColor = when {
-                                    currentDropFps < 1.0f -> CinemaSuccess
-                                    currentDropFps < 10.0f -> CinemaWarning
-                                    else -> CinemaError
-                                }
+                                val currentDropColor =
+                                    when {
+                                        currentDropFps < 1.0f -> CinemaSuccess
+                                        currentDropFps < 10.0f -> CinemaWarning
+                                        else -> CinemaError
+                                    }
                                 CompactStatRowColored(
                                     stringResource(R.string.player_stats_drop_rate_per_sec),
                                     String.format(java.util.Locale.US, "%.1f fps", currentDropFps),
-                                    currentDropColor
+                                    currentDropColor,
                                 )
                             }
 
@@ -520,7 +549,12 @@ fun TvStatsOverlay(
                                 }
                             CompactStatRowColored(
                                 stringResource(R.string.player_stats_heap),
-                                stringResource(R.string.player_stats_heap_format, stats.heap.usedMb, stats.heap.maxMb, stats.heap.usedPercent),
+                                stringResource(
+                                    R.string.player_stats_heap_format,
+                                    stats.heap.usedMb,
+                                    stats.heap.maxMb,
+                                    stats.heap.usedPercent,
+                                ),
                                 heapColor,
                             )
                             CompactStatRow(
@@ -537,25 +571,27 @@ fun TvStatsOverlay(
                             SectionHeader(stringResource(R.string.player_stats_stream))
                             CompactStatRow(
                                 stringResource(R.string.player_stats_type),
-                                if (metadata.isLive) stringResource(R.string.player_live) else vodTypeText
+                                if (metadata.isLive) stringResource(R.string.player_live) else vodTypeText,
                             )
                             CompactStatRow(stringResource(R.string.player_stats_retries), "$serviceRetryCount")
-                            
+
                             if (metadata.isLive) {
                                 val health = streamHealthState
-                                val healthText = when {
-                                    health.isDegraded -> String.format(degradedFormat, health.degradedAttempts)
-                                    !health.isHealthy -> String.format(unstableFormat, health.recycleAttempts)
-                                    else -> healthyText
-                                }
-                                val healthColor = when {
-                                    health.isDegraded -> CinemaError
-                                    !health.isHealthy -> CinemaWarning
-                                    else -> CinemaSuccess
-                                }
+                                val healthText =
+                                    when {
+                                        health.isDegraded -> String.format(degradedFormat, health.degradedAttempts)
+                                        !health.isHealthy -> String.format(unstableFormat, health.recycleAttempts)
+                                        else -> healthyText
+                                    }
+                                val healthColor =
+                                    when {
+                                        health.isDegraded -> CinemaError
+                                        !health.isHealthy -> CinemaWarning
+                                        else -> CinemaSuccess
+                                    }
                                 CompactStatRowColored(stringResource(R.string.player_stats_stream_health), healthText, healthColor)
                             }
-                            
+
                             CompactStatRow(stringResource(R.string.player_stats_uptime), stats.streamElapsed)
                             CompactStatRow(stringResource(R.string.player_stats_url), metadata.streamUrl.substringAfterLast("/").take(20))
 
@@ -584,7 +620,12 @@ fun TvStatsOverlay(
                                     .detect()
                             }
                         Text(
-                            text = stringResource(R.string.player_stats_build_format, org.njarasoa.fijerena.BuildConfig.BUILD_TIME, org.njarasoa.fijerena.BuildConfig.GIT_HASH),
+                            text =
+                                stringResource(
+                                    R.string.player_stats_build_format,
+                                    org.njarasoa.fijerena.BuildConfig.BUILD_TIME,
+                                    org.njarasoa.fijerena.BuildConfig.GIT_HASH,
+                                ),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = CinemaTextSecondary.copy(alpha = 0.3f),
                             modifier = Modifier.padding(top = Spacing.xxs),

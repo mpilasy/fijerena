@@ -63,8 +63,19 @@ object SyncPayloads {
         companion object {
             fun of(e: WatchStateEntity) =
                 Watch(
-                    e.itemName, e.categoryId, e.positionMs, e.durationMs, e.isCompleted, e.updatedAt, e.lastPlayedAt,
-                    e.seriesId, e.episodeId, e.seriesName, e.episodeExtension, e.audioTrackIndex, e.subtitleTrackIndex,
+                    e.itemName,
+                    e.categoryId,
+                    e.positionMs,
+                    e.durationMs,
+                    e.isCompleted,
+                    e.updatedAt,
+                    e.lastPlayedAt,
+                    e.seriesId,
+                    e.episodeId,
+                    e.seriesName,
+                    e.episodeExtension,
+                    e.audioTrackIndex,
+                    e.subtitleTrackIndex,
                 )
         }
     }

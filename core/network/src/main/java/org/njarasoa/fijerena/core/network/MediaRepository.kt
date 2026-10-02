@@ -3,7 +3,6 @@ package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import java.io.Closeable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -32,26 +31,27 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
-import org.njarasoa.fijerena.core.player.domain.SeriesId
-import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
-import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
-import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.PlayableStream
+import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
+import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
+import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
-import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 @Serializable
 data class WatchedItem(
@@ -306,7 +306,9 @@ class MediaRepository(
          */
         fun clearDefaultProfile(prefs: SharedPreferences) {
             prefs.edit(commit = true) {
-                prefs.all.keys.filter(::isDefaultProfileKey).forEach(::remove)
+                prefs.all.keys
+                    .filter(::isDefaultProfileKey)
+                    .forEach(::remove)
                 remove(KEY_WATCH_HISTORY)
                 remove(KEY_WATCH_HISTORY_V2)
                 remove(KEY_FAVORITES)
@@ -404,7 +406,6 @@ class MediaRepository(
         }
     }
 
-
     /**
      * One-time per-provider copy of the `favorites_v2` and `favorite_categories` blobs into
      * `favorite_state`, then purging both keys — see
@@ -462,7 +463,8 @@ class MediaRepository(
         val raw = cache.getString(key, null) ?: return emptyList()
         return try {
             json.decodeFromString<List<T>>(raw)
-        } catch (_: Exception) { // cancellation-ok: non-suspend
+        } catch (_: Exception) {
+            // cancellation-ok: non-suspend
             emptyList()
         }
     }
@@ -666,9 +668,10 @@ class MediaRepository(
      * Check whether the SQLite EPG index has data available for search/display.
      */
     fun hasIndexedEpgData(): Boolean {
-        val state = org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-            .getInstance(context)
-            .state.value
+        val state =
+            org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+                .getInstance(context)
+                .state.value
         return state !is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.NotIndexed
     }
 
@@ -713,10 +716,12 @@ class MediaRepository(
                     putString(KEY_LAST_LIVE_CATEGORY, categoryId)
                     putString(KEY_LAST_LIVE_ITEM, itemId)
                 }
+
                 ContentType.MOVIES -> {
                     putString(KEY_LAST_MOVIES_CATEGORY, categoryId)
                     putString(KEY_LAST_MOVIES_ITEM, itemId)
                 }
+
                 ContentType.TV_SHOWS -> {
                     putString(KEY_LAST_TVSHOWS_CATEGORY, categoryId)
                     putString(KEY_LAST_TVSHOWS_ITEM, itemId)
@@ -801,7 +806,8 @@ class MediaRepository(
         val raw = profileCache.getString(key, null) ?: return emptyList()
         return try {
             json.decodeFromString(raw)
-        } catch (_: Exception) { // cancellation-ok: non-suspend
+        } catch (_: Exception) {
+            // cancellation-ok: non-suspend
             emptyList()
         }
     }
@@ -827,40 +833,45 @@ class MediaRepository(
      */
     internal fun getWatchHistoryLocked(): List<WatchedItem> {
         val currentCache = cachedWatchHistory
-        val history = if (currentCache != null) {
-            currentCache
-        } else {
-            val v3Json = cache.getString(KEY_WATCH_HISTORY, null)
-            val loaded = if (v3Json != null) {
-                try {
-                    json.decodeFromString<List<WatchedItem>>(v3Json)
-                } catch (e: Exception) { // cancellation-ok: non-suspend
-                    emptyList()
-                }
+        val history =
+            if (currentCache != null) {
+                currentCache
             } else {
-                val v2Json = cache.getString(KEY_WATCH_HISTORY_V2, null)
-                if (v2Json != null) {
-                    try {
-                        val v2Items = json.decodeFromString<List<WatchedItem>>(v2Json)
-                        val normalized = v2Items.map { item ->
-                            if (item.contentType == ContentType.TV_SHOWS && item.episodeId == null) {
-                                item.copy(episodeId = EpisodeId(item.itemId))
-                            } else {
-                                item
-                            }
+                val v3Json = cache.getString(KEY_WATCH_HISTORY, null)
+                val loaded =
+                    if (v3Json != null) {
+                        try {
+                            json.decodeFromString<List<WatchedItem>>(v3Json)
+                        } catch (e: Exception) {
+                            // cancellation-ok: non-suspend
+                            emptyList()
                         }
-                        cache.commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(normalized)) }
-                        normalized
-                    } catch (e: Exception) { // cancellation-ok: non-suspend
-                        emptyList()
+                    } else {
+                        val v2Json = cache.getString(KEY_WATCH_HISTORY_V2, null)
+                        if (v2Json != null) {
+                            try {
+                                val v2Items = json.decodeFromString<List<WatchedItem>>(v2Json)
+                                val normalized =
+                                    v2Items.map { item ->
+                                        if (item.contentType == ContentType.TV_SHOWS && item.episodeId == null) {
+                                            item.copy(episodeId = EpisodeId(item.itemId))
+                                        } else {
+                                            item
+                                        }
+                                    }
+                                cache.commitAsync { putString(KEY_WATCH_HISTORY, json.encodeToString(normalized)) }
+                                normalized
+                            } catch (e: Exception) {
+                                // cancellation-ok: non-suspend
+                                emptyList()
+                            }
+                        } else {
+                            emptyList()
+                        }
                     }
-                } else {
-                    emptyList()
-                }
+                cachedWatchHistory = loaded
+                loaded
             }
-            cachedWatchHistory = loaded
-            loaded
-        }
         return history
     }
 
@@ -907,37 +918,39 @@ class MediaRepository(
         itemName: String,
         categoryId: String,
         contentType: String,
-    ): Boolean = synchronized(favoriteLock) {
-        val favorites = getFavoriteItems().toMutableList()
-        val alreadyFavorite = favorites.any { it.itemId == itemId && it.contentType == contentType }
-        if (!alreadyFavorite) {
-            val item = FavoriteItem(itemId, itemName, categoryId, contentType)
-            // No take(favoritesMaxSize) here any more: the cap is what silently evicted the oldest
-            // favourite once the list filled up. Rows are unbounded — see
-            // docs/plans/20260828_favorites-durable-storage-plan.md.
-            favorites.add(0, item)
-            cachedFavorites = favorites
-            favoriteIdSet = null
-            writeScope.launch { favoriteStateDao.upsertClearingTombstone(item.toEntity(providerId, profileId)) }
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val favorites = getFavoriteItems().toMutableList()
+            val alreadyFavorite = favorites.any { it.itemId == itemId && it.contentType == contentType }
+            if (!alreadyFavorite) {
+                val item = FavoriteItem(itemId, itemName, categoryId, contentType)
+                // No take(favoritesMaxSize) here any more: the cap is what silently evicted the oldest
+                // favourite once the list filled up. Rows are unbounded — see
+                // docs/plans/20260828_favorites-durable-storage-plan.md.
+                favorites.add(0, item)
+                cachedFavorites = favorites
+                favoriteIdSet = null
+                writeScope.launch { favoriteStateDao.upsertClearingTombstone(item.toEntity(providerId, profileId)) }
+            }
+            return !alreadyFavorite
         }
-        return !alreadyFavorite
-    }
 
     fun removeFavorite(
         itemId: String,
         contentType: String,
-    ): Boolean = synchronized(favoriteLock) {
-        val favorites = getFavoriteItems().toMutableList()
-        val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
-        if (removed) {
-            cachedFavorites = favorites
-            favoriteIdSet = null
-            writeScope.launch {
-                favoriteStateDao.deleteRecordingTombstone(providerId, profileId, itemId, contentType, FavoriteKind.STREAM)
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val favorites = getFavoriteItems().toMutableList()
+            val removed = favorites.removeAll { it.itemId == itemId && it.contentType == contentType }
+            if (removed) {
+                cachedFavorites = favorites
+                favoriteIdSet = null
+                writeScope.launch {
+                    favoriteStateDao.deleteRecordingTombstone(providerId, profileId, itemId, contentType, FavoriteKind.STREAM)
+                }
             }
+            return removed
         }
-        return removed
-    }
 
     /**
      * Fills both favourite snapshots from `favorite_state` in one read.
@@ -974,58 +987,63 @@ class MediaRepository(
                 .toList()
     }
 
-    private fun getFavoriteItems(): List<FavoriteItem> = synchronized(favoriteLock) {
-        loadFavoriteSnapshotLocked()
-        return cachedFavorites.orEmpty()
-    }
+    private fun getFavoriteItems(): List<FavoriteItem> =
+        synchronized(favoriteLock) {
+            loadFavoriteSnapshotLocked()
+            return cachedFavorites.orEmpty()
+        }
 
-    fun getFavoritesForContentType(contentType: String): List<MediaItem> = synchronized(favoriteLock) {
-        val mediaType = contentTypeToMediaType(contentType)
-        return getFavoriteItems()
-            .asSequence()
-            .filter { it.contentType == contentType }
-            .map { fav ->
-                MediaItem(
-                    id = fav.itemId,
-                    name = fav.itemName,
-                    mediaType = mediaType,
-                    categoryId = fav.categoryId,
-                )
-            }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
-            .toList()
-    }
+    fun getFavoritesForContentType(contentType: String): List<MediaItem> =
+        synchronized(favoriteLock) {
+            val mediaType = contentTypeToMediaType(contentType)
+            return getFavoriteItems()
+                .asSequence()
+                .filter { it.contentType == contentType }
+                .map { fav ->
+                    MediaItem(
+                        id = fav.itemId,
+                        name = fav.itemName,
+                        mediaType = mediaType,
+                        categoryId = fav.categoryId,
+                    )
+                }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+                .toList()
+        }
 
     fun isFavorite(
         itemId: String,
         contentType: String,
-    ): Boolean = synchronized(favoriteLock) {
-        val set =
-            favoriteIdSet ?: getFavoriteItems()
-                .mapTo(HashSet()) { it.itemId to it.contentType }
-                .also { favoriteIdSet = it }
-        return (itemId to contentType) in set
-    }
-
-    fun getFavoriteItemIds(contentType: String): Set<String> = synchronized(favoriteLock) {
-        val set =
-            favoriteIdSet ?: getFavoriteItems()
-                .mapTo(HashSet()) { it.itemId to it.contentType }
-                .also { favoriteIdSet = it }
-        val matching = HashSet<String>(set.size)
-        for ((id, type) in set) {
-            if (type == contentType) {
-                matching.add(id)
-            }
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val set =
+                favoriteIdSet ?: getFavoriteItems()
+                    .mapTo(HashSet()) { it.itemId to it.contentType }
+                    .also { favoriteIdSet = it }
+            return (itemId to contentType) in set
         }
-        matching
-    }
+
+    fun getFavoriteItemIds(contentType: String): Set<String> =
+        synchronized(favoriteLock) {
+            val set =
+                favoriteIdSet ?: getFavoriteItems()
+                    .mapTo(HashSet()) { it.itemId to it.contentType }
+                    .also { favoriteIdSet = it }
+            val matching = HashSet<String>(set.size)
+            for ((id, type) in set) {
+                if (type == contentType) {
+                    matching.add(id)
+                }
+            }
+            matching
+        }
 
     /** Streams only — both "Clear All Favorites" dialogs say "favorited streams". */
-    fun clearFavorites() = synchronized(favoriteLock) {
-        cachedFavorites = emptyList()
-        favoriteIdSet = null
-        writeScope.launch { favoriteStateDao.deleteAllOfKindRecordingTombstones(providerId, profileId, FavoriteKind.STREAM) }
-    }
+    fun clearFavorites() =
+        synchronized(favoriteLock) {
+            cachedFavorites = emptyList()
+            favoriteIdSet = null
+            writeScope.launch { favoriteStateDao.deleteAllOfKindRecordingTombstones(providerId, profileId, FavoriteKind.STREAM) }
+        }
 
     // --- Favorite Categories ---
 
@@ -1033,83 +1051,90 @@ class MediaRepository(
         categoryId: String,
         categoryName: String,
         contentType: String,
-    ): Boolean = synchronized(favoriteLock) {
-        val favorites = getFavoriteCategoryItems().toMutableList()
-        if (favorites.any { it.categoryId == categoryId && it.contentType == contentType }) {
-            return false
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val favorites = getFavoriteCategoryItems().toMutableList()
+            if (favorites.any { it.categoryId == categoryId && it.contentType == contentType }) {
+                return false
+            }
+            val item = FavoriteCategoryItem(categoryId, categoryName, contentType)
+            favorites.add(0, item)
+            cachedFavoriteCategories = favorites
+            favoriteCategoryIdSet = null
+            writeScope.launch { favoriteStateDao.upsertClearingTombstone(item.toEntity(providerId, profileId)) }
+            return true
         }
-        val item = FavoriteCategoryItem(categoryId, categoryName, contentType)
-        favorites.add(0, item)
-        cachedFavoriteCategories = favorites
-        favoriteCategoryIdSet = null
-        writeScope.launch { favoriteStateDao.upsertClearingTombstone(item.toEntity(providerId, profileId)) }
-        return true
-    }
 
     fun removeFavoriteCategory(
         categoryId: String,
         contentType: String,
-    ): Boolean = synchronized(favoriteLock) {
-        val favorites = getFavoriteCategoryItems().toMutableList()
-        val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
-        if (!removed) return false
-        cachedFavoriteCategories = favorites
-        favoriteCategoryIdSet = null
-        writeScope.launch {
-            favoriteStateDao.deleteRecordingTombstone(providerId, profileId, categoryId, contentType, FavoriteKind.CATEGORY)
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val favorites = getFavoriteCategoryItems().toMutableList()
+            val removed = favorites.removeAll { it.categoryId == categoryId && it.contentType == contentType }
+            if (!removed) return false
+            cachedFavoriteCategories = favorites
+            favoriteCategoryIdSet = null
+            writeScope.launch {
+                favoriteStateDao.deleteRecordingTombstone(providerId, profileId, categoryId, contentType, FavoriteKind.CATEGORY)
+            }
+            return true
         }
-        return true
-    }
 
-    fun getFavoriteCategoryItems(): List<FavoriteCategoryItem> = synchronized(favoriteLock) {
-        loadFavoriteSnapshotLocked()
-        return cachedFavoriteCategories.orEmpty()
-    }
+    fun getFavoriteCategoryItems(): List<FavoriteCategoryItem> =
+        synchronized(favoriteLock) {
+            loadFavoriteSnapshotLocked()
+            return cachedFavoriteCategories.orEmpty()
+        }
 
-    fun getFavoriteCategoriesForContentType(contentType: String): List<MediaCategory> = synchronized(favoriteLock) {
-        return@synchronized getFavoriteCategoryItems()
-            .asSequence()
-            .filter { it.contentType == contentType }
-            .map { fav ->
-                MediaCategory(
-                    id = fav.categoryId,
-                    name = fav.categoryName,
-                    isVirtual = false,
-                )
-            }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
-            .toList()
-    }
+    fun getFavoriteCategoriesForContentType(contentType: String): List<MediaCategory> =
+        synchronized(favoriteLock) {
+            return@synchronized getFavoriteCategoryItems()
+                .asSequence()
+                .filter { it.contentType == contentType }
+                .map { fav ->
+                    MediaCategory(
+                        id = fav.categoryId,
+                        name = fav.categoryName,
+                        isVirtual = false,
+                    )
+                }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+                .toList()
+        }
 
     fun isFavoriteCategory(
         categoryId: String,
         contentType: String,
-    ): Boolean = synchronized(favoriteLock) {
-        val set =
-            favoriteCategoryIdSet ?: getFavoriteCategoryItems()
-                .mapTo(HashSet()) { it.categoryId to it.contentType }
-                .also { favoriteCategoryIdSet = it }
-        return (categoryId to contentType) in set
-    }
-
-    fun getFavoriteCategoryIds(contentType: String): Set<String> = synchronized(favoriteLock) {
-        val set =
-            favoriteCategoryIdSet ?: getFavoriteCategoryItems()
-                .mapTo(HashSet()) { it.categoryId to it.contentType }
-                .also { favoriteCategoryIdSet = it }
-        val matching = HashSet<String>(set.size)
-        for ((id, type) in set) {
-            if (type == contentType) {
-                matching.add(id)
-            }
+    ): Boolean =
+        synchronized(favoriteLock) {
+            val set =
+                favoriteCategoryIdSet ?: getFavoriteCategoryItems()
+                    .mapTo(HashSet()) { it.categoryId to it.contentType }
+                    .also { favoriteCategoryIdSet = it }
+            return (categoryId to contentType) in set
         }
-        matching
-    }
 
-    fun clearFavoriteCategories() = synchronized(favoriteLock) {
-        cachedFavoriteCategories = emptyList()
-        favoriteCategoryIdSet = null
-        writeScope.launch { favoriteStateDao.deleteAllOfKindRecordingTombstones(providerId, profileId, FavoriteKind.CATEGORY) }
-    }
+    fun getFavoriteCategoryIds(contentType: String): Set<String> =
+        synchronized(favoriteLock) {
+            val set =
+                favoriteCategoryIdSet ?: getFavoriteCategoryItems()
+                    .mapTo(HashSet()) { it.categoryId to it.contentType }
+                    .also { favoriteCategoryIdSet = it }
+            val matching = HashSet<String>(set.size)
+            for ((id, type) in set) {
+                if (type == contentType) {
+                    matching.add(id)
+                }
+            }
+            matching
+        }
+
+    fun clearFavoriteCategories() =
+        synchronized(favoriteLock) {
+            cachedFavoriteCategories = emptyList()
+            favoriteCategoryIdSet = null
+            writeScope.launch { favoriteStateDao.deleteAllOfKindRecordingTombstones(providerId, profileId, FavoriteKind.CATEGORY) }
+        }
 
     /**
      * Records a resume point, and with it the identity of what was played.
@@ -1350,17 +1375,26 @@ class MediaRepository(
      */
     private fun WatchedItem.recentTarget(seriesCardId: SeriesId?): BrowseTarget =
         when {
-            seriesCardId != null ->
+            seriesCardId != null -> {
                 BrowseTarget.Series(seriesId = seriesCardId, resumeEpisodeId = episodeId ?: EpisodeId(itemId))
-            contentType == ContentType.TV_SHOWS ->
+            }
+
+            contentType == ContentType.TV_SHOWS -> {
                 BrowseTarget.Episode(
                     episodeId = episodeId ?: EpisodeId(itemId),
                     seriesId = seriesId,
                     seriesName = seriesName,
                     extension = episodeExtension,
                 )
-            contentType == ContentType.MOVIES -> BrowseTarget.Movie(itemId)
-            else -> BrowseTarget.Channel(itemId)
+            }
+
+            contentType == ContentType.MOVIES -> {
+                BrowseTarget.Movie(itemId)
+            }
+
+            else -> {
+                BrowseTarget.Channel(itemId)
+            }
         }
 
     /**
@@ -1423,8 +1457,7 @@ class MediaRepository(
         return result
     }
 
-    private fun WatchStateEntity.isResumable(): Boolean =
-        !isCompleted && durationMs > 0 && (positionMs * 100.0 / durationMs) in 2.0..95.0
+    private fun WatchStateEntity.isResumable(): Boolean = !isCompleted && durationMs > 0 && (positionMs * 100.0 / durationMs) in 2.0..95.0
 
     /** An episode to offer as "Up next": its id and title. */
     private data class UpNextEpisode(
@@ -1460,7 +1493,8 @@ class MediaRepository(
                 unknown += row
                 continue
             }
-            episodeDao.getNextEpisode(providerId, current.seriesId, current.season ?: 0, current.episodeNum)
+            episodeDao
+                .getNextEpisode(providerId, current.seriesId, current.season ?: 0, current.episodeNum)
                 ?.let { found[row] = UpNextEpisode(it.id, it.title) }
         }
         val toFetch = unknown.filter { latestPerShow.indexOf(it) < limit }
@@ -1772,9 +1806,13 @@ class MediaRepository(
             } else {
                 watchStateDao.markUnwatched(providerId, profileId, itemId, contentType, now)
                 when (contentType) {
-                    ContentType.MOVIES ->
+                    ContentType.MOVIES -> {
                         streamDao.clearGroupCompletion(providerId, profileId, contentType, XtreamStreamEntity.TYPE_VOD, itemId, now)
-                    ContentType.TV_SHOWS -> episodeDao.clearGroupCompletion(providerId, profileId, itemId, now)
+                    }
+
+                    ContentType.TV_SHOWS -> {
+                        episodeDao.clearGroupCompletion(providerId, profileId, itemId, now)
+                    }
                 }
             }
         }
@@ -1862,8 +1900,11 @@ class MediaRepository(
             when (value) {
                 // Estimate UTF-8 size without allocating byte arrays (worst-case 3 bytes per char)
                 is String -> totalSize += value.length.toLong() * 3
+
                 is Long -> totalSize += 8
+
                 is Int -> totalSize += 4
+
                 is Boolean -> totalSize += 1
             }
         }

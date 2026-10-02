@@ -22,9 +22,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 @Composable
@@ -106,7 +106,14 @@ fun ColumnScope.ProviderFormSection(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     val image = if (passwordVisible) CinemaIcons.VisibilityOff else CinemaIcons.Visibility
-                    val description = if (passwordVisible) stringResource(R.string.provider_hide_password) else stringResource(R.string.provider_show_password)
+                    val description =
+                        if (passwordVisible) {
+                            stringResource(
+                                R.string.provider_hide_password,
+                            )
+                        } else {
+                            stringResource(R.string.provider_show_password)
+                        }
                     IconButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
                         Icon(imageVector = image, contentDescription = description)
                     }
@@ -165,7 +172,14 @@ fun ColumnScope.ProviderFormSection(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     val image = if (passwordVisible) CinemaIcons.VisibilityOff else CinemaIcons.Visibility
-                    val description = if (passwordVisible) stringResource(R.string.provider_hide_password) else stringResource(R.string.provider_show_password)
+                    val description =
+                        if (passwordVisible) {
+                            stringResource(
+                                R.string.provider_hide_password,
+                            )
+                        } else {
+                            stringResource(R.string.provider_show_password)
+                        }
                     IconButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
                         Icon(imageVector = image, contentDescription = description)
                     }
@@ -257,7 +271,14 @@ fun ColumnScope.ProviderFormSection(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     val image = if (passwordVisible) CinemaIcons.VisibilityOff else CinemaIcons.Visibility
-                    val description = if (passwordVisible) stringResource(R.string.provider_hide_password) else stringResource(R.string.provider_show_password)
+                    val description =
+                        if (passwordVisible) {
+                            stringResource(
+                                R.string.provider_hide_password,
+                            )
+                        } else {
+                            stringResource(R.string.provider_show_password)
+                        }
                     IconButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
                         Icon(imageVector = image, contentDescription = description)
                     }

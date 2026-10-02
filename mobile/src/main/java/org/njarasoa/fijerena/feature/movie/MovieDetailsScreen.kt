@@ -5,9 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Star
@@ -30,15 +30,16 @@ import org.njarasoa.fijerena.core.player.model.channelLabel
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.extractYear
 import org.njarasoa.fijerena.core.player.model.formatDuration
-import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
+import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
@@ -52,7 +53,6 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.components.buttons.DetailIconAction
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,10 +93,11 @@ fun MobileMovieDetailsScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.movie_details_title)) },
                 navigationIcon = {
-                    CinemaIconButton(onClick = onBack,
+                    CinemaIconButton(
+                        onClick = onBack,
                         icon = {
                             Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back), tint = CinemaTextPrimary)
-                        }
+                        },
                     )
                 },
                 // Favorite/Watched moved into the icon row under the Play button (see
@@ -120,6 +121,7 @@ fun MobileMovieDetailsScreen(
                         onBack = onBack,
                     )
                 }
+
                 shown != null -> {
                     PullToRefreshBox(
                         isRefreshing = isRefreshing,
@@ -149,6 +151,7 @@ fun MobileMovieDetailsScreen(
                         )
                     }
                 }
+
                 else -> {
                     LoadingScreen()
                 }
@@ -182,217 +185,242 @@ private fun MovieDetailsContent(
     val extension = movieDetail.extension ?: "mp4"
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-    // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the related
-    // rows below paid their full layout cost while sitting off-screen — on the TV copy of this
-    // screen that was 200ms of a 215ms measure pass, and this screen's player exit shows the same
-    // ~167ms rebuild frame. Unlike the TV version, nothing moves visually here: the rows were
-    // already top-level siblings rather than nested inside a panel.
-    //
-    // Everything above the related rows stays in one item: it is a single flowing block that is
-    // largely on screen anyway, so splitting it would add churn without saving measurement.
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(CinemaSpacing.md),
-    ) {
-        item(key = "detail") {
-        Column {
-        val movieTitleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
-        MobileDetailHero(
-            title = movieTitleText,
-            backdropUrl = backdropUrl,
-            posterUrl = movieDetail.coverUrl,
-            logoUrl = logoUrl,
-            thumbnailContentType = ThumbnailContentType.MOVIE,
-        )
-
-        Spacer(modifier = Modifier.height(CinemaSpacing.md))
-
-        // Movie metadata - genre on its own line
-        movieDetail.metadata.genre?.let { genre ->
-            Text(
-                text = genre,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-
-        // Single dot-separated meta row: star rating and content rating/resolution stay their own
-        // small pills (same as before), everything else is plain text — all joined by " · " into
-        // one flowing line instead of each fact carrying its own separate spacing.
-        val endsAtContext = LocalContext.current
-        val endsAtText =
-            remember(movieDetail.metadata.duration, resumePositionMs) {
-                computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
-            }
-        val year = extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
-        val resolution =
-            movieDetail.videoInfo?.let { video -> video.width?.let { w -> video.height?.let { h -> resolutionLabel(w, h) } } }
-        val metaSegments =
-            listOfNotNull<@Composable () -> Unit>(
-                movieDetail.metadata.rating?.let { rating ->
-                    { RatingBadge(rating = rating, textColor = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.titleMedium) }
-                },
-                year?.let { { MetaText(it.toString()) } },
-                movieDetail.metadata.contentRating?.let { { MetaBadge(it) } },
-                movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { { MetaText(formatDuration(it)) } },
-                endsAtText?.let { { MetaText(stringResource(R.string.movie_ends_at_format, it)) } },
-                resolution?.let { { MetaBadge(it) } },
-            )
-        if (metaSegments.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            Row(
-                // Rating badge + a long meta line can add up to wider than a narrow phone screen;
-                // a plain Row clips the tail instead of wrapping. Scroll rather than clip.
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                metaSegments.forEachIndexed { index, segment ->
-                    if (index > 0) {
-                        Text(
-                            text = "•",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        )
-                    }
-                    segment()
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-
-        // Play / Resume button
-        val hasResume = resumePositionMs > 0L
-        if (hasResume) {
-            val resumeTimeText = formatTime(resumePositionMs)
-            CinemaButton(
-                onClick = {
-                    onPlayMovie(movieId, movieDetail.name, extension, false)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.movie_resume_from_format, resumeTimeText))
-            }
-        } else {
-            CinemaButton(
-                onClick = {
-                    onPlayMovie(movieId, movieDetail.name, extension, false)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.movie_play_action))
-            }
-        }
-
-        // Secondary actions row — only actions the app actually supports (no Cast/Shuffle).
-        Spacer(modifier = Modifier.height(CinemaSpacing.md))
-        val trailerContext = LocalContext.current
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+        // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the related
+        // rows below paid their full layout cost while sitting off-screen — on the TV copy of this
+        // screen that was 200ms of a 215ms measure pass, and this screen's player exit shows the same
+        // ~167ms rebuild frame. Unlike the TV version, nothing moves visually here: the rows were
+        // already top-level siblings rather than nested inside a panel.
+        //
+        // Everything above the related rows stays in one item: it is a single flowing block that is
+        // largely on screen anyway, so splitting it would add churn without saving measurement.
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(CinemaSpacing.md),
         ) {
-            DetailIconAction(
-                icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
-                onClick = onToggleFavorite,
-                tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
-            )
-            DetailIconAction(
-                icon = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
-                onClick = onToggleWatched,
-                tint = if (isWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
-            )
-            if (hasResume) {
-                DetailIconAction(
-                    icon = CinemaIcons.Replay,
-                    label = stringResource(R.string.movie_start_beginning),
-                    onClick = { onPlayMovie(movieId, movieDetail.name, extension, true) },
-                )
-            }
-            movieDetail.metadata.trailerUrl?.let { trailer ->
-                DetailIconAction(
-                    icon = CinemaIcons.Movie,
-                    label = stringResource(R.string.details_watch_trailer),
-                    onClick = { openExternalUrl(trailerContext, trailer) },
-                )
-            }
-        }
-
-        // Segmented detail sections (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,
-        // Phase 4 3c) — mirrors TV's own tabbed layout (docs/plans/20260902_tv-detail-hero-ui-plan.md
-        // Phase 4): built from what this movie actually has, not a fixed list, so a title with no
-        // cast/related-titles/alternate-instances doesn't show an empty tab for it.
-        val hasCast = !movieDetail.metadata.cast.isNullOrBlank()
-        val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty() || relatedTitles.collection.isNotEmpty()
-        val hasVersions = alternateStreams.isNotEmpty()
-        val tabs =
-            remember(hasCast, hasMoreLikeThis, hasVersions) {
-                buildList {
-                    add(MovieDetailTab.OVERVIEW)
-                    if (hasCast) add(MovieDetailTab.CAST)
-                    if (hasMoreLikeThis) add(MovieDetailTab.MORE_LIKE_THIS)
-                    if (hasVersions) add(MovieDetailTab.VERSIONS)
-                }
-            }
-        var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
-        val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
-
-        Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-        // A single-tab strip (a title with no cast/related-titles/alternate-instances, leaving
-        // only Overview) has nothing to switch between — skip the strip entirely rather than
-        // render dead chrome for a tab the user can't leave.
-        if (tabs.size > 1) {
-            PrimaryTabRow(selectedTabIndex = safeTabIndex) {
-                tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        selected = index == safeTabIndex,
-                        onClick = { selectedTabIndex = index },
-                        text = { Text(movieDetailTabLabel(tab)) },
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(CinemaSpacing.md))
-        }
-        when (tabs.getOrNull(safeTabIndex)) {
-            MovieDetailTab.OVERVIEW ->
-                MovieOverviewTabContent(
-                    movieDetail = movieDetail,
-                    categoryName = categoryName,
-                    onCategorySelected = onCategorySelected,
-                )
-            MovieDetailTab.CAST -> CastChipsTabContent(cast = movieDetail.metadata.cast.orEmpty())
-            MovieDetailTab.MORE_LIKE_THIS ->
+            item(key = "detail") {
                 Column {
-                    if (relatedTitles.collection.isNotEmpty()) {
-                        RelatedTitlesRow(
-                            title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
-                            items = relatedTitles.collection,
-                            onItemClick = onRelatedTitleSelected,
+                    val movieTitleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
+                    MobileDetailHero(
+                        title = movieTitleText,
+                        backdropUrl = backdropUrl,
+                        posterUrl = movieDetail.coverUrl,
+                        logoUrl = logoUrl,
+                        thumbnailContentType = ThumbnailContentType.MOVIE,
+                    )
+
+                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
+
+                    // Movie metadata - genre on its own line
+                    movieDetail.metadata.genre?.let { genre ->
+                        Text(
+                            text = genre,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    if (relatedTitles.moreLikeThis.isNotEmpty()) {
-                        RelatedTitlesRow(
-                            title = stringResource(R.string.details_more_like_this),
-                            items = relatedTitles.moreLikeThis,
-                            onItemClick = onRelatedTitleSelected,
-                            modifier =
-                                if (relatedTitles.collection.isNotEmpty()) Modifier.padding(top = CinemaSpacing.lg) else Modifier,
+
+                    // Single dot-separated meta row: star rating and content rating/resolution stay their own
+                    // small pills (same as before), everything else is plain text — all joined by " · " into
+                    // one flowing line instead of each fact carrying its own separate spacing.
+                    val endsAtContext = LocalContext.current
+                    val endsAtText =
+                        remember(movieDetail.metadata.duration, resumePositionMs) {
+                            computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
+                        }
+                    val year =
+                        extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
+                    val resolution =
+                        movieDetail.videoInfo?.let { video -> video.width?.let { w -> video.height?.let { h -> resolutionLabel(w, h) } } }
+                    val metaSegments =
+                        listOfNotNull<@Composable () -> Unit>(
+                            movieDetail.metadata.rating?.let { rating ->
+                                {
+                                    RatingBadge(
+                                        rating = rating,
+                                        textColor = MaterialTheme.colorScheme.secondary,
+                                        style = MaterialTheme.typography.titleMedium,
+                                    )
+                                }
+                            },
+                            year?.let { { MetaText(it.toString()) } },
+                            movieDetail.metadata.contentRating?.let { { MetaBadge(it) } },
+                            movieDetail.metadata.duration
+                                ?.takeIf(::hasMeaningfulDuration)
+                                ?.let { { MetaText(formatDuration(it)) } },
+                            endsAtText?.let { { MetaText(stringResource(R.string.movie_ends_at_format, it)) } },
+                            resolution?.let { { MetaBadge(it) } },
                         )
+                    if (metaSegments.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                        Row(
+                            // Rating badge + a long meta line can add up to wider than a narrow phone screen;
+                            // a plain Row clips the tail instead of wrapping. Scroll rather than clip.
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            metaSegments.forEachIndexed { index, segment ->
+                                if (index > 0) {
+                                    Text(
+                                        text = "•",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                    )
+                                }
+                                segment()
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(CinemaSpacing.lg))
+
+                    // Play / Resume button
+                    val hasResume = resumePositionMs > 0L
+                    if (hasResume) {
+                        val resumeTimeText = formatTime(resumePositionMs)
+                        CinemaButton(
+                            onClick = {
+                                onPlayMovie(movieId, movieDetail.name, extension, false)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.movie_resume_from_format, resumeTimeText))
+                        }
+                    } else {
+                        CinemaButton(
+                            onClick = {
+                                onPlayMovie(movieId, movieDetail.name, extension, false)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.movie_play_action))
+                        }
+                    }
+
+                    // Secondary actions row — only actions the app actually supports (no Cast/Shuffle).
+                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                    val trailerContext = LocalContext.current
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        DetailIconAction(
+                            icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                            label = stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
+                            onClick = onToggleFavorite,
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                        )
+                        DetailIconAction(
+                            icon = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                            label = stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
+                            onClick = onToggleWatched,
+                            tint = if (isWatched) MaterialTheme.colorScheme.primary else CinemaTextPrimary,
+                        )
+                        if (hasResume) {
+                            DetailIconAction(
+                                icon = CinemaIcons.Replay,
+                                label = stringResource(R.string.movie_start_beginning),
+                                onClick = { onPlayMovie(movieId, movieDetail.name, extension, true) },
+                            )
+                        }
+                        movieDetail.metadata.trailerUrl?.let { trailer ->
+                            DetailIconAction(
+                                icon = CinemaIcons.Movie,
+                                label = stringResource(R.string.details_watch_trailer),
+                                onClick = { openExternalUrl(trailerContext, trailer) },
+                            )
+                        }
+                    }
+
+                    // Segmented detail sections (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,
+                    // Phase 4 3c) — mirrors TV's own tabbed layout (docs/plans/20260902_tv-detail-hero-ui-plan.md
+                    // Phase 4): built from what this movie actually has, not a fixed list, so a title with no
+                    // cast/related-titles/alternate-instances doesn't show an empty tab for it.
+                    val hasCast = !movieDetail.metadata.cast.isNullOrBlank()
+                    val hasMoreLikeThis = relatedTitles.moreLikeThis.isNotEmpty() || relatedTitles.collection.isNotEmpty()
+                    val hasVersions = alternateStreams.isNotEmpty()
+                    val tabs =
+                        remember(hasCast, hasMoreLikeThis, hasVersions) {
+                            buildList {
+                                add(MovieDetailTab.OVERVIEW)
+                                if (hasCast) add(MovieDetailTab.CAST)
+                                if (hasMoreLikeThis) add(MovieDetailTab.MORE_LIKE_THIS)
+                                if (hasVersions) add(MovieDetailTab.VERSIONS)
+                            }
+                        }
+                    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+                    val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
+
+                    Spacer(modifier = Modifier.height(CinemaSpacing.lg))
+                    // A single-tab strip (a title with no cast/related-titles/alternate-instances, leaving
+                    // only Overview) has nothing to switch between — skip the strip entirely rather than
+                    // render dead chrome for a tab the user can't leave.
+                    if (tabs.size > 1) {
+                        PrimaryTabRow(selectedTabIndex = safeTabIndex) {
+                            tabs.forEachIndexed { index, tab ->
+                                Tab(
+                                    selected = index == safeTabIndex,
+                                    onClick = { selectedTabIndex = index },
+                                    text = { Text(movieDetailTabLabel(tab)) },
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                    }
+                    when (tabs.getOrNull(safeTabIndex)) {
+                        MovieDetailTab.OVERVIEW -> {
+                            MovieOverviewTabContent(
+                                movieDetail = movieDetail,
+                                categoryName = categoryName,
+                                onCategorySelected = onCategorySelected,
+                            )
+                        }
+
+                        MovieDetailTab.CAST -> {
+                            CastChipsTabContent(cast = movieDetail.metadata.cast.orEmpty())
+                        }
+
+                        MovieDetailTab.MORE_LIKE_THIS -> {
+                            Column {
+                                if (relatedTitles.collection.isNotEmpty()) {
+                                    RelatedTitlesRow(
+                                        title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
+                                        items = relatedTitles.collection,
+                                        onItemClick = onRelatedTitleSelected,
+                                    )
+                                }
+                                if (relatedTitles.moreLikeThis.isNotEmpty()) {
+                                    RelatedTitlesRow(
+                                        title = stringResource(R.string.details_more_like_this),
+                                        items = relatedTitles.moreLikeThis,
+                                        onItemClick = onRelatedTitleSelected,
+                                        modifier =
+                                            if (relatedTitles.collection.isNotEmpty()) {
+                                                Modifier.padding(
+                                                    top = CinemaSpacing.lg,
+                                                )
+                                            } else {
+                                                Modifier
+                                            },
+                                    )
+                                }
+                            }
+                        }
+
+                        MovieDetailTab.VERSIONS -> {
+                            // The catalogue's raw name, not movieDetail.name — some providers' detail API
+                            // returns a cleaned-up name inconsistent with the raw name alternates are listed
+                            // under, so use the same source as alternates to keep the picker consistent.
+                            StreamNamePicker(currentName = movieName, alternates = alternateStreams, onSelect = onAlternateStreamSelected)
+                        }
+
+                        null -> {
+                            Unit
+                        }
                     }
                 }
-            MovieDetailTab.VERSIONS ->
-                // The catalogue's raw name, not movieDetail.name — some providers' detail API
-                // returns a cleaned-up name inconsistent with the raw name alternates are listed
-                // under, so use the same source as alternates to keep the picker consistent.
-                StreamNamePicker(currentName = movieName, alternates = alternateStreams, onSelect = onAlternateStreamSelected)
-            null -> Unit
+            }
         }
-
-        }
-        }
-    }
     }
 }
 
@@ -684,4 +712,3 @@ private fun MobileTechInfoRow(
         )
     }
 }
-

@@ -37,8 +37,6 @@ interface XtreamCategoryDao {
         type: String,
     )
 
-
-
     @Query("SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type")
     fun getCategoryIds(
         providerId: Long,

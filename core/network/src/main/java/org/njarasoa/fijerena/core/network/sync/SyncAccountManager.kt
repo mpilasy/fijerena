@@ -49,7 +49,10 @@ class SyncAccountManager(
                 checkServer(qr.serverUrl)
                 link(qr.serverUrl, api.pair(qr.serverUrl, qr.pairingCode, deviceName), qr.accountKey)
             }
-            is PairingQr.HandoffRequest -> handOver(qr)
+
+            is PairingQr.HandoffRequest -> {
+                handOver(qr)
+            }
         }
     }
 
@@ -65,7 +68,11 @@ class SyncAccountManager(
         checkServer(serverUrl)
         val keyPair = HandoffKeys.newKeyPair()
         val opened = api.openHandoff(serverUrl)
-        return Handoff(PairingQr.HandoffRequest(serverUrl.trimEnd('/'), opened.handoffId, keyPair.public.encoded), keyPair, opened.expiresAt)
+        return Handoff(
+            PairingQr.HandoffRequest(serverUrl.trimEnd('/'), opened.handoffId, keyPair.public.encoded),
+            keyPair,
+            opened.expiresAt,
+        )
     }
 
     /** Waits for a device of an account to scan the QR code, then joins that account. */
@@ -80,7 +87,9 @@ class SyncAccountManager(
             val collected = api.collectHandoff(url, id)
             if (collected.ready) {
                 val key = HandoffKeys.sharedKey(handoff.keyPair.private, HandoffKeys.publicKey(B64URL.decode(collected.senderKey!!)), id)
-                val opened = Aead.open(key, collected.sealed!!, id.toByteArray()) ?: throw SyncApiException(0, "The handed-over account couldn't be opened")
+                val opened =
+                    Aead.open(key, collected.sealed!!, id.toByteArray())
+                        ?: throw SyncApiException(0, "The handed-over account couldn't be opened")
                 val secret = json.decodeFromString<SyncWire.HandoffSecret>(String(opened))
                 link(url, api.pair(url, secret.pairingCode, deviceName), B64URL.decode(secret.accountKey))
                 return
@@ -139,7 +148,10 @@ class SyncAccountManager(
     private suspend fun checkServer(serverUrl: String): SyncWire.Info {
         val info = api.info(serverUrl)
         if (info.service != "fijerena-sync" || info.protocol != SyncWire.PROTOCOL) {
-            throw SyncApiException(SyncApiException.INCOMPATIBLE, "Not a compatible Fijerena sync server (${info.service}, protocol ${info.protocol})")
+            throw SyncApiException(
+                SyncApiException.INCOMPATIBLE,
+                "Not a compatible Fijerena sync server (${info.service}, protocol ${info.protocol})",
+            )
         }
         return info
     }

@@ -60,13 +60,11 @@ class FakeFavoriteStateDao : FavoriteStateDao {
         rows.values.removeAll { it.profileId == profileId }
     }
 
-
     override fun restoreAll(entities: List<FavoriteStateEntity>) {
         entities.forEach { upsert(it) }
     }
 
     override fun count(providerId: Long): Int = rows.values.count { it.providerId == providerId }
-
 
     override fun get(
         providerId: Long,

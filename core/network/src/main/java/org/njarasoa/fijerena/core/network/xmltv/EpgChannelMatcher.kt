@@ -20,7 +20,10 @@ class EpgChannelMatcher(
          * and updates the cache. Thread-safe via synchronized.
          */
         @Synchronized
-        fun getOrCreate(providerId: Long, fetchStreams: () -> List<XtreamStreamEntity>): EpgChannelMatcher {
+        fun getOrCreate(
+            providerId: Long,
+            fetchStreams: () -> List<XtreamStreamEntity>,
+        ): EpgChannelMatcher {
             if (providerId == cachedProviderId) {
                 cachedInstance?.let { return it }
             }
@@ -46,7 +49,10 @@ class EpgChannelMatcher(
          * Useful after a background sync to avoid I/O on the next user search.
          */
         @Synchronized
-        fun warmCache(providerId: Long, streams: List<XtreamStreamEntity>) {
+        fun warmCache(
+            providerId: Long,
+            streams: List<XtreamStreamEntity>,
+        ) {
             val matcher = EpgChannelMatcher(streams)
             cachedProviderId = providerId
             cachedInstance = matcher
@@ -70,13 +76,21 @@ class EpgChannelMatcher(
 
     // Level 4: normalized stream name -> stream
     private val byNormalized = mutableMapOf<String, XtreamStreamEntity>()
+
     // Level 5: Arrays instead of lists to avoid overhead
     private val normalizedNames: Array<String>
     private val normalizedStreams: Array<XtreamStreamEntity>
 
     // Memoize slow queries
-    private data class MatchKey(val channelId: String, val channelName: String)
-    private class MatchResult(val result: EpgBrowserMatchedStream?)
+    private data class MatchKey(
+        val channelId: String,
+        val channelName: String,
+    )
+
+    private class MatchResult(
+        val result: EpgBrowserMatchedStream?,
+    )
+
     private val memoizedMatches = ConcurrentHashMap<MatchKey, MatchResult>()
 
     init {
@@ -112,9 +126,10 @@ class EpgChannelMatcher(
         if (memoizedMatches.size >= MAX_MEMOIZED_MATCHES && !memoizedMatches.containsKey(key)) {
             memoizedMatches.clear()
         }
-        return memoizedMatches.getOrPut(key) {
-            MatchResult(doMatch(channelId, channelName))
-        }.result
+        return memoizedMatches
+            .getOrPut(key) {
+                MatchResult(doMatch(channelId, channelName))
+            }.result
     }
 
     private fun doMatch(

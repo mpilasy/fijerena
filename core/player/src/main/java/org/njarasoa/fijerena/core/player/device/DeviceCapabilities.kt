@@ -24,11 +24,10 @@ object DeviceDetector {
     @Volatile
     private var cachedCapabilities: DeviceCapabilities? = null
 
-    fun detect(): DeviceCapabilities {
-        return cachedCapabilities ?: synchronized(this) {
+    fun detect(): DeviceCapabilities =
+        cachedCapabilities ?: synchronized(this) {
             cachedCapabilities ?: performDetection().also { cachedCapabilities = it }
         }
-    }
 
     private fun performDetection(): DeviceCapabilities {
         val deviceType = detectDeviceType()
@@ -47,24 +46,32 @@ object DeviceDetector {
 
         val preferredCodecs =
             when (deviceType) {
-                DeviceType.NVIDIA_SHIELD ->
+                DeviceType.NVIDIA_SHIELD -> {
                     listOfNotNull(
                         if (supportsAv1) "video/av01" else null,
                         if (supportsHevc) "video/hevc" else null,
                         "video/avc",
                     )
-                DeviceType.SONY_BRAVIA ->
+                }
+
+                DeviceType.SONY_BRAVIA -> {
                     listOfNotNull(
                         if (supportsHevc) "video/hevc" else null,
                         "video/avc",
                     )
-                DeviceType.CHROMECAST_TV ->
+                }
+
+                DeviceType.CHROMECAST_TV -> {
                     listOfNotNull(
                         if (supportsAv1) "video/av01" else null,
                         if (supportsHevc) "video/hevc" else null,
                         "video/avc",
                     )
-                else -> listOf("video/avc")
+                }
+
+                else -> {
+                    listOf("video/avc")
+                }
             }
 
         return DeviceCapabilities(

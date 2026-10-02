@@ -164,7 +164,10 @@ interface EpgIndexDao {
         ORDER BY c.display_name ASC
         """,
     )
-    fun getPagedNowPlaying(nowEpoch: Long, sourceIds: List<Long>): PagingSource<Int, EpgSearchResultRow>
+    fun getPagedNowPlaying(
+        nowEpoch: Long,
+        sourceIds: List<Long>,
+    ): PagingSource<Int, EpgSearchResultRow>
 
     @Query(
         """
@@ -195,7 +198,10 @@ interface EpgIndexDao {
         ORDER BY display_name ASC
         """,
     )
-    suspend fun searchChannelsByName(queryLower: String, sourceIds: List<Long>): List<EpgChannelEntity>
+    suspend fun searchChannelsByName(
+        queryLower: String,
+        sourceIds: List<Long>,
+    ): List<EpgChannelEntity>
 
     @Query("SELECT * FROM epg_channel WHERE source_id IN (:sourceIds)")
     suspend fun getChannelsForSources(sourceIds: List<Long>): List<EpgChannelEntity>

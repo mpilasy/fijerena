@@ -8,15 +8,17 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import java.util.*
 import java.util.concurrent.TimeUnit
-import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Manages periodic background synchronization for Xtream IPTV providers.
  * Handles scheduling of XtreamSyncWorker.
  */
-class ProviderSyncManager private constructor(private val context: Context) {
+class ProviderSyncManager private constructor(
+    private val context: Context,
+) {
     private val scope = AppScopes.create("ProviderSyncManager", Dispatchers.Main)
     private var autoRefreshJob: Job? = null
 
@@ -28,7 +30,9 @@ class ProviderSyncManager private constructor(private val context: Context) {
     sealed interface SyncResult {
         data object Success : SyncResult
 
-        data class Failed(val message: String) : SyncResult
+        data class Failed(
+            val message: String,
+        ) : SyncResult
     }
 
     companion object {
@@ -42,11 +46,10 @@ class ProviderSyncManager private constructor(private val context: Context) {
         @Volatile
         private var instance: ProviderSyncManager? = null
 
-        fun getInstance(context: Context): ProviderSyncManager {
-            return instance ?: synchronized(this) {
+        fun getInstance(context: Context): ProviderSyncManager =
+            instance ?: synchronized(this) {
                 instance ?: ProviderSyncManager(context.applicationContext).also { instance = it }
             }
-        }
     }
 
     /**
@@ -80,21 +83,22 @@ class ProviderSyncManager private constructor(private val context: Context) {
 
         // TV/fixed devices additionally refresh in-process whenever the app happens to be running.
         if (!isFixedDevice()) return
-        autoRefreshJob = scope.launch {
-            while (true) {
-                val delayMs =
-                    if (appSettings.contentAutoRefreshEnabled) {
-                        calculateDelayUntilNextSlot(appSettings.contentRefreshTime)
-                    } else {
-                        Long.MAX_VALUE
+        autoRefreshJob =
+            scope.launch {
+                while (true) {
+                    val delayMs =
+                        if (appSettings.contentAutoRefreshEnabled) {
+                            calculateDelayUntilNextSlot(appSettings.contentRefreshTime)
+                        } else {
+                            Long.MAX_VALUE
+                        }
+                    if (delayMs < AUTO_REFRESH_CHECK_INTERVAL_MS) {
+                        delay(delayMs)
+                        performFullSync()
                     }
-                if (delayMs < AUTO_REFRESH_CHECK_INTERVAL_MS) {
-                    delay(delayMs)
-                    performFullSync()
+                    delay(AUTO_REFRESH_CHECK_INTERVAL_MS) // Avoid immediate re-trigger
                 }
-                delay(AUTO_REFRESH_CHECK_INTERVAL_MS) // Avoid immediate re-trigger
             }
-        }
     }
 
     /**
@@ -116,30 +120,38 @@ class ProviderSyncManager private constructor(private val context: Context) {
                 val endTime = System.currentTimeMillis()
                 val delta = (outcome as? ProviderSyncRunner.Outcome.Success)?.delta
                 providerRepo.updateSyncStats(
-                    provider.id, endTime, endTime - startTime, outcome.errorOrNull(),
-                    inserted = delta?.inserted, updated = delta?.updated, deleted = delta?.deleted,
+                    provider.id,
+                    endTime,
+                    endTime - startTime,
+                    outcome.errorOrNull(),
+                    inserted = delta?.inserted,
+                    updated = delta?.updated,
+                    deleted = delta?.deleted,
                 )
             }
         }
     }
 
     private fun updateWorkManagerSchedule(appSettings: AppSettings) {
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        val constraints =
+            Constraints
+                .Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
 
         val initialDelay = calculateDelayUntilNextSlot(appSettings.contentRefreshTime)
 
-        val request = PeriodicWorkRequestBuilder<XtreamSyncWorker>(REFRESH_INTERVAL_HOURS.toLong(), TimeUnit.HOURS)
-            .setConstraints(constraints)
-            .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
-            .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
-            .build()
+        val request =
+            PeriodicWorkRequestBuilder<XtreamSyncWorker>(REFRESH_INTERVAL_HOURS.toLong(), TimeUnit.HOURS)
+                .setConstraints(constraints)
+                .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 5, TimeUnit.MINUTES)
+                .build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WORK_NAME,
             ExistingPeriodicWorkPolicy.UPDATE,
-            request
+            request,
         )
     }
 
@@ -160,21 +172,23 @@ class ProviderSyncManager private constructor(private val context: Context) {
             val minute = parts[1].toInt()
 
             val now = Calendar.getInstance()
-            val target = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, hour)
-                set(Calendar.MINUTE, minute)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-                // The anchor may be later today; step back a full day so the loop below always
-                // walks forward from a slot that is in the past.
-                add(Calendar.DAY_OF_YEAR, -1)
-            }
+            val target =
+                Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, hour)
+                    set(Calendar.MINUTE, minute)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                    // The anchor may be later today; step back a full day so the loop below always
+                    // walks forward from a slot that is in the past.
+                    add(Calendar.DAY_OF_YEAR, -1)
+                }
 
             while (!target.after(now)) {
                 target.add(Calendar.HOUR_OF_DAY, REFRESH_INTERVAL_HOURS)
             }
             return (target.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
-        } catch (e: Exception) { // cancellation-ok: non-suspend
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
             Log.w(TAG, "Failed to calculate delay for $time", e)
             return 0
         }
@@ -188,6 +202,7 @@ class ProviderSyncManager private constructor(private val context: Context) {
      * Start a manual sync for a specific provider.
      * This runs in the manager's scope, so it persists even if the calling ViewModel is cleared.
      */
+
     /**
      * Runs in [scope] — a singleton scope outside any ViewModel — so the sync itself keeps going
      * even if the screen that requested it is closed. The returned [Deferred] is just a handle a
@@ -237,8 +252,13 @@ class ProviderSyncManager private constructor(private val context: Context) {
                 val endTime = System.currentTimeMillis()
                 val delta = (outcome as? ProviderSyncRunner.Outcome.Success)?.delta
                 providerRepo.updateSyncStats(
-                    providerId, endTime, endTime - startTime, outcome.errorOrNull(),
-                    inserted = delta?.inserted, updated = delta?.updated, deleted = delta?.deleted,
+                    providerId,
+                    endTime,
+                    endTime - startTime,
+                    outcome.errorOrNull(),
+                    inserted = delta?.inserted,
+                    updated = delta?.updated,
+                    deleted = delta?.deleted,
                 )
                 if (outcome is ProviderSyncRunner.Outcome.Success) {
                     SyncResult.Success

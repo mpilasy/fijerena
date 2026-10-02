@@ -2,8 +2,8 @@ package org.njarasoa.fijerena.core.player.network
 
 import android.content.Context
 import android.net.ConnectivityManager
-import okhttp3.Dns
 import okhttp3.Dispatcher
+import okhttp3.Dns
 import okhttp3.OkHttpClient
 import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
 import org.njarasoa.fijerena.core.player.config.NetworkType
@@ -94,7 +94,10 @@ object NetworkModule {
     private object AndroidAwareDns : Dns {
         override fun lookup(hostname: String): List<InetAddress> {
             if (isIpAddress(hostname)) {
-                try { return listOf(InetAddress.getByName(hostname)) } catch (_: Exception) { }
+                try {
+                    return listOf(InetAddress.getByName(hostname))
+                } catch (_: Exception) {
+                }
             }
 
             // Single attempt only — this runs synchronously on whatever thread triggers the
@@ -123,8 +126,7 @@ object NetworkModule {
             return Dns.SYSTEM.lookup(hostname).sortedBy { it is java.net.Inet6Address }
         }
 
-        private fun isIpAddress(hostname: String): Boolean =
-            hostname.matches(IPV4_REGEX) || hostname.contains(":")
+        private fun isIpAddress(hostname: String): Boolean = hostname.matches(IPV4_REGEX) || hostname.contains(":")
 
         private const val TAG = "NetworkModule"
         private val IPV4_REGEX = Regex("""^(\d{1,3}\.){3}\d{1,3}$""")

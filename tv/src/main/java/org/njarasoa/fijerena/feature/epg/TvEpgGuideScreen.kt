@@ -65,7 +65,10 @@ fun TvEpgGuideScreen(
     CompositionLocalProvider(LocalUiScale provides uiScale) {
         Box(modifier = Modifier.fillMaxSize()) {
             when (val state = uiState) {
-                is EpgViewModel.UiState.Loading -> LoadingScreen()
+                is EpgViewModel.UiState.Loading -> {
+                    LoadingScreen()
+                }
+
                 is EpgViewModel.UiState.Success -> {
                     val epgCategoryName =
                         if (appSettings.isDevMode && state.epgLoadTime != null) {
@@ -93,6 +96,7 @@ fun TvEpgGuideScreen(
                         onBack = onBack,
                     )
                 }
+
                 is EpgViewModel.UiState.Error -> {
                     ErrorScreen(message = state.message, onRetry = { viewModel.loadEpgData() }, onBack = onBack)
                 }

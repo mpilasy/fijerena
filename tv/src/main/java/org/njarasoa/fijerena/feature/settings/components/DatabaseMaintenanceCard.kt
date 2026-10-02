@@ -43,7 +43,9 @@ fun DatabaseMaintenanceCard(
                 text = stringResource(R.string.settings_shrink_database_title),
                 style =
                     MaterialTheme.typography.titleMedium.copy(
-                        fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale),
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
                     ),
                 color = CinemaAccent,
             )
@@ -52,7 +54,9 @@ fun DatabaseMaintenanceCard(
                 text = stringResource(R.string.settings_shrink_database_desc),
                 style =
                     MaterialTheme.typography.bodySmall.copy(
-                        fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale),
+                        fontSize =
+                            MaterialTheme.typography.bodySmall.fontSize
+                                .scaled(scale),
                     ),
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
@@ -72,7 +76,9 @@ fun DatabaseMaintenanceCard(
                     text = resultMessage,
                     style =
                         MaterialTheme.typography.bodySmall.copy(
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale),
+                            fontSize =
+                                MaterialTheme.typography.bodySmall.fontSize
+                                    .scaled(scale),
                         ),
                     color = CinemaTextSecondary,
                 )
@@ -86,7 +92,9 @@ fun DatabaseMaintenanceCard(
                     text = stringResource(R.string.settings_shrink_database_dev_stats_time, time, duration),
                     style =
                         MaterialTheme.typography.bodySmall.copy(
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale),
+                            fontSize =
+                                MaterialTheme.typography.bodySmall.fontSize
+                                    .scaled(scale),
                         ),
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
                 )
@@ -95,7 +103,9 @@ fun DatabaseMaintenanceCard(
                     text = stringResource(R.string.settings_shrink_database_dev_stats_delta, lastShrinkRowsRemoved, bytesStr),
                     style =
                         MaterialTheme.typography.bodySmall.copy(
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale),
+                            fontSize =
+                                MaterialTheme.typography.bodySmall.fontSize
+                                    .scaled(scale),
                         ),
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textLow),
                 )

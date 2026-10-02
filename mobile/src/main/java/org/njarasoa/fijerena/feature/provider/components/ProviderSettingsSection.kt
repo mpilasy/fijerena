@@ -295,13 +295,20 @@ fun ColumnScope.ProviderSettingsSection(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = stringResource(R.string.provider_filter_mode_value, categoryFilters.mode.name), style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = stringResource(R.string.provider_filter_mode_value, categoryFilters.mode.name),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                             Text(
                                 text =
                                     if (categoryFilters.rules.isEmpty()) {
                                         stringResource(R.string.provider_no_filters)
                                     } else {
-                                        val preview = categoryFilters.rules.take(CATEGORY_FILTER_PREVIEW_COUNT).joinToString(", ") { it.value }
+                                        val preview =
+                                            categoryFilters.rules
+                                                .take(
+                                                    CATEGORY_FILTER_PREVIEW_COUNT,
+                                                ).joinToString(", ") { it.value }
                                         val remaining = categoryFilters.rules.size - CATEGORY_FILTER_PREVIEW_COUNT
                                         val suffix = if (remaining > 0) ", +$remaining more" else ""
                                         stringResource(R.string.provider_prefixes_value, categoryFilters.rules.size, "$preview$suffix")
@@ -312,24 +319,27 @@ fun ColumnScope.ProviderSettingsSection(
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                text = stringResource(
-                                    R.string.provider_scripts_value,
-                                    if (categoryFilters.allowedScripts.isEmpty()) {
-                                        stringResource(R.string.common_all)
-                                    } else {
-                                        categoryFilters.allowedScripts
-                                            .joinToString(
-                                                ", ",
-                                            ) { it.displayName }
-                                    },
-                                ),
+                                text =
+                                    stringResource(
+                                        R.string.provider_scripts_value,
+                                        if (categoryFilters.allowedScripts.isEmpty()) {
+                                            stringResource(R.string.common_all)
+                                        } else {
+                                            categoryFilters.allowedScripts
+                                                .joinToString(
+                                                    ", ",
+                                                ) { it.displayName }
+                                        },
+                                    ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        CinemaOutlinedButton(onClick = { onShowCategoryFilterDialogChange(true) }) { Text(stringResource(R.string.provider_edit_button)) }
+                        CinemaOutlinedButton(
+                            onClick = { onShowCategoryFilterDialogChange(true) },
+                        ) { Text(stringResource(R.string.provider_edit_button)) }
                     }
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))

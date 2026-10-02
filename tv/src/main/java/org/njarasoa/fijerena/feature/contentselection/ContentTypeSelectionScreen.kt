@@ -35,7 +35,6 @@ import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tv
-import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -43,15 +42,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -71,14 +69,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
-import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
@@ -91,20 +86,20 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
-import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
-import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaGlassBorder
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaLive
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.core.ui.theme.CinemaOrangeDark
@@ -112,7 +107,13 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -120,7 +121,6 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.navigation.ContentType as NavContentType
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
  * Content type selection screen with icons, category counts, and gradient cards.
@@ -173,7 +173,9 @@ fun ContentTypeSelectionScreen(
     // `remember`) so a source that finishes indexing while this screen is on-screen shows the
     // icon immediately, instead of waiting for the composable to be torn down and rebuilt.
     val epgIndexState by remember {
-        org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer.getInstance(context.applicationContext).state
+        org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+            .getInstance(context.applicationContext)
+            .state
     }.collectAsStateWithLifecycle()
     val hasEpgData = epgIndexState is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
 
@@ -202,7 +204,9 @@ fun ContentTypeSelectionScreen(
                         if (AppContainer.getInstance(context.applicationContext).shouldPromptSignIn(activeProvider.id)) {
                             val message = signInResources.getString(R.string.profile_jellyfin_sign_in_prompt, activeProvider.name)
                             withContext(Dispatchers.Main) {
-                                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                                android.widget.Toast
+                                    .makeText(context, message, android.widget.Toast.LENGTH_LONG)
+                                    .show()
                                 onSignInRequired(activeProvider.id)
                             }
                         }
@@ -235,12 +239,14 @@ fun ContentTypeSelectionScreen(
     LaunchedEffect(mediaProviderRef) {
         val mp = mediaProviderRef ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            backdropImageUrl = listOf(ContentType.MOVIES, ContentType.TV_SHOWS, ContentType.LIVE_TV).firstNotNullOfOrNull { contentType ->
-                mp.getRecentlyPlayed(contentType)
-                    ?.getOrNull()
-                    ?.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }
-                    ?.thumbnailUrl
-            }
+            backdropImageUrl =
+                listOf(ContentType.MOVIES, ContentType.TV_SHOWS, ContentType.LIVE_TV).firstNotNullOfOrNull { contentType ->
+                    mp
+                        .getRecentlyPlayed(contentType)
+                        ?.getOrNull()
+                        ?.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }
+                        ?.thumbnailUrl
+                }
         }
     }
 
@@ -298,284 +304,299 @@ fun ContentTypeSelectionScreen(
         val scale = LocalUiScale.current
 
         Box(modifier = Modifier.fillMaxSize()) {
-        AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = backdropImageUrl)
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        horizontal = Spacing.tvSafeMarginHorizontal,
-                        vertical = Spacing.tvSafeMarginVertical,
-                    ),
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Header with provider name in glass pill
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = Spacing.xxl.scaled(scale)),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.login_app_name),
-                        style =
-                            MaterialTheme.typography.displayMedium.copy(
-                                fontSize =
-                                    MaterialTheme.typography.displayMedium.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.staggeredEntrance(0),
-                    )
-                    // Provider name in glass pill badge + settings gear
+            AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = backdropImageUrl)
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(
+                            horizontal = Spacing.tvSafeMarginHorizontal,
+                            vertical = Spacing.tvSafeMarginVertical,
+                        ),
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Header with provider name in glass pill
                     Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = Spacing.xxl.scaled(scale)),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        if (allProviders.size > 1) {
-                            val displayName =
-                                if (appSettings.isDevMode && providerType.isNotEmpty()) {
-                                    "$providerName ($providerType)"
-                                } else {
-                                    providerName
-                                }
-                            val switchProviderDescription =
-                                stringResource(R.string.content_switch_provider_description_format, displayName)
-                            var providerPillFocused by remember { mutableStateOf(false) }
-                            val pillScale by animateFloatAsState(
-                                targetValue = if (providerPillFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
-                                animationSpec = tween(durationMillis = org.njarasoa.fijerena.core.ui.theme.CinemaAnimation.focusDurationMs),
-                                label = "provider_pill_scale",
-                            )
-                            GlassPanel(
-                                modifier =
-                                    Modifier
-                                        .scale(pillScale)
-                                        .border(
-                                            width = TvFocusTokens.focusBorderWidth,
-                                            color = if (providerPillFocused) CinemaAccentLight else androidx.compose.ui.graphics.Color.Transparent,
-                                            shape = RoundedCornerShape(CinemaCornerRadius.large),
-                                        ).onFocusChanged { providerPillFocused = it.isFocused }
-                                        .clickable(role = Role.DropdownList) { showProviderPicker = true }
-                                        .semantics {
-                                            contentDescription = switchProviderDescription
-                                        },
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier =
-                                        Modifier.padding(
-                                            horizontal = Spacing.md,
-                                            vertical = Spacing.xs,
+                        Text(
+                            text = stringResource(R.string.login_app_name),
+                            style =
+                                MaterialTheme.typography.displayMedium.copy(
+                                    fontSize =
+                                        MaterialTheme.typography.displayMedium.fontSize
+                                            .scaled(scale),
+                                ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.staggeredEntrance(0),
+                        )
+                        // Provider name in glass pill badge + settings gear
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        ) {
+                            if (allProviders.size > 1) {
+                                val displayName =
+                                    if (appSettings.isDevMode && providerType.isNotEmpty()) {
+                                        "$providerName ($providerType)"
+                                    } else {
+                                        providerName
+                                    }
+                                val switchProviderDescription =
+                                    stringResource(R.string.content_switch_provider_description_format, displayName)
+                                var providerPillFocused by remember { mutableStateOf(false) }
+                                val pillScale by animateFloatAsState(
+                                    targetValue = if (providerPillFocused) TvFocusTokens.focusedScaleSubtle else TvFocusTokens.defaultScale,
+                                    animationSpec =
+                                        tween(
+                                            durationMillis = org.njarasoa.fijerena.core.ui.theme.CinemaAnimation.focusDurationMs,
                                         ),
+                                    label = "provider_pill_scale",
+                                )
+                                GlassPanel(
+                                    modifier =
+                                        Modifier
+                                            .scale(pillScale)
+                                            .border(
+                                                width = TvFocusTokens.focusBorderWidth,
+                                                color =
+                                                    if (providerPillFocused) {
+                                                        CinemaAccentLight
+                                                    } else {
+                                                        androidx.compose.ui.graphics.Color.Transparent
+                                                    },
+                                                shape = RoundedCornerShape(CinemaCornerRadius.large),
+                                            ).onFocusChanged { providerPillFocused = it.isFocused }
+                                            .clickable(role = Role.DropdownList) { showProviderPicker = true }
+                                            .semantics {
+                                                contentDescription = switchProviderDescription
+                                            },
                                 ) {
-                                    Text(
-                                        text = displayName,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
-                                    )
-                                    Icon(
-                                        imageVector = CinemaIcons.ArrowDropDown,
-                                        contentDescription = null,
-                                        tint = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
-                                        modifier = Modifier.padding(start = Spacing.xs),
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier =
+                                            Modifier.padding(
+                                                horizontal = Spacing.md,
+                                                vertical = Spacing.xs,
+                                            ),
+                                    ) {
+                                        Text(
+                                            text = displayName,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
+                                        )
+                                        Icon(
+                                            imageVector = CinemaIcons.ArrowDropDown,
+                                            contentDescription = null,
+                                            tint = if (providerPillFocused) CinemaTextPrimary else CinemaAccentLight,
+                                            modifier = Modifier.padding(start = Spacing.xs),
+                                        )
+                                    }
                                 }
                             }
-                        }
-                        if (hasEpgData) {
+                            if (hasEpgData) {
+                                CinemaIconButton(
+                                    onClick = onEpgBrowser,
+                                    icon = {
+                                        Icon(
+                                            imageVector = CinemaIcons.DateRange,
+                                            contentDescription = stringResource(R.string.epg_browser_title),
+                                            tint = CinemaTextPrimary,
+                                        )
+                                    },
+                                )
+                            }
                             CinemaIconButton(
-                                onClick = onEpgBrowser,
+                                onClick = onSearch,
                                 icon = {
                                     Icon(
-                                        imageVector = CinemaIcons.DateRange,
-                                        contentDescription = stringResource(R.string.epg_browser_title),
+                                        imageVector = CinemaIcons.Search,
+                                        contentDescription = stringResource(R.string.content_search_all_description),
+                                        tint = CinemaTextPrimary,
+                                    )
+                                },
+                            )
+                            // Always shown, even with one profile, so profiles are discoverable.
+                            activeProfile?.let { profile ->
+                                val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
+                                CinemaIconButton(
+                                    onClick = onChooseProfile,
+                                    modifier = Modifier.semantics { contentDescription = switchLabel },
+                                    icon = {
+                                        ProfileAvatar(
+                                            name = profile.name,
+                                            colorIndex = profile.colorIndex,
+                                            size = TvDimensions.iconMedium,
+                                            fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                                        )
+                                    },
+                                )
+                            }
+                            CinemaIconButton(
+                                onClick = onSettings,
+                                icon = {
+                                    Icon(
+                                        imageVector = CinemaIcons.Settings,
+                                        contentDescription = stringResource(R.string.settings_title),
                                         tint = CinemaTextPrimary,
                                     )
                                 },
                             )
                         }
-                        CinemaIconButton(
-                            onClick = onSearch,
-                            icon = {
-                                Icon(
-                                    imageVector = CinemaIcons.Search,
-                                    contentDescription = stringResource(R.string.content_search_all_description),
-                                    tint = CinemaTextPrimary,
-                                )
-                            },
-                        )
-                        // Always shown, even with one profile, so profiles are discoverable.
-                        activeProfile?.let { profile ->
-                            val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
-                            CinemaIconButton(
-                                onClick = onChooseProfile,
-                                modifier = Modifier.semantics { contentDescription = switchLabel },
-                                icon = {
-                                    ProfileAvatar(
-                                        name = profile.name,
-                                        colorIndex = profile.colorIndex,
-                                        size = TvDimensions.iconMedium,
-                                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
-                                    )
-                                },
-                            )
-                        }
-                        CinemaIconButton(
-                            onClick = onSettings,
-                            icon = {
-                                Icon(
-                                    imageVector = CinemaIcons.Settings,
-                                    contentDescription = stringResource(R.string.settings_title),
-                                    tint = CinemaTextPrimary,
-                                )
-                            },
-                        )
                     }
-                }
 
-                if (needsSignIn) {
-                    JellyfinSignInPanel(
-                        providerName = providerName,
-                        onSignIn = { onSignInRequired(activeProviderId) },
-                        scale = scale,
-                    )
-                } else {
-                    // Content type hero cards. Scrollable, not just fillMaxSize: the hero row plus
-                    // the "Jump Back In" shelf below it can exceed a lower-density TV's viewport
-                    // height, and an unscrollable Center-arranged Column clips whatever doesn't fit
-                    // off both edges instead of making it reachable. Arrangement.Center still centers
-                    // this content when it's shorter than the viewport, same as before — verticalScroll
-                    // only takes over once content is taller than the space it's given.
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            val isDevMode = appSettings.isDevMode
-                            var cardIndex = 1
-                            if (ContentType.LIVE_TV in supportedContentTypes) {
-                                ContentTypeHeroCard(
-                                    title = stringResource(R.string.provider_live_tv_label),
-                                    subtitle = stringResource(R.string.content_type_live_tv_subtitle_short),
-                                    icon = CinemaIcons.LiveTv,
-                                    categoryCounts = liveTvCounts,
-                                    showTotal = isDevMode,
-                                    showLivePulse = true,
-                                    gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                                    onClick = { onContentTypeSelected(NavContentType.LIVE_TV) },
-                                    modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
-                                )
-                            }
-
-                            if (ContentType.MOVIES in supportedContentTypes) {
-                                ContentTypeHeroCard(
-                                    title = stringResource(R.string.provider_movies_label),
-                                    subtitle = stringResource(R.string.content_type_movies_subtitle_short),
-                                    icon = CinemaIcons.Movie,
-                                    categoryCounts = moviesCounts,
-                                    showTotal = isDevMode,
-                                    gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                                    onClick = { onContentTypeSelected(NavContentType.MOVIES) },
-                                    modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
-                                )
-                            }
-
-                            if (ContentType.TV_SHOWS in supportedContentTypes) {
-                                ContentTypeHeroCard(
-                                    title = stringResource(R.string.provider_tv_shows_label),
-                                    subtitle = stringResource(R.string.content_type_tv_shows_subtitle_short),
-                                    icon = CinemaIcons.Tv,
-                                    categoryCounts = tvShowsCounts,
-                                    showTotal = isDevMode,
-                                    gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                                    onClick = { onContentTypeSelected(NavContentType.TV_SHOWS) },
-                                    modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
-                                )
-                            }
-                        }
-
-                        if (continueWatchingItems.isNotEmpty()) {
-                            TvContinueWatchingShelf(
-                                items = continueWatchingItems,
-                                onItemSelected = onContinueWatchingSelected,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = Spacing.xl.scaled(scale)),
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Provider picker dialog
-            if (showProviderPicker && allProviders.size > 1) {
-                // A new dialog window starts with focus on the Close button *below* the list, so
-                // D-pad Down had nowhere to go and Center just closed the dialog. Land on the
-                // current provider's row instead (F-38).
-                val pickerInitialFocus = remember { FocusRequester() }
-                val pickerFocusId = (allProviders.firstOrNull { it.id == activeProviderId } ?: allProviders.first()).id
-                CinemaAlertDialog(
-                    initialFocus = pickerInitialFocus,
-                    onDismissRequest = { showProviderPicker = false },
-                    containerColor = CinemaSurface,
-                    titleContentColor = CinemaTextPrimary,
-                    textContentColor = CinemaTextSecondary,
-                    title = { androidx.compose.material3.Text(stringResource(R.string.content_switch_provider_title)) },
-                    text = {
+                    if (needsSignIn) {
+                        JellyfinSignInPanel(
+                            providerName = providerName,
+                            onSignIn = { onSignInRequired(activeProviderId) },
+                            scale = scale,
+                        )
+                    } else {
+                        // Content type hero cards. Scrollable, not just fillMaxSize: the hero row plus
+                        // the "Jump Back In" shelf below it can exceed a lower-density TV's viewport
+                        // height, and an unscrollable Center-arranged Column clips whatever doesn't fit
+                        // off both edges instead of making it reachable. Arrangement.Center still centers
+                        // this content when it's shorter than the viewport, same as before — verticalScroll
+                        // only takes over once content is taller than the space it's given.
                         Column(
-                            modifier = Modifier.verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
                         ) {
-                            allProviders.forEach { provider ->
-                                val isActive = provider.id == activeProviderId
-                                val label =
-                                    if (appSettings.isDevMode) {
-                                        "${provider.name} (${provider.type})"
-                                    } else {
-                                        provider.name
-                                    }
-                                TvOptionRow(
-                                    title = label,
-                                    selected = isActive,
-                                    activeLabel = stringResource(R.string.provider_active_label),
-                                    onClick = {
-                                        if (!isActive) {
-                                            coroutineScope.launch {
-                                                val providerRepo = ProviderRepository(context.applicationContext)
-                                                providerRepo.pickProvider(provider.id)
-                                                showProviderPicker = false
-                                                refreshTrigger++
-                                                onProviderChanged()
-                                            }
-                                        } else {
-                                            showProviderPicker = false
-                                        }
-                                    },
-                                    modifier = if (provider.id == pickerFocusId) Modifier.focusRequester(pickerInitialFocus) else Modifier,
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xl.scaled(scale)),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                val isDevMode = appSettings.isDevMode
+                                var cardIndex = 1
+                                if (ContentType.LIVE_TV in supportedContentTypes) {
+                                    ContentTypeHeroCard(
+                                        title = stringResource(R.string.provider_live_tv_label),
+                                        subtitle = stringResource(R.string.content_type_live_tv_subtitle_short),
+                                        icon = CinemaIcons.LiveTv,
+                                        categoryCounts = liveTvCounts,
+                                        showTotal = isDevMode,
+                                        showLivePulse = true,
+                                        gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
+                                        onClick = { onContentTypeSelected(NavContentType.LIVE_TV) },
+                                        modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
+                                    )
+                                }
+
+                                if (ContentType.MOVIES in supportedContentTypes) {
+                                    ContentTypeHeroCard(
+                                        title = stringResource(R.string.provider_movies_label),
+                                        subtitle = stringResource(R.string.content_type_movies_subtitle_short),
+                                        icon = CinemaIcons.Movie,
+                                        categoryCounts = moviesCounts,
+                                        showTotal = isDevMode,
+                                        gradientColors = listOf(CinemaAccent, CinemaAccentDark),
+                                        onClick = { onContentTypeSelected(NavContentType.MOVIES) },
+                                        modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
+                                    )
+                                }
+
+                                if (ContentType.TV_SHOWS in supportedContentTypes) {
+                                    ContentTypeHeroCard(
+                                        title = stringResource(R.string.provider_tv_shows_label),
+                                        subtitle = stringResource(R.string.content_type_tv_shows_subtitle_short),
+                                        icon = CinemaIcons.Tv,
+                                        categoryCounts = tvShowsCounts,
+                                        showTotal = isDevMode,
+                                        gradientColors = listOf(CinemaAccentLight, CinemaAccent),
+                                        onClick = { onContentTypeSelected(NavContentType.TV_SHOWS) },
+                                        modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
+                                    )
+                                }
+                            }
+
+                            if (continueWatchingItems.isNotEmpty()) {
+                                TvContinueWatchingShelf(
+                                    items = continueWatchingItems,
+                                    onItemSelected = onContinueWatchingSelected,
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = Spacing.xl.scaled(scale)),
                                 )
                             }
                         }
-                    },
-                    confirmButton = {
-                        CinemaDialogTextButton(onClick = { showProviderPicker = false }) {
-                            androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaAccent)
-                        }
-                    },
-                )
+                    }
+                }
+
+                // Provider picker dialog
+                if (showProviderPicker && allProviders.size > 1) {
+                    // A new dialog window starts with focus on the Close button *below* the list, so
+                    // D-pad Down had nowhere to go and Center just closed the dialog. Land on the
+                    // current provider's row instead (F-38).
+                    val pickerInitialFocus = remember { FocusRequester() }
+                    val pickerFocusId = (allProviders.firstOrNull { it.id == activeProviderId } ?: allProviders.first()).id
+                    CinemaAlertDialog(
+                        initialFocus = pickerInitialFocus,
+                        onDismissRequest = { showProviderPicker = false },
+                        containerColor = CinemaSurface,
+                        titleContentColor = CinemaTextPrimary,
+                        textContentColor = CinemaTextSecondary,
+                        title = { androidx.compose.material3.Text(stringResource(R.string.content_switch_provider_title)) },
+                        text = {
+                            Column(
+                                modifier = Modifier.verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            ) {
+                                allProviders.forEach { provider ->
+                                    val isActive = provider.id == activeProviderId
+                                    val label =
+                                        if (appSettings.isDevMode) {
+                                            "${provider.name} (${provider.type})"
+                                        } else {
+                                            provider.name
+                                        }
+                                    TvOptionRow(
+                                        title = label,
+                                        selected = isActive,
+                                        activeLabel = stringResource(R.string.provider_active_label),
+                                        onClick = {
+                                            if (!isActive) {
+                                                coroutineScope.launch {
+                                                    val providerRepo = ProviderRepository(context.applicationContext)
+                                                    providerRepo.pickProvider(provider.id)
+                                                    showProviderPicker = false
+                                                    refreshTrigger++
+                                                    onProviderChanged()
+                                                }
+                                            } else {
+                                                showProviderPicker = false
+                                            }
+                                        },
+                                        modifier =
+                                            if (provider.id ==
+                                                pickerFocusId
+                                            ) {
+                                                Modifier.focusRequester(pickerInitialFocus)
+                                            } else {
+                                                Modifier
+                                            },
+                                    )
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            CinemaDialogTextButton(onClick = { showProviderPicker = false }) {
+                                androidx.compose.material3.Text(stringResource(R.string.common_close), color = CinemaAccent)
+                            }
+                        },
+                    )
+                }
             }
-        }
         }
     } // CompositionLocalProvider
 }
@@ -788,7 +809,12 @@ private fun JellyfinSignInPanel(
     ) {
         Text(
             text = stringResource(R.string.profile_jellyfin_sign_in_prompt, providerName),
-            style = MaterialTheme.typography.headlineSmall.copy(fontSize = MaterialTheme.typography.headlineSmall.fontSize.scaled(scale)),
+            style =
+                MaterialTheme.typography.headlineSmall.copy(
+                    fontSize =
+                        MaterialTheme.typography.headlineSmall.fontSize
+                            .scaled(scale),
+                ),
             color = CinemaTextPrimary,
         )
         Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))

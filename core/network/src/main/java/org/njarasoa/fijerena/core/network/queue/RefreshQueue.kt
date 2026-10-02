@@ -13,8 +13,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
-import java.util.PriorityQueue
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import java.util.PriorityQueue
 
 /**
  * Singleton queue manager that processes tasks based on priority.

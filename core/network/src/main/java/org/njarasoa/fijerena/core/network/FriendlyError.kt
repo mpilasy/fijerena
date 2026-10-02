@@ -25,12 +25,26 @@ fun friendlyErrorMessage(
         // generic network-error bucket below — but it has nothing to do with the user's
         // connection, and telling them to "check your connection" for an internal lifecycle bug
         // sends them chasing the wrong thing. No connectivity check would ever fix this.
-        e.message?.contains("executor rejected", ignoreCase = true) == true ->
+        e.message?.contains("executor rejected", ignoreCase = true) == true -> {
             context.getString(R.string.error_generic)
-        e is UnknownHostException -> context.getString(R.string.error_no_internet)
-        e is SocketTimeoutException -> context.getString(R.string.error_timeout)
-        e is SSLException -> context.getString(R.string.error_ssl)
-        e is IOException -> context.getString(R.string.error_network)
+        }
+
+        e is UnknownHostException -> {
+            context.getString(R.string.error_no_internet)
+        }
+
+        e is SocketTimeoutException -> {
+            context.getString(R.string.error_timeout)
+        }
+
+        e is SSLException -> {
+            context.getString(R.string.error_ssl)
+        }
+
+        e is IOException -> {
+            context.getString(R.string.error_network)
+        }
+
         else -> {
             val msg = e.message.orEmpty()
             val isAuthFailure =
@@ -45,7 +59,9 @@ fun friendlyErrorMessage(
                 // A saved login this device had to reset (lost Keystore key) explains a failed
                 // login better than "check your username and password". See CredentialStoreHealth.
                 isAuthFailure && CredentialStoreHealth.anyLost(context) -> context.getString(R.string.error_saved_login_lost)
+
                 isAuthFailure -> context.getString(R.string.error_unauthorized)
+
                 else -> context.getString(R.string.error_generic)
             }
         }

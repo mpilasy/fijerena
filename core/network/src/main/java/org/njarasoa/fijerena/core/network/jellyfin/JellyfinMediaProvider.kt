@@ -5,7 +5,6 @@ import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.njarasoa.fijerena.core.network.TtlCache
-import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
@@ -20,6 +19,7 @@ import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.SubtitleTechInfo
 import org.njarasoa.fijerena.core.player.domain.VideoTechInfo
 import org.njarasoa.fijerena.core.player.domain.trailerUrl
@@ -377,6 +377,7 @@ class JellyfinMediaProvider(
                             // No source in response — fall back to static direct play
                             api.buildStreamUrl(streamItemId)
                         }
+
                         source.supportsDirectPlay -> {
                             // Jellyfin confirms the device can decode this file natively
                             val container =
@@ -386,10 +387,12 @@ class JellyfinMediaProvider(
                                     ?.trim()
                             api.buildStreamUrl(streamItemId, container, source.id)
                         }
+
                         source.transcodingUrl != null -> {
                             // Jellyfin will transcode to HLS; the URL includes all params + api_key
                             "$serverUrl${source.transcodingUrl}"
                         }
+
                         source.supportsDirectStream -> {
                             // Server streams the file without re-encoding (seeking handled by server)
                             val container =
@@ -399,7 +402,10 @@ class JellyfinMediaProvider(
                                     ?.trim()
                             api.buildStreamUrl(streamItemId, container, source.id)
                         }
-                        else -> api.buildStreamUrl(streamItemId)
+
+                        else -> {
+                            api.buildStreamUrl(streamItemId)
+                        }
                     }
 
                 return@coroutineScope Result.success(
@@ -416,7 +422,10 @@ class JellyfinMediaProvider(
                     ?.firstOrNull { ext ->
                         val trimmed = ext.trim()
                         // ⚡ Bolt: Zero-allocation file extension matching to avoid lowercase string and set allocation
-                        SUPPORTED_CONTAINERS.any { it.length == trimmed.length && trimmed.regionMatches(0, it, 0, trimmed.length, ignoreCase = true) }
+                        SUPPORTED_CONTAINERS.any {
+                            it.length == trimmed.length &&
+                                trimmed.regionMatches(0, it, 0, trimmed.length, ignoreCase = true)
+                        }
                     }?.trim() ?: rawContainer?.split(",")?.firstOrNull()?.trim()
 
             return@coroutineScope Result.success(
@@ -509,13 +518,14 @@ class JellyfinMediaProvider(
                     val ud = item.userData
                     val posMs = (ud?.playbackPositionTicks ?: 0L) / 10_000
                     val durMs = (item.runTimeTicks ?: 0L) / 10_000
-                    item.id to PlaybackStatus(
-                        positionMs = posMs,
-                        durationMs = durMs,
-                        isCompleted = ud?.played ?: false,
-                        itemName = item.name,
-                        categoryId = item.parentId,
-                    )
+                    item.id to
+                        PlaybackStatus(
+                            positionMs = posMs,
+                            durationMs = durMs,
+                            isCompleted = ud?.played ?: false,
+                            itemName = item.name,
+                            categoryId = item.parentId,
+                        )
                 }
             }
         }
@@ -687,7 +697,10 @@ class JellyfinMediaProvider(
 
     /** Jellyfin keys its external ids case-inconsistently across versions; match either spelling. */
     private fun JellyfinItem.tmdbId(): String? =
-        providerIds.entries.firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }?.value?.ifBlank { null }
+        providerIds.entries
+            .firstOrNull { it.key.equals("Tmdb", ignoreCase = true) }
+            ?.value
+            ?.ifBlank { null }
 
     private fun JellyfinItem.firstTrailerUrl(): String? = remoteTrailers.firstNotNullOfOrNull { trailerUrl(it.url) }
 

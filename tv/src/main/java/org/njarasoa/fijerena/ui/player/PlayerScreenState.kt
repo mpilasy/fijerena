@@ -49,12 +49,13 @@ class PlayerScreenState(
      * through it would change channel instead of moving between its options.
      */
     val isModalOpen: Boolean
-        get() = showCategoryOverlay ||
-            showLastWatchedOverlay ||
-            showAudioTrackSelector ||
-            showSubtitleSelector ||
-            showQualitySelector ||
-            showChapterSelector
+        get() =
+            showCategoryOverlay ||
+                showLastWatchedOverlay ||
+                showAudioTrackSelector ||
+                showSubtitleSelector ||
+                showQualitySelector ||
+                showChapterSelector
     var showTopOfHourClock by mutableStateOf(false)
     var showControlHints by mutableStateOf(false)
 

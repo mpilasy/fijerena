@@ -16,8 +16,8 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.ParsedQuery
-import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.SearchUtils
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -34,7 +34,9 @@ class SearchViewModel(
     }
 
     sealed class UiState {
-        data class Loading(val message: String? = null) : UiState()
+        data class Loading(
+            val message: String? = null,
+        ) : UiState()
 
         data class Success(
             val categoryResults: List<CategorySearchResult> = emptyList(),
@@ -83,7 +85,9 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val appSettings = org.njarasoa.fijerena.core.network.AppSettings(context)
+    private val appSettings =
+        org.njarasoa.fijerena.core.network
+            .AppSettings(context)
 
     private val _searchHistory = MutableStateFlow<List<String>>(emptyList())
     val searchHistory: StateFlow<List<String>> = _searchHistory.asStateFlow()
@@ -242,7 +246,9 @@ class SearchViewModel(
             val realCategories =
                 prefetchedCategories?.takeIf { it.isNotEmpty() }
                     ?: targetContentTypes.flatMap { type ->
-                        repo.getFilteredCategories(type).getOrNull()
+                        repo
+                            .getFilteredCategories(type)
+                            .getOrNull()
                             ?.filter { !it.isVirtual }
                             ?.map { SearchableCategory(it, type) }
                             ?: emptyList()
@@ -323,7 +329,7 @@ class SearchViewModel(
             // Fall back to client-side search
             _uiState.value = UiState.Loading(context.getString(org.njarasoa.fijerena.core.ui.R.string.search_fallback_local))
             kotlinx.coroutines.delay(50) // Allow UI to render the new loading message
-            
+
             val results = mutableListOf<SearchResult>()
 
             // Phase 1: Local cache scan

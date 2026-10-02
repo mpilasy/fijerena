@@ -9,10 +9,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okhttp3.Response
 import okhttp3.WebSocket
@@ -25,12 +25,12 @@ import org.njarasoa.fijerena.core.network.sync.SyncApiException
 import org.njarasoa.fijerena.core.network.sync.SyncEngine
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.cancellation.CancellationException
-import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
-import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
  * Runs live sync while the app is in use — see `docs/plans/20260929_live-sync-plan.md` → Flow.
@@ -96,7 +96,12 @@ class SyncManager internal constructor(
                     // Another device deleted the profile this one is using: move to another, then
                     // sync again so the deletion can land.
                     val active = AppSettings(app).activeProfileId
-                    val other = SettingsDatabase.getInstance(app).profileDao().getAll().firstOrNull { it.id != active } ?: return@launch
+                    val other =
+                        SettingsDatabase
+                            .getInstance(app)
+                            .profileDao()
+                            .getAll()
+                            .firstOrNull { it.id != active } ?: return@launch
                     Log.i(TAG, "Active profile deleted on another device; switching to ${other.id}")
                     AppContainer.getInstance(app).switchProfileExternally(other.id)
                     requestSync(0)
@@ -206,7 +211,11 @@ class SyncManager internal constructor(
         try {
             val outcome = engine.syncNow(listener) ?: return
             retryDelayMs = INITIAL_RETRY_MS
-            if (outcome.pulled + outcome.pushed > 0) Log.i(TAG, "Synced: pulled ${outcome.pulled}, pushed ${outcome.pushed}, waiting ${outcome.deferred}")
+            if (outcome.pulled + outcome.pushed >
+                0
+            ) {
+                Log.i(TAG, "Synced: pulled ${outcome.pulled}, pushed ${outcome.pushed}, waiting ${outcome.deferred}")
+            }
         } catch (e: SyncApiException) {
             Log.w(TAG, "Sync failed: ${e.message}")
             if (e.status == 401) {

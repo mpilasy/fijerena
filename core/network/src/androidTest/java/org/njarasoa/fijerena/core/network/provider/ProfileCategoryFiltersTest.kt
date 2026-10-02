@@ -69,6 +69,7 @@ class ProfileCategoryFiltersTest {
                 ),
             )
             providers.updateProviderSettings(id, providers.getProviderSettings(id).copy(categoryFilters = adult))
+
             fun visible() = categoryDao.getCategories(id, XtreamCategoryEntity.TYPE_VOD).map { it.categoryName }
             assertEquals(listOf("Comedy"), visible())
 

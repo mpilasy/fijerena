@@ -40,7 +40,11 @@ fun DatabaseMaintenanceCard(
         ) {
             Text(
                 stringResource(
-                    if (uiState.isPruningDatabase) R.string.settings_shrink_database_button_running else R.string.settings_shrink_database_button,
+                    if (uiState.isPruningDatabase) {
+                        R.string.settings_shrink_database_button_running
+                    } else {
+                        R.string.settings_shrink_database_button
+                    },
                 ),
             )
         }

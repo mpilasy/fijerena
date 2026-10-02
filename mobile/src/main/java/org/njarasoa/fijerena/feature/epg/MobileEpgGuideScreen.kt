@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
@@ -58,7 +59,6 @@ import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 // Pre-compiled formatter — locale-aware medium date (e.g., "Feb 27, 2026")
 private val EPG_SHORT_DATE_FORMATTER = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
@@ -157,6 +157,7 @@ fun MobileEpgGuideScreen(
                         }
                     }
                 }
+
                 is EpgViewModel.UiState.Success -> {
                     Column(modifier = Modifier.fillMaxSize()) {
                         // Date navigation row
@@ -198,6 +199,7 @@ fun MobileEpgGuideScreen(
                         }
                     }
                 }
+
                 is EpgViewModel.UiState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),

@@ -104,6 +104,7 @@ fun firstSeasonWithUnwatchedEpisode(
  * [lastPlayedEpisodeId] is the id with the newest playback timestamp among this series'
  * episodes; [isCompleted] reports whether an episode was watched past the completion mark.
  */
+
 /**
  * This show's episode with the season and episode number in [name]'s `SxxEyy` — how an episode
  * played from another copy of the show (an alternate stream: another language or quality, its own
@@ -114,9 +115,10 @@ fun SeriesDetail.episodeIdMatchingName(name: String): String? {
     val match = SEASON_EPISODE.find(name) ?: return null
     val season = match.groupValues[1].toInt()
     val number = match.groupValues[2].toInt()
-    return episodes.entries.firstNotNullOfOrNull { (seasonKey, episodes) ->
-        episodes.firstOrNull { (it.seasonNumber ?: seasonKey.toIntOrNull()) == season && it.episodeNumber == number }
-    }?.id
+    return episodes.entries
+        .firstNotNullOfOrNull { (seasonKey, episodes) ->
+            episodes.firstOrNull { (it.seasonNumber ?: seasonKey.toIntOrNull()) == season && it.episodeNumber == number }
+        }?.id
 }
 
 private val SEASON_EPISODE = Regex("""\bS(\d{1,3})\s*E(\d{1,4})\b""", RegexOption.IGNORE_CASE)
@@ -144,16 +146,29 @@ fun SeriesDetail.seriesYearRange(presentLabel: String = "present"): String? {
     val episodeYears =
         episodes.values
             .flatten()
-            .mapNotNull { it.metadata.year ?: it.metadata.airDate?.take(4)?.toIntOrNull() }
+            .mapNotNull {
+                it.metadata.year ?: it.metadata.airDate
+                    ?.take(4)
+                    ?.toIntOrNull()
+            }
 
     val minYear = startYear ?: episodeYears.minOrNull()
     val maxEpisodeYear = episodeYears.maxOrNull()
 
     return when {
-        minYear == null -> null
-        maxEpisodeYear == null || minYear == maxEpisodeYear -> "$minYear"
+        minYear == null -> {
+            null
+        }
+
+        maxEpisodeYear == null || minYear == maxEpisodeYear -> {
+            "$minYear"
+        }
+
         else -> {
-            val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+            val currentYear =
+                java.util.Calendar
+                    .getInstance()
+                    .get(java.util.Calendar.YEAR)
             if (maxEpisodeYear >= currentYear) {
                 "$minYear–$presentLabel"
             } else {

@@ -4,9 +4,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -36,32 +36,32 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
-import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
+import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
+import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.core.ui.components.MitadyLoading
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 private fun localizedContentTypeLabel(contentType: String): String =
@@ -118,6 +118,7 @@ fun MobileSearchScreen(
                             target.isFavorite,
                         )
                     }
+
                     is FavoriteMenuTarget.Stream -> {
                         viewModel.toggleFavorite(
                             target.itemId,
@@ -207,9 +208,9 @@ fun MobileSearchScreen(
                             Icon(
                                 imageVector = CinemaIcons.Search,
                                 contentDescription = stringResource(R.string.common_search),
-                                tint = CinemaTextPrimary
+                                tint = CinemaTextPrimary,
                             )
-                        }
+                        },
                     )
                 },
                 trailingIcon = {
@@ -228,9 +229,9 @@ fun MobileSearchScreen(
                                 Icon(
                                     imageVector = CinemaIcons.Close,
                                     contentDescription = stringResource(R.string.provider_clear_button),
-                                    tint = CinemaTextPrimary
+                                    tint = CinemaTextPrimary,
                                 )
-                            }
+                            },
                         )
                     }
                 },
@@ -269,9 +270,11 @@ fun MobileSearchScreen(
                     is SearchViewModel.UiState.Loading -> {
                         LoadingView(message = state.message)
                     }
+
                     is SearchViewModel.UiState.Error -> {
                         ErrorView(message = state.message)
                     }
+
                     is SearchViewModel.UiState.Success -> {
                         val failedSuffix = if (state.failedCalls > 0) " (${state.failedCalls} failed)" else ""
                         val errorSuffix = if (state.firstError != null) "\n${state.firstError}" else ""
@@ -455,180 +458,188 @@ private fun SearchResults(
         // paint order, not position. Without this Column, the LazyColumn below (declared after
         // the Row) painted on top of it and ate every touch meant for the chips.
         Column(modifier = Modifier.fillMaxSize()) {
-        // Pre-compute grouped results outside LazyColumn to avoid O(N×types) filter per recomposition
-        val groupedByType =
-            remember(categoryResults, results) {
-                buildGroupedSearchResults(categoryResults, results)
-            }
-
-        // Scope filter chips — only meaningful for Global Search, where results already span
-        // multiple content types worth triaging. A type-scoped search (queryContentType != "ALL")
-        // only ever has one type of result to begin with. Selection is hoisted to the caller (see
-        // MobileSearchScreen) so it survives the transitional Loading state performSearch() emits
-        // on every re-search, not just the first.
-        if (queryContentType == "ALL" && groupedByType.size > 1) {
-            val totalCount = categoryResults.size + results.size
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                CinemaFilterChip(
-                    selected = selectedTypeFilter == null,
-                    onClick = { onTypeFilterChange(null) },
-                    label = { Text("${stringResource(R.string.content_type_all_label)} ($totalCount)") },
-                )
-                for ((type, cats, streams) in groupedByType) {
-                    val count = cats.size + streams.size
-                    if (count > 0) {
-                        CinemaFilterChip(
-                            selected = selectedTypeFilter == type,
-                            onClick = { onTypeFilterChange(if (selectedTypeFilter == type) null else type) },
-                            label = { Text("${localizedContentTypeLabel(type)} ($count)") },
-                        )
-                    }
+            // Pre-compute grouped results outside LazyColumn to avoid O(N×types) filter per recomposition
+            val groupedByType =
+                remember(categoryResults, results) {
+                    buildGroupedSearchResults(categoryResults, results)
                 }
-            }
-        }
-        val visibleGroups =
-            selectedTypeFilter?.let { filter -> groupedByType.filter { it.first == filter } } ?: groupedByType
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            contentPadding = PaddingValues(bottom = Spacing.md),
-        ) {
-            // Progress / complete message
-            if (isSearching && searchProgress != null) {
-                item(key = "search_progress", contentType = "status") {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = Spacing.xs),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        MitadyLoading(
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = " ($searchProgress)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            } else if (!isSearching && searchProgress != null) {
-                item(key = "search_complete", contentType = "status") {
-                    Text(
-                        text = searchProgress,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = Spacing.xs),
+            // Scope filter chips — only meaningful for Global Search, where results already span
+            // multiple content types worth triaging. A type-scoped search (queryContentType != "ALL")
+            // only ever has one type of result to begin with. Selection is hoisted to the caller (see
+            // MobileSearchScreen) so it survives the transitional Loading state performSearch() emits
+            // on every re-search, not just the first.
+            if (queryContentType == "ALL" && groupedByType.size > 1) {
+                val totalCount = categoryResults.size + results.size
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    CinemaFilterChip(
+                        selected = selectedTypeFilter == null,
+                        onClick = { onTypeFilterChange(null) },
+                        label = { Text("${stringResource(R.string.content_type_all_label)} ($totalCount)") },
                     )
-                }
-            }
-
-            // Dev stats on separate line
-            if (devStats != null) {
-                item(key = "dev_stats", contentType = "status") {
-                    Text(
-                        text = devStats,
-                        style =
-                            MaterialTheme.typography.labelSmall.copy(
-                                fontSize = MaterialTheme.typography.labelSmall.fontSize * CinemaAlpha.textMedium,
-                            ),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                    )
-                }
-            }
-
-            if (queryContentType == "ALL") {
-                visibleGroups.forEach { (type, typeCats, typeStreams) ->
-
-                    if (typeCats.isNotEmpty() || typeStreams.isNotEmpty()) {
-                        val isExpanded = expandedGroups.contains(type)
-                        item(key = "header_$type", contentType = "header") {
-                            MobileCollapsibleHeader(
-                                title = localizedContentTypeLabel(type),
-                                count = typeCats.size + typeStreams.size,
-                                hiddenCount = excludedCountByType[type] ?: 0,
-                                isExpanded = isExpanded,
-                                onToggle = { toggleGroup(type) },
+                    for ((type, cats, streams) in groupedByType) {
+                        val count = cats.size + streams.size
+                        if (count > 0) {
+                            CinemaFilterChip(
+                                selected = selectedTypeFilter == type,
+                                onClick = { onTypeFilterChange(if (selectedTypeFilter == type) null else type) },
+                                label = { Text("${localizedContentTypeLabel(type)} ($count)") },
                             )
                         }
-
-                        if (isExpanded) {
-                            items(typeCats, key = { "cat_${it.categoryId}_${it.contentType}" }, contentType = { "category" }) { catResult ->
-                                CategoryResultCard(
-                                    result = catResult,
-                                    cardColors = categoryCardColors,
-                                    onClick = { onCategoryClick(catResult) },
-                                    onLongClick = { onCategoryLongPress(catResult) },
-                                )
-                            }
-                            items(
-                                typeStreams,
-                                key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" },
-                                contentType = { "stream" },
-                            ) { result ->
-                                SearchResultCard(
-                                    result = result,
-                                    cardColors = streamCardColors,
-                                    onClick = { onResultClick(result) },
-                                    onLongClick = { onResultLongPress(result) },
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                if (categoryResults.isNotEmpty()) {
-                    item(key = "category_header", contentType = "header") {
-                        SearchSectionHeader(
-                            title = stringResource(R.string.search_tab_categories),
-                            count = categoryResults.size,
-                            hiddenCount = 0,
-                        )
-                    }
-                    items(categoryResults, key = { "cat_${it.categoryId}_${it.contentType}" }, contentType = { "category" }) { catResult ->
-                        CategoryResultCard(
-                            result = catResult,
-                            cardColors = categoryCardColors,
-                            onClick = { onCategoryClick(catResult) },
-                            onLongClick = { onCategoryLongPress(catResult) },
-                        )
-                    }
-                }
-                if (results.isNotEmpty()) {
-                    item(key = "stream_header", contentType = "header") {
-                        SearchSectionHeader(
-                            title = stringResource(R.string.search_tab_streams),
-                            count = results.size,
-                            hiddenCount = excludedCountByType[queryContentType] ?: 0,
-                        )
-                    }
-                    items(
-                        results,
-                        key = { "search_${it.contentType}_${it.categoryId}_${it.itemId}" },
-                        contentType = { "stream" },
-                    ) { result ->
-                        SearchResultCard(
-                            result = result,
-                            cardColors = streamCardColors,
-                            onClick = { onResultClick(result) },
-                            onLongClick = { onResultLongPress(result) },
-                        )
                     }
                 }
             }
-        }
+            val visibleGroups =
+                selectedTypeFilter?.let { filter -> groupedByType.filter { it.first == filter } } ?: groupedByType
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                contentPadding = PaddingValues(bottom = Spacing.md),
+            ) {
+                // Progress / complete message
+                if (isSearching && searchProgress != null) {
+                    item(key = "search_progress", contentType = "status") {
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = Spacing.xs),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            MitadyLoading(
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                text = " ($searchProgress)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                } else if (!isSearching && searchProgress != null) {
+                    item(key = "search_complete", contentType = "status") {
+                        Text(
+                            text = searchProgress,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(vertical = Spacing.xs),
+                        )
+                    }
+                }
+
+                // Dev stats on separate line
+                if (devStats != null) {
+                    item(key = "dev_stats", contentType = "status") {
+                        Text(
+                            text = devStats,
+                            style =
+                                MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = MaterialTheme.typography.labelSmall.fontSize * CinemaAlpha.textMedium,
+                                ),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                        )
+                    }
+                }
+
+                if (queryContentType == "ALL") {
+                    visibleGroups.forEach { (type, typeCats, typeStreams) ->
+
+                        if (typeCats.isNotEmpty() || typeStreams.isNotEmpty()) {
+                            val isExpanded = expandedGroups.contains(type)
+                            item(key = "header_$type", contentType = "header") {
+                                MobileCollapsibleHeader(
+                                    title = localizedContentTypeLabel(type),
+                                    count = typeCats.size + typeStreams.size,
+                                    hiddenCount = excludedCountByType[type] ?: 0,
+                                    isExpanded = isExpanded,
+                                    onToggle = { toggleGroup(type) },
+                                )
+                            }
+
+                            if (isExpanded) {
+                                items(
+                                    typeCats,
+                                    key = { "cat_${it.categoryId}_${it.contentType}" },
+                                    contentType = { "category" },
+                                ) { catResult ->
+                                    CategoryResultCard(
+                                        result = catResult,
+                                        cardColors = categoryCardColors,
+                                        onClick = { onCategoryClick(catResult) },
+                                        onLongClick = { onCategoryLongPress(catResult) },
+                                    )
+                                }
+                                items(
+                                    typeStreams,
+                                    key = { "stream_${it.itemId}_${it.categoryId}_${it.contentType}" },
+                                    contentType = { "stream" },
+                                ) { result ->
+                                    SearchResultCard(
+                                        result = result,
+                                        cardColors = streamCardColors,
+                                        onClick = { onResultClick(result) },
+                                        onLongClick = { onResultLongPress(result) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    if (categoryResults.isNotEmpty()) {
+                        item(key = "category_header", contentType = "header") {
+                            SearchSectionHeader(
+                                title = stringResource(R.string.search_tab_categories),
+                                count = categoryResults.size,
+                                hiddenCount = 0,
+                            )
+                        }
+                        items(
+                            categoryResults,
+                            key = { "cat_${it.categoryId}_${it.contentType}" },
+                            contentType = { "category" },
+                        ) { catResult ->
+                            CategoryResultCard(
+                                result = catResult,
+                                cardColors = categoryCardColors,
+                                onClick = { onCategoryClick(catResult) },
+                                onLongClick = { onCategoryLongPress(catResult) },
+                            )
+                        }
+                    }
+                    if (results.isNotEmpty()) {
+                        item(key = "stream_header", contentType = "header") {
+                            SearchSectionHeader(
+                                title = stringResource(R.string.search_tab_streams),
+                                count = results.size,
+                                hiddenCount = excludedCountByType[queryContentType] ?: 0,
+                            )
+                        }
+                        items(
+                            results,
+                            key = { "search_${it.contentType}_${it.categoryId}_${it.itemId}" },
+                            contentType = { "stream" },
+                        ) { result ->
+                            SearchResultCard(
+                                result = result,
+                                cardColors = streamCardColors,
+                                onClick = { onResultClick(result) },
+                                onLongClick = { onResultLongPress(result) },
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

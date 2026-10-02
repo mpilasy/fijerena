@@ -160,6 +160,7 @@ private val BaseTypography =
 @OptIn(ExperimentalTvMaterial3Api::class)
 fun cinemaTypography(tokens: UiTypeTokens): Typography {
     fun TextStyle.display() = applyUiTypeTokens(tokens, CinemaDisplayFontFamily)
+
     fun TextStyle.body() = applyUiTypeTokens(tokens, FontFamily.Default)
     return BaseTypography.copy(
         displayLarge = BaseTypography.displayLarge.display(),

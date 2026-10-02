@@ -119,7 +119,9 @@ fun AppLoadingScreen(
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
-                    topLeft = androidx.compose.ui.geometry.Offset(inset, inset),
+                    topLeft =
+                        androidx.compose.ui.geometry
+                            .Offset(inset, inset),
                     size = arcSize,
                     style = Stroke(width = stroke, cap = StrokeCap.Round),
                 )
@@ -128,7 +130,9 @@ fun AppLoadingScreen(
                     startAngle = sweep,
                     sweepAngle = 80f,
                     useCenter = false,
-                    topLeft = androidx.compose.ui.geometry.Offset(inset, inset),
+                    topLeft =
+                        androidx.compose.ui.geometry
+                            .Offset(inset, inset),
                     size = arcSize,
                     style = Stroke(width = stroke, cap = StrokeCap.Round),
                 )

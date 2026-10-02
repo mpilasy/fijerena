@@ -36,23 +36,23 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.formatBitrate
+import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.performance.AppPerformanceMonitor
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.player.model.formatBitrate
-import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
 import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
 fun MobileStatsOverlay(
@@ -115,8 +115,16 @@ fun MobileStatsOverlay(
         ?: remember { mutableStateOf(0f) }
     val serviceMeasuredDroppedFps by StreamingPlaybackService.getInstance()?.measuredDroppedFps?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
-    val streamHealthState by StreamingPlaybackService.getInstance()?.streamHealthState?.collectAsStateWithLifecycle(org.njarasoa.fijerena.core.player.network.StreamHealthState())
-        ?: remember { mutableStateOf(org.njarasoa.fijerena.core.player.network.StreamHealthState()) }
+    val streamHealthState by StreamingPlaybackService.getInstance()?.streamHealthState?.collectAsStateWithLifecycle(
+        org.njarasoa.fijerena.core.player.network
+            .StreamHealthState(),
+    )
+        ?: remember {
+            mutableStateOf(
+                org.njarasoa.fijerena.core.player.network
+                    .StreamHealthState(),
+            )
+        }
     val serviceRecentDropRate by StreamingPlaybackService.getInstance()?.recentDropRate?.collectAsStateWithLifecycle(0f)
         ?: remember { mutableStateOf(0f) }
     var streamElapsed by remember { mutableStateOf("0:00") }
@@ -186,7 +194,14 @@ fun MobileStatsOverlay(
                                         if (newResolution != videoResolution) videoResolution = newResolution
 
                                         currentVideoBitrate = format.bitrate
-                                        val newVideoBitrate = if (currentVideoBitrate > 0) formatBitrate(currentVideoBitrate) else unknownText
+                                        val newVideoBitrate =
+                                            if (currentVideoBitrate >
+                                                0
+                                            ) {
+                                                formatBitrate(currentVideoBitrate)
+                                            } else {
+                                                unknownText
+                                            }
                                         if (newVideoBitrate != videoBitrate) videoBitrate = newVideoBitrate
                                     }
                                     if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
@@ -209,7 +224,14 @@ fun MobileStatsOverlay(
                                         if (newChannels != audioChannels) audioChannels = newChannels
 
                                         currentAudioBitrate = format.bitrate
-                                        val newAudioBitrate = if (currentAudioBitrate > 0) formatBitrate(currentAudioBitrate) else unknownText
+                                        val newAudioBitrate =
+                                            if (currentAudioBitrate >
+                                                0
+                                            ) {
+                                                formatBitrate(currentAudioBitrate)
+                                            } else {
+                                                unknownText
+                                            }
                                         if (newAudioBitrate != audioBitrate) audioBitrate = newAudioBitrate
                                     }
                                     break // Found the selected track in this group
@@ -370,7 +392,11 @@ fun MobileStatsOverlay(
                     }
                 StatRowColored(stringResource(R.string.player_stats_rebuffers), "$rebuffers", rebufferColor)
                 if (rebufferTimeMs > 0) {
-                    StatRowColored(stringResource(R.string.player_stats_rebuf_time), "${rebufferTimeMs / 1000}.${(rebufferTimeMs % 1000) / 100}s", rebufferColor)
+                    StatRowColored(
+                        stringResource(R.string.player_stats_rebuf_time),
+                        "${rebufferTimeMs / 1000}.${(rebufferTimeMs % 1000) / 100}s",
+                        rebufferColor,
+                    )
                 }
                 val qSwitches = serviceQualitySwitches
                 if (qSwitches > 0) {
@@ -384,7 +410,11 @@ fun MobileStatsOverlay(
                 SectionHeader(stringResource(R.string.player_stats_performance))
                 StatRowColored(stringResource(R.string.player_stats_dropped), "$droppedFrames / $totalFrames", dropColor)
                 if (totalFrames > 0) {
-                    StatRowColored(stringResource(R.string.player_stats_drop_rate), String.format(java.util.Locale.US, "%.2f%%", dropRate), dropColor)
+                    StatRowColored(
+                        stringResource(R.string.player_stats_drop_rate),
+                        String.format(java.util.Locale.US, "%.2f%%", dropRate),
+                        dropColor,
+                    )
                 }
 
                 // Short-window rate: the cumulative one above averages a bad burst away against
@@ -404,12 +434,17 @@ fun MobileStatsOverlay(
 
                 val currentDropFps = serviceMeasuredDroppedFps
                 if (currentDropFps > 0f) {
-                    val currentDropColor = when {
-                        currentDropFps < 1.0f -> CinemaSuccess
-                        currentDropFps < 10.0f -> CinemaWarning
-                        else -> CinemaError
-                    }
-                    StatRowColored(stringResource(R.string.player_stats_drop_rate_per_sec), String.format(java.util.Locale.US, "%.1f fps", currentDropFps), currentDropColor)
+                    val currentDropColor =
+                        when {
+                            currentDropFps < 1.0f -> CinemaSuccess
+                            currentDropFps < 10.0f -> CinemaWarning
+                            else -> CinemaError
+                        }
+                    StatRowColored(
+                        stringResource(R.string.player_stats_drop_rate_per_sec),
+                        String.format(java.util.Locale.US, "%.1f fps", currentDropFps),
+                        currentDropColor,
+                    )
                 }
 
                 SectionHeader(stringResource(R.string.player_stats_app))
@@ -440,16 +475,18 @@ fun MobileStatsOverlay(
 
                 if (metadata.isLive) {
                     val health = streamHealthState
-                    val healthText = when {
-                        health.isDegraded -> String.format(degradedFormat, health.degradedAttempts)
-                        !health.isHealthy -> String.format(unstableFormat, health.recycleAttempts)
-                        else -> healthyText
-                    }
-                    val healthColor = when {
-                        health.isDegraded -> CinemaError
-                        !health.isHealthy -> CinemaWarning
-                        else -> CinemaSuccess
-                    }
+                    val healthText =
+                        when {
+                            health.isDegraded -> String.format(degradedFormat, health.degradedAttempts)
+                            !health.isHealthy -> String.format(unstableFormat, health.recycleAttempts)
+                            else -> healthyText
+                        }
+                    val healthColor =
+                        when {
+                            health.isDegraded -> CinemaError
+                            !health.isHealthy -> CinemaWarning
+                            else -> CinemaSuccess
+                        }
                     StatRowColored(stringResource(R.string.player_stats_stream_health), healthText, healthColor)
                 }
 
@@ -466,7 +503,12 @@ fun MobileStatsOverlay(
                             .detect()
                     }
                 Text(
-                    text = stringResource(R.string.player_stats_build_format, org.njarasoa.fijerena.BuildConfig.BUILD_TIME, org.njarasoa.fijerena.BuildConfig.GIT_HASH),
+                    text =
+                        stringResource(
+                            R.string.player_stats_build_format,
+                            org.njarasoa.fijerena.BuildConfig.BUILD_TIME,
+                            org.njarasoa.fijerena.BuildConfig.GIT_HASH,
+                        ),
                     style = typography.labelSmall,
                     color = CinemaTextPrimary.copy(alpha = 0.3f),
                     modifier = Modifier.padding(top = Spacing.sm),

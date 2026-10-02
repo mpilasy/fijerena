@@ -9,13 +9,17 @@ import androidx.room.Query
 /** Series follow their category's `excluded` flag, as streams do — see [XtreamStreamDao]. */
 @Dao
 interface XtreamSeriesDao {
-    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1) ORDER BY name ASC")
+    @Query(
+        "SELECT * FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1) ORDER BY name ASC",
+    )
     fun getSeriesByCategory(
         providerId: Long,
         categoryId: String,
     ): List<XtreamSeriesEntity>
 
-    @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1) ORDER BY name ASC")
+    @Query(
+        "SELECT * FROM xtream_series WHERE providerId = :providerId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1) ORDER BY name ASC",
+    )
     fun getAllSeries(providerId: Long): List<XtreamSeriesEntity>
 
     @Query("SELECT * FROM xtream_series WHERE providerId = :providerId AND seriesId = :seriesId LIMIT 1")
@@ -40,7 +44,6 @@ interface XtreamSeriesDao {
 
     @Query("DELETE FROM xtream_series WHERE providerId = :providerId")
     fun deleteAll(providerId: Long)
-
 
     @Query("SELECT seriesId FROM xtream_series WHERE providerId = :providerId")
     fun getSeriesIds(providerId: Long): List<Int>
@@ -72,7 +75,8 @@ interface XtreamSeriesDao {
         ids: List<Int>,
     )
 
-    @Query("""
+    @Query(
+        """
         SELECT s.* FROM xtream_series s
         WHERE s.rowid IN (
             SELECT docid FROM xtream_series_fts WHERE xtream_series_fts MATCH :query
@@ -80,7 +84,8 @@ interface XtreamSeriesDao {
         AND s.providerId = :providerId
         AND (:includeExcluded = 1 OR s.categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1))
         LIMIT 200
-    """)
+    """,
+    )
     fun searchByFts(
         providerId: Long,
         query: String,
@@ -88,20 +93,22 @@ interface XtreamSeriesDao {
     ): List<XtreamSeriesEntity>
 
     /** The unary `+` keeps SQLite off the categoryId index — see [XtreamStreamDao.countExcludedByFts]. */
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(*) FROM xtream_series s
         WHERE s.rowid IN (
             SELECT docid FROM xtream_series_fts WHERE xtream_series_fts MATCH :query
         )
         AND s.providerId = :providerId
         AND +s.categoryId IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = 'SERIES' AND excluded = 1)
-    """)
+    """,
+    )
     fun countExcludedByFts(
         providerId: Long,
         query: String,
     ): Int
 
-@Query("DELETE FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId")
+    @Query("DELETE FROM xtream_series WHERE providerId = :providerId AND categoryId = :categoryId")
     fun deleteByCategoryId(
         providerId: Long,
         categoryId: String,

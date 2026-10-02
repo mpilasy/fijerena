@@ -39,6 +39,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -56,29 +58,30 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
-import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
 import org.njarasoa.fijerena.core.network.xmltv.formatAiringTime
 import org.njarasoa.fijerena.core.network.xmltv.formatCount
 import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
-import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
-import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
+import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
+import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.message
@@ -91,9 +94,6 @@ import org.njarasoa.fijerena.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.core.ui.components.MitadyLoading
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -327,11 +327,15 @@ fun MobileEpgBrowserScreen(
             val currentIndexState = indexState
             if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
                 val idx = currentIndexState
-                val progressText = if (idx is EpgIndexState.Indexing) {
-                    stringResource(R.string.epg_indexing_progress_count, idx.progressPercent, formatCount(idx.programmesIndexed))
-                } else {
-                    stringResource(R.string.epg_browser_finalizing_format, formatCount((idx as EpgIndexState.Optimizing).programmeCount))
-                }
+                val progressText =
+                    if (idx is EpgIndexState.Indexing) {
+                        stringResource(R.string.epg_indexing_progress_count, idx.progressPercent, formatCount(idx.programmesIndexed))
+                    } else {
+                        stringResource(
+                            R.string.epg_browser_finalizing_format,
+                            formatCount((idx as EpgIndexState.Optimizing).programmeCount),
+                        )
+                    }
                 val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f
 
                 Column(
@@ -346,7 +350,14 @@ fun MobileEpgBrowserScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = if (idx is EpgIndexState.Indexing) stringResource(R.string.epg_browser_indexing_label) else stringResource(R.string.epg_browser_optimizing_label),
+                            text =
+                                if (idx is EpgIndexState.Indexing) {
+                                    stringResource(
+                                        R.string.epg_browser_indexing_label,
+                                    )
+                                } else {
+                                    stringResource(R.string.epg_browser_optimizing_label)
+                                },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -401,6 +412,7 @@ fun MobileEpgBrowserScreen(
                         }
                     }
                 }
+
                 is EpgBrowserViewModel.UiState.IndexBusy -> {
                     Box(
                         modifier = Modifier.fillMaxSize().padding(horizontal = CinemaSpacing.lg),
@@ -414,6 +426,7 @@ fun MobileEpgBrowserScreen(
                         )
                     }
                 }
+
                 is EpgBrowserViewModel.UiState.NoEpgFile -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -426,6 +439,7 @@ fun MobileEpgBrowserScreen(
                         )
                     }
                 }
+
                 is EpgBrowserViewModel.UiState.Searching -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -437,6 +451,7 @@ fun MobileEpgBrowserScreen(
                         )
                     }
                 }
+
                 is EpgBrowserViewModel.UiState.Results -> {
                     MobileResultsContent(
                         results = state,
@@ -447,6 +462,7 @@ fun MobileEpgBrowserScreen(
                         onNavigateToPlayer = onNavigateToPlayer,
                     )
                 }
+
                 is EpgBrowserViewModel.UiState.Error -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -689,12 +705,27 @@ private fun MobileProgramCard(
                 ) {
                     Icon(
                         imageVector = if (expanded) CinemaIcons.ExpandLess else CinemaIcons.ExpandMore,
-                        contentDescription = if (expanded) stringResource(R.string.epg_browser_show_less) else stringResource(R.string.epg_browser_show_more),
+                        contentDescription =
+                            if (expanded) {
+                                stringResource(
+                                    R.string.epg_browser_show_less,
+                                )
+                            } else {
+                                stringResource(R.string.epg_browser_show_more)
+                            },
                         modifier = Modifier.size(CinemaSpacing.lg),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        text = if (expanded) stringResource(R.string.epg_browser_show_less) else stringResource(R.string.epg_browser_show_more_count, program.airings.size - 3),
+                        text =
+                            if (expanded) {
+                                stringResource(R.string.epg_browser_show_less)
+                            } else {
+                                stringResource(
+                                    R.string.epg_browser_show_more_count,
+                                    program.airings.size - 3,
+                                )
+                            },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -760,7 +791,14 @@ private fun MobileAiringRow(
         )
         if (isOnAir || isSoon) {
             val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
-            val badgeLabel = if (isOnAir) stringResource(R.string.epg_browser_on_air_badge) else stringResource(R.string.epg_browser_soon_badge)
+            val badgeLabel =
+                if (isOnAir) {
+                    stringResource(
+                        R.string.epg_browser_on_air_badge,
+                    )
+                } else {
+                    stringResource(R.string.epg_browser_soon_badge)
+                }
             Text(
                 text = badgeLabel,
                 style = MaterialTheme.typography.labelSmall,
@@ -851,4 +889,3 @@ private fun MobileEpgSearchHistorySection(
         }
     }
 }
-

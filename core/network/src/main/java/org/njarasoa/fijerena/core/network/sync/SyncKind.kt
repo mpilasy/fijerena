@@ -50,8 +50,7 @@ object SyncKind {
     /** The profile slot of anything the whole household shares. */
     const val SHARED = "shared"
 
-    fun forFavorite(favoriteKind: String): String =
-        if (favoriteKind == FavoriteKind.CATEGORY) FAVORITE_CATEGORY else FAVORITE_STREAM
+    fun forFavorite(favoriteKind: String): String = if (favoriteKind == FavoriteKind.CATEGORY) FAVORITE_CATEGORY else FAVORITE_STREAM
 
     /**
      * How long a deletion is kept locally — the server's planned tombstone horizon. A device

@@ -28,19 +28,21 @@ data class EpgChannelStagingEntity(
 /**
  * Extension to convert staging entity to primary entity.
  */
-fun EpgChannelStagingEntity.toPrimary() = EpgChannelEntity(
-    xmltvId = xmltvId,
-    displayName = displayName,
-    iconUrl = iconUrl,
-    sourceId = sourceId
-)
+fun EpgChannelStagingEntity.toPrimary() =
+    EpgChannelEntity(
+        xmltvId = xmltvId,
+        displayName = displayName,
+        iconUrl = iconUrl,
+        sourceId = sourceId,
+    )
 
 /**
  * Extension to convert primary entity to staging entity.
  */
-fun EpgChannelEntity.toStaging() = EpgChannelStagingEntity(
-    xmltvId = xmltvId,
-    displayName = displayName,
-    iconUrl = iconUrl,
-    sourceId = sourceId
-)
+fun EpgChannelEntity.toStaging() =
+    EpgChannelStagingEntity(
+        xmltvId = xmltvId,
+        displayName = displayName,
+        iconUrl = iconUrl,
+        sourceId = sourceId,
+    )

@@ -55,14 +55,23 @@ fun EpgSettingsCard(
             }
             val summaryText =
                 when (val idx = indexState) {
-                    is EpgIndexState.Indexed -> stringResource(
-                        R.string.epg_summary_channels_programmes,
-                        formatProgrammeCount(idx.channelCount),
-                        formatProgrammeCount(idx.programmeCount),
-                    )
-                    is EpgIndexState.Indexing -> stringResource(R.string.epg_summary_indexing, idx.progressPercent)
-                    is EpgIndexState.Optimizing -> stringResource(R.string.epg_browser_optimizing_index_label)
-                    is EpgIndexState.NotIndexed ->
+                    is EpgIndexState.Indexed -> {
+                        stringResource(
+                            R.string.epg_summary_channels_programmes,
+                            formatProgrammeCount(idx.channelCount),
+                            formatProgrammeCount(idx.programmeCount),
+                        )
+                    }
+
+                    is EpgIndexState.Indexing -> {
+                        stringResource(R.string.epg_summary_indexing, idx.progressPercent)
+                    }
+
+                    is EpgIndexState.Optimizing -> {
+                        stringResource(R.string.epg_browser_optimizing_index_label)
+                    }
+
+                    is EpgIndexState.NotIndexed -> {
                         if (sourceCount >
                             0
                         ) {
@@ -70,7 +79,11 @@ fun EpgSettingsCard(
                         } else {
                             stringResource(R.string.epg_summary_no_sources)
                         }
-                    is EpgIndexState.Failed -> stringResource(R.string.epg_database_error, idx.reason)
+                    }
+
+                    is EpgIndexState.Failed -> {
+                        stringResource(R.string.epg_database_error, idx.reason)
+                    }
                 }
             Text(
                 text = summaryText,

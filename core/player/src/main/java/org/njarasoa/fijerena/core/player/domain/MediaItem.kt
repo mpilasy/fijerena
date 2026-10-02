@@ -72,6 +72,7 @@ data class MediaItem(
 ) {
     /** The series ID associated with this media item if it represents a series or episode. */
     val seriesId: String?
-        get() = (target as? BrowseTarget.Series)?.seriesId?.raw
-            ?: (target as? BrowseTarget.Episode)?.seriesId?.raw
+        get() =
+            (target as? BrowseTarget.Series)?.seriesId?.raw
+                ?: (target as? BrowseTarget.Episode)?.seriesId?.raw
 }

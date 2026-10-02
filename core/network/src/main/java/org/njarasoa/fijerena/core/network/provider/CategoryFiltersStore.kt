@@ -84,12 +84,20 @@ class CategoryFiltersStore(
 
     fun removeProvider(providerId: Long) {
         val prefix = "${providerId}_"
-        prefs.edit { prefs.all.keys.filter { it.startsWith(prefix) }.forEach { remove(it) } }
+        prefs.edit {
+            prefs.all.keys
+                .filter { it.startsWith(prefix) }
+                .forEach { remove(it) }
+        }
     }
 
     fun removeProfile(profileId: String) {
         val suffix = "_$profileId"
-        prefs.edit { prefs.all.keys.filter { it.endsWith(suffix) }.forEach { remove(it) } }
+        prefs.edit {
+            prefs.all.keys
+                .filter { it.endsWith(suffix) }
+                .forEach { remove(it) }
+        }
     }
 
     private companion object {

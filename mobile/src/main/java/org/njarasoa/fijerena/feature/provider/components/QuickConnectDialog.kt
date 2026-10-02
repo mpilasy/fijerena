@@ -41,7 +41,7 @@ fun QuickConnectDialog(
     onQcSecretChange: (String) -> Unit,
     onQcErrorChange: (String?) -> Unit,
     onShowQuickConnectDialogChange: (Boolean) -> Unit,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit,
 ) {
     if (showQuickConnectDialog) {
         val appSettings = remember { AppSettings(context) }
@@ -58,7 +58,10 @@ fun QuickConnectDialog(
             val initResult = api.initiateQuickConnect()
             if (initResult.isFailure) {
                 val e = initResult.exceptionOrNull()
-                onQcErrorChange(e?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) } ?: context.getString(R.string.provider_qc_init_failed))
+                onQcErrorChange(
+                    e?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
+                        ?: context.getString(R.string.provider_qc_init_failed),
+                )
                 return@LaunchedEffect
             }
             val init = initResult.getOrThrow()
@@ -114,6 +117,7 @@ fun QuickConnectDialog(
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
+
                         qcCode.isEmpty() -> {
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
@@ -122,6 +126,7 @@ fun QuickConnectDialog(
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
+
                         else -> {
                             Text(
                                 text = stringResource(R.string.provider_qc_enter_code),

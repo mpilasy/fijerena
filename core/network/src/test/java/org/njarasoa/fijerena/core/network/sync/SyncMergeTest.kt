@@ -89,7 +89,10 @@ class SyncMergeTest {
 
     @Test
     fun `a watch row from before the clear stays cleared`() {
-        assertEquals(Resolution.Skip(SkipReason.CLEARED), SyncMerge.resolve(record(watchKey, 10), onKnownProvider.copy(watchClearedAt = 20)))
+        assertEquals(
+            Resolution.Skip(SkipReason.CLEARED),
+            SyncMerge.resolve(record(watchKey, 10), onKnownProvider.copy(watchClearedAt = 20)),
+        )
     }
 
     @Test

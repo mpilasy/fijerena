@@ -94,6 +94,12 @@ class AppScopesCrashLogTest {
         Thread.getDefaultUncaughtExceptionHandler()!!.uncaughtException(Thread.currentThread(), crash)
 
         assertSame(crash, forwarded)
-        assertTrue(CrashLog.read().single().substringBefore('\n').contains("uncaught on"))
+        assertTrue(
+            CrashLog
+                .read()
+                .single()
+                .substringBefore('\n')
+                .contains("uncaught on"),
+        )
     }
 }

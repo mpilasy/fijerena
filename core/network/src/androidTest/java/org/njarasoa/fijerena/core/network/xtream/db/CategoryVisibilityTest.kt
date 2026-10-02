@@ -59,8 +59,22 @@ class CategoryVisibilityTest {
     @Test
     fun searchHidesFilteredStreamsAndCountsThem() {
         val streams = db.streamDao()
-        assertEquals(setOf(1, 3, 4), streams.searchByFts(P, XtreamStreamEntity.TYPE_VOD, "king*", includeExcluded = false).map { it.streamId }.toSet())
-        assertEquals(setOf(1, 2, 3, 4), streams.searchByFts(P, XtreamStreamEntity.TYPE_VOD, "king*", includeExcluded = true).map { it.streamId }.toSet())
+        assertEquals(
+            setOf(1, 3, 4),
+            streams
+                .searchByFts(P, XtreamStreamEntity.TYPE_VOD, "king*", includeExcluded = false)
+                .map {
+                    it.streamId
+                }.toSet(),
+        )
+        assertEquals(
+            setOf(1, 2, 3, 4),
+            streams
+                .searchByFts(P, XtreamStreamEntity.TYPE_VOD, "king*", includeExcluded = true)
+                .map {
+                    it.streamId
+                }.toSet(),
+        )
         assertEquals(1, streams.countExcludedByFts(P, XtreamStreamEntity.TYPE_VOD, "king*"))
     }
 

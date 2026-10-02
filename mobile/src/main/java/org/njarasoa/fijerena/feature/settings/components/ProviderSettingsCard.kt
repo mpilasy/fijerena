@@ -19,7 +19,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 @Composable
 fun ProviderSettingsCard(
     uiState: SettingsUiState,
-    onManageProviders: () -> Unit
+    onManageProviders: () -> Unit,
 ) {
     SettingsSection(title = stringResource(R.string.settings_provider_section_title)) {
         Text(
@@ -63,7 +63,11 @@ fun ProviderSettingsCard(
                 }
             }
             if (uiState.subscriptionIsTrial) {
-                Text(stringResource(R.string.settings_provider_trial_account_label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+                Text(
+                    stringResource(R.string.settings_provider_trial_account_label),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
             }
         }
         Spacer(modifier = Modifier.height(Spacing.xs))

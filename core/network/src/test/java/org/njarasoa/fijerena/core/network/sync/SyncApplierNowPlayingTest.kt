@@ -45,13 +45,25 @@ class SyncApplierNowPlayingTest {
     @Test
     fun `a now-playing record writes to neither database`() =
         runBlocking {
-            val payload = SyncPayloads.NowPlaying(state = SyncPayloads.NowPlaying.PLAYING, title = "Malcolm X", profileName = "Kid", sentAt = 1_000)
-            val record = SyncRecord(SyncKey(SyncKind.SHARED, "", SyncKind.NOW_PLAYING, "tv-1"), hlc = 42, payload = SyncPayloads.encode(payload))
+            val payload =
+                SyncPayloads.NowPlaying(
+                    state = SyncPayloads.NowPlaying.PLAYING,
+                    title = "Malcolm X",
+                    profileName = "Kid",
+                    sentAt = 1_000,
+                )
+            val record =
+                SyncRecord(SyncKey(SyncKind.SHARED, "", SyncKind.NOW_PLAYING, "tv-1"), hlc = 42, payload = SyncPayloads.encode(payload))
 
             val result = SyncApplier(mockk<Context>(relaxed = true)).apply(listOf(record))
 
             assertEquals(1, result.applied)
-            assertEquals(payload, NowPlayingStore.devices.value.getValue("tv-1").nowPlaying)
+            assertEquals(
+                payload,
+                NowPlayingStore.devices.value
+                    .getValue("tv-1")
+                    .nowPlaying,
+            )
             verify { settingsSync wasNot io.mockk.Called }
             verify { versions wasNot io.mockk.Called }
         }

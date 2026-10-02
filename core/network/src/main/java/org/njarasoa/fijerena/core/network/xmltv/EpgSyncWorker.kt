@@ -32,23 +32,28 @@ class EpgSyncWorker(
     context: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
-
     override suspend fun getForegroundInfo(): ForegroundInfo {
         val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, applicationContext.getString(R.string.epg_sync_notification_channel), NotificationManager.IMPORTANCE_LOW).apply {
+                NotificationChannel(
+                    CHANNEL_ID,
+                    applicationContext.getString(R.string.epg_sync_notification_channel),
+                    NotificationManager.IMPORTANCE_LOW,
+                ).apply {
                     setShowBadge(false)
                 },
             )
         }
-        val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setContentTitle(applicationContext.getString(R.string.epg_sync_notification_title))
-            .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setOngoing(true)
-            .setSilent(true)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .build()
+        val notification =
+            NotificationCompat
+                .Builder(applicationContext, CHANNEL_ID)
+                .setContentTitle(applicationContext.getString(R.string.epg_sync_notification_title))
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setOngoing(true)
+                .setSilent(true)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .build()
         return if (Build.VERSION.SDK_INT >= 34) {
             ForegroundInfo(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
@@ -96,12 +101,13 @@ class EpgSyncWorker(
         return try {
             // Routine maintenance: sweep orphaned catalog data left by deleted providers
             providerRepo.pruneOrphanedCatalogData(forceVacuum = false)
-            val staleSources = if (force) {
-                Log.i(TAG, "doWork: force=true, refreshing all sources of provider $providerId")
-                fileManager.getAllSources(providerId)
-            } else {
-                fileManager.getStaleSources(providerId)
-            }
+            val staleSources =
+                if (force) {
+                    Log.i(TAG, "doWork: force=true, refreshing all sources of provider $providerId")
+                    fileManager.getAllSources(providerId)
+                } else {
+                    fileManager.getStaleSources(providerId)
+                }
             if (staleSources.isEmpty()) {
                 Log.i(TAG, "doWork: all sources fresh, nothing to do")
                 Result.success()

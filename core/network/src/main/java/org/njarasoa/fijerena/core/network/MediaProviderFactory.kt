@@ -4,7 +4,6 @@ package org.njarasoa.fijerena.core.network
 
 import android.content.Context
 import android.provider.Settings
-import java.util.concurrent.ConcurrentHashMap
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.Dispatchers
@@ -20,8 +19,9 @@ import org.njarasoa.fijerena.core.network.remote.RemoteM3uMediaProvider
 import org.njarasoa.fijerena.core.network.smb.SmbClient
 import org.njarasoa.fijerena.core.network.smb.SmbMediaProvider
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
-import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.domain.MediaProvider
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Resolves the correct [MediaProvider] implementation based on the provider entity type.

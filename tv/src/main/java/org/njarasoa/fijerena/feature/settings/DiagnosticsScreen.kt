@@ -67,7 +67,11 @@ fun DiagnosticsScreen() {
             )
         }
         item {
-            Text(stringResource(R.string.settings_diagnostics_desc), style = MaterialTheme.typography.bodyMedium, color = CinemaTextSecondary)
+            Text(
+                stringResource(R.string.settings_diagnostics_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CinemaTextSecondary,
+            )
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
@@ -78,7 +82,11 @@ fun DiagnosticsScreen() {
         val loaded = entries
         if (loaded != null && loaded.isEmpty()) {
             item {
-                Text(stringResource(R.string.settings_diagnostics_empty), style = MaterialTheme.typography.bodyLarge, color = CinemaTextSecondary)
+                Text(
+                    stringResource(R.string.settings_diagnostics_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = CinemaTextSecondary,
+                )
             }
         }
         items(loaded.orEmpty()) { entry ->

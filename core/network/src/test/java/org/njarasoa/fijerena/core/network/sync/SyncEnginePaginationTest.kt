@@ -94,7 +94,8 @@ class SyncEnginePaginationTest {
     @Test
     fun `records deferred on an earlier page survive a later page failing`() =
         runBlocking {
-            coEvery { api.pull(any(), any(), 0L, any()) } returns SyncWire.PullResponse(head = 4, more = true, records = listOf(wire("waits", 1), wire("ok", 2)))
+            coEvery { api.pull(any(), any(), 0L, any()) } returns
+                SyncWire.PullResponse(head = 4, more = true, records = listOf(wire("waits", 1), wire("ok", 2)))
             coEvery { api.pull(any(), any(), 2L, any()) } throws SyncApiException(0, "connection reset")
 
             try {
@@ -121,8 +122,10 @@ class SyncEnginePaginationTest {
     @Test
     fun `the cursor and the waiting records are saved together on every page`() =
         runBlocking {
-            coEvery { api.pull(any(), any(), 0L, any()) } returns SyncWire.PullResponse(head = 4, more = true, records = listOf(wire("waits", 1), wire("ok", 2)))
-            coEvery { api.pull(any(), any(), 2L, any()) } returns SyncWire.PullResponse(head = 4, more = false, records = listOf(wire("later", 3), wire("ok2", 4)))
+            coEvery { api.pull(any(), any(), 0L, any()) } returns
+                SyncWire.PullResponse(head = 4, more = true, records = listOf(wire("waits", 1), wire("ok", 2)))
+            coEvery { api.pull(any(), any(), 2L, any()) } returns
+                SyncWire.PullResponse(head = 4, more = false, records = listOf(wire("later", 3), wire("ok2", 4)))
 
             engine().syncNow()
 
@@ -162,7 +165,8 @@ class SyncEnginePaginationTest {
                     LocalRecords.Outgoing(small) { sent += "small" },
                 )
             val pushed = slot<List<SyncWire.Record>>()
-            coEvery { api.push(any(), any(), capture(pushed)) } answers { SyncWire.PushResponse(head = 1, accepted = pushed.captured.size, rejected = emptyList()) }
+            coEvery { api.push(any(), any(), capture(pushed)) } answers
+                { SyncWire.PushResponse(head = 1, accepted = pushed.captured.size, rejected = emptyList()) }
 
             val outcome = engine().syncNow()
 

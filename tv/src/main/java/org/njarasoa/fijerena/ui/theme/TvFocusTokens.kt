@@ -26,13 +26,16 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
  */
 object TvFocusTokens {
     val focusedScale: Float
-        @Composable @ReadOnlyComposable get() = LocalUiStyle.current.grid.focusScale
+        @Composable @ReadOnlyComposable
+        get() = LocalUiStyle.current.grid.focusScale
 
     val focusedScaleSubtle: Float
-        @Composable @ReadOnlyComposable get() = 1f + (LocalUiStyle.current.grid.focusScale - 1f) * 0.5f
+        @Composable @ReadOnlyComposable
+        get() = 1f + (LocalUiStyle.current.grid.focusScale - 1f) * 0.5f
 
     val focusedScaleContent: Float
-        @Composable @ReadOnlyComposable get() = 1f + (LocalUiStyle.current.grid.focusScale - 1f) * 0.5f
+        @Composable @ReadOnlyComposable
+        get() = 1f + (LocalUiStyle.current.grid.focusScale - 1f) * 0.5f
 
     const val pressedScale = 0.95f
     const val pressedScaleSubtle = 0.98f
@@ -46,12 +49,14 @@ object TvFocusTokens {
     val minFocusBorderWidth: Dp = 2.dp
 
     val focusBorderWidth: Dp
-        @Composable @ReadOnlyComposable get() =
+        @Composable @ReadOnlyComposable
+        get() =
             (if (LocalUiStyle.current.grid.focusUsesOutline) 3.dp else 1.5.dp).coerceAtLeast(minFocusBorderWidth)
 
     /** Resting container for an interactive row or button. */
     val restingContainer: Color
-        @Composable @ReadOnlyComposable get() = CinemaSurfaceVariant
+        @Composable @ReadOnlyComposable
+        get() = CinemaSurfaceVariant
 
     /**
      * Container behind the focused row or button. Must stay *lighter* than [restingContainer]:
@@ -59,11 +64,13 @@ object TvFocusTokens {
      * was darker than rest on every palette, which read as the element receding.
      */
     val focusedContainer: Color
-        @Composable @ReadOnlyComposable get() = CinemaSurfaceLight
+        @Composable @ReadOnlyComposable
+        get() = CinemaSurfaceLight
 
     /** Container behind a selected row or button that does not currently hold focus. */
     val selectedContainer: Color
-        @Composable @ReadOnlyComposable get() = CinemaAccent.copy(alpha = CinemaAlpha.tint)
+        @Composable @ReadOnlyComposable
+        get() = CinemaAccent.copy(alpha = CinemaAlpha.tint)
 
     /**
      * Container for a row or button that is both selected and focused. Letting [focusedContainer]
@@ -72,7 +79,8 @@ object TvFocusTokens {
      * A brighter accent instead reads as selected *and* lifted.
      */
     val focusedSelectedContainer: Color
-        @Composable @ReadOnlyComposable get() = CinemaAccent.copy(alpha = CinemaAlpha.scrim)
+        @Composable @ReadOnlyComposable
+        get() = CinemaAccent.copy(alpha = CinemaAlpha.scrim)
 
     /**
      * Focus glow, honouring [org.njarasoa.fijerena.core.ui.theme.UiGridTokens.focusUsesShadow]:
@@ -80,7 +88,8 @@ object TvFocusTokens {
      * [Glow.None] on the styles that opt out, so this can be passed unconditionally.
      */
     val focusedGlow: Glow
-        @Composable @ReadOnlyComposable get() =
+        @Composable @ReadOnlyComposable
+        get() =
             if (LocalUiStyle.current.grid.focusUsesShadow) {
                 Glow(
                     elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.cardElevationShadow),
@@ -96,13 +105,15 @@ object TvFocusTokens {
      * come through — the typography scale gets the same treatment in `Type.kt`, and a raw literal
      * here would opt this text out of it.
      */
+
     /**
      * Ambient glow for elements that should read as raised even before focus — hero cards, not
      * list rows (those already lift on [focusedGlow] alone). Same style opt-out as [focusedGlow]
      * and a dimmer, constant elevation since it must never outshine the focus state.
      */
     val restingGlow: Glow
-        @Composable @ReadOnlyComposable get() =
+        @Composable @ReadOnlyComposable
+        get() =
             if (LocalUiStyle.current.grid.focusUsesShadow) {
                 Glow(
                     elevationColor = CinemaAccent.copy(alpha = CinemaAlpha.ghost),
@@ -113,10 +124,12 @@ object TvFocusTokens {
             }
 
     val emphasisWeight: FontWeight
-        @Composable @ReadOnlyComposable get() = FontWeight(LocalUiStyle.current.type.weightEmphasis)
+        @Composable @ReadOnlyComposable
+        get() = FontWeight(LocalUiStyle.current.type.weightEmphasis)
 
     val regularWeight: FontWeight
-        @Composable @ReadOnlyComposable get() = FontWeight(LocalUiStyle.current.type.weightRegular)
+        @Composable @ReadOnlyComposable
+        get() = FontWeight(LocalUiStyle.current.type.weightRegular)
 
     val borderDefault: Dp = 1.dp
     val borderThin: Dp = 0.5.dp

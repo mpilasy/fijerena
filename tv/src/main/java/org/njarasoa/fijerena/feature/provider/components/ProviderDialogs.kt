@@ -8,12 +8,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -39,7 +39,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.ui.theme.TvDimensions
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
@@ -57,13 +56,14 @@ import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
-import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.TvCheckRow
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
@@ -71,8 +71,8 @@ import org.njarasoa.fijerena.ui.components.input.TvRadioRow
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /** Share of the screen the category-filter panel takes at 100% UI scale. */
 private const val PANEL_SCREEN_FRACTION = 0.85f
@@ -154,7 +154,10 @@ fun CategoryFilterDialog(
         }
 
     @Composable
-    fun MatchTypeChipRow(selected: MatchType, onSelect: (MatchType) -> Unit) {
+    fun MatchTypeChipRow(
+        selected: MatchType,
+        onSelect: (MatchType) -> Unit,
+    ) {
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
@@ -249,11 +252,15 @@ fun CategoryFilterDialog(
                                         }
                                         editingIndex = null
                                     },
-                                    colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaAccent),
+                                    colors =
+                                        androidx.tv.material3.ButtonDefaults
+                                            .colors(containerColor = CinemaAccent),
                                 ) { Text(stringResource(R.string.provider_save_button)) }
                                 CinemaButton(
                                     onClick = { editingIndex = null },
-                                    colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
+                                    colors =
+                                        androidx.tv.material3.ButtonDefaults
+                                            .colors(containerColor = CinemaSurfaceVariant),
                                 ) { Text(stringResource(R.string.common_cancel)) }
                             }
                         }
@@ -289,14 +296,23 @@ fun CategoryFilterDialog(
                             Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                             CinemaDangerIconButton(
                                 onClick = { rules = rules.toMutableList().also { it.removeAt(index) } },
-                                icon = { Icon(CinemaIcons.Delete, contentDescription = stringResource(R.string.provider_filter_delete_rule)) },
+                                icon = {
+                                    Icon(
+                                        CinemaIcons.Delete,
+                                        contentDescription = stringResource(R.string.provider_filter_delete_rule),
+                                    )
+                                },
                                 size = TvDimensions.iconLarge * 0.75f,
                             )
                         }
                     }
                 }
 
-                Text(stringResource(R.string.provider_filter_add_rules_section_label), style = scaledStyles.titleSmall, color = CinemaTextPrimary)
+                Text(
+                    stringResource(R.string.provider_filter_add_rules_section_label),
+                    style = scaledStyles.titleSmall,
+                    color = CinemaTextPrimary,
+                )
                 // A live OutlinedTextField sitting in the D-pad path is a dead end on TV: once
                 // focused it swallows every direction key, so the Add button and the entire
                 // script filter below it were unreachable by remote. ReadOnlyFieldWithEdit exists
@@ -317,12 +333,18 @@ fun CategoryFilterDialog(
                         }
                     },
                     enabled = addRulesText.isNotBlank(),
-                    colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
+                    colors =
+                        androidx.tv.material3.ButtonDefaults
+                            .colors(containerColor = CinemaSurfaceVariant),
                 ) { Text(stringResource(R.string.common_add)) }
 
                 pendingAddValues?.let { values ->
                     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                        Text(stringResource(R.string.provider_filter_choose_match_type_prompt), style = scaledStyles.bodyMedium, color = CinemaTextPrimary)
+                        Text(
+                            stringResource(R.string.provider_filter_choose_match_type_prompt),
+                            style = scaledStyles.bodyMedium,
+                            color = CinemaTextPrimary,
+                        )
                         MatchTypeChipRow(selected = pendingAddMatchType, onSelect = { pendingAddMatchType = it })
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                             CinemaButton(
@@ -331,11 +353,15 @@ fun CategoryFilterDialog(
                                     addRulesText = ""
                                     pendingAddValues = null
                                 },
-                                colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaAccent),
+                                colors =
+                                    androidx.tv.material3.ButtonDefaults
+                                        .colors(containerColor = CinemaAccent),
                             ) { Text(stringResource(R.string.common_ok)) }
                             CinemaButton(
                                 onClick = { pendingAddValues = null },
-                                colors = androidx.tv.material3.ButtonDefaults.colors(containerColor = CinemaSurfaceVariant),
+                                colors =
+                                    androidx.tv.material3.ButtonDefaults
+                                        .colors(containerColor = CinemaSurfaceVariant),
                             ) { Text(stringResource(R.string.common_cancel)) }
                         }
                     }
@@ -465,6 +491,7 @@ fun QuickConnectDialog(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
+
                     qcCode.isEmpty() -> {
                         CircularProgressIndicator(color = CinemaAccent)
                         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -474,6 +501,7 @@ fun QuickConnectDialog(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
+
                     else -> {
                         Text(
                             text = stringResource(R.string.provider_qc_enter_code),
@@ -773,7 +801,9 @@ fun CopyProviderDialog(
                     style = MaterialTheme.typography.titleSmall,
                     color = CinemaTextPrimary,
                 )
-                TvCheckRow(checked = copySettings, onCheckedChange = { copySettings = it }, label = stringResource(R.string.provider_copy_to_settings_label))
+                TvCheckRow(checked = copySettings, onCheckedChange = {
+                    copySettings = it
+                }, label = stringResource(R.string.provider_copy_to_settings_label))
                 TvCheckRow(
                     checked = copyFavorites,
                     onCheckedChange = { copyFavorites = it },

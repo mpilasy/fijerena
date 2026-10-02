@@ -22,10 +22,14 @@ class SettingsViewModelFactory(
             modelClass.isAssignableFrom(EpgManagementViewModel::class.java) -> {
                 EpgManagementViewModel(appContext, providerId) as T
             }
+
             modelClass.isAssignableFrom(EpgBrowserViewModel::class.java) -> {
-                val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(appContext)
+                val container =
+                    org.njarasoa.fijerena.core.ui.di.AppContainer
+                        .getInstance(appContext)
                 EpgBrowserViewModel(appContext, container.providerRepository) as T
             }
+
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
                 SettingsViewModel(
                     context = appContext,
@@ -34,22 +38,31 @@ class SettingsViewModelFactory(
                     exportManager = SettingsExportManager(appContext),
                 ) as T
             }
+
             modelClass.isAssignableFrom(ProfilesViewModel::class.java) -> {
                 ProfilesViewModel(
                     context = appContext,
-                    repository = org.njarasoa.fijerena.core.network.profile.ProfileRepository(appContext),
+                    repository =
+                        org.njarasoa.fijerena.core.network.profile
+                            .ProfileRepository(appContext),
                     appSettings = AppSettings(appContext),
                 ) as T
             }
+
             modelClass.isAssignableFrom(SyncSettingsViewModel::class.java) -> {
                 SyncSettingsViewModel(appContext as android.app.Application) as T
             }
+
             modelClass.isAssignableFrom(DiagnosticsViewModel::class.java) -> {
                 DiagnosticsViewModel(appContext) as T
             }
+
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
                 SearchViewModel(appContext, contentType) as T
             }
-            else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+
+            else -> {
+                throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+            }
         }
 }

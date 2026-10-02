@@ -18,6 +18,7 @@ object XtreamCacheKeys {
 
     /** Deliberately not prefixed with `epg_` — the purge removes everything that is. */
     const val KEY_LEGACY_EPG_PREFS_PURGED = "xtream_epg_prefs_purged"
+
     // Matches MediaRepository's XTREAM_EPG_TTL_MS. At 10 minutes the entire catalogue expired
     // between ingest runs, so every pass re-fetched every channel over the network.
     const val EPG_CACHE_EXPIRY_MS = 6L * 60 * 60 * 1000 // 6 hours

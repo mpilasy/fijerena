@@ -16,11 +16,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,9 +44,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardColors
 import androidx.tv.material3.CardDefaults
@@ -53,37 +52,40 @@ import androidx.tv.material3.CardScale
 import androidx.tv.material3.CardShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
+import androidx.tv.material3.Icon
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
-import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.browseTarget
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
-import org.njarasoa.fijerena.core.ui.components.LanguageBadge
-import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
-import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
+import org.njarasoa.fijerena.core.ui.components.RatingBadge
+import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
+import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -94,8 +96,6 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
  * Row card styling, built once per list composition instead of once per row.
@@ -289,7 +289,7 @@ internal fun StreamList(
                                         .size(TvDimensions.iconMedium.scaled(scale))
                                         .rotate(rotation),
                             )
-                        }
+                        },
                     )
                 }
             }
@@ -340,10 +340,13 @@ internal fun StreamList(
                             rowHeight = (TvDimensions.cardHeight).scaled(scale),
                             thumbnailWidth = (TvDimensions.posterWidth * thumbnailScale).scaled(scale),
                             thumbnailHeight = (TvDimensions.posterHeight * thumbnailScale).scaled(scale),
-                            verticalSpacing = LocalUiStyle.current.grid.spacing.scaled(scale),
+                            verticalSpacing =
+                                LocalUiStyle.current.grid.spacing
+                                    .scaled(scale),
                         )
                     }
                 }
+
                 streams.isNullOrEmpty() -> {
                     // Nothing else in this branch is focusable — the previous version was a bare
                     // Text. Removing the last item from an already-loaded category (e.g.
@@ -387,11 +390,16 @@ internal fun StreamList(
                         }
                     }
                 }
+
                 else -> {
                     LazyColumn(
                         state = listState,
                         contentPadding = PaddingValues(Spacing.sm.scaled(scale)),
-                        verticalArrangement = Arrangement.spacedBy(LocalUiStyle.current.grid.spacing.scaled(scale)),
+                        verticalArrangement =
+                            Arrangement.spacedBy(
+                                LocalUiStyle.current.grid.spacing
+                                    .scaled(scale),
+                            ),
                     ) {
                         itemsIndexed(
                             items = streams,
@@ -578,6 +586,7 @@ private fun StreamItem(
                                             }
                                             true
                                         }
+
                                         outwardKey -> {
                                             if (index < actions.lastIndex) {
                                                 actionFocusRequesters[index + 1].requestFocus()
@@ -588,11 +597,14 @@ private fun StreamItem(
                                                 revealOnDemand
                                             }
                                         }
-                                        else -> false
+
+                                        else -> {
+                                            false
+                                        }
                                     }
                                 }
                         when (actions[index]) {
-                            RowAction.FAVORITE ->
+                            RowAction.FAVORITE -> {
                                 CinemaIconButton(
                                     onClick = onToggleFavorite,
                                     size = TvDimensions.iconLarge.scaled(scale),
@@ -607,7 +619,9 @@ private fun StreamItem(
                                         )
                                     },
                                 )
-                            RowAction.WATCHED ->
+                            }
+
+                            RowAction.WATCHED -> {
                                 CinemaIconButton(
                                     onClick = onToggleWatched,
                                     size = TvDimensions.iconLarge.scaled(scale),
@@ -622,7 +636,9 @@ private fun StreamItem(
                                         )
                                     },
                                 )
-                            RowAction.REMOVE_FROM_RECENT ->
+                            }
+
+                            RowAction.REMOVE_FROM_RECENT -> {
                                 CinemaIconButton(
                                     onClick = { onRemoveFromRecent?.invoke() },
                                     size = TvDimensions.iconLarge.scaled(scale),
@@ -636,6 +652,7 @@ private fun StreamItem(
                                         )
                                     },
                                 )
+                            }
                         }
                     }
                 }
@@ -652,8 +669,7 @@ private fun StreamItem(
                     .onFocusChanged {
                         isFocused = it.isFocused
                         if (it.isFocused) onFocused()
-                    }
-                    .focusRequester(cardFocusRequester)
+                    }.focusRequester(cardFocusRequester)
                     .onPreviewKeyEvent { event ->
                         if (event.type != KeyEventType.KeyDown || event.key != outwardKey) return@onPreviewKeyEvent false
                         actionsRevealed = true

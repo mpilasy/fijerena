@@ -157,9 +157,15 @@ class XtreamDatabaseMigrationTest {
 
         // No fallbackToDestructiveMigration: a schema mismatch must throw, not silently wipe.
         val migratedDb =
-            Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_19_20, XtreamDatabase.MIGRATION_20_21, XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23, XtreamDatabase.MIGRATION_23_24)
-                .build()
+            Room
+                .databaseBuilder(context, XtreamDatabase::class.java, testDbName)
+                .addMigrations(
+                    XtreamDatabase.MIGRATION_19_20,
+                    XtreamDatabase.MIGRATION_20_21,
+                    XtreamDatabase.MIGRATION_21_22,
+                    XtreamDatabase.MIGRATION_22_23,
+                    XtreamDatabase.MIGRATION_23_24,
+                ).build()
         assertEquals(24, migratedDb.openHelper.writableDatabase.version)
 
         val default = ProfileEntity.DEFAULT_ID
@@ -196,9 +202,14 @@ class XtreamDatabaseMigrationTest {
         seedDb.close()
 
         val migratedDb =
-            Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
-                .addMigrations(XtreamDatabase.MIGRATION_20_21, XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23, XtreamDatabase.MIGRATION_23_24)
-                .build()
+            Room
+                .databaseBuilder(context, XtreamDatabase::class.java, testDbName)
+                .addMigrations(
+                    XtreamDatabase.MIGRATION_20_21,
+                    XtreamDatabase.MIGRATION_21_22,
+                    XtreamDatabase.MIGRATION_22_23,
+                    XtreamDatabase.MIGRATION_23_24,
+                ).build()
         assertEquals(24, migratedDb.openHelper.writableDatabase.version)
 
         val dao = migratedDb.favoriteStateDao()
@@ -223,7 +234,8 @@ class XtreamDatabaseMigrationTest {
         seedDb.close()
 
         val migratedDb =
-            Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
+            Room
+                .databaseBuilder(context, XtreamDatabase::class.java, testDbName)
                 .addMigrations(XtreamDatabase.MIGRATION_21_22, XtreamDatabase.MIGRATION_22_23, XtreamDatabase.MIGRATION_23_24)
                 .build()
         assertEquals(24, migratedDb.openHelper.writableDatabase.version)
@@ -248,7 +260,8 @@ class XtreamDatabaseMigrationTest {
         seedDb.close()
 
         val migratedDb =
-            Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
+            Room
+                .databaseBuilder(context, XtreamDatabase::class.java, testDbName)
                 .addMigrations(XtreamDatabase.MIGRATION_22_23, XtreamDatabase.MIGRATION_23_24)
                 .build()
         assertEquals(24, migratedDb.openHelper.writableDatabase.version)
@@ -280,15 +293,17 @@ class XtreamDatabaseMigrationTest {
         seedDb.close()
 
         val migratedDb =
-            Room.databaseBuilder(context, XtreamDatabase::class.java, testDbName)
+            Room
+                .databaseBuilder(context, XtreamDatabase::class.java, testDbName)
                 .addMigrations(XtreamDatabase.MIGRATION_23_24)
                 .build()
         val db = migratedDb.openHelper.writableDatabase
         assertEquals(24, db.version)
-        db.query(
-            "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN " +
-                "('index_xtream_streams_providerId_type_categoryId_excluded', 'index_xtream_series_providerId_categoryId_excluded')",
-        ).use { assertEquals(0, it.count) }
+        db
+            .query(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN " +
+                    "('index_xtream_streams_providerId_type_categoryId_excluded', 'index_xtream_series_providerId_categoryId_excluded')",
+            ).use { assertEquals(0, it.count) }
         assertEquals(listOf(1), migratedDb.streamDao().getAllStreams(42L, XtreamStreamEntity.TYPE_LIVE).map { it.streamId })
         migratedDb.close()
     }

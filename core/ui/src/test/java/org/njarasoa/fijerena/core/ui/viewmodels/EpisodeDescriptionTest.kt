@@ -8,7 +8,8 @@ import org.njarasoa.fijerena.core.player.domain.MediaMetadata
 
 /** The OSD describes the episode, never the series. */
 class EpisodeDescriptionTest {
-    private fun episode(plot: String?) = EpisodeItem(id = "e1", episodeNumber = 1, title = "Pilot", seasonNumber = 1, metadata = MediaMetadata(plot = plot))
+    private fun episode(plot: String?) =
+        EpisodeItem(id = "e1", episodeNumber = 1, title = "Pilot", seasonNumber = 1, metadata = MediaMetadata(plot = plot))
 
     @Test
     fun `an episode with a plot gives it`() {

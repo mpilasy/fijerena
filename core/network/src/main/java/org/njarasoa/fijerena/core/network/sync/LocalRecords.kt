@@ -53,9 +53,17 @@ class LocalRecords(
             if (record == null) {
                 versions.deleteVersion(version.providerId, version.profileId, version.kind, version.itemId, version.contentType)
             } else {
-                out += Outgoing(record) {
-                    versions.markSent(version.providerId, version.profileId, version.kind, version.itemId, version.contentType, version.hlc)
-                }
+                out +=
+                    Outgoing(record) {
+                        versions.markSent(
+                            version.providerId,
+                            version.profileId,
+                            version.kind,
+                            version.itemId,
+                            version.contentType,
+                            version.hlc,
+                        )
+                    }
             }
         }
         return out
@@ -85,7 +93,11 @@ class LocalRecords(
             }
             if (provider.type == "JELLYFIN") {
                 (providers.profilesWithOwnLogin(provider.id) + ProfileEntity.DEFAULT_ID).distinct().forEach { profile ->
-                    if (providers.syncedLogin(provider, profile) != null) sync.seed(SyncKind.PROVIDER_LOGIN, profile, provider.providerKey, now)
+                    if (providers.syncedLogin(provider, profile) !=
+                        null
+                    ) {
+                        sync.seed(SyncKind.PROVIDER_LOGIN, profile, provider.providerKey, now)
+                    }
                 }
             }
         }
@@ -107,14 +119,26 @@ class LocalRecords(
                 if (entity == null) {
                     SyncRecord(key, v.hlc, deleted = true)
                 } else {
-                    SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.Provider.of(entity, providers.getPassword(entity.id))))
+                    SyncRecord(
+                        key,
+                        v.hlc,
+                        payload = SyncPayloads.encode(SyncPayloads.Provider.of(entity, providers.getPassword(entity.id))),
+                    )
                 }
             }
+
             SyncKind.PROFILE -> {
                 val key = SyncKey(SyncKind.SHARED, "", SyncKind.PROFILE, v.itemKey)
                 val profile = settingsDb.profileDao().getAll().firstOrNull { it.id == v.itemKey }
-                if (profile == null) SyncRecord(key, v.hlc, deleted = true) else SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.Profile.of(profile)))
+                if (profile ==
+                    null
+                ) {
+                    SyncRecord(key, v.hlc, deleted = true)
+                } else {
+                    SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.Profile.of(profile)))
+                }
             }
+
             SyncKind.EPG_SOURCE -> {
                 val key = SyncKey(SyncKind.SHARED, "", SyncKind.EPG_SOURCE, v.itemKey)
                 val source = sync.sourceByKey(v.itemKey)
@@ -125,17 +149,28 @@ class LocalRecords(
                     else -> SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.EpgSource.of(source, providerKey)))
                 }
             }
+
             SyncKind.PROVIDER_LOGIN -> {
                 val entity = sync.providerByKey(v.itemKey)
                 when {
-                    entity == null || entity.type != "JELLYFIN" -> null
+                    entity == null || entity.type != "JELLYFIN" -> {
+                        null
+                    }
+
                     else -> {
                         val key = SyncKey(v.profileId, v.itemKey, SyncKind.PROVIDER_LOGIN)
                         val login = providers.syncedLogin(entity, v.profileId)
-                        if (login == null) SyncRecord(key, v.hlc, deleted = true) else SyncRecord(key, v.hlc, payload = SyncPayloads.encode(login))
+                        if (login ==
+                            null
+                        ) {
+                            SyncRecord(key, v.hlc, deleted = true)
+                        } else {
+                            SyncRecord(key, v.hlc, payload = SyncPayloads.encode(login))
+                        }
                     }
                 }
             }
+
             SyncKind.CATEGORY_FILTERS -> {
                 val entity = sync.providerByKey(v.itemKey) ?: return null
                 val filters = CategoryFiltersStore(context).get(entity.id, v.profileId)
@@ -145,11 +180,19 @@ class LocalRecords(
                     payload = SyncPayloads.json.encodeToString(CategoryFiltersSerializer, filters),
                 )
             }
+
             SyncKind.SETTING -> {
                 val value = AppSettings(context).syncedSetting(v.itemKey, v.profileId) ?: return null
-                SyncRecord(SyncKey(v.profileId, "", SyncKind.SETTING, v.itemKey), v.hlc, payload = SyncPayloads.encode(SyncPayloads.Setting(value)))
+                SyncRecord(
+                    SyncKey(v.profileId, "", SyncKind.SETTING, v.itemKey),
+                    v.hlc,
+                    payload = SyncPayloads.encode(SyncPayloads.Setting(value)),
+                )
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
 
     private suspend fun userDataRecord(v: SyncVersionEntity): SyncRecord? {
@@ -162,13 +205,26 @@ class LocalRecords(
                 val row = xtreamDb.watchStateDao().getItem(v.providerId, v.profileId, v.itemId, v.contentType) ?: return null
                 SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.Watch.of(row)))
             }
+
             SyncKind.FAVORITE_STREAM, SyncKind.FAVORITE_CATEGORY -> {
                 val favoriteKind = if (v.kind == SyncKind.FAVORITE_CATEGORY) FavoriteKind.CATEGORY else FavoriteKind.STREAM
                 val row = xtreamDb.favoriteStateDao().get(v.providerId, v.profileId, v.itemId, v.contentType, favoriteKind)
-                if (row == null) SyncRecord(key, v.hlc, deleted = true) else SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.Favorite.of(row)))
+                if (row ==
+                    null
+                ) {
+                    SyncRecord(key, v.hlc, deleted = true)
+                } else {
+                    SyncRecord(key, v.hlc, payload = SyncPayloads.encode(SyncPayloads.Favorite.of(row)))
+                }
             }
-            SyncKind.WATCH_CLEAR -> SyncRecord(key, v.hlc)
-            else -> null
+
+            SyncKind.WATCH_CLEAR -> {
+                SyncRecord(key, v.hlc)
+            }
+
+            else -> {
+                null
+            }
         }
     }
 }

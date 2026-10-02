@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -60,8 +60,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
-import org.njarasoa.fijerena.core.ui.di.AppContainer
-import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -74,28 +72,30 @@ import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.provider.withAddedRules
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
-import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
-import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
-import org.njarasoa.fijerena.ui.theme.*
+import org.njarasoa.fijerena.feature.provider.components.DataManagementSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderFormSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
-import org.njarasoa.fijerena.feature.provider.components.DataManagementSection
 import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
+import org.njarasoa.fijerena.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -142,7 +142,7 @@ fun MobileAddProviderScreen(
     val coroutineScope = rememberCoroutineScope()
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
     var currentProvider by remember { mutableStateOf<org.njarasoa.fijerena.core.network.provider.ProviderEntity?>(null) }
-    
+
     // Update currentProvider when providers list changes
     LaunchedEffect(providers, editId) {
         if (isEditMode) {
@@ -336,7 +336,7 @@ fun MobileAddProviderScreen(
                 onPlaylistTypeChange = { playlistType = it },
                 onQcCodeChange = { qcCode = it },
                 onQcSecretChange = { qcSecret = it },
-                onQcErrorChange = { qcError = it }
+                onQcErrorChange = { qcError = it },
             )
             ProviderSettingsSection(
                 isEditMode = isEditMode,
@@ -363,7 +363,7 @@ fun MobileAddProviderScreen(
                 onPlaylistTypeChange = { playlistType = it },
                 onShowClearFavoritesDialogChange = { showClearFavoritesDialog = it },
                 onShowClearProgressDialogChange = { showClearProgressDialog = it },
-                onShowCategoryFilterDialogChange = { showCategoryFilterDialog = it }
+                onShowCategoryFilterDialogChange = { showCategoryFilterDialog = it },
             )
             DataManagementSection(
                 isEditMode = isEditMode,
@@ -377,7 +377,7 @@ fun MobileAddProviderScreen(
                 onShowClearCacheDialogChange = { showClearCacheDialog = it },
                 onShowClearLiveTvCacheDialogChange = { showClearLiveTvCacheDialog = it },
                 onShowClearMoviesCacheDialogChange = { showClearMoviesCacheDialog = it },
-                onShowClearTvShowsCacheDialogChange = { showClearTvShowsCacheDialog = it }
+                onShowClearTvShowsCacheDialogChange = { showClearTvShowsCacheDialog = it },
             )
 
             error?.let { errorMsg ->
@@ -396,7 +396,7 @@ fun MobileAddProviderScreen(
                     // Validation based on selected type
                     val validationError =
                         when (selectedType) {
-                            ProviderType.XTREAM ->
+                            ProviderType.XTREAM -> {
                                 when {
                                     name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                     url.isBlank() -> resources.getString(R.string.provider_error_url_required)
@@ -404,7 +404,9 @@ fun MobileAddProviderScreen(
                                     password.isBlank() -> resources.getString(R.string.provider_error_password_required)
                                     else -> null
                                 }
-                            ProviderType.JELLYFIN ->
+                            }
+
+                            ProviderType.JELLYFIN -> {
                                 when {
                                     name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                     url.isBlank() -> resources.getString(R.string.provider_error_url_required)
@@ -412,24 +414,31 @@ fun MobileAddProviderScreen(
                                     password.isBlank() -> resources.getString(R.string.provider_error_password_required)
                                     else -> null
                                 }
-                            ProviderType.SMB ->
+                            }
+
+                            ProviderType.SMB -> {
                                 when {
                                     name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                     host.isBlank() -> resources.getString(R.string.provider_error_host_required)
                                     shareName.isBlank() -> resources.getString(R.string.provider_error_share_required)
                                     else -> null
                                 }
-                            ProviderType.LOCAL ->
+                            }
+
+                            ProviderType.LOCAL -> {
                                 when {
                                     name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                     else -> null
                                 }
-                            ProviderType.REMOTE_M3U ->
+                            }
+
+                            ProviderType.REMOTE_M3U -> {
                                 when {
                                     name.isBlank() -> resources.getString(R.string.provider_error_name_required)
                                     url.isBlank() -> resources.getString(R.string.provider_error_m3u_url_required)
                                     else -> null
                                 }
+                            }
                         }
 
                     if (validationError != null) {
@@ -464,9 +473,23 @@ fun MobileAddProviderScreen(
             ) {
                 Text(
                     when (saveState) {
-                        is SaveState.Validating -> stringResource(R.string.provider_connecting)
-                        is SaveState.Saving -> stringResource(R.string.provider_saving)
-                        else -> if (isEditMode) stringResource(R.string.provider_update_button) else stringResource(R.string.provider_add_title)
+                        is SaveState.Validating -> {
+                            stringResource(R.string.provider_connecting)
+                        }
+
+                        is SaveState.Saving -> {
+                            stringResource(R.string.provider_saving)
+                        }
+
+                        else -> {
+                            if (isEditMode) {
+                                stringResource(
+                                    R.string.provider_update_button,
+                                )
+                            } else {
+                                stringResource(R.string.provider_add_title)
+                            }
+                        }
                     },
                 )
             }
@@ -566,7 +589,9 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
-                        CinemaOutlinedButton(onClick = { showClearLiveTvCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(
+                            onClick = { showClearLiveTvCacheDialog = false },
+                        ) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -589,7 +614,9 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
-                        CinemaOutlinedButton(onClick = { showClearMoviesCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(
+                            onClick = { showClearMoviesCacheDialog = false },
+                        ) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -612,7 +639,9 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.provider_clear_button)) }
                     },
                     dismissButton = {
-                        CinemaOutlinedButton(onClick = { showClearTvShowsCacheDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(
+                            onClick = { showClearTvShowsCacheDialog = false },
+                        ) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -639,7 +668,9 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.common_ok)) }
                     },
                     dismissButton = {
-                        CinemaOutlinedButton(onClick = { showClearFavoritesDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(
+                            onClick = { showClearFavoritesDialog = false },
+                        ) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -928,7 +959,9 @@ fun MobileAddProviderScreen(
                         ) { Text(stringResource(R.string.provider_save_button)) }
                     },
                     dismissButton = {
-                        CinemaOutlinedButton(onClick = { showCategoryFilterDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+                        CinemaOutlinedButton(
+                            onClick = { showCategoryFilterDialog = false },
+                        ) { Text(stringResource(R.string.common_cancel)) }
                     },
                 )
             }
@@ -948,7 +981,7 @@ fun MobileAddProviderScreen(
                 onQcSecretChange = { qcSecret = it },
                 onQcErrorChange = { qcError = it },
                 onShowQuickConnectDialogChange = { showQuickConnectDialog = it },
-                onSuccess = onSuccess
+                onSuccess = onSuccess,
             )
         }
     }

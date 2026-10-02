@@ -21,8 +21,7 @@ import org.njarasoa.fijerena.ui.theme.MobileDimensions
  * per screen.
  */
 @Composable
-private fun defaultCardElevation(): CardElevation =
-    CardDefaults.cardElevation(defaultElevation = MobileDimensions.cardRowElevation)
+private fun defaultCardElevation(): CardElevation = CardDefaults.cardElevation(defaultElevation = MobileDimensions.cardRowElevation)
 
 /**
  * The same hairline used as [CinemaCard]'s own default border — exposed for the handful of

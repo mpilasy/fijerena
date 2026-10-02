@@ -100,7 +100,8 @@ class SettingsDatabaseMigrationTest {
         seedDb.close()
 
         val migratedDb =
-            Room.databaseBuilder(context, SettingsDatabase::class.java, testDbName)
+            Room
+                .databaseBuilder(context, SettingsDatabase::class.java, testDbName)
                 .addMigrations(
                     SettingsDatabase.MIGRATION_10_11,
                     SettingsDatabase.MIGRATION_11_12,
@@ -122,7 +123,14 @@ class SettingsDatabaseMigrationTest {
             assertEquals(36, provider.providerKey.length)
             assertNotEquals(provider.providerKey, other.providerKey)
             assertTrue(migratedDb.providerDao().getAllTombstones().isEmpty())
-            assertEquals(36, migratedDb.epgSourceDao().getAllSourcesOnce().single().sourceKey.length)
+            assertEquals(
+                36,
+                migratedDb
+                    .epgSourceDao()
+                    .getAllSourcesOnce()
+                    .single()
+                    .sourceKey.length,
+            )
             assertTrue(migratedDb.settingsSyncDao().getPending(10).isEmpty())
         }
         migratedDb.close()

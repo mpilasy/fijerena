@@ -25,7 +25,9 @@ data class ProviderSettings(
     /** Whether caching is enabled for this provider */
     val cachingEnabled: Boolean = true,
     /** Category filtering rules */
-    val categoryFilters: @Serializable(with = CategoryFiltersSerializer::class) CategoryFilters = CategoryFilters(),
+    val categoryFilters:
+        @Serializable(with = CategoryFiltersSerializer::class)
+        CategoryFilters = CategoryFilters(),
     /** External XMLTV EPG URL for this provider (empty = use provider's native EPG) */
     val epgUrl: String = "",
     /** Stream output format for live streams: "m3u8" (HLS) or "ts" (MPEG-TS) */
@@ -51,7 +53,10 @@ data class CategoryFilters(
     /** Filter mode: EXCLUDE hides matching, INCLUDE shows only matching */
     val mode: FilterMode = FilterMode.EXCLUDE,
     /** Rules to match against category names (case-insensitive) */
-    val rules: List<@Serializable(with = CategoryMatcherSerializer::class) CategoryMatcher> = emptyList(),
+    val rules: List<
+        @Serializable(with = CategoryMatcherSerializer::class)
+        CategoryMatcher,
+    > = emptyList(),
     /** Allowed Unicode scripts — empty means show all */
     val allowedScripts: Set<ScriptType> = emptySet(),
 ) {
@@ -129,7 +134,10 @@ data class CategoryMatcher(
  * A duplicate is a case-insensitive value match with the same [matchType] — same text under a
  * different matchType is a distinct rule and is kept.
  */
-fun List<CategoryMatcher>.withAddedRules(values: List<String>, matchType: MatchType): List<CategoryMatcher> {
+fun List<CategoryMatcher>.withAddedRules(
+    values: List<String>,
+    matchType: MatchType,
+): List<CategoryMatcher> {
     val result = toMutableList()
     val seen = result.mapTo(mutableSetOf()) { it.value.trim().lowercase() to it.matchType }
     for (raw in values) {

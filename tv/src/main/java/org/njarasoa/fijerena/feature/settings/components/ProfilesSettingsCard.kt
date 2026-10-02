@@ -75,12 +75,22 @@ fun ProfilesSettingsCard(
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
                 text = stringResource(R.string.settings_profiles_title),
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)),
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
+                    ),
                 color = CinemaAccent,
             )
             Text(
                 text = stringResource(R.string.settings_profiles_description),
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodyMedium.fontSize
+                                .scaled(scale),
+                    ),
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
@@ -97,7 +107,9 @@ fun ProfilesSettingsCard(
                                 name = profile.name,
                                 colorIndex = profile.colorIndex,
                                 size = TvDimensions.iconMedium.scaled(scale),
-                                fontSize = MaterialTheme.typography.titleSmall.fontSize.scaled(scale),
+                                fontSize =
+                                    MaterialTheme.typography.titleSmall.fontSize
+                                        .scaled(scale),
                             )
                         },
                         supportingContent =
@@ -114,7 +126,12 @@ fun ProfilesSettingsCard(
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 Text(
                     text = message,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = MaterialTheme.typography.bodyMedium.fontSize.scaled(scale)),
+                    style =
+                        MaterialTheme.typography.bodyMedium.copy(
+                            fontSize =
+                                MaterialTheme.typography.bodyMedium.fontSize
+                                    .scaled(scale),
+                        ),
                     color = CinemaError,
                 )
             }

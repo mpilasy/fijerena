@@ -191,7 +191,11 @@ class FakeWatchStateDao : WatchStateDao {
         providerId: Long,
         profileId: String,
         contentType: String,
-    ): List<WatchStateEntity> = rows.values.filter { it.providerId == providerId && it.profileId == profileId && it.contentType == contentType }
+    ): List<WatchStateEntity> =
+        rows.values.filter {
+            it.providerId == providerId && it.profileId == profileId &&
+                it.contentType == contentType
+        }
 
     override suspend fun getRecent(
         providerId: Long,
@@ -224,8 +228,10 @@ class FakeWatchStateDao : WatchStateDao {
         contentType: String,
     ): List<SeriesCompletedCount> =
         rows.values
-            .filter { it.providerId == providerId && it.profileId == profileId && it.contentType == contentType && it.isCompleted && it.seriesId != null }
-            .groupBy { it.seriesId!! }
+            .filter {
+                it.providerId == providerId && it.profileId == profileId && it.contentType == contentType && it.isCompleted &&
+                    it.seriesId != null
+            }.groupBy { it.seriesId!! }
             .map { (seriesId, group) -> SeriesCompletedCount(seriesId, group.map { it.episodeId ?: it.itemId }.distinct().size) }
 
     override suspend fun getItem(
@@ -307,7 +313,6 @@ class FakeWatchStateDao : WatchStateDao {
     override suspend fun deleteAllProfiles(providerId: Long) {
         rows.keys.filter { it.providerId == providerId }.forEach { rows.remove(it) }
     }
-
 
     override suspend fun restoreAll(entities: List<WatchStateEntity>) {
         entities.forEach { seed(it) }

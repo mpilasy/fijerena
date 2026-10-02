@@ -1,12 +1,12 @@
 package org.njarasoa.fijerena.core.network.sync
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import org.junit.Test
 import javax.crypto.spec.SecretKeySpec
 
@@ -60,7 +60,12 @@ class SyncCryptoTest {
         assertEquals(invite.pairingCode, decoded.pairingCode)
         assertTrue(invite.accountKey.contentEquals(decoded.accountKey))
 
-        val handoff = PairingQr.HandoffRequest("http://10.0.2.2:8787", "0123456789abcdef0123456789abcdef", HandoffKeys.newKeyPair().public.encoded)
+        val handoff =
+            PairingQr.HandoffRequest(
+                "http://10.0.2.2:8787",
+                "0123456789abcdef0123456789abcdef",
+                HandoffKeys.newKeyPair().public.encoded,
+            )
         val decodedHandoff = PairingQr.decode(PairingQr.encode(handoff)) as PairingQr.HandoffRequest
         assertEquals(handoff.handoffId, decodedHandoff.handoffId)
         assertTrue(handoff.publicKey.contentEquals(decodedHandoff.publicKey))
@@ -111,7 +116,12 @@ class SyncCryptoTest {
         val keyId = crypto.keyId(record.key)
         val k = record.key
         val envelope = LegacyEnvelope(k.profileKey, k.providerKey, k.kind, k.itemId, k.contentType, record.payload)
-        return SyncWire.Record(keyId, updatedAt = record.hlc, deleted = record.deleted, payload = crypto.seal(legacyJson.encodeToString(envelope), aad = keyId))
+        return SyncWire.Record(
+            keyId,
+            updatedAt = record.hlc,
+            deleted = record.deleted,
+            payload = crypto.seal(legacyJson.encodeToString(envelope), aad = keyId),
+        )
     }
 
     private fun legacyDecode(

@@ -10,9 +10,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.network.sync.SyncAccountManager
 import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
-import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.network.sync.SyncEngine
 
 /**
@@ -60,13 +60,18 @@ class SyncDebugReceiver : BroadcastReceiver() {
                 SyncManager.getInstance(app).onLinkChanged()
                 Log.i(TAG, "setup: linked to a new account")
             }
-            "invite" -> Log.i(TAG, "invite qr: ${PairingQr.encode(accounts.createInvite())}")
+
+            "invite" -> {
+                Log.i(TAG, "invite qr: ${PairingQr.encode(accounts.createInvite())}")
+            }
+
             "scan" -> {
                 val qr = PairingQr.decode(intent.getStringExtra("qr")!!) ?: error("not a Fijerena pairing code")
                 accounts.scanned(qr, name)
                 SyncManager.getInstance(app).onLinkChanged()
                 Log.i(TAG, "scan: done (${qr::class.simpleName})")
             }
+
             "handoff" -> {
                 val handoff = accounts.startHandoff(intent.getStringExtra("url")!!)
                 Log.i(TAG, "handoff qr: ${PairingQr.encode(handoff.qr)}")
@@ -81,17 +86,30 @@ class SyncDebugReceiver : BroadcastReceiver() {
                     }
                 }
             }
-            "now" -> Log.i(TAG, "now: ${SyncEngine(app).syncNow()}")
+
+            "now" -> {
+                Log.i(TAG, "now: ${SyncEngine(app).syncNow()}")
+            }
+
             "status" -> {
                 val store = SyncAccountStore(app)
-                Log.i(TAG, "status: link=${store.link?.let { "${it.serverUrl} account ${it.accountId} device ${it.deviceId}" }} cursor=${store.cursor} seeded=${store.seeded} lastSync=${store.lastSyncAt} lastError=${store.lastError} waiting=${store.deferred.size}")
+                Log.i(
+                    TAG,
+                    "status: link=${store.link?.let {
+                        "${it.serverUrl} account ${it.accountId} device ${it.deviceId}"
+                    }} cursor=${store.cursor} seeded=${store.seeded} lastSync=${store.lastSyncAt} lastError=${store.lastError} waiting=${store.deferred.size}",
+                )
             }
+
             "unlink" -> {
                 accounts.leave()
                 SyncManager.getInstance(app).onLinkChanged()
                 Log.i(TAG, "unlink: done")
             }
-            else -> Log.w(TAG, "unknown cmd $cmd")
+
+            else -> {
+                Log.w(TAG, "unknown cmd $cmd")
+            }
         }
     }
 

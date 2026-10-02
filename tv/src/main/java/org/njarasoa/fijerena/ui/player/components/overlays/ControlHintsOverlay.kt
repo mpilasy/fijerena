@@ -70,14 +70,29 @@ fun ControlHintsOverlay(
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     ControlHint(stringResource(R.string.player_hint_ok_button), stringResource(R.string.player_hint_ok_description))
-                    ControlHint(stringResource(R.string.player_hint_double_ok_button), stringResource(R.string.player_hint_double_ok_description))
+                    ControlHint(
+                        stringResource(R.string.player_hint_double_ok_button),
+                        stringResource(R.string.player_hint_double_ok_description),
+                    )
                     ControlHint(stringResource(R.string.player_hint_back_button), stringResource(R.string.player_hint_back_description))
                     ControlHint(stringResource(R.string.player_hint_dpad_button), stringResource(R.string.player_hint_dpad_description))
-                    ControlHint(stringResource(R.string.player_hint_pause_resume_button), stringResource(R.string.player_hint_pause_resume_description))
+                    ControlHint(
+                        stringResource(R.string.player_hint_pause_resume_button),
+                        stringResource(R.string.player_hint_pause_resume_description),
+                    )
                     ControlHint(stringResource(R.string.player_hint_audio_button), stringResource(R.string.player_hint_audio_description))
-                    ControlHint(stringResource(R.string.player_hint_subtitle_button), stringResource(R.string.player_hint_subtitle_description))
-                    ControlHint(stringResource(R.string.player_hint_quality_button), stringResource(R.string.player_hint_quality_description))
-                    ControlHint(stringResource(R.string.player_hint_favorite_button), stringResource(R.string.player_hint_favorite_description))
+                    ControlHint(
+                        stringResource(R.string.player_hint_subtitle_button),
+                        stringResource(R.string.player_hint_subtitle_description),
+                    )
+                    ControlHint(
+                        stringResource(R.string.player_hint_quality_button),
+                        stringResource(R.string.player_hint_quality_description),
+                    )
+                    ControlHint(
+                        stringResource(R.string.player_hint_favorite_button),
+                        stringResource(R.string.player_hint_favorite_description),
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.xs))

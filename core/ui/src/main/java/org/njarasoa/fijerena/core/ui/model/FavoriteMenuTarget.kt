@@ -94,5 +94,4 @@ fun MediaItem.toFavoriteMenuTarget(
 }
 
 /** Manual watched/unwatched only makes sense for something you actually watch. */
-private fun isWatchableContentType(contentType: String): Boolean =
-    contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
+private fun isWatchableContentType(contentType: String): Boolean = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS

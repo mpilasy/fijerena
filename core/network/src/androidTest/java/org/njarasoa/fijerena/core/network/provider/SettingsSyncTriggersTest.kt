@@ -43,7 +43,10 @@ class SettingsSyncTriggersTest {
     @Test
     fun aProfileAndItsDeletionAreQueued() =
         runBlocking {
-            db.profileDao().insert(org.njarasoa.fijerena.core.network.profile.ProfileEntity("trig-profile", "Trig", 1L))
+            db.profileDao().insert(
+                org.njarasoa.fijerena.core.network.profile
+                    .ProfileEntity("trig-profile", "Trig", 1L),
+            )
             val added = queued(SyncKind.PROFILE, "trig-profile").single()
 
             db.profileDao().deleteRecordingTombstone("trig-profile")

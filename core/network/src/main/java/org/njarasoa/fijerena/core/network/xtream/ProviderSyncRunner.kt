@@ -8,8 +8,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
-import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.R
+import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
@@ -35,13 +35,19 @@ object ProviderSyncRunner {
          * Sync completed. [delta] is the row-level change count for an Xtream provider, null for
          * any other provider type (they have no equivalent diff).
          */
-        data class Success(val delta: SyncDelta? = null) : Outcome
+        data class Success(
+            val delta: SyncDelta? = null,
+        ) : Outcome
 
         /** Retrying won't help (bad credentials, unsupported provider). Error is user-facing. */
-        data class Permanent(val error: String) : Outcome
+        data class Permanent(
+            val error: String,
+        ) : Outcome
 
         /** Network blip — worth another WorkManager-backed retry later. Error is user-facing. */
-        data class Transient(val error: String) : Outcome
+        data class Transient(
+            val error: String,
+        ) : Outcome
     }
 
     /**

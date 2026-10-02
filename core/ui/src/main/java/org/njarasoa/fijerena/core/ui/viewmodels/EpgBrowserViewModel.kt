@@ -13,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -21,6 +20,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -49,17 +49,16 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSearchResultRow
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.utils.UiText
 import java.util.Date
 import java.util.Locale
-import org.njarasoa.fijerena.core.ui.utils.UiText
-import org.njarasoa.fijerena.core.ui.R
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EpgBrowserViewModel(
     private val context: Context,
     private val providerRepository: ProviderRepository,
 ) : ViewModel() {
-
     /**
      * Internal key for grouping programs without allocating new lowercase strings.
      */
@@ -162,6 +161,7 @@ class EpgBrowserViewModel(
 
     private var searchJob: Job? = null
     private val searchService = XmltvSearchService(context)
+
     @Volatile private var channelMatcher: EpgChannelMatcher? = null
 
     @Volatile private var lastMatcherProviderId: Long? = null
@@ -173,13 +173,14 @@ class EpgBrowserViewModel(
     private val _epgSearchHistory = MutableStateFlow<List<String>>(emptyList())
     val epgSearchHistory: StateFlow<List<String>> = _epgSearchHistory.asStateFlow()
 
-    private val _epgSettings = MutableStateFlow(
-        EpgManagementViewModel.EpgSettings(
-            autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
-            epgRefreshTime = appSettings.epgRefreshTime,
-            epgRefreshInterval = appSettings.epgRefreshInterval,
+    private val _epgSettings =
+        MutableStateFlow(
+            EpgManagementViewModel.EpgSettings(
+                autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
+                epgRefreshTime = appSettings.epgRefreshTime,
+                epgRefreshInterval = appSettings.epgRefreshInterval,
+            ),
         )
-    )
     val epgSettings: StateFlow<EpgManagementViewModel.EpgSettings> = _epgSettings.asStateFlow()
 
     private val _sourceLabels = MutableStateFlow<Map<Long, String>>(emptyMap())
@@ -192,7 +193,13 @@ class EpgBrowserViewModel(
         flow {
             emit(
                 withContext(Dispatchers.IO) {
-                    runCatching { SettingsDatabase.getInstance(context).providerDao().getActiveProvider()?.id }.getOrNull()
+                    runCatching {
+                        SettingsDatabase
+                            .getInstance(context)
+                            .providerDao()
+                            .getActiveProvider()
+                            ?.id
+                    }.getOrNull()
                 },
             )
         }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
@@ -304,10 +311,16 @@ class EpgBrowserViewModel(
         val indexer = EpgIndexer.getInstance(context)
         when (indexer.state.value) {
             // Set up paged "Now Playing" flow when index is available
-            is EpgIndexState.Indexed -> initPagedNowPlaying()
+            is EpgIndexState.Indexed -> {
+                initPagedNowPlaying()
+            }
+
             // Indexing/Optimizing/Failed still have a guide on disk — a refresh is no reason to
             // claim there isn't one.
-            is EpgIndexState.NotIndexed -> _uiState.value = UiState.NoEpgFile
+            is EpgIndexState.NotIndexed -> {
+                _uiState.value = UiState.NoEpgFile
+            }
+
             else -> {}
         }
         viewModelScope.launch {
@@ -316,9 +329,14 @@ class EpgBrowserViewModel(
                 // A busy search, or a LIKE-fallback one that may be incomplete, gets the full
                 // FTS answer once the index is ready.
                 when (val current = _uiState.value) {
-                    is UiState.IndexBusy -> performSearch(current.query)
-                    is UiState.Results ->
+                    is UiState.IndexBusy -> {
+                        performSearch(current.query)
+                    }
+
+                    is UiState.Results -> {
                         if (current.searchPath == EpgSearchPath.LIKE_FALLBACK) performSearch(current.query)
+                    }
+
                     else -> {}
                 }
             }
@@ -360,17 +378,19 @@ class EpgBrowserViewModel(
                         .getInstance(context)
                         .providerDao()
                         .getActiveProvider() ?: return@withContext
-                
-                channelMatcher = EpgChannelMatcher.getOrCreate(provider.id) {
-                    val t0 = System.currentTimeMillis()
-                    val streams = XtreamDatabase
-                        .getInstance(context)
-                        .streamDao()
-                        .getAllStreamsIncludingExcluded(provider.id, XtreamStreamEntity.TYPE_LIVE)
-                    val t1 = System.currentTimeMillis()
-                    android.util.Log.d("EpgBrowserViewModel", "Fetched ${streams.size} streams in ${t1 - t0}ms for new matcher")
-                    streams
-                }
+
+                channelMatcher =
+                    EpgChannelMatcher.getOrCreate(provider.id) {
+                        val t0 = System.currentTimeMillis()
+                        val streams =
+                            XtreamDatabase
+                                .getInstance(context)
+                                .streamDao()
+                                .getAllStreamsIncludingExcluded(provider.id, XtreamStreamEntity.TYPE_LIVE)
+                        val t1 = System.currentTimeMillis()
+                        android.util.Log.d("EpgBrowserViewModel", "Fetched ${streams.size} streams in ${t1 - t0}ms for new matcher")
+                        streams
+                    }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -436,6 +456,7 @@ class EpgBrowserViewModel(
                 }.flow.cachedIn(viewModelScope)
         }
     }
+
     fun performSearch(query: String) {
         if (query.length < 2) return
 
@@ -530,11 +551,15 @@ class EpgBrowserViewModel(
             is EpgFileManager.MultiSourceState.Processing,
             is EpgFileManager.MultiSourceState.Finalizing,
             is EpgFileManager.MultiSourceState.Retrying,
-            -> true
-            else ->
+            -> {
+                true
+            }
+
+            else -> {
                 EpgIndexer.getInstance(context).state.value.let {
                     it is EpgIndexState.Indexing || it is EpgIndexState.Optimizing
                 }
+            }
         }
 
     fun clearSearch() {
@@ -600,8 +625,7 @@ class EpgBrowserViewModel(
                                 val matched = matcher?.match(row.channelId, row.channelDisplayName)
                                 matched == null || !matched.excluded
                             }
-                        }
-                        .cachedIn(viewModelScope)
+                        }.cachedIn(viewModelScope)
             }
         }
     }
@@ -612,11 +636,12 @@ class EpgBrowserViewModel(
     }
 
     private fun refreshSettings() {
-        _epgSettings.value = EpgManagementViewModel.EpgSettings(
-            autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
-            epgRefreshTime = appSettings.epgRefreshTime,
-            epgRefreshInterval = appSettings.epgRefreshInterval,
-        )
+        _epgSettings.value =
+            EpgManagementViewModel.EpgSettings(
+                autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
+                epgRefreshTime = appSettings.epgRefreshTime,
+                epgRefreshInterval = appSettings.epgRefreshInterval,
+            )
     }
 
     private data class AiringWithProgramme(
@@ -632,38 +657,39 @@ class EpgBrowserViewModel(
             dateGroups
         } else {
             dateGroups
-            .map { group ->
-                group.copy(
-                    programs =
-                        group.programs
-                            .map { program ->
-                                // ⚡ Bolt: Performance Optimization
-                                // Replaced O(N log N) `sortedWith` with an O(N) stable bucketing approach.
-                                // `program.airings` is already sorted by `startEpoch`. By accumulating
-                                // matches and non-matches separately and concatenating, we preserve
-                                // the initial chronological ordering natively without redundant allocations.
-                                val matchedList = ArrayList<EpgBrowserAiring>()
-                                val unmatchedList = ArrayList<EpgBrowserAiring>()
+                .map { group ->
+                    group.copy(
+                        programs =
+                            group.programs
+                                .map { program ->
+                                    // ⚡ Bolt: Performance Optimization
+                                    // Replaced O(N log N) `sortedWith` with an O(N) stable bucketing approach.
+                                    // `program.airings` is already sorted by `startEpoch`. By accumulating
+                                    // matches and non-matches separately and concatenating, we preserve
+                                    // the initial chronological ordering natively without redundant allocations.
+                                    val matchedList = ArrayList<EpgBrowserAiring>()
+                                    val unmatchedList = ArrayList<EpgBrowserAiring>()
 
-                                for (airing in program.airings) {
-                                    val matched = matcher.match(airing.channelId, airing.channelName)
-                                    when {
-                                        matched != null && matched.excluded -> Unit // excluded channel: drop from search results
-                                        matched != null -> matchedList.add(airing.copy(matchedStream = matched))
-                                        else -> unmatchedList.add(airing) // no corresponding stream at all — keep as before
+                                    for (airing in program.airings) {
+                                        val matched = matcher.match(airing.channelId, airing.channelName)
+                                        when {
+                                            matched != null && matched.excluded -> Unit
+
+                                            // excluded channel: drop from search results
+                                            matched != null -> matchedList.add(airing.copy(matchedStream = matched))
+
+                                            else -> unmatchedList.add(airing) // no corresponding stream at all — keep as before
+                                        }
                                     }
-                                }
 
-                                val sorted = ArrayList<EpgBrowserAiring>(matchedList.size + unmatchedList.size)
-                                sorted.addAll(matchedList)
-                                sorted.addAll(unmatchedList)
+                                    val sorted = ArrayList<EpgBrowserAiring>(matchedList.size + unmatchedList.size)
+                                    sorted.addAll(matchedList)
+                                    sorted.addAll(unmatchedList)
 
-                                program.copy(airings = sorted)
-                            }
-                            .filter { it.airings.isNotEmpty() },
+                                    program.copy(airings = sorted)
+                                }.filter { it.airings.isNotEmpty() },
                     )
-                }
-                .filter { it.programs.isNotEmpty() }
+                }.filter { it.programs.isNotEmpty() }
         }
     }
 
@@ -690,8 +716,14 @@ class EpgBrowserViewModel(
                 // Compute date label
                 val label =
                     when (localDate) {
-                        today -> "Today"
-                        tomorrow -> "Tomorrow"
+                        today -> {
+                            "Today"
+                        }
+
+                        tomorrow -> {
+                            "Tomorrow"
+                        }
+
                         else -> {
                             val zdt = localDate.atStartOfDay(zoneId)
                             labelFormat.format(java.util.Date.from(zdt.toInstant()))
@@ -736,8 +768,13 @@ class EpgBrowserViewModel(
 
         return byChannel.entries
             // Use String.CASE_INSENSITIVE_ORDER to avoid allocating new String objects during sorting
-            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.value.first().airing.channelName })
-            .mapIndexed { index, (_, channelAirings) ->
+            .sortedWith(
+                compareBy(String.CASE_INSENSITIVE_ORDER) {
+                    it.value
+                        .first()
+                        .airing.channelName
+                },
+            ).mapIndexed { index, (_, channelAirings) ->
                 val channelName = channelAirings.first().airing.channelName
                 val programs =
                     channelAirings
@@ -768,14 +805,18 @@ fun EpgBrowserViewModel.UiState.Results.statsLine(): String {
     val truncatedSuffix = if (truncated) " (truncated)" else ""
     val sourceSuffix =
         when {
-            !searchedFromIndex -> " [XML scan]"
-            else ->
+            !searchedFromIndex -> {
+                " [XML scan]"
+            }
+
+            else -> {
                 when (searchPath) {
                     EpgSearchPath.FTS_PHRASE -> " [FTS phrase]"
                     EpgSearchPath.FTS_AND -> " [FTS AND]"
                     EpgSearchPath.LIKE_FALLBACK -> " [LIKE fallback]"
                     EpgSearchPath.NONE -> " [indexed]"
                 }
+            }
         }
     return "$totalPrograms programs ($totalAirings airings) — ${timeStr}s$truncatedSuffix$sourceSuffix"
 }
@@ -784,16 +825,20 @@ fun EpgBrowserViewModel.UiState.Results.statsLine(): String {
 @androidx.compose.runtime.Composable
 fun EpgBrowserViewModel.UiState.IndexBusy.message(): String =
     if (refreshing) {
-        androidx.compose.ui.res.stringResource(R.string.epg_browser_busy_refreshing_format, query)
+        androidx.compose.ui.res
+            .stringResource(R.string.epg_browser_busy_refreshing_format, query)
     } else {
-        androidx.compose.ui.res.stringResource(R.string.epg_browser_busy_rebuilding_format, query)
+        androidx.compose.ui.res
+            .stringResource(R.string.epg_browser_busy_rebuilding_format, query)
     }
 
 /** Empty-state message when there are no (matched) results for the query. */
 @androidx.compose.runtime.Composable
 fun EpgBrowserViewModel.UiState.Results.noResultsMessage(matchedOnly: Boolean): String =
     if (matchedOnly) {
-        androidx.compose.ui.res.stringResource(R.string.epg_browser_no_matched_results_format, query)
+        androidx.compose.ui.res
+            .stringResource(R.string.epg_browser_no_matched_results_format, query)
     } else {
-        androidx.compose.ui.res.stringResource(R.string.epg_browser_no_results_format, query)
+        androidx.compose.ui.res
+            .stringResource(R.string.epg_browser_no_results_format, query)
     }

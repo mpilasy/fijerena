@@ -56,5 +56,4 @@ interface XtreamEpgCacheDao {
 
     @Query("DELETE FROM xtream_epg_cache WHERE providerId = :providerId")
     fun deleteAll(providerId: Long)
-
 }

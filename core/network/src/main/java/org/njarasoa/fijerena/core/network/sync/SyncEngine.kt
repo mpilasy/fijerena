@@ -132,7 +132,10 @@ class SyncEngine(
             // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-22.
             val (sendable, oversized) = encoded.partition { (_, wire) -> wire.payload.length <= MAX_PAYLOAD_CHARS }
             oversized.forEach { (pending, wire) ->
-                val e = IllegalStateException("${pending.record.key.kind} record not synced: ${wire.payload.length} chars sealed, over the server's $MAX_PAYLOAD_CHARS")
+                val e =
+                    IllegalStateException(
+                        "${pending.record.key.kind} record not synced: ${wire.payload.length} chars sealed, over the server's $MAX_PAYLOAD_CHARS",
+                    )
                 Log.e(TAG, e.message, e)
                 CrashLog.record("sync push", e)
                 pending.markSent()

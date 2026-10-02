@@ -15,10 +15,10 @@ import org.njarasoa.fijerena.core.network.xtream.manager.XtreamEpgManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamMetricsManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamSessionManager
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamStatsManager
+import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.EpgResponse
-import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
@@ -66,7 +66,6 @@ class XtreamRepository(
             providerId,
             categoryFilters = { filtersStore.get(providerId, appSettings.activeProfileId, providerSettings.categoryFilters) },
         )
-
 
     private val epgManager = XtreamEpgManager(sessionManager, cache, providerSettings, database.epgCacheDao(), providerId)
 
@@ -151,7 +150,11 @@ class XtreamRepository(
 
     fun getSeriesCached(categoryId: String): List<XtreamStream>? = contentManager.getSeriesCached(categoryId)
 
-    suspend fun searchByFts(contentType: String, ftsQuery: String, includeExcluded: Boolean = false): List<XtreamStream> =
+    suspend fun searchByFts(
+        contentType: String,
+        ftsQuery: String,
+        includeExcluded: Boolean = false,
+    ): List<XtreamStream> =
         when (contentType) {
             ContentType.LIVE_TV -> contentManager.searchStreams(XtreamStreamEntity.TYPE_LIVE, ftsQuery, includeExcluded)
             ContentType.MOVIES -> contentManager.searchStreams(XtreamStreamEntity.TYPE_VOD, ftsQuery, includeExcluded)
@@ -160,14 +163,21 @@ class XtreamRepository(
         }
 
     /** Other local catalogue entries sharing [tmdbId] — see [XtreamContentManager.getAlternateVodStreams]. */
-    suspend fun getAlternateStreams(contentType: String, tmdbId: String, excludeId: Int): List<XtreamStream> =
+    suspend fun getAlternateStreams(
+        contentType: String,
+        tmdbId: String,
+        excludeId: Int,
+    ): List<XtreamStream> =
         when (contentType) {
             ContentType.MOVIES -> contentManager.getAlternateVodStreams(tmdbId, excludeId)
             ContentType.TV_SHOWS -> contentManager.getAlternateSeries(tmdbId, excludeId)
             else -> emptyList()
         }
 
-    suspend fun countExcludedByFts(contentType: String, ftsQuery: String): Int =
+    suspend fun countExcludedByFts(
+        contentType: String,
+        ftsQuery: String,
+    ): Int =
         when (contentType) {
             ContentType.LIVE_TV -> contentManager.countExcludedStreams(XtreamStreamEntity.TYPE_LIVE, ftsQuery)
             ContentType.MOVIES -> contentManager.countExcludedStreams(XtreamStreamEntity.TYPE_VOD, ftsQuery)
@@ -235,7 +245,6 @@ class XtreamRepository(
     fun clearEpgCache(streamId: Int) = epgManager.clearEpgCache(streamId)
 
     fun clearAllEpgCache() = epgManager.clearAllEpgCache()
-
 
     suspend fun clearCache() = statsManager.clearCache()
 

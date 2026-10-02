@@ -15,20 +15,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
-import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.tv.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -54,36 +54,36 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
-import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
 import org.njarasoa.fijerena.core.network.xmltv.formatAiringTime
 import org.njarasoa.fijerena.core.network.xmltv.formatCount
 import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
 import org.njarasoa.fijerena.core.network.xmltv.freshnessLabel
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -91,6 +91,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
@@ -98,24 +99,23 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
+import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
+import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
-import org.njarasoa.fijerena.ui.theme.CornerRadius
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
-import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
+import org.njarasoa.fijerena.ui.theme.CornerRadius
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
-import org.njarasoa.fijerena.core.ui.components.MitadyLoading
-import org.njarasoa.fijerena.ui.components.TvSearchTextField
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.R
 
 @Composable
 fun TvEpgBrowserScreen(
@@ -140,8 +140,17 @@ fun TvEpgBrowserScreen(
     val processingState by viewModel.epgProcessingState.collectAsStateWithLifecycle()
     val epgDbStats =
         when (val idx = indexState) {
-            is EpgIndexState.Indexed -> stringResource(R.string.epg_browser_dev_stats_counts_format, formatCount(idx.programmeCount), formatCount(idx.channelCount))
-            else -> null
+            is EpgIndexState.Indexed -> {
+                stringResource(
+                    R.string.epg_browser_dev_stats_counts_format,
+                    formatCount(idx.programmeCount),
+                    formatCount(idx.channelCount),
+                )
+            }
+
+            else -> {
+                null
+            }
         }
     val isRefreshing =
         processingState is EpgFileManager.MultiSourceState.Pending ||
@@ -163,140 +172,142 @@ fun TvEpgBrowserScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-                // Header
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = stringResource(R.string.epg_browser_title),
+                    style =
+                        MaterialTheme.typography.displaySmall.copy(
+                            fontSize =
+                                MaterialTheme.typography.displaySmall.fontSize
+                                    .scaled(scale),
+                        ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                val providerName = activeProviderName
+                if (providerName != null) {
                     Text(
-                        text = stringResource(R.string.epg_browser_title),
+                        text = stringResource(R.string.epg_browser_provider_suffix_format, providerName),
                         style =
-                            MaterialTheme.typography.displaySmall.copy(
+                            MaterialTheme.typography.titleLarge.copy(
                                 fontSize =
-                                    MaterialTheme.typography.displaySmall.fontSize
+                                    MaterialTheme.typography.titleLarge.fontSize
                                         .scaled(scale),
                             ),
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale), start = Spacing.xs.scaled(scale)),
                     )
-                    val providerName = activeProviderName
-                    if (providerName != null) {
-                        Text(
-                            text = stringResource(R.string.epg_browser_provider_suffix_format, providerName),
-                            style =
-                                MaterialTheme.typography.titleLarge.copy(
-                                    fontSize =
-                                        MaterialTheme.typography.titleLarge.fontSize
-                                            .scaled(scale),
-                                ),
-                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                            modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale), start = Spacing.xs.scaled(scale)),
-                        )
-                    }
+                }
 
-                    Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.weight(1f))
 
-                    // Freshness + refresh button
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                        modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale)),
-                    ) {
-                        val freshnessText =
-                            freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount)
-                        val freshnessColor =
-                            if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L) {
-                                CinemaWarning
+                // Freshness + refresh button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+                    modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale)),
+                ) {
+                    val freshnessText =
+                        freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount)
+                    val freshnessColor =
+                        if (staleSourceCount > 0 || neverRunSourceCount > 0 || oldestIngestedAtMs == 0L) {
+                            CinemaWarning
+                        } else {
+                            CinemaTextSecondary
+                        }
+                    Text(
+                        text = freshnessText,
+                        style =
+                            MaterialTheme.typography.labelLarge.copy(
+                                fontSize =
+                                    MaterialTheme.typography.labelLarge.fontSize
+                                        .scaled(scale),
+                            ),
+                        color = freshnessColor,
+                    )
+                    CinemaIconButton(
+                        onClick = { if (!isRefreshing) viewModel.refreshStale() },
+                        icon = {
+                            if (isRefreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                                    color = CinemaAccent,
+                                    strokeWidth = TvDimensions.borderFocused,
+                                )
                             } else {
-                                CinemaTextSecondary
+                                Icon(
+                                    imageVector = CinemaIcons.Refresh,
+                                    contentDescription = stringResource(R.string.epg_browser_refresh_stale_description),
+                                    tint = if (staleSourceCount > 0) CinemaWarning else CinemaTextPrimary,
+                                    modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                                )
                             }
+                        },
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
+
+            when (val state = uiState) {
+                is EpgBrowserViewModel.UiState.NoEpgFile -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Text(
-                            text = freshnessText,
+                            text = stringResource(R.string.epg_browser_no_file_message),
                             style =
-                                MaterialTheme.typography.labelLarge.copy(
+                                MaterialTheme.typography.bodyLarge.copy(
                                     fontSize =
-                                        MaterialTheme.typography.labelLarge.fontSize
+                                        MaterialTheme.typography.bodyLarge.fontSize
                                             .scaled(scale),
                                 ),
-                            color = freshnessColor,
-                        )
-                        CinemaIconButton(
-                            onClick = { if (!isRefreshing) viewModel.refreshStale() },
-                            icon = {
-                                if (isRefreshing) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                                        color = CinemaAccent,
-                                        strokeWidth = TvDimensions.borderFocused,
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = CinemaIcons.Refresh,
-                                        contentDescription = stringResource(R.string.epg_browser_refresh_stale_description),
-                                        tint = if (staleSourceCount > 0) CinemaWarning else CinemaTextPrimary,
-                                        modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                                    )
-                                }
-                            },
+                            color = CinemaTextSecondary,
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-
-                when (val state = uiState) {
-                    is EpgBrowserViewModel.UiState.NoEpgFile -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.epg_browser_no_file_message),
-                                style =
-                                    MaterialTheme.typography.bodyLarge.copy(
-                                        fontSize =
-                                            MaterialTheme.typography.bodyLarge.fontSize
-                                                .scaled(scale),
-                                    ),
-                                color = CinemaTextSecondary,
-                            )
-                        }
-                    }
-                    is EpgBrowserViewModel.UiState.Error -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = state.message,
-                                style =
-                                    MaterialTheme.typography.bodyLarge.copy(
-                                        fontSize =
-                                            MaterialTheme.typography.bodyLarge.fontSize
-                                                .scaled(scale),
-                                    ),
-                                color = CinemaError,
-                            )
-                        }
-                    }
-                    else -> {
-                        EpgBrowserContent(
-                            uiState = state,
-                            nowEpoch = nowEpoch,
-                            indexState = indexState,
-                            isDevMode = isDevMode,
-                            epgDbStats = epgDbStats,
-                            sourceLabels = sourceLabels,
-                            searchMode = searchMode,
-                            epgSearchHistory = epgSearchHistory,
-                            onSearchModeChange = { viewModel.setSearchMode(it) },
-                            onSearch = { viewModel.performSearch(it) },
-                            onRemoveHistoryEntry = { viewModel.removeEpgSearchHistoryEntry(it) },
-                            onClearHistory = { viewModel.clearEpgSearchHistory() },
-                            onClearSearch = { viewModel.clearSearch() },
-                            onNavigateToPlayer = onNavigateToPlayer,
+                is EpgBrowserViewModel.UiState.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = state.message,
+                            style =
+                                MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize =
+                                        MaterialTheme.typography.bodyLarge.fontSize
+                                            .scaled(scale),
+                                ),
+                            color = CinemaError,
                         )
                     }
                 }
+
+                else -> {
+                    EpgBrowserContent(
+                        uiState = state,
+                        nowEpoch = nowEpoch,
+                        indexState = indexState,
+                        isDevMode = isDevMode,
+                        epgDbStats = epgDbStats,
+                        sourceLabels = sourceLabels,
+                        searchMode = searchMode,
+                        epgSearchHistory = epgSearchHistory,
+                        onSearchModeChange = { viewModel.setSearchMode(it) },
+                        onSearch = { viewModel.performSearch(it) },
+                        onRemoveHistoryEntry = { viewModel.removeEpgSearchHistoryEntry(it) },
+                        onClearHistory = { viewModel.clearEpgSearchHistory() },
+                        onClearSearch = { viewModel.clearSearch() },
+                        onNavigateToPlayer = onNavigateToPlayer,
+                    )
+                }
+            }
         }
     }
 }
@@ -340,7 +351,8 @@ private fun EpgBrowserContent(
         if (uiState is EpgBrowserViewModel.UiState.Results) {
             try {
                 firstItemFocusRequester.requestFocus()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -398,10 +410,11 @@ private fun EpgBrowserContent(
                         localQuery = ""
                         onClearSearch()
                     },
-                    placeholder = when (searchMode) {
-                        EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_enter_programme_placeholder)
-                        EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_enter_channel_placeholder)
-                    },
+                    placeholder =
+                        when (searchMode) {
+                            EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_enter_programme_placeholder)
+                            EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_enter_channel_placeholder)
+                        },
                     focusRequester = searchFocusRequester,
                     showClearButton = localQuery.isNotEmpty() || hasResults,
                 )
@@ -435,11 +448,19 @@ private fun EpgBrowserContent(
         val currentIndexState = indexState
         if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
             val idx = currentIndexState
-            val progressText = if (idx is EpgIndexState.Indexing) {
-                stringResource(R.string.epg_browser_indexing_progress_programmes_format, idx.progressPercent, formatCount(idx.programmesIndexed))
-            } else {
-                stringResource(R.string.epg_browser_finalizing_programmes_format, formatCount((idx as EpgIndexState.Optimizing).programmeCount))
-            }
+            val progressText =
+                if (idx is EpgIndexState.Indexing) {
+                    stringResource(
+                        R.string.epg_browser_indexing_progress_programmes_format,
+                        idx.progressPercent,
+                        formatCount(idx.programmesIndexed),
+                    )
+                } else {
+                    stringResource(
+                        R.string.epg_browser_finalizing_programmes_format,
+                        formatCount((idx as EpgIndexState.Optimizing).programmeCount),
+                    )
+                }
             val progressValue = if (idx is EpgIndexState.Indexing) idx.progressPercent / 100f else 0.95f
 
             Column(modifier = Modifier.padding(top = Spacing.sm.scaled(scale))) {
@@ -448,7 +469,14 @@ private fun EpgBrowserContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = if (idx is EpgIndexState.Indexing) stringResource(R.string.epg_browser_building_index_label) else stringResource(R.string.epg_browser_optimizing_index_label),
+                        text =
+                            if (idx is EpgIndexState.Indexing) {
+                                stringResource(
+                                    R.string.epg_browser_building_index_label,
+                                )
+                            } else {
+                                stringResource(R.string.epg_browser_optimizing_index_label)
+                            },
                         style =
                             MaterialTheme.typography.labelMedium.copy(
                                 fontSize =
@@ -522,6 +550,7 @@ private fun EpgBrowserContent(
                     }
                 }
             }
+
             is EpgBrowserViewModel.UiState.IndexBusy -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -540,6 +569,7 @@ private fun EpgBrowserContent(
                     )
                 }
             }
+
             is EpgBrowserViewModel.UiState.Searching -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -551,6 +581,7 @@ private fun EpgBrowserContent(
                     )
                 }
             }
+
             is EpgBrowserViewModel.UiState.Results -> {
                 ResultsContent(
                     results = uiState,
@@ -563,6 +594,7 @@ private fun EpgBrowserContent(
                     firstItemFocusRequester = firstItemFocusRequester,
                 )
             }
+
             else -> {} // NoEpgFile and Error handled in parent
         }
     }
@@ -604,7 +636,7 @@ private fun EpgSearchHistorySection(
                         imageVector = CinemaIcons.Delete,
                         contentDescription = stringResource(R.string.epg_browser_clear_all_description),
                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        tint = CinemaTextPrimary
+                        tint = CinemaTextPrimary,
                     )
                 },
             )
@@ -779,10 +811,13 @@ private fun ResultsContent(
                                 isDevMode = isDevMode,
                                 sourceLabels = sourceLabels,
                                 onNavigateToPlayer = onNavigateToPlayer,
-                                modifier = if (isFirstItem && index == 0) {
-                                    isFirstItem = false
-                                    if (firstItemFocusRequester != null) Modifier.focusRequester(firstItemFocusRequester) else Modifier
-                                } else Modifier
+                                modifier =
+                                    if (isFirstItem && index == 0) {
+                                        isFirstItem = false
+                                        if (firstItemFocusRequester != null) Modifier.focusRequester(firstItemFocusRequester) else Modifier
+                                    } else {
+                                        Modifier
+                                    },
                             )
                         }
                     }
@@ -941,7 +976,7 @@ private fun ProgramCard(
                                 formatAiringTime(airingContext, pending.startEpoch, pending.endEpoch),
                                 pending.channelName,
                             ),
-                            color = CinemaTextSecondary
+                            color = CinemaTextSecondary,
                         )
                     },
                     confirmButton = {
@@ -1038,7 +1073,14 @@ private fun AiringRow(
             }
             if (isOnAir || isSoon) {
                 val badgeColor = if (isOnAir) CinemaSuccess else CinemaWarning
-                val badgeLabel = if (isOnAir) stringResource(R.string.epg_browser_on_air_badge) else stringResource(R.string.epg_browser_soon_badge)
+                val badgeLabel =
+                    if (isOnAir) {
+                        stringResource(
+                            R.string.epg_browser_on_air_badge,
+                        )
+                    } else {
+                        stringResource(R.string.epg_browser_soon_badge)
+                    }
                 Text(
                     text = badgeLabel,
                     style =
@@ -1092,4 +1134,3 @@ private fun AiringRow(
         rowContent()
     }
 }
-

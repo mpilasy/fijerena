@@ -37,8 +37,12 @@ class SyncTombstoneTest {
 
             providers.deleteProvider(id)
 
-            val tombstone = SettingsDatabase.getInstance(context).providerDao().getAllTombstones()
-                .single { it.kind == SyncKind.PROVIDER && it.itemKey == key }
+            val tombstone =
+                SettingsDatabase
+                    .getInstance(context)
+                    .providerDao()
+                    .getAllTombstones()
+                    .single { it.kind == SyncKind.PROVIDER && it.itemKey == key }
             assertTrue(tombstone.deletedAt > 0)
             assertTrue(xtream.syncTombstoneDao().getAll(id).isEmpty())
         }
@@ -65,7 +69,14 @@ class SyncTombstoneTest {
         runBlocking {
             val xtream = XtreamDatabase.getInstance(context)
             val now = 1_000_000_000_000L
-            xtream.favoriteStateDao().deleteRecordingTombstone(9L, "p", "old", "MOVIES", FavoriteKind.STREAM, now - SyncKind.TOMBSTONE_RETENTION_MS - 1)
+            xtream.favoriteStateDao().deleteRecordingTombstone(
+                9L,
+                "p",
+                "old",
+                "MOVIES",
+                FavoriteKind.STREAM,
+                now - SyncKind.TOMBSTONE_RETENTION_MS - 1,
+            )
             xtream.favoriteStateDao().deleteRecordingTombstone(9L, "p", "new", "MOVIES", FavoriteKind.STREAM, now - 1)
 
             pruneSyncTombstones(context, now)

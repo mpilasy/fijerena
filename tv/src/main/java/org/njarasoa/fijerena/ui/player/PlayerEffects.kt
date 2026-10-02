@@ -28,11 +28,12 @@ fun PlayerEffects(
     // Auto-show toast on repeated buffer exhaustion
     LaunchedEffect(isDeveloperMode, currentMetadata.streamUrl) {
         watchExhaustionToasts {
-            android.widget.Toast.makeText(
-                context,
-                resources.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
-                android.widget.Toast.LENGTH_LONG
-            ).show()
+            android.widget.Toast
+                .makeText(
+                    context,
+                    resources.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
+                    android.widget.Toast.LENGTH_LONG,
+                ).show()
         }
     }
 

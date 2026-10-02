@@ -10,7 +10,14 @@ import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 /** See docs/plans/20261001_live-sync-now-playing-plan.md → Phase 1 and 2. */
 class NowPlayingSyncTest {
     private val key = SyncKey(SyncKind.SHARED, "", SyncKind.NOW_PLAYING, "device-1")
-    private val episode = NowPlayingSnapshot(title = "Pilot", showTitle = "The King of Queens", episodeLabel = "S1:E12", positionMs = 60_000, durationMs = 1_320_000)
+    private val episode =
+        NowPlayingSnapshot(
+            title = "Pilot",
+            showTitle = "The King of Queens",
+            episodeLabel = "S1:E12",
+            positionMs = 60_000,
+            durationMs = 1_320_000,
+        )
 
     @Test
     fun `the payload survives encoding, sealing and opening`() {
@@ -59,11 +66,23 @@ class NowPlayingSyncTest {
             val outbox = VolatileRecords()
             outbox.put(key, "first")
             val failedPush = outbox.take { 1 }
-            assertEquals("first", outbox.take { 2 }.single().record.payload) // not sent: still there
+            assertEquals(
+                "first",
+                outbox
+                    .take { 2 }
+                    .single()
+                    .record.payload,
+            ) // not sent: still there
 
             outbox.put(key, "second")
             failedPush.single().markSent()
-            assertEquals("second", outbox.take { 3 }.single().record.payload)
+            assertEquals(
+                "second",
+                outbox
+                    .take { 3 }
+                    .single()
+                    .record.payload,
+            )
 
             outbox.take { 4 }.single().markSent()
             assertTrue(outbox.take { 5 }.isEmpty())
@@ -72,6 +91,7 @@ class NowPlayingSyncTest {
     @Test
     fun `playing or paused is current for three minutes by both clocks`() {
         val now = 10_000_000L
+
         fun entry(
             state: String,
             sentAt: Long,
@@ -85,7 +105,13 @@ class NowPlayingSyncTest {
         // An old record arriving now (a catch-up pull).
         assertFalse(entry(SyncPayloads.NowPlaying.PLAYING, sentAt = now - 3_600_000).isCurrent(now))
         // A sender whose clock runs an hour ahead, quiet since.
-        assertFalse(entry(SyncPayloads.NowPlaying.PLAYING, sentAt = now + 3_600_000, receivedAt = now - NowPlayingStore.STALE_AFTER_MS - 1).isCurrent(now))
+        assertFalse(
+            entry(
+                SyncPayloads.NowPlaying.PLAYING,
+                sentAt = now + 3_600_000,
+                receivedAt = now - NowPlayingStore.STALE_AFTER_MS - 1,
+            ).isCurrent(now),
+        )
         assertFalse(entry(SyncPayloads.NowPlaying.STOPPED, sentAt = now).isCurrent(now))
         // A sender whose clock is 10 min slow: shown while the server saw it recently...
         val slow = entry(SyncPayloads.NowPlaying.PLAYING, sentAt = now - 600_000)
@@ -103,11 +129,20 @@ class NowPlayingSyncTest {
         fun entry(
             hlc: Long,
             title: String,
-        ) = NowPlayingStore.Entry(SyncPayloads.NowPlaying(state = SyncPayloads.NowPlaying.PLAYING, title = title, sentAt = 0), hlc, receivedAt = 0)
+        ) = NowPlayingStore.Entry(
+            SyncPayloads.NowPlaying(state = SyncPayloads.NowPlaying.PLAYING, title = title, sentAt = 0),
+            hlc,
+            receivedAt = 0,
+        )
         NowPlayingStore.clear()
         NowPlayingStore.receive("tv", entry(2, "newer"))
         NowPlayingStore.receive("tv", entry(1, "older"))
-        assertEquals("newer", NowPlayingStore.devices.value.getValue("tv").nowPlaying.title)
+        assertEquals(
+            "newer",
+            NowPlayingStore.devices.value
+                .getValue("tv")
+                .nowPlaying.title,
+        )
         NowPlayingStore.clear()
     }
 }

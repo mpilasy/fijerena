@@ -62,7 +62,6 @@ class EpgIndexer private constructor(
         /** Free pages moved per `incremental_vacuum` batch — about 2 MB at this DB's page size. */
         private const val VACUUM_CHUNK_PAGES = 2000
 
-
         private fun getBatchSize(context: Context): Int {
             val isTv = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
             return if (isTv) BATCH_SIZE_TV else BATCH_SIZE_MOBILE
@@ -189,7 +188,6 @@ class EpgIndexer private constructor(
                         _state.value = EpgIndexState.NotIndexed
                     }
                 }
-
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -267,7 +265,13 @@ class EpgIndexer private constructor(
                                     if (channelBatch.size >= batchSize || channelStagingBatch.size >= batchSize) {
                                         writeMutex.withLock {
                                             db.withTransaction {
-                                                if (useStaging) dao.insertChannelsStagingIgnore(channelStagingBatch) else dao.insertChannelsIgnore(channelBatch)
+                                                if (useStaging) {
+                                                    dao.insertChannelsStagingIgnore(
+                                                        channelStagingBatch,
+                                                    )
+                                                } else {
+                                                    dao.insertChannelsIgnore(channelBatch)
+                                                }
                                             }
                                         }
                                         channelBatch.clear()
@@ -277,12 +281,19 @@ class EpgIndexer private constructor(
                                     }
                                 }
                             }
+
                             "programme" -> {
                                 // Flush any remaining channels before starting programmes
                                 if (channelBatch.isNotEmpty() || channelStagingBatch.isNotEmpty()) {
                                     writeMutex.withLock {
                                         db.withTransaction {
-                                            if (useStaging) dao.insertChannelsStagingIgnore(channelStagingBatch) else dao.insertChannelsIgnore(channelBatch)
+                                            if (useStaging) {
+                                                dao.insertChannelsStagingIgnore(
+                                                    channelStagingBatch,
+                                                )
+                                            } else {
+                                                dao.insertChannelsIgnore(channelBatch)
+                                            }
                                         }
                                     }
                                     channelBatch.clear()
@@ -298,7 +309,13 @@ class EpgIndexer private constructor(
                                     if (programmeBatch.size >= batchSize || programmeStagingBatch.size >= batchSize) {
                                         writeMutex.withLock {
                                             db.withTransaction {
-                                                if (useStaging) dao.insertProgrammesStaging(programmeStagingBatch) else dao.insertProgrammes(programmeBatch)
+                                                if (useStaging) {
+                                                    dao.insertProgrammesStaging(
+                                                        programmeStagingBatch,
+                                                    )
+                                                } else {
+                                                    dao.insertProgrammes(programmeBatch)
+                                                }
                                             }
                                         }
                                         programmeBatch.clear()
@@ -550,25 +567,27 @@ class EpgIndexer private constructor(
     /**
      * Clear all staging tables.
      */
-    suspend fun clearStaging() = withContext(Dispatchers.IO) {
-        val db = EpgIndexDatabase.getInstance(context)
-        val dao = db.epgIndexDao()
-        writeMutex.withLock {
-            dao.clearStaging()
+    suspend fun clearStaging() =
+        withContext(Dispatchers.IO) {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            writeMutex.withLock {
+                dao.clearStaging()
+            }
         }
-    }
 
     /**
      * Clear staging rows for just [sourceIds], leaving any other source's in-flight or
      * pending-retry staging data untouched.
      */
-    suspend fun clearStagingForSources(sourceIds: List<Long>) = withContext(Dispatchers.IO) {
-        val db = EpgIndexDatabase.getInstance(context)
-        val dao = db.epgIndexDao()
-        writeMutex.withLock {
-            dao.clearStagingForSources(sourceIds)
+    suspend fun clearStagingForSources(sourceIds: List<Long>) =
+        withContext(Dispatchers.IO) {
+            val db = EpgIndexDatabase.getInstance(context)
+            val dao = db.epgIndexDao()
+            writeMutex.withLock {
+                dao.clearStagingForSources(sourceIds)
+            }
         }
-    }
 
     /**
      * Prepare the database for a bulk ingestion session:
@@ -821,15 +840,18 @@ class EpgIndexer private constructor(
             if (started > 0) {
                 Log.i(TAG, "Incremental vacuum reclaimed ${started - remaining} of $started free pages")
             }
-        } catch (e: Exception) { // cancellation-ok: non-suspend helper
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend helper
             Log.w(TAG, "Incremental vacuum failed: ${e.message}", e)
         }
     }
 
     private fun freelistCount(sdb: SupportSQLiteDatabase): Long = pragmaLong(sdb, "PRAGMA freelist_count")
 
-    private fun pragmaLong(sdb: SupportSQLiteDatabase, sql: String): Long =
-        sdb.query(sql).use { if (it.moveToFirst()) it.getLong(0) else 0L }
+    private fun pragmaLong(
+        sdb: SupportSQLiteDatabase,
+        sql: String,
+    ): Long = sdb.query(sql).use { if (it.moveToFirst()) it.getLong(0) else 0L }
 }
 
 /**

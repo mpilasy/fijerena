@@ -17,24 +17,24 @@ import androidx.media3.session.MediaSessionService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import org.njarasoa.fijerena.core.player.R
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.player.R
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
-import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import java.util.UUID
 
 /**
@@ -43,7 +43,9 @@ import java.util.UUID
  * represents a real playback failure a caller should react to (e.g. show an error), not a
  * structured-concurrency cancellation that should silently propagate and skip error handling.
  */
-class ServiceDestroyedException(message: String) : Exception(message)
+class ServiceDestroyedException(
+    message: String,
+) : Exception(message)
 
 @androidx.media3.common.util.UnstableApi
 class StreamingPlaybackService : MediaSessionService() {
@@ -116,7 +118,11 @@ class StreamingPlaybackService : MediaSessionService() {
     private val _recentDropRate = MutableStateFlow(0f)
     val recentDropRate: StateFlow<Float> = _recentDropRate.asStateFlow()
 
-    private val _streamHealthState = MutableStateFlow(org.njarasoa.fijerena.core.player.network.StreamHealthState())
+    private val _streamHealthState =
+        MutableStateFlow(
+            org.njarasoa.fijerena.core.player.network
+                .StreamHealthState(),
+        )
     val streamHealthState: StateFlow<org.njarasoa.fijerena.core.player.network.StreamHealthState> = _streamHealthState.asStateFlow()
 
     private var onPositionSaveListener: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null
@@ -168,34 +174,40 @@ class StreamingPlaybackService : MediaSessionService() {
         }
     }
 
-    private val recycleHandler = Runnable {
-        val metadata = _currentMetadata.value
-        val player = getPlayer()
-        if (player != null) {
-            val currentPos = player.currentPosition
-            Log.i(TAG, "Executing silent stream recycle at position: $currentPos (isLive=${metadata.isLive})")
+    private val recycleHandler =
+        Runnable {
+            val metadata = _currentMetadata.value
+            val player = getPlayer()
+            if (player != null) {
+                val currentPos = player.currentPosition
+                Log.i(TAG, "Executing silent stream recycle at position: $currentPos (isLive=${metadata.isLive})")
 
-            // 1. Evict network connection pool to bypass ISP/CDN shaping.
-            // Closing pooled connections can block on socket I/O, so this must not run on
-            // the main thread (recycleHandler is posted via mainHandler.post).
-            serviceScope?.launch(Dispatchers.IO) {
-                org.njarasoa.fijerena.core.player.network.NetworkModule.evictConnectionPool()
+                // 1. Evict network connection pool to bypass ISP/CDN shaping.
+                // Closing pooled connections can block on socket I/O, so this must not run on
+                // the main thread (recycleHandler is posted via mainHandler.post).
+                serviceScope?.launch(Dispatchers.IO) {
+                    org.njarasoa.fijerena.core.player.network.NetworkModule
+                        .evictConnectionPool()
+                }
+
+                // 2. Restart stream seamlessly without clearing the screen
+                performSeamlessRecycle(metadata, currentPos)
+
+                // 3. Reset monitor for the fresh connection
+                healthMonitor?.reset()
             }
-
-            // 2. Restart stream seamlessly without clearing the screen
-            performSeamlessRecycle(metadata, currentPos)
-
-            // 3. Reset monitor for the fresh connection
-            healthMonitor?.reset()
         }
-    }
 
-    internal fun performSeamlessRecycle(metadata: PlayerMetadata, currentPos: Long) {
-        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
-            ?: run {
-                Log.w(TAG, "performSeamlessRecycle: no-op, mediaSession/player unavailable.")
-                return
-            }
+    internal fun performSeamlessRecycle(
+        metadata: PlayerMetadata,
+        currentPos: Long,
+    ) {
+        val player =
+            mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
+                ?: run {
+                    Log.w(TAG, "performSeamlessRecycle: no-op, mediaSession/player unavailable.")
+                    return
+                }
 
         // A hard retry scheduled for the same underlying error must not be allowed to fire
         // later with a screen-clearing setMediaSource() call on top of this seamless swap.
@@ -204,21 +216,22 @@ class StreamingPlaybackService : MediaSessionService() {
         // Temporarily increase buffer requirement for recycling to ensure a 100% smooth handover
         setRecycling(true)
 
-        val mediaSource = mediaSourceFactory?.createMediaSource(
-            streamUrl = metadata.streamUrl,
-            headers = metadata.headers,
-            isLive = metadata.isLive,
-            onRetry = { _streamRetryCount.update { it + 1 } },
-            transferListener = bandwidthMeter,
-            metadata = metadata,
-        ) ?: run {
-            Log.w(TAG, "performSeamlessRecycle: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
-            // setRecycling(true) above already fired — without resetting it here, isRecycling()
-            // stays true until some later Playing state, and the recycle-grace suppression keeps
-            // hiding every non-Playing state meanwhile.
-            setRecycling(false)
-            return
-        }
+        val mediaSource =
+            mediaSourceFactory?.createMediaSource(
+                streamUrl = metadata.streamUrl,
+                headers = metadata.headers,
+                isLive = metadata.isLive,
+                onRetry = { _streamRetryCount.update { it + 1 } },
+                transferListener = bandwidthMeter,
+                metadata = metadata,
+            ) ?: run {
+                Log.w(TAG, "performSeamlessRecycle: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
+                // setRecycling(true) above already fired — without resetting it here, isRecycling()
+                // stays true until some later Playing state, and the recycle-grace suppression keeps
+                // hiding every non-Playing state meanwhile.
+                setRecycling(false)
+                return
+            }
 
         // setMediaSource(source, resetPosition=false) keeps the current frame on screen
         // while the new source prepares in the background.
@@ -232,23 +245,31 @@ class StreamingPlaybackService : MediaSessionService() {
         NetworkMonitor.init(this)
         mediaSourceFactory = StreamingMediaSourceFactory(this)
 
-        healthMonitor = org.njarasoa.fijerena.core.player.network.StreamHealthMonitor(
-            onStreamRecycleRequired = {
-                mainHandler.post(recycleHandler)
-            },
-            onRecoveryExhausted = {
-                mainHandler.post {
-                    val isLive = _currentMetadata.value.isLive
-                    Log.w(TAG, "Recovery exhausted: giving up after repeated recycle attempts (isLive=$isLive).")
-                    stop()
-                    val label = if (isLive) getString(R.string.player_error_stream_type_live) else getString(R.string.player_error_stream_type_video)
-                    _playbackState.value =
-                        PlaybackState.Error(
-                            getString(R.string.player_error_recovery_exhausted_format, label),
-                        )
-                }
-            },
-        )
+        healthMonitor =
+            org.njarasoa.fijerena.core.player.network.StreamHealthMonitor(
+                onStreamRecycleRequired = {
+                    mainHandler.post(recycleHandler)
+                },
+                onRecoveryExhausted = {
+                    mainHandler.post {
+                        val isLive = _currentMetadata.value.isLive
+                        Log.w(TAG, "Recovery exhausted: giving up after repeated recycle attempts (isLive=$isLive).")
+                        stop()
+                        val label =
+                            if (isLive) {
+                                getString(
+                                    R.string.player_error_stream_type_live,
+                                )
+                            } else {
+                                getString(R.string.player_error_stream_type_video)
+                            }
+                        _playbackState.value =
+                            PlaybackState.Error(
+                                getString(R.string.player_error_recovery_exhausted_format, label),
+                            )
+                    }
+                },
+            )
 
         initializePlayer()
         // Only publish the instance after initializePlayer() so getInstance()/awaitInstance()
@@ -275,7 +296,9 @@ class StreamingPlaybackService : MediaSessionService() {
     private fun publishNowPlaying(scope: CoroutineScope) {
         scope.launch {
             combine(_currentMetadata, _playbackState, playSessionId) { metadata, state, session -> Triple(metadata, state, session) }
-                .collect { (metadata, state, session) -> _nowPlaying.update { NowPlayingSnapshot.of(metadata, state, it, session.ifEmpty { null }) } }
+                .collect { (metadata, state, session) ->
+                    _nowPlaying.update { NowPlayingSnapshot.of(metadata, state, it, session.ifEmpty { null }) }
+                }
         }
     }
 
@@ -352,7 +375,7 @@ class StreamingPlaybackService : MediaSessionService() {
                         healthMonitor?.updateMetrics(
                             bufferedDurationMs = player.bufferedPosition - player.currentPosition,
                             droppedFramesPerSecond = _measuredDroppedFps.value,
-                            hasReadTimeout = isStalled
+                            hasReadTimeout = isStalled,
                         )
                     }
                 }
@@ -364,8 +387,9 @@ class StreamingPlaybackService : MediaSessionService() {
         val ffmpegAvailable = FfmpegLibrary.isAvailable()
         Log.i(TAG, "FFmpeg library available: $ffmpegAvailable")
 
-        val renderersFactory = DefaultRenderersFactory(this)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+        val renderersFactory =
+            DefaultRenderersFactory(this)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
 
         val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
@@ -399,10 +423,10 @@ class StreamingPlaybackService : MediaSessionService() {
                         .setUsage(C.USAGE_MEDIA)
                         .build(),
                     true,
-                // Without this, unplugging headphones (or the Shield remote's headphone jack)
-                // mid-playback left audio blasting out of the device speaker instead of
-                // auto-pausing — ExoPlayer's built-in ACTION_AUDIO_BECOMING_NOISY handling, off
-                // by default.
+                    // Without this, unplugging headphones (or the Shield remote's headphone jack)
+                    // mid-playback left audio blasting out of the device speaker instead of
+                    // auto-pausing — ExoPlayer's built-in ACTION_AUDIO_BECOMING_NOISY handling, off
+                    // by default.
                 ).setHandleAudioBecomingNoisy(true)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
 
@@ -416,7 +440,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 onStateChanged = { newState ->
                     val isRecycling = isRecycling()
                     Log.d(TAG, "onStateChanged: newState=$newState, isRecycling=$isRecycling")
-                    
+
                     if (newState is PlaybackState.Playing) {
                         retryCount = 0
                         // Recycle backoff is cleared by StreamHealthMonitor itself once metrics
@@ -546,11 +570,12 @@ class StreamingPlaybackService : MediaSessionService() {
         metadata: PlayerMetadata,
         startPositionMs: Long = 0L,
     ) {
-        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
-            ?: run {
-                Log.w(TAG, "playStream: no-op, mediaSession/player unavailable.")
-                return
-            }
+        val player =
+            mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
+                ?: run {
+                    Log.w(TAG, "playStream: no-op, mediaSession/player unavailable.")
+                    return
+                }
         cancelPendingRetry()
         playerListener?.resetErrorState()
         playerListener?.resetStartupTiming()
@@ -677,8 +702,23 @@ class StreamingPlaybackService : MediaSessionService() {
     private fun attemptStreamRetry(metadata: PlayerMetadata) {
         val maxRetries = if (metadata.isLive) MAX_LIVE_RETRIES else MAX_VOD_RETRIES
         if (retryCount >= maxRetries) {
-            val detail = lastErrorMessage ?: if (metadata.isLive) getString(R.string.player_error_channel_offline) else getString(R.string.player_error_check_connection)
-            val label = if (metadata.isLive) getString(R.string.player_error_stream_type_live) else getString(R.string.player_error_stream_type_video)
+            val detail =
+                lastErrorMessage
+                    ?: if (metadata.isLive) {
+                        getString(
+                            R.string.player_error_channel_offline,
+                        )
+                    } else {
+                        getString(R.string.player_error_check_connection)
+                    }
+            val label =
+                if (metadata.isLive) {
+                    getString(
+                        R.string.player_error_stream_type_live,
+                    )
+                } else {
+                    getString(R.string.player_error_stream_type_video)
+                }
             _playbackState.value =
                 PlaybackState.Error(
                     getString(R.string.player_error_retry_exhausted_format, label, maxRetries, detail),
@@ -824,7 +864,13 @@ class StreamingPlaybackService : MediaSessionService() {
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
                             language = format.language ?: getString(R.string.player_track_language_unknown),
-                            label = format.label ?: getString(R.string.player_track_audio_fallback_label_format, format.language ?: getString(R.string.player_track_generic_label), format.channelCount),
+                            label =
+                                format.label
+                                    ?: getString(
+                                        R.string.player_track_audio_fallback_label_format,
+                                        format.language ?: getString(R.string.player_track_generic_label),
+                                        format.channelCount,
+                                    ),
                             channelCount = format.channelCount,
                             sampleRate = format.sampleRate,
                             bitrate = format.bitrate,
@@ -862,7 +908,9 @@ class StreamingPlaybackService : MediaSessionService() {
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
                             language = format.language ?: getString(R.string.player_track_language_unknown),
-                            label = format.label ?: format.language ?: getString(R.string.player_track_subtitle_fallback_label_format, trackIndex + 1),
+                            label =
+                                format.label ?: format.language
+                                    ?: getString(R.string.player_track_subtitle_fallback_label_format, trackIndex + 1),
                             mimeType = format.sampleMimeType ?: "unknown",
                             isSelected = isSelected,
                         ),
@@ -1241,37 +1289,72 @@ class StreamingPlaybackService : MediaSessionService() {
                         context.getString(R.string.player_error_format_unsupported)
                     }
                 }
+
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
                 -> {
                     context.getString(R.string.player_error_network_failed)
                 }
+
                 PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
                     val code = extractHttpStatusCode(error)
                     when (code) {
-                        401 -> context.getString(R.string.player_error_http_401)
-                        403 -> context.getString(R.string.player_error_http_403)
-                        404 -> context.getString(R.string.player_error_http_404)
-                        456, 458 -> context.getString(R.string.player_error_http_connection_limit_format, code)
-                        502, 503, 504 -> context.getString(R.string.player_error_http_server_unavailable_format, code)
-                        in 500..599 -> context.getString(R.string.player_error_http_server_error_format, code)
-                        in 400..499 -> context.getString(R.string.player_error_http_access_denied_format, code)
-                        else -> if (code != null) context.getString(R.string.player_error_http_unavailable_format, code) else context.getString(R.string.player_error_stream_unavailable)
+                        401 -> {
+                            context.getString(R.string.player_error_http_401)
+                        }
+
+                        403 -> {
+                            context.getString(R.string.player_error_http_403)
+                        }
+
+                        404 -> {
+                            context.getString(R.string.player_error_http_404)
+                        }
+
+                        456, 458 -> {
+                            context.getString(R.string.player_error_http_connection_limit_format, code)
+                        }
+
+                        502, 503, 504 -> {
+                            context.getString(R.string.player_error_http_server_unavailable_format, code)
+                        }
+
+                        in 500..599 -> {
+                            context.getString(R.string.player_error_http_server_error_format, code)
+                        }
+
+                        in 400..499 -> {
+                            context.getString(R.string.player_error_http_access_denied_format, code)
+                        }
+
+                        else -> {
+                            if (code !=
+                                null
+                            ) {
+                                context.getString(R.string.player_error_http_unavailable_format, code)
+                            } else {
+                                context.getString(R.string.player_error_stream_unavailable)
+                            }
+                        }
                     }
                 }
+
                 PlaybackException.ERROR_CODE_TIMEOUT -> {
                     context.getString(R.string.player_error_playback_timeout)
                 }
+
                 PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
                 PlaybackException.ERROR_CODE_IO_NO_PERMISSION,
                 -> {
                     context.getString(R.string.player_error_stream_not_found)
                 }
+
                 PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
                 PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
                 -> {
                     context.getString(R.string.player_error_invalid_stream_format)
                 }
+
                 else -> {
                     context.getString(R.string.player_error_generic_format, error.errorCodeName)
                 }
@@ -1303,8 +1386,14 @@ class StreamingPlaybackService : MediaSessionService() {
 
             val state =
                 when (player.playbackState) {
-                    Player.STATE_IDLE -> PlaybackState.Idle
-                    Player.STATE_BUFFERING -> PlaybackState.Buffering
+                    Player.STATE_IDLE -> {
+                        PlaybackState.Idle
+                    }
+
+                    Player.STATE_BUFFERING -> {
+                        PlaybackState.Buffering
+                    }
+
                     Player.STATE_READY -> {
                         if (player.playWhenReady) {
                             PlaybackState.Playing(
@@ -1318,11 +1407,15 @@ class StreamingPlaybackService : MediaSessionService() {
                             )
                         }
                     }
+
                     Player.STATE_ENDED -> {
                         onStreamEndedOrError(null)
                         return
                     }
-                    else -> PlaybackState.Idle
+
+                    else -> {
+                        PlaybackState.Idle
+                    }
                 }
             onStateChanged(state)
         }
@@ -1395,7 +1488,7 @@ class StreamingPlaybackService : MediaSessionService() {
                     val frames = totalFrames - fpsLastFrameCount
                     val fps = (frames * 1000f) / delta
                     onFpsUpdate(fps)
-                    
+
                     val dropped = droppedFrames - fpsLastDroppedFrameCount
                     val droppedFps = (dropped * 1000f) / delta
                     onDroppedFpsUpdate(droppedFps)
@@ -1451,6 +1544,7 @@ class StreamingPlaybackService : MediaSessionService() {
                     }
                     seekPending = false
                 }
+
                 Player.STATE_READY -> {
                     seekPending = false
                     if (rebufferStartTimeMs > 0) {
@@ -1460,13 +1554,14 @@ class StreamingPlaybackService : MediaSessionService() {
                     }
                     wasPlaying = true
                 }
+
                 Player.STATE_IDLE, Player.STATE_ENDED -> {
                     wasPlaying = false
                     seekPending = false
                     rebufferStartTimeMs = 0L
                 }
             }
-            
+
             // Feed health monitor on every state change for Live TV streams. Skipped for VOD
             // and right after a seek.
             val service = instance
@@ -1475,8 +1570,8 @@ class StreamingPlaybackService : MediaSessionService() {
             if (service != null && player != null && isLive && !service.isWithinSeekGrace()) {
                 service.healthMonitor?.updateMetrics(
                     bufferedDurationMs = player.bufferedPosition - player.currentPosition,
-                    droppedFramesPerSecond = service._measuredDroppedFps.value, 
-                    hasReadTimeout = false // ExoPlayer reports timeouts via exceptions
+                    droppedFramesPerSecond = service._measuredDroppedFps.value,
+                    hasReadTimeout = false, // ExoPlayer reports timeouts via exceptions
                 )
             }
         }
@@ -1546,7 +1641,9 @@ class StreamingPlaybackService : MediaSessionService() {
         // during the starting gap re-arms the claim for a second, redundant startService() call
         // racing the first. Only this class knows the true moment a start-claim should be
         // released: exactly when releasePlayerAndSession() tears the instance down.
-        private val serviceStartRequested = java.util.concurrent.atomic.AtomicBoolean(false)
+        private val serviceStartRequested =
+            java.util.concurrent.atomic
+                .AtomicBoolean(false)
 
         fun getInstance(): StreamingPlaybackService? = instance
 

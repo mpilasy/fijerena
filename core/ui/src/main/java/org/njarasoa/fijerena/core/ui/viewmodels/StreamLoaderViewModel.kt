@@ -3,10 +3,10 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 import android.content.Context
 import android.util.Log
 import androidx.annotation.OptIn
-import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -22,19 +22,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.network.friendlyErrorMessage
-import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.friendlyErrorMessage
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
-import org.njarasoa.fijerena.core.player.domain.SeriesId
-import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.flattenedEpisodes
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+import org.njarasoa.fijerena.core.ui.R
 
 class StreamLoaderViewModel(
     private val context: Context,
@@ -371,9 +371,10 @@ class StreamLoaderViewModel(
             if (curEpisodeId != null && contentType == ContentType.TV_SHOWS && seriesId != null) {
                 val seriesDetailResult = repo.getSeriesDetail(SeriesId(seriesId))
                 seriesDetailResult.getOrNull()?.let { detail ->
-                    val curEp = detail.episodes.values.firstNotNullOfOrNull { seasonEpisodes ->
-                        seasonEpisodes.find { it.id == curEpisodeId }
-                    }
+                    val curEp =
+                        detail.episodes.values.firstNotNullOfOrNull { seasonEpisodes ->
+                            seasonEpisodes.find { it.id == curEpisodeId }
+                        }
                     // Never the series' synopsis: it would read as this episode's.
                     description = episodeDescription(curEp)
                     plotlessEpisode = curEp?.takeIf { description == null }
@@ -437,7 +438,8 @@ class StreamLoaderViewModel(
         currentStreams: List<MediaItem>,
     ) {
         while (true) {
-            val endsAtSec = ((_state.value as? StreamState.Success)?.takeIf { it.streamId == streamId }?.currentEpgProgram?.endTime) ?: break
+            val endsAtSec =
+                ((_state.value as? StreamState.Success)?.takeIf { it.streamId == streamId }?.currentEpgProgram?.endTime) ?: break
             delay((endsAtSec * 1000 - System.currentTimeMillis()).coerceAtLeast(0L) + PROGRAMME_ROLLOVER_MARGIN_MS)
             enrichStreamMetadata(streamId, streamName, currentStreams)
         }
@@ -478,18 +480,19 @@ class StreamLoaderViewModel(
                 if (item.categoryId != currentCategoryId && contentType == ContentType.LIVE_TV) {
                     currentCategoryId = item.categoryId
                     categoryListJob?.cancel()
-                    categoryListJob = viewModelScope.launch(Dispatchers.IO) {
-                        val result = repo.getItems(currentCategoryId, contentType)
-                        result.fold(
-                            onSuccess = { items ->
-                                streamList = items
-                                currentStreamIndex = items.indexOfFirst { it.id == item.id }
-                                if (currentStreamIndex == -1 && items.isNotEmpty()) currentStreamIndex = 0
-                                updateCategoryStreams(items)
-                            },
-                            onFailure = { Log.e("StreamLoader", "Failed to refresh category streams", it) },
-                        )
-                    }
+                    categoryListJob =
+                        viewModelScope.launch(Dispatchers.IO) {
+                            val result = repo.getItems(currentCategoryId, contentType)
+                            result.fold(
+                                onSuccess = { items ->
+                                    streamList = items
+                                    currentStreamIndex = items.indexOfFirst { it.id == item.id }
+                                    if (currentStreamIndex == -1 && items.isNotEmpty()) currentStreamIndex = 0
+                                    updateCategoryStreams(items)
+                                },
+                                onFailure = { Log.e("StreamLoader", "Failed to refresh category streams", it) },
+                            )
+                        }
                 } else {
                     currentStreamIndex = streamList.indexOfFirst { it.id == item.id }
                 }
@@ -775,9 +778,12 @@ private class FinalizeSessionSnapshot(
                 livePosition?.first
                     ?: when (playbackState) {
                         is PlaybackState.Playing -> playbackState.position
+
                         is PlaybackState.Paused -> playbackState.position
+
                         // Played to the end: report the full duration so the >95% rule marks it completed.
                         is PlaybackState.Ended -> playbackState.duration
+
                         else -> 0L
                     }
             val dur =

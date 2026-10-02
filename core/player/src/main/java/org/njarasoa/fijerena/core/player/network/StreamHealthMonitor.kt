@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.player.network
 
 import android.util.Log
-
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +10,7 @@ data class StreamHealthState(
     val recycleAttempts: Int = 0,
     val degradedAttempts: Int = 0,
     val firstFailureTimestamp: Long = 0L,
-    val isHealthy: Boolean = true
+    val isHealthy: Boolean = true,
 )
 
 /**
@@ -24,18 +23,18 @@ class StreamHealthMonitor(
     private val onStreamRecycleRequired: () -> Unit,
     private val onRecoveryExhausted: () -> Unit = {},
 ) {
-
     private val _state = MutableStateFlow(StreamHealthState())
     val state: StateFlow<StreamHealthState> = _state.asStateFlow()
 
     private fun updateStateFlow() {
-        _state.value = StreamHealthState(
-            isDegraded = isDegraded,
-            recycleAttempts = recycleAttempts,
-            degradedAttempts = degradedAttempts,
-            firstFailureTimestamp = firstFailureTimestamp,
-            isHealthy = !isDegraded && firstFailureTimestamp == 0L && recycleAttempts == 0
-        )
+        _state.value =
+            StreamHealthState(
+                isDegraded = isDegraded,
+                recycleAttempts = recycleAttempts,
+                degradedAttempts = degradedAttempts,
+                firstFailureTimestamp = firstFailureTimestamp,
+                isHealthy = !isDegraded && firstFailureTimestamp == 0L && recycleAttempts == 0,
+            )
     }
 
     data class Config(
@@ -78,7 +77,7 @@ class StreamHealthMonitor(
     fun updateMetrics(
         bufferedDurationMs: Long,
         droppedFramesPerSecond: Float,
-        hasReadTimeout: Boolean
+        hasReadTimeout: Boolean,
     ) {
         val now = System.currentTimeMillis()
         val isBufferLow = bufferedDurationMs < config.minBufferMs

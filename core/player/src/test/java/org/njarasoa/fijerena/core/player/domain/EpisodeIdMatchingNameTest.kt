@@ -12,7 +12,11 @@ class EpisodeIdMatchingNameTest {
             name = "EN - Criminal Minds (2005) (US)",
             episodes =
                 mapOf(
-                    "5" to listOf(EpisodeItem("en-s5e22", 22, "S05E22", seasonNumber = 5), EpisodeItem("en-s5e23", 23, "S05E23", seasonNumber = 5)),
+                    "5" to
+                        listOf(
+                            EpisodeItem("en-s5e22", 22, "S05E22", seasonNumber = 5),
+                            EpisodeItem("en-s5e23", 23, "S05E23", seasonNumber = 5),
+                        ),
                     // No seasonNumber on the items: the map key says which season.
                     "6" to listOf(EpisodeItem("en-s6e1", 1, "S06E01")),
                 ),
@@ -23,7 +27,8 @@ class EpisodeIdMatchingNameTest {
         assertEquals("en-s5e23", show.episodeIdMatchingName("D+ - Criminal Minds (2005) (US) - S05E23 - Our Darkest Hour"))
 
     @Test
-    fun `uses the season key when episodes carry no season`() = assertEquals("en-s6e1", show.episodeIdMatchingName("DE - Criminal Minds s06e01"))
+    fun `uses the season key when episodes carry no season`() =
+        assertEquals("en-s6e1", show.episodeIdMatchingName("DE - Criminal Minds s06e01"))
 
     @Test
     fun `nothing when the name has no season and episode, or this show lacks it`() {

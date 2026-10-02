@@ -30,11 +30,24 @@ class XtreamDatabaseMigrationChainTest {
 
     @Test
     fun `every version since the schema history starts has its schema committed`() {
-        val versions = schemaDir.listFiles { f -> f.extension == "json" }.orEmpty().mapNotNull { it.nameWithoutExtension.toIntOrNull() }.sorted()
+        val versions =
+            schemaDir
+                .listFiles { f ->
+                    f.extension == "json"
+                }.orEmpty()
+                .mapNotNull { it.nameWithoutExtension.toIntOrNull() }
+                .sorted()
         assertTrue("no exported schemas under ${schemaDir.absolutePath}", versions.isNotEmpty())
         assertEquals((versions.first()..XtreamDatabase.DB_VERSION).toList(), versions)
 
         val latest = Json.parseToJsonElement(File(schemaDir, "${XtreamDatabase.DB_VERSION}.json").readText())
-        assertEquals(XtreamDatabase.DB_VERSION, latest.jsonObject.getValue("database").jsonObject.getValue("version").jsonPrimitive.int)
+        assertEquals(
+            XtreamDatabase.DB_VERSION,
+            latest.jsonObject
+                .getValue("database")
+                .jsonObject
+                .getValue("version")
+                .jsonPrimitive.int,
+        )
     }
 }

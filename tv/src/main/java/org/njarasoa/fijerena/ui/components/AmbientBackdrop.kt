@@ -64,7 +64,8 @@ fun AmbientBackdrop(
                 withContext(Dispatchers.IO) {
                     runCatching {
                         val request =
-                            ImageRequest.Builder(context)
+                            ImageRequest
+                                .Builder(context)
                                 .data(imageUrl)
                                 .allowHardware(false)
                                 .size(64)

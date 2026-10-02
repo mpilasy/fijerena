@@ -77,8 +77,7 @@ sealed interface PairingQr {
 
 /** P-256 ECDH for a handoff: the shared AES-256-GCM key both ends derive, bound to the handoff id. */
 internal object HandoffKeys {
-    fun newKeyPair(): KeyPair =
-        KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
+    fun newKeyPair(): KeyPair = KeyPairGenerator.getInstance("EC").apply { initialize(ECGenParameterSpec("secp256r1")) }.generateKeyPair()
 
     fun publicKey(encoded: ByteArray): PublicKey = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(encoded))
 

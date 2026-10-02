@@ -2,8 +2,8 @@
 
 package org.njarasoa.fijerena.core.network.provider
 import android.content.Context
-import androidx.room.withTransaction
 import androidx.core.content.edit
+import androidx.room.withTransaction
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.CancellationException
@@ -15,9 +15,9 @@ import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
-import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
@@ -83,6 +83,7 @@ class ProviderRepository(
 
     // Keyed by file name: one provider can have several — see [credsFileName].
     private val encryptedPrefsCache = java.util.concurrent.ConcurrentHashMap<String, android.content.SharedPreferences>()
+
     // Keyed by (providerId, profileId): the category filters in each entry are that profile's.
     private val settingsCache = java.util.concurrent.ConcurrentHashMap<Pair<Long, String>, ProviderSettings>()
     private val filtersStore = CategoryFiltersStore(context)
@@ -144,7 +145,8 @@ class ProviderRepository(
                 putString(KEY_USERNAME, username)
                     .putString(KEY_PASSWORD, password)
             }
-            org.njarasoa.fijerena.core.network.CredentialStoreHealth.clear(context)
+            org.njarasoa.fijerena.core.network.CredentialStoreHealth
+                .clear(context)
             SettingsSyncQueue.providerLogin(context, id, loginProfile)
         }
         if (initialSettings.categoryFilters != CategoryFilters()) {
@@ -186,7 +188,8 @@ class ProviderRepository(
             getProviderPrefs(id, loginProfile).edit { putString(KEY_USERNAME, username) }
         }
         getProviderPrefs(id, loginProfile).edit { putString(KEY_PASSWORD, password) }
-        org.njarasoa.fijerena.core.network.CredentialStoreHealth.clear(context)
+        org.njarasoa.fijerena.core.network.CredentialStoreHealth
+            .clear(context)
         // The password lives outside the row, so no trigger sees it change. A Jellyfin login is
         // its profile's own record; any other provider's login is part of the provider record.
         if (effectiveType == "JELLYFIN") {
@@ -355,7 +358,8 @@ class ProviderRepository(
                     }
                 }
             }
-        } catch (e: Exception) { // cancellation-ok: non-suspend
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
             android.util.Log.w("ProviderRepository", "Failed cleaning up orphaned prefs", e)
         }
     }
@@ -364,6 +368,7 @@ class ProviderRepository(
      * EPG sources belong to a single provider, and their indexed channels/programmes live in a
      * separate database ([EpgIndexDatabase]), so no SQL cascade is possible - delete both by hand.
      */
+
     /**
      * EPG source records carry no provider tag, so the server's provider cascade doesn't reach
      * them: a deletion made here must queue a tombstone per source ([recordTombstones]). Applying
@@ -544,7 +549,8 @@ class ProviderRepository(
         val prefs = getProviderPrefs(entity.id, profileId)
         val username = if (profileId == ProfileEntity.DEFAULT_ID) entity.username else prefs.getString(KEY_USERNAME, null).orEmpty()
         if (username.isBlank()) return null
-        return org.njarasoa.fijerena.core.network.sync.SyncPayloads.Login(username, prefs.getString(KEY_PASSWORD, null))
+        return org.njarasoa.fijerena.core.network.sync.SyncPayloads
+            .Login(username, prefs.getString(KEY_PASSWORD, null))
     }
 
     /** Profiles with a Jellyfin login of their own on [providerId] — Default's is the row's. */
@@ -617,7 +623,10 @@ class ProviderRepository(
             if (login?.password == null) remove(KEY_PASSWORD) else putString(KEY_PASSWORD, login.password)
             remove(KEY_JELLYFIN_TOKEN).remove(KEY_JELLYFIN_USER_ID)
         }
-        if (login?.password != null) org.njarasoa.fijerena.core.network.CredentialStoreHealth.clear(context)
+        if (login?.password != null) {
+            org.njarasoa.fijerena.core.network.CredentialStoreHealth
+                .clear(context)
+        }
         MediaProviderFactory.clearCache(providerId)
     }
 
@@ -693,7 +702,9 @@ class ProviderRepository(
         // Runs on IO: the DAO calls inside recompute() are synchronous, non-suspend Room queries.
         if (entity.type == "XTREAM") {
             withContext(Dispatchers.IO) {
-                val database = org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase.getInstance(context)
+                val database =
+                    org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+                        .getInstance(context)
                 org.njarasoa.fijerena.core.network.xtream.manager.XtreamCategoryExclusionSync.recompute(
                     database.categoryDao(),
                     providerId,
@@ -711,7 +722,8 @@ class ProviderRepository(
         if (settingsJson.isBlank() || settingsJson == "{}") return ProviderSettings.DEFAULT
         return try {
             json.decodeFromString<ProviderSettings>(settingsJson)
-        } catch (_: Exception) { // cancellation-ok: non-suspend
+        } catch (_: Exception) {
+            // cancellation-ok: non-suspend
             ProviderSettings.DEFAULT
         }
     }
@@ -738,7 +750,10 @@ class ProviderRepository(
                     newFilters,
                 )
             }
-            android.util.Log.i("ProfileSwitch", "filters for provider ${entity.id} (${entity.name}): ${android.os.SystemClock.elapsedRealtime() - started} ms")
+            android.util.Log.i(
+                "ProfileSwitch",
+                "filters for provider ${entity.id} (${entity.name}): ${android.os.SystemClock.elapsedRealtime() - started} ms",
+            )
             // Same as a filter edit: the cached provider and EPG matcher hold category lists and
             // excluded flags from before.
             MediaProviderFactory.clearCache(entity.id)
@@ -814,7 +829,8 @@ class ProviderRepository(
         getProviderPrefs(providerId, ProfileEntity.DEFAULT_ID).edit {
             putString(KEY_PASSWORD, password)
         }
-        org.njarasoa.fijerena.core.network.CredentialStoreHealth.clear(context)
+        org.njarasoa.fijerena.core.network.CredentialStoreHealth
+            .clear(context)
     }
 
     /** Every profile's credentials for the provider: the shared file and each profile's own. */
@@ -832,7 +848,8 @@ class ProviderRepository(
                     encryptedPrefsCache.remove(name)
                     context.deleteSharedPreferences(name)
                 }
-        } catch (_: Exception) { // cancellation-ok: non-suspend
+        } catch (_: Exception) {
+            // cancellation-ok: non-suspend
             // Ignore errors clearing prefs for deleted provider
         }
     }
@@ -843,7 +860,8 @@ class ProviderRepository(
             context
                 .getSharedPreferences(cacheName, Context.MODE_PRIVATE)
                 .edit { clear() }
-        } catch (_: Exception) { // cancellation-ok: non-suspend
+        } catch (_: Exception) {
+            // cancellation-ok: non-suspend
             // Ignore errors clearing cache for deleted provider
         }
     }
@@ -876,7 +894,8 @@ class ProviderRepository(
                 ?.map { it.name.removeSuffix(".xml") }
                 ?.filter { it.startsWith(profilePrefix) }
                 ?.forEach { context.deleteSharedPreferences(it) }
-        } catch (_: Exception) { // cancellation-ok: no suspend call in try
+        } catch (_: Exception) {
+            // cancellation-ok: no suspend call in try
             // Ignore errors clearing cache for deleted provider
         }
     }
@@ -896,8 +915,10 @@ class ProviderRepository(
                         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
                     )
-                } catch (e: Exception) { // cancellation-ok: non-suspend
-                    org.njarasoa.fijerena.core.network.CredentialStoreHealth.markLost(context, fileName, e)
+                } catch (e: Exception) {
+                    // cancellation-ok: non-suspend
+                    org.njarasoa.fijerena.core.network.CredentialStoreHealth
+                        .markLost(context, fileName, e)
                     context.deleteSharedPreferences(fileName)
                     try {
                         EncryptedSharedPreferences.create(
@@ -907,9 +928,11 @@ class ProviderRepository(
                             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
                         )
-                    } catch (_: Exception) { // cancellation-ok: non-suspend
+                    } catch (_: Exception) {
+                        // cancellation-ok: non-suspend
                         // Never a plaintext file — see CredentialStoreHealth.InMemoryPrefs.
-                        org.njarasoa.fijerena.core.network.CredentialStoreHealth.InMemoryPrefs()
+                        org.njarasoa.fijerena.core.network.CredentialStoreHealth
+                            .InMemoryPrefs()
                     }
                 }
             prefs

@@ -42,7 +42,11 @@ class AppSettingsSearchHistoryTest {
 
     @Test
     fun `upgrade gives the install-wide history to the default profile only`() {
-        prefs.edit().putString("search_history", "dune\u001Falien").putString("epg_search_history", "news").commit()
+        prefs
+            .edit()
+            .putString("search_history", "dune\u001Falien")
+            .putString("epg_search_history", "news")
+            .commit()
 
         settings.moveLegacySearchHistoryToDefaultProfile()
 

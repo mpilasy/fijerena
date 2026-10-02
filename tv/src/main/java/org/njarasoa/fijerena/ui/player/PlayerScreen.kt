@@ -15,14 +15,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
@@ -33,10 +33,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,21 +45,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
-import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.awaitStarted
-import org.njarasoa.fijerena.core.ui.components.showUpNext
-import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
-import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
+import org.njarasoa.fijerena.core.ui.components.awaitStarted
+import org.njarasoa.fijerena.core.ui.components.showUpNext
+import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
+import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
@@ -69,8 +69,8 @@ import org.njarasoa.fijerena.ui.player.components.dialogs.AudioTrackSelectorDial
 import org.njarasoa.fijerena.ui.player.components.dialogs.ChapterSelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.QualitySelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.SubtitleSelectorDialog
-import org.njarasoa.fijerena.ui.player.components.overlays.TvChannelListOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.ControlHintsOverlay
+import org.njarasoa.fijerena.ui.player.components.overlays.TvChannelListOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvPlayerControlsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvStatsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvUpNextOverlay
@@ -151,20 +151,35 @@ fun PlayerScreen(
     // ever runs per press.
     BackHandler {
         when {
-            upNextVisible -> cancelUpNext()
-            state.scrubPositionMs != null -> state.scrubPositionMs = null
-            state.showCategoryOverlay -> state.showCategoryOverlay = false
-            state.showLastWatchedOverlay -> state.showLastWatchedOverlay = false
+            upNextVisible -> {
+                cancelUpNext()
+            }
+
+            state.scrubPositionMs != null -> {
+                state.scrubPositionMs = null
+            }
+
+            state.showCategoryOverlay -> {
+                state.showCategoryOverlay = false
+            }
+
+            state.showLastWatchedOverlay -> {
+                state.showLastWatchedOverlay = false
+            }
+
             state.showStats || state.showControls || state.showStreamInfo -> {
                 state.showStats = false
                 state.showControls = false
                 state.showStreamInfo = false
             }
+
             // Whether "back" should stop playback is the caller's call, not this shared
             // composable's — the standalone route's onBack stops (TvPlayerScreen.kt), while
             // LiveTvSplitLayout's promoted view just wants to demote back to the dock without
             // interrupting playback.
-            else -> onBack()
+            else -> {
+                onBack()
+            }
         }
     }
 
@@ -211,7 +226,7 @@ fun PlayerScreen(
                             .focusable()
                     } else {
                         Modifier
-                    }
+                    },
                 )
                 // onPreviewKeyEvent (top-down, before any focused descendant) rather than
                 // onKeyEvent (bubble-up, after) — mirrors the BackHandler/onPreviewKeyEvent
@@ -223,7 +238,10 @@ fun PlayerScreen(
                 // suppressNextCenterKeyUp never got a chance to run, so one press both opened
                 // the OSD and toggled play/pause. Preview phase always wins that race.
                 .onPreviewKeyEvent { keyEvent ->
-                    android.util.Log.i("PlayerScreen", "onPreviewKeyEvent: action=${keyEvent.nativeKeyEvent.action}, code=${keyEvent.nativeKeyEvent.keyCode}")
+                    android.util.Log.i(
+                        "PlayerScreen",
+                        "onPreviewKeyEvent: action=${keyEvent.nativeKeyEvent.action}, code=${keyEvent.nativeKeyEvent.keyCode}",
+                    )
                     when {
                         // "Up next" card up: Back hides it and playback carries on. Taken here,
                         // top-down, because a focused TV Button swallows the first Back before
@@ -232,14 +250,19 @@ fun PlayerScreen(
                             if (keyEvent.type == KeyEventType.KeyUp) cancelUpNext()
                             true
                         }
+
                         // Focus is on the card: its buttons get the D-pad and OK.
-                        upNextVisible && upNextFocused && keyEvent.key in UP_NEXT_CARD_KEYS -> false
+                        upNextVisible && upNextFocused && keyEvent.key in UP_NEXT_CARD_KEYS -> {
+                            false
+                        }
+
                         // Card up, OSD hidden, focus on the player: Down moves onto the card.
                         upNextVisible && !state.showControls && !state.isModalOpen && keyEvent.key == Key.DirectionDown -> {
                             if (keyEvent.type == KeyEventType.KeyDown) upNextFocus.requestFocus()
                             true
                         }
-                        else ->
+
+                        else -> {
                             handlePlayerKeyEvent(
                                 keyEvent = keyEvent,
                                 state = state,
@@ -249,6 +272,7 @@ fun PlayerScreen(
                                 onNextChannel = onNextChannel,
                                 onPreviousChannel = onPreviousChannel,
                             )
+                        }
                     }
                 },
     ) {
@@ -317,19 +341,25 @@ fun PlayerScreen(
 
             when (val ps = currentPs) {
                 PlaybackState.Idle -> { /* Silent */ }
+
                 PlaybackState.Buffering -> {
                     if (!isActuallyMoving) {
                         BufferingContent()
                     }
                 }
-                is PlaybackState.Ended ->
+
+                is PlaybackState.Ended -> {
                     if (upNextState.startingFrom != null) BufferingContent() else EndedContent(onBack)
-                is PlaybackState.Error ->
+                }
+
+                is PlaybackState.Error -> {
                     ErrorContent(
                         error = ps,
                         onRetry = { viewModel.playStream(currentMeta) },
                         onBack = onBack,
                     )
+                }
+
                 else -> { /* Show controls overlay below */ }
             }
         }

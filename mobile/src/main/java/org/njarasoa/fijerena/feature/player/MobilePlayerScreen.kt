@@ -2,8 +2,8 @@
 
 package org.njarasoa.fijerena.feature.player
 
-import androidx.activity.compose.BackHandler
 import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -35,8 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -50,8 +50,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
-import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -65,12 +65,12 @@ import org.njarasoa.fijerena.core.ui.components.awaitStarted
 import org.njarasoa.fijerena.core.ui.components.showUpNext
 import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
 import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
+import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
+import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
-import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
@@ -142,7 +142,7 @@ fun MobilePlayerScreen(
     // Use activity-scoped ViewModel so it's shared with MainActivity for PiP updates
     val activityScopedViewModel: PlaybackViewModel =
         viewModel(
-            viewModelStoreOwner = (activity as? ViewModelStoreOwner) ?: LocalLifecycleOwner.current as ViewModelStoreOwner
+            viewModelStoreOwner = (activity as? ViewModelStoreOwner) ?: LocalLifecycleOwner.current as ViewModelStoreOwner,
         )
 
     // This is the standalone full-screen route (Movies, TV Shows, or Live TV reached without
@@ -218,8 +218,14 @@ fun MobilePlayerContent(
             LifecycleEventObserver { _, event ->
                 when (event) {
                     // ON_STOP, not ON_PAUSE — see onAppStopped's kdoc.
-                    Lifecycle.Event.ON_STOP -> viewModel.onAppStopped()
-                    Lifecycle.Event.ON_RESUME -> viewModel.onAppResumed()
+                    Lifecycle.Event.ON_STOP -> {
+                        viewModel.onAppStopped()
+                    }
+
+                    Lifecycle.Event.ON_RESUME -> {
+                        viewModel.onAppResumed()
+                    }
+
                     else -> {}
                 }
             }
@@ -255,8 +261,14 @@ fun MobilePlayerContent(
     // confusing after the viewer already saw an Error screen in between.
     var lastSuccessState by remember { mutableStateOf<StreamLoaderViewModel.StreamState.Success?>(null) }
     when (streamState) {
-        is StreamLoaderViewModel.StreamState.Success -> lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
-        is StreamLoaderViewModel.StreamState.Error -> lastSuccessState = null
+        is StreamLoaderViewModel.StreamState.Success -> {
+            lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
+        }
+
+        is StreamLoaderViewModel.StreamState.Error -> {
+            lastSuccessState = null
+        }
+
         else -> {}
     }
     val displayState: StreamLoaderViewModel.StreamState =
@@ -317,9 +329,10 @@ fun MobilePlayerContent(
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             val isPlaying = ps is PlaybackState.Playing || ps is PlaybackState.Buffering
             activity?.setPictureInPictureParams(
-                android.app.PictureInPictureParams.Builder()
+                android.app.PictureInPictureParams
+                    .Builder()
                     .setAutoEnterEnabled(isPlaying && currentMetadata.isLive)
-                    .build()
+                    .build(),
             )
         }
     }
@@ -327,11 +340,12 @@ fun MobilePlayerContent(
     // Auto-show toast on repeated buffer exhaustion
     LaunchedEffect(appSettings.isDevMode, currentMetadata.streamUrl) {
         watchExhaustionToasts {
-            android.widget.Toast.makeText(
-                context,
-                resources.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
-                android.widget.Toast.LENGTH_LONG
-            ).show()
+            android.widget.Toast
+                .makeText(
+                    context,
+                    resources.getString(org.njarasoa.fijerena.core.ui.R.string.buffering_excessive_toast),
+                    android.widget.Toast.LENGTH_LONG,
+                ).show()
         }
     }
 
@@ -534,9 +548,10 @@ fun MobilePlayerContent(
                     // playbackState is a plain StateFlow, not Compose snapshot state — wrapping it
                     // in snapshotFlow{} never registers an observable read, so it emits once and
                     // never again, leaving this stuck waiting forever instead of restoring tracks.
-                    val readyState = viewModel.playbackState
-                        .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
-                        .first() // Wait for first ready state
+                    val readyState =
+                        viewModel.playbackState
+                            .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
+                            .first() // Wait for first ready state
 
                     if (readyState !is PlaybackState.Error) {
                         val service = StreamingPlaybackService.getInstance()
@@ -583,13 +598,15 @@ fun MobilePlayerContent(
         is StreamLoaderViewModel.StreamState.Loading -> {
             LoadingScreen()
         }
+
         is StreamLoaderViewModel.StreamState.Error -> {
             ErrorScreen(
                 message = state.message,
                 onRetry = { loaderViewModel.retryLastLoad() },
-                onBack = onBack
+                onBack = onBack,
             )
         }
+
         is StreamLoaderViewModel.StreamState.Success -> {
             val isLiveContent = state.isLive
             Box(
@@ -598,104 +615,130 @@ fun MobilePlayerContent(
                         .fillMaxSize()
                         .background(org.njarasoa.fijerena.core.ui.theme.CinemaBackground)
                         .then(
-                            if (isInPipMode) Modifier else
-                            Modifier.pointerInput(showStats, isLiveContent) {
-                                detectTapGestures(
-                                    onTap = {
-                                        if (!showStats) showControls = !showControls
-                                    },
-                                    // Double-tap 10s relative seek (2a), replacing the old
-                                    // double-tap pause/resume — that duplicated the single-tap +
-                                    // center button path and broke the double-tap-to-seek
-                                    // convention every other mobile video player uses (YouTube,
-                                    // Netflix, Plex, MX Player). Left 40% of the width rewinds,
-                                    // right 40% seeks forward, the center 20% is left alone —
-                                    // single tap already toggles the controls overlay, so a
-                                    // second meaning on center double-tap would be redundant.
-                                    onDoubleTap = { offset ->
-                                        if (!showStats && !isLiveContent) {
-                                            val width = size.width
-                                            when {
-                                                offset.x < width * 0.4f -> {
-                                                    viewModel.seekRelative(-SEEK_STEP_MS)
-                                                    seekRippleSeconds =
-                                                        if (seekRippleSide == -1) seekRippleSeconds + SEEK_STEP_SECONDS else SEEK_STEP_SECONDS
-                                                    seekRippleSide = -1
-                                                    seekRippleTick++
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                }
-                                                offset.x > width * 0.6f -> {
-                                                    viewModel.seekRelative(SEEK_STEP_MS)
-                                                    seekRippleSeconds =
-                                                        if (seekRippleSide == 1) seekRippleSeconds + SEEK_STEP_SECONDS else SEEK_STEP_SECONDS
-                                                    seekRippleSide = 1
-                                                    seekRippleTick++
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (isInPipMode) {
+                                Modifier
+                            } else {
+                                Modifier.pointerInput(showStats, isLiveContent) {
+                                    detectTapGestures(
+                                        onTap = {
+                                            if (!showStats) showControls = !showControls
+                                        },
+                                        // Double-tap 10s relative seek (2a), replacing the old
+                                        // double-tap pause/resume — that duplicated the single-tap +
+                                        // center button path and broke the double-tap-to-seek
+                                        // convention every other mobile video player uses (YouTube,
+                                        // Netflix, Plex, MX Player). Left 40% of the width rewinds,
+                                        // right 40% seeks forward, the center 20% is left alone —
+                                        // single tap already toggles the controls overlay, so a
+                                        // second meaning on center double-tap would be redundant.
+                                        onDoubleTap = { offset ->
+                                            if (!showStats && !isLiveContent) {
+                                                val width = size.width
+                                                when {
+                                                    offset.x < width * 0.4f -> {
+                                                        viewModel.seekRelative(-SEEK_STEP_MS)
+                                                        seekRippleSeconds =
+                                                            if (seekRippleSide ==
+                                                                -1
+                                                            ) {
+                                                                seekRippleSeconds + SEEK_STEP_SECONDS
+                                                            } else {
+                                                                SEEK_STEP_SECONDS
+                                                            }
+                                                        seekRippleSide = -1
+                                                        seekRippleTick++
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    }
+
+                                                    offset.x > width * 0.6f -> {
+                                                        viewModel.seekRelative(SEEK_STEP_MS)
+                                                        seekRippleSeconds =
+                                                            if (seekRippleSide ==
+                                                                1
+                                                            ) {
+                                                                seekRippleSeconds + SEEK_STEP_SECONDS
+                                                            } else {
+                                                                SEEK_STEP_SECONDS
+                                                            }
+                                                        seekRippleSide = 1
+                                                        seekRippleTick++
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    }
                                                 }
                                             }
-                                        }
-                                    },
-                                )
-                            }
+                                        },
+                                    )
+                                }
+                            },
                         ).then(
-                            if (isInPipMode || !isLiveContent) Modifier else
-                            Modifier.pointerInput(state.categoryStreams, showStats) {
-                                var verticalAccumulator = 0f
-                                var horizontalAccumulator = 0f
-                                var hasFiredVerticalThisGesture = false
-                                var hasFiredHorizontalThisGesture = false
-                                detectDragGestures(
-                                    onDragStart = {
-                                        verticalAccumulator = 0f
-                                        horizontalAccumulator = 0f
-                                        hasFiredVerticalThisGesture = false
-                                        hasFiredHorizontalThisGesture = false
-                                    },
-                                    onDragEnd = {
-                                        hasFiredVerticalThisGesture = false
-                                        hasFiredHorizontalThisGesture = false
-                                    },
-                                    onDragCancel = {
-                                        hasFiredVerticalThisGesture = false
-                                        hasFiredHorizontalThisGesture = false
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        // Without guarding the other two overlays the same way
-                                        // showStats already was, a vertical scroll inside the open
-                                        // category/last-watched drawer was consumed here instead —
-                                        // channel-skipping while the user tried to scroll the list.
-                                        if (showStats || showCategoryOverlay || showLastWatchedOverlay) return@detectDragGestures
-                                        change.consume()
-                                        verticalAccumulator += dragAmount.y
-                                        horizontalAccumulator += dragAmount.x
-                                        // Vertical: channel switching
-                                        if (!hasFiredVerticalThisGesture && kotlin.math.abs(verticalAccumulator) > 100f) {
-                                            hasFiredVerticalThisGesture = true
-                                            if (verticalAccumulator < 0) {
-                                                loaderViewModel.nextChannel()
-                                            } else {
-                                                loaderViewModel.prevChannel()
-                                            }
+                            if (isInPipMode || !isLiveContent) {
+                                Modifier
+                            } else {
+                                Modifier.pointerInput(state.categoryStreams, showStats) {
+                                    var verticalAccumulator = 0f
+                                    var horizontalAccumulator = 0f
+                                    var hasFiredVerticalThisGesture = false
+                                    var hasFiredHorizontalThisGesture = false
+                                    detectDragGestures(
+                                        onDragStart = {
                                             verticalAccumulator = 0f
-                                        }
-                                        // Horizontal: overlay panels
-                                        if (!hasFiredHorizontalThisGesture && kotlin.math.abs(horizontalAccumulator) > 80f) {
-                                            hasFiredHorizontalThisGesture = true
-                                            when {
-                                                horizontalAccumulator > 0 && !showLastWatchedOverlay ->
-                                                    showCategoryOverlay = true
-                                                horizontalAccumulator < 0 && !showCategoryOverlay ->
-                                                    showLastWatchedOverlay = true
-                                                horizontalAccumulator > 0 && showLastWatchedOverlay ->
-                                                    showLastWatchedOverlay = false
-                                                horizontalAccumulator < 0 && showCategoryOverlay ->
-                                                    showCategoryOverlay = false
-                                            }
                                             horizontalAccumulator = 0f
-                                        }
-                                    },
-                                )
-                            }
+                                            hasFiredVerticalThisGesture = false
+                                            hasFiredHorizontalThisGesture = false
+                                        },
+                                        onDragEnd = {
+                                            hasFiredVerticalThisGesture = false
+                                            hasFiredHorizontalThisGesture = false
+                                        },
+                                        onDragCancel = {
+                                            hasFiredVerticalThisGesture = false
+                                            hasFiredHorizontalThisGesture = false
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            // Without guarding the other two overlays the same way
+                                            // showStats already was, a vertical scroll inside the open
+                                            // category/last-watched drawer was consumed here instead —
+                                            // channel-skipping while the user tried to scroll the list.
+                                            if (showStats || showCategoryOverlay || showLastWatchedOverlay) return@detectDragGestures
+                                            change.consume()
+                                            verticalAccumulator += dragAmount.y
+                                            horizontalAccumulator += dragAmount.x
+                                            // Vertical: channel switching
+                                            if (!hasFiredVerticalThisGesture && kotlin.math.abs(verticalAccumulator) > 100f) {
+                                                hasFiredVerticalThisGesture = true
+                                                if (verticalAccumulator < 0) {
+                                                    loaderViewModel.nextChannel()
+                                                } else {
+                                                    loaderViewModel.prevChannel()
+                                                }
+                                                verticalAccumulator = 0f
+                                            }
+                                            // Horizontal: overlay panels
+                                            if (!hasFiredHorizontalThisGesture && kotlin.math.abs(horizontalAccumulator) > 80f) {
+                                                hasFiredHorizontalThisGesture = true
+                                                when {
+                                                    horizontalAccumulator > 0 && !showLastWatchedOverlay -> {
+                                                        showCategoryOverlay = true
+                                                    }
+
+                                                    horizontalAccumulator < 0 && !showCategoryOverlay -> {
+                                                        showLastWatchedOverlay = true
+                                                    }
+
+                                                    horizontalAccumulator > 0 && showLastWatchedOverlay -> {
+                                                        showLastWatchedOverlay = false
+                                                    }
+
+                                                    horizontalAccumulator < 0 && showCategoryOverlay -> {
+                                                        showCategoryOverlay = false
+                                                    }
+                                                }
+                                                horizontalAccumulator = 0f
+                                            }
+                                        },
+                                    )
+                                }
+                            },
                         ),
             ) {
                 // SurfaceView (EmbeddedPlayerSurface's default), always — full-screen playback is
@@ -717,9 +760,10 @@ fun MobilePlayerContent(
 
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                             activity?.setPictureInPictureParams(
-                                android.app.PictureInPictureParams.Builder()
+                                android.app.PictureInPictureParams
+                                    .Builder()
                                     .setAutoEnterEnabled(false)
-                                    .build()
+                                    .build(),
                             )
                         }
                     }
@@ -735,10 +779,11 @@ fun MobilePlayerContent(
                             if (!hasStartedPlaying || showRecoverySpinner) {
                                 org.njarasoa.fijerena.core.ui.components.MitohanaLoading(
                                     style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
-                                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
                                 )
                             }
                         }
+
                         is PlaybackState.Error -> {
                             ErrorOverlay(
                                 error = currentPs,
@@ -746,6 +791,7 @@ fun MobilePlayerContent(
                                 onBack = onBack,
                             )
                         }
+
                         else -> { /* Playing or paused */ }
                     }
                 }
@@ -758,7 +804,13 @@ fun MobilePlayerContent(
                 // for as long as a stream was buffering, silently swallowing every reveal tap.
                 // Idle/Error/Ended stay excluded: nothing here to control yet.
                 AnimatedVisibility(
-                    visible = !isInPipMode && showControls && !showStats && (currentPs is PlaybackState.Playing || currentPs is PlaybackState.Paused || currentPs is PlaybackState.Buffering),
+                    visible =
+                        !isInPipMode && showControls && !showStats &&
+                            (
+                                currentPs is PlaybackState.Playing ||
+                                    currentPs is PlaybackState.Paused ||
+                                    currentPs is PlaybackState.Buffering
+                            ),
                     enter = fadeIn(),
                     exit = fadeOut(),
                 ) {
@@ -829,7 +881,6 @@ fun MobilePlayerContent(
                         onClose = { showStats = false },
                     )
                 }
-
             }
 
             // Category streams panel — slides in from the left
@@ -958,4 +1009,3 @@ fun MobilePlayerContent(
         }
     }
 }
-

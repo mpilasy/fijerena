@@ -16,16 +16,23 @@ import androidx.compose.runtime.Immutable
 @Immutable
 sealed interface BrowseTarget {
     /** A live channel. */
-    data class Channel(val streamId: String) : BrowseTarget
+    data class Channel(
+        val streamId: String,
+    ) : BrowseTarget
 
     /** A film, which opens its detail screen. */
-    data class Movie(val movieId: String) : BrowseTarget
+    data class Movie(
+        val movieId: String,
+    ) : BrowseTarget
 
     /**
      * A show, which opens its episode list. [resumeEpisodeId] is the episode to open the detail
      * panel on — set when the row came from watch history.
      */
-    data class Series(val seriesId: SeriesId, val resumeEpisodeId: EpisodeId? = null) : BrowseTarget
+    data class Series(
+        val seriesId: SeriesId,
+        val resumeEpisodeId: EpisodeId? = null,
+    ) : BrowseTarget
 
     /**
      * One episode, which plays. [seriesId] and [seriesName] are what the player reports progress
@@ -40,7 +47,9 @@ sealed interface BrowseTarget {
     ) : BrowseTarget
 
     /** Not content at all: a row standing for a category, which browses into it. */
-    data class CategoryRef(val categoryId: String) : BrowseTarget
+    data class CategoryRef(
+        val categoryId: String,
+    ) : BrowseTarget
 }
 
 /**

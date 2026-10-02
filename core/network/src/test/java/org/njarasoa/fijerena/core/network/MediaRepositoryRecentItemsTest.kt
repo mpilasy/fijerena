@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.network
 
-import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Handler
@@ -23,6 +22,7 @@ import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.episode
 import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.movie
 import org.njarasoa.fijerena.core.network.fixtures.WatchHistoryFixtures.seriesUnknownEpisode
 import org.njarasoa.fijerena.core.network.fixtures.toWatchStateEntity
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
@@ -188,10 +188,11 @@ class MediaRepositoryRecentItemsTest {
 
     @Test
     fun removeFromRecentClearsItemFromRecentList() {
-        val repository = repositoryWith(
-            movie("film1", position = 50L, duration = 100L),
-            movie("film2", position = 60L, duration = 100L),
-        )
+        val repository =
+            repositoryWith(
+                movie("film1", position = 50L, duration = 100L),
+                movie("film2", position = 60L, duration = 100L),
+            )
 
         assertEquals(listOf("film1", "film2"), repository.fetchRecent(ContentType.MOVIES).map { it.id })
 
@@ -204,11 +205,12 @@ class MediaRepositoryRecentItemsTest {
 
     @Test
     fun removeFromRecentClearsSeriesEpisodesFromRecentList() {
-        val repository = repositoryWith(
-            episode("s1e1", seriesId = "s1"),
-            episode("s1e2", seriesId = "s1"),
-            episode("s2e1", seriesId = "s2"),
-        )
+        val repository =
+            repositoryWith(
+                episode("s1e1", seriesId = "s1"),
+                episode("s1e2", seriesId = "s1"),
+                episode("s2e1", seriesId = "s2"),
+            )
 
         assertEquals(listOf("s1", "s2"), repository.fetchRecent(ContentType.TV_SHOWS).map { it.id })
 

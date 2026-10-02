@@ -298,6 +298,5 @@ class MovieDetailsViewModelFactory(
     private val appContext = context.applicationContext
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        MovieDetailsViewModel(appContext, movieId, categoryId, movieName) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = MovieDetailsViewModel(appContext, movieId, categoryId, movieName) as T
 }

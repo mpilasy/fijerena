@@ -255,7 +255,9 @@ interface WatchStateDao {
     ): List<SeriesCompletedCount>
 
     /** Single-item lookup, replacing the blob's O(1) `(itemId, contentType)` map hit. */
-    @Query("SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND itemId = :itemId AND contentType = :contentType")
+    @Query(
+        "SELECT * FROM watch_state WHERE providerId = :providerId AND profileId = :profileId AND itemId = :itemId AND contentType = :contentType",
+    )
     suspend fun getItem(
         providerId: Long,
         profileId: String,
@@ -324,7 +326,6 @@ interface WatchStateDao {
     /** Provider deletion: every profile's rows go with it. */
     @Query("DELETE FROM watch_state WHERE providerId = :providerId")
     suspend fun deleteAllProfiles(providerId: Long)
-
 
     /**
      * Bulk restore from a settings-export import: the whole row is known and authoritative, so a

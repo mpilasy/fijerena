@@ -4,19 +4,12 @@ package org.njarasoa.fijerena.feature.movie
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +24,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
@@ -39,18 +34,16 @@ import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.tv.material3.Icon
-import androidx.tv.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -59,6 +52,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -66,20 +64,22 @@ import androidx.compose.ui.text.TextStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
+import androidx.tv.material3.IconButton
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
-import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.model.channelLabel
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.extractYear
 import org.njarasoa.fijerena.core.player.model.formatDuration
-import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
+import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
@@ -89,8 +89,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
@@ -107,8 +109,6 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 
 /**
  * Movie details screen for VOD content.
@@ -152,12 +152,14 @@ fun MovieDetailsScreen(
             is MovieDetailsViewModel.UiState.Loading -> {
                 LoadingScreen()
             }
+
             is MovieDetailsViewModel.UiState.Error -> {
                 ErrorScreen(
                     message = state.message,
                     onBack = onBack,
                 )
             }
+
             is MovieDetailsViewModel.UiState.Success -> {
                 MovieDetailsContent(
                     movieDetail = state.movieDetail,
@@ -355,278 +357,305 @@ private fun MovieDetailsContent(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-    // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the Similar
-    // Titles row paid its full layout cost while sitting entirely off-screen — 85ms of a 215ms
-    // measure pass on every rebuild of this screen, which is why backing out of the player was
-    // slow. EpisodeSelectionScreen already builds these same rows as LazyColumn items.
-    val movieListState = rememberLazyListState()
-    LazyColumn(
-        state = movieListState,
-        // Confirmed on a real Shield (logcat): the first Back press while a focused TV Button
-        // has focus reaches Compose's key dispatch fine (a non-consuming onPreviewKeyEvent here
-        // logs it), but something between here and the BackHandler/OnBackPressedDispatcher
-        // bridge marks it handled — BackHandler never fires on that first press, only the
-        // second. Rather than chase the exact consumer, intercept here instead: onPreviewKeyEvent
-        // runs top-down, before any descendant (including the focused Button) gets a look, so
-        // this always wins the race. Matches the same pattern TvDpadEscape.kt uses for the same
-        // class of problem.
-        modifier = Modifier.fillMaxSize().focusable().onPreviewKeyEvent { event ->
-            if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
-                // Phase 4: Back out of an open tab section goes to the tab row, not out of the
-                // screen — same interception point as the screen-exit case below, since this
-                // handler already runs before any descendant (the tab row's own handling would
-                // never get a look otherwise).
-                if (focusInSection) {
-                    tabRowFocusRequester.requestFocus()
-                } else {
-                    onBack()
-                }
-                true
-            } else {
-                false
-            }
-        },
-        // No horizontal margin here: the hero backdrop below must run edge to edge. Every other
-        // item applies Spacing.tvSafeMarginHorizontal to itself instead (see "details" below).
-        contentPadding = PaddingValues(bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
-    ) {
-        item(key = "hero") {
-            // TMDB's branded logo art when it has one, else TMDB's original title falling back
-            // to the provider's own stream name (when TMDB has no match, or the lookup hasn't
-            // come back yet).
-            val titleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
-            val year = extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
-            val endsAtContext = LocalContext.current
-            val endsAtText =
-                remember(movieDetail.metadata.duration, resumePositionMs) {
-                    computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
-                }
-            val metaLine =
-                listOfNotNull(
-                    year?.toString(),
-                    movieDetail.metadata.contentRating,
-                    movieDetail.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { formatDuration(it) },
-                    endsAtText?.let { stringResource(R.string.movie_ends_at_format, it) },
-                    movieDetail.metadata.genre,
-                )
-            val communityRatingLabel = stringResource(R.string.details_community_rating)
-            val hasResume = resumePositionMs > 0L
-
-            TvDetailHero(
-                title = titleText,
-                backdropUrl = backdropUrl,
-                logoUrl = logoUrl,
-                titleFallback = {
-                    Text(
-                        text = titleText,
-                        style = MaterialTheme.typography.displayLarge,
-                        color = CinemaTextPrimary,
-                    )
-                },
-                metaLine = metaLine,
-                scoreChips =
-                    movieDetail.metadata.rating?.let { rating ->
-                        { ScoreChip(value = formatRating(rating), label = communityRatingLabel) }
-                    },
-                plot = movieDetail.metadata.plot,
-            ) {
-                // Phase 4: D-pad Down from any action button lands on the tab row below, not
-                // wherever default geometry search prefers. focusProperties { down = ... } was
-                // tried for the equivalent transition on EpisodeSelectionScreen's season tabs and
-                // never took there (see its comment on the category button) — intercepting the
-                // key and requesting focus directly is the proven fix, reused here.
-                val downToTabRow =
-                    Modifier.onPreviewKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
+        // Lazy, not Column(verticalScroll): a scrolling Column measures every child, so the Similar
+        // Titles row paid its full layout cost while sitting entirely off-screen — 85ms of a 215ms
+        // measure pass on every rebuild of this screen, which is why backing out of the player was
+        // slow. EpisodeSelectionScreen already builds these same rows as LazyColumn items.
+        val movieListState = rememberLazyListState()
+        LazyColumn(
+            state = movieListState,
+            // Confirmed on a real Shield (logcat): the first Back press while a focused TV Button
+            // has focus reaches Compose's key dispatch fine (a non-consuming onPreviewKeyEvent here
+            // logs it), but something between here and the BackHandler/OnBackPressedDispatcher
+            // bridge marks it handled — BackHandler never fires on that first press, only the
+            // second. Rather than chase the exact consumer, intercept here instead: onPreviewKeyEvent
+            // runs top-down, before any descendant (including the focused Button) gets a look, so
+            // this always wins the race. Matches the same pattern TvDpadEscape.kt uses for the same
+            // class of problem.
+            modifier =
+                Modifier.fillMaxSize().focusable().onPreviewKeyEvent { event ->
+                    if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
+                        // Phase 4: Back out of an open tab section goes to the tab row, not out of the
+                        // screen — same interception point as the screen-exit case below, since this
+                        // handler already runs before any descendant (the tab row's own handling would
+                        // never get a look otherwise).
+                        if (focusInSection) {
                             tabRowFocusRequester.requestFocus()
-                            true
                         } else {
-                            false
+                            onBack()
                         }
+                        true
+                    } else {
+                        false
                     }
-                // D-pad Up from the hero action row — same fix, same reason as
-                // EpisodeSelectionScreen's identical addition: these buttons are the topmost
-                // focusable in the screen, so default focus search has nowhere to go and the
-                // LazyColumn never scrolls back up once a tall plot has pushed the title above
-                // the viewport. Force it back to the top explicitly instead.
-                val upScrollToTop =
-                    Modifier.onPreviewKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
-                            refreshScope.launch { movieListState.animateScrollToItem(0) }
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                if (hasResume) {
-                    val resumeTimeText = formatTime(resumePositionMs)
-                    CinemaPrimaryButton(
-                        onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
-                        text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
-                        modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow).then(upScrollToTop),
-                    )
-                    CinemaIconButton(
-                        onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true) },
-                        modifier = downToTabRow.then(upScrollToTop),
-                        icon = {
-                            Icon(
-                                imageVector = CinemaIcons.Replay,
-                                contentDescription = stringResource(R.string.movie_start_beginning),
-                                tint = CinemaTextPrimary,
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        },
-                    )
-                } else {
-                    CinemaPrimaryButton(
-                        onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
-                        text = stringResource(R.string.movie_play_action),
-                        modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow).then(upScrollToTop),
-                    )
-                }
-                CinemaIconButton(
-                    onClick = onToggleFavorite,
-                    modifier = downToTabRow.then(upScrollToTop),
-                    icon = {
-                        Icon(
-                            imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                            contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add),
-                            tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        )
-                    },
-                )
-                // Watched button (Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md)
-                CinemaIconButton(
-                    onClick = onToggleWatched,
-                    modifier = downToTabRow.then(upScrollToTop),
-                    icon = {
-                        Icon(
-                            imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                            contentDescription = if (isWatched) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark),
-                            tint = if (isWatched) CinemaAccent else CinemaTextPrimary,
-                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        )
-                    },
-                )
-                CinemaIconButton(
-                    onClick = {
-                        refreshScope.launch {
-                            isRefreshing = true
-                            onRefresh()
-                            kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
-                            isRefreshing = false
-                        }
-                    },
-                    enabled = !isRefreshing,
-                    modifier = downToTabRow.then(upScrollToTop),
-                    icon = {
-                        Icon(
-                            imageVector = CinemaIcons.Refresh,
-                            contentDescription = stringResource(R.string.movie_refresh_info),
-                            modifier =
-                                Modifier
-                                    .size(TvDimensions.iconSmall.scaled(scale))
-                                    .rotate(rotation),
-                        )
-                    },
-                )
-                movieDetail.metadata.trailerUrl?.let { trailer ->
-                    val trailerContext = LocalContext.current
-                    CinemaIconButton(
-                        onClick = { openExternalUrl(trailerContext, trailer) },
-                        modifier = downToTabRow.then(upScrollToTop),
-                        icon = {
-                            Icon(
-                                imageVector = CinemaIcons.Movie,
-                                contentDescription = stringResource(R.string.details_watch_trailer_description),
-                                tint = CinemaTextPrimary,
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        },
-                    )
-                }
-            }
-        }
-
-        item(key = "tabs") {
-            TvSectionTabs(
-                tabs = tabLabels,
-                selectedIndex = safeTabIndex,
-                onTabSelected = {
-                    selectedTabIndex = it
-                    // A tab regaining focus — whether from Left/Right, the initial Down from the
-                    // action row, or our own Back-triggered tabRowFocusRequester.requestFocus()
-                    // below — means focus is on the tab row, not in a section.
-                    focusInSection = false
                 },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
-                        .padding(top = Spacing.xl.scaled(scale)),
-                entryFocusRequester = tabRowFocusRequester,
-            )
-        }
+            // No horizontal margin here: the hero backdrop below must run edge to edge. Every other
+            // item applies Spacing.tvSafeMarginHorizontal to itself instead (see "details" below).
+            contentPadding = PaddingValues(bottom = Spacing.tvSafeMarginVertical.scaled(scale)),
+        ) {
+            item(key = "hero") {
+                // TMDB's branded logo art when it has one, else TMDB's original title falling back
+                // to the provider's own stream name (when TMDB has no match, or the lookup hasn't
+                // come back yet).
+                val titleText = tmdbTitle ?: movieDetail.name.ifEmpty { movieName }
+                val year = extractYear(movieDetail.metadata.year, movieDetail.metadata.releaseDate, movieDetail.name.ifBlank { movieName })
+                val endsAtContext = LocalContext.current
+                val endsAtText =
+                    remember(movieDetail.metadata.duration, resumePositionMs) {
+                        computeEndsAt(endsAtContext, movieDetail.metadata.duration, resumePositionMs)
+                    }
+                val metaLine =
+                    listOfNotNull(
+                        year?.toString(),
+                        movieDetail.metadata.contentRating,
+                        movieDetail.metadata.duration
+                            ?.takeIf(::hasMeaningfulDuration)
+                            ?.let { formatDuration(it) },
+                        endsAtText?.let { stringResource(R.string.movie_ends_at_format, it) },
+                        movieDetail.metadata.genre,
+                    )
+                val communityRatingLabel = stringResource(R.string.details_community_rating)
+                val hasResume = resumePositionMs > 0L
 
-        // Keyed by the selected tab: switching tabs is a fresh item, so a tab whose content
-        // scrolls (a related-titles row) resets that scroll instead of keeping the last tab's
-        // position — "switching resets the section's own scroll" from the plan's focus rules.
-        item(key = "tab-section-${tabs.getOrNull(safeTabIndex)}") {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
-                        .padding(top = Spacing.md.scaled(scale))
-                        .focusRestorer()
-                        // Only the true transition is trusted: the physical Back key itself was
-                        // found (on the TV emulator, not just real hardware — see the codebase's
-                        // other "unconfirmed root cause" back-key notes) to fire a spurious false
-                        // here moments before the key event reaches onPreviewKeyEvent below, which
-                        // would otherwise read focusInSection as already false and exit the screen
-                        // instead of returning to the tab row. The false transition is instead
-                        // driven explicitly by onTabSelected (a tab regaining focus, including via
-                        // this same Back path) — see TvSectionTabs' entryFocusRequester usage below.
-                        .onFocusChanged { if (it.hasFocus) focusInSection = true },
-            ) {
-                when (tabs.getOrNull(safeTabIndex)) {
-                    MovieDetailTab.CAST ->
-                        CastTabContent(cast = movieDetail.metadata.cast.orEmpty())
-                    MovieDetailTab.DETAILS ->
-                        DetailsTabContent(
-                            movieDetail = movieDetail,
-                            movieName = movieName,
-                            providerName = providerName,
-                            categoryName = categoryName,
-                            alternateStreams = alternateStreams,
-                            streamNameFocusRequester = streamNameFocusRequester,
-                            onStreamSelected = {
-                                streamSwitchSignal++
-                                onAlternateStreamSelected(it)
+                TvDetailHero(
+                    title = titleText,
+                    backdropUrl = backdropUrl,
+                    logoUrl = logoUrl,
+                    titleFallback = {
+                        Text(
+                            text = titleText,
+                            style = MaterialTheme.typography.displayLarge,
+                            color = CinemaTextPrimary,
+                        )
+                    },
+                    metaLine = metaLine,
+                    scoreChips =
+                        movieDetail.metadata.rating?.let { rating ->
+                            { ScoreChip(value = formatRating(rating), label = communityRatingLabel) }
+                        },
+                    plot = movieDetail.metadata.plot,
+                ) {
+                    // Phase 4: D-pad Down from any action button lands on the tab row below, not
+                    // wherever default geometry search prefers. focusProperties { down = ... } was
+                    // tried for the equivalent transition on EpisodeSelectionScreen's season tabs and
+                    // never took there (see its comment on the category button) — intercepting the
+                    // key and requesting focus directly is the proven fix, reused here.
+                    val downToTabRow =
+                        Modifier.onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
+                                tabRowFocusRequester.requestFocus()
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                    // D-pad Up from the hero action row — same fix, same reason as
+                    // EpisodeSelectionScreen's identical addition: these buttons are the topmost
+                    // focusable in the screen, so default focus search has nowhere to go and the
+                    // LazyColumn never scrolls back up once a tall plot has pushed the title above
+                    // the viewport. Force it back to the top explicitly instead.
+                    val upScrollToTop =
+                        Modifier.onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
+                                refreshScope.launch { movieListState.animateScrollToItem(0) }
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                    if (hasResume) {
+                        val resumeTimeText = formatTime(resumePositionMs)
+                        CinemaPrimaryButton(
+                            onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
+                            text = stringResource(R.string.movie_resume_from_format, resumeTimeText),
+                            modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow).then(upScrollToTop),
+                        )
+                        CinemaIconButton(
+                            onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true) },
+                            modifier = downToTabRow.then(upScrollToTop),
+                            icon = {
+                                Icon(
+                                    imageVector = CinemaIcons.Replay,
+                                    contentDescription = stringResource(R.string.movie_start_beginning),
+                                    tint = CinemaTextPrimary,
+                                    modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                )
                             },
-                            onStreamFocusedChanged = { streamRowFocused = it },
-                            onCategorySelected = onCategorySelected,
-                            titleSmallStyle = scaledStyles.titleSmall,
-                            bodySmallStyle = scaledStyles.bodySmall,
                         )
-                    MovieDetailTab.SIMILAR ->
-                        RelatedTitlesRow(
-                            title = stringResource(R.string.details_more_like_this),
-                            items = relatedTitles.moreLikeThis,
-                            onItemClick = onRelatedTitleSelected,
+                    } else {
+                        CinemaPrimaryButton(
+                            onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, false) },
+                            text = stringResource(R.string.movie_play_action),
+                            modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow).then(upScrollToTop),
                         )
-                    MovieDetailTab.COLLECTION ->
-                        RelatedTitlesRow(
-                            title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
-                            items = relatedTitles.collection,
-                            onItemClick = onRelatedTitleSelected,
+                    }
+                    CinemaIconButton(
+                        onClick = onToggleFavorite,
+                        modifier = downToTabRow.then(upScrollToTop),
+                        icon = {
+                            Icon(
+                                imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                                contentDescription =
+                                    if (isFavorite) {
+                                        stringResource(
+                                            R.string.favorite_remove,
+                                        )
+                                    } else {
+                                        stringResource(R.string.favorite_add)
+                                    },
+                                tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        },
+                    )
+                    // Watched button (Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md)
+                    CinemaIconButton(
+                        onClick = onToggleWatched,
+                        modifier = downToTabRow.then(upScrollToTop),
+                        icon = {
+                            Icon(
+                                imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                                contentDescription =
+                                    if (isWatched) {
+                                        stringResource(
+                                            R.string.watched_unmark,
+                                        )
+                                    } else {
+                                        stringResource(R.string.watched_mark)
+                                    },
+                                tint = if (isWatched) CinemaAccent else CinemaTextPrimary,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        },
+                    )
+                    CinemaIconButton(
+                        onClick = {
+                            refreshScope.launch {
+                                isRefreshing = true
+                                onRefresh()
+                                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
+                                isRefreshing = false
+                            }
+                        },
+                        enabled = !isRefreshing,
+                        modifier = downToTabRow.then(upScrollToTop),
+                        icon = {
+                            Icon(
+                                imageVector = CinemaIcons.Refresh,
+                                contentDescription = stringResource(R.string.movie_refresh_info),
+                                modifier =
+                                    Modifier
+                                        .size(TvDimensions.iconSmall.scaled(scale))
+                                        .rotate(rotation),
+                            )
+                        },
+                    )
+                    movieDetail.metadata.trailerUrl?.let { trailer ->
+                        val trailerContext = LocalContext.current
+                        CinemaIconButton(
+                            onClick = { openExternalUrl(trailerContext, trailer) },
+                            modifier = downToTabRow.then(upScrollToTop),
+                            icon = {
+                                Icon(
+                                    imageVector = CinemaIcons.Movie,
+                                    contentDescription = stringResource(R.string.details_watch_trailer_description),
+                                    tint = CinemaTextPrimary,
+                                    modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                                )
+                            },
                         )
-                    null -> Unit
+                    }
+                }
+            }
+
+            item(key = "tabs") {
+                TvSectionTabs(
+                    tabs = tabLabels,
+                    selectedIndex = safeTabIndex,
+                    onTabSelected = {
+                        selectedTabIndex = it
+                        // A tab regaining focus — whether from Left/Right, the initial Down from the
+                        // action row, or our own Back-triggered tabRowFocusRequester.requestFocus()
+                        // below — means focus is on the tab row, not in a section.
+                        focusInSection = false
+                    },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                            .padding(top = Spacing.xl.scaled(scale)),
+                    entryFocusRequester = tabRowFocusRequester,
+                )
+            }
+
+            // Keyed by the selected tab: switching tabs is a fresh item, so a tab whose content
+            // scrolls (a related-titles row) resets that scroll instead of keeping the last tab's
+            // position — "switching resets the section's own scroll" from the plan's focus rules.
+            item(key = "tab-section-${tabs.getOrNull(safeTabIndex)}") {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
+                            .padding(top = Spacing.md.scaled(scale))
+                            .focusRestorer()
+                            // Only the true transition is trusted: the physical Back key itself was
+                            // found (on the TV emulator, not just real hardware — see the codebase's
+                            // other "unconfirmed root cause" back-key notes) to fire a spurious false
+                            // here moments before the key event reaches onPreviewKeyEvent below, which
+                            // would otherwise read focusInSection as already false and exit the screen
+                            // instead of returning to the tab row. The false transition is instead
+                            // driven explicitly by onTabSelected (a tab regaining focus, including via
+                            // this same Back path) — see TvSectionTabs' entryFocusRequester usage below.
+                            .onFocusChanged { if (it.hasFocus) focusInSection = true },
+                ) {
+                    when (tabs.getOrNull(safeTabIndex)) {
+                        MovieDetailTab.CAST -> {
+                            CastTabContent(cast = movieDetail.metadata.cast.orEmpty())
+                        }
+
+                        MovieDetailTab.DETAILS -> {
+                            DetailsTabContent(
+                                movieDetail = movieDetail,
+                                movieName = movieName,
+                                providerName = providerName,
+                                categoryName = categoryName,
+                                alternateStreams = alternateStreams,
+                                streamNameFocusRequester = streamNameFocusRequester,
+                                onStreamSelected = {
+                                    streamSwitchSignal++
+                                    onAlternateStreamSelected(it)
+                                },
+                                onStreamFocusedChanged = { streamRowFocused = it },
+                                onCategorySelected = onCategorySelected,
+                                titleSmallStyle = scaledStyles.titleSmall,
+                                bodySmallStyle = scaledStyles.bodySmall,
+                            )
+                        }
+
+                        MovieDetailTab.SIMILAR -> {
+                            RelatedTitlesRow(
+                                title = stringResource(R.string.details_more_like_this),
+                                items = relatedTitles.moreLikeThis,
+                                onItemClick = onRelatedTitleSelected,
+                            )
+                        }
+
+                        MovieDetailTab.COLLECTION -> {
+                            RelatedTitlesRow(
+                                title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
+                                items = relatedTitles.collection,
+                                onItemClick = onRelatedTitleSelected,
+                            )
+                        }
+
+                        null -> {
+                            Unit
+                        }
+                    }
                 }
             }
         }
-    }
     }
 }
 
@@ -763,8 +792,9 @@ private fun DetailsTabContent(
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
         // Release date / year
-        val displayRelease = movieDetail.metadata.releaseDate
-            ?: extractYear(movieDetail.metadata.year, null, movieDetail.name.ifBlank { movieName })?.toString()
+        val displayRelease =
+            movieDetail.metadata.releaseDate
+                ?: extractYear(movieDetail.metadata.year, null, movieDetail.name.ifBlank { movieName })?.toString()
         displayRelease?.let { releaseInfo ->
             Text(
                 text = stringResource(R.string.movie_released_format, releaseInfo),
@@ -938,8 +968,7 @@ private fun StreamNamePicker(
                     .background(
                         color = if (isFocused) CinemaAccent.copy(alpha = CinemaAlpha.tint) else Color.Transparent,
                         shape = RoundedCornerShape(CornerRadius.medium),
-                    )
-                    .then(
+                    ).then(
                         if (isFocused) {
                             Modifier.border(
                                 width = TvFocusTokens.focusBorderWidth,
@@ -949,17 +978,14 @@ private fun StreamNamePicker(
                         } else {
                             Modifier
                         },
-                    )
-                    .focusRequester(focusRequester)
+                    ).focusRequester(focusRequester)
                     .onFocusChanged {
                         isFocused = it.isFocused
                         onFocusedChanged(it.isFocused)
-                    }
-                    .clickable {
+                    }.clickable {
                         coroutineScope.launch { bringIntoViewRequester.bringIntoView() }
                         expanded = true
-                    }
-                    .padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
+                    }.padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
         ) {
             Text(
                 text = stringResource(R.string.details_stream_name_format, currentName),
@@ -1028,5 +1054,3 @@ private fun TechInfoRow(
         )
     }
 }
-
-

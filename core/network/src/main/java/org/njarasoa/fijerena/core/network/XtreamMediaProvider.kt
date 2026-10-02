@@ -12,20 +12,18 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.XtreamMapper.toDomain
 import org.njarasoa.fijerena.core.network.XtreamMapper.toMovieDetail
 import org.njarasoa.fijerena.core.network.tmdb.TitleMatcher
-import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
 import org.njarasoa.fijerena.core.network.tmdb.TmdbImagesResponse
+import org.njarasoa.fijerena.core.network.tmdb.TmdbRecommendation
 import org.njarasoa.fijerena.core.network.xtream.SyncDelta
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
-import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import org.njarasoa.fijerena.core.player.api.XtreamResponse
 import org.njarasoa.fijerena.core.player.api.asThrowable
-import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.ContentType
+import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
 import org.njarasoa.fijerena.core.player.domain.MediaItem
-import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
@@ -33,7 +31,9 @@ import org.njarasoa.fijerena.core.player.domain.PlayableStream
 import org.njarasoa.fijerena.core.player.domain.ProviderCapabilities
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.model.EpgResponse
+import org.njarasoa.fijerena.core.player.model.SeriesInfo
 import java.util.concurrent.ConcurrentHashMap
 
 class XtreamMediaProvider(
@@ -61,7 +61,6 @@ class XtreamMediaProvider(
     // round trip instead of two.
     private val tmdbImagesCache = TtlCache<Pair<Int, String>, TmdbImagesResponse>(DETAIL_CACHE_TTL_MS)
 
-
     override val capabilities =
         ProviderCapabilities(
             supportedContentTypes = setOf(ContentType.LIVE_TV, ContentType.MOVIES, ContentType.TV_SHOWS),
@@ -74,11 +73,15 @@ class XtreamMediaProvider(
 
     override suspend fun connect(): kotlin.Result<Unit> =
         when (val result = repository.restoreSession()) {
-            is Result.Success -> kotlin.Result.success(Unit)
-            is Result.Error ->
+            is Result.Success -> {
+                kotlin.Result.success(Unit)
+            }
+
+            is Result.Error -> {
                 kotlin.Result.failure(
                     Exception("Failed to connect to Xtream provider: ${result.exception.message}", result.exception),
                 )
+            }
         }
 
     override suspend fun disconnect() {
@@ -97,10 +100,13 @@ class XtreamMediaProvider(
                 else -> repository.getCategories()
             }
         return when (result) {
-            is Result.Success ->
+            is Result.Success -> {
                 kotlin.Result.success(result.data.map { it.toDomain() })
-            is Result.Error ->
+            }
+
+            is Result.Error -> {
                 kotlin.Result.failure(result.exception)
+            }
         }
     }
 
@@ -125,13 +131,16 @@ class XtreamMediaProvider(
                 else -> repository.getStreams(categoryId)
             }
         return when (result) {
-            is Result.Success ->
+            is Result.Success -> {
                 // Callers run on Dispatchers.Main.immediate, and each toDomain allocates a
                 // MediaItem, a providerData map and a MediaMetadata. On the largest category
                 // (9,480 items) that measured 50ms of main-thread work at the moment of the tap.
                 kotlin.Result.success(withContext(Dispatchers.Default) { result.data.map { it.toDomain(mediaType) } })
-            is Result.Error ->
+            }
+
+            is Result.Error -> {
                 kotlin.Result.failure(result.exception)
+            }
         }
     }
 
@@ -140,10 +149,13 @@ class XtreamMediaProvider(
         // Use repository.getAllStreams which handles caching and fetching all streams
         val result = repository.getAllStreams(contentType)
         return when (result) {
-            is Result.Success ->
+            is Result.Success -> {
                 kotlin.Result.success(withContext(Dispatchers.Default) { result.data.map { it.toDomain(mediaType) } })
-            is Result.Error ->
+            }
+
+            is Result.Error -> {
                 kotlin.Result.failure(result.exception)
+            }
         }
     }
 
@@ -154,12 +166,24 @@ class XtreamMediaProvider(
      * completed left no trace at all, so in a log capture "the user never opened anything" and
      * "the provider was unreachable" looked exactly the same.
      */
-    private fun XtreamResponse<*>.logAsFailure(action: String, id: String) {
+    private fun XtreamResponse<*>.logAsFailure(
+        action: String,
+        id: String,
+    ) {
         when (this) {
             is XtreamResponse.Ok -> {}
-            is XtreamResponse.Unavailable -> Log.w("XtreamMediaProvider", "$action $id: provider has nothing for it")
-            is XtreamResponse.Malformed -> Log.w("XtreamMediaProvider", "$action $id: response could not be read", cause)
-            is XtreamResponse.Failed -> Log.w("XtreamMediaProvider", "$action $id: call did not complete", cause)
+
+            is XtreamResponse.Unavailable -> {
+                Log.w("XtreamMediaProvider", "$action $id: provider has nothing for it")
+            }
+
+            is XtreamResponse.Malformed -> {
+                Log.w("XtreamMediaProvider", "$action $id: response could not be read", cause)
+            }
+
+            is XtreamResponse.Failed -> {
+                Log.w("XtreamMediaProvider", "$action $id: call did not complete", cause)
+            }
         }
     }
 
@@ -252,7 +276,13 @@ class XtreamMediaProvider(
                 // again. Without this the season fetches below repeat on every cold start, since
                 // their in-memory cache dies with the process.
                 val detail = result.value.toDomain(rawSeriesId).withPlots(repository.getPersistedEpisodePlots(id))
-                val tmdbSeriesId = resolveSeriesTmdbId(result.value.info?.tmdb.asString(), cachedEntity?.tmdbId)
+                val tmdbSeriesId =
+                    resolveSeriesTmdbId(
+                        result.value.info
+                            ?.tmdb
+                            .asString(),
+                        cachedEntity?.tmdbId,
+                    )
                 var enriched = detail
                 if (tmdb.hasApiKey() && tmdbSeriesId != null) {
                     if (detail.hasEpisodeWithoutPlot()) {
@@ -286,7 +316,13 @@ class XtreamMediaProvider(
                     }
                     if (!cachedRatingFresh) {
                         val tmdbPosterPath = tmdbDetails?.posterPath
-                        repository.saveSeriesDetailCache(id, certification, tmdbSeriesId.toString(), System.currentTimeMillis(), tmdbPosterPath)
+                        repository.saveSeriesDetailCache(
+                            id,
+                            certification,
+                            tmdbSeriesId.toString(),
+                            System.currentTimeMillis(),
+                            tmdbPosterPath,
+                        )
                     }
                 }
                 if (enriched.metadata.year == null) {
@@ -305,6 +341,7 @@ class XtreamMediaProvider(
                 }
                 kotlin.Result.success(enriched)
             }
+
             else -> {
                 result.logAsFailure("get_series_info", rawSeriesId)
                 kotlin.Result.failure(result.asThrowable())
@@ -351,7 +388,10 @@ class XtreamMediaProvider(
             .getOrNull()
             ?.let { response ->
                 extractCertification(
-                    response.results.map { it.country to it.releaseDates.firstNotNullOfOrNull { d -> d.certification?.takeIf { c -> c.isNotBlank() } } },
+                    response.results.map {
+                        it.country to
+                            it.releaseDates.firstNotNullOfOrNull { d -> d.certification?.takeIf { c -> c.isNotBlank() } }
+                    },
                 )
             }
 
@@ -421,7 +461,10 @@ class XtreamMediaProvider(
         }
 
     /** Whether any episode still lacks a synopsis — the only reason to spend TMDB season calls. */
-    private fun SeriesDetail.hasEpisodeWithoutPlot(): Boolean = episodes.values.any { list -> list.any { it.metadata.plot.isNullOrBlank() } }
+    private fun SeriesDetail.hasEpisodeWithoutPlot(): Boolean =
+        episodes.values.any { list ->
+            list.any { it.metadata.plot.isNullOrBlank() }
+        }
 
     private suspend fun fetchTmdbOverviews(
         tmdbSeriesId: Int,
@@ -520,6 +563,7 @@ class XtreamMediaProvider(
                 )
                 kotlin.Result.success(enriched)
             }
+
             // The provider answered and had nothing to say about this movie. Its own catalogue
             // row is still local, and a movie needs no more than that to play — the stream URL is
             // built from the id, with the extension defaulting to mp4. Failing here would refuse
@@ -534,6 +578,7 @@ class XtreamMediaProvider(
                 // ask the provider again rather than replay it.
                 kotlin.Result.success(cached.toMovieDetail(movieId))
             }
+
             // The call never completed, so nothing else will either — including playback.
             is XtreamResponse.Failed -> {
                 result.logAsFailure("get_vod_info", movieId)
@@ -552,7 +597,7 @@ class XtreamMediaProvider(
 
         if (episodeId != null && extension != null) {
             return when (val result = repository.buildEpisodeStreamUrl(episodeId, extension)) {
-                is Result.Success ->
+                is Result.Success -> {
                     kotlin.Result.success(
                         PlayableStream(
                             uri = result.data,
@@ -560,8 +605,11 @@ class XtreamMediaProvider(
                             title = "",
                         ),
                     )
-                is Result.Error ->
+                }
+
+                is Result.Error -> {
                     kotlin.Result.failure(result.exception)
+                }
             }
         }
 
@@ -571,7 +619,7 @@ class XtreamMediaProvider(
             )
         val streamName = repository.getStreamName(streamId, contentType) ?: ""
         return when (val result = repository.buildStreamUrl(streamId, contentType, extension)) {
-            is Result.Success ->
+            is Result.Success -> {
                 kotlin.Result.success(
                     PlayableStream(
                         uri = result.data,
@@ -579,8 +627,11 @@ class XtreamMediaProvider(
                         title = streamName,
                     ),
                 )
-            is Result.Error ->
+            }
+
+            is Result.Error -> {
                 kotlin.Result.failure(result.exception)
+            }
         }
     }
 
@@ -601,13 +652,18 @@ class XtreamMediaProvider(
 
     /** Builds the FTS MATCH expression for [query], or null when nothing searchable remains. */
     private fun buildFtsQuery(query: String): String? {
-        val words = query.trim().split("\\s+".toRegex())
-            .filter { it.isNotBlank() && !it.startsWith("-") }
+        val words =
+            query
+                .trim()
+                .split("\\s+".toRegex())
+                .filter { it.isNotBlank() && !it.startsWith("-") }
         if (words.isEmpty()) return null
         // Sanitize input to prevent SQLite FTS syntax errors (like **) that trigger fallback hangs
-        val ftsQuery = words.map { it.replace(Regex("[*\"'()\\^]"), "") }
-            .filter { it.isNotBlank() }
-            .joinToString(" ") { "${it}*" }
+        val ftsQuery =
+            words
+                .map { it.replace(Regex("[*\"'()\\^]"), "") }
+                .filter { it.isNotBlank() }
+                .joinToString(" ") { "$it*" }
         return ftsQuery.ifBlank { null }
     }
 
@@ -894,10 +950,13 @@ class XtreamMediaProvider(
                 Exception("Invalid stream ID for EPG: $streamId"),
             )
         return when (val result = repository.getEpgForStream(id)) {
-            is Result.Success ->
+            is Result.Success -> {
                 kotlin.Result.success(result.data)
-            is Result.Error ->
+            }
+
+            is Result.Error -> {
                 kotlin.Result.failure(result.exception)
+            }
         }
     }
 
@@ -905,10 +964,13 @@ class XtreamMediaProvider(
         val intIds = streamIds.mapNotNull { it.toIntOrNull() }
         if (intIds.isEmpty()) return kotlin.Result.success(emptyMap())
         return when (val result = repository.getEpgForStreams(intIds)) {
-            is Result.Success ->
+            is Result.Success -> {
                 kotlin.Result.success(result.data.mapKeys { it.key.toString() })
-            is Result.Error ->
+            }
+
+            is Result.Error -> {
                 kotlin.Result.failure(result.exception)
+            }
         }
     }
 

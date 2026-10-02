@@ -36,27 +36,29 @@ data class EpgProgrammeStagingEntity(
 /**
  * Extension to convert staging entity to primary entity.
  */
-fun EpgProgrammeStagingEntity.toPrimary() = EpgProgrammeEntity(
-    channelId = channelId,
-    title = title,
-    titleLowercase = titleLowercase,
-    description = description,
-    category = category,
-    startEpoch = startEpoch,
-    endEpoch = endEpoch,
-    sourceId = sourceId
-)
+fun EpgProgrammeStagingEntity.toPrimary() =
+    EpgProgrammeEntity(
+        channelId = channelId,
+        title = title,
+        titleLowercase = titleLowercase,
+        description = description,
+        category = category,
+        startEpoch = startEpoch,
+        endEpoch = endEpoch,
+        sourceId = sourceId,
+    )
 
 /**
  * Extension to convert primary entity to staging entity.
  */
-fun EpgProgrammeEntity.toStaging() = EpgProgrammeStagingEntity(
-    channelId = channelId,
-    title = title,
-    titleLowercase = titleLowercase,
-    description = description,
-    category = category,
-    startEpoch = startEpoch,
-    endEpoch = endEpoch,
-    sourceId = sourceId
-)
+fun EpgProgrammeEntity.toStaging() =
+    EpgProgrammeStagingEntity(
+        channelId = channelId,
+        title = title,
+        titleLowercase = titleLowercase,
+        description = description,
+        category = category,
+        startEpoch = startEpoch,
+        endEpoch = endEpoch,
+        sourceId = sourceId,
+    )

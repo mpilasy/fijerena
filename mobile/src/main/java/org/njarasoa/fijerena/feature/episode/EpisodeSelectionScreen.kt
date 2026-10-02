@@ -4,14 +4,14 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -21,7 +21,6 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -32,6 +31,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,9 +39,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.resumeProgress
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
-import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.player.domain.firstSeasonWithUnwatchedEpisode
@@ -50,26 +50,27 @@ import org.njarasoa.fijerena.core.player.domain.resumeAnchorEpisodeId
 import org.njarasoa.fijerena.core.player.domain.seasonNumberContaining
 import org.njarasoa.fijerena.core.player.domain.seriesYearRange
 import org.njarasoa.fijerena.core.player.domain.sortedSeasons
-import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.core.player.model.computeEndsAt
 import org.njarasoa.fijerena.core.player.model.formatDuration
-import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.model.formatTime
+import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
+import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.MetaBadge
 import org.njarasoa.fijerena.ui.components.MetaText
 import org.njarasoa.fijerena.ui.components.MobileDetailHero
@@ -82,7 +83,6 @@ import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -155,16 +155,17 @@ fun MobileEpisodeSelectionScreen(
                 // TMDB's clean title once it resolves, the provider's raw stream name until then
                 title = { Text(tmdbTitle ?: (lastSuccess?.streamName ?: seriesName)) },
                 navigationIcon = {
-                    CinemaIconButton(onClick = {
-                        if (selectedEpisode != null) {
-                            selectedEpisode = null
-                        } else {
-                            onBack()
-                        }
-                    },
+                    CinemaIconButton(
+                        onClick = {
+                            if (selectedEpisode != null) {
+                                selectedEpisode = null
+                            } else {
+                                onBack()
+                            }
+                        },
                         icon = {
                             Icon(CinemaIcons.ArrowBack, stringResource(R.string.common_back), tint = CinemaTextPrimary)
-                        }
+                        },
                     )
                 },
                 // Favorite moved into the icon row under the Play/Resume button (see
@@ -185,12 +186,14 @@ fun MobileEpisodeSelectionScreen(
                 displaySeriesDetail == null && errorState == null -> {
                     LoadingScreen()
                 }
+
                 errorState != null -> {
                     ErrorScreen(
                         message = errorState.message,
                         onBack = onBack,
                     )
                 }
+
                 displaySeriesDetail != null && selectedEpisode != null -> {
                     val detail = displaySeriesDetail
                     val flatEpisodes =
@@ -218,6 +221,7 @@ fun MobileEpisodeSelectionScreen(
                         },
                     )
                 }
+
                 displaySeriesDetail != null -> {
                     PullToRefreshBox(
                         isRefreshing = isRefreshing,
@@ -250,6 +254,7 @@ fun MobileEpisodeSelectionScreen(
                         )
                     }
                 }
+
                 else -> {
                     LoadingScreen()
                 }
@@ -515,7 +520,13 @@ private fun EpisodeListContent(
                 val seriesMetaSegments =
                     listOfNotNull<@Composable () -> Unit>(
                         seriesDetail.metadata.rating?.let { rating ->
-                            { RatingBadge(rating = rating, textColor = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.titleMedium) }
+                            {
+                                RatingBadge(
+                                    rating = rating,
+                                    textColor = MaterialTheme.colorScheme.secondary,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
                         },
                         yearRange?.let { { MetaText(it) } },
                         seriesDetail.metadata.contentRating?.let { { MetaBadge(it) } },
@@ -912,8 +923,7 @@ private fun EpisodeDetailContent(
                             change.consume()
                         },
                     )
-                }
-                .verticalScroll(rememberScrollState())
+                }.verticalScroll(rememberScrollState())
                 .padding(CinemaSpacing.md),
     ) {
         // Episode thumbnail
@@ -963,7 +973,10 @@ private fun EpisodeDetailContent(
         // Single dot-separated meta row — same treatment as the series header above.
         val contentRating = episode.metadata.contentRating ?: seriesDetail.metadata.contentRating
         val rating = episode.metadata.rating ?: seriesDetail.metadata.rating
-        val year = episode.metadata.year ?: episode.metadata.airDate?.take(4)?.toIntOrNull() ?: seriesDetail.metadata.year
+        val year =
+            episode.metadata.year ?: episode.metadata.airDate
+                ?.take(4)
+                ?.toIntOrNull() ?: seriesDetail.metadata.year
         val endsAtContext = LocalContext.current
         val endsAtText =
             remember(episode.metadata.duration, resumePositionMs) {
@@ -971,10 +984,20 @@ private fun EpisodeDetailContent(
             }
         val episodeMetaSegments =
             listOfNotNull<@Composable () -> Unit>(
-                rating?.let { { RatingBadge(rating = it, textColor = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.titleMedium) } },
+                rating?.let {
+                    {
+                        RatingBadge(
+                            rating = it,
+                            textColor = MaterialTheme.colorScheme.secondary,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                },
                 year?.let { { MetaText("$it") } },
                 contentRating?.let { { MetaBadge(it) } },
-                episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { { MetaText(formatDuration(it)) } },
+                episode.metadata.duration
+                    ?.takeIf(::hasMeaningfulDuration)
+                    ?.let { { MetaText(formatDuration(it)) } },
                 endsAtText?.let { { MetaText(stringResource(R.string.movie_ends_at_format, it)) } },
             )
         if (episodeMetaSegments.isNotEmpty()) {
@@ -1344,4 +1367,3 @@ private fun ErrorScreen(
 }
 
 private const val EPISODE_SWIPE_THRESHOLD_PX = 80f
-

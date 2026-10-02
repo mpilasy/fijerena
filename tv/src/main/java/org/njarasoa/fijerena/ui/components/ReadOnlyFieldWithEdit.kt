@@ -10,7 +10,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
-import androidx.tv.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -33,18 +32,19 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.rememberFocusReturn
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
  * A text field that displays as read-only text with an edit pencil icon.
@@ -114,12 +114,16 @@ fun ReadOnlyFieldWithEdit(
                                     isEditing = false
                                     true
                                 }
+
                                 Key.Enter -> {
                                     onValueChange(editValue)
                                     isEditing = false
                                     true
                                 }
-                                else -> false
+
+                                else -> {
+                                    false
+                                }
                             }
                         } else {
                             false
@@ -179,9 +183,13 @@ fun ReadOnlyFieldWithEdit(
                     Modifier
                         .focusRequester(returnFocusRequester)
                         .then(if (editButtonFocusRequester != null) Modifier.focusRequester(editButtonFocusRequester) else Modifier),
-                icon = { Icon(CinemaIcons.Edit, contentDescription = stringResource(R.string.common_edit_field_description_format, label)) },
+                icon = {
+                    Icon(
+                        CinemaIcons.Edit,
+                        contentDescription = stringResource(R.string.common_edit_field_description_format, label),
+                    )
+                },
             )
         }
     }
 }
-

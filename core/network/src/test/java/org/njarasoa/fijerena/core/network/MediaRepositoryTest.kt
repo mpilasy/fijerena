@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.network
 
-import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Handler
@@ -15,14 +14,15 @@ import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.junit.Assert.assertEquals
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.EpisodeId
 import org.njarasoa.fijerena.core.player.domain.SeriesId
-import org.njarasoa.fijerena.core.player.domain.ContentType
 
 class MediaRepositoryTest {
     private lateinit var context: Context
@@ -63,7 +63,7 @@ class MediaRepositoryTest {
         every { editor.putString(any(), any()) } returns editor
         every { editor.putInt(any(), any()) } returns editor
         every { editor.remove(any()) } returns editor
-        
+
         // AppSettings might also need mocking if it's used in constructor
         every { context.getSharedPreferences("app_settings", any()) } returns mockk(relaxed = true)
     }
@@ -231,6 +231,10 @@ class MediaRepositoryTest {
         val history = repository.getWatchHistoryLocked()
 
         assertEquals(1, history.size)
-        assertEquals(org.njarasoa.fijerena.core.player.domain.EpisodeId("101"), history[0].episodeId)
+        assertEquals(
+            org.njarasoa.fijerena.core.player.domain
+                .EpisodeId("101"),
+            history[0].episodeId,
+        )
     }
 }

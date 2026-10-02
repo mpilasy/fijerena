@@ -42,7 +42,9 @@ class XtreamDatabaseUpgradeTest {
 
     private fun cleanUp() {
         context.deleteDatabase(testDbName)
-        context.getDatabasePath(testDbName).parentFile
+        context
+            .getDatabasePath(testDbName)
+            .parentFile
             ?.listFiles { f -> f.name.startsWith("$testDbName.v") }
             ?.forEach { it.delete() }
     }
@@ -91,7 +93,11 @@ class XtreamDatabaseUpgradeTest {
                 val watched = runBlocking { upgraded.watchStateDao().getAll(1, "p") }
                 assertEquals("watch history lost upgrading from v$version", listOf("m1"), watched.map { it.itemId })
                 assertEquals(600_000L, watched.single().positionMs)
-                assertEquals("favourites lost upgrading from v$version", listOf("ch1"), upgraded.favoriteStateDao().getAll(1, "p").map { it.itemId })
+                assertEquals(
+                    "favourites lost upgrading from v$version",
+                    listOf("ch1"),
+                    upgraded.favoriteStateDao().getAll(1, "p").map { it.itemId },
+                )
                 assertEquals(XtreamDatabase.DB_VERSION, upgraded.openHelper.readableDatabase.version)
             } finally {
                 upgraded.close()

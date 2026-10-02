@@ -81,7 +81,11 @@ fun ProviderSettingsCard(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text(stringResource(R.string.settings_provider_expires_label), style = bodySmallStyle, color = CinemaTextSecondary)
+                            Text(
+                                stringResource(R.string.settings_provider_expires_label),
+                                style = bodySmallStyle,
+                                color = CinemaTextSecondary,
+                            )
                             Text(
                                 text = subscriptionExpiry,
                                 style = bodySmallStyle,
@@ -93,12 +97,20 @@ fun ProviderSettingsCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Text(stringResource(R.string.settings_provider_max_connections_label), style = bodySmallStyle, color = CinemaTextSecondary)
+                                Text(
+                                    stringResource(R.string.settings_provider_max_connections_label),
+                                    style = bodySmallStyle,
+                                    color = CinemaTextSecondary,
+                                )
                                 Text(subscriptionMaxCons, style = bodySmallStyle)
                             }
                         }
                         if (subscriptionIsTrial) {
-                            Text(stringResource(R.string.settings_provider_trial_account_label), style = bodySmallStyle, color = CinemaAccent)
+                            Text(
+                                stringResource(R.string.settings_provider_trial_account_label),
+                                style = bodySmallStyle,
+                                color = CinemaAccent,
+                            )
                         }
                     }
                 }

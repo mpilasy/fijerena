@@ -134,7 +134,11 @@ fun ImportOptionsDialog(
                             }
                             if (parsed.hasEpgSources) {
                                 OptionRow(
-                                    label = stringResource(R.string.settings_import_epg_sources_count_format, parsed.settings.epgSources.size),
+                                    label =
+                                        stringResource(
+                                            R.string.settings_import_epg_sources_count_format,
+                                            parsed.settings.epgSources.size,
+                                        ),
                                     checked = optEpg,
                                     onToggle = { optEpg = !optEpg },
                                 )

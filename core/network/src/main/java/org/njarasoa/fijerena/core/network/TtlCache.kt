@@ -14,7 +14,10 @@ class TtlCache<K : Any, V : Any>(
     private val ttlMs: Long,
     private val maxSize: Int = DEFAULT_MAX_SIZE,
 ) {
-    private data class Entry<V>(val value: V, val expiresAt: Long)
+    private data class Entry<V>(
+        val value: V,
+        val expiresAt: Long,
+    )
 
     private val map =
         object : LinkedHashMap<K, Entry<V>>(16, 0.75f, true) {

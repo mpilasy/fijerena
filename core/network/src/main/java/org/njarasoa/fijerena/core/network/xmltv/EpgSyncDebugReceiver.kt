@@ -19,16 +19,20 @@ import java.util.concurrent.TimeUnit
  * This class is excluded from release builds via BuildConfig.DEBUG guard in the manifest.
  */
 class EpgSyncDebugReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         if (intent.action != ACTION) return
         Log.i(TAG, "Debug trigger received — enqueuing force OneTimeWorkRequest for EpgSyncWorker")
         // No backoff criteria here previously meant WorkManager's aggressive default (~30s
         // initial, doubling) between retries — fine for a transient blip, hostile to a source
         // that's actively rate-limiting/blocking (retrying every 30s only keeps it blocked).
-        val request = OneTimeWorkRequestBuilder<EpgSyncWorker>()
-            .setInputData(androidx.work.workDataOf("force" to true))
-            .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
-            .build()
+        val request =
+            OneTimeWorkRequestBuilder<EpgSyncWorker>()
+                .setInputData(androidx.work.workDataOf("force" to true))
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
+                .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
             "epg_sync_debug",
             ExistingWorkPolicy.REPLACE,

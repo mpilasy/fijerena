@@ -19,8 +19,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncKind
 class XtreamSyncTriggersTest {
     private val db = XtreamDatabase.getInstance(InstrumentationRegistry.getInstrumentation().targetContext)
 
-    private fun queued(providerId: Long) =
-        runBlocking { db.syncVersionDao().getPending(10_000).filter { it.providerId == providerId } }
+    private fun queued(providerId: Long) = runBlocking { db.syncVersionDao().getPending(10_000).filter { it.providerId == providerId } }
 
     private fun favorite(
         providerId: Long,

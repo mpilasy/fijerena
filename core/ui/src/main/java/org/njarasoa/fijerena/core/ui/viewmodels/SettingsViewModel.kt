@@ -134,7 +134,8 @@ class SettingsViewModel(
     }
 
     fun updateLanguage(language: String) {
-        org.njarasoa.fijerena.core.ui.utils.LocaleManager.updateLocale(context, language)
+        org.njarasoa.fijerena.core.ui.utils.LocaleManager
+            .updateLocale(context, language)
         _uiState.value = _uiState.value.copy(language = language)
     }
 
@@ -227,8 +228,14 @@ class SettingsViewModel(
 
     private fun formatExpiryDate(expDate: String?): String? =
         when {
-            expDate.isNullOrEmpty() -> null
-            expDate.equals("Unlimited", ignoreCase = true) -> context.getString(R.string.subscription_unlimited)
+            expDate.isNullOrEmpty() -> {
+                null
+            }
+
+            expDate.equals("Unlimited", ignoreCase = true) -> {
+                context.getString(R.string.subscription_unlimited)
+            }
+
             else -> {
                 val epoch = expDate.toLongOrNull()
                 if (epoch != null) {

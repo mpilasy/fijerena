@@ -15,12 +15,12 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
-import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.network.provider.ProviderCopyManager
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 
 data class ParsedUrlCredentials(
@@ -75,7 +75,8 @@ fun parseUrlCredentials(input: String): ParsedUrlCredentials? {
 
                     ParsedUrlCredentials(baseUrl, username, password, streamOutputFormat, playlistType)
                 }
-            } catch (_: Exception) { // cancellation-ok: non-suspend URL parsing
+            } catch (_: Exception) {
+                // cancellation-ok: non-suspend URL parsing
                 null
             }
         }
@@ -487,7 +488,9 @@ class ProviderViewModel(
                         if (response.userInfo.auth != 1) {
                             Result.failure(Exception(context.getString(R.string.provider_error_invalid_credentials)))
                         } else if (response.userInfo.status != "Active") {
-                            Result.failure(Exception(context.getString(R.string.provider_error_account_inactive_format, response.userInfo.status)))
+                            Result.failure(
+                                Exception(context.getString(R.string.provider_error_account_inactive_format, response.userInfo.status)),
+                            )
                         } else {
                             Result.success(Unit)
                         }
@@ -499,6 +502,7 @@ class ProviderViewModel(
                         service.close()
                     }
                 }
+
                 "REMOTE_M3U" -> {
                     try {
                         val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
@@ -532,6 +536,7 @@ class ProviderViewModel(
                         Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
                     }
                 }
+
                 "JELLYFIN", "SMB" -> {
                     val tempEntity =
                         ProviderEntity(
@@ -565,7 +570,10 @@ class ProviderViewModel(
                         Result.failure(Exception(friendlyErrorMessage(e, context, appSettings.isDevMode), e))
                     }
                 }
-                else -> Result.success(Unit)
+
+                else -> {
+                    Result.success(Unit)
+                }
             }
         }
 }

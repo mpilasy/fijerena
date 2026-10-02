@@ -2,8 +2,8 @@ package org.njarasoa.fijerena.feature.contentselection.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -110,7 +110,8 @@ private fun MobileContinueWatchingCard(
                         val upNext = stringResource(R.string.continue_watching_up_next)
                         item.subtitle?.let { "$upNext • $it" } ?: upNext
                     } else {
-                        val remainingLabel = stringResource(R.string.series_remaining_format, formatDuration((item.remainingMs / 1000).toString()))
+                        val remainingLabel =
+                            stringResource(R.string.series_remaining_format, formatDuration((item.remainingMs / 1000).toString()))
                         item.subtitle?.let { "$it • $remainingLabel" } ?: remainingLabel
                     }
                 Text(

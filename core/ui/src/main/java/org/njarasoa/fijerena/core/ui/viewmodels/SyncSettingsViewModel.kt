@@ -88,7 +88,11 @@ class SyncSettingsViewModel(
      * the screen is open.
      */
     val nowPlaying: StateFlow<Map<String, SyncPayloads.NowPlaying>> =
-        combine(ui, NowPlayingStore.devices, ticker()) { current, entries, now -> currentNowPlaying(current.devices.orEmpty(), entries, now) }
+        combine(
+            ui,
+            NowPlayingStore.devices,
+            ticker(),
+        ) { current, entries, now -> currentNowPlaying(current.devices.orEmpty(), entries, now) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     init {
@@ -316,7 +320,10 @@ class SyncSettingsViewModel(
     }
 
     private fun normalizedUrl(): String {
-        val url = ui.value.serverUrl.trim().trimEnd('/')
+        val url =
+            ui.value.serverUrl
+                .trim()
+                .trimEnd('/')
         return if (url.startsWith("http://") || url.startsWith("https://")) url else "https://$url"
     }
 
@@ -377,8 +384,9 @@ class SyncSettingsViewModel(
         ): Map<String, SyncPayloads.NowPlaying> =
             devices
                 .filterNot { it.revoked }
-                .mapNotNull { device -> entries[device.id]?.takeIf { it.isCurrent(now, device.lastSeen) }?.let { device.id to it.nowPlaying } }
-                .toMap()
+                .mapNotNull { device ->
+                    entries[device.id]?.takeIf { it.isCurrent(now, device.lastSeen) }?.let { device.id to it.nowPlaying }
+                }.toMap()
     }
 
     private fun friendly(e: Exception): String {

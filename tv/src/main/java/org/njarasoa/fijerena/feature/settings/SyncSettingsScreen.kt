@@ -88,7 +88,16 @@ fun SyncSettingsScreen() {
         if (qr != null) {
             PairingPanel(
                 qr = qr,
-                instructions = stringResource(if (ui.handoffQr != null) R.string.live_sync_handoff_instructions else R.string.live_sync_invite_instructions),
+                instructions =
+                    stringResource(
+                        if (ui.handoffQr !=
+                            null
+                        ) {
+                            R.string.live_sync_handoff_instructions
+                        } else {
+                            R.string.live_sync_invite_instructions
+                        },
+                    ),
                 onClose = { if (ui.handoffQr != null) viewModel.cancelHandoff() else viewModel.hideInvite() },
             )
         } else if (status.linked) {
@@ -174,7 +183,9 @@ private fun SetupPanel(
                         onValueChange = { setupSecret = it },
                         label = stringResource(R.string.live_sync_setup_secret_label),
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
-                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        visualTransformation =
+                            androidx.compose.ui.text.input
+                                .PasswordVisualTransformation(),
                         displayText = "•".repeat(setupSecret.length),
                     )
                 }
@@ -230,11 +241,26 @@ private fun LinkedPanel(
     val scale = LocalUiScale.current
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-            Text(statusLine(status), style = MaterialTheme.typography.titleMedium, color = if (status.lastError != null && !status.syncing) CinemaError else CinemaAccent)
+            Text(
+                statusLine(status),
+                style = MaterialTheme.typography.titleMedium,
+                color =
+                    if (status.lastError != null &&
+                        !status.syncing
+                    ) {
+                        CinemaError
+                    } else {
+                        CinemaAccent
+                    },
+            )
             if (devMode && status.lastError != null) {
                 Text("[dev] ${status.lastError}", style = MaterialTheme.typography.bodySmall, color = CinemaTextSecondary)
             }
-            Text(stringResource(R.string.live_sync_server_line, status.serverUrl.orEmpty()), style = MaterialTheme.typography.bodySmall, color = CinemaTextSecondary)
+            Text(
+                stringResource(R.string.live_sync_server_line, status.serverUrl.orEmpty()),
+                style = MaterialTheme.typography.bodySmall,
+                color = CinemaTextSecondary,
+            )
             Spacer(Modifier.height(Spacing.xs.scaled(scale)))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
                 CinemaPrimaryButton(onClick = onAddDevice, text = stringResource(R.string.live_sync_add_device), enabled = !busy)
@@ -260,11 +286,23 @@ private fun DevicesPanel(
                     Column(Modifier.weight(1f)) {
                         Text(device.name, style = MaterialTheme.typography.bodyLarge, color = CinemaTextPrimary)
                         Text(
-                            if (device.current) stringResource(R.string.live_sync_device_this) else stringResource(R.string.live_sync_device_last_seen, relative(device.lastSeen)),
+                            if (device.current) {
+                                stringResource(
+                                    R.string.live_sync_device_this,
+                                )
+                            } else {
+                                stringResource(R.string.live_sync_device_last_seen, relative(device.lastSeen))
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = CinemaTextSecondary,
                         )
-                        nowPlaying[device.id]?.let { Text(nowPlayingLine(it), style = MaterialTheme.typography.bodySmall, color = CinemaAccent) }
+                        nowPlaying[device.id]?.let {
+                            Text(
+                                nowPlayingLine(it),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CinemaAccent,
+                            )
+                        }
                     }
                     if (!device.current) {
                         Spacer(Modifier.width(Spacing.sm.scaled(scale)))

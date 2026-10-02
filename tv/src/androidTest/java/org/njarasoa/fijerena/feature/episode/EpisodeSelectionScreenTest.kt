@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.feature.episode
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.hasTestTag
@@ -19,12 +20,12 @@ import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
-import androidx.compose.ui.test.assertIsDisplayed
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.njarasoa.fijerena.core.network.MediaRepository
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
@@ -32,7 +33,6 @@ import org.njarasoa.fijerena.core.player.domain.RelatedTitles
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.feature.episode.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.feature.episode.fixtures.FakeXtreamEpisodeDao
 
@@ -232,7 +232,9 @@ class EpisodeSelectionScreenTest {
             episodes =
                 (1..4).associate { season ->
                     season.toString() to
-                        (1..12).map { n -> EpisodeItem(id = "s${season}e$n", episodeNumber = n, title = "S$season Episode $n", seasonNumber = season) }
+                        (1..12).map { n ->
+                            EpisodeItem(id = "s${season}e$n", episodeNumber = n, title = "S$season Episode $n", seasonNumber = season)
+                        }
                 },
         )
 
@@ -319,7 +321,11 @@ class EpisodeSelectionScreenTest {
                 id = "series-many",
                 name = "Many Seasons",
                 seasons = (1..14).map { SeasonInfo(it, "Season $it") },
-                episodes = (1..14).associate { it.toString() to listOf(EpisodeItem(id = "s${it}e1", episodeNumber = 1, title = "S$it Episode 1", seasonNumber = it)) },
+                episodes =
+                    (1..14).associate {
+                        it.toString() to
+                            listOf(EpisodeItem(id = "s${it}e1", episodeNumber = 1, title = "S$it Episode 1", seasonNumber = it))
+                    },
             )
         setLongSeries(initialEpisodeId = "s14e1", series = manySeasons)
 

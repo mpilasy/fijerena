@@ -14,9 +14,13 @@ import kotlinx.serialization.Serializable
  */
 @JvmInline
 @Serializable
-value class SeriesId(val raw: String)
+value class SeriesId(
+    val raw: String,
+)
 
 /** One episode's id, in the provider's episode namespace. See [SeriesId]. */
 @JvmInline
 @Serializable
-value class EpisodeId(val raw: String)
+value class EpisodeId(
+    val raw: String,
+)

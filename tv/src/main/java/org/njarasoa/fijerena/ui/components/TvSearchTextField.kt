@@ -30,17 +30,16 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
-
-import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.scaled
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun TvSearchTextField(
@@ -58,9 +57,10 @@ fun TvSearchTextField(
     val scale = LocalUiScale.current
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(Spacing.sm.scaled(scale)),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(Spacing.sm.scaled(scale)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
     ) {
@@ -84,11 +84,15 @@ fun TvSearchTextField(
                                     }
                                     true
                                 }
-                                else -> false
+
+                                else -> {
+                                    false
+                                }
                             }
-                        } else false
-                    }
-                    .tvDpadEscape(),
+                        } else {
+                            false
+                        }
+                    }.tvDpadEscape(),
             shape = CircleShape,
             colors =
                 OutlinedTextFieldDefaults.colors(
@@ -105,7 +109,7 @@ fun TvSearchTextField(
                     imageVector = CinemaIcons.Search,
                     contentDescription = null,
                     modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                    tint = CinemaTextPrimary
+                    tint = CinemaTextPrimary,
                 )
             },
             keyboardOptions =
@@ -122,61 +126,74 @@ fun TvSearchTextField(
         if (showClearButton) {
             CinemaIconButton(
                 onClick = onClear,
-                modifier = Modifier
-                    .focusRequester(clearFocusRequester)
-                    .onPreviewKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown) {
-                            when (event.nativeKeyEvent.keyCode) {
-                                android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                    focusRequester.requestFocus()
-                                    true
+                modifier =
+                    Modifier
+                        .focusRequester(clearFocusRequester)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown) {
+                                when (event.nativeKeyEvent.keyCode) {
+                                    android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                        focusRequester.requestFocus()
+                                        true
+                                    }
+
+                                    android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                        submitFocusRequester.requestFocus()
+                                        true
+                                    }
+
+                                    else -> {
+                                        false
+                                    }
                                 }
-                                android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                    submitFocusRequester.requestFocus()
-                                    true
-                                }
-                                else -> false
+                            } else {
+                                false
                             }
-                        } else false
-                    },
+                        },
                 icon = {
                     Icon(
                         imageVector = CinemaIcons.Close,
                         contentDescription = stringResource(R.string.provider_clear_button),
                         modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                        tint = CinemaTextPrimary
+                        tint = CinemaTextPrimary,
                     )
-                }
+                },
             )
         }
 
         CinemaIconButton(
             onClick = onSearchSubmit,
-            modifier = Modifier
-                .focusRequester(submitFocusRequester)
-                .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown) {
-                        when (event.nativeKeyEvent.keyCode) {
-                            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                if (query.isNotEmpty()) {
-                                    clearFocusRequester.requestFocus()
-                                } else {
-                                    focusRequester.requestFocus()
+            modifier =
+                Modifier
+                    .focusRequester(submitFocusRequester)
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown) {
+                            when (event.nativeKeyEvent.keyCode) {
+                                android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                    if (query.isNotEmpty()) {
+                                        clearFocusRequester.requestFocus()
+                                    } else {
+                                        focusRequester.requestFocus()
+                                    }
+                                    true
                                 }
-                                true
+
+                                else -> {
+                                    false
+                                }
                             }
-                            else -> false
+                        } else {
+                            false
                         }
-                    } else false
-                },
+                    },
             icon = {
                 Icon(
                     imageVector = CinemaIcons.Search,
                     contentDescription = stringResource(R.string.common_search),
                     modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
-                    tint = CinemaTextPrimary
+                    tint = CinemaTextPrimary,
                 )
-            }
+            },
         )
     }
 

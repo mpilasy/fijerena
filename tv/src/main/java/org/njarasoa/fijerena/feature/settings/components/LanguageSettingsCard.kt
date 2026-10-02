@@ -31,35 +31,40 @@ fun LanguageSettingsCard(
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
                 text = stringResource(R.string.settings_language),
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)
-                ),
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleMedium.fontSize
+                                .scaled(scale),
+                    ),
                 color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-            val label = when (selectedLanguage) {
-                "en" -> stringResource(R.string.settings_language_en)
-                "mg" -> stringResource(R.string.settings_language_mg)
-                "fr" -> stringResource(R.string.settings_language_fr)
-                else -> selectedLanguage
-            }
+            val label =
+                when (selectedLanguage) {
+                    "en" -> stringResource(R.string.settings_language_en)
+                    "mg" -> stringResource(R.string.settings_language_mg)
+                    "fr" -> stringResource(R.string.settings_language_fr)
+                    else -> selectedLanguage
+                }
 
             CinemaSecondaryButton(
                 onClick = { showDialog = true },
                 text = label,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
 
     if (showDialog) {
-        val languages = listOf(
-            "en" to stringResource(R.string.settings_language_en),
-            "mg" to stringResource(R.string.settings_language_mg),
-            "fr" to stringResource(R.string.settings_language_fr)
-        )
-        
+        val languages =
+            listOf(
+                "en" to stringResource(R.string.settings_language_en),
+                "mg" to stringResource(R.string.settings_language_mg),
+                "fr" to stringResource(R.string.settings_language_fr),
+            )
+
         // Land focus on the language that is currently active, not on the button row at the
         // bottom of the dialog. Without this the dialog opened with focus nowhere at all — the
         // requester was attached to the empty `confirmButton = {}` slot — and D-pad presses fell

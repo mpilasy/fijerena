@@ -55,7 +55,9 @@ class SyncApplier(
         const val TAG = "SyncApplier"
 
         /** See [applyGuarded]. */
-        val reportedFailures: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+        val reportedFailures: MutableSet<String> =
+            java.util.concurrent.ConcurrentHashMap
+                .newKeySet()
     }
 
     private val settingsDb = SettingsDatabase.getInstance(context)
@@ -108,13 +110,23 @@ class SyncApplier(
                 continue
             }
             when (val outcome = applyGuarded(record)) {
-                Outcome.Applied -> applied++
+                Outcome.Applied -> {
+                    applied++
+                }
+
                 is Outcome.AppliedUserData -> {
                     applied++
                     changedProviders += outcome.providerId
                 }
-                Outcome.Skipped -> skipped++
-                Outcome.Deferred -> deferred += record
+
+                Outcome.Skipped -> {
+                    skipped++
+                }
+
+                Outcome.Deferred -> {
+                    deferred += record
+                }
+
                 Outcome.ActiveProfileDeleted -> {
                     deferred += record
                     activeProfileDeleted = true
@@ -132,7 +144,9 @@ class SyncApplier(
     private sealed interface Outcome {
         data object Applied : Outcome
 
-        data class AppliedUserData(val providerId: Long) : Outcome
+        data class AppliedUserData(
+            val providerId: Long,
+        ) : Outcome
 
         data object Skipped : Outcome
 
@@ -257,7 +271,16 @@ class SyncApplier(
             } else {
                 SyncMerge.Local(
                     version = versions.get(provider.id, key.profileKey, key.kind, key.itemId, key.contentType)?.hlc,
-                    tombstone = xtreamDb.syncTombstoneDao().get(provider.id, key.profileKey, key.kind, key.itemId, key.contentType)?.deletedAt,
+                    tombstone =
+                        xtreamDb
+                            .syncTombstoneDao()
+                            .get(
+                                provider.id,
+                                key.profileKey,
+                                key.kind,
+                                key.itemId,
+                                key.contentType,
+                            )?.deletedAt,
                     watchClearedAt =
                         if (key.kind == SyncKind.WATCH) {
                             xtreamDb.syncTombstoneDao().get(provider.id, key.profileKey, SyncKind.WATCH_CLEAR, "", "")?.deletedAt
@@ -278,7 +301,7 @@ class SyncApplier(
         xtreamDb.withTransaction {
             versions.setApplying(true)
             when (resolution) {
-                Resolution.Upsert ->
+                Resolution.Upsert -> {
                     if (key.kind == SyncKind.WATCH) {
                         val watch = SyncPayloads.decode<SyncPayloads.Watch>(record.payload)
                         xtreamDb.watchStateDao().restoreAll(listOf(watch.toEntity(providerId, key.profileKey, key.itemId, key.contentType)))
@@ -287,18 +310,27 @@ class SyncApplier(
                         xtreamDb.favoriteStateDao().restoreAllClearingTombstones(
                             listOf(
                                 FavoriteStateEntity(
-                                    providerId, key.profileKey, key.itemId, key.contentType, favoriteKind(key.kind),
-                                    favorite.name, favorite.parentCategoryId, favorite.createdAt,
+                                    providerId,
+                                    key.profileKey,
+                                    key.itemId,
+                                    key.contentType,
+                                    favoriteKind(key.kind),
+                                    favorite.name,
+                                    favorite.parentCategoryId,
+                                    favorite.createdAt,
                                 ),
                             ),
                         )
                     }
+                }
+
                 Resolution.Delete -> {
                     xtreamDb.favoriteStateDao().delete(providerId, key.profileKey, key.itemId, key.contentType, favoriteKind(key.kind))
                     xtreamDb.syncTombstoneDao().upsert(
                         SyncTombstoneEntity(providerId, key.profileKey, key.kind, key.itemId, key.contentType, record.hlc),
                     )
                 }
+
                 is Resolution.ClearWatch -> {
                     versions.deleteWatchOlderThan(providerId, key.profileKey, resolution.before)
                     versions.deleteWatchVersionsOlderThan(providerId, key.profileKey, resolution.before)
@@ -307,7 +339,9 @@ class SyncApplier(
                     )
                 }
             }
-            versions.upsert(SyncVersionEntity(providerId, key.profileKey, key.kind, key.itemId, key.contentType, record.hlc, pending = false))
+            versions.upsert(
+                SyncVersionEntity(providerId, key.profileKey, key.kind, key.itemId, key.contentType, record.hlc, pending = false),
+            )
             versions.setApplying(false)
         }
         return Outcome.AppliedUserData(providerId)
@@ -315,7 +349,8 @@ class SyncApplier(
 
     private fun favoriteKind(kind: String) = if (kind == SyncKind.FAVORITE_CATEGORY) FavoriteKind.CATEGORY else FavoriteKind.STREAM
 
-    private fun skippedOrDeferred(resolution: Resolution): Outcome = if (resolution is Resolution.Defer) Outcome.Deferred else Outcome.Skipped
+    private fun skippedOrDeferred(resolution: Resolution): Outcome =
+        if (resolution is Resolution.Defer) Outcome.Deferred else Outcome.Skipped
 
     // --- Profiles ---
 
@@ -340,18 +375,24 @@ class SyncApplier(
                 }
                 Outcome.Applied
             }
+
             Resolution.Delete -> {
                 when (ProfileRepository(context).deleteProfile(id)) {
                     ProfileRepository.DeleteBlocked.ACTIVE -> return Outcome.ActiveProfileDeleted
+
                     // Another device can't have deleted this one's last profile without having
                     // another; ignore rather than leave nobody to be.
                     ProfileRepository.DeleteBlocked.LAST -> return Outcome.Skipped
+
                     ProfileRepository.DeleteBlocked.NONE -> Unit
                 }
                 recordReceivedDeletion(SyncKind.PROFILE, id, record.hlc)
                 Outcome.Applied
             }
-            else -> skippedOrDeferred(resolution)
+
+            else -> {
+                skippedOrDeferred(resolution)
+            }
         }
     }
 
@@ -374,12 +415,16 @@ class SyncApplier(
                 }
                 Outcome.Applied
             }
+
             Resolution.Delete -> {
                 sync.providerByKey(providerKey)?.let { providers.deleteProvider(it.id, fromRemote = true) }
                 recordReceivedDeletion(SyncKind.PROVIDER, providerKey, record.hlc)
                 Outcome.Applied
             }
-            else -> skippedOrDeferred(resolution)
+
+            else -> {
+                skippedOrDeferred(resolution)
+            }
         }
     }
 
@@ -439,7 +484,8 @@ class SyncApplier(
                     val dao = settingsDb.epgSourceDao()
                     // First sync: the same source added on both devices before linking adopts this key.
                     if (sync.sourceByKey(sourceKey) == null) {
-                        sync.sourcesAt(providerId, remote.url)
+                        sync
+                            .sourcesAt(providerId, remote.url)
                             .firstOrNull { !sync.knownToServer(SyncKind.EPG_SOURCE, it.sourceKey) }
                             ?.let { sync.adoptSourceKey(it.sourceKey, sourceKey) }
                     }
@@ -470,6 +516,7 @@ class SyncApplier(
                 }
                 Outcome.Applied
             }
+
             Resolution.Delete -> {
                 val existing = sync.sourceByKey(sourceKey)
                 inSettingsApply {
@@ -480,7 +527,10 @@ class SyncApplier(
                 existing?.let { EpgIndexDatabase.getInstance(context).epgIndexDao().deleteBySourceId(it.id) }
                 Outcome.Applied
             }
-            else -> skippedOrDeferred(resolution)
+
+            else -> {
+                skippedOrDeferred(resolution)
+            }
         }
     }
 
@@ -500,7 +550,10 @@ class SyncApplier(
                 inSettingsApply { markSettingsVersion(SyncKind.SETTING, key.profileKey, key.itemId, record.hlc) }
                 Outcome.Applied
             }
-            else -> skippedOrDeferred(resolution)
+
+            else -> {
+                skippedOrDeferred(resolution)
+            }
         }
     }
 
@@ -532,7 +585,10 @@ class SyncApplier(
                 }
                 Outcome.Applied
             }
-            else -> skippedOrDeferred(resolution)
+
+            else -> {
+                skippedOrDeferred(resolution)
+            }
         }
     }
 }

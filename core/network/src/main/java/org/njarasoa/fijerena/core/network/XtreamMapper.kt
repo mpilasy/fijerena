@@ -1,7 +1,7 @@
 package org.njarasoa.fijerena.core.network
 
 import org.njarasoa.fijerena.core.network.asString
-
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.domain.AudioTechInfo
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
 import org.njarasoa.fijerena.core.player.domain.MediaCategory
@@ -11,8 +11,8 @@ import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.domain.MovieDetail
 import org.njarasoa.fijerena.core.player.domain.SeasonInfo
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
-import org.njarasoa.fijerena.core.player.domain.trailerUrl
 import org.njarasoa.fijerena.core.player.domain.VideoTechInfo
+import org.njarasoa.fijerena.core.player.domain.trailerUrl
 import org.njarasoa.fijerena.core.player.model.Episode
 import org.njarasoa.fijerena.core.player.model.Season
 import org.njarasoa.fijerena.core.player.model.SeriesInfo
@@ -20,7 +20,6 @@ import org.njarasoa.fijerena.core.player.model.VodInfo
 import org.njarasoa.fijerena.core.player.model.XtreamCategory
 import org.njarasoa.fijerena.core.player.model.XtreamSeries
 import org.njarasoa.fijerena.core.player.model.XtreamStream
-import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 
 object XtreamMapper {
     fun XtreamCategory.toDomain(): MediaCategory =

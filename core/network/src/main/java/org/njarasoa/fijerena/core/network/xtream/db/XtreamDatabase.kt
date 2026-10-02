@@ -77,8 +77,12 @@ abstract class XtreamDatabase : RoomDatabase() {
         private val MIGRATION_9_10 =
             object : Migration(9, 10) {
                 override fun migrate(db: SupportSQLiteDatabase) {
-                    db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `xtream_streams_fts` USING fts4(content=`xtream_streams`, tokenize=unicode61, `name`)")
-                    db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `xtream_series_fts`  USING fts4(content=`xtream_series`,  tokenize=unicode61, `name`)")
+                    db.execSQL(
+                        "CREATE VIRTUAL TABLE IF NOT EXISTS `xtream_streams_fts` USING fts4(content=`xtream_streams`, tokenize=unicode61, `name`)",
+                    )
+                    db.execSQL(
+                        "CREATE VIRTUAL TABLE IF NOT EXISTS `xtream_series_fts`  USING fts4(content=`xtream_series`,  tokenize=unicode61, `name`)",
+                    )
                     db.execSQL("INSERT INTO `xtream_streams_fts`(`xtream_streams_fts`) VALUES('rebuild')")
                     db.execSQL("INSERT INTO `xtream_series_fts`(`xtream_series_fts`)   VALUES('rebuild')")
                 }
@@ -91,9 +95,15 @@ abstract class XtreamDatabase : RoomDatabase() {
                     db.execSQL("ALTER TABLE `xtream_categories` ADD COLUMN `excluded` INTEGER NOT NULL DEFAULT 0")
                     db.execSQL("ALTER TABLE `xtream_streams` ADD COLUMN `excluded` INTEGER NOT NULL DEFAULT 0")
                     db.execSQL("ALTER TABLE `xtream_series` ADD COLUMN `excluded` INTEGER NOT NULL DEFAULT 0")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_xtream_categories_providerId_type_excluded` ON `xtream_categories` (`providerId`, `type`, `excluded`)")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_xtream_streams_providerId_type_categoryId_excluded` ON `xtream_streams` (`providerId`, `type`, `categoryId`, `excluded`)")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_xtream_series_providerId_categoryId_excluded` ON `xtream_series` (`providerId`, `categoryId`, `excluded`)")
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_xtream_categories_providerId_type_excluded` ON `xtream_categories` (`providerId`, `type`, `excluded`)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_xtream_streams_providerId_type_categoryId_excluded` ON `xtream_streams` (`providerId`, `type`, `categoryId`, `excluded`)",
+                    )
+                    db.execSQL(
+                        "CREATE INDEX IF NOT EXISTS `index_xtream_series_providerId_categoryId_excluded` ON `xtream_series` (`providerId`, `categoryId`, `excluded`)",
+                    )
                 }
             }
 
@@ -138,6 +148,7 @@ abstract class XtreamDatabase : RoomDatabase() {
          * See `docs/plans/20260828_watch-state-durable-storage-plan.md`. Nothing reads or writes this table
          * yet — it ships dark until Phase 2.
          */
+
         /**
          * Migration 15→16: durable favourites, replacing the `favorites_v2` and
          * `favorite_categories` SharedPreferences blobs that truncated at
@@ -423,19 +434,36 @@ abstract class XtreamDatabase : RoomDatabase() {
                     val part = java.io.File(file.path + suffix)
                     if (part.exists()) part.renameTo(java.io.File(file.parentFile, backupBase + suffix))
                 }
-                val notice = IllegalStateException("$name is v$fileVersion, newer than this build's v$DB_VERSION: moved to $backupBase, starting empty")
+                val notice =
+                    IllegalStateException(
+                        "$name is v$fileVersion, newer than this build's v$DB_VERSION: moved to $backupBase, starting empty",
+                    )
                 android.util.Log.e("XtreamDatabase", notice.message, notice)
-                org.njarasoa.fijerena.core.player.diagnostics.CrashLog.record("database downgrade", notice)
+                org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+                    .record("database downgrade", notice)
             }
         }
 
         /** Every migration, in order. internal: the migration tests check and run exactly these. */
         internal val ALL_MIGRATIONS: Array<Migration> =
             arrayOf(
-                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
-                MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
-                MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
-                MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24,
+                MIGRATION_7_8,
+                MIGRATION_8_9,
+                MIGRATION_9_10,
+                MIGRATION_10_11,
+                MIGRATION_11_12,
+                MIGRATION_12_13,
+                MIGRATION_13_14,
+                MIGRATION_14_15,
+                MIGRATION_15_16,
+                MIGRATION_16_17,
+                MIGRATION_17_18,
+                MIGRATION_18_19,
+                MIGRATION_19_20,
+                MIGRATION_20_21,
+                MIGRATION_21_22,
+                MIGRATION_22_23,
+                MIGRATION_23_24,
             )
 
         fun getInstance(context: Context): XtreamDatabase =
@@ -487,7 +515,6 @@ abstract class XtreamDatabase : RoomDatabase() {
                             XtreamSyncTriggers.install(db)
                         }
                     },
-                )
-                .build()
+                ).build()
     }
 }

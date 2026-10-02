@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -25,12 +27,6 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
-import androidx.tv.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -43,27 +39,29 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardColors
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.CardGlow
 import androidx.tv.material3.CardScale
 import androidx.tv.material3.CardShape
-import androidx.tv.material3.Glow
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Glow
+import androidx.tv.material3.Icon
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -71,16 +69,16 @@ import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
-import org.njarasoa.fijerena.ui.theme.LocalUiScale
-import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -88,7 +86,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 
 // Pre-compiled formatter — locale-aware full date (e.g., "Thursday, February 27, 2026")
 private val EPG_DATE_FORMATTER = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
@@ -302,7 +300,15 @@ fun EpgGridLayout(
                                 modifier =
                                     Modifier
                                         .width(TvDimensions.epgChannelColumnWidth.scaled(scale))
-                                        .then(if (index == initialRowIndex) Modifier.focusRequester(firstChannelFocusRequester) else Modifier),
+                                        .then(
+                                            if (index ==
+                                                initialRowIndex
+                                            ) {
+                                                Modifier.focusRequester(firstChannelFocusRequester)
+                                            } else {
+                                                Modifier
+                                            },
+                                        ),
                             )
 
                             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
@@ -408,7 +414,7 @@ private fun EpgHeader(
                 Icon(
                     imageVector = CinemaIcons.KeyboardArrowLeft,
                     contentDescription = stringResource(R.string.epg_prev_day),
-                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
                 )
             }
             CinemaButton(onClick = onJumpToNow) {
@@ -418,7 +424,7 @@ private fun EpgHeader(
                 Icon(
                     imageVector = CinemaIcons.KeyboardArrowRight,
                     contentDescription = stringResource(R.string.epg_next_day),
-                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
                 )
             }
             CinemaButton(
@@ -435,15 +441,22 @@ private fun EpgHeader(
                     Icon(
                         imageVector = CinemaIcons.Refresh,
                         contentDescription = stringResource(R.string.common_refresh),
-                        tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                        tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
                     )
                 }
             }
             CinemaButton(onClick = onSearchToggle) {
                 Icon(
                     imageVector = if (isSearchActive) CinemaIcons.Close else CinemaIcons.Search,
-                    contentDescription = if (isSearchActive) stringResource(R.string.epg_search_close) else stringResource(R.string.common_search),
-                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                    contentDescription =
+                        if (isSearchActive) {
+                            stringResource(
+                                R.string.epg_search_close,
+                            )
+                        } else {
+                            stringResource(R.string.common_search)
+                        },
+                    tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
                 )
             }
         }

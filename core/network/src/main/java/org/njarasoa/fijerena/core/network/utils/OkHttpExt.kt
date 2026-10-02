@@ -14,16 +14,24 @@ import kotlin.coroutines.resumeWithException
  */
 suspend fun Call.await(): Response {
     return suspendCancellableCoroutine { continuation ->
-        enqueue(object : Callback {
-            override fun onResponse(call: Call, response: Response) {
-                continuation.resume(response)
-            }
+        enqueue(
+            object : Callback {
+                override fun onResponse(
+                    call: Call,
+                    response: Response,
+                ) {
+                    continuation.resume(response)
+                }
 
-            override fun onFailure(call: Call, e: IOException) {
-                if (continuation.isCancelled) return
-                continuation.resumeWithException(e)
-            }
-        })
+                override fun onFailure(
+                    call: Call,
+                    e: IOException,
+                ) {
+                    if (continuation.isCancelled) return
+                    continuation.resumeWithException(e)
+                }
+            },
+        )
 
         continuation.invokeOnCancellation {
             try {

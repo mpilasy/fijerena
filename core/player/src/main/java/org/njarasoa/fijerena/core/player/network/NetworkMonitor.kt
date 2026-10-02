@@ -100,8 +100,11 @@ object NetworkMonitor {
         return when {
             // Ethernet and WiFi both map to WIFI profile (stable, high bandwidth)
             caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> NetworkType.WIFI
+
             caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkType.WIFI
+
             caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetworkType.CELLULAR
+
             else -> NetworkType.UNKNOWN
         }
     }

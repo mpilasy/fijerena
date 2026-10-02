@@ -1,15 +1,15 @@
 package org.njarasoa.fijerena.core.network
 import android.content.Context
-import kotlinx.coroutines.CancellationException
-import org.njarasoa.fijerena.core.network.R
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.edit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
@@ -215,6 +215,7 @@ class SettingsExportManager(
         val hasConflicts: Boolean get() = conflictingProviders.isNotEmpty()
         val hasProviders: Boolean get() = settings.providers.isNotEmpty()
         val hasEpgSources: Boolean get() = settings.epgSources.isNotEmpty()
+
         // Watch state rides the favorites checkbox (see importFromJson), so its presence counts
         // toward whether that checkbox is worth showing at all.
         val hasFavorites: Boolean get() =
@@ -520,6 +521,7 @@ class SettingsExportManager(
                                 ConflictResolution.SKIP -> {
                                     providersSkipped++
                                 }
+
                                 ConflictResolution.OVERWRITE -> {
                                     // Update existing provider's URL, username, type, config, settings
                                     providerRepo.updateProvider(
@@ -546,6 +548,7 @@ class SettingsExportManager(
                                     }
                                     providersUpdated++
                                 }
+
                                 ConflictResolution.DUPLICATE -> {
                                     // Add as new provider with "(imported)" suffix
                                     addNewProvider(providerRepo, ep.copy(name = "${ep.name} (imported)"))
@@ -853,7 +856,13 @@ class SettingsExportManager(
 
             if (parts.isEmpty()) parts.add(context.getString(R.string.settings_export_summary_updated))
             val summary = parts.joinToString(". ") + "."
-            return if (providersAdded > 0) context.getString(R.string.settings_export_summary_passwords_reentry_format, summary) else summary
+            return if (providersAdded >
+                0
+            ) {
+                context.getString(R.string.settings_export_summary_passwords_reentry_format, summary)
+            } else {
+                summary
+            }
         }
     }
 }

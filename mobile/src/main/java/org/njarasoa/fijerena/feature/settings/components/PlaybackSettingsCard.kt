@@ -31,7 +31,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 @Composable
 fun PlaybackSettingsCard(
     uiState: SettingsUiState,
-    viewModel: SettingsViewModel
+    viewModel: SettingsViewModel,
 ) {
     SettingsSection(title = stringResource(R.string.settings_playback_section_title)) {
         var watchDelayText by remember(uiState.watchDelaySeconds) {

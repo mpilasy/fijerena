@@ -12,8 +12,8 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSearchResultRow
-import java.util.Locale
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import java.util.Locale
 
 /**
  * Thrown when the FTS index is marked stale (mid-ingest or mid-rebuild) and the LIKE fallback
@@ -187,35 +187,37 @@ class XmltvSearchService(
         } else {
             // 1. Try Raw FTS Query (Supports OR, NEAR, etc.)
             val rawFtsQuery = buildRawFtsQuery(query)
-            val rawRows = try {
-                withTimeoutOrNull(FTS_TIMEOUT_MS) {
-                    dao.searchByTitleFts(rawFtsQuery, sourceIds, windowStart, windowEnd)
+            val rawRows =
+                try {
+                    withTimeoutOrNull(FTS_TIMEOUT_MS) {
+                        dao.searchByTitleFts(rawFtsQuery, sourceIds, windowStart, windowEnd)
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    // A newer keystroke cancelled this search — not a query failure. Rethrowing
+                    // (rather than falling through to null, which the fallback path below treats as
+                    // "no results, try the safe query") stops a second, equally pointless FTS query
+                    // from running against an already-cancelled search.
+                    throw e
+                } catch (e: Exception) {
+                    // Catches SQLite syntax errors if user provided malformed FTS tokens
+                    null
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                // A newer keystroke cancelled this search — not a query failure. Rethrowing
-                // (rather than falling through to null, which the fallback path below treats as
-                // "no results, try the safe query") stops a second, equally pointless FTS query
-                // from running against an already-cancelled search.
-                throw e
-            } catch (e: Exception) {
-                // Catches SQLite syntax errors if user provided malformed FTS tokens
-                null
-            }
 
             if (rawRows != null && rawRows.isNotEmpty()) {
                 result = rowsToSearchResult(rawRows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_PHRASE)
             } else {
                 // 2. Fallback to Safe Phrase/AND matching if raw FTS returned nothing or failed
                 val safeFtsQuery = buildSafeFtsQuery(query)
-                val safeRows = try {
-                    withTimeoutOrNull(FTS_TIMEOUT_MS) {
-                        dao.searchByTitleFts(safeFtsQuery, sourceIds, windowStart, windowEnd)
+                val safeRows =
+                    try {
+                        withTimeoutOrNull(FTS_TIMEOUT_MS) {
+                            dao.searchByTitleFts(safeFtsQuery, sourceIds, windowStart, windowEnd)
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        null
                     }
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    null
-                }
 
                 if (safeRows != null && safeRows.isNotEmpty()) {
                     result = rowsToSearchResult(safeRows, searchedFromIndex = true, searchPath = EpgSearchPath.FTS_AND)
@@ -234,13 +236,14 @@ class XmltvSearchService(
      */
     private fun buildRawFtsQuery(query: String): String {
         val trimmed = query.trim()
-        val finalQuery = if (FTS_OPERATOR_REGEX.containsMatchIn(trimmed) || trimmed.contains("\"")) {
-            // User likely provided manual FTS syntax
-            trimmed
-        } else {
-            // Standard query: append wildcard to end for prefix matching
-            "$trimmed*"
-        }
+        val finalQuery =
+            if (FTS_OPERATOR_REGEX.containsMatchIn(trimmed) || trimmed.contains("\"")) {
+                // User likely provided manual FTS syntax
+                trimmed
+            } else {
+                // Standard query: append wildcard to end for prefix matching
+                "$trimmed*"
+            }
         return finalQuery
     }
 
@@ -248,14 +251,15 @@ class XmltvSearchService(
      * Builds a safe "fallback" query by stripping operators and wrapping in quotes.
      */
     private fun buildSafeFtsQuery(query: String): String {
-        val sanitized = query
-            .replace("\"", "")
-            .replace("*", "")
-            .replace("(", "")
-            .replace(")", "")
-            .replace(":", "")
-            .trim()
-        
+        val sanitized =
+            query
+                .replace("\"", "")
+                .replace("*", "")
+                .replace("(", "")
+                .replace(")", "")
+                .replace(":", "")
+                .trim()
+
         return if (sanitized.isBlank()) {
             "*"
         } else {

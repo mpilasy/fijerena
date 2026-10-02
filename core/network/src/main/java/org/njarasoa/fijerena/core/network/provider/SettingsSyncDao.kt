@@ -149,7 +149,9 @@ interface SettingsSyncDao {
         newKey: String,
     )
 
-    @Query("UPDATE OR REPLACE sync_version SET itemKey = :newKey WHERE itemKey = :oldKey AND kind IN ('provider', 'provider_login', 'category_filters')")
+    @Query(
+        "UPDATE OR REPLACE sync_version SET itemKey = :newKey WHERE itemKey = :oldKey AND kind IN ('provider', 'provider_login', 'category_filters')",
+    )
     suspend fun renameVersionKeys(
         oldKey: String,
         newKey: String,

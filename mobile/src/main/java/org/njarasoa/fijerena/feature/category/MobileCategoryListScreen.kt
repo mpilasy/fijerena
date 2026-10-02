@@ -2,7 +2,9 @@ package org.njarasoa.fijerena.feature.category
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -72,7 +74,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -89,21 +90,19 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.LocalActivity
-import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
-import org.njarasoa.fijerena.core.player.domain.browseTarget
-import org.njarasoa.fijerena.core.player.domain.browseTargetFor
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.browseTarget
+import org.njarasoa.fijerena.core.player.domain.browseTargetFor
 import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -113,37 +112,39 @@ import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
-import org.njarasoa.fijerena.core.ui.components.SkeletonList
-import org.njarasoa.fijerena.core.ui.components.LanguageBadge
-import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.components.LanguageBadge
+import org.njarasoa.fijerena.core.ui.components.RatingBadge
+import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaThemeHolder
+import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
-import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
-import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
-import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
+import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
-import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
+import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
+import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
+import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -153,8 +154,7 @@ import org.njarasoa.fijerena.ui.components.cards.cinemaCardHairlineBorder
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -301,7 +301,8 @@ fun MobileCategoryListScreen(
         LaunchedEffect(dockPlaybackState) {
             val isPlaying = dockPlaybackState is PlaybackState.Playing || dockPlaybackState is PlaybackState.Buffering
             activity?.setPictureInPictureParams(
-                android.app.PictureInPictureParams.Builder()
+                android.app.PictureInPictureParams
+                    .Builder()
                     .setAutoEnterEnabled(isPlaying)
                     .build(),
             )
@@ -437,8 +438,14 @@ fun MobileCategoryListScreen(
             val observer =
                 LifecycleEventObserver { _, event ->
                     when (event) {
-                        Lifecycle.Event.ON_STOP -> dockPlayback.onAppStopped()
-                        Lifecycle.Event.ON_RESUME -> dockPlayback.onAppResumed()
+                        Lifecycle.Event.ON_STOP -> {
+                            dockPlayback.onAppStopped()
+                        }
+
+                        Lifecycle.Event.ON_RESUME -> {
+                            dockPlayback.onAppResumed()
+                        }
+
                         else -> {}
                     }
                 }
@@ -500,471 +507,403 @@ fun MobileCategoryListScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-    AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = target?.thumbnailUrl)
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            // Hidden in the landscape split — the title/EPG/search row eats vertical space the
-            // video pane needs, and none of its actions (EPG, search, category nav) apply while
-            // docked anyway (category chips are hidden here too, see below).
-            if (!(isLiveTv && target != null && isLandscape)) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            when (contentType) {
-                                ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
-                                ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
-                                ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
-                                else -> contentType.replace("_", " ")
-                            },
-                        )
-                    },
-                    navigationIcon = {
-                        CinemaIconButton(onClick = { stopDockThen(onBack) },
-                            icon = {
-                                Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
-                            }
-                        )
-                    },
-                    actions = {
-                        // EPG button - show for Live TV when native EPG or XMLTV file is available
-                        if (contentType == ContentType.LIVE_TV) {
-                            val state = uiState
-                            if (state is CategoryViewModel.UiState.Success) {
-                                val selectedCatId = state.selectedCategoryId
-                                val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
-                                val hasEpgData =
-                                    supportsNativeEpg ||
-                                        epgIndexState is EpgIndexState.Indexed
-                                if (selectedCatId != null && selectedCatName != null && hasEpgData) {
-                                    CinemaIconButton(onClick = { stopDockThen { onEpgClick(selectedCatId, selectedCatName) } },
-                                        icon = {
-                                            Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide), tint = CinemaTextPrimary)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        CinemaIconButton(onClick = { stopDockThen(onSearchClick) },
-                            icon = {
-                                Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
-                            }
-                        )
-                    },
-                )
-            }
-        },
-    ) { paddingValues ->
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-        ) {
-            AnimatedContent(
-                targetState = uiState,
-                // Keyed on the sealed subtype, not the state instance — Success carries fresh
-                // data (stream lists, docked preview target) on nearly every emission, and a
-                // plain targetState comparison would refire the crossfade on every one of those
-                // instead of only on Loading/Success/Error swaps.
-                contentKey = { it::class },
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) togetherWith
-                        fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
-                },
-                label = "category_state_crossfade",
-            ) { state ->
-            when (state) {
-                is CategoryViewModel.UiState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize().padding(Spacing.sm),
-                    ) {
-                        SkeletonList(
-                            rowCount = 8,
-                            rowHeight = MobileDimensions.streamCardHeight,
-                            thumbnailWidth = MobileDimensions.posterWidth,
-                            thumbnailHeight = MobileDimensions.posterHeight,
-                            verticalSpacing = LocalUiStyle.current.grid.spacing,
-                        )
-                    }
-                }
-                is CategoryViewModel.UiState.Success -> {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        // EPG error/status banner (Live TV only)
-                        if (contentType == ContentType.LIVE_TV) {
-                            val epgMessage =
-                                when (epgIndexState) {
-                                    is EpgIndexState.Failed -> stringResource(R.string.epg_indexing_failed)
-                                    is EpgIndexState.Indexing ->
-                                        stringResource(R.string.epg_indexing_progress, (epgIndexState as EpgIndexState.Indexing).progressPercent)
-                                    else -> null
-                                }
-                            if (epgMessage != null) {
-                                Text(
-                                    text = epgMessage,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color =
-                                        if (epgIndexState is EpgIndexState.Indexing) {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        } else {
-                                            MaterialTheme.colorScheme.error
-                                        },
-                                    modifier =
-                                        Modifier.padding(
-                                            horizontal = CinemaSpacing.md,
-                                            vertical = CinemaSpacing.xs,
-                                        ),
-                                )
-                            }
-                        }
-
-                        // Horizontal category chips — hidden while a preview is docked so the
-                        // video sits right below the top bar instead of being pushed down by
-                        // navigation chrome the user isn't using in that moment.
-                        if (!(isLiveTv && target != null)) {
-                            CategoryChipRow(
-                                categories = state.categories,
-                                selectedCategoryId = state.selectedCategoryId,
-                                contentType = contentType,
-                                favoriteCategoryIds = favoriteCategoryIds,
-                                categoryViewModel = viewModel,
-                                onCategorySelected = { categoryId ->
-                                    viewModel.loadStreams(categoryId)
+        AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = target?.thumbnailUrl)
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                // Hidden in the landscape split — the title/EPG/search row eats vertical space the
+                // video pane needs, and none of its actions (EPG, search, category nav) apply while
+                // docked anyway (category chips are hidden here too, see below).
+                if (!(isLiveTv && target != null && isLandscape)) {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                when (contentType) {
+                                    ContentType.LIVE_TV -> stringResource(R.string.provider_live_tv_label)
+                                    ContentType.MOVIES -> stringResource(R.string.provider_movies_label)
+                                    ContentType.TV_SHOWS -> stringResource(R.string.provider_tv_shows_label)
+                                    else -> contentType.replace("_", " ")
                                 },
                             )
-
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outline,
-                                thickness = MobileDimensions.dividerThin,
-                            )
-                        }
-
-                        // Streams list with pull-to-refresh — while a preview is docked, always
-                        // Recent or favorites (see listSource above), regardless of the real
-                        // selected category/tab. INCLUDE keeps the docked channel in the list
-                        // even before its delayed history write lands.
-                        val displayedStreams =
-                            if (target == null) {
-                                state.streams
-                            } else if (listSource == PreviewListSource.FAVORITES) {
-                                favoriteStreams
-                            } else {
-                                recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE)
-                            }
-                        val displayedStreamsLoading =
-                            if (target == null) {
-                                state.streamsLoading
-                            } else if (listSource == PreviewListSource.FAVORITES) {
-                                favoriteStreamsLoading
-                            } else {
-                                publishedRecentStreams == null
-                            }
-                        // Swipe left/right toggles the docked panel between Recent and
-                        // Favorites — mirrors TV's D-pad Left/Right on the same panel
-                        // (LiveTvSplitLayout.kt). Only active while docked; normal category/tab
-                        // browsing has no swipe. Threshold/accumulator pattern matches the
-                        // full-screen player's own horizontal swipe handling
-                        // (MobilePlayerScreen.kt) for consistency.
-                        val listSourceSwipeModifier =
-                            if (target == null) {
-                                Modifier
-                            } else {
-                                Modifier.pointerInput(Unit) {
-                                    var accumulator = 0f
-                                    var fired = false
-                                    detectHorizontalDragGestures(
-                                        onDragStart = { accumulator = 0f; fired = false },
-                                        onDragEnd = { accumulator = 0f; fired = false },
-                                        onDragCancel = { accumulator = 0f; fired = false },
-                                    ) { change, dragAmount ->
-                                        change.consume()
-                                        accumulator += dragAmount
-                                        if (!fired && kotlin.math.abs(accumulator) > 80f) {
-                                            fired = true
-                                            listSource =
-                                                if (accumulator < 0) PreviewListSource.FAVORITES else PreviewListSource.RECENT
-                                        }
-                                    }
-                                }
-                            }
-                        val streamsList: @Composable () -> Unit = {
-                            PullToRefreshBox(
-                                isRefreshing = displayedStreamsLoading,
-                                onRefresh = {
-                                    if (target == null) {
-                                        state.selectedCategoryId?.let { viewModel.refreshStreams(it) }
-                                    } else if (listSource == PreviewListSource.FAVORITES) {
-                                        composableScope.launch {
-                                            favoriteStreamsLoading = true
-                                            favoriteStreams = viewModel.getFavoritesSnapshot()
-                                            favoriteStreamsLoading = false
-                                        }
-                                    } else {
-                                        composableScope.launch { viewModel.refreshRecentItems() }
-                                        recentOrderResetTick++
-                                    }
+                        },
+                        navigationIcon = {
+                            CinemaIconButton(
+                                onClick = { stopDockThen(onBack) },
+                                icon = {
+                                    Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
                                 },
-                                modifier = Modifier.fillMaxSize().then(listSourceSwipeModifier),
-                            ) {
-                                val toggleFavorite: (MediaItem) -> Unit = { toggled ->
-                                    viewModel.toggleFavoriteStream(
-                                        itemId = toggled.id,
-                                        itemName = toggled.name,
-                                        categoryId = toggled.categoryId,
-                                        contentType = contentType,
-                                    )
-                                    if (target == null) {
-                                        // Only reload when Favorites is what's on screen (so an
-                                        // unfavorited row drops out) — refreshStreams selects the
-                                        // category it loads, so calling it from any other category
-                                        // yanked the view over to Favorites.
-                                        if (state.selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID) {
-                                            viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
-                                        }
-                                    } else {
-                                        composableScope.launch {
-                                            favoriteStreams = viewModel.getFavoritesSnapshot()
-                                        }
-                                    }
-                                }
-                                StreamsList(
-                                    items = displayedStreams,
-                                    streamsLoading = displayedStreamsLoading,
-                                    selectedCategoryId =
-                                        when {
-                                            target == null -> state.selectedCategoryId
-                                            listSource == PreviewListSource.FAVORITES -> CategoryViewModel.FAVORITES_CATEGORY_ID
-                                            else -> CategoryViewModel.RECENT_CATEGORY_ID
-                                        },
-                                    panelTitle =
-                                        if (target == null) {
-                                            null
-                                        } else if (listSource == PreviewListSource.FAVORITES) {
-                                            stringResource(R.string.settings_import_favorites_label)
-                                        } else {
-                                            stringResource(R.string.category_recent_label)
-                                        },
-                                    lastPlayedItemId = state.lastPlayedItemId,
-                                    nowPlaying = nowPlaying,
-                                    watchedIds = watchedIds,
-                                    watchProgress = watchProgress,
-                                    currentlyPlayingId = target?.id,
-                                    onItemSelected = { itemId, itemName, categoryId ->
-                                        val item = displayedStreams?.firstOrNull { it.id == itemId }
-                                        val selected = item?.browseTarget(contentType) ?: browseTargetFor(contentType, itemId)
-                                        when {
-                                            // A row from "Recent Categories"/"Favorite Categories" browses, it doesn't play.
-                                            selected is BrowseTarget.CategoryRef -> viewModel.loadStreams(selected.categoryId)
-                                            isLiveTv && item != null -> {
-                                                // Dock locally instead of navigating away — mirrors
-                                                // TV's LiveTvChannelList.onStreamPromote interception.
-                                                dockTarget = item
-                                            }
-                                            else -> onStreamSelected(itemId, itemName, categoryId, contentType, selected)
-                                        }
-                                    },
-                                    contentType = contentType,
-                                    favoriteIds = favoriteIds,
-                                    onToggleFavorite = toggleFavorite,
-                                    onToggleWatched = { toggled ->
-                                        viewModel.toggleWatchedStream(toggled.id, contentType)
-                                    },
-                                    onRemoveItem =
-                                        if (viewModel.supportsRemoveFromRecent) {
-                                            { item -> viewModel.removeFromRecent(item.id, contentType, item.seriesId) }
-                                        } else {
-                                            null
-                                        },
-                                    onRemoveFavorite = toggleFavorite,
-                                )
-                            }
-                        }
-
-                        if (isLiveTv && target != null && isLandscape) {
-                            // Landscape split — mirrors tv/.../LiveTvSplitLayout.kt's side-by-side
-                            // layout as closely as possible: video+EPG pane left (0.66), channel
-                            // list right (0.34).
-                            Row(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                            ) {
-                                Column(
-                                    modifier =
-                                        Modifier
-                                            .weight(0.66f)
-                                            .fillMaxHeight()
-                                            .padding(horizontal = CinemaSpacing.md),
-                                ) {
-                                    // True 16:9 without Modifier.aspectRatio(16f / 9f): the latter
-                                    // mis-positions its content in this specific spot (a Row placed
-                                    // after other siblings in the parent Column, each weighted+
-                                    // fillMaxHeight child measured with a reduced-but-bounded height
-                                    // constraint) — reproduced with a bare colored Box, confirmed
-                                    // it's not related to EmbeddedPlayerSurface. TV's
-                                    // LiveTvSplitLayout doesn't hit this because its Row has no
-                                    // preceding siblings to reduce the incoming constraint.
-                                    // BoxWithConstraints sidesteps it: it reads the actual measured
-                                    // width and derives a plain .height() from it, the same
-                                    // primitive the old fixed-120dp workaround used, just computed
-                                    // instead of hardcoded — coerced against maxHeight too, so it
-                                    // never overflows the column on unusually short screens.
-                                    BoxWithConstraints(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(CinemaCornerRadius.medium))
-                                                .background(CinemaSurface)
-                                                .clickable(onClick = { fullScreen = true }),
-                                    ) {
-                                        val videoHeight = (maxWidth * 9f / 16f).coerceAtMost(maxHeight)
-                                        Box(modifier = Modifier.fillMaxWidth().height(videoHeight)) {
-                                            // TextureView (not the default SurfaceView): this box
-                                            // sits next to the scrolling/recomposing channel list,
-                                            // and SurfaceView there stalls the main thread and
-                                            // ANRs. Full-screen playback (MobilePlayerContent) uses
-                                            // its own default surface instead of sharing this one —
-                                            // promoting/demoting does a real detach/reattach (one
-                                            // frame's glitch) rather than relocating this node, but
-                                            // it stops every OSD/flyout interaction in full-screen
-                                            // from janking the video for the rest of the session.
-                                            // Mirrors TV's LiveTvSplitLayout.
-                                            EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
-
-                                            // The preview surface has no controls/error UI of its
-                                            // own, so a stalled or watchdog-killed stream would
-                                            // otherwise look identical to a live frozen frame —
-                                            // mirrors TV's LiveTvSplitLayout.
-                                            if (dockPlaybackState !is PlaybackState.Playing) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.align(Alignment.Center),
-                                                    color = CinemaAccent,
-                                                )
-                                            }
-
-                                            IconButton(
-                                                onClick = {
-                                                    dockPlayback?.stop()
-                                                    dockTarget = null
-                                                },
-                                                modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xs),
-                                            ) {
+                            )
+                        },
+                        actions = {
+                            // EPG button - show for Live TV when native EPG or XMLTV file is available
+                            if (contentType == ContentType.LIVE_TV) {
+                                val state = uiState
+                                if (state is CategoryViewModel.UiState.Success) {
+                                    val selectedCatId = state.selectedCategoryId
+                                    val selectedCatName = state.categories.find { it.id == selectedCatId }?.name
+                                    val hasEpgData =
+                                        supportsNativeEpg ||
+                                            epgIndexState is EpgIndexState.Indexed
+                                    if (selectedCatId != null && selectedCatName != null && hasEpgData) {
+                                        CinemaIconButton(
+                                            onClick = { stopDockThen { onEpgClick(selectedCatId, selectedCatName) } },
+                                            icon = {
                                                 Icon(
-                                                    CinemaIcons.Close,
-                                                    contentDescription = stringResource(R.string.common_close),
+                                                    CinemaIcons.DateRange,
+                                                    stringResource(R.string.common_tv_guide),
                                                     tint = CinemaTextPrimary,
                                                 )
-                                            }
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                                    // Marks this as the docked preview, distinct from the bare
-                                    // list underneath — see docs/UX_FLOW_AUDIT.md, "Live TV
-                                    // back-stopover".
-                                    Text(
-                                        text = stringResource(R.string.category_live_preview_badge),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = CinemaAccent,
-                                    )
-                                    Text(
-                                        text = dockSuccess?.streamName ?: target.name,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = CinemaTextPrimary,
-                                        maxLines = 1,
-                                    )
-                                    val nowProg = dockSuccess?.currentEpgProgram
-                                    if (nowProg != null) {
-                                        Text(
-                                            text = stringResource(R.string.epg_now_prefix, nowProg.title),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = CinemaTextPrimary,
-                                            maxLines = 2,
-                                        )
-                                        val fraction = nowProg.elapsedFraction()
-                                        LinearProgressIndicator(
-                                            progress = { fraction },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            color = CinemaAccent,
-                                            trackColor = CinemaSurface,
+                                            },
                                         )
                                     }
-                                    val nextProg = dockSuccess?.nextEpgProgram
-                                    if (nextProg != null) {
-                                        Text(
-                                            text = stringResource(R.string.category_up_next_format, nextProg.title),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = CinemaTextSecondary,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                }
-                                Column(modifier = Modifier.weight(0.34f).fillMaxHeight()) {
-                                    streamsList()
                                 }
                             }
-                        } else {
-                            // Portrait: same video+EPG / list split as landscape, just stacked
-                            // top/bottom instead of side-by-side (a plain Column weight split —
-                            // no Row-after-siblings + aspectRatio() involved, so none of the
-                            // mis-positioning above applies here).
+                            CinemaIconButton(
+                                onClick = { stopDockThen(onSearchClick) },
+                                icon = {
+                                    Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
+                                },
+                            )
+                        },
+                    )
+                }
+            },
+        ) { paddingValues ->
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+            ) {
+                AnimatedContent(
+                    targetState = uiState,
+                    // Keyed on the sealed subtype, not the state instance — Success carries fresh
+                    // data (stream lists, docked preview target) on nearly every emission, and a
+                    // plain targetState comparison would refire the crossfade on every one of those
+                    // instead of only on Loading/Success/Error swaps.
+                    contentKey = { it::class },
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) togetherWith
+                            fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs))
+                    },
+                    label = "category_state_crossfade",
+                ) { state ->
+                    when (state) {
+                        is CategoryViewModel.UiState.Loading -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize().padding(Spacing.sm),
+                            ) {
+                                SkeletonList(
+                                    rowCount = 8,
+                                    rowHeight = MobileDimensions.streamCardHeight,
+                                    thumbnailWidth = MobileDimensions.posterWidth,
+                                    thumbnailHeight = MobileDimensions.posterHeight,
+                                    verticalSpacing = LocalUiStyle.current.grid.spacing,
+                                )
+                            }
+                        }
+
+                        is CategoryViewModel.UiState.Success -> {
                             Column(modifier = Modifier.fillMaxSize()) {
-                                if (isLiveTv && target != null) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .weight(0.5f)
-                                                // Unlike TV, the dock here already did a full
-                                                // loadStream() (see the top-of-function comment on
-                                                // why mobile commits immediately on tap) — real
-                                                // category/last-watched data and watch-history
-                                                // recording already happened at dock time, so
-                                                // promoting needs no extra reload.
-                                                .clickable(onClick = { fullScreen = true }),
-                                    ) {
-                                        // TextureView — see the landscape dock box above.
-                                        EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
+                                // EPG error/status banner (Live TV only)
+                                if (contentType == ContentType.LIVE_TV) {
+                                    val epgMessage =
+                                        when (epgIndexState) {
+                                            is EpgIndexState.Failed -> {
+                                                stringResource(R.string.epg_indexing_failed)
+                                            }
 
-                                        IconButton(
-                                            onClick = {
-                                                dockPlayback?.stop()
-                                                dockTarget = null
-                                            },
-                                            modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xs),
-                                        ) {
-                                            Icon(
-                                                CinemaIcons.Close,
-                                                contentDescription = stringResource(R.string.common_close),
-                                                tint = CinemaTextPrimary,
-                                            )
-                                        }
-
-                                        val palette = CinemaThemeHolder.current
-                                        // Memoize brush to avoid allocating new Brush + listOf on
-                                        // every recomposition — mirrors GradientOverlay.kt.
-                                        val scrimBrush =
-                                            remember(palette.background) {
-                                                Brush.verticalGradient(
-                                                    listOf(
-                                                        Color.Transparent,
-                                                        palette.background.copy(alpha = CinemaAlpha.imageOverlay),
-                                                    ),
+                                            is EpgIndexState.Indexing -> {
+                                                stringResource(
+                                                    R.string.epg_indexing_progress,
+                                                    (epgIndexState as EpgIndexState.Indexing).progressPercent,
                                                 )
                                             }
+
+                                            else -> {
+                                                null
+                                            }
+                                        }
+                                    if (epgMessage != null) {
+                                        Text(
+                                            text = epgMessage,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color =
+                                                if (epgIndexState is EpgIndexState.Indexing) {
+                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                                } else {
+                                                    MaterialTheme.colorScheme.error
+                                                },
+                                            modifier =
+                                                Modifier.padding(
+                                                    horizontal = CinemaSpacing.md,
+                                                    vertical = CinemaSpacing.xs,
+                                                ),
+                                        )
+                                    }
+                                }
+
+                                // Horizontal category chips — hidden while a preview is docked so the
+                                // video sits right below the top bar instead of being pushed down by
+                                // navigation chrome the user isn't using in that moment.
+                                if (!(isLiveTv && target != null)) {
+                                    CategoryChipRow(
+                                        categories = state.categories,
+                                        selectedCategoryId = state.selectedCategoryId,
+                                        contentType = contentType,
+                                        favoriteCategoryIds = favoriteCategoryIds,
+                                        categoryViewModel = viewModel,
+                                        onCategorySelected = { categoryId ->
+                                            viewModel.loadStreams(categoryId)
+                                        },
+                                    )
+
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.outline,
+                                        thickness = MobileDimensions.dividerThin,
+                                    )
+                                }
+
+                                // Streams list with pull-to-refresh — while a preview is docked, always
+                                // Recent or favorites (see listSource above), regardless of the real
+                                // selected category/tab. INCLUDE keeps the docked channel in the list
+                                // even before its delayed history write lands.
+                                val displayedStreams =
+                                    if (target == null) {
+                                        state.streams
+                                    } else if (listSource == PreviewListSource.FAVORITES) {
+                                        favoriteStreams
+                                    } else {
+                                        recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE)
+                                    }
+                                val displayedStreamsLoading =
+                                    if (target == null) {
+                                        state.streamsLoading
+                                    } else if (listSource == PreviewListSource.FAVORITES) {
+                                        favoriteStreamsLoading
+                                    } else {
+                                        publishedRecentStreams == null
+                                    }
+                                // Swipe left/right toggles the docked panel between Recent and
+                                // Favorites — mirrors TV's D-pad Left/Right on the same panel
+                                // (LiveTvSplitLayout.kt). Only active while docked; normal category/tab
+                                // browsing has no swipe. Threshold/accumulator pattern matches the
+                                // full-screen player's own horizontal swipe handling
+                                // (MobilePlayerScreen.kt) for consistency.
+                                val listSourceSwipeModifier =
+                                    if (target == null) {
+                                        Modifier
+                                    } else {
+                                        Modifier.pointerInput(Unit) {
+                                            var accumulator = 0f
+                                            var fired = false
+                                            detectHorizontalDragGestures(
+                                                onDragStart = {
+                                                    accumulator = 0f
+                                                    fired = false
+                                                },
+                                                onDragEnd = {
+                                                    accumulator = 0f
+                                                    fired = false
+                                                },
+                                                onDragCancel = {
+                                                    accumulator = 0f
+                                                    fired = false
+                                                },
+                                            ) { change, dragAmount ->
+                                                change.consume()
+                                                accumulator += dragAmount
+                                                if (!fired && kotlin.math.abs(accumulator) > 80f) {
+                                                    fired = true
+                                                    listSource =
+                                                        if (accumulator < 0) PreviewListSource.FAVORITES else PreviewListSource.RECENT
+                                                }
+                                            }
+                                        }
+                                    }
+                                val streamsList: @Composable () -> Unit = {
+                                    PullToRefreshBox(
+                                        isRefreshing = displayedStreamsLoading,
+                                        onRefresh = {
+                                            if (target == null) {
+                                                state.selectedCategoryId?.let { viewModel.refreshStreams(it) }
+                                            } else if (listSource == PreviewListSource.FAVORITES) {
+                                                composableScope.launch {
+                                                    favoriteStreamsLoading = true
+                                                    favoriteStreams = viewModel.getFavoritesSnapshot()
+                                                    favoriteStreamsLoading = false
+                                                }
+                                            } else {
+                                                composableScope.launch { viewModel.refreshRecentItems() }
+                                                recentOrderResetTick++
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxSize().then(listSourceSwipeModifier),
+                                    ) {
+                                        val toggleFavorite: (MediaItem) -> Unit = { toggled ->
+                                            viewModel.toggleFavoriteStream(
+                                                itemId = toggled.id,
+                                                itemName = toggled.name,
+                                                categoryId = toggled.categoryId,
+                                                contentType = contentType,
+                                            )
+                                            if (target == null) {
+                                                // Only reload when Favorites is what's on screen (so an
+                                                // unfavorited row drops out) — refreshStreams selects the
+                                                // category it loads, so calling it from any other category
+                                                // yanked the view over to Favorites.
+                                                if (state.selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID) {
+                                                    viewModel.refreshStreams(CategoryViewModel.FAVORITES_CATEGORY_ID)
+                                                }
+                                            } else {
+                                                composableScope.launch {
+                                                    favoriteStreams = viewModel.getFavoritesSnapshot()
+                                                }
+                                            }
+                                        }
+                                        StreamsList(
+                                            items = displayedStreams,
+                                            streamsLoading = displayedStreamsLoading,
+                                            selectedCategoryId =
+                                                when {
+                                                    target == null -> state.selectedCategoryId
+                                                    listSource == PreviewListSource.FAVORITES -> CategoryViewModel.FAVORITES_CATEGORY_ID
+                                                    else -> CategoryViewModel.RECENT_CATEGORY_ID
+                                                },
+                                            panelTitle =
+                                                if (target == null) {
+                                                    null
+                                                } else if (listSource == PreviewListSource.FAVORITES) {
+                                                    stringResource(R.string.settings_import_favorites_label)
+                                                } else {
+                                                    stringResource(R.string.category_recent_label)
+                                                },
+                                            lastPlayedItemId = state.lastPlayedItemId,
+                                            nowPlaying = nowPlaying,
+                                            watchedIds = watchedIds,
+                                            watchProgress = watchProgress,
+                                            currentlyPlayingId = target?.id,
+                                            onItemSelected = { itemId, itemName, categoryId ->
+                                                val item = displayedStreams?.firstOrNull { it.id == itemId }
+                                                val selected = item?.browseTarget(contentType) ?: browseTargetFor(contentType, itemId)
+                                                when {
+                                                    // A row from "Recent Categories"/"Favorite Categories" browses, it doesn't play.
+                                                    selected is BrowseTarget.CategoryRef -> {
+                                                        viewModel.loadStreams(selected.categoryId)
+                                                    }
+
+                                                    isLiveTv && item != null -> {
+                                                        // Dock locally instead of navigating away — mirrors
+                                                        // TV's LiveTvChannelList.onStreamPromote interception.
+                                                        dockTarget = item
+                                                    }
+
+                                                    else -> {
+                                                        onStreamSelected(itemId, itemName, categoryId, contentType, selected)
+                                                    }
+                                                }
+                                            },
+                                            contentType = contentType,
+                                            favoriteIds = favoriteIds,
+                                            onToggleFavorite = toggleFavorite,
+                                            onToggleWatched = { toggled ->
+                                                viewModel.toggleWatchedStream(toggled.id, contentType)
+                                            },
+                                            onRemoveItem =
+                                                if (viewModel.supportsRemoveFromRecent) {
+                                                    { item -> viewModel.removeFromRecent(item.id, contentType, item.seriesId) }
+                                                } else {
+                                                    null
+                                                },
+                                            onRemoveFavorite = toggleFavorite,
+                                        )
+                                    }
+                                }
+
+                                if (isLiveTv && target != null && isLandscape) {
+                                    // Landscape split — mirrors tv/.../LiveTvSplitLayout.kt's side-by-side
+                                    // layout as closely as possible: video+EPG pane left (0.66), channel
+                                    // list right (0.34).
+                                    Row(
+                                        modifier = Modifier.fillMaxSize(),
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                                    ) {
                                         Column(
                                             modifier =
                                                 Modifier
-                                                    .align(Alignment.BottomStart)
-                                                    .fillMaxWidth()
-                                                    .background(scrimBrush)
-                                                    .padding(CinemaSpacing.sm),
+                                                    .weight(0.66f)
+                                                    .fillMaxHeight()
+                                                    .padding(horizontal = CinemaSpacing.md),
                                         ) {
-                                            // Marks this as the docked preview, distinct from the
-                                            // bare list underneath — see docs/UX_FLOW_AUDIT.md,
-                                            // "Live TV back-stopover".
+                                            // True 16:9 without Modifier.aspectRatio(16f / 9f): the latter
+                                            // mis-positions its content in this specific spot (a Row placed
+                                            // after other siblings in the parent Column, each weighted+
+                                            // fillMaxHeight child measured with a reduced-but-bounded height
+                                            // constraint) — reproduced with a bare colored Box, confirmed
+                                            // it's not related to EmbeddedPlayerSurface. TV's
+                                            // LiveTvSplitLayout doesn't hit this because its Row has no
+                                            // preceding siblings to reduce the incoming constraint.
+                                            // BoxWithConstraints sidesteps it: it reads the actual measured
+                                            // width and derives a plain .height() from it, the same
+                                            // primitive the old fixed-120dp workaround used, just computed
+                                            // instead of hardcoded — coerced against maxHeight too, so it
+                                            // never overflows the column on unusually short screens.
+                                            BoxWithConstraints(
+                                                modifier =
+                                                    Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(CinemaCornerRadius.medium))
+                                                        .background(CinemaSurface)
+                                                        .clickable(onClick = { fullScreen = true }),
+                                            ) {
+                                                val videoHeight = (maxWidth * 9f / 16f).coerceAtMost(maxHeight)
+                                                Box(modifier = Modifier.fillMaxWidth().height(videoHeight)) {
+                                                    // TextureView (not the default SurfaceView): this box
+                                                    // sits next to the scrolling/recomposing channel list,
+                                                    // and SurfaceView there stalls the main thread and
+                                                    // ANRs. Full-screen playback (MobilePlayerContent) uses
+                                                    // its own default surface instead of sharing this one —
+                                                    // promoting/demoting does a real detach/reattach (one
+                                                    // frame's glitch) rather than relocating this node, but
+                                                    // it stops every OSD/flyout interaction in full-screen
+                                                    // from janking the video for the rest of the session.
+                                                    // Mirrors TV's LiveTvSplitLayout.
+                                                    EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
+
+                                                    // The preview surface has no controls/error UI of its
+                                                    // own, so a stalled or watchdog-killed stream would
+                                                    // otherwise look identical to a live frozen frame —
+                                                    // mirrors TV's LiveTvSplitLayout.
+                                                    if (dockPlaybackState !is PlaybackState.Playing) {
+                                                        CircularProgressIndicator(
+                                                            modifier = Modifier.align(Alignment.Center),
+                                                            color = CinemaAccent,
+                                                        )
+                                                    }
+
+                                                    IconButton(
+                                                        onClick = {
+                                                            dockPlayback?.stop()
+                                                            dockTarget = null
+                                                        },
+                                                        modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xs),
+                                                    ) {
+                                                        Icon(
+                                                            CinemaIcons.Close,
+                                                            contentDescription = stringResource(R.string.common_close),
+                                                            tint = CinemaTextPrimary,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                                            // Marks this as the docked preview, distinct from the bare
+                                            // list underneath — see docs/UX_FLOW_AUDIT.md, "Live TV
+                                            // back-stopover".
                                             Text(
                                                 text = stringResource(R.string.category_live_preview_badge),
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = CinemaTextSecondary,
+                                                color = CinemaAccent,
                                             )
                                             Text(
                                                 text = dockSuccess?.streamName ?: target.name,
@@ -976,51 +915,152 @@ fun MobileCategoryListScreen(
                                             if (nowProg != null) {
                                                 Text(
                                                     text = stringResource(R.string.epg_now_prefix, nowProg.title),
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = CinemaTextPrimary,
+                                                    maxLines = 2,
+                                                )
+                                                val fraction = nowProg.elapsedFraction()
+                                                LinearProgressIndicator(
+                                                    progress = { fraction },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    color = CinemaAccent,
+                                                    trackColor = CinemaSurface,
+                                                )
+                                            }
+                                            val nextProg = dockSuccess?.nextEpgProgram
+                                            if (nextProg != null) {
+                                                Text(
+                                                    text = stringResource(R.string.category_up_next_format, nextProg.title),
                                                     style = MaterialTheme.typography.bodyMedium,
-                                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                                                    color = CinemaTextSecondary,
                                                     maxLines = 1,
                                                 )
                                             }
                                         }
+                                        Column(modifier = Modifier.weight(0.34f).fillMaxHeight()) {
+                                            streamsList()
+                                        }
                                     }
-                                }
-                                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                                    streamsList()
+                                } else {
+                                    // Portrait: same video+EPG / list split as landscape, just stacked
+                                    // top/bottom instead of side-by-side (a plain Column weight split —
+                                    // no Row-after-siblings + aspectRatio() involved, so none of the
+                                    // mis-positioning above applies here).
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        if (isLiveTv && target != null) {
+                                            Box(
+                                                modifier =
+                                                    Modifier
+                                                        .fillMaxWidth()
+                                                        .weight(0.5f)
+                                                        // Unlike TV, the dock here already did a full
+                                                        // loadStream() (see the top-of-function comment on
+                                                        // why mobile commits immediately on tap) — real
+                                                        // category/last-watched data and watch-history
+                                                        // recording already happened at dock time, so
+                                                        // promoting needs no extra reload.
+                                                        .clickable(onClick = { fullScreen = true }),
+                                            ) {
+                                                // TextureView — see the landscape dock box above.
+                                                EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
+
+                                                IconButton(
+                                                    onClick = {
+                                                        dockPlayback?.stop()
+                                                        dockTarget = null
+                                                    },
+                                                    modifier = Modifier.align(Alignment.TopEnd).padding(CinemaSpacing.xs),
+                                                ) {
+                                                    Icon(
+                                                        CinemaIcons.Close,
+                                                        contentDescription = stringResource(R.string.common_close),
+                                                        tint = CinemaTextPrimary,
+                                                    )
+                                                }
+
+                                                val palette = CinemaThemeHolder.current
+                                                // Memoize brush to avoid allocating new Brush + listOf on
+                                                // every recomposition — mirrors GradientOverlay.kt.
+                                                val scrimBrush =
+                                                    remember(palette.background) {
+                                                        Brush.verticalGradient(
+                                                            listOf(
+                                                                Color.Transparent,
+                                                                palette.background.copy(alpha = CinemaAlpha.imageOverlay),
+                                                            ),
+                                                        )
+                                                    }
+                                                Column(
+                                                    modifier =
+                                                        Modifier
+                                                            .align(Alignment.BottomStart)
+                                                            .fillMaxWidth()
+                                                            .background(scrimBrush)
+                                                            .padding(CinemaSpacing.sm),
+                                                ) {
+                                                    // Marks this as the docked preview, distinct from the
+                                                    // bare list underneath — see docs/UX_FLOW_AUDIT.md,
+                                                    // "Live TV back-stopover".
+                                                    Text(
+                                                        text = stringResource(R.string.category_live_preview_badge),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = CinemaTextSecondary,
+                                                    )
+                                                    Text(
+                                                        text = dockSuccess?.streamName ?: target.name,
+                                                        style = MaterialTheme.typography.titleLarge,
+                                                        color = CinemaTextPrimary,
+                                                        maxLines = 1,
+                                                    )
+                                                    val nowProg = dockSuccess?.currentEpgProgram
+                                                    if (nowProg != null) {
+                                                        Text(
+                                                            text = stringResource(R.string.epg_now_prefix, nowProg.title),
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
+                                                            maxLines = 1,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                            streamsList()
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
-                }
-                is CategoryViewModel.UiState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                            modifier = Modifier.padding(Spacing.xl),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.common_error),
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            Text(
-                                text = state.message,
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            CinemaButton(onClick = { viewModel.retry() }) {
-                                Text(stringResource(R.string.common_retry))
+
+                        is CategoryViewModel.UiState.Error -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                                    modifier = Modifier.padding(Spacing.xl),
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.common_error),
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                    Text(
+                                        text = state.message,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                    CinemaButton(onClick = { viewModel.retry() }) {
+                                        Text(stringResource(R.string.common_retry))
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        }
-    }
-
     }
 }
 
@@ -1106,7 +1146,12 @@ private fun CategoryChipRow(
                 contentPadding = PaddingValues(horizontal = CinemaSpacing.sm),
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
-                itemsIndexed(virtualCategories, key = { _, category -> category.id }, contentType = { _, _ -> "category" }) { index, category ->
+                itemsIndexed(virtualCategories, key = {
+                    _,
+                    category,
+                    ->
+                    category.id
+                }, contentType = { _, _ -> "category" }) { index, category ->
                     CinemaFilterChip(
                         selected = category.id == selectedCategoryId,
                         onClick = { onCategorySelected(category.id) },
@@ -1267,6 +1312,7 @@ private fun StreamsList(
                 )
             }
         }
+
         streamsLoading -> {
             Column(
                 modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.sm, vertical = Spacing.xs),
@@ -1286,6 +1332,7 @@ private fun StreamsList(
                 )
             }
         }
+
         items.isNullOrEmpty() -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -1298,6 +1345,7 @@ private fun StreamsList(
                 )
             }
         }
+
         else -> {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Pinned, not a LazyColumn item — otherwise it scrolls away with the list, and on
@@ -1505,73 +1553,73 @@ private fun StreamCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
-            // Poster thumbnail
-            CinemaThumbnail(
-                url = item.thumbnailUrl,
-                fallbackLetter = item.name.firstOrNull(),
-                contentType = ThumbnailContentType.DEFAULT,
-                overlayGradient = true,
-                modifier =
-                    Modifier.size(
-                        width = MobileDimensions.posterWidth,
-                        height = MobileDimensions.posterHeight,
-                    ),
-            )
-            // Stream name + rating
-            val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
-                ) {
-                    if (isWatched) {
-                        Icon(
-                            imageVector = CinemaIcons.CheckCircle,
-                            contentDescription = stringResource(R.string.content_watched_badge),
-                            tint = CinemaSuccess,
-                            modifier = Modifier.size(MobileDimensions.iconSmall),
+                // Poster thumbnail
+                CinemaThumbnail(
+                    url = item.thumbnailUrl,
+                    fallbackLetter = item.name.firstOrNull(),
+                    contentType = ThumbnailContentType.DEFAULT,
+                    overlayGradient = true,
+                    modifier =
+                        Modifier.size(
+                            width = MobileDimensions.posterWidth,
+                            height = MobileDimensions.posterHeight,
+                        ),
+                )
+                // Stream name + rating
+                val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xxs),
+                    ) {
+                        if (isWatched) {
+                            Icon(
+                                imageVector = CinemaIcons.CheckCircle,
+                                contentDescription = stringResource(R.string.content_watched_badge),
+                                tint = CinemaSuccess,
+                                modifier = Modifier.size(MobileDimensions.iconSmall),
+                            )
+                        }
+                        parsedTitle.badge?.let { LanguageBadge(it) }
+                        Text(
+                            // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with
+                            // nothing between the dashes) — an empty row reads as broken, not a
+                            // catalogue gap.
+                            text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            // Only the row that's actually playing scrolls its title.
+                            modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
                         )
                     }
-                    parsedTitle.badge?.let { LanguageBadge(it) }
-                    Text(
-                        // Provider data occasionally sends a blank name (e.g. "EN -  (US)" with
-                        // nothing between the dashes) — an empty row reads as broken, not a
-                        // catalogue gap.
-                        text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        // Only the row that's actually playing scrolls its title.
-                        modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
-                    )
+                    if (isCurrentlyPlaying) {
+                        Text(
+                            text = stringResource(R.string.category_now_playing_badge),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CinemaAccent,
+                            maxLines = 1,
+                        )
+                    }
+                    item.metadata.rating?.let { rating ->
+                        RatingBadge(
+                            rating = rating,
+                            textColor = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textMedium),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    // "What's On Now" for Live TV
+                    nowPlayingProgram?.let { program ->
+                        Text(
+                            text = stringResource(R.string.epg_now_prefix, program.title),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
+                        )
+                    }
                 }
-                if (isCurrentlyPlaying) {
-                    Text(
-                        text = stringResource(R.string.category_now_playing_badge),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaAccent,
-                        maxLines = 1,
-                    )
-                }
-                item.metadata.rating?.let { rating ->
-                    RatingBadge(
-                        rating = rating,
-                        textColor = MaterialTheme.colorScheme.primary.copy(alpha = CinemaAlpha.textMedium),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                // "What's On Now" for Live TV
-                nowPlayingProgram?.let { program ->
-                    Text(
-                        text = stringResource(R.string.epg_now_prefix, program.title),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = if (isCurrentlyPlaying) Modifier.bounceMarquee() else Modifier,
-                    )
-                }
-            }
             }
 
             // Progress bar

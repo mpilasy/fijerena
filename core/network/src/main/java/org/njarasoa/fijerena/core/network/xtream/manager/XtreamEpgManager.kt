@@ -20,8 +20,8 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpgCacheEntity
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.EPG_CACHE_EXPIRY_MS
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_EPG_PREFIX
 import org.njarasoa.fijerena.core.network.xtream.manager.XtreamCacheKeys.KEY_LEGACY_EPG_PREFS_PURGED
-import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.model.EpgResponse
 
 class XtreamEpgManager(
     private val sessionManager: XtreamSessionManager,
@@ -241,7 +241,8 @@ class XtreamEpgManager(
     private fun decode(payload: String): EpgResponse? =
         try {
             json.decodeFromString<EpgResponse>(payload)
-        } catch (e: Exception) { // cancellation-ok: non-suspend
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
             null
         }
 
@@ -299,7 +300,9 @@ class XtreamEpgManager(
         const val TAG = "XtreamEpgManager"
 
         /** Guards [evictStaleCache]; the sweep is process-wide, not per provider. */
-        val staleEvictionDone = java.util.concurrent.atomic.AtomicBoolean(false)
+        val staleEvictionDone =
+            java.util.concurrent.atomic
+                .AtomicBoolean(false)
 
         /** Rows per sweep commit — small enough that `auto_vacuum = FULL` page movement stays bounded. */
         const val STALE_SWEEP_BATCH = 400

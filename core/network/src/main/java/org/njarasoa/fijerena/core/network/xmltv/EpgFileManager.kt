@@ -8,7 +8,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
-import org.njarasoa.fijerena.core.network.R
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
@@ -20,22 +19,21 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import okhttp3.Request
-import org.njarasoa.fijerena.core.network.utils.await
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
@@ -45,10 +43,12 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
+import org.njarasoa.fijerena.core.network.utils.await
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -60,7 +60,6 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import androidx.work.NetworkType as WorkNetworkType
-import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Singleton managing multi-source EPG download-ingest pipeline.
@@ -92,7 +91,9 @@ class EpgFileManager private constructor(
         fun refreshFailedTaskId(providerId: Long): String = "epg_refresh_failed_$providerId"
 
         fun refreshSelectedTaskId(providerId: Long): String = "epg_refresh_selected_$providerId"
+
         private const val RETRY_DELAY_MS = 5000L
+
         // A content-hash match skips ingestion (see canSkipIngest) unless the last real ingest is
         // older than this — ingestFromStream's programme window is wall-clock relative, so a
         // static file left un-ingested longer than this would fall behind regardless of content.
@@ -123,7 +124,8 @@ class EpgFileManager private constructor(
                         .removePrefix("www.")
                         .take(30)
                 }
-            } catch (e: Exception) { // cancellation-ok: non-suspend
+            } catch (e: Exception) {
+                // cancellation-ok: non-suspend
                 "Source"
             }
     }
@@ -282,16 +284,20 @@ class EpgFileManager private constructor(
 
             val dbSize = dbFile.length()
             val availableSpace = context.dataDir.usableSpace
-            
+
             // Allow staging only if we have 1.5x the DB size free.
             // Example: 1.5GB DB requires 2.25GB free space.
             val isSafe = availableSpace > (dbSize * 1.5).toLong()
-            
+
             if (!isSafe) {
-                Log.w(TAG, "Low storage detected: available=${availableSpace/1024/1024}MB, db=${dbSize/1024/1024}MB. Falling back to blocking sync.")
+                Log.w(
+                    TAG,
+                    "Low storage detected: available=${availableSpace / 1024 / 1024}MB, db=${dbSize / 1024 / 1024}MB. Falling back to blocking sync.",
+                )
             }
             isSafe
-        } catch (e: Exception) { // cancellation-ok: non-suspend
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
             Log.w(TAG, "Failed to check storage for staging, defaulting to false", e)
             false
         }
@@ -415,13 +421,14 @@ class EpgFileManager private constructor(
 
                         override suspend fun execute() {
                             val maxAttempts = 5
-                            val retryDelaysMs = listOf(
-                                1L * 60 * 1000,
-                                2L * 60 * 1000,
-                                4L * 60 * 1000,
-                                8L * 60 * 1000,
-                                16L * 60 * 1000
-                            )
+                            val retryDelaysMs =
+                                listOf(
+                                    1L * 60 * 1000,
+                                    2L * 60 * 1000,
+                                    4L * 60 * 1000,
+                                    8L * 60 * 1000,
+                                    16L * 60 * 1000,
+                                )
 
                             var currentAttempt = 0
                             var lastException: Exception? = null
@@ -442,17 +449,21 @@ class EpgFileManager private constructor(
                                 } catch (e: Exception) {
                                     lastException = e
                                     currentAttempt++
-                                    
+
                                     if (currentAttempt <= maxAttempts) {
                                         val delayMs = retryDelaysMs[currentAttempt - 1]
                                         val nextRetryAt = System.currentTimeMillis() + delayMs
-                                        _state.value = MultiSourceState.Retrying(
-                                            attempt = currentAttempt,
-                                            maxAttempts = maxAttempts,
-                                            nextRetryAtMs = nextRetryAt,
-                                            reason = e.message ?: context.getString(R.string.epg_error_unknown)
+                                        _state.value =
+                                            MultiSourceState.Retrying(
+                                                attempt = currentAttempt,
+                                                maxAttempts = maxAttempts,
+                                                nextRetryAtMs = nextRetryAt,
+                                                reason = e.message ?: context.getString(R.string.epg_error_unknown),
+                                            )
+                                        Log.w(
+                                            TAG,
+                                            "Task $taskId failed (attempt $currentAttempt/$maxAttempts). Retrying in ${delayMs / 60000} min. Error: ${e.message}",
                                         )
-                                        Log.w(TAG, "Task $taskId failed (attempt $currentAttempt/$maxAttempts). Retrying in ${delayMs/60000} min. Error: ${e.message}")
                                         delay(delayMs)
                                     }
                                 }
@@ -460,7 +471,10 @@ class EpgFileManager private constructor(
 
                             // All attempts failed
                             Log.e(TAG, "Task $taskId failed after $maxAttempts retries: ${lastException?.message}", lastException)
-                            _state.value = MultiSourceState.Error(lastException?.message ?: context.getString(R.string.epg_error_task_failed_retries_format, maxAttempts))
+                            _state.value =
+                                MultiSourceState.Error(
+                                    lastException?.message ?: context.getString(R.string.epg_error_task_failed_retries_format, maxAttempts),
+                                )
                             onComplete?.invoke()
                         }
                     }
@@ -567,288 +581,304 @@ class EpgFileManager private constructor(
         val lastModifiedHeader: String? = null,
     )
 
-    private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) = ingestMutex.withLock {
-        if (sources.isEmpty()) {
-            _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_no_sources))
-            return@withLock
-        }
-
-        // Every source in a refresh belongs to the same provider — that is what the run reports on.
-        _refreshProviderId.value = sources.first().providerId
-        val startTime = System.currentTimeMillis()
-        val fixedDevice = isFixedDevice()
-        val batchSize = if (fixedDevice) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
-        // Declared before the try block (not inside it, as before) so the catch block's cleanup
-        // call can pass the same value beginBulkIngestion() was actually called with.
-        val useStaging = shouldUseStaging()
-        try {
-            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-            val indexer = EpgIndexer.getInstance(context)
-
-            val maxDownloadConcurrency = if (fixedDevice) 2 else 3
-            val downloadSemaphore = Semaphore(maxDownloadConcurrency)
-            val maxIngestionConcurrency = 2
-            val completedStats = CopyOnWriteArrayList<SourceStats>()
-            val activeLabels = CopyOnWriteArrayList<String>()
-            val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
-
-            // Channel: downloads produce, ingestion consumes
-            val ingestionQueue = Channel<DownloadedSource>(Channel.UNLIMITED)
-            val sourceStartTimeMap = ConcurrentHashMap<Long, Long>()
-
-            indexer.setIndexing()
-            if (useStaging) {
-                indexer.clearStaging()
+    private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) =
+        ingestMutex.withLock {
+            if (sources.isEmpty()) {
+                _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_no_sources))
+                return@withLock
             }
 
-            _state.value =
-                MultiSourceState.Processing(
-                    completedCount = 0,
-                    totalSources = sources.size,
-                    activeSourceLabels = emptyList(),
-                )
+            // Every source in a refresh belongs to the same provider — that is what the run reports on.
+            _refreshProviderId.value = sources.first().providerId
+            val startTime = System.currentTimeMillis()
+            val fixedDevice = isFixedDevice()
+            val batchSize = if (fixedDevice) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
+            // Declared before the try block (not inside it, as before) so the catch block's cleanup
+            // call can pass the same value beginBulkIngestion() was actually called with.
+            val useStaging = shouldUseStaging()
+            try {
+                val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+                val indexer = EpgIndexer.getInstance(context)
 
-            val allStats =
-                try {
-                    coroutineScope {
-                        // Start bulk setup in parallel with downloads — downloads write to cache files
-                        // and never touch the DB, so there is no ordering constraint here.
-                        // Consumers await this before touching the DB.
-                        val bulkReady = async(Dispatchers.IO) { indexer.beginBulkIngestion(useStaging) }
+                val maxDownloadConcurrency = if (fixedDevice) 2 else 3
+                val downloadSemaphore = Semaphore(maxDownloadConcurrency)
+                val maxIngestionConcurrency = 2
+                val completedStats = CopyOnWriteArrayList<SourceStats>()
+                val activeLabels = CopyOnWriteArrayList<String>()
+                val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
 
-                        // Consumer: ingest downloaded files in parallel (SQLite handles locking)
-                        val ingestionJobs =
-                            (1..maxIngestionConcurrency).map {
-                                launch {
-                                    bulkReady.await() // Ensure indexes are dropped before first ingest
-                                    for (downloaded in ingestionQueue) {
-                                        activeProgress[downloaded.source.id] =
-                                            ActiveSourceProgress(
-                                                sourceId = downloaded.source.id,
-                                                label = downloaded.label,
-                                                phase = "Ingesting",
-                                                downloadedBytes = downloaded.downloadedBytes,
-                                                downloadTotalBytes = downloaded.downloadedBytes,
-                                            )
-                                        updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                // Channel: downloads produce, ingestion consumes
+                val ingestionQueue = Channel<DownloadedSource>(Channel.UNLIMITED)
+                val sourceStartTimeMap = ConcurrentHashMap<Long, Long>()
 
-                                        val stats =
-                                            ingestDownloadedSource(
-                                                downloaded,
-                                                sourceDao,
-                                                indexer,
-                                                activeProgress,
-                                                batchSize = batchSize,
-                                                useStaging = useStaging,
-                                                isPlaybackActive = ::isPlaybackActive,
-                                            ) {
-                                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-                                            }
+                indexer.setIndexing()
+                if (useStaging) {
+                    indexer.clearStaging()
+                }
 
-                                        val sourceId = downloaded.source.id
-                                        val sourceDuration = sourceStartTimeMap[sourceId]?.let { System.currentTimeMillis() - it } ?: 0
-                                        val finalStats = stats.copy(durationMs = sourceDuration)
+                _state.value =
+                    MultiSourceState.Processing(
+                        completedCount = 0,
+                        totalSources = sources.size,
+                        activeSourceLabels = emptyList(),
+                    )
 
-                                        activeLabels.remove(downloaded.label)
-                                        activeProgress.remove(sourceId)
-                                        completedStats.add(finalStats)
-                                        updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                val allStats =
+                    try {
+                        coroutineScope {
+                            // Start bulk setup in parallel with downloads — downloads write to cache files
+                            // and never touch the DB, so there is no ordering constraint here.
+                            // Consumers await this before touching the DB.
+                            val bulkReady = async(Dispatchers.IO) { indexer.beginBulkIngestion(useStaging) }
+
+                            // Consumer: ingest downloaded files in parallel (SQLite handles locking)
+                            val ingestionJobs =
+                                (1..maxIngestionConcurrency).map {
+                                    launch {
+                                        bulkReady.await() // Ensure indexes are dropped before first ingest
+                                        for (downloaded in ingestionQueue) {
+                                            activeProgress[downloaded.source.id] =
+                                                ActiveSourceProgress(
+                                                    sourceId = downloaded.source.id,
+                                                    label = downloaded.label,
+                                                    phase = "Ingesting",
+                                                    downloadedBytes = downloaded.downloadedBytes,
+                                                    downloadTotalBytes = downloaded.downloadedBytes,
+                                                )
+                                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+
+                                            val stats =
+                                                ingestDownloadedSource(
+                                                    downloaded,
+                                                    sourceDao,
+                                                    indexer,
+                                                    activeProgress,
+                                                    batchSize = batchSize,
+                                                    useStaging = useStaging,
+                                                    isPlaybackActive = ::isPlaybackActive,
+                                                ) {
+                                                    updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                                }
+
+                                            val sourceId = downloaded.source.id
+                                            val sourceDuration = sourceStartTimeMap[sourceId]?.let { System.currentTimeMillis() - it } ?: 0
+                                            val finalStats = stats.copy(durationMs = sourceDuration)
+
+                                            activeLabels.remove(downloaded.label)
+                                            activeProgress.remove(sourceId)
+                                            completedStats.add(finalStats)
+                                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                        }
                                     }
                                 }
-                            }
 
-                        // Producers: download sources concurrently
-                        val downloadJobs =
-                            sources.map { source ->
-                                async {
-                                    sourceStartTimeMap[source.id] = System.currentTimeMillis()
-                                    val label = source.label.ifBlank { extractLabel(source.url) }
-                                    downloadSemaphore.withPermit {
-                                        activeLabels.add(label)
-                                        activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
-                                        updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                            // Producers: download sources concurrently
+                            val downloadJobs =
+                                sources.map { source ->
+                                    async {
+                                        sourceStartTimeMap[source.id] = System.currentTimeMillis()
+                                        val label = source.label.ifBlank { extractLabel(source.url) }
+                                        downloadSemaphore.withPermit {
+                                            activeLabels.add(label)
+                                            activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
+                                            updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
 
-                                        val result =
-                                            downloadSource(source, label, sourceDao, activeProgress) {
-                                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-                                            }
+                                            val result =
+                                                downloadSource(source, label, sourceDao, activeProgress) {
+                                                    updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                                }
 
-                                        when {
-                                            result != null && result.unchanged -> {
-                                                // Confirmed unchanged (304 or matching content hash) — skip
-                                                // ingestion entirely, carry forward the last known counts.
-                                                val sourceDuration = sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
-                                                activeLabels.remove(label)
-                                                activeProgress.remove(source.id)
-                                                completedStats.add(
-                                                    SourceStats(
-                                                        sourceId = source.id,
-                                                        label = label,
-                                                        downloadBytes = result.downloadedBytes,
-                                                        channelsIngested = source.lastChannels,
-                                                        programmesIngested = source.lastProgrammes,
-                                                        durationMs = sourceDuration,
-                                                        unchanged = true,
-                                                    ),
-                                                )
-                                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-                                            }
-                                            result != null -> {
-                                                // Success — send to ingestion pipeline
-                                                activeProgress[source.id] =
-                                                    ActiveSourceProgress(
-                                                        sourceId = source.id,
-                                                        label = label,
-                                                        phase = "Awaiting Ingestion",
-                                                        downloadedBytes = result.downloadedBytes,
-                                                        downloadTotalBytes = result.downloadedBytes,
+                                            when {
+                                                result != null && result.unchanged -> {
+                                                    // Confirmed unchanged (304 or matching content hash) — skip
+                                                    // ingestion entirely, carry forward the last known counts.
+                                                    val sourceDuration =
+                                                        sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
+                                                    activeLabels.remove(label)
+                                                    activeProgress.remove(source.id)
+                                                    completedStats.add(
+                                                        SourceStats(
+                                                            sourceId = source.id,
+                                                            label = label,
+                                                            downloadBytes = result.downloadedBytes,
+                                                            channelsIngested = source.lastChannels,
+                                                            programmesIngested = source.lastProgrammes,
+                                                            durationMs = sourceDuration,
+                                                            unchanged = true,
+                                                        ),
                                                     )
-                                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
-                                                ingestionQueue.send(result)
-                                            }
-                                            else -> {
-                                                // Download failed — record and clean up
-                                                val sourceDuration = sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
-                                                activeLabels.remove(label)
-                                                activeProgress.remove(source.id)
-                                                completedStats.add(
-                                                    SourceStats(source.id, label, durationMs = sourceDuration, error = context.getString(R.string.sync_error_download_failed)),
-                                                )
-                                                updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                                    updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                                }
+
+                                                result != null -> {
+                                                    // Success — send to ingestion pipeline
+                                                    activeProgress[source.id] =
+                                                        ActiveSourceProgress(
+                                                            sourceId = source.id,
+                                                            label = label,
+                                                            phase = "Awaiting Ingestion",
+                                                            downloadedBytes = result.downloadedBytes,
+                                                            downloadTotalBytes = result.downloadedBytes,
+                                                        )
+                                                    updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                                    ingestionQueue.send(result)
+                                                }
+
+                                                else -> {
+                                                    // Download failed — record and clean up
+                                                    val sourceDuration =
+                                                        sourceStartTimeMap[source.id]?.let { System.currentTimeMillis() - it } ?: 0
+                                                    activeLabels.remove(label)
+                                                    activeProgress.remove(source.id)
+                                                    completedStats.add(
+                                                        SourceStats(
+                                                            source.id,
+                                                            label,
+                                                            durationMs = sourceDuration,
+                                                            error = context.getString(R.string.sync_error_download_failed),
+                                                        ),
+                                                    )
+                                                    updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                        // Wait for all downloads, then close the ingestion queue
-                        downloadJobs.forEach { it.await() }
-                        ingestionQueue.close()
+                            // Wait for all downloads, then close the ingestion queue
+                            downloadJobs.forEach { it.await() }
+                            ingestionQueue.close()
 
-                        // Wait for ingestion to drain
-                        ingestionJobs.forEach { it.join() }
+                            // Wait for ingestion to drain
+                            ingestionJobs.forEach { it.join() }
 
-                        completedStats.toList()
-                    }
-                } finally {
-                    ingestionQueue.close()
-                    var remaining = ingestionQueue.tryReceive().getOrNull()
-                    while (remaining != null) {
-                        try {
-                            remaining.tmpFile.delete()
-                        } catch (e: Exception) { // cancellation-ok: non-suspend
-                            Log.w(TAG, "Error cleaning up temporary file for ${remaining.label}", e)
+                            completedStats.toList()
                         }
-                        remaining = ingestionQueue.tryReceive().getOrNull()
+                    } finally {
+                        ingestionQueue.close()
+                        var remaining = ingestionQueue.tryReceive().getOrNull()
+                        while (remaining != null) {
+                            try {
+                                remaining.tmpFile.delete()
+                            } catch (e: Exception) {
+                                // cancellation-ok: non-suspend
+                                Log.w(TAG, "Error cleaning up temporary file for ${remaining.label}", e)
+                            }
+                            remaining = ingestionQueue.tryReceive().getOrNull()
+                        }
+                    }
+
+                val totalChannels = allStats.sumOf { it.channelsIngested }
+                val totalProgrammes = allStats.sumOf { it.programmesIngested }
+                val totalBytes = allStats.sumOf { it.downloadBytes }
+
+                // Finalizing: rebuild B-tree query indexes (fast compared to FTS rebuild).
+                // Show this phase so the UI doesn't appear stuck after ingestion completes.
+                _state.value =
+                    MultiSourceState.Finalizing(
+                        phase = "Rebuilding indexes\u2026",
+                        totalChannels = totalChannels,
+                        totalProgrammes = totalProgrammes,
+                        totalDownloadBytes = totalBytes,
+                    )
+
+                // `unchanged` stats carry forward the last known counts (so UI totals don't collapse
+                // to zero) \u2014 they must not count as "ingested" here, or a run where every source was
+                // confirmed unchanged would still trigger a swap and an FTS rebuild for nothing.
+                val anyIngested =
+                    allStats.any {
+                        it.error == null && !it.unchanged && (it.channelsIngested > 0 || it.programmesIngested > 0)
+                    }
+
+                // beginBulkIngestion() marked FTS stale defensively before we knew whether anything
+                // would actually change. Nothing did — the triggers dropped during bulk are the only
+                // thing that could have desynced FTS, and no write happened, so it's still consistent.
+                if (!anyIngested) {
+                    indexer.markFtsClean()
+                }
+
+                // Swap and FTS rebuild in one transaction, so search keeps working throughout.
+                if (anyIngested && useStaging) {
+                    _state.value =
+                        MultiSourceState.Finalizing(
+                            phase = "Swapping to primary guide\u2026",
+                            totalChannels = totalChannels,
+                            totalProgrammes = totalProgrammes,
+                            totalDownloadBytes = totalBytes,
+                        )
+                    // A skipped (unchanged) source must never appear here: swapAndRebuildFts deletes
+                    // that source's primary rows before transferring staging, and staging has nothing
+                    // for it \u2014 including it would wipe its guide instead of leaving it alone.
+                    val syncedIds = allStats.filter { it.error == null && !it.unchanged }.map { it.sourceId }
+                    indexer.swapAndRebuildFts(syncedIds)
+                }
+
+                if (anyIngested) {
+                    invalidateXmltvCache(sources, allStats)
+                }
+
+                // FTS rebuild runs in the caller's coroutine so the WorkManager wake lock
+                // covers the full operation. Killing the process mid-rebuild leaves fts_stale=true
+                // persisted to prefs, which on Shield causes permanent LIKE fallback via Doze.
+                // The staging path already rebuilt inside swapAndRebuildFts() above.
+                if (anyIngested) {
+                    try {
+                        if (!useStaging) indexer.rebuildFtsAndUpdateState()
+                        indexer.incrementalVacuum()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                     }
                 }
 
-            val totalChannels = allStats.sumOf { it.channelsIngested }
-            val totalProgrammes = allStats.sumOf { it.programmesIngested }
-            val totalBytes = allStats.sumOf { it.downloadBytes }
+                // Restore the FTS sync triggers dropped in beginBulkIngestion() only now, after both
+                // the staging→primary swap and the full FTS rebuild — not before. 'rebuild' above
+                // repopulates FTS by scanning epg_programme directly and doesn't need the triggers at
+                // all, so leaving them off through the swap means swapAndRebuildFts()'s bulk
+                // INSERT…SELECT no longer fires an AFTER_INSERT trigger per row, only to have the
+                // very next step throw all of that away and rebuild from scratch anyway. Still
+                // unconditional (not inside `if (anyIngested)`): a run where nothing changed still
+                // needs its triggers back for the next incremental write.
+                indexer.endBulkIngestion(useStaging)
 
-            // Finalizing: rebuild B-tree query indexes (fast compared to FTS rebuild).
-            // Show this phase so the UI doesn't appear stuck after ingestion completes.
-            _state.value =
-                MultiSourceState.Finalizing(
-                    phase = "Rebuilding indexes\u2026",
-                    totalChannels = totalChannels,
-                    totalProgrammes = totalProgrammes,
-                    totalDownloadBytes = totalBytes,
-                )
-
-            // `unchanged` stats carry forward the last known counts (so UI totals don't collapse
-            // to zero) \u2014 they must not count as "ingested" here, or a run where every source was
-            // confirmed unchanged would still trigger a swap and an FTS rebuild for nothing.
-            val anyIngested = allStats.any { it.error == null && !it.unchanged && (it.channelsIngested > 0 || it.programmesIngested > 0) }
-
-            // beginBulkIngestion() marked FTS stale defensively before we knew whether anything
-            // would actually change. Nothing did — the triggers dropped during bulk are the only
-            // thing that could have desynced FTS, and no write happened, so it's still consistent.
-            if (!anyIngested) {
-                indexer.markFtsClean()
-            }
-
-            // Swap and FTS rebuild in one transaction, so search keeps working throughout.
-            if (anyIngested && useStaging) {
-                _state.value = MultiSourceState.Finalizing(
-                    phase = "Swapping to primary guide\u2026",
-                    totalChannels = totalChannels,
-                    totalProgrammes = totalProgrammes,
-                    totalDownloadBytes = totalBytes,
-                )
-                // A skipped (unchanged) source must never appear here: swapAndRebuildFts deletes
-                // that source's primary rows before transferring staging, and staging has nothing
-                // for it \u2014 including it would wipe its guide instead of leaving it alone.
-                val syncedIds = allStats.filter { it.error == null && !it.unchanged }.map { it.sourceId }
-                indexer.swapAndRebuildFts(syncedIds)
-            }
-
-            if (anyIngested) {
-                invalidateXmltvCache(sources, allStats)
-            }
-
-            // FTS rebuild runs in the caller's coroutine so the WorkManager wake lock
-            // covers the full operation. Killing the process mid-rebuild leaves fts_stale=true
-            // persisted to prefs, which on Shield causes permanent LIKE fallback via Doze.
-            // The staging path already rebuilt inside swapAndRebuildFts() above.
-            if (anyIngested) {
-                try {
-                    if (!useStaging) indexer.rebuildFtsAndUpdateState()
-                    indexer.incrementalVacuum()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
+                // Completed only now, after the FTS rebuild and index/trigger restore above actually
+                // finish — emitting it earlier let a search fired the instant the UI showed
+                // "Completed" hit EpgIndexBusyException (FTS still marked stale) or a full table scan
+                // (query indexes from beginBulkIngestion() not yet recreated).
+                val endTime = System.currentTimeMillis()
+                val finalState =
+                    MultiSourceState.Completed(
+                        sourcesProcessed = sources.size,
+                        errors = allStats.count { it.error != null },
+                        sourceStats = allStats.associateBy { it.sourceId },
+                        totalChannels = totalChannels,
+                        totalProgrammes = totalProgrammes,
+                        totalDownloadBytes = totalBytes,
+                        updatedAtMs = endTime,
+                        durationMs = endTime - startTime,
+                    )
+                _state.value = finalState
+                updateLastPipelineStats(finalState)
+            } catch (e: Exception) {
+                // cancellation-ok: cleans up, then rethrows CancellationException below
+                withContext(NonCancellable) {
+                    EpgIndexer.getInstance(context).endBulkIngestion(useStaging)
                 }
+                // Checked before logging/setting Error state: a cancelled run isn't a processing
+                // failure, and flashing a red error onto the EPG management screen for a normal
+                // cancellation (e.g. leaving the screen mid-refresh) is misleading.
+                if (e is CancellationException) {
+                    // Reset rather than leaving _state stranded on whatever mid-run value (Processing/
+                    // Finalizing) was last set — the refresh this described no longer exists, and the
+                    // next screen open must not show a permanently "in progress" guide sync.
+                    _state.value = MultiSourceState.Idle
+                    throw e
+                }
+                Log.e(TAG, "processAllSources failed: ${e.message}", e)
+                _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
             }
-
-            // Restore the FTS sync triggers dropped in beginBulkIngestion() only now, after both
-            // the staging→primary swap and the full FTS rebuild — not before. 'rebuild' above
-            // repopulates FTS by scanning epg_programme directly and doesn't need the triggers at
-            // all, so leaving them off through the swap means swapAndRebuildFts()'s bulk
-            // INSERT…SELECT no longer fires an AFTER_INSERT trigger per row, only to have the
-            // very next step throw all of that away and rebuild from scratch anyway. Still
-            // unconditional (not inside `if (anyIngested)`): a run where nothing changed still
-            // needs its triggers back for the next incremental write.
-            indexer.endBulkIngestion(useStaging)
-
-            // Completed only now, after the FTS rebuild and index/trigger restore above actually
-            // finish — emitting it earlier let a search fired the instant the UI showed
-            // "Completed" hit EpgIndexBusyException (FTS still marked stale) or a full table scan
-            // (query indexes from beginBulkIngestion() not yet recreated).
-            val endTime = System.currentTimeMillis()
-            val finalState =
-                MultiSourceState.Completed(
-                    sourcesProcessed = sources.size,
-                    errors = allStats.count { it.error != null },
-                    sourceStats = allStats.associateBy { it.sourceId },
-                    totalChannels = totalChannels,
-                    totalProgrammes = totalProgrammes,
-                    totalDownloadBytes = totalBytes,
-                    updatedAtMs = endTime,
-                    durationMs = endTime - startTime,
-                )
-            _state.value = finalState
-            updateLastPipelineStats(finalState)
-        } catch (e: Exception) { // cancellation-ok: cleans up, then rethrows CancellationException below
-            withContext(NonCancellable) {
-                EpgIndexer.getInstance(context).endBulkIngestion(useStaging)
-            }
-            // Checked before logging/setting Error state: a cancelled run isn't a processing
-            // failure, and flashing a red error onto the EPG management screen for a normal
-            // cancellation (e.g. leaving the screen mid-refresh) is misleading.
-            if (e is CancellationException) {
-                // Reset rather than leaving _state stranded on whatever mid-run value (Processing/
-                // Finalizing) was last set — the refresh this described no longer exists, and the
-                // next screen open must not show a permanently "in progress" guide sync.
-                _state.value = MultiSourceState.Idle
-                throw e
-            }
-            Log.e(TAG, "processAllSources failed: ${e.message}", e)
-            _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
         }
-    }
 
     /**
      * Clear the per-provider XMLTV cache (SharedPreferences-backed, 12h TTL) for every
@@ -889,184 +919,187 @@ class EpgFileManager private constructor(
             )
     }
 
-    private suspend fun processSingleSourceInternal(sourceId: Long) = ingestMutex.withLock {
-        val startTime = System.currentTimeMillis()
-        val batchSize = if (isFixedDevice()) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
-        // Declared before the try block (not inside it, as before) so the catch block's cleanup
-        // call can pass the same value beginBulkIngestion() was actually called with.
-        val useStaging = shouldUseStaging()
-        try {
-            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-            val source =
-                sourceDao.getSourceById(sourceId) ?: run {
-                    _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_source_not_found))
-                    return@withLock
+    private suspend fun processSingleSourceInternal(sourceId: Long) =
+        ingestMutex.withLock {
+            val startTime = System.currentTimeMillis()
+            val batchSize = if (isFixedDevice()) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
+            // Declared before the try block (not inside it, as before) so the catch block's cleanup
+            // call can pass the same value beginBulkIngestion() was actually called with.
+            val useStaging = shouldUseStaging()
+            try {
+                val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+                val source =
+                    sourceDao.getSourceById(sourceId) ?: run {
+                        _state.value = MultiSourceState.Error(context.getString(R.string.epg_error_source_not_found))
+                        return@withLock
+                    }
+                _refreshProviderId.value = source.providerId
+                val indexer = EpgIndexer.getInstance(context)
+                val label = source.label.ifBlank { extractLabel(source.url) }
+
+                indexer.setIndexing()
+                if (useStaging) {
+                    indexer.clearStaging()
                 }
-            _refreshProviderId.value = source.providerId
-            val indexer = EpgIndexer.getInstance(context)
-            val label = source.label.ifBlank { extractLabel(source.url) }
-
-            indexer.setIndexing()
-            if (useStaging) {
-                indexer.clearStaging()
-            }
-            val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
-            _state.value =
-                MultiSourceState.Processing(
-                    completedCount = 0,
-                    totalSources = 1,
-                    activeSourceLabels = listOf(label),
-                )
-
-            fun updateSingleProgress() {
+                val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
                 _state.value =
                     MultiSourceState.Processing(
                         completedCount = 0,
                         totalSources = 1,
                         activeSourceLabels = listOf(label),
-                        activeProgress = activeProgress.toMap(),
-                        totalChannels = activeProgress.values.sumOf { it.channels },
-                        totalProgrammes = activeProgress.values.sumOf { it.programmes },
-                        totalDownloadedBytes = activeProgress.values.sumOf { it.downloadedBytes },
                     )
-            }
 
-            // Start bulk setup in parallel with the download — same rationale as processAllSourcesInternal.
-            val bulkReady = scope.async(Dispatchers.IO) { indexer.beginBulkIngestion(useStaging) }
-
-            // Download phase
-            activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
-            updateSingleProgress()
-
-            val downloaded = downloadSource(source, label, sourceDao, activeProgress) { updateSingleProgress() }
-
-            bulkReady.await() // Ensure indexes are dropped before ingesting
-
-            val stats =
-                if (downloaded != null && downloaded.unchanged) {
-                    // Confirmed unchanged (304 or matching content hash) — downloadSource already
-                    // recorded this via markUnchanged; skip ingestion entirely.
-                    SourceStats(
-                        sourceId = source.id,
-                        label = label,
-                        downloadBytes = downloaded.downloadedBytes,
-                        channelsIngested = source.lastChannels,
-                        programmesIngested = source.lastProgrammes,
-                        unchanged = true,
-                    )
-                } else if (downloaded != null) {
-                    // Buffer state between phases
-                    activeProgress[source.id] =
-                        ActiveSourceProgress(
-                            sourceId = source.id,
-                            label = label,
-                            phase = "Awaiting Ingestion",
-                            downloadedBytes = downloaded.downloadedBytes,
-                            downloadTotalBytes = downloaded.downloadedBytes,
+                fun updateSingleProgress() {
+                    _state.value =
+                        MultiSourceState.Processing(
+                            completedCount = 0,
+                            totalSources = 1,
+                            activeSourceLabels = listOf(label),
+                            activeProgress = activeProgress.toMap(),
+                            totalChannels = activeProgress.values.sumOf { it.channels },
+                            totalProgrammes = activeProgress.values.sumOf { it.programmes },
+                            totalDownloadedBytes = activeProgress.values.sumOf { it.downloadedBytes },
                         )
-                    updateSingleProgress()
-
-                    // Ingest phase
-                    activeProgress[source.id] =
-                        ActiveSourceProgress(
-                            sourceId = source.id,
-                            label = label,
-                            phase = "Ingesting",
-                            downloadedBytes = downloaded.downloadedBytes,
-                            downloadTotalBytes = downloaded.downloadedBytes,
-                        )
-                    updateSingleProgress()
-
-                    ingestDownloadedSource(
-                        downloaded,
-                        sourceDao,
-                        indexer,
-                        activeProgress,
-                        batchSize = batchSize,
-                        useStaging = useStaging,
-                        isPlaybackActive = ::isPlaybackActive,
-                    ) { updateSingleProgress() }
-                } else {
-                    // Download failed — error already logged
-                    SourceStats(source.id, label, error = context.getString(R.string.sync_error_download_failed))
                 }
 
-            // Finalizing: rebuild B-tree query indexes.
-            _state.value =
-                MultiSourceState.Finalizing(
-                    phase = "Rebuilding indexes\u2026",
-                    totalChannels = stats.channelsIngested,
-                    totalProgrammes = stats.programmesIngested,
-                    totalDownloadBytes = stats.downloadBytes,
-                )
+                // Start bulk setup in parallel with the download — same rationale as processAllSourcesInternal.
+                val bulkReady = scope.async(Dispatchers.IO) { indexer.beginBulkIngestion(useStaging) }
 
-            // Swap and FTS rebuild in one transaction (only if staging was used). `unchanged` must
-            // be excluded here \u2014 staging has nothing for a skipped source, so swapping it would
-            // delete its primary rows and transfer nothing back (see processAllSourcesInternal).
-            if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0) && useStaging) {
-                _state.value = MultiSourceState.Finalizing(
-                    phase = "Swapping to primary guide\u2026",
-                    totalChannels = stats.channelsIngested,
-                    totalProgrammes = stats.programmesIngested,
-                    totalDownloadBytes = stats.downloadBytes,
-                )
-                indexer.swapAndRebuildFts(listOf(sourceId))
-            }
+                // Download phase
+                activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
+                updateSingleProgress()
 
-            if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
-                invalidateXmltvCache(listOf(source), listOf(stats))
-            }
+                val downloaded = downloadSource(source, label, sourceDao, activeProgress) { updateSingleProgress() }
 
-            // Inline — same reasoning as processAllSourcesInternal (staging path already rebuilt).
-            if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
-                try {
-                    if (!useStaging) indexer.rebuildFtsAndUpdateState()
-                    indexer.incrementalVacuum()
-                } catch (e: CancellationException) {
+                bulkReady.await() // Ensure indexes are dropped before ingesting
+
+                val stats =
+                    if (downloaded != null && downloaded.unchanged) {
+                        // Confirmed unchanged (304 or matching content hash) — downloadSource already
+                        // recorded this via markUnchanged; skip ingestion entirely.
+                        SourceStats(
+                            sourceId = source.id,
+                            label = label,
+                            downloadBytes = downloaded.downloadedBytes,
+                            channelsIngested = source.lastChannels,
+                            programmesIngested = source.lastProgrammes,
+                            unchanged = true,
+                        )
+                    } else if (downloaded != null) {
+                        // Buffer state between phases
+                        activeProgress[source.id] =
+                            ActiveSourceProgress(
+                                sourceId = source.id,
+                                label = label,
+                                phase = "Awaiting Ingestion",
+                                downloadedBytes = downloaded.downloadedBytes,
+                                downloadTotalBytes = downloaded.downloadedBytes,
+                            )
+                        updateSingleProgress()
+
+                        // Ingest phase
+                        activeProgress[source.id] =
+                            ActiveSourceProgress(
+                                sourceId = source.id,
+                                label = label,
+                                phase = "Ingesting",
+                                downloadedBytes = downloaded.downloadedBytes,
+                                downloadTotalBytes = downloaded.downloadedBytes,
+                            )
+                        updateSingleProgress()
+
+                        ingestDownloadedSource(
+                            downloaded,
+                            sourceDao,
+                            indexer,
+                            activeProgress,
+                            batchSize = batchSize,
+                            useStaging = useStaging,
+                            isPlaybackActive = ::isPlaybackActive,
+                        ) { updateSingleProgress() }
+                    } else {
+                        // Download failed — error already logged
+                        SourceStats(source.id, label, error = context.getString(R.string.sync_error_download_failed))
+                    }
+
+                // Finalizing: rebuild B-tree query indexes.
+                _state.value =
+                    MultiSourceState.Finalizing(
+                        phase = "Rebuilding indexes\u2026",
+                        totalChannels = stats.channelsIngested,
+                        totalProgrammes = stats.programmesIngested,
+                        totalDownloadBytes = stats.downloadBytes,
+                    )
+
+                // Swap and FTS rebuild in one transaction (only if staging was used). `unchanged` must
+                // be excluded here \u2014 staging has nothing for a skipped source, so swapping it would
+                // delete its primary rows and transfer nothing back (see processAllSourcesInternal).
+                if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0) && useStaging) {
+                    _state.value =
+                        MultiSourceState.Finalizing(
+                            phase = "Swapping to primary guide\u2026",
+                            totalChannels = stats.channelsIngested,
+                            totalProgrammes = stats.programmesIngested,
+                            totalDownloadBytes = stats.downloadBytes,
+                        )
+                    indexer.swapAndRebuildFts(listOf(sourceId))
+                }
+
+                if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
+                    invalidateXmltvCache(listOf(source), listOf(stats))
+                }
+
+                // Inline — same reasoning as processAllSourcesInternal (staging path already rebuilt).
+                if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
+                    try {
+                        if (!useStaging) indexer.rebuildFtsAndUpdateState()
+                        indexer.incrementalVacuum()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
+                    }
+                }
+
+                // Restore FTS sync triggers only now — see the identical comment in
+                // processAllSourcesInternal for why this must come after the swap and rebuild, not
+                // before. Still unconditional: an unchanged/skipped source still needs them back.
+                indexer.endBulkIngestion(useStaging)
+
+                // Completed only now — see the identical comment in processAllSourcesInternal for why
+                // this must come after the FTS rebuild and index/trigger restore above, not before.
+                val endTime = System.currentTimeMillis()
+                val finalState =
+                    MultiSourceState.Completed(
+                        sourcesProcessed = 1,
+                        errors = if (stats.error != null) 1 else 0,
+                        sourceStats =
+                            mapOf(
+                                stats.copy(durationMs = endTime - startTime).sourceId to stats.copy(durationMs = endTime - startTime),
+                            ),
+                        totalChannels = stats.channelsIngested,
+                        totalProgrammes = stats.programmesIngested,
+                        totalDownloadBytes = stats.downloadBytes,
+                        updatedAtMs = endTime,
+                        durationMs = endTime - startTime,
+                    )
+                _state.value = finalState
+                updateLastPipelineStats(finalState)
+            } catch (e: Exception) {
+                // cancellation-ok: cleans up, then rethrows CancellationException below
+                withContext(NonCancellable) {
+                    EpgIndexer.getInstance(context).endBulkIngestion(useStaging)
+                }
+                if (e is CancellationException) {
+                    // See the identical comment in processAllSourcesInternal: don't strand the UI on
+                    // a mid-run state for a refresh that no longer exists.
+                    _state.value = MultiSourceState.Idle
                     throw e
-                } catch (e: Exception) {
-                    Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 }
+                Log.e(TAG, "processSingleSource failed: ${e.message}", e)
+                _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
             }
-
-            // Restore FTS sync triggers only now — see the identical comment in
-            // processAllSourcesInternal for why this must come after the swap and rebuild, not
-            // before. Still unconditional: an unchanged/skipped source still needs them back.
-            indexer.endBulkIngestion(useStaging)
-
-            // Completed only now — see the identical comment in processAllSourcesInternal for why
-            // this must come after the FTS rebuild and index/trigger restore above, not before.
-            val endTime = System.currentTimeMillis()
-            val finalState =
-                MultiSourceState.Completed(
-                    sourcesProcessed = 1,
-                    errors = if (stats.error != null) 1 else 0,
-                    sourceStats =
-                        mapOf(
-                            stats.copy(durationMs = endTime - startTime).sourceId to stats.copy(durationMs = endTime - startTime),
-                        ),
-                    totalChannels = stats.channelsIngested,
-                    totalProgrammes = stats.programmesIngested,
-                    totalDownloadBytes = stats.downloadBytes,
-                    updatedAtMs = endTime,
-                    durationMs = endTime - startTime,
-                )
-            _state.value = finalState
-            updateLastPipelineStats(finalState)
-        } catch (e: Exception) { // cancellation-ok: cleans up, then rethrows CancellationException below
-            withContext(NonCancellable) {
-                EpgIndexer.getInstance(context).endBulkIngestion(useStaging)
-            }
-            if (e is CancellationException) {
-                // See the identical comment in processAllSourcesInternal: don't strand the UI on
-                // a mid-run state for a refresh that no longer exists.
-                _state.value = MultiSourceState.Idle
-                throw e
-            }
-            Log.e(TAG, "processSingleSource failed: ${e.message}", e)
-            _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
         }
-    }
 
     /**
      * Cancel all running and queued EPG refresh processing.
@@ -1186,15 +1219,23 @@ class EpgFileManager private constructor(
                                     // Throttle UI updates to every 512KB
                                     if (totalRead - lastReportedBytes >= 524288) {
                                         lastReportedBytes = totalRead
-                                        val pct = if (contentLength > 0) ((totalRead * 100) / contentLength).toInt().coerceIn(0, 100) else -1
-                                        activeProgress[source.id] = ActiveSourceProgress(
-                                            sourceId = source.id,
-                                            label = label,
-                                            phase = "Downloading",
-                                            progressPercent = pct,
-                                            downloadedBytes = totalRead,
-                                            downloadTotalBytes = contentLength,
-                                        )
+                                        val pct =
+                                            if (contentLength >
+                                                0
+                                            ) {
+                                                ((totalRead * 100) / contentLength).toInt().coerceIn(0, 100)
+                                            } else {
+                                                -1
+                                            }
+                                        activeProgress[source.id] =
+                                            ActiveSourceProgress(
+                                                sourceId = source.id,
+                                                label = label,
+                                                phase = "Downloading",
+                                                progressPercent = pct,
+                                                downloadedBytes = totalRead,
+                                                downloadTotalBytes = contentLength,
+                                            )
                                         onProgressUpdate()
                                     }
                                 }
@@ -1259,7 +1300,10 @@ class EpgFileManager private constructor(
                 sourceDao.markUnchanged(source.id, System.currentTimeMillis())
                 tmpFile.delete()
                 return DownloadedSource(
-                    source, label, tmpFile, downloadedBytes = 0,
+                    source,
+                    label,
+                    tmpFile,
+                    downloadedBytes = 0,
                     downloadDurationMs = System.currentTimeMillis() - downloadStartMs,
                     unchanged = true,
                 )
@@ -1270,17 +1314,27 @@ class EpgFileManager private constructor(
                 sourceDao.markUnchanged(source.id, System.currentTimeMillis())
                 tmpFile.delete()
                 return DownloadedSource(
-                    source, label, tmpFile, downloadedBytes,
+                    source,
+                    label,
+                    tmpFile,
+                    downloadedBytes,
                     downloadDurationMs = System.currentTimeMillis() - downloadStartMs,
-                    unchanged = true, contentSha256 = computedSha256,
-                    etag = responseEtag, lastModifiedHeader = responseLastModified,
+                    unchanged = true,
+                    contentSha256 = computedSha256,
+                    etag = responseEtag,
+                    lastModifiedHeader = responseLastModified,
                 )
             }
 
             return DownloadedSource(
-                source, label, tmpFile, downloadedBytes,
+                source,
+                label,
+                tmpFile,
+                downloadedBytes,
                 System.currentTimeMillis() - downloadStartMs,
-                contentSha256 = computedSha256, etag = responseEtag, lastModifiedHeader = responseLastModified,
+                contentSha256 = computedSha256,
+                etag = responseEtag,
+                lastModifiedHeader = responseLastModified,
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -1325,7 +1379,8 @@ class EpgFileManager private constructor(
                 }
             }
             digest.digest().joinToString("") { "%02x".format(it) }
-        } catch (e: Exception) { // cancellation-ok: non-suspend
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
             Log.w(TAG, "Decompressed-content hash failed, proceeding with full ingest", e)
             null
         }
@@ -1377,7 +1432,8 @@ class EpgFileManager private constructor(
                 if (isGzip) {
                     try {
                         GZIPInputStream(bufferedStream, STREAM_BUFFER_SIZE)
-                    } catch (e: Exception) { // cancellation-ok: non-suspend, rethrows
+                    } catch (e: Exception) {
+                        // cancellation-ok: non-suspend, rethrows
                         // GZIPInputStream's constructor reads and validates the magic bytes
                         // before this assignment completes — on a corrupt/non-gzip file it
                         // throws here, before `stream.use { }` below ever gets a stream to
@@ -1490,9 +1546,8 @@ class EpgFileManager private constructor(
      * to process before calling [processAllSources]; a source belongs to exactly one provider, so a
      * refresh never touches another provider's guide.
      */
-    internal suspend fun getAllSources(providerId: Long): List<EpgSourceEntity> {
-        return SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSourcesForProvider(providerId)
-    }
+    internal suspend fun getAllSources(providerId: Long): List<EpgSourceEntity> =
+        SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSourcesForProvider(providerId)
 
     internal suspend fun getStaleSources(providerId: Long): List<EpgSourceEntity> {
         val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
@@ -1521,7 +1576,8 @@ class EpgFileManager private constructor(
                 target.add(java.util.Calendar.DAY_OF_YEAR, 1)
             }
             return (target.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
-        } catch (e: Exception) { // cancellation-ok: non-suspend
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
             Log.w(TAG, "Failed to calculate delay for $time", e)
             return 0
         }
@@ -1566,7 +1622,8 @@ class EpgFileManager private constructor(
                 .listFiles { file ->
                     file.name.startsWith("xmltv_") && file.isFile
                 }?.toList() ?: emptyList()
-        } catch (e: Exception) { // cancellation-ok: non-suspend
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
             emptyList()
         }
 
@@ -1583,7 +1640,8 @@ class EpgFileManager private constructor(
                 }
             }
             return CleanupResult(filesDeleted, bytesFreed)
-        } catch (e: Exception) { // cancellation-ok: non-suspend
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
             Log.w(TAG, "Cleanup failed", e)
             return CleanupResult(0, 0)
         }

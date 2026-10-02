@@ -10,12 +10,12 @@ import com.hierynomus.smbj.auth.AuthenticationContext
 import com.hierynomus.smbj.connection.Connection
 import com.hierynomus.smbj.session.Session
 import com.hierynomus.smbj.share.DiskShare
-import com.hierynomus.smbj.share.File as SmbFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.util.EnumSet
+import com.hierynomus.smbj.share.File as SmbFile
 
 class SmbClient(
     private val host: String,
@@ -109,10 +109,26 @@ class SmbClient(
         connection: Connection?,
         client: SMBClient?,
     ) {
-        try { share?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close share", e) }
-        try { session?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close session", e) }
-        try { connection?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close connection", e) }
-        try { client?.close() } catch (e: Exception) { Log.e(TAG, "Failed to close client", e) }
+        try {
+            share?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close share", e)
+        }
+        try {
+            session?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close session", e)
+        }
+        try {
+            connection?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close connection", e)
+        }
+        try {
+            client?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to close client", e)
+        }
     }
 
     fun isConnected(): Boolean = synchronized(lock) { share != null }

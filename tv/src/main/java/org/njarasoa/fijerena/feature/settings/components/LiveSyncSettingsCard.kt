@@ -40,13 +40,23 @@ fun LiveSyncSettingsCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.live_sync_title),
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontSize =
+                                MaterialTheme.typography.titleMedium.fontSize
+                                    .scaled(scale),
+                        ),
                     color = CinemaAccent,
                 )
                 Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
                 Text(
                     text = status.serverUrl ?: stringResource(R.string.live_sync_off),
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize.scaled(scale)),
+                    style =
+                        MaterialTheme.typography.bodySmall.copy(
+                            fontSize =
+                                MaterialTheme.typography.bodySmall.fontSize
+                                    .scaled(scale),
+                        ),
                     color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                 )
             }

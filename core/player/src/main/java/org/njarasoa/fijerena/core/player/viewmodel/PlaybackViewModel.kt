@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.player.viewmodel
 import android.app.Application
 import android.content.Intent
-import org.njarasoa.fijerena.core.player.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
@@ -15,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.njarasoa.fijerena.core.player.R
 import org.njarasoa.fijerena.core.player.model.AudioTrackInfo
 import org.njarasoa.fijerena.core.player.model.ChapterInfo
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -397,7 +397,13 @@ class PlaybackViewModel(
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
                             language = format.language ?: context.getString(R.string.player_track_language_unknown),
-                            label = format.label ?: context.getString(R.string.player_track_audio_fallback_label_format, format.language ?: context.getString(R.string.player_track_generic_label), format.channelCount),
+                            label =
+                                format.label
+                                    ?: context.getString(
+                                        R.string.player_track_audio_fallback_label_format,
+                                        format.language ?: context.getString(R.string.player_track_generic_label),
+                                        format.channelCount,
+                                    ),
                             channelCount = format.channelCount,
                             sampleRate = format.sampleRate,
                             bitrate = format.bitrate,
@@ -442,7 +448,9 @@ class PlaybackViewModel(
                             groupIndex = groupIndex,
                             trackIndex = trackIndex,
                             language = format.language ?: context.getString(R.string.player_track_language_unknown),
-                            label = format.label ?: format.language ?: context.getString(R.string.player_track_subtitle_fallback_label_format, trackIndex + 1),
+                            label =
+                                format.label ?: format.language
+                                    ?: context.getString(R.string.player_track_subtitle_fallback_label_format, trackIndex + 1),
                             mimeType = format.sampleMimeType ?: "unknown",
                             isSelected = isSelected,
                         ),
@@ -477,7 +485,11 @@ class PlaybackViewModel(
      */
     fun getVideoQualities(): List<VideoQualityInfo> {
         val qualities = mutableListOf<VideoQualityInfo>()
-        val groups = _controller.value?.currentTracks?.groups.orEmpty()
+        val groups =
+            _controller.value
+                ?.currentTracks
+                ?.groups
+                .orEmpty()
 
         groups.forEachIndexed { groupIndex, group ->
             if (group.type == androidx.media3.common.C.TRACK_TYPE_VIDEO) {

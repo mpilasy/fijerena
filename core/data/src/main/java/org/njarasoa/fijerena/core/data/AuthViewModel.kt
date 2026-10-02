@@ -104,8 +104,14 @@ class AuthViewModel : ViewModel() {
         val expDate = _authResponse.value?.userInfo?.expDate
         val isExpired =
             when {
-                expDate.isNullOrEmpty() -> true
-                expDate.equals("Unlimited", ignoreCase = true) -> false
+                expDate.isNullOrEmpty() -> {
+                    true
+                }
+
+                expDate.equals("Unlimited", ignoreCase = true) -> {
+                    false
+                }
+
                 else -> {
                     val expirationTimestamp = expDate.toLongOrNull()
                     val currentTimestamp = System.currentTimeMillis() / 1000

@@ -30,11 +30,10 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
-import kotlin.coroutines.resume
-
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.utils.UiText
-import org.njarasoa.fijerena.core.ui.R
+import kotlin.coroutines.resume
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EpgManagementViewModel(
@@ -118,13 +117,14 @@ class EpgManagementViewModel(
         val epgRefreshInterval: Int,
     )
 
-    private val _epgSettings = MutableStateFlow(
-        EpgSettings(
-            autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
-            epgRefreshTime = appSettings.epgRefreshTime,
-            epgRefreshInterval = appSettings.epgRefreshInterval,
+    private val _epgSettings =
+        MutableStateFlow(
+            EpgSettings(
+                autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
+                epgRefreshTime = appSettings.epgRefreshTime,
+                epgRefreshInterval = appSettings.epgRefreshInterval,
+            ),
         )
-    )
     val epgSettings: StateFlow<EpgSettings> = _epgSettings.asStateFlow()
 
     val nextRefreshAtMs: StateFlow<Long> =
@@ -515,7 +515,9 @@ class EpgManagementViewModel(
                 }
             _hasStrayFiles.value = false
             if (result.filesDeleted > 0) {
-                _toastMessage.tryEmit(UiText.StringResource(R.string.epg_cache_cleaned, result.filesDeleted, NumberUtils.formatBytes(result.bytesFreed)))
+                _toastMessage.tryEmit(
+                    UiText.StringResource(R.string.epg_cache_cleaned, result.filesDeleted, NumberUtils.formatBytes(result.bytesFreed)),
+                )
             } else {
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_stray_files))
             }
@@ -558,7 +560,10 @@ class EpgManagementViewModel(
     }
 
     companion object {
-        private fun calculateNextRefreshTime(anchorTime: String, intervalHours: Int): Long {
+        private fun calculateNextRefreshTime(
+            anchorTime: String,
+            intervalHours: Int,
+        ): Long {
             val parts = anchorTime.split(":")
             var next = 0L
 

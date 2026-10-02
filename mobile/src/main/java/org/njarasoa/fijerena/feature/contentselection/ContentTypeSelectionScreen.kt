@@ -1,10 +1,5 @@
 package org.njarasoa.fijerena.feature.contentselection
 
-import androidx.lifecycle.viewmodel.compose.viewModel
-import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
-import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
-import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import androidx.compose.runtime.getValue
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -29,6 +24,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +44,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -59,16 +56,22 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ContinueWatchingItem
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
+import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.components.ShimmerPlaceholder
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
-import org.njarasoa.fijerena.feature.contentselection.components.MobileContinueWatchingShelf
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.feature.contentselection.components.MobileContinueWatchingShelf
+import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaAccentDark
 import org.njarasoa.fijerena.ui.theme.CinemaAccentLight
@@ -76,11 +79,8 @@ import org.njarasoa.fijerena.ui.theme.CinemaGlassBorder
 import org.njarasoa.fijerena.ui.theme.CinemaLive
 import org.njarasoa.fijerena.ui.theme.CinemaOrange
 import org.njarasoa.fijerena.ui.theme.CinemaOrangeDark
-import org.njarasoa.fijerena.ui.components.AmbientBackdrop
-import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,7 +129,9 @@ fun MobileContentTypeSelectionScreen(
     // `remember`) so a source that finishes indexing while this screen is on-screen shows the
     // icon immediately, instead of waiting for the composable to be torn down and rebuilt.
     val epgIndexState by remember {
-        org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer.getInstance(context.applicationContext).state
+        org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+            .getInstance(context.applicationContext)
+            .state
     }.collectAsStateWithLifecycle()
     val hasEpgData = epgIndexState is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
 
@@ -158,7 +160,9 @@ fun MobileContentTypeSelectionScreen(
                         if (AppContainer.getInstance(context.applicationContext).shouldPromptSignIn(activeProvider.id)) {
                             val message = signInResources.getString(R.string.profile_jellyfin_sign_in_prompt, activeProvider.name)
                             withContext(Dispatchers.Main) {
-                                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+                                android.widget.Toast
+                                    .makeText(context, message, android.widget.Toast.LENGTH_LONG)
+                                    .show()
                                 onSignInRequired(activeProvider.id)
                             }
                         }
@@ -191,12 +195,14 @@ fun MobileContentTypeSelectionScreen(
     LaunchedEffect(mediaProviderRef) {
         val mp = mediaProviderRef ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            backdropImageUrl = listOf(ContentType.MOVIES, ContentType.TV_SHOWS, ContentType.LIVE_TV).firstNotNullOfOrNull { contentType ->
-                mp.getRecentlyPlayed(contentType)
-                    ?.getOrNull()
-                    ?.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }
-                    ?.thumbnailUrl
-            }
+            backdropImageUrl =
+                listOf(ContentType.MOVIES, ContentType.TV_SHOWS, ContentType.LIVE_TV).firstNotNullOfOrNull { contentType ->
+                    mp
+                        .getRecentlyPlayed(contentType)
+                        ?.getOrNull()
+                        ?.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }
+                        ?.thumbnailUrl
+                }
         }
     }
 
@@ -249,170 +255,173 @@ fun MobileContentTypeSelectionScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-    AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = backdropImageUrl)
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            val appName = stringResource(R.string.login_app_name)
-            val displayName =
-                buildString {
-                    append(providerName.ifEmpty { appName })
-                    if (appSettings.isDevMode && providerType.isNotEmpty()) {
-                        append(" ($providerType)")
+        AmbientBackdrop(modifier = Modifier.fillMaxSize(), imageUrl = backdropImageUrl)
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                val appName = stringResource(R.string.login_app_name)
+                val displayName =
+                    buildString {
+                        append(providerName.ifEmpty { appName })
+                        if (appSettings.isDevMode && providerType.isNotEmpty()) {
+                            append(" ($providerType)")
+                        }
                     }
-                }
-            val switchProviderDescription = stringResource(R.string.content_switch_provider_description_format, displayName)
-            TopAppBar(
-                title = {
-                    // Only render as a dropdown when there's actually something to switch to —
-                    // otherwise this is a dead tap: the picker dialog below only ever opens when
-                    // allProviders.size > 1, but the arrow/click target used to show regardless.
-                    if (allProviders.size > 1) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier =
-                                Modifier
-                                    .clickable(role = Role.DropdownList) { showProviderPicker = true }
-                                    .semantics {
-                                        contentDescription = switchProviderDescription
-                                    }.padding(end = CinemaSpacing.xs, top = CinemaSpacing.xs, bottom = CinemaSpacing.xs),
-                        ) {
+                val switchProviderDescription = stringResource(R.string.content_switch_provider_description_format, displayName)
+                TopAppBar(
+                    title = {
+                        // Only render as a dropdown when there's actually something to switch to —
+                        // otherwise this is a dead tap: the picker dialog below only ever opens when
+                        // allProviders.size > 1, but the arrow/click target used to show regardless.
+                        if (allProviders.size > 1) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier =
+                                    Modifier
+                                        .clickable(role = Role.DropdownList) { showProviderPicker = true }
+                                        .semantics {
+                                            contentDescription = switchProviderDescription
+                                        }.padding(end = CinemaSpacing.xs, top = CinemaSpacing.xs, bottom = CinemaSpacing.xs),
+                            ) {
+                                Text(
+                                    text = displayName,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Icon(
+                                    imageVector = CinemaIcons.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        } else {
                             Text(
                                 text = displayName,
                                 color = MaterialTheme.colorScheme.primary,
                             )
-                            Icon(
-                                imageVector = CinemaIcons.ArrowDropDown,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                        }
+                    },
+                    actions = {
+                        if (hasEpgData) {
+                            CinemaIconButton(
+                                onClick = onEpgBrowser,
+                                icon = {
+                                    Icon(CinemaIcons.DateRange, stringResource(R.string.epg_browser_title), tint = CinemaTextPrimary)
+                                },
                             )
                         }
-                    } else {
-                        Text(
-                            text = displayName,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                },
-                actions = {
-                    if (hasEpgData) {
-                        CinemaIconButton(onClick = onEpgBrowser,
-                            icon = {
-                                Icon(CinemaIcons.DateRange, stringResource(R.string.epg_browser_title), tint = CinemaTextPrimary)
-                            }
-                        )
-                    }
-                    CinemaIconButton(onClick = onSearch,
-                        icon = {
-                            Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
-                        }
-                    )
-                    // Always shown, even with one profile, so profiles are discoverable.
-                    activeProfile?.let { profile ->
-                        val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
                         CinemaIconButton(
-                            onClick = onChooseProfile,
-                            modifier = Modifier.semantics { contentDescription = switchLabel },
+                            onClick = onSearch,
                             icon = {
-                                ProfileAvatar(
-                                    name = profile.name,
-                                    colorIndex = profile.colorIndex,
-                                    size = MobileDimensions.iconLarge,
-                                    fontSize = MaterialTheme.typography.titleSmall.fontSize,
-                                )
+                                Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
                             },
                         )
-                    }
-                    CinemaIconButton(onClick = onSettings,
-                        icon = {
-                            Icon(CinemaIcons.Settings, stringResource(R.string.settings_title), tint = CinemaTextPrimary)
+                        // Always shown, even with one profile, so profiles are discoverable.
+                        activeProfile?.let { profile ->
+                            val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
+                            CinemaIconButton(
+                                onClick = onChooseProfile,
+                                modifier = Modifier.semantics { contentDescription = switchLabel },
+                                icon = {
+                                    ProfileAvatar(
+                                        name = profile.name,
+                                        colorIndex = profile.colorIndex,
+                                        size = MobileDimensions.iconLarge,
+                                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                                    )
+                                },
+                            )
                         }
-                    )
-                },
-            )
-        },
-    ) { paddingValues ->
-        if (needsSignIn) {
-            JellyfinSignInPanel(
-                providerName = providerName,
-                onSignIn = { onSignInRequired(activeProviderId) },
-                modifier = Modifier.padding(paddingValues),
-            )
-        } else {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .verticalScroll(rememberScrollState())
-                        .padding(CinemaSpacing.lg),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md, Alignment.CenterVertically),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = stringResource(R.string.content_select_type_title),
-                    style = MaterialTheme.typography.headlineMedium,
+                        CinemaIconButton(
+                            onClick = onSettings,
+                            icon = {
+                                Icon(CinemaIcons.Settings, stringResource(R.string.settings_title), tint = CinemaTextPrimary)
+                            },
+                        )
+                    },
+                )
+            },
+        ) { paddingValues ->
+            if (needsSignIn) {
+                JellyfinSignInPanel(
+                    providerName = providerName,
+                    onSignIn = { onSignInRequired(activeProviderId) },
+                    modifier = Modifier.padding(paddingValues),
+                )
+            } else {
+                Column(
                     modifier =
                         Modifier
-                            .padding(bottom = CinemaSpacing.lg)
-                            .staggeredEntrance(0),
-                )
-
-                if (continueWatchingItems.isNotEmpty()) {
-                    MobileContinueWatchingShelf(
-                        items = continueWatchingItems,
-                        onItemSelected = onContinueWatchingSelected,
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                            .verticalScroll(rememberScrollState())
+                            .padding(CinemaSpacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md, Alignment.CenterVertically),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = stringResource(R.string.content_select_type_title),
+                        style = MaterialTheme.typography.headlineMedium,
                         modifier =
                             Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = CinemaSpacing.lg),
+                                .padding(bottom = CinemaSpacing.lg)
+                                .staggeredEntrance(0),
                     )
-                }
 
-                val isDevMode = appSettings.isDevMode
-                var cardIndex = 1
-                if (ContentType.LIVE_TV in supportedContentTypes) {
-                    GradientContentCard(
-                        title = stringResource(R.string.provider_live_tv_label),
-                        description = stringResource(R.string.content_type_live_tv_description),
-                        icon = CinemaIcons.LiveTv,
-                        categoryCounts = liveTvCounts,
-                        showTotal = isDevMode,
-                        showLivePulse = true,
-                        gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                        onClick = { onContentTypeSelected(ContentType.LIVE_TV) },
-                        modifier = Modifier.staggeredEntrance(cardIndex++),
-                    )
-                }
+                    if (continueWatchingItems.isNotEmpty()) {
+                        MobileContinueWatchingShelf(
+                            items = continueWatchingItems,
+                            onItemSelected = onContinueWatchingSelected,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = CinemaSpacing.lg),
+                        )
+                    }
 
-                if (ContentType.MOVIES in supportedContentTypes) {
-                    GradientContentCard(
-                        title = stringResource(R.string.provider_movies_label),
-                        description = stringResource(R.string.content_type_movies_description),
-                        icon = CinemaIcons.Movie,
-                        categoryCounts = moviesCounts,
-                        showTotal = isDevMode,
-                        gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                        onClick = { onContentTypeSelected(ContentType.MOVIES) },
-                        modifier = Modifier.staggeredEntrance(cardIndex++),
-                    )
-                }
+                    val isDevMode = appSettings.isDevMode
+                    var cardIndex = 1
+                    if (ContentType.LIVE_TV in supportedContentTypes) {
+                        GradientContentCard(
+                            title = stringResource(R.string.provider_live_tv_label),
+                            description = stringResource(R.string.content_type_live_tv_description),
+                            icon = CinemaIcons.LiveTv,
+                            categoryCounts = liveTvCounts,
+                            showTotal = isDevMode,
+                            showLivePulse = true,
+                            gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
+                            onClick = { onContentTypeSelected(ContentType.LIVE_TV) },
+                            modifier = Modifier.staggeredEntrance(cardIndex++),
+                        )
+                    }
 
-                if (ContentType.TV_SHOWS in supportedContentTypes) {
-                    GradientContentCard(
-                        title = stringResource(R.string.provider_tv_shows_label),
-                        description = stringResource(R.string.content_type_tv_shows_description),
-                        icon = CinemaIcons.Tv,
-                        categoryCounts = tvShowsCounts,
-                        showTotal = isDevMode,
-                        gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                        onClick = { onContentTypeSelected(ContentType.TV_SHOWS) },
-                        modifier = Modifier.staggeredEntrance(cardIndex++),
-                    )
+                    if (ContentType.MOVIES in supportedContentTypes) {
+                        GradientContentCard(
+                            title = stringResource(R.string.provider_movies_label),
+                            description = stringResource(R.string.content_type_movies_description),
+                            icon = CinemaIcons.Movie,
+                            categoryCounts = moviesCounts,
+                            showTotal = isDevMode,
+                            gradientColors = listOf(CinemaAccent, CinemaAccentDark),
+                            onClick = { onContentTypeSelected(ContentType.MOVIES) },
+                            modifier = Modifier.staggeredEntrance(cardIndex++),
+                        )
+                    }
+
+                    if (ContentType.TV_SHOWS in supportedContentTypes) {
+                        GradientContentCard(
+                            title = stringResource(R.string.provider_tv_shows_label),
+                            description = stringResource(R.string.content_type_tv_shows_description),
+                            icon = CinemaIcons.Tv,
+                            categoryCounts = tvShowsCounts,
+                            showTotal = isDevMode,
+                            gradientColors = listOf(CinemaAccentLight, CinemaAccent),
+                            onClick = { onContentTypeSelected(ContentType.TV_SHOWS) },
+                            modifier = Modifier.staggeredEntrance(cardIndex++),
+                        )
+                    }
                 }
             }
         }
-    }
     }
 
     // Provider picker dialog

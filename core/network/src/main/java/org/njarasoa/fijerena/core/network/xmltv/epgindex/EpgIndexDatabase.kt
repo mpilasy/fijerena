@@ -70,7 +70,8 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                         raw.execSQL("CREATE TABLE _page_size_seed (x INTEGER)")
                         raw.execSQL("DROP TABLE _page_size_seed")
                     }
-            } catch (e: Exception) { // cancellation-ok: non-suspend
+            } catch (e: Exception) {
+                // cancellation-ok: non-suspend
                 Log.w(TAG, "Could not seed page size — index will use the SQLite default", e)
             }
         }
@@ -103,7 +104,8 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                                 // for any statement that produces rows, so it goes through
                                 // execPragma, which steps the cursor so the statement actually runs.
                                 db.execPragma("PRAGMA journal_size_limit = 10485760")
-                            } catch (e: Exception) { // cancellation-ok: non-suspend
+                            } catch (e: Exception) {
+                                // cancellation-ok: non-suspend
                                 Log.w(TAG, "Failed to run DB maintenance", e)
                             }
                         }
@@ -167,11 +169,17 @@ private class CreationPragmaFactory(
 
                 override fun onCreate(db: SupportSQLiteDatabase) = inner.onCreate(db)
 
-                override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) =
-                    inner.onUpgrade(db, oldVersion, newVersion)
+                override fun onUpgrade(
+                    db: SupportSQLiteDatabase,
+                    oldVersion: Int,
+                    newVersion: Int,
+                ) = inner.onUpgrade(db, oldVersion, newVersion)
 
-                override fun onDowngrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) =
-                    inner.onDowngrade(db, oldVersion, newVersion)
+                override fun onDowngrade(
+                    db: SupportSQLiteDatabase,
+                    oldVersion: Int,
+                    newVersion: Int,
+                ) = inner.onDowngrade(db, oldVersion, newVersion)
 
                 override fun onOpen(db: SupportSQLiteDatabase) = inner.onOpen(db)
 

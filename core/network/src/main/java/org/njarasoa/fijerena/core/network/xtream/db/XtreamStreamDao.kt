@@ -15,14 +15,18 @@ import androidx.room.Query
  */
 @Dao
 interface XtreamStreamDao {
-    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1) ORDER BY num ASC")
+    @Query(
+        "SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1) ORDER BY num ASC",
+    )
     fun getStreamsByCategory(
         providerId: Long,
         type: String,
         categoryId: String,
     ): List<XtreamStreamEntity>
 
-    @Query("SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1) ORDER BY num ASC")
+    @Query(
+        "SELECT * FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1) ORDER BY num ASC",
+    )
     fun getAllStreams(
         providerId: Long,
         type: String,
@@ -130,8 +134,6 @@ interface XtreamStreamDao {
         type: String,
     )
 
-
-
     @Query("SELECT streamId FROM xtream_streams WHERE providerId = :providerId AND type = :type")
     fun getStreamIds(
         providerId: Long,
@@ -149,7 +151,9 @@ interface XtreamStreamDao {
         Int,
     >
 
-    @Query("SELECT streamId, streamIcon FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids) AND streamIcon IS NOT NULL")
+    @Query(
+        "SELECT streamId, streamIcon FROM xtream_streams WHERE providerId = :providerId AND type = :type AND streamId IN (:ids) AND streamIcon IS NOT NULL",
+    )
     fun getIconsByIds(
         providerId: Long,
         type: String,
@@ -168,7 +172,8 @@ interface XtreamStreamDao {
         ids: List<Int>,
     )
 
-    @Query("""
+    @Query(
+        """
         SELECT s.* FROM xtream_streams s
         WHERE s.rowid IN (
             SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
@@ -176,7 +181,8 @@ interface XtreamStreamDao {
         AND s.providerId = :providerId AND s.type = :type
         AND (:includeExcluded = 1 OR s.categoryId NOT IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1))
         LIMIT 200
-    """)
+    """,
+    )
     fun searchByFts(
         providerId: Long,
         type: String,
@@ -191,21 +197,23 @@ interface XtreamStreamDao {
      * 250k-row catalogue that was ~5 s per type on a desktop and tens of seconds on a TV box,
      * all spent before the search results could show.
      */
-    @Query("""
+    @Query(
+        """
         SELECT COUNT(*) FROM xtream_streams s
         WHERE s.rowid IN (
             SELECT docid FROM xtream_streams_fts WHERE xtream_streams_fts MATCH :query
         )
         AND s.providerId = :providerId AND s.type = :type
         AND +s.categoryId IN (SELECT categoryId FROM xtream_categories WHERE providerId = :providerId AND type = :type AND excluded = 1)
-    """)
+    """,
+    )
     fun countExcludedByFts(
         providerId: Long,
         type: String,
         query: String,
     ): Int
 
-@Query("DELETE FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId")
+    @Query("DELETE FROM xtream_streams WHERE providerId = :providerId AND type = :type AND categoryId = :categoryId")
     fun deleteByCategoryId(
         providerId: Long,
         type: String,

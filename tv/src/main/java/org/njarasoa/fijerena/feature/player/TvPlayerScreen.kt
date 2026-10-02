@@ -15,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -30,7 +31,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
@@ -52,7 +53,6 @@ import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 import org.njarasoa.fijerena.ui.player.UpNextState
 import org.njarasoa.fijerena.ui.theme.*
-import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 
 /**
  * TV player screen that integrates stream playback via StreamLoaderViewModel.
@@ -137,6 +137,7 @@ fun TvPlayerScreen(
                             lastSuccessState?.isLive == true && (state is PlaybackState.Playing || state is PlaybackState.Buffering)
                         playbackViewModel.onFocusLost(false)
                     }
+
                     Lifecycle.Event.ON_RESUME -> {
                         playbackViewModel.onFocusRegained()
                         // A long absence (TV screensaver, HDMI input switch) lets onFocusLost's
@@ -169,6 +170,7 @@ fun TvPlayerScreen(
                             )
                         }
                     }
+
                     else -> {}
                 }
             }
@@ -302,6 +304,7 @@ fun TvPlayerScreen(
                 PlayerContent(previous, playbackViewModel, loaderViewModel, onBack, upNextState)
             }
         }
+
         is StreamLoaderViewModel.StreamState.Error -> {
             ErrorScreen(
                 message = state.message,
@@ -309,6 +312,7 @@ fun TvPlayerScreen(
                 onBack = onBack,
             )
         }
+
         is StreamLoaderViewModel.StreamState.Success -> {
             PlayerContent(state, playbackViewModel, loaderViewModel, onBack, upNextState)
         }

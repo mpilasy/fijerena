@@ -45,7 +45,10 @@ class LocalRecordsTest {
         runBlocking {
             everythingPending() // start from an empty queue
             val profile = ProfileRepository(context).addProfile("LR-${UUID.randomUUID()}", 1)
-            val providerId = ProviderRepository(context).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
+            val providerId =
+                ProviderRepository(
+                    context,
+                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
             val providerKey = settingsDb.providerDao().getProviderById(providerId)!!.providerKey
             xtreamDb.favoriteStateDao().upsertClearingTombstone(
                 FavoriteStateEntity(providerId, profile, "m1", "MOVIES", FavoriteKind.STREAM, "Film", "c1", 1L),
@@ -68,13 +71,20 @@ class LocalRecordsTest {
         runBlocking {
             everythingPending()
             val profile = ProfileRepository(context).addProfile("LR-${UUID.randomUUID()}", 1)
-            val providerId = ProviderRepository(context).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
+            val providerId =
+                ProviderRepository(
+                    context,
+                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
             xtreamDb.favoriteStateDao().upsertClearingTombstone(
                 FavoriteStateEntity(providerId, profile, "m1", "MOVIES", FavoriteKind.STREAM, "Film", "c1", 1L),
             )
             xtreamDb.favoriteStateDao().deleteRecordingTombstone(providerId, profile, "m1", "MOVIES", FavoriteKind.STREAM)
 
-            val favorite = everythingPending().map { it.record }.single { it.key.kind == SyncKind.FAVORITE_STREAM && it.key.profileKey == profile }
+            val favorite =
+                everythingPending().map { it.record }.single {
+                    it.key.kind == SyncKind.FAVORITE_STREAM &&
+                        it.key.profileKey == profile
+                }
             assertTrue(favorite.deleted)
             assertNull(favorite.payload)
         }
@@ -84,7 +94,10 @@ class LocalRecordsTest {
         runBlocking {
             everythingPending()
             val profile = ProfileRepository(context).addProfile("LR-${UUID.randomUUID()}", 1)
-            val providerId = ProviderRepository(context).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
+            val providerId =
+                ProviderRepository(
+                    context,
+                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
             val favorite = FavoriteStateEntity(providerId, profile, "m1", "MOVIES", FavoriteKind.STREAM, "Film", "c1", 1L)
             xtreamDb.favoriteStateDao().upsertClearingTombstone(favorite)
 
@@ -100,7 +113,10 @@ class LocalRecordsTest {
     fun seedingQueuesWhatAlreadyExistsAtItsOwnTime() =
         runBlocking {
             val profile = ProfileRepository(context).addProfile("LR-${UUID.randomUUID()}", 1)
-            val providerId = ProviderRepository(context).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
+            val providerId =
+                ProviderRepository(
+                    context,
+                ).addProvider("lr", "http://${UUID.randomUUID()}.test", "u", "pw", "XTREAM", activate = false)
             xtreamDb.favoriteStateDao().upsertClearingTombstone(
                 FavoriteStateEntity(providerId, profile, "m1", "MOVIES", FavoriteKind.STREAM, "Film", "c1", 123L),
             )

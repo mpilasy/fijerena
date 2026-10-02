@@ -2,9 +2,9 @@ package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 
 /**
@@ -182,10 +182,23 @@ class AppSettings(
         val stored = if (key in PER_PROFILE_SETTING_KEYS) profileKey(key, profileId) else key
         if (!prefs.contains(stored)) return null
         return when (key) {
-            KEY_DEV_MODE, KEY_EPG_AUTO_REFRESH, KEY_AUTOPLAY_NEXT_EPISODE -> kotlinx.serialization.json.JsonPrimitive(prefs.getBoolean(stored, false))
-            KEY_THEME_ID, KEY_EPG_REFRESH_TIME, KEY_LAST_PROVIDER -> kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
-            KEY_EPG_REFRESH_INTERVAL -> kotlinx.serialization.json.JsonPrimitive(prefs.getInt(stored, DEFAULT_EPG_REFRESH_INTERVAL))
-            else -> null
+            KEY_DEV_MODE, KEY_EPG_AUTO_REFRESH, KEY_AUTOPLAY_NEXT_EPISODE -> {
+                kotlinx.serialization.json.JsonPrimitive(
+                    prefs.getBoolean(stored, false),
+                )
+            }
+
+            KEY_THEME_ID, KEY_EPG_REFRESH_TIME, KEY_LAST_PROVIDER -> {
+                kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
+            }
+
+            KEY_EPG_REFRESH_INTERVAL -> {
+                kotlinx.serialization.json.JsonPrimitive(prefs.getInt(stored, DEFAULT_EPG_REFRESH_INTERVAL))
+            }
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -382,6 +395,7 @@ class AppSettings(
      * Used for fast startup — avoids Room DB query on cold start.
      * Must be updated whenever providers are added or removed.
      */
+
     /**
      * Delay in seconds before a live channel is marked as "watched" (added to Last Watched).
      * Range: 5-120 seconds. Default: 30 seconds.

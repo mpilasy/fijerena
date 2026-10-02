@@ -123,7 +123,8 @@ class SyncApplierRemoteCommandTest {
 
     @Test
     fun `a payload that does not decode is skipped, not deferred`() {
-        val unreadable = SyncRecord(SyncKey(SyncKind.SHARED, "", SyncKind.REMOTE_COMMAND, "tv"), hlc = 7, payload = "{\"command\":\"stop\"}")
+        val unreadable =
+            SyncRecord(SyncKey(SyncKind.SHARED, "", SyncKind.REMOTE_COMMAND, "tv"), hlc = 7, payload = "{\"command\":\"stop\"}")
 
         val result = runBlocking { applier().apply(listOf(unreadable)) }
 

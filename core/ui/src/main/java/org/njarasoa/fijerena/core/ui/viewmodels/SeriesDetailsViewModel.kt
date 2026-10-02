@@ -17,8 +17,8 @@ import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.suspendRunCatching
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.RelatedTitles
-import org.njarasoa.fijerena.core.player.domain.SeriesId
 import org.njarasoa.fijerena.core.player.domain.SeriesDetail
+import org.njarasoa.fijerena.core.player.domain.SeriesId
 
 class SeriesDetailsViewModel(
     private val context: android.content.Context,
@@ -342,6 +342,5 @@ class SeriesDetailsViewModelFactory(
     private val appContext = context.applicationContext
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SeriesDetailsViewModel(appContext, seriesId, categoryId, seriesName) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = SeriesDetailsViewModel(appContext, seriesId, categoryId, seriesName) as T
 }

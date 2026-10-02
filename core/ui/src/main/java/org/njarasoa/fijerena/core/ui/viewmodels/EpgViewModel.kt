@@ -5,21 +5,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.MediaRepository
-import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.TimeSlot
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import java.time.LocalDate
 import java.time.ZoneId
@@ -171,42 +171,44 @@ class EpgViewModel(
         }
         // Debounce: cancel previous search, wait 200ms before scanning all programs
         searchJob?.cancel()
-        searchJob = viewModelScope.launch(Dispatchers.Default) {
-            delay(200)
-            val state = _uiState.value
-            if (state !is UiState.Success) return@launch
-            val now = System.currentTimeMillis() / 1000
+        searchJob =
+            viewModelScope.launch(Dispatchers.Default) {
+                delay(200)
+                val state = _uiState.value
+                if (state !is UiState.Success) return@launch
+                val now = System.currentTimeMillis() / 1000
 
-            val processors = Runtime.getRuntime().availableProcessors()
-            val chunkSize = maxOf(1, state.channelRows.size / processors)
+                val processors = Runtime.getRuntime().availableProcessors()
+                val chunkSize = maxOf(1, state.channelRows.size / processors)
 
-            val deferredResults = state.channelRows.chunked(chunkSize).map { chunk ->
-                async(Dispatchers.Default) {
-                    val current = mutableListOf<EpgSearchResult>()
-                    val others = mutableListOf<EpgSearchResult>()
-                    for (row in chunk) {
-                        val channel = row.channel
-                        for (program in row.programs) {
-                            if (program.title.indexOf(query, ignoreCase = true) >= 0) {
-                                val isCurrent = now in program.startTime..program.endTime
-                                val result = EpgSearchResult(program, channel, isCurrent)
-                                if (isCurrent) current.add(result) else others.add(result)
+                val deferredResults =
+                    state.channelRows.chunked(chunkSize).map { chunk ->
+                        async(Dispatchers.Default) {
+                            val current = mutableListOf<EpgSearchResult>()
+                            val others = mutableListOf<EpgSearchResult>()
+                            for (row in chunk) {
+                                val channel = row.channel
+                                for (program in row.programs) {
+                                    if (program.title.indexOf(query, ignoreCase = true) >= 0) {
+                                        val isCurrent = now in program.startTime..program.endTime
+                                        val result = EpgSearchResult(program, channel, isCurrent)
+                                        if (isCurrent) current.add(result) else others.add(result)
+                                    }
+                                }
                             }
+                            Pair(current, others)
                         }
                     }
-                    Pair(current, others)
+
+                val finalCurrent = mutableListOf<EpgSearchResult>()
+                val finalOthers = mutableListOf<EpgSearchResult>()
+                deferredResults.awaitAll().forEach { (current, others) ->
+                    finalCurrent.addAll(current)
+                    finalOthers.addAll(others)
                 }
-            }
 
-            val finalCurrent = mutableListOf<EpgSearchResult>()
-            val finalOthers = mutableListOf<EpgSearchResult>()
-            deferredResults.awaitAll().forEach { (current, others) ->
-                finalCurrent.addAll(current)
-                finalOthers.addAll(others)
+                _searchResults.value = finalCurrent + finalOthers
             }
-
-            _searchResults.value = finalCurrent + finalOthers
-        }
     }
 
     fun clearSearch() {

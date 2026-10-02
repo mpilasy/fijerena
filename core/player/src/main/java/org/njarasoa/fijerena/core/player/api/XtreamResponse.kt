@@ -19,20 +19,31 @@ import org.njarasoa.fijerena.core.player.model.VodInfo
  */
 sealed interface XtreamResponse<out T> {
     /** A response with something in it. */
-    data class Ok<T>(val value: T) : XtreamResponse<T>
+    data class Ok<T>(
+        val value: T,
+    ) : XtreamResponse<T>
 
     /**
      * The provider has no such id, or nothing to say about it: `[]`, or an object whose every
      * field came back empty. Usually a catalogue id that changed since the local sync, sometimes
      * a proxy answering before it has the data.
      */
-    data class Unavailable(val itemId: Int, val action: String) : XtreamResponse<Nothing>
+    data class Unavailable(
+        val itemId: Int,
+        val action: String,
+    ) : XtreamResponse<Nothing>
 
     /** A response that could not be read as the expected shape at all. */
-    data class Malformed(val itemId: Int, val action: String, val cause: Throwable) : XtreamResponse<Nothing>
+    data class Malformed(
+        val itemId: Int,
+        val action: String,
+        val cause: Throwable,
+    ) : XtreamResponse<Nothing>
 
     /** The call itself did not complete — no network, not authenticated, server error. */
-    data class Failed(val cause: Throwable) : XtreamResponse<Nothing>
+    data class Failed(
+        val cause: Throwable,
+    ) : XtreamResponse<Nothing>
 }
 
 /** The throwable to report when a response that is not [XtreamResponse.Ok] has to surface as one. */

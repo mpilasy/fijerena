@@ -162,6 +162,7 @@ private val BaseTypography =
 /** [BaseTypography] with the active [UiTypeTokens] weight/tracking character applied. */
 fun cinemaTypography(tokens: UiTypeTokens): Typography {
     fun TextStyle.display() = applyUiTypeTokens(tokens, CinemaDisplayFontFamily)
+
     fun TextStyle.body() = applyUiTypeTokens(tokens, FontFamily.Default)
     return BaseTypography.copy(
         displayLarge = BaseTypography.displayLarge.display(),

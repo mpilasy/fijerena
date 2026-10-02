@@ -20,21 +20,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
-import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
-import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
+import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
+import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.*
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,6 +94,7 @@ fun MobileProviderSelectionScreen(
                         CircularProgressIndicator()
                     }
                 }
+
                 is ProviderUiState.NoProviders -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -119,6 +120,7 @@ fun MobileProviderSelectionScreen(
                         }
                     }
                 }
+
                 is ProviderUiState.Error -> {
                     Text(
                         text = state.message,
@@ -126,6 +128,7 @@ fun MobileProviderSelectionScreen(
                         color = CinemaError,
                     )
                 }
+
                 is ProviderUiState.SingleProvider -> {
                     MobileProviderList(
                         providers = listOf(state.provider),
@@ -137,6 +140,7 @@ fun MobileProviderSelectionScreen(
                         onCopyTo = { copyFromProvider = it },
                     )
                 }
+
                 is ProviderUiState.MultipleProviders -> {
                     MobileProviderList(
                         providers = state.providers,

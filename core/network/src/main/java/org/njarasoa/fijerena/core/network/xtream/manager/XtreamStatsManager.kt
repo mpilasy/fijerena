@@ -83,12 +83,14 @@ class XtreamStatsManager(
                         categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_LIVE)
                         streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_LIVE)
                     }
+
                     "MOVIES" -> {
                         remove(KEY_VOD_CATEGORIES_TIMESTAMP)
                         metricsManager.removeFetchTime("vod_categories")
                         categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_VOD)
                         streamDao.deleteAll(providerId, XtreamStreamEntity.TYPE_VOD)
                     }
+
                     "TV_SHOWS" -> {
                         remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
                         metricsManager.removeFetchTime("series_categories")
@@ -132,11 +134,13 @@ class XtreamStatsManager(
                         metricsManager.removeFetchTime("live_categories")
                         categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_LIVE)
                     }
+
                     "MOVIES" -> {
                         remove(KEY_VOD_CATEGORIES_TIMESTAMP)
                         metricsManager.removeFetchTime("vod_categories")
                         categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_VOD)
                     }
+
                     "TV_SHOWS" -> {
                         remove(KEY_SERIES_CATEGORIES_TIMESTAMP)
                         metricsManager.removeFetchTime("series_categories")

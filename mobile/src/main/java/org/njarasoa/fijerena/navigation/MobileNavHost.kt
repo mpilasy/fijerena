@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.navigation
 
-import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,7 +38,6 @@ import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
 import org.njarasoa.fijerena.feature.contentselection.MobileContentTypeSelectionScreen
 import org.njarasoa.fijerena.feature.epg.MobileEpgGuideScreen
@@ -48,11 +46,13 @@ import org.njarasoa.fijerena.feature.epgbrowser.MobileEpgBrowserScreen
 import org.njarasoa.fijerena.feature.episode.MobileEpisodeSelectionScreen
 import org.njarasoa.fijerena.feature.movie.MobileMovieDetailsScreen
 import org.njarasoa.fijerena.feature.player.MobilePlayerScreen
+import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import org.njarasoa.fijerena.feature.provider.MobileAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.MobileProviderSelectionScreen
 import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileCellularBufferSettingsScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 /**
  * Mobile navigation host with Material3 transitions.
@@ -155,9 +155,10 @@ fun MobileNavHost(
             if (activeProvider != null && activeProvider.type == "XTREAM") {
                 // Use AppContainer to get the shared repository instance.
                 // AppContainer.getMediaRepository() now handles connect() internally.
-                val repo = org.njarasoa.fijerena.core.ui.di.AppContainer
-                    .getInstance(context)
-                    .getMediaRepository(activeProvider.id)
+                val repo =
+                    org.njarasoa.fijerena.core.ui.di.AppContainer
+                        .getInstance(context)
+                        .getMediaRepository(activeProvider.id)
 
                 if (repo.isConnected()) {
                     // Update AuthViewModel for UI consistency
@@ -265,7 +266,7 @@ fun MobileNavHost(
                         // Same dispatch as Screen.CategoryList's onStreamSelected below — a shelf
                         // card is just another resumable entry, and should route exactly like one.
                         when (val target = item.target) {
-                            is BrowseTarget.Series ->
+                            is BrowseTarget.Series -> {
                                 navController.navigateOnce(
                                     Screen.EpisodeSelection(
                                         seriesId = target.seriesId.raw,
@@ -274,7 +275,9 @@ fun MobileNavHost(
                                         initialEpisodeId = target.resumeEpisodeId?.raw,
                                     ),
                                 )
-                            is BrowseTarget.Episode ->
+                            }
+
+                            is BrowseTarget.Episode -> {
                                 navController.navigateOnce(
                                     Screen.Player(
                                         streamId = target.episodeId.raw,
@@ -287,7 +290,9 @@ fun MobileNavHost(
                                         seriesName = target.seriesName,
                                     ),
                                 )
-                            is BrowseTarget.Movie ->
+                            }
+
+                            is BrowseTarget.Movie -> {
                                 navController.navigateOnce(
                                     Screen.MovieDetails(
                                         movieId = target.movieId,
@@ -295,7 +300,11 @@ fun MobileNavHost(
                                         categoryId = item.categoryId,
                                     ),
                                 )
-                            is BrowseTarget.Channel, is BrowseTarget.CategoryRef -> Unit
+                            }
+
+                            is BrowseTarget.Channel, is BrowseTarget.CategoryRef -> {
+                                Unit
+                            }
                         }
                     },
                 )
@@ -330,7 +339,7 @@ fun MobileNavHost(
                         when (target) {
                             // Continue Watching: the card stands for the show, so open episode
                             // selection with the last-watched episode's panel already up.
-                            is BrowseTarget.Series ->
+                            is BrowseTarget.Series -> {
                                 navController.navigateOnce(
                                     Screen.EpisodeSelection(
                                         seriesId = target.seriesId.raw,
@@ -339,9 +348,11 @@ fun MobileNavHost(
                                         initialEpisodeId = target.resumeEpisodeId?.raw,
                                     ),
                                 )
+                            }
+
                             // The card stands for one episode — play it, whether or not it can
                             // name the show it belongs to.
-                            is BrowseTarget.Episode ->
+                            is BrowseTarget.Episode -> {
                                 navController.navigateOnce(
                                     Screen.Player(
                                         streamId = target.episodeId.raw,
@@ -354,7 +365,9 @@ fun MobileNavHost(
                                         seriesName = target.seriesName,
                                     ),
                                 )
-                            is BrowseTarget.Movie ->
+                            }
+
+                            is BrowseTarget.Movie -> {
                                 navController.navigateOnce(
                                     Screen.MovieDetails(
                                         movieId = target.movieId,
@@ -362,15 +375,21 @@ fun MobileNavHost(
                                         categoryId = categoryId,
                                     ),
                                 )
+                            }
+
                             // Live TV: unreachable in practice for a genuine stream tap —
                             // MobileCategoryListScreen docks it locally instead of calling this
                             // callback (mirrors TV's LiveTvChannelList.onStreamPromote
                             // interception). Kept for the "not resolvable from the current list"
                             // case, same as TV.
-                            is BrowseTarget.Channel ->
+                            is BrowseTarget.Channel -> {
                                 navController.navigateOnce(Screen.Player(target.streamId, itemName, categoryId, contentType))
+                            }
+
                             // Browsed into by the list screen itself; it never reaches nav.
-                            is BrowseTarget.CategoryRef -> Unit
+                            is BrowseTarget.CategoryRef -> {
+                                Unit
+                            }
                         }
                     },
                     onSearchClick = {
@@ -461,7 +480,9 @@ fun MobileNavHost(
                             providerRepo.pickProvider(provider.id)
 
                             // Clear AppContainer caches to force a fresh repository for the new provider
-                            val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+                            val container =
+                                org.njarasoa.fijerena.core.ui.di.AppContainer
+                                    .getInstance(context)
                             container.clearAllCaches()
 
                             // For Xtream providers, restore session to update AuthViewModel
@@ -536,7 +557,9 @@ fun MobileNavHost(
                             val activeProvider = providerRepo.getActiveProvider()
 
                             // Clear AppContainer caches for the new provider
-                            val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)
+                            val container =
+                                org.njarasoa.fijerena.core.ui.di.AppContainer
+                                    .getInstance(context)
                             container.clearAllCaches()
 
                             if (activeProvider != null && activeProvider.type == "XTREAM") {
@@ -560,11 +583,13 @@ fun MobileNavHost(
             }
 
             composable<Screen.SyncSettings> {
-                org.njarasoa.fijerena.feature.settings.MobileSyncSettingsScreen(onBack = { navController.navigateUp() })
+                org.njarasoa.fijerena.feature.settings
+                    .MobileSyncSettingsScreen(onBack = { navController.navigateUp() })
             }
 
             composable<Screen.Diagnostics> {
-                org.njarasoa.fijerena.feature.settings.MobileDiagnosticsScreen(onBack = { navController.navigateUp() })
+                org.njarasoa.fijerena.feature.settings
+                    .MobileDiagnosticsScreen(onBack = { navController.navigateUp() })
             }
 
             // Cellular Buffer Settings Screen
@@ -584,7 +609,7 @@ fun MobileNavHost(
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
                         // Navigate based on content type
                         when (contentType) {
-                            ContentType.TV_SHOWS ->
+                            ContentType.TV_SHOWS -> {
                                 navController.navigateOnce(
                                     Screen.EpisodeSelection(
                                         seriesId = itemId,
@@ -592,7 +617,9 @@ fun MobileNavHost(
                                         categoryId = categoryId,
                                     ),
                                 )
-                            ContentType.MOVIES ->
+                            }
+
+                            ContentType.MOVIES -> {
                                 navController.navigateOnce(
                                     Screen.MovieDetails(
                                         movieId = itemId,
@@ -600,7 +627,9 @@ fun MobileNavHost(
                                         categoryId = categoryId,
                                     ),
                                 )
-                            else ->
+                            }
+
+                            else -> {
                                 // Live TV: land on the docked mini-player, not full-screen.
                                 navController.navigateOnce(
                                     Screen.CategoryList(
@@ -609,6 +638,7 @@ fun MobileNavHost(
                                         initialStreamId = itemId,
                                     ),
                                 )
+                            }
                         }
                     },
                     onCategorySelected = { categoryId, contentType ->

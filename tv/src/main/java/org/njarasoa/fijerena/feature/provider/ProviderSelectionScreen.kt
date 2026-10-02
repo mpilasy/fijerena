@@ -13,16 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
-import androidx.tv.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,30 +29,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
-import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
-import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
-import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDialog
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProviderViewModelFactory
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.feature.provider.components.CopyProviderDialog
+import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
+import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.theme.*
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @Composable
 fun TvProviderSelectionScreen(
@@ -120,7 +120,7 @@ fun TvProviderSelectionScreen(
                     Icon(
                         CinemaIcons.Add,
                         contentDescription = stringResource(R.string.provider_add_title),
-                        tint = CinemaAccent
+                        tint = CinemaAccent,
                     )
                 },
             )
@@ -137,6 +137,7 @@ fun TvProviderSelectionScreen(
                     CircularProgressIndicator()
                 }
             }
+
             is ProviderUiState.NoProviders -> {
                 val emptyStateFocusRequester = remember { FocusRequester() }
                 LaunchedEffect(Unit) {
@@ -173,6 +174,7 @@ fun TvProviderSelectionScreen(
                     }
                 }
             }
+
             is ProviderUiState.Error -> {
                 Text(
                     text = state.message,
@@ -180,6 +182,7 @@ fun TvProviderSelectionScreen(
                     color = CinemaError,
                 )
             }
+
             is ProviderUiState.SingleProvider -> {
                 ProviderList(
                     providers = listOf(state.provider),
@@ -188,6 +191,7 @@ fun TvProviderSelectionScreen(
                     onMoreActions = { actionsMenuProvider = it },
                 )
             }
+
             is ProviderUiState.MultipleProviders -> {
                 ProviderList(
                     providers = state.providers,
@@ -364,7 +368,7 @@ private fun ProviderList(
                                 Icon(
                                     CinemaIcons.CheckCircle,
                                     contentDescription = stringResource(R.string.common_select),
-                                    tint = CinemaAccent
+                                    tint = CinemaAccent,
                                 )
                             },
                         )
@@ -377,7 +381,7 @@ private fun ProviderList(
                                 Icon(
                                     CinemaIcons.LiveTv,
                                     contentDescription = stringResource(R.string.epg_data_manage_button),
-                                    tint = CinemaAccent
+                                    tint = CinemaAccent,
                                 )
                             },
                         )
@@ -390,7 +394,7 @@ private fun ProviderList(
                             Icon(
                                 CinemaIcons.MoreVert,
                                 contentDescription = stringResource(R.string.provider_more_actions_for_format, provider.name),
-                                tint = CinemaAccent
+                                tint = CinemaAccent,
                             )
                         },
                     )

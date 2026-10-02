@@ -24,6 +24,7 @@ class XmltvEpgService(
     companion object {
         private const val TAG = "XmltvEpgService"
         private const val PARSED_CACHE_TTL_MS = 12L * 60 * 60 * 1000
+
         // v2: entries cached before the per-source dedup fix can hold duplicate
         // programmes, which crashes the lazy lists keyed on listing id.
         private const val KEY_CACHED_EPG = "xmltv_epg_data_v2"
@@ -123,7 +124,7 @@ class XmltvEpgService(
             byNormalized = byNormalized,
             normalizedNames = normalizedNamesList.toTypedArray(),
             normalizedIds = normalizedIdsList.toTypedArray(),
-            sourceIds = sourceIds
+            sourceIds = sourceIds,
         ).also {
             cachedChannelMaps = it
             missCachedUntilMs = 0L
@@ -142,15 +143,16 @@ class XmltvEpgService(
     ): Map<String, String> {
         val matchedIds = mutableMapOf<String, String>()
         for (item in items) {
-            val matched = matchChannel(
-                item,
-                maps.byId,
-                maps.byIdLower,
-                maps.byName,
-                maps.byNormalized,
-                maps.normalizedNames,
-                maps.normalizedIds
-            )
+            val matched =
+                matchChannel(
+                    item,
+                    maps.byId,
+                    maps.byIdLower,
+                    maps.byName,
+                    maps.byNormalized,
+                    maps.normalizedNames,
+                    maps.normalizedIds,
+                )
             if (matched != null) {
                 matchedIds[item.id] = matched
             }
@@ -323,7 +325,8 @@ class XmltvEpgService(
                 parsedEpgCache = it
                 parsedEpgTimestamp = timestamp
             }
-        } catch (e: Exception) { // cancellation-ok: non-suspend
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
             Log.w(TAG, "Failed to deserialize cached EPG", e)
             null
         }
@@ -339,7 +342,8 @@ class XmltvEpgService(
             }
             parsedEpgCache = data
             parsedEpgTimestamp = now
-        } catch (e: Exception) { // cancellation-ok: non-suspend
+        } catch (e: Exception) {
+            // cancellation-ok: non-suspend
             Log.w(TAG, "Failed to cache XMLTV EPG", e)
         }
     }

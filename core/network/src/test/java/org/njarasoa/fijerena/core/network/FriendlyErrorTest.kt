@@ -56,7 +56,10 @@ class FriendlyErrorTest {
     fun missingPassword_afterASavedLoginWasReset_saysTheLoginWasLost() {
         lostLogins = mapOf("xtream_secure_credentials_4" to true)
 
-        assertEquals("lost", friendlyErrorMessage(Exception("Failed to connect to Xtream provider: Password not stored. Please login again."), context))
+        assertEquals(
+            "lost",
+            friendlyErrorMessage(Exception("Failed to connect to Xtream provider: Password not stored. Please login again."), context),
+        )
     }
 
     @Test
@@ -69,11 +72,19 @@ class FriendlyErrorTest {
     @Test
     fun inMemoryPrefs_behaveLikePrefs() {
         val prefs = CredentialStoreHealth.InMemoryPrefs()
-        prefs.edit().putString("password", "secret").putBoolean("remember", true).apply()
+        prefs
+            .edit()
+            .putString("password", "secret")
+            .putBoolean("remember", true)
+            .apply()
         assertEquals("secret", prefs.getString("password", null))
         prefs.edit().remove("password").commit()
         assertEquals(null, prefs.getString("password", null))
-        prefs.edit().clear().putString("username", "u").commit()
+        prefs
+            .edit()
+            .clear()
+            .putString("username", "u")
+            .commit()
         assertEquals(mapOf("username" to "u"), prefs.all)
     }
 }

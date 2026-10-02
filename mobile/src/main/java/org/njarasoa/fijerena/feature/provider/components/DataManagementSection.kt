@@ -72,7 +72,15 @@ fun ColumnScope.DataManagementSection(
                             enabled = !isBusy && syncState !is SyncState.Syncing,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(if (syncState is SyncState.Syncing) stringResource(R.string.provider_syncing) else stringResource(R.string.provider_sync_now_button))
+                            Text(
+                                if (syncState is SyncState.Syncing) {
+                                    stringResource(
+                                        R.string.provider_syncing,
+                                    )
+                                } else {
+                                    stringResource(R.string.provider_sync_now_button)
+                                },
+                            )
                         }
 
                         // Last Sync Stats
@@ -169,7 +177,12 @@ fun ColumnScope.DataManagementSection(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = stringResource(R.string.provider_live_tv_label), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                text = stringResource(R.string.provider_live_tv_stats, NumberUtils.formatCount(stats.liveTv.categoryCount), NumberUtils.formatCount(stats.liveTv.itemsCount)),
+                                text =
+                                    stringResource(
+                                        R.string.provider_live_tv_stats,
+                                        NumberUtils.formatCount(stats.liveTv.categoryCount),
+                                        NumberUtils.formatCount(stats.liveTv.itemsCount),
+                                    ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -191,7 +204,12 @@ fun ColumnScope.DataManagementSection(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = stringResource(R.string.provider_movies_label), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                text = stringResource(R.string.provider_movies_stats, NumberUtils.formatCount(stats.movies.categoryCount), NumberUtils.formatCount(stats.movies.itemsCount)),
+                                text =
+                                    stringResource(
+                                        R.string.provider_movies_stats,
+                                        NumberUtils.formatCount(stats.movies.categoryCount),
+                                        NumberUtils.formatCount(stats.movies.itemsCount),
+                                    ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -213,7 +231,13 @@ fun ColumnScope.DataManagementSection(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = stringResource(R.string.provider_tv_shows_label), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                text = stringResource(R.string.provider_tv_shows_stats, NumberUtils.formatCount(stats.tvShows.categoryCount), NumberUtils.formatCount(stats.tvShows.itemsCount), NumberUtils.formatCount(stats.tvShows.episodesCount)),
+                                text =
+                                    stringResource(
+                                        R.string.provider_tv_shows_stats,
+                                        NumberUtils.formatCount(stats.tvShows.categoryCount),
+                                        NumberUtils.formatCount(stats.tvShows.itemsCount),
+                                        NumberUtils.formatCount(stats.tvShows.episodesCount),
+                                    ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )

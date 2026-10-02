@@ -147,12 +147,10 @@ class TmdbApiService(
 
     /** Backdrops/posters/logos for a movie. `logos` (wordmark art) and `backdrops` (hero
      * background) are used; posters come from the Xtream catalogue instead. */
-    suspend fun getMovieImages(movieId: Int): TmdbImagesResponse =
-        client.get("movie/$movieId/images") { authenticate() }.body()
+    suspend fun getMovieImages(movieId: Int): TmdbImagesResponse = client.get("movie/$movieId/images") { authenticate() }.body()
 
     /** As [getMovieImages], for a TV series. */
-    suspend fun getTvImages(tvId: Int): TmdbImagesResponse =
-        client.get("tv/$tvId/images") { authenticate() }.body()
+    suspend fun getTvImages(tvId: Int): TmdbImagesResponse = client.get("tv/$tvId/images") { authenticate() }.body()
 
     /** The franchise's name and every movie in it, for the collection a movie's details named. */
     suspend fun getCollection(collectionId: Int): TmdbCollectionResponse =
@@ -189,7 +187,10 @@ class TmdbApiService(
         const val LOGO_SIZE_W500 = "w500"
         const val BACKDROP_SIZE_W1280 = "w1280"
 
-        fun posterUrl(path: String?, size: String = POSTER_SIZE_W185): String? {
+        fun posterUrl(
+            path: String?,
+            size: String = POSTER_SIZE_W185,
+        ): String? {
             val p = path?.trim()?.removePrefix("/") ?: return null
             if (p.isEmpty()) return null
             return "$IMAGE_BASE_URL$size/$p"
@@ -200,7 +201,10 @@ class TmdbApiService(
          * language tag at all — usually the studio's international art), then whatever else TMDB
          * has, each tier picking the widest/highest-voted first. Null when TMDB has none.
          */
-        fun bestLogoUrl(logos: List<TmdbImage>, language: String = "en"): String? {
+        fun bestLogoUrl(
+            logos: List<TmdbImage>,
+            language: String = "en",
+        ): String? {
             // Ascending comparator, `maxWithOrNull` below: compareByDescending here would have
             // maxWithOrNull pick the *lowest*-voted/narrowest logo, since maxWithOrNull returns
             // the comparator's greatest element and a descending comparator inverts what "greatest"

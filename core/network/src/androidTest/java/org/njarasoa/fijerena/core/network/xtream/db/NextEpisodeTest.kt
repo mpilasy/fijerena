@@ -43,12 +43,10 @@ class NextEpisodeTest {
         }
 
     @Test
-    fun afterASeasonComesTheNextSeason() =
-        runBlocking { assertEquals("s2e1", db.episodeDao().getNextEpisode(P, SHOW, 1, 10)?.id) }
+    fun afterASeasonComesTheNextSeason() = runBlocking { assertEquals("s2e1", db.episodeDao().getNextEpisode(P, SHOW, 1, 10)?.id) }
 
     @Test
-    fun nothingAfterTheLastEpisode() =
-        runBlocking { assertNull(db.episodeDao().getNextEpisode(P, SHOW, 2, 1)) }
+    fun nothingAfterTheLastEpisode() = runBlocking { assertNull(db.episodeDao().getNextEpisode(P, SHOW, 2, 1)) }
 
     @Test
     fun episodesWithoutASeasonCountAsSeasonZero() =
@@ -64,7 +62,15 @@ class NextEpisodeTest {
         number: Int,
         seriesId: Int = SHOW,
         providerId: Long = P,
-    ) = XtreamEpisodeEntity(id = id, seriesId = seriesId, providerId = providerId, season = season, episodeNum = number, title = id, containerExtension = "mkv")
+    ) = XtreamEpisodeEntity(
+        id = id,
+        seriesId = seriesId,
+        providerId = providerId,
+        season = season,
+        episodeNum = number,
+        title = id,
+        containerExtension = "mkv",
+    )
 
     private companion object {
         const val P = 1L

@@ -29,6 +29,7 @@ class LoginViewModel(
     private val context: Context,
 ) : ViewModel() {
     private val appSettings = AppSettings(context)
+
     /**
      * UI state sealed class representing all possible login states.
      */
@@ -88,25 +89,37 @@ class LoginViewModel(
                 is Result.Success -> {
                     _uiState.value = UiState.Success(result.data)
                 }
+
                 is Result.Error -> {
                     // Handle network errors, timeouts, invalid JSON, etc.
                     val errorMessage =
                         when {
-                            result.message?.contains("timeout", ignoreCase = true) == true ->
+                            result.message?.contains("timeout", ignoreCase = true) == true -> {
                                 context.getString(R.string.login_error_timeout)
-                            result.message?.contains("401") == true || result.message?.contains("Unauthorized") == true ->
+                            }
+
+                            result.message?.contains("401") == true || result.message?.contains("Unauthorized") == true -> {
                                 context.getString(R.string.login_error_invalid_credentials)
-                            result.message?.contains("404") == true || result.message?.contains("Not Found") == true ->
+                            }
+
+                            result.message?.contains("404") == true || result.message?.contains("Not Found") == true -> {
                                 context.getString(R.string.login_error_server_not_found)
-                            result.message?.contains("Invalid credentials") == true ->
+                            }
+
+                            result.message?.contains("Invalid credentials") == true -> {
                                 context.getString(R.string.login_error_invalid_credentials)
-                            result.message?.contains("not active", ignoreCase = true) == true ->
+                            }
+
+                            result.message?.contains("not active", ignoreCase = true) == true -> {
                                 result.message ?: context.getString(R.string.login_error_account_inactive)
-                            else ->
+                            }
+
+                            else -> {
                                 context.getString(
                                     R.string.login_error_generic_format,
                                     friendlyErrorMessage(result.exception, context, appSettings.isDevMode),
                                 )
+                            }
                         }
                     _uiState.value = UiState.Error(errorMessage)
                 }
@@ -125,6 +138,7 @@ class LoginViewModel(
                 is Result.Success -> {
                     _uiState.value = UiState.Success(result.data)
                 }
+
                 is Result.Error -> {
                     _uiState.value = UiState.Idle
                 }

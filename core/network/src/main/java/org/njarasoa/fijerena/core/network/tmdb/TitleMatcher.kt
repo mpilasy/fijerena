@@ -58,12 +58,22 @@ object TitleMatcher {
                 .lowercase()
 
         // Years come out before punctuation does, while "(2021)" is still recognisable as one.
-        var year = BRACKETED_YEAR.find(text)?.groupValues?.get(1)?.toIntOrNull()
+        var year =
+            BRACKETED_YEAR
+                .find(text)
+                ?.groupValues
+                ?.get(1)
+                ?.toIntOrNull()
         if (year != null) text = text.replace(BRACKETED_YEAR, "")
 
         var withoutYear = text
         if (year == null) {
-            val bare = BARE_YEAR.find(text)?.groupValues?.get(1)?.toIntOrNull()
+            val bare =
+                BARE_YEAR
+                    .find(text)
+                    ?.groupValues
+                    ?.get(1)
+                    ?.toIntOrNull()
             if (bare != null) {
                 year = bare
                 withoutYear = text.replace(BARE_YEAR, "")

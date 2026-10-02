@@ -1,7 +1,12 @@
 package org.njarasoa.fijerena.feature.epg
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -10,38 +15,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import androidx.tv.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import org.njarasoa.fijerena.core.network.EPG_REFRESH_INTERVAL_OPTIONS
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
+import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import org.njarasoa.fijerena.core.ui.R
-import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -213,14 +213,29 @@ fun TvEpgManagementScreen(
                                 ) {
                                     Column {
                                         Text(stringResource(R.string.epg_auto_refresh_title), style = MaterialTheme.typography.titleMedium)
-                                        val intervalText = when (val interval = epgSettings.epgRefreshInterval) {
-                                            -1 -> stringResource(R.string.epg_automation_disabled)
-                                            else -> {
-                                                val freq = if (interval == 24) stringResource(R.string.epg_automation_freq_daily) else stringResource(R.string.epg_automation_freq_hours, interval)
-                                                val timeStr = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(nextRefreshAtMs))
-                                                freq + stringResource(R.string.epg_automation_next_at, timeStr)
+                                        val intervalText =
+                                            when (val interval = epgSettings.epgRefreshInterval) {
+                                                -1 -> {
+                                                    stringResource(R.string.epg_automation_disabled)
+                                                }
+
+                                                else -> {
+                                                    val freq =
+                                                        if (interval ==
+                                                            24
+                                                        ) {
+                                                            stringResource(R.string.epg_automation_freq_daily)
+                                                        } else {
+                                                            stringResource(R.string.epg_automation_freq_hours, interval)
+                                                        }
+                                                    val timeStr =
+                                                        android.text.format.DateFormat
+                                                            .getTimeFormat(
+                                                                context,
+                                                            ).format(java.util.Date(nextRefreshAtMs))
+                                                    freq + stringResource(R.string.epg_automation_next_at, timeStr)
+                                                }
                                             }
-                                        }
                                         Text(
                                             intervalText,
                                             style = MaterialTheme.typography.bodySmall,
@@ -233,7 +248,10 @@ fun TvEpgManagementScreen(
                                         onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
                                         colors =
                                             androidx.tv.material3.ToggleableSurfaceDefaults.colors(
-                                                containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface.copy(alpha = org.njarasoa.fijerena.core.ui.theme.CinemaAlpha.glass),
+                                                containerColor =
+                                                    org.njarasoa.fijerena.core.ui.theme.CinemaSurface.copy(
+                                                        alpha = org.njarasoa.fijerena.core.ui.theme.CinemaAlpha.glass,
+                                                    ),
                                                 contentColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
                                                 focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
                                                 focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
@@ -242,18 +260,22 @@ fun TvEpgManagementScreen(
                                             androidx.tv.material3.ToggleableSurfaceDefaults.scale(
                                                 focusedScale = 1.15f,
                                             ),
-                                        shape = androidx.tv.material3.ToggleableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+                                        shape =
+                                            androidx.tv.material3.ToggleableSurfaceDefaults.shape(
+                                                shape = androidx.compose.foundation.shape.CircleShape,
+                                            ),
                                     ) {
                                         androidx.compose.material3.Switch(
                                             checked = viewModel.autoRefreshEnabled,
                                             onCheckedChange = null,
                                             modifier = Modifier.padding(Spacing.xxs.scaled(scale)),
-                                            colors = androidx.compose.material3.SwitchDefaults.colors(
-                                                checkedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-                                                checkedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                                                uncheckedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                                                uncheckedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-                                            )
+                                            colors =
+                                                androidx.compose.material3.SwitchDefaults.colors(
+                                                    checkedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+                                                    checkedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                                                    uncheckedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                                                    uncheckedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
+                                                ),
                                         )
                                     }
                                 }
@@ -263,11 +285,29 @@ fun TvEpgManagementScreen(
                                 ) {
                                     CinemaSecondaryButton(
                                         onClick = { showIntervalPicker = true },
-                                        text = when (val interval = epgSettings.epgRefreshInterval) {
-                                            -1 -> stringResource(R.string.epg_automation_frequency, stringResource(R.string.epg_automation_freq_never))
-                                            24 -> stringResource(R.string.epg_automation_frequency, stringResource(R.string.epg_automation_freq_daily))
-                                            else -> stringResource(R.string.epg_automation_frequency, stringResource(R.string.epg_automation_freq_hours, interval))
-                                        },
+                                        text =
+                                            when (val interval = epgSettings.epgRefreshInterval) {
+                                                -1 -> {
+                                                    stringResource(
+                                                        R.string.epg_automation_frequency,
+                                                        stringResource(R.string.epg_automation_freq_never),
+                                                    )
+                                                }
+
+                                                24 -> {
+                                                    stringResource(
+                                                        R.string.epg_automation_frequency,
+                                                        stringResource(R.string.epg_automation_freq_daily),
+                                                    )
+                                                }
+
+                                                else -> {
+                                                    stringResource(
+                                                        R.string.epg_automation_frequency,
+                                                        stringResource(R.string.epg_automation_freq_hours, interval),
+                                                    )
+                                                }
+                                            },
                                     )
                                     if (epgSettings.epgRefreshInterval != -1) {
                                         CinemaSecondaryButton(
@@ -314,18 +354,26 @@ fun TvEpgManagementScreen(
                                     onCheckedChange = { viewModel.toggleSelection(source.id) },
                                     colors =
                                         androidx.tv.material3.ToggleableSurfaceDefaults.colors(
-                                            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface.copy(alpha = org.njarasoa.fijerena.core.ui.theme.CinemaAlpha.glass),
+                                            containerColor =
+                                                org.njarasoa.fijerena.core.ui.theme.CinemaSurface.copy(
+                                                    alpha = org.njarasoa.fijerena.core.ui.theme.CinemaAlpha.glass,
+                                                ),
                                             contentColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
                                             focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
                                             focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-                                            selectedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent.copy(alpha = 0.2f),
+                                            selectedContainerColor =
+                                                org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+                                                    .copy(alpha = 0.2f),
                                             selectedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
                                         ),
                                     scale =
                                         androidx.tv.material3.ToggleableSurfaceDefaults.scale(
                                             focusedScale = 1.15f,
                                         ),
-                                    shape = androidx.tv.material3.ToggleableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+                                    shape =
+                                        androidx.tv.material3.ToggleableSurfaceDefaults.shape(
+                                            shape = androidx.compose.foundation.shape.CircleShape,
+                                        ),
                                 ) {
                                     Box(
                                         modifier = Modifier.size(TvDimensions.iconLarge.scaled(scale)),
@@ -333,7 +381,14 @@ fun TvEpgManagementScreen(
                                     ) {
                                         Icon(
                                             imageVector = if (isSelected) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                                            contentDescription = if (isSelected) stringResource(R.string.epg_source_selected_description) else stringResource(R.string.epg_source_not_selected_description),
+                                            contentDescription =
+                                                if (isSelected) {
+                                                    stringResource(
+                                                        R.string.epg_source_selected_description,
+                                                    )
+                                                } else {
+                                                    stringResource(R.string.epg_source_not_selected_description)
+                                                },
                                             modifier = Modifier.size(Spacing.lg.scaled(scale)),
                                         )
                                     }
@@ -381,7 +436,11 @@ fun TvEpgManagementScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                     ) {
                                         Text(
-                                            text = stringResource(R.string.epg_source_phase_format, localizedEpgPhase(activeProgress.phase)),
+                                            text =
+                                                stringResource(
+                                                    R.string.epg_source_phase_format,
+                                                    localizedEpgPhase(activeProgress.phase),
+                                                ),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.primary,
                                         )
@@ -436,12 +495,28 @@ fun TvEpgManagementScreen(
                                             color = org.njarasoa.fijerena.ui.theme.CinemaWarning,
                                         )
                                     } else {
-                                        SourceStat(stringResource(R.string.epg_source_stat_download), NumberUtils.formatDuration(source.lastDownloadDurationMs), scale)
-                                        SourceStat(stringResource(R.string.epg_source_stat_ingest), NumberUtils.formatDuration(source.lastIngestionDurationMs), scale)
+                                        SourceStat(
+                                            stringResource(R.string.epg_source_stat_download),
+                                            NumberUtils.formatDuration(source.lastDownloadDurationMs),
+                                            scale,
+                                        )
+                                        SourceStat(
+                                            stringResource(R.string.epg_source_stat_ingest),
+                                            NumberUtils.formatDuration(source.lastIngestionDurationMs),
+                                            scale,
+                                        )
                                     }
                                     SourceStat(stringResource(R.string.epg_source_stat_latest), latestProgStr, scale)
-                                    SourceStat(stringResource(R.string.epg_source_stat_channels), NumberUtils.formatCount(source.lastChannels), scale)
-                                    SourceStat(stringResource(R.string.epg_source_stat_programmes), NumberUtils.formatCount(source.lastProgrammes), scale)
+                                    SourceStat(
+                                        stringResource(R.string.epg_source_stat_channels),
+                                        NumberUtils.formatCount(source.lastChannels),
+                                        scale,
+                                    )
+                                    SourceStat(
+                                        stringResource(R.string.epg_source_stat_programmes),
+                                        NumberUtils.formatCount(source.lastProgrammes),
+                                        scale,
+                                    )
 
                                     val lastError = source.lastError
                                     if (lastError != null) {
@@ -503,8 +578,18 @@ fun TvEpgManagementScreen(
                     text = stringResource(R.string.common_cancel),
                 )
             },
-            title = { Text(stringResource(R.string.epg_clear_db_confirm_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
-            text = { Text(stringResource(R.string.epg_clear_db_confirm_message), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
+            title = {
+                Text(
+                    stringResource(R.string.epg_clear_db_confirm_title),
+                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                )
+            },
+            text = {
+                Text(
+                    stringResource(R.string.epg_clear_db_confirm_message),
+                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                )
+            },
             containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
@@ -527,8 +612,23 @@ fun TvEpgManagementScreen(
                     text = stringResource(R.string.common_cancel),
                 )
             },
-            title = { Text(stringResource(R.string.epg_delete_source_confirm_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
-            text = { Text(stringResource(R.string.epg_delete_source_message_tv, source.label.ifBlank { source.url }), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
+            title = {
+                Text(
+                    stringResource(R.string.epg_delete_source_confirm_title),
+                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                )
+            },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.epg_delete_source_message_tv,
+                        source.label.ifBlank {
+                            source.url
+                        },
+                    ),
+                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                )
+            },
             containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
@@ -551,8 +651,18 @@ fun TvEpgManagementScreen(
                     text = stringResource(R.string.common_cancel),
                 )
             },
-            title = { Text(stringResource(R.string.epg_delete_selected_confirm_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
-            text = { Text(stringResource(R.string.epg_delete_selected_confirm_message, idsToDelete.size), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary) },
+            title = {
+                Text(
+                    stringResource(R.string.epg_delete_selected_confirm_title),
+                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                )
+            },
+            text = {
+                Text(
+                    stringResource(R.string.epg_delete_selected_confirm_message, idsToDelete.size),
+                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                )
+            },
             containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
@@ -572,15 +682,27 @@ fun TvEpgManagementScreen(
     if (showIntervalPicker) {
         CinemaAlertDialog(
             onDismissRequest = { showIntervalPicker = false },
-            title = { Text(stringResource(R.string.epg_refresh_interval_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+            title = {
+                Text(
+                    stringResource(R.string.epg_refresh_interval_title),
+                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                )
+            },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
                     intervalOptions.forEach { interval ->
-                        val label = if (interval == -1) stringResource(R.string.epg_automation_freq_never) else stringResource(R.string.epg_refresh_interval_hours_format, interval)
+                        val label =
+                            if (interval ==
+                                -1
+                            ) {
+                                stringResource(R.string.epg_automation_freq_never)
+                            } else {
+                                stringResource(R.string.epg_refresh_interval_hours_format, interval)
+                            }
                         val isSelected = epgSettings.epgRefreshInterval == interval
                         androidx.tv.material3.Surface(
                             checked = isSelected,
-                            onCheckedChange = { 
+                            onCheckedChange = {
                                 viewModel.setEpgRefreshInterval(interval)
                                 if (interval == -1) {
                                     viewModel.setAutoRefreshEnabled(false)
@@ -589,24 +711,45 @@ fun TvEpgManagementScreen(
                                 }
                                 showIntervalPicker = false
                             },
-                            colors = androidx.tv.material3.ToggleableSurfaceDefaults.colors(
-                                containerColor = if (isSelected) org.njarasoa.fijerena.core.ui.theme.CinemaAccent.copy(alpha = 0.2f) else org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant.copy(alpha = 0.5f),
-                                contentColor = if (isSelected) org.njarasoa.fijerena.core.ui.theme.CinemaAccent else org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                                focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                                focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground
-                            ),
-                            shape = androidx.tv.material3.ToggleableSurfaceDefaults.shape(MaterialTheme.shapes.small),
-                            modifier = Modifier.fillMaxWidth()
+                            colors =
+                                androidx.tv.material3.ToggleableSurfaceDefaults.colors(
+                                    containerColor =
+                                        if (isSelected) {
+                                            org.njarasoa.fijerena.core.ui.theme.CinemaAccent.copy(
+                                                alpha = 0.2f,
+                                            )
+                                        } else {
+                                            org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+                                                .copy(alpha = 0.5f)
+                                        },
+                                    contentColor =
+                                        if (isSelected) {
+                                            org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+                                        } else {
+                                            org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                                        },
+                                    focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                                    focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+                                ),
+                            shape =
+                                androidx.tv.material3.ToggleableSurfaceDefaults
+                                    .shape(MaterialTheme.shapes.small),
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Row(
                                 modifier = Modifier.padding(Spacing.sm.scaled(scale)),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
                                     imageVector = if (isSelected) CinemaIcons.RadioButtonChecked else CinemaIcons.RadioButtonUnchecked,
                                     contentDescription = null,
                                     modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                    tint = if (isSelected) org.njarasoa.fijerena.core.ui.theme.CinemaAccent else org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+                                    tint =
+                                        if (isSelected) {
+                                            org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+                                        } else {
+                                            org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+                                        },
                                 )
                                 Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
                                 Text(label)
@@ -690,11 +833,31 @@ private fun EpgStatusCard(
             // Indexer State
             val indexText =
                 when (indexState) {
-                    is EpgIndexState.Indexed -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_ready, NumberUtils.formatCount(indexState.programmeCount)))
-                    is EpgIndexState.Indexing -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_indexing))
-                    is EpgIndexState.Optimizing -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_optimizing))
-                    is EpgIndexState.NotIndexed -> stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_empty))
-                    is EpgIndexState.Failed -> stringResource(R.string.epg_database_error_prefixed, indexState.reason)
+                    is EpgIndexState.Indexed -> {
+                        stringResource(
+                            R.string.epg_database_label,
+                            stringResource(R.string.epg_database_ready, NumberUtils.formatCount(indexState.programmeCount)),
+                        )
+                    }
+
+                    is EpgIndexState.Indexing -> {
+                        stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_indexing))
+                    }
+
+                    is EpgIndexState.Optimizing -> {
+                        stringResource(
+                            R.string.epg_database_label,
+                            stringResource(R.string.epg_database_optimizing),
+                        )
+                    }
+
+                    is EpgIndexState.NotIndexed -> {
+                        stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_empty))
+                    }
+
+                    is EpgIndexState.Failed -> {
+                        stringResource(R.string.epg_database_error_prefixed, indexState.reason)
+                    }
                 }
             Text(indexText, style = MaterialTheme.typography.bodySmall)
 
@@ -709,16 +872,44 @@ private fun EpgStatusCard(
                             stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
                         }
                     }
-                    is MultiSourceState.Processing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_processing, multiState.completedCount, multiState.totalSources))
+
+                    is MultiSourceState.Processing -> {
+                        stringResource(
+                            R.string.epg_current_status,
+                            stringResource(R.string.epg_status_processing, multiState.completedCount, multiState.totalSources),
+                        )
+                    }
+
                     is MultiSourceState.Retrying -> {
                         val nextRetry = NumberUtils.formatTimestamp(LocalContext.current, multiState.nextRetryAtMs)
-                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_retrying, multiState.attempt, multiState.maxAttempts, nextRetry))
+                        stringResource(
+                            R.string.epg_current_status,
+                            stringResource(R.string.epg_status_retrying, multiState.attempt, multiState.maxAttempts, nextRetry),
+                        )
                     }
-                    is MultiSourceState.Completed -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finished))
-                    is MultiSourceState.Finalizing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finalizing, localizedEpgPhase(multiState.phase)))
-                    is MultiSourceState.Clearing -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_clearing))
-                    is MultiSourceState.Error -> stringResource(R.string.epg_current_status_error, multiState.reason)
-                    else -> stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
+
+                    is MultiSourceState.Completed -> {
+                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finished))
+                    }
+
+                    is MultiSourceState.Finalizing -> {
+                        stringResource(
+                            R.string.epg_current_status,
+                            stringResource(R.string.epg_status_finalizing, localizedEpgPhase(multiState.phase)),
+                        )
+                    }
+
+                    is MultiSourceState.Clearing -> {
+                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_clearing))
+                    }
+
+                    is MultiSourceState.Error -> {
+                        stringResource(R.string.epg_current_status_error, multiState.reason)
+                    }
+
+                    else -> {
+                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
+                    }
                 }
             Text(currentStatusText, style = MaterialTheme.typography.bodySmall)
 
@@ -752,7 +943,18 @@ private fun EpgSourceEditDialog(
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialSource == null) stringResource(R.string.epg_add_source_title) else stringResource(R.string.epg_edit_source_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+        title = {
+            Text(
+                if (initialSource ==
+                    null
+                ) {
+                    stringResource(R.string.epg_add_source_title)
+                } else {
+                    stringResource(R.string.epg_edit_source_title)
+                },
+                color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+            )
+        },
         confirmButton = {
             CinemaPrimaryButton(
                 onClick = {
@@ -780,15 +982,16 @@ private fun EpgSourceEditDialog(
                     label = { Text(stringResource(R.string.epg_xmltv_url_label)) },
                     modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                        unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                        cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
-                        focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-                    )
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                            unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                            cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                            focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                            unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
+                            focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                            unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                        ),
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = label,
@@ -796,15 +999,16 @@ private fun EpgSourceEditDialog(
                     label = { Text(stringResource(R.string.epg_label_optional)) },
                     modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                        unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                        cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
-                        focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-                    )
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                            unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                            cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                            focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                            unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
+                            focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                            unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                        ),
                 )
                 androidx.compose.material3.OutlinedTextField(
                     value = tzOffset,
@@ -812,15 +1016,16 @@ private fun EpgSourceEditDialog(
                     label = { Text(stringResource(R.string.epg_timezone_label)) },
                     modifier = Modifier.fillMaxWidth().tvDpadEscape(),
                     singleLine = true,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                        unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                        cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
-                        focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                        unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-                    )
+                    colors =
+                        androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                            unfocusedTextColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+                            cursorColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                            focusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                            unfocusedBorderColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
+                            focusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                            unfocusedLabelColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
+                        ),
                 )
             }
         },
@@ -837,11 +1042,24 @@ private fun TvTimePickerDialog(
 ) {
     val parts = initialTime.split(":")
     var hour by remember { mutableStateOf(parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 0) }
-    var minute by remember { mutableStateOf(parts.getOrNull(1)?.toIntOrNull()?.let { (it / 5) * 5 }?.coerceIn(0, 55) ?: 0) }
+    var minute by remember {
+        mutableStateOf(
+            parts
+                .getOrNull(1)
+                ?.toIntOrNull()
+                ?.let { (it / 5) * 5 }
+                ?.coerceIn(0, 55) ?: 0,
+        )
+    }
 
     CinemaAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.epg_set_refresh_time_title), color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary) },
+        title = {
+            Text(
+                stringResource(R.string.epg_set_refresh_time_title),
+                color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
+            )
+        },
         text = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -908,13 +1126,20 @@ private fun TimeSpinnerColumn(
         )
         androidx.tv.material3.Surface(
             onClick = onIncrement,
-            colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant.copy(alpha = 0.5f),
-                focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-            ),
-            scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
-            shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(MaterialTheme.shapes.small),
+            colors =
+                androidx.tv.material3.ClickableSurfaceDefaults.colors(
+                    containerColor =
+                        org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+                            .copy(alpha = 0.5f),
+                    focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                    focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+                ),
+            scale =
+                androidx.tv.material3.ClickableSurfaceDefaults
+                    .scale(focusedScale = 1.1f),
+            shape =
+                androidx.tv.material3.ClickableSurfaceDefaults
+                    .shape(MaterialTheme.shapes.small),
         ) {
             Icon(
                 imageVector = CinemaIcons.KeyboardArrowUp,
@@ -930,13 +1155,20 @@ private fun TimeSpinnerColumn(
         )
         androidx.tv.material3.Surface(
             onClick = onDecrement,
-            colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant.copy(alpha = 0.5f),
-                focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-            ),
-            scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
-            shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(MaterialTheme.shapes.small),
+            colors =
+                androidx.tv.material3.ClickableSurfaceDefaults.colors(
+                    containerColor =
+                        org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
+                            .copy(alpha = 0.5f),
+                    focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                    focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
+                ),
+            scale =
+                androidx.tv.material3.ClickableSurfaceDefaults
+                    .scale(focusedScale = 1.1f),
+            shape =
+                androidx.tv.material3.ClickableSurfaceDefaults
+                    .shape(MaterialTheme.shapes.small),
         ) {
             Icon(
                 imageVector = CinemaIcons.KeyboardArrowDown,

@@ -22,7 +22,9 @@ import org.njarasoa.fijerena.core.player.network.NetworkMonitor
  * DNS-retry resilience as the rest of the app's networking.
  */
 @OptIn(UnstableApi::class)
-class StreamingMediaSourceFactory(private val context: Context) {
+class StreamingMediaSourceFactory(
+    private val context: Context,
+) {
     private val userAgent = "MediaPlayer/1.0 (Linux; Android)"
 
     private val mediaSourceFactory = DefaultMediaSourceFactory(context)
@@ -44,14 +46,16 @@ class StreamingMediaSourceFactory(private val context: Context) {
                 .build()
 
         // Configure common HTTP factory
-        val allHeaders = buildMap {
-            put("User-Agent", userAgent)
-            putAll(headers)
-        }
+        val allHeaders =
+            buildMap {
+                put("User-Agent", userAgent)
+                putAll(headers)
+            }
 
         val callFactory = NetworkModule.streamingClientFor(NetworkMonitor.currentNetworkType)
         val httpDataSourceFactory =
-            OkHttpDataSource.Factory(callFactory)
+            OkHttpDataSource
+                .Factory(callFactory)
                 .setUserAgent(userAgent)
                 .setDefaultRequestProperties(allHeaders)
                 .setTransferListener(transferListener)

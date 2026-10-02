@@ -6,9 +6,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
@@ -73,7 +73,11 @@ class AppContainer(
                             // This profile's login — its own for Jellyfin, the shared one otherwise.
                             val login = providerRepository.getLogin(entity)
                             val provider =
-                                MediaProviderFactory.create(entity.copy(username = login.username), context.applicationContext, login.password)
+                                MediaProviderFactory.create(
+                                    entity.copy(username = login.username),
+                                    context.applicationContext,
+                                    login.password,
+                                )
                             newRepo.setProvider(provider)
                             // Only cache once we actually have a backing provider — otherwise this
                             // provider-less repo would get stuck at mediaRepositories[0L] forever,
@@ -108,7 +112,8 @@ class AppContainer(
             mediaRepositories.values.forEach { repo ->
                 try {
                     repo.close()
-                } catch (e: Exception) { // cancellation-ok: non-suspend
+                } catch (e: Exception) {
+                    // cancellation-ok: non-suspend
                     android.util.Log.w("AppContainer", "Error closing MediaRepository during clearAllCaches", e)
                 }
             }
@@ -118,7 +123,9 @@ class AppContainer(
     }
 
     // (providerId, profileId) pairs already sent to sign in this process — see [shouldPromptSignIn].
-    private val signInPrompted = java.util.concurrent.ConcurrentHashMap.newKeySet<Pair<Long, String>>()
+    private val signInPrompted =
+        java.util.concurrent.ConcurrentHashMap
+            .newKeySet<Pair<Long, String>>()
 
     /**
      * Whether the home screen should send this device's profile to sign in to [providerId]: true
@@ -126,7 +133,8 @@ class AppContainer(
      * backing out of the sign-in screen must land on a usable home (to switch profile, say), not
      * bounce straight back into sign-in.
      */
-    fun shouldPromptSignIn(providerId: Long): Boolean = signInPrompted.add(providerId to AppSettings(context.applicationContext).activeProfileId)
+    fun shouldPromptSignIn(providerId: Long): Boolean =
+        signInPrompted.add(providerId to AppSettings(context.applicationContext).activeProfileId)
 
     /**
      * Makes [profileId] the profile this device uses. Every cached MediaRepository belongs to the
@@ -153,7 +161,8 @@ class AppContainer(
                 mediaRepositories.values.forEach { repo ->
                     try {
                         repo.close()
-                    } catch (e: Exception) { // cancellation-ok: non-suspend
+                    } catch (e: Exception) {
+                        // cancellation-ok: non-suspend
                         android.util.Log.w("AppContainer", "Error closing MediaRepository during profile switch", e)
                     }
                 }
@@ -203,7 +212,8 @@ class AppContainer(
             val repo = mediaRepositories.remove(providerId)
             try {
                 repo?.close()
-            } catch (e: Exception) { // cancellation-ok: non-suspend
+            } catch (e: Exception) {
+                // cancellation-ok: non-suspend
                 android.util.Log.w("AppContainer", "Error closing MediaRepository during eviction for provider $providerId", e)
             }
         }

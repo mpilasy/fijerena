@@ -123,7 +123,9 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
                             name = profile.name,
                             colorIndex = profile.colorIndex,
                             size = TvDimensions.iconButtonSizeLarge.scaled(scale),
-                            fontSize = MaterialTheme.typography.displaySmall.fontSize.scaled(scale),
+                            fontSize =
+                                MaterialTheme.typography.displaySmall.fontSize
+                                    .scaled(scale),
                         )
                     }
                 }
@@ -200,7 +202,12 @@ private fun PickerCard(
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
         Text(
             text = label,
-            style = MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.titleMedium.fontSize.scaled(scale)),
+            style =
+                MaterialTheme.typography.titleMedium.copy(
+                    fontSize =
+                        MaterialTheme.typography.titleMedium.fontSize
+                            .scaled(scale),
+                ),
             color = CinemaTextPrimary,
             textAlign = TextAlign.Center,
             maxLines = 1,

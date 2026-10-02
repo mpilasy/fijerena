@@ -16,19 +16,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Search
-import kotlinx.coroutines.launch
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.tv.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -62,30 +62,29 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.asContentTypeLabel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
-import org.njarasoa.fijerena.core.ui.viewmodels.toggled
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
-import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -93,6 +92,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.CategorySearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModel.SearchResult
 import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
+import org.njarasoa.fijerena.core.ui.viewmodels.toggled
+import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
+import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -101,9 +104,6 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
-import org.njarasoa.fijerena.core.ui.components.MitadyLoading
-import org.njarasoa.fijerena.ui.components.TvSearchTextField
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
  * Search screen for searching streams across all categories.
@@ -173,6 +173,7 @@ fun SearchScreen(
                             target.isFavorite,
                         )
                     }
+
                     is FavoriteMenuTarget.Stream -> {
                         viewModel.toggleFavorite(
                             target.itemId,
@@ -211,8 +212,14 @@ fun SearchScreen(
                 Spacer(modifier = Modifier.height(Spacing.lg))
 
                 when (val state = uiState) {
-                    is SearchViewModel.UiState.Loading -> LoadingView(message = state.message)
-                    is SearchViewModel.UiState.Error -> ErrorView(state.message)
+                    is SearchViewModel.UiState.Loading -> {
+                        LoadingView(message = state.message)
+                    }
+
+                    is SearchViewModel.UiState.Error -> {
+                        ErrorView(state.message)
+                    }
+
                     is SearchViewModel.UiState.Success -> {
                         val successState = state
                         val failedSuffix = if (successState.failedCalls > 0) " (${successState.failedCalls} failed)" else ""
@@ -322,7 +329,9 @@ private fun LoadingView(message: String? = null) {
                 color = CinemaAccent,
             )
             Text(
-                text = message ?: androidx.compose.ui.res.stringResource(org.njarasoa.fijerena.core.ui.R.string.search_loading_categories),
+                text =
+                    message ?: androidx.compose.ui.res
+                        .stringResource(org.njarasoa.fijerena.core.ui.R.string.search_loading_categories),
                 style = MaterialTheme.typography.titleLarge,
                 color = CinemaTextSecondary,
             )
@@ -495,7 +504,7 @@ private fun SearchHistorySection(
                         imageVector = CinemaIcons.Delete,
                         contentDescription = stringResource(R.string.epg_browser_clear_all_description),
                         modifier = Modifier.size(TvDimensions.iconSmall),
-                        tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+                        tint = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
                     )
                 },
             )
@@ -585,7 +594,8 @@ private fun SearchResultsList(
         if (!isSearching && (categoryResults.isNotEmpty() || results.isNotEmpty())) {
             try {
                 firstItemFocusRequester.requestFocus()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -704,7 +714,14 @@ private fun SearchResultsList(
                                         result = catResult,
                                         onClick = { onCategoryClick(catResult) },
                                         onLongPress = { onCategoryLongPress(catResult) },
-                                        modifier = if (isFirstItem && index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier
+                                        modifier =
+                                            if (isFirstItem &&
+                                                index == 0
+                                            ) {
+                                                Modifier.focusRequester(firstItemFocusRequester)
+                                            } else {
+                                                Modifier
+                                            },
                                     )
                                     if (isFirstItem && index == 0) isFirstItem = false
                                 }
@@ -718,7 +735,14 @@ private fun SearchResultsList(
                                         result = result,
                                         onClick = { onResultClick(result) },
                                         onLongPress = { onResultLongPress(result) },
-                                        focusRequester = if (isFirstItem && index == 0) firstItemFocusRequester else focusRequesters.getOrPut(result.itemId) { FocusRequester() },
+                                        focusRequester =
+                                            if (isFirstItem &&
+                                                index == 0
+                                            ) {
+                                                firstItemFocusRequester
+                                            } else {
+                                                focusRequesters.getOrPut(result.itemId) { FocusRequester() }
+                                            },
                                     )
                                     if (isFirstItem && index == 0) isFirstItem = false
                                 }
@@ -744,7 +768,7 @@ private fun SearchResultsList(
                                 result = catResult,
                                 onClick = { onCategoryClick(catResult) },
                                 onLongPress = { onCategoryLongPress(catResult) },
-                                modifier = if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier
+                                modifier = if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier,
                             )
                         }
                     }
@@ -757,12 +781,24 @@ private fun SearchResultsList(
                                 hiddenCount = excludedCountByType[queryContentType] ?: 0,
                             )
                         }
-                        itemsIndexed(results, key = { _, it -> "${it.itemId}_${it.categoryId}" }, contentType = { _, _ -> "stream" }) { index, result ->
+                        itemsIndexed(results, key = {
+                            _,
+                            it,
+                            ->
+                            "${it.itemId}_${it.categoryId}"
+                        }, contentType = { _, _ -> "stream" }) { index, result ->
                             SearchResultItem(
                                 result = result,
                                 onClick = { onResultClick(result) },
                                 onLongPress = { onResultLongPress(result) },
-                                focusRequester = if (categoryResults.isEmpty() && index == 0) firstItemFocusRequester else focusRequesters.getOrPut(result.itemId) { FocusRequester() },
+                                focusRequester =
+                                    if (categoryResults.isEmpty() &&
+                                        index == 0
+                                    ) {
+                                        firstItemFocusRequester
+                                    } else {
+                                        focusRequesters.getOrPut(result.itemId) { FocusRequester() }
+                                    },
                             )
                         }
                     }

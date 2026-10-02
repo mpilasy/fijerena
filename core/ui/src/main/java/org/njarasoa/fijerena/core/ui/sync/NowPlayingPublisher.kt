@@ -85,7 +85,13 @@ class NowPlayingPublisher private constructor(
 
     private suspend fun profileName(): String {
         val active = settings.activeProfileId
-        return SettingsDatabase.getInstance(app).profileDao().getAll().firstOrNull { it.id == active }?.name.orEmpty()
+        return SettingsDatabase
+            .getInstance(app)
+            .profileDao()
+            .getAll()
+            .firstOrNull { it.id == active }
+            ?.name
+            .orEmpty()
     }
 
     companion object {

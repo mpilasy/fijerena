@@ -21,7 +21,6 @@ interface XtreamEpisodeDao {
     @Query("DELETE FROM xtream_episodes WHERE providerId = :providerId")
     fun deleteAll(providerId: Long)
 
-
     @Query("DELETE FROM xtream_episodes WHERE providerId = :providerId AND seriesId = :seriesId")
     fun deleteBySeriesId(
         providerId: Long,
@@ -83,7 +82,9 @@ interface XtreamEpisodeDao {
     // Only covers series whose detail has been opened at least once, which is exactly the set
     // that can have completed episodes in watch history.
     @Query("SELECT seriesId, COUNT(*) AS episodeCount FROM xtream_episodes WHERE providerId = :providerId GROUP BY seriesId")
-    fun countEpisodesBySeries(providerId: Long): Map<
+    fun countEpisodesBySeries(
+        providerId: Long,
+    ): Map<
         @MapColumn(columnName = "seriesId")
         Int,
         @MapColumn(columnName = "episodeCount")

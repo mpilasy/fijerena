@@ -80,7 +80,13 @@ class DeleteDefaultProfileTest {
             assertTrue(mediaCache.getBoolean("watch_state_migrated_v1", false))
             assertTrue(mediaCache.getBoolean("favorites_migrated_v1", false))
             // And its rows.
-            assertTrue(XtreamDatabase.getInstance(context).watchStateDao().getAll(xtreamId, ProfileEntity.DEFAULT_ID).isEmpty())
+            assertTrue(
+                XtreamDatabase
+                    .getInstance(context)
+                    .watchStateDao()
+                    .getAll(xtreamId, ProfileEntity.DEFAULT_ID)
+                    .isEmpty(),
+            )
 
             // Adding a Jellyfin server now stores no login for the profile that no longer exists.
             val laterJellyfinId = providers.addProvider("jf2", "http://jf2.test", "someone", "pw2", "JELLYFIN")

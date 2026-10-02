@@ -18,12 +18,12 @@ import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.ui.theme.CinemaWarning
-import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
+import org.njarasoa.fijerena.ui.theme.CinemaWarning
+import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -123,7 +123,11 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = stringResource(R.string.settings_cellular_multiplier_format, String.format(java.util.Locale.US, "%.1f", liveMultiplier)),
+                            text =
+                                stringResource(
+                                    R.string.settings_cellular_multiplier_format,
+                                    String.format(java.util.Locale.US, "%.1f", liveMultiplier),
+                                ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -164,7 +168,11 @@ fun MobileCellularBufferSettingsScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = stringResource(R.string.settings_cellular_multiplier_format, String.format(java.util.Locale.US, "%.1f", vodMultiplier)),
+                            text =
+                                stringResource(
+                                    R.string.settings_cellular_multiplier_format,
+                                    String.format(java.util.Locale.US, "%.1f", vodMultiplier),
+                                ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -252,7 +260,11 @@ private fun CellularBufferPreview(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                     )
                     Text(
-                        text = stringResource(R.string.common_seconds_decimal_format, String.format(java.util.Locale.US, "%.1f", minBufferSeconds)),
+                        text =
+                            stringResource(
+                                R.string.common_seconds_decimal_format,
+                                String.format(java.util.Locale.US, "%.1f", minBufferSeconds),
+                            ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -263,7 +275,11 @@ private fun CellularBufferPreview(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                     )
                     Text(
-                        text = stringResource(R.string.common_seconds_decimal_format, String.format(java.util.Locale.US, "%.1f", maxBufferSeconds)),
+                        text =
+                            stringResource(
+                                R.string.common_seconds_decimal_format,
+                                String.format(java.util.Locale.US, "%.1f", maxBufferSeconds),
+                            ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

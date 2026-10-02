@@ -54,7 +54,13 @@ class XtreamResponseTest {
         val response = series(XtreamPayloads.SERIES_EPISODES_ONLY)
 
         assertTrue(response is XtreamResponse.Ok)
-        assertEquals(1, (response as XtreamResponse.Ok).value.episodes.getValue("1").size)
+        assertEquals(
+            1,
+            (response as XtreamResponse.Ok)
+                .value.episodes
+                .getValue("1")
+                .size,
+        )
     }
 
     @Test
@@ -64,7 +70,13 @@ class XtreamResponseTest {
         val response = series(XtreamPayloads.SERIES_INFO_WITHOUT_NAME)
 
         assertTrue("expected Ok, got $response", response is XtreamResponse.Ok)
-        assertEquals(1, (response as XtreamResponse.Ok).value.episodes.getValue("1").size)
+        assertEquals(
+            1,
+            (response as XtreamResponse.Ok)
+                .value.episodes
+                .getValue("1")
+                .size,
+        )
     }
 
     @Test

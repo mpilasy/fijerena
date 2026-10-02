@@ -57,7 +57,10 @@ class SyncApplierPoisonPillTest {
         SyncRecord(
             SyncKey(SyncKind.SHARED, "", SyncKind.NOW_PLAYING, "tv-1"),
             hlc = 40,
-            payload = SyncPayloads.encode(SyncPayloads.NowPlaying(state = SyncPayloads.NowPlaying.PLAYING, title = "News", profileName = "Kid", sentAt = 1)),
+            payload =
+                SyncPayloads.encode(
+                    SyncPayloads.NowPlaying(state = SyncPayloads.NowPlaying.PLAYING, title = "News", profileName = "Kid", sentAt = 1),
+                ),
         )
 
     @Test
@@ -92,8 +95,16 @@ class SyncApplierPoisonPillTest {
     fun `an EPG source whose provider vanished mid-apply is deferred, not thrown`() =
         runBlocking {
             coEvery { sync.providerByKey("prov-1") } returnsMany listOf(provider, null)
-            val payload = SyncPayloads.EpgSource(providerKey = "prov-1", url = "http://epg.test/guide.xml", label = "Guide", timezoneOffsetHours = 0, enabled = true)
-            val source = SyncRecord(SyncKey(SyncKind.SHARED, "", SyncKind.EPG_SOURCE, "src-1"), hlc = 70, payload = SyncPayloads.encode(payload))
+            val payload =
+                SyncPayloads.EpgSource(
+                    providerKey = "prov-1",
+                    url = "http://epg.test/guide.xml",
+                    label = "Guide",
+                    timezoneOffsetHours = 0,
+                    enabled = true,
+                )
+            val source =
+                SyncRecord(SyncKey(SyncKind.SHARED, "", SyncKind.EPG_SOURCE, "src-1"), hlc = 70, payload = SyncPayloads.encode(payload))
 
             val result = applier().apply(listOf(source, nowPlaying))
 
@@ -106,7 +117,11 @@ class SyncApplierPoisonPillTest {
         runBlocking {
             coEvery { sync.providerByKey("prov-1") } throws IllegalStateException("database closed")
             val favorite =
-                SyncRecord(SyncKey("profile", "prov-1", SyncKind.FAVORITE_STREAM, "m1", "MOVIES"), hlc = 80, payload = """{"name":"Film","createdAt":1}""")
+                SyncRecord(
+                    SyncKey("profile", "prov-1", SyncKind.FAVORITE_STREAM, "m1", "MOVIES"),
+                    hlc = 80,
+                    payload = """{"name":"Film","createdAt":1}""",
+                )
 
             val result = applier().apply(listOf(favorite, nowPlaying))
 

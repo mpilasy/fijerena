@@ -83,16 +83,19 @@ class AdaptiveLoadControl(
         val trackSelections: Array<out ExoTrackSelection?>,
     )
 
-    private fun buildDelegate(networkType: NetworkType, contentType: PlayerConfigFactory.ContentType): DefaultLoadControl {
+    private fun buildDelegate(
+        networkType: NetworkType,
+        contentType: PlayerConfigFactory.ContentType,
+    ): DefaultLoadControl {
         // WIFI and UNKNOWN both use the WiFi profile, matching NetworkMonitor's own default
         // (currentNetworkType starts as WIFI; UNKNOWN only follows an explicit network loss,
         // not a degraded-but-present connection) — written explicitly per branch rather than
         // an `else` fallthrough so the mapping stays obvious to the next reader.
         val durations =
             when (networkType) {
-                NetworkType.CELLULAR ->
+                NetworkType.CELLULAR -> {
                     when (contentType) {
-                        PlayerConfigFactory.ContentType.LIVE_TV ->
+                        PlayerConfigFactory.ContentType.LIVE_TV -> {
                             BufferDurations(
                                 NetworkBufferProfile.getCellularLiveMinBuffer(cellularLiveMultiplier),
                                 NetworkBufferProfile.getCellularLiveMaxBuffer(cellularLiveMultiplier),
@@ -100,7 +103,9 @@ class AdaptiveLoadControl(
                                 NetworkBufferProfile.getCellularLiveRebuffer(cellularLiveMultiplier),
                                 NetworkBufferProfile.CELLULAR_LIVE_BACK_BUFFER_MS,
                             )
-                        PlayerConfigFactory.ContentType.VOD ->
+                        }
+
+                        PlayerConfigFactory.ContentType.VOD -> {
                             BufferDurations(
                                 NetworkBufferProfile.getCellularVodMinBuffer(cellularVodMultiplier),
                                 NetworkBufferProfile.getCellularVodMaxBuffer(cellularVodMultiplier),
@@ -108,10 +113,13 @@ class AdaptiveLoadControl(
                                 NetworkBufferProfile.getCellularVodRebuffer(cellularVodMultiplier),
                                 NetworkBufferProfile.CELLULAR_VOD_BACK_BUFFER_MS,
                             )
+                        }
                     }
-                NetworkType.WIFI, NetworkType.UNKNOWN ->
+                }
+
+                NetworkType.WIFI, NetworkType.UNKNOWN -> {
                     when (contentType) {
-                        PlayerConfigFactory.ContentType.LIVE_TV ->
+                        PlayerConfigFactory.ContentType.LIVE_TV -> {
                             BufferDurations(
                                 NetworkBufferProfile.WIFI_LIVE_MIN_BUFFER_MS,
                                 NetworkBufferProfile.WIFI_LIVE_MAX_BUFFER_MS,
@@ -119,7 +127,9 @@ class AdaptiveLoadControl(
                                 NetworkBufferProfile.WIFI_LIVE_REBUFFER_MS,
                                 NetworkBufferProfile.WIFI_LIVE_BACK_BUFFER_MS,
                             )
-                        PlayerConfigFactory.ContentType.VOD ->
+                        }
+
+                        PlayerConfigFactory.ContentType.VOD -> {
                             BufferDurations(
                                 NetworkBufferProfile.WIFI_VOD_MIN_BUFFER_MS,
                                 NetworkBufferProfile.WIFI_VOD_MAX_BUFFER_MS,
@@ -127,7 +137,9 @@ class AdaptiveLoadControl(
                                 NetworkBufferProfile.WIFI_VOD_REBUFFER_MS,
                                 NetworkBufferProfile.WIFI_VOD_BACK_BUFFER_MS,
                             )
+                        }
                     }
+                }
             }
 
         val targetBufferBytes =
@@ -146,7 +158,8 @@ class AdaptiveLoadControl(
         // only, plus the larger cap below, fixes that without reopening the VOD memory risk.
         val prioritizeTimeOverSize = contentType == PlayerConfigFactory.ContentType.LIVE_TV
 
-        return DefaultLoadControl.Builder()
+        return DefaultLoadControl
+            .Builder()
             .setAllocator(sharedAllocator)
             .setBufferDurationsMs(durations.minBufferMs, durations.maxBufferMs, durations.playbackMs, durations.rebufferMs)
             .setTargetBufferBytes(targetBufferBytes)
@@ -186,7 +199,7 @@ class AdaptiveLoadControl(
 
     // Analytics-aware lifecycle methods (often used by 1.7.1+ internal logic)
     override fun onPrepared(playerId: PlayerId) {
-        pendingReplay = false  // Natural lifecycle call from ExoPlayer supersedes deferred replay
+        pendingReplay = false // Natural lifecycle call from ExoPlayer supersedes deferred replay
         lastPreparedPlayerId = playerId
         delegate.onPrepared(playerId)
     }

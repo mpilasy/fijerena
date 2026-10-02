@@ -7,9 +7,12 @@ import org.junit.Test
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 
 class EpgChannelMatcherTest {
-
-    private fun createStream(id: Int, name: String, epgId: String? = null): XtreamStreamEntity {
-        return XtreamStreamEntity(
+    private fun createStream(
+        id: Int,
+        name: String,
+        epgId: String? = null,
+    ): XtreamStreamEntity =
+        XtreamStreamEntity(
             streamId = id,
             name = name,
             categoryId = "1",
@@ -19,9 +22,8 @@ class EpgChannelMatcherTest {
             streamIcon = "",
             num = id,
             added = "0",
-            type = XtreamStreamEntity.TYPE_LIVE
+            type = XtreamStreamEntity.TYPE_LIVE,
         )
-    }
 
     @Test
     fun `match by exact epgChannelId`() {

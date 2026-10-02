@@ -164,6 +164,7 @@ fun EditProviderScreen(
                                         isLoading = false
                                         onSuccess()
                                     }
+
                                     is Result.Error -> {
                                         isLoading = false
                                         error = result.message ?: updateFailedText
@@ -172,7 +173,14 @@ fun EditProviderScreen(
                             }
                         },
                         enabled = !isLoading && urlInput.trim() != currentUrl,
-                        text = if (isLoading) stringResource(R.string.provider_saving) else stringResource(R.string.edit_provider_save_reauth_button),
+                        text =
+                            if (isLoading) {
+                                stringResource(
+                                    R.string.provider_saving,
+                                )
+                            } else {
+                                stringResource(R.string.edit_provider_save_reauth_button)
+                            },
                     )
                 }
             }

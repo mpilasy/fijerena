@@ -67,8 +67,14 @@ class ProfileRepository(
     suspend fun deleteProfile(id: String): DeleteBlocked =
         withContext(Dispatchers.IO) {
             when {
-                id == AppSettings(context).activeProfileId -> DeleteBlocked.ACTIVE
-                dao.getAll().size <= 1 -> DeleteBlocked.LAST
+                id == AppSettings(context).activeProfileId -> {
+                    DeleteBlocked.ACTIVE
+                }
+
+                dao.getAll().size <= 1 -> {
+                    DeleteBlocked.LAST
+                }
+
                 // Crash-safe by ordering, not by one transaction (it spans two databases and
                 // SharedPreferences): each database's part is atomic, every step is an idempotent
                 // delete, and the profile's own row goes last. Killed part-way, the profile is

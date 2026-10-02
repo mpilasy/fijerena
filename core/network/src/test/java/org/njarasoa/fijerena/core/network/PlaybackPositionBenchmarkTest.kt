@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.network
 
-import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
@@ -15,6 +14,7 @@ import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeFavoriteStateDao
 import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaProvider
 import org.njarasoa.fijerena.core.player.domain.PlaybackStatus
@@ -43,15 +43,15 @@ class PlaybackPositionBenchmarkTest {
 
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
 
-        every { provider.capabilities } returns ProviderCapabilities(
-            supportedContentTypes = setOf(ContentType.TV_SHOWS),
-            supportsEpg = false,
-            supportsSearch = false,
-            supportsAuthentication = false,
-            supportsProgressSync = false,
-            supportsServerUserData = true
-        )
-
+        every { provider.capabilities } returns
+            ProviderCapabilities(
+                supportedContentTypes = setOf(ContentType.TV_SHOWS),
+                supportsEpg = false,
+                supportsSearch = false,
+                supportsAuthentication = false,
+                supportsProgressSync = false,
+                supportsServerUserData = true,
+            )
 
         repository =
             MediaRepository(
@@ -70,39 +70,43 @@ class PlaybackPositionBenchmarkTest {
     }
 
     @Test
-    fun benchmarkSequentialGetPlaybackPosition() = runBlocking {
-        val episodeCount = 50
-        val episodeIds = (1..episodeCount).map { "ep_$it" }
+    fun benchmarkSequentialGetPlaybackPosition() =
+        runBlocking {
+            val episodeCount = 50
+            val episodeIds = (1..episodeCount).map { "ep_$it" }
 
-        // Simulate network latency
-        coEvery { provider.getPlaybackPosition(any()) } coAnswers {
-            kotlinx.coroutines.delay(10) // 10ms latency per request
-            PlaybackStatus(1000L, 2000L, false)
-        }
-
-        val time = measureTimeMillis {
-            for (id in episodeIds) {
-                repository.getPlaybackPositionSuspend(id, ContentType.TV_SHOWS)
+            // Simulate network latency
+            coEvery { provider.getPlaybackPosition(any()) } coAnswers {
+                kotlinx.coroutines.delay(10) // 10ms latency per request
+                PlaybackStatus(1000L, 2000L, false)
             }
-        }
 
-        println("BENCHMARK_RESULT: Sequential time for $episodeCount episodes: $time ms")
-    }
+            val time =
+                measureTimeMillis {
+                    for (id in episodeIds) {
+                        repository.getPlaybackPositionSuspend(id, ContentType.TV_SHOWS)
+                    }
+                }
+
+            println("BENCHMARK_RESULT: Sequential time for $episodeCount episodes: $time ms")
+        }
 
     @Test
-    fun benchmarkBulkGetPlaybackPosition() = runBlocking {
-        val episodeCount = 50
-        val episodeIds = (1..episodeCount).map { "ep_$it" }
+    fun benchmarkBulkGetPlaybackPosition() =
+        runBlocking {
+            val episodeCount = 50
+            val episodeIds = (1..episodeCount).map { "ep_$it" }
 
-        coEvery { provider.getPlaybackPositions(any()) } coAnswers {
-            kotlinx.coroutines.delay(10) // 10ms latency total for the bulk request
-            kotlin.Result.success(episodeIds.associateWith { PlaybackStatus(1000L, 2000L, false) })
+            coEvery { provider.getPlaybackPositions(any()) } coAnswers {
+                kotlinx.coroutines.delay(10) // 10ms latency total for the bulk request
+                kotlin.Result.success(episodeIds.associateWith { PlaybackStatus(1000L, 2000L, false) })
+            }
+
+            val time =
+                measureTimeMillis {
+                    repository.getPlaybackPositionsSuspend(episodeIds, ContentType.TV_SHOWS)
+                }
+
+            println("BENCHMARK_RESULT: Bulk time for $episodeCount episodes: $time ms")
         }
-
-        val time = measureTimeMillis {
-            repository.getPlaybackPositionsSuspend(episodeIds, ContentType.TV_SHOWS)
-        }
-
-        println("BENCHMARK_RESULT: Bulk time for $episodeCount episodes: $time ms")
-    }
 }

@@ -20,7 +20,11 @@ class SyncNowPlayingJoinTest {
         sentAt: Long,
         state: String = SyncPayloads.NowPlaying.PLAYING,
         receivedAt: Long = sentAt,
-    ) = NowPlayingStore.Entry(SyncPayloads.NowPlaying(state = state, title = "Malcolm X", sentAt = sentAt), hlc = 1, receivedAt = receivedAt)
+    ) = NowPlayingStore.Entry(
+        SyncPayloads.NowPlaying(state = state, title = "Malcolm X", sentAt = sentAt),
+        hlc = 1,
+        receivedAt = receivedAt,
+    )
 
     @Test
     fun `only listed devices playing or paused right now are shown`() {
@@ -41,7 +45,10 @@ class SyncNowPlayingJoinTest {
         val devices = listOf(device("tv"))
         val entries = mapOf("tv" to entry(now))
         assertEquals(setOf("tv"), SyncSettingsViewModel.currentNowPlaying(devices, entries, now + NowPlayingStore.STALE_AFTER_MS).keys)
-        assertEquals(emptySet<String>(), SyncSettingsViewModel.currentNowPlaying(devices, entries, now + NowPlayingStore.STALE_AFTER_MS + 1).keys)
+        assertEquals(
+            emptySet<String>(),
+            SyncSettingsViewModel.currentNowPlaying(devices, entries, now + NowPlayingStore.STALE_AFTER_MS + 1).keys,
+        )
     }
 
     @Test

@@ -14,13 +14,14 @@ class BaseM3uMediaProviderTest {
         testItems: List<MediaItem>,
     ) : BaseM3uMediaProvider() {
         override val providerId: Long = 1L
-        override val capabilities: ProviderCapabilities = ProviderCapabilities(
-            supportedContentTypes = setOf(ContentType.MOVIES),
-            supportsEpg = false,
-            supportsSearch = true,
-            supportsAuthentication = false,
-            supportsProgressSync = false,
-        )
+        override val capabilities: ProviderCapabilities =
+            ProviderCapabilities(
+                supportedContentTypes = setOf(ContentType.MOVIES),
+                supportsEpg = false,
+                supportsSearch = true,
+                supportsAuthentication = false,
+                supportsProgressSync = false,
+            )
 
         init {
             items = testItems
@@ -31,36 +32,40 @@ class BaseM3uMediaProviderTest {
     }
 
     @Test
-    fun search_returnsMatchingItemsByQuery() = runTest {
-        val sampleItems = listOf(
-            MediaItem(id = "1", name = "Dune Part Two", mediaType = MediaType.VIDEO_FILE, categoryId = "cat1"),
-            MediaItem(id = "2", name = "Interstellar", mediaType = MediaType.VIDEO_FILE, categoryId = "cat1"),
-            MediaItem(id = "3", name = "Dune", mediaType = MediaType.VIDEO_FILE, categoryId = "cat1"),
-        )
-        val provider = TestM3uProvider(sampleItems)
+    fun search_returnsMatchingItemsByQuery() =
+        runTest {
+            val sampleItems =
+                listOf(
+                    MediaItem(id = "1", name = "Dune Part Two", mediaType = MediaType.VIDEO_FILE, categoryId = "cat1"),
+                    MediaItem(id = "2", name = "Interstellar", mediaType = MediaType.VIDEO_FILE, categoryId = "cat1"),
+                    MediaItem(id = "3", name = "Dune", mediaType = MediaType.VIDEO_FILE, categoryId = "cat1"),
+                )
+            val provider = TestM3uProvider(sampleItems)
 
-        val result = provider.search("dune", ContentType.MOVIES)
+            val result = provider.search("dune", ContentType.MOVIES)
 
-        assertTrue(result.isSuccess)
-        val matches = result.getOrNull()!!
-        assertEquals(2, matches.size)
-        assertEquals("Dune Part Two", matches[0].name)
-        assertEquals("Dune", matches[1].name)
-    }
+            assertTrue(result.isSuccess)
+            val matches = result.getOrNull()!!
+            assertEquals(2, matches.size)
+            assertEquals("Dune Part Two", matches[0].name)
+            assertEquals("Dune", matches[1].name)
+        }
 
     @Test
-    fun trimMemory_dropsItemsAndMarksDisconnected() = runTest {
-        val sampleItems = listOf(
-            MediaItem(id = "1", name = "Dune Part Two", mediaType = MediaType.VIDEO_FILE, categoryId = "cat1"),
-        )
-        val provider = TestM3uProvider(sampleItems)
+    fun trimMemory_dropsItemsAndMarksDisconnected() =
+        runTest {
+            val sampleItems =
+                listOf(
+                    MediaItem(id = "1", name = "Dune Part Two", mediaType = MediaType.VIDEO_FILE, categoryId = "cat1"),
+                )
+            val provider = TestM3uProvider(sampleItems)
 
-        provider.trimMemory()
+            provider.trimMemory()
 
-        // Marking disconnected is what makes this transparent: getCategories()/getItems() only
-        // re-scan when !connected, so a trimmed provider must fall back into that path on next
-        // use instead of permanently looking empty.
-        assertTrue(!provider.isConnected())
-        assertTrue(provider.search("dune", ContentType.MOVIES).getOrNull()!!.isEmpty())
-    }
+            // Marking disconnected is what makes this transparent: getCategories()/getItems() only
+            // re-scan when !connected, so a trimmed provider must fall back into that path on next
+            // use instead of permanently looking empty.
+            assertTrue(!provider.isConnected())
+            assertTrue(provider.search("dune", ContentType.MOVIES).getOrNull()!!.isEmpty())
+        }
 }

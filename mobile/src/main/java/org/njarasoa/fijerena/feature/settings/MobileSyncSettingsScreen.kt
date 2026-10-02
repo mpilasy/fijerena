@@ -108,7 +108,12 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
         },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(CinemaSpacing.md),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(CinemaSpacing.md),
             verticalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
         ) {
             Text(
@@ -119,12 +124,23 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
 
             val qr = ui.handoffQr ?: ui.inviteQr
             when {
-                qr != null ->
+                qr != null -> {
                     PairingPanel(
                         qr = qr,
-                        instructions = stringResource(if (ui.handoffQr != null) R.string.live_sync_handoff_instructions else R.string.live_sync_invite_instructions),
+                        instructions =
+                            stringResource(
+                                if (ui.handoffQr !=
+                                    null
+                                ) {
+                                    R.string.live_sync_handoff_instructions
+                                } else {
+                                    R.string.live_sync_invite_instructions
+                                },
+                            ),
                         onClose = { if (ui.handoffQr != null) viewModel.cancelHandoff() else viewModel.hideInvite() },
                     )
+                }
+
                 status.linked -> {
                     LinkedPanel(
                         status = status,
@@ -140,7 +156,10 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                         Text(stringResource(R.string.live_sync_leave), color = CinemaError)
                     }
                 }
-                else -> SetupPanel(ui, viewModel, onScan = { scanning = true })
+
+                else -> {
+                    SetupPanel(ui, viewModel, onScan = { scanning = true })
+                }
             }
 
             ui.error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = CinemaError) }
@@ -248,7 +267,11 @@ private fun PairingPanel(
         ) {
             QrCode(text = qr, size = 280.dp, contentDescription = stringResource(R.string.live_sync_qr_description))
             Text(instructions, style = MaterialTheme.typography.bodyMedium)
-            Text(stringResource(R.string.live_sync_waiting), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium))
+            Text(
+                stringResource(R.string.live_sync_waiting),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+            )
             CinemaOutlinedButton(onClick = onClose) { Text(stringResource(R.string.common_cancel)) }
         }
     }
@@ -308,11 +331,23 @@ private fun DevicesPanel(
                     Column(Modifier.weight(1f)) {
                         Text(device.name, style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            if (device.current) stringResource(R.string.live_sync_device_this) else stringResource(R.string.live_sync_device_last_seen, relative(device.lastSeen)),
+                            if (device.current) {
+                                stringResource(
+                                    R.string.live_sync_device_this,
+                                )
+                            } else {
+                                stringResource(R.string.live_sync_device_last_seen, relative(device.lastSeen))
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                         )
-                        nowPlaying[device.id]?.let { Text(nowPlayingLine(it), style = MaterialTheme.typography.bodySmall, color = CinemaAccent) }
+                        nowPlaying[device.id]?.let {
+                            Text(
+                                nowPlayingLine(it),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CinemaAccent,
+                            )
+                        }
                         stopStates[device.id]?.let { state ->
                             Text(
                                 if (state == SyncSettingsViewModel.StopState.STOPPING) {
@@ -321,7 +356,14 @@ private fun DevicesPanel(
                                     stringResource(R.string.live_sync_stop_unreachable, device.name)
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (state == SyncSettingsViewModel.StopState.STOPPING) MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium) else CinemaError,
+                                color =
+                                    if (state ==
+                                        SyncSettingsViewModel.StopState.STOPPING
+                                    ) {
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium)
+                                    } else {
+                                        CinemaError
+                                    },
                             )
                         }
                     }
@@ -332,7 +374,9 @@ private fun DevicesPanel(
                         TextButton(onClick = { onStop(device) }) { Text(stringResource(R.string.live_sync_stop), color = CinemaError) }
                     }
                     if (!device.current) {
-                        TextButton(onClick = { onRemove(device) }) { Text(stringResource(R.string.live_sync_device_remove), color = CinemaError) }
+                        TextButton(
+                            onClick = { onRemove(device) },
+                        ) { Text(stringResource(R.string.live_sync_device_remove), color = CinemaError) }
                     }
                 }
             }

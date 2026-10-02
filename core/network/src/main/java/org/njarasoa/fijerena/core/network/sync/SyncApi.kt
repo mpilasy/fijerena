@@ -73,8 +73,7 @@ class SyncApi(
         serverUrl: String,
         token: String,
         records: List<SyncWire.Record>,
-    ): SyncWire.PushResponse =
-        call(serverUrl, "POST", "/changes", token = token, body = json.encodeToString(SyncWire.PushRequest(records)))
+    ): SyncWire.PushResponse = call(serverUrl, "POST", "/changes", token = token, body = json.encodeToString(SyncWire.PushRequest(records)))
 
     /** A page of records after [since]; `resync` set when [since] is too old to continue from. */
     suspend fun pull(
@@ -123,8 +122,21 @@ class SyncApi(
         token: String,
         listener: WebSocketListener,
     ): WebSocket {
-        val url = serverUrl.trimEnd('/').toHttpUrl().newBuilder().addPathSegment("ws").build()
-        return socketClient.newWebSocket(Request.Builder().url(url).header("Authorization", "Bearer $token").build(), listener)
+        val url =
+            serverUrl
+                .trimEnd('/')
+                .toHttpUrl()
+                .newBuilder()
+                .addPathSegment("ws")
+                .build()
+        return socketClient.newWebSocket(
+            Request
+                .Builder()
+                .url(url)
+                .header("Authorization", "Bearer $token")
+                .build(),
+            listener,
+        )
     }
 
     /**

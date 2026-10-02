@@ -2,8 +2,8 @@ package org.njarasoa.fijerena.core.ui.utils
 
 import android.content.Context
 import android.content.res.Configuration
-import java.util.Locale
 import org.njarasoa.fijerena.core.network.AppSettings
+import java.util.Locale
 
 object LocaleManager {
     /**
@@ -35,7 +35,10 @@ object LocaleManager {
     }
 
     /** Persist the chosen language. Caller recreates the activity to apply it. */
-    fun updateLocale(context: Context, language: String) {
+    fun updateLocale(
+        context: Context,
+        language: String,
+    ) {
         AppSettings(context).language = language
     }
 }

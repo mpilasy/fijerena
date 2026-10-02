@@ -49,12 +49,16 @@ fun parseDurationToSeconds(duration: String): Long? {
             val s = parts[2].toLongOrNull() ?: return null
             h * 3600 + m * 60 + s
         }
+
         2 -> {
             val m = parts[0].toLongOrNull() ?: return null
             val s = parts[1].toLongOrNull() ?: return null
             m * 60 + s
         }
-        else -> null
+
+        else -> {
+            null
+        }
     }
 }
 
@@ -111,8 +115,7 @@ fun formatRating(rating: String): String {
  * True when [duration] parses to more than zero seconds. Providers sometimes send "0" for an
  * unknown/missing runtime — treat that as absent rather than render it as a bogus "0s".
  */
-fun hasMeaningfulDuration(duration: String?): Boolean =
-    duration != null && (parseDurationToSeconds(duration) ?: 0) > 0
+fun hasMeaningfulDuration(duration: String?): Boolean = duration != null && (parseDurationToSeconds(duration) ?: 0) > 0
 
 /** Resolution bucket label, e.g. "4K", "1080p", "720p". */
 fun resolutionLabel(
@@ -157,8 +160,9 @@ fun extractYear(
     releaseDate: String?,
     title: String?,
 ): Int? {
-    val year = metadataYear
-        ?: releaseDate?.take(4)?.toIntOrNull()
-        ?: title?.let { Regex("""\b(19\d\d|20\d\d)\b""").find(it)?.value?.toIntOrNull() }
+    val year =
+        metadataYear
+            ?: releaseDate?.take(4)?.toIntOrNull()
+            ?: title?.let { Regex("""\b(19\d\d|20\d\d)\b""").find(it)?.value?.toIntOrNull() }
     return year
 }

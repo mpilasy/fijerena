@@ -62,6 +62,7 @@ object NetworkBufferProfile {
     // hundreds of MB of native allocation on 1-2GB Android TV devices. An explicit cap bounds
     // worst-case memory regardless of stream bitrate.
     const val VOD_TARGET_BUFFER_BYTES = 64 * 1024 * 1024
+
     // 16MB left high-bitrate 4K live (25-40Mbps) hitting this cap in ~3-5s, well short of the
     // 15-50s time-based targets above — see AdaptiveLoadControl.buildDelegate()'s
     // prioritizeTimeOverSize, which now favors time for LIVE_TV. This cap still bounds worst-case

@@ -100,6 +100,7 @@ class SyncApplierTest {
         runBlocking {
             val profile = newProfile()
             val (providerId, providerKey) = newProvider()
+
             fun watch(
                 item: String,
                 hlc: Long,
@@ -136,7 +137,9 @@ class SyncApplierTest {
             val key = UUID.randomUUID().toString()
             val payload = SyncPayloads.Provider("From phone", "http://phone.test", "user", "XTREAM", "", "{}", "secret")
 
-            applier.apply(listOf(SyncRecord(SyncKey(SyncKind.SHARED, key, SyncKind.PROVIDER), FAR_FUTURE, payload = SyncPayloads.encode(payload))))
+            applier.apply(
+                listOf(SyncRecord(SyncKey(SyncKind.SHARED, key, SyncKind.PROVIDER), FAR_FUTURE, payload = SyncPayloads.encode(payload))),
+            )
 
             val provider = sync.providerByKey(key)!!
             assertEquals("From phone", provider.name)
@@ -160,7 +163,10 @@ class SyncApplierTest {
                     SyncRecord(
                         SyncKey(SyncKind.SHARED, "", SyncKind.EPG_SOURCE, sourceKey),
                         FAR_FUTURE,
-                        payload = SyncPayloads.encode(SyncPayloads.EpgSource(providerKey, "http://epg.test/$sourceKey.xml", "EPG", 1, true)),
+                        payload =
+                            SyncPayloads.encode(
+                                SyncPayloads.EpgSource(providerKey, "http://epg.test/$sourceKey.xml", "EPG", 1, true),
+                            ),
                     ),
                 ),
             )

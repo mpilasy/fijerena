@@ -94,7 +94,11 @@ class MediaRepositoryContinueWatchingTest {
                     episodes =
                         mapOf(
                             "2" to listOf(EpisodeItem(id = "x3", episodeNumber = 1, title = "Show 8 S2E1")),
-                            "1" to listOf(EpisodeItem("x2", 2, "Show 8 S1E2", seasonNumber = 1), EpisodeItem("x1", 1, "Show 8 S1E1", seasonNumber = 1)),
+                            "1" to
+                                listOf(
+                                    EpisodeItem("x2", 2, "Show 8 S1E2", seasonNumber = 1),
+                                    EpisodeItem("x1", 1, "Show 8 S1E1", seasonNumber = 1),
+                                ),
                         ),
                 ),
             )
@@ -111,7 +115,10 @@ class MediaRepositoryContinueWatchingTest {
 
     @Test
     fun `the provider's last episode ends the show there too`() {
-        assertEquals(emptyList<ContinueWatchingItem>(), shelf(episode("x3", "8", position = 100, duration = 100, isCompleted = true), provider = panel()))
+        assertEquals(
+            emptyList<ContinueWatchingItem>(),
+            shelf(episode("x3", "8", position = 100, duration = 100, isCompleted = true), provider = panel()),
+        )
     }
 
     @Test
@@ -185,7 +192,15 @@ class MediaRepositoryContinueWatchingTest {
         id: String,
         season: Int,
         number: Int,
-    ) = XtreamEpisodeEntity(id = id, seriesId = 7, providerId = P, season = season, episodeNum = number, title = "Episode $id", containerExtension = "mkv")
+    ) = XtreamEpisodeEntity(
+        id = id,
+        seriesId = 7,
+        providerId = P,
+        season = season,
+        episodeNum = number,
+        title = "Episode $id",
+        containerExtension = "mkv",
+    )
 
     private companion object {
         const val P = 1L

@@ -5,18 +5,17 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.ViewModelProvider
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
+import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 import org.njarasoa.fijerena.navigation.MobileNavHost
 import org.njarasoa.fijerena.ui.theme.FirstVideoPlayerTheme
-
-import org.njarasoa.fijerena.core.ui.utils.LocaleManager
 
 class MainActivity : ComponentActivity() {
     override fun attachBaseContext(newBase: android.content.Context) {
@@ -48,9 +47,10 @@ class MainActivity : ComponentActivity() {
         // Ensure PiP auto-enter is disabled by default
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             setPictureInPictureParams(
-                android.app.PictureInPictureParams.Builder()
+                android.app.PictureInPictureParams
+                    .Builder()
                     .setAutoEnterEnabled(false)
-                    .build()
+                    .build(),
             )
         }
 
@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPictureInPictureModeChanged(
         isInPictureInPictureMode: Boolean,
-        newConfig: Configuration
+        newConfig: Configuration,
     ) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         val playbackViewModel = ViewModelProvider(this)[PlaybackViewModel::class.java]
@@ -100,10 +100,16 @@ class MainActivity : ComponentActivity() {
             val state = playbackViewModel.playbackState.value
             // Live only — same rule as the S+ auto-enter params set by the player screens.
             if (playbackViewModel.currentMetadata.value.isLive &&
-                (state is org.njarasoa.fijerena.core.player.model.PlaybackState.Playing ||
-                    state is org.njarasoa.fijerena.core.player.model.PlaybackState.Buffering)
+                (
+                    state is org.njarasoa.fijerena.core.player.model.PlaybackState.Playing ||
+                        state is org.njarasoa.fijerena.core.player.model.PlaybackState.Buffering
+                )
             ) {
-                enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().build())
+                enterPictureInPictureMode(
+                    android.app.PictureInPictureParams
+                        .Builder()
+                        .build(),
+                )
             }
         }
     }

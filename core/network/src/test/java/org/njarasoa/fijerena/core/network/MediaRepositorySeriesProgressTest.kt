@@ -1,6 +1,5 @@
 package org.njarasoa.fijerena.core.network
 
-import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Looper
@@ -17,6 +16,7 @@ import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.fixtures.FakeFavoriteStateDao
 import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
+import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamEpisodeDao
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamDao
@@ -51,7 +51,16 @@ class MediaRepositorySeriesProgressTest {
         episodeDao = mockk(relaxed = true)
         streamDao = mockk(relaxed = true)
         coEvery { episodeDao.getSiblingCompletedCountsBySeries(any(), any()) } returns emptyMap()
-        repository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = watchStateDao, favoriteStateDao = FakeFavoriteStateDao(), streamDao = streamDao, episodeDao = episodeDao)
+        repository =
+            MediaRepository(
+                context,
+                1L,
+                ProfileEntity.DEFAULT_ID,
+                watchStateDao = watchStateDao,
+                favoriteStateDao = FakeFavoriteStateDao(),
+                streamDao = streamDao,
+                episodeDao = episodeDao,
+            )
     }
 
     @After

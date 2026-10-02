@@ -21,7 +21,16 @@ fun nowPlayingLine(nowPlaying: SyncPayloads.NowPlaying): String {
             nowPlaying.showTitle != null -> listOfNotNull(nowPlaying.showTitle, nowPlaying.episodeLabel).joinToString(" ")
             else -> nowPlaying.title
         }
-    val withProfile = if (nowPlaying.profileName.isBlank()) what else stringResource(R.string.live_sync_now_profile, what, nowPlaying.profileName)
+    val withProfile =
+        if (nowPlaying.profileName.isBlank()) {
+            what
+        } else {
+            stringResource(
+                R.string.live_sync_now_profile,
+                what,
+                nowPlaying.profileName,
+            )
+        }
     val line =
         when {
             nowPlaying.state == SyncPayloads.NowPlaying.PAUSED -> R.string.live_sync_now_paused

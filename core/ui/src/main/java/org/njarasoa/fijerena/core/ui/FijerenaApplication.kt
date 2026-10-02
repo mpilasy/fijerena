@@ -48,7 +48,8 @@ class FijerenaApplication :
         // jank/ANRs. Gated on the debuggable flag so it never runs in release.
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             StrictMode.setThreadPolicy(
-                StrictMode.ThreadPolicy.Builder()
+                StrictMode.ThreadPolicy
+                    .Builder()
                     .detectDiskReads()
                     .detectDiskWrites()
                     .detectCustomSlowCalls()
@@ -134,8 +135,7 @@ class FijerenaApplication :
             .components {
                 // Reuse the shared OkHttpClient for image loading to prevent memory leaks and OOM
                 add(OkHttpNetworkFetcherFactory(NetworkModule.okHttpClient))
-            }
-            .coroutineContext(Dispatchers.IO)
+            }.coroutineContext(Dispatchers.IO)
             // Posters/thumbnails rarely change and there are thousands of them across a large
             // catalog — a generously sized disk cache means scrolling back through a category or
             // reopening a detail screen doesn't refetch images that were already downloaded.

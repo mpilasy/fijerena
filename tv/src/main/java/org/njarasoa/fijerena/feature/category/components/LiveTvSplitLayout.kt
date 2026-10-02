@@ -51,8 +51,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.PlaybackState
-import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
+import org.njarasoa.fijerena.core.player.model.elapsedFraction
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
@@ -61,18 +61,18 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CurrentChannelPolicy
-import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
-import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
-import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
+import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
+import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -157,8 +157,9 @@ internal fun LiveTvSplitLayout(
         if (hasSeeded || previewTarget != null) return@LaunchedEffect
         val list = streams ?: return@LaunchedEffect
         hasSeeded = true
-        val seed = initialStreamId?.let { id -> list.firstOrNull { it.id == id } }
-            ?: lastPlayedItemId?.let { id -> list.firstOrNull { it.id == id } }
+        val seed =
+            initialStreamId?.let { id -> list.firstOrNull { it.id == id } }
+                ?: lastPlayedItemId?.let { id -> list.firstOrNull { it.id == id } }
         if (seed != null) {
             previewTarget = seed
             focusedItemFlow.value = seed
@@ -356,12 +357,14 @@ internal fun LiveTvSplitLayout(
                         resumeOnReturn = state is PlaybackState.Playing || state is PlaybackState.Buffering
                         playback.onFocusLost(false)
                     }
+
                     Lifecycle.Event.ON_RESUME -> {
                         playback.onFocusRegained()
                         val s = currentSuccess
                         if (resumeOnReturn && s != null) playback.playStream(previewMetadata(s))
                         resumeOnReturn = false
                     }
+
                     else -> {}
                 }
             }
@@ -511,9 +514,13 @@ internal fun LiveTvSplitLayout(
             val displayedStreams =
                 remember(listSource, recentStreams, favoriteStreams, target.id) {
                     when (listSource) {
-                        PreviewListSource.RECENT ->
+                        PreviewListSource.RECENT -> {
                             recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE)
-                        PreviewListSource.FAVORITES -> favoriteStreams
+                        }
+
+                        PreviewListSource.FAVORITES -> {
+                            favoriteStreams
+                        }
                     }
                 }
             // Remembered, not built inline: an unremembered wrapper hands StreamList a new
@@ -560,6 +567,7 @@ internal fun LiveTvSplitLayout(
                                 categoryViewModel.refreshRecentItems()
                                 recentOrderResetTick++
                             }
+
                             PreviewListSource.FAVORITES -> {
                                 favoriteStreamsLoading = true
                                 favoriteStreams = categoryViewModel.getFavoritesSnapshot()
@@ -613,11 +621,15 @@ internal fun LiveTvSplitLayout(
                                         listSource = PreviewListSource.RECENT
                                         true
                                     }
+
                                     Key.DirectionRight -> {
                                         listSource = PreviewListSource.FAVORITES
                                         true
                                     }
-                                    else -> false
+
+                                    else -> {
+                                        false
+                                    }
                                 }
                             }
                         },
@@ -635,7 +647,11 @@ private enum class PreviewListSource { RECENT, FAVORITES }
  * internal index, which [StreamLoaderViewModel.loadStreamLight] (the preview re-point path) never
  * keeps in sync with what's actually on screen.
  */
-private fun neighborChannel(streams: ImmutableMediaList?, currentId: String, direction: Int): MediaItem? {
+private fun neighborChannel(
+    streams: ImmutableMediaList?,
+    currentId: String,
+    direction: Int,
+): MediaItem? {
     val list = streams?.takeIf { it.isNotEmpty() }
     val neighbor =
         list?.let {

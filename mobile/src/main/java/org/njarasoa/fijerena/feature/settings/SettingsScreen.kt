@@ -19,24 +19,24 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
+import org.njarasoa.fijerena.feature.settings.components.AboutSettingsCard
+import org.njarasoa.fijerena.feature.settings.components.DatabaseMaintenanceCard
+import org.njarasoa.fijerena.feature.settings.components.DeveloperSettingsCard
+import org.njarasoa.fijerena.feature.settings.components.EpgSettingsCard
+import org.njarasoa.fijerena.feature.settings.components.ExportImportSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ImportConflictDialog
 import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
 import org.njarasoa.fijerena.feature.settings.components.LanguageSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.LiveSyncSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.PlaybackSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ProfilesSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.AboutSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.DatabaseMaintenanceCard
-import org.njarasoa.fijerena.feature.settings.components.DeveloperSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.EpgSettingsCard
-import org.njarasoa.fijerena.feature.settings.components.ExportImportSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ProviderSettingsCard
 import org.njarasoa.fijerena.feature.settings.components.ThemeSettingsCard
-import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,8 +76,11 @@ fun MobileSettingsScreen(
                 coroutineScope.launch {
                     val success = exportManager.exportToUri(uri)
                     viewModel.setExportImportMessage(
-                        if (success) resources.getString(R.string.settings_export_success)
-                        else resources.getString(R.string.settings_export_failed)
+                        if (success) {
+                            resources.getString(R.string.settings_export_success)
+                        } else {
+                            resources.getString(R.string.settings_export_failed)
+                        },
                     )
                 }
             }
@@ -123,7 +126,7 @@ fun MobileSettingsScreen(
                     showImportOptionsDialog = false
                     viewModel.doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
                 }
-            }
+            },
         )
     }
 
@@ -155,7 +158,7 @@ fun MobileSettingsScreen(
                 val options = pendingImportOptions
                 pendingParsedImport = null
                 viewModel.doImport(parsed, SettingsExportManager.ConflictResolution.SKIP, options)
-            }
+            },
         )
     }
 

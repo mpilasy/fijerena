@@ -27,7 +27,7 @@ fun ExportImportSettingsCard(
     exportManager: SettingsExportManager,
     exportLauncher: ManagedActivityResultLauncher<String, android.net.Uri?>,
     importLauncher: ManagedActivityResultLauncher<Array<String>, android.net.Uri?>,
-    onPendingImportPathChange: (String) -> Unit
+    onPendingImportPathChange: (String) -> Unit,
 ) {
     SettingsSection(title = stringResource(R.string.settings_export_import_section_title)) {
         Text(

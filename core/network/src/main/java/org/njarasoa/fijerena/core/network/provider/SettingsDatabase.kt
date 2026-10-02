@@ -230,7 +230,12 @@ abstract class SettingsDatabase : RoomDatabase() {
                     ids.forEach { id ->
                         db.execSQL(
                             "UPDATE `providers` SET `providerKey` = ? WHERE `id` = ?",
-                            arrayOf<Any>(java.util.UUID.randomUUID().toString(), id),
+                            arrayOf<Any>(
+                                java.util.UUID
+                                    .randomUUID()
+                                    .toString(),
+                                id,
+                            ),
                         )
                     }
                     db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_providers_providerKey` ON `providers` (`providerKey`)")
@@ -258,7 +263,12 @@ abstract class SettingsDatabase : RoomDatabase() {
                     ids.forEach { id ->
                         db.execSQL(
                             "UPDATE `epg_source` SET `source_key` = ? WHERE `id` = ?",
-                            arrayOf<Any>(java.util.UUID.randomUUID().toString(), id),
+                            arrayOf<Any>(
+                                java.util.UUID
+                                    .randomUUID()
+                                    .toString(),
+                                id,
+                            ),
                         )
                     }
                     db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_epg_source_source_key` ON `epg_source` (`source_key`)")
