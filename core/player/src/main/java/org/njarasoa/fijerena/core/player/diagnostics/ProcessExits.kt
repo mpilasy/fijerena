@@ -14,6 +14,9 @@ object ProcessExits {
     private const val TAG = "ProcessExits"
     private const val MAX_EXITS = 15
     private const val MAX_TRACE_LINES = 60
+    private const val REASON_FREEZER = 14
+    private const val REASON_PACKAGE_STATE_CHANGE = 15
+    private const val REASON_PACKAGE_UPDATED = 16
 
     data class Exit(
         val timestampMs: Long,
@@ -73,6 +76,11 @@ object ProcessExits {
             ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "PERMISSION_CHANGE"
             ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "DEPENDENCY_DIED"
             ApplicationExitInfo.REASON_OTHER -> "OTHER"
+            // API 33+ reasons (ApplicationExitInfo.REASON_FREEZER etc.), kept as local constants so
+            // a minSdk-30 build carries no InlinedApi warning.
+            REASON_FREEZER -> "FREEZER"
+            REASON_PACKAGE_STATE_CHANGE -> "PACKAGE_STATE_CHANGE"
+            REASON_PACKAGE_UPDATED -> "PACKAGE_UPDATED"
             else -> "UNKNOWN($reason)"
         }
 }
