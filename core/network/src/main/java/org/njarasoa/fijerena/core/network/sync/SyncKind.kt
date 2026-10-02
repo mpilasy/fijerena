@@ -35,10 +35,17 @@ object SyncKind {
     const val NOW_PLAYING = "now_playing"
 
     /**
+     * A command to one device — today only "stop what you are playing"; keyed by the *target's*
+     * server device id. Volatile — see [VOLATILE], [RemoteCommands] and
+     * `docs/plans/20261001_live-sync-now-playing-plan.md` → Remote Stop.
+     */
+    const val REMOTE_COMMAND = "remote_command"
+
+    /**
      * Kinds held only in memory, on both ends: pushed from [VolatileRecords], applied to an
      * in-memory store — never a version row, a tombstone, or a step of the receiver's sync clocks.
      */
-    val VOLATILE = setOf(NOW_PLAYING)
+    val VOLATILE = setOf(NOW_PLAYING, REMOTE_COMMAND)
 
     /** The profile slot of anything the whole household shares. */
     const val SHARED = "shared"

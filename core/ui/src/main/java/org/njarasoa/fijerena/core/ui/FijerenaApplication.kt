@@ -30,6 +30,7 @@ import org.njarasoa.fijerena.core.player.network.NetworkModule
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher
+import org.njarasoa.fijerena.core.ui.sync.RemoteStopFallback
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 
 class FijerenaApplication :
@@ -62,6 +63,8 @@ class FijerenaApplication :
         SyncManager.getInstance(this).start()
         // What this device plays, for the group's devices lists — sends nothing until turned on.
         NowPlayingPublisher.getInstance(this).start()
+        // A remote Stop no player screen took (playback with nothing on screen to obey it).
+        RemoteStopFallback.start(this)
         // One-time moves of each provider's category filters and the install-wide dev-mode flag to
         // every profile, and the install-wide search history to the default profile — see
         // ProviderRepository.migrateCategoryFiltersToProfiles().

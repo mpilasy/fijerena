@@ -25,6 +25,12 @@ class NowPlayingSyncTest {
     }
 
     @Test
+    fun `the session id travels, and an older sender's payload has none`() {
+        assertEquals("s-1", SyncPayloads.NowPlaying.of(episode.copy(sessionId = "s-1"), "Kid", 1).sessionId)
+        assertEquals(null, SyncPayloads.decode<SyncPayloads.NowPlaying>("""{"state":"playing","sentAt":1}""").sessionId)
+    }
+
+    @Test
     fun `a snapshot becomes playing or paused, nothing becomes stopped`() {
         assertEquals(SyncPayloads.NowPlaying.PLAYING, SyncPayloads.NowPlaying.of(episode, "Kid", 1).state)
         assertEquals(SyncPayloads.NowPlaying.PAUSED, SyncPayloads.NowPlaying.of(episode.copy(paused = true), "Kid", 1).state)

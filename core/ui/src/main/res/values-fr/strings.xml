@@ -856,6 +856,13 @@
     <string name="live_sync_now_paused">⏸ En pause · %1$s</string>
     <string name="live_sync_now_programme">%1$s — %2$s</string>
     <string name="live_sync_now_profile">%1$s · %2$s</string>
+    <string name="live_sync_stop">Arrêter</string>
+    <string name="live_sync_stop_title">Arrêter la lecture sur %1$s ?</string>
+    <string name="live_sync_stop_message">Ce qui y est en lecture s\'arrête et le lecteur se ferme. La lecture peut reprendre aussitôt.</string>
+    <string name="live_sync_stopping">Arrêt en cours…</string>
+    <string name="live_sync_stop_unreachable">Impossible de joindre %1$s</string>
+    <string name="live_sync_stopped_from">Lecture arrêtée depuis %1$s</string>
+    <string name="live_sync_stopped_from_another_device">un autre appareil</string>
     <string name="live_sync_leave">Quitter le groupe de synchronisation</string>
     <string name="live_sync_leave_title">Quitter le groupe de synchronisation ?</string>
     <string name="live_sync_leave_message">Cet appareil cesse de se synchroniser. Ses profils, fournisseurs, favoris et historique restent dessus.</string>

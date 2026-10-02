@@ -71,6 +71,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
+import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -112,6 +114,7 @@ internal fun LiveTvSplitLayout(
     onRefreshCategories: () -> Unit,
     onRefreshStreams: (String) -> Unit,
     onBack: () -> Unit,
+    onHome: () -> Unit,
     initialStreamId: String? = null,
 ) {
     val context = LocalContext.current
@@ -301,6 +304,15 @@ internal fun LiveTvSplitLayout(
     LaunchedEffect(success?.streamUrl, success?.currentEpgProgram?.title) {
         val s = success ?: return@LaunchedEffect
         playback.updateMetadata(s.streamUrl) { it.copy(programTitle = s.currentEpgProgram?.title) }
+    }
+
+    // Another device of the sync group stopped this playback — preview or promoted full-screen
+    // alike: finalise and release as leaving Live TV does, then go Home. See
+    // docs/plans/20261001_live-sync-now-playing-plan.md → Remote Stop.
+    RemoteStopEffect {
+        finalizeSessionAndAwait(playback.playbackState.value, loader)
+        playback.stopAndRelease()
+        onHome()
     }
 
     // Dead-stream watchdog: stop trying rather than let a bad channel buffer in the background

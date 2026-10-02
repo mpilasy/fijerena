@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.sync
 
 import android.content.Context
 import android.util.Log
+import androidx.media3.common.util.UnstableApi
 import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -23,6 +24,11 @@ import org.njarasoa.fijerena.core.network.xtream.db.SyncTombstoneEntity
 import org.njarasoa.fijerena.core.network.xtream.db.SyncVersionEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
+
+/** The playback on this device right now — `core:player` publishes it process-wide. */
+@androidx.annotation.OptIn(UnstableApi::class)
+private fun playingSessionNow(): String? = StreamingPlaybackService.nowPlaying.value?.sessionId
 
 /**
  * Applies records received from another device: looks up what this device knows about each key,
@@ -40,6 +46,10 @@ import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
  */
 class SyncApplier(
     private val context: Context,
+    /** This device's server id — a remote command is obeyed only when keyed to it. */
+    private val thisDeviceId: () -> String? = { SyncAccountStore(context).link?.deviceId },
+    /** The playback on right now (`NowPlayingSnapshot.sessionId`), null when nothing plays. */
+    private val playingSessionId: () -> String? = ::playingSessionNow,
 ) {
     private companion object {
         const val TAG = "SyncApplier"
@@ -82,6 +92,7 @@ class SyncApplier(
             SyncKind.FAVORITE_CATEGORY,
             SyncKind.WATCH,
             SyncKind.NOW_PLAYING,
+            SyncKind.REMOTE_COMMAND,
         )
 
     suspend fun apply(records: List<SyncRecord>): Result {
@@ -161,6 +172,7 @@ class SyncApplier(
             SyncKind.SETTING -> applySetting(record)
             SyncKind.PROVIDER_LOGIN, SyncKind.CATEGORY_FILTERS -> applyProviderScopedSetting(record)
             SyncKind.NOW_PLAYING -> applyNowPlaying(record)
+            SyncKind.REMOTE_COMMAND -> applyRemoteCommand(record)
             else -> Outcome.Skipped
         }
     }
@@ -174,6 +186,26 @@ class SyncApplier(
             NowPlayingStore.receive(record.key.itemId, entry)
             Outcome.Applied
         }
+
+    /**
+     * To [RemoteCommands] only, and only a command keyed to this device for the session playing
+     * right now — see [RemoteCommands.receive]. Commands for other devices are never even decoded.
+     * Nothing is written anywhere: no version, no tombstone.
+     */
+    private fun applyRemoteCommand(record: SyncRecord): Outcome {
+        val forThisDevice = !record.deleted && record.key.itemId.isNotEmpty() && record.key.itemId == thisDeviceId()
+        // A payload this version can't read (a newer sender) is volatile and can never matter:
+        // skip it rather than defer it for retry.
+        val fired =
+            try {
+                forThisDevice && RemoteCommands.receive(SyncPayloads.decode(record.payload), playingSessionId())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                false
+            }
+        return if (fired) Outcome.Applied else Outcome.Skipped
+    }
 
     // --- Facts about this device ---
 

@@ -69,6 +69,8 @@ fun TvCategoryGridScreen(
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onBack: () -> Unit = {},
+    /** Leaves for Home — after a remote Stop of the Live TV preview (see LiveTvSplitLayout). */
+    onHome: () -> Unit = {},
     viewModel: CategoryViewModel =
         viewModel(
             factory =
@@ -134,6 +136,7 @@ fun TvCategoryGridScreen(
         onSearchClick = onSearchClick,
         onEpgClick = onEpgClick,
         onBack = onBack,
+        onHome = onHome,
         contentType = contentType,
         initialStreamId = initialStreamId,
         showPreviewPane = showPreviewPane,
@@ -156,6 +159,7 @@ private fun CategoryGridContent(
     onSearchClick: () -> Unit,
     onEpgClick: (categoryId: String, categoryName: String) -> Unit,
     onBack: () -> Unit,
+    onHome: () -> Unit,
     contentType: String,
     initialStreamId: String? = null,
     showPreviewPane: Boolean = true,
@@ -223,6 +227,7 @@ private fun CategoryGridContent(
                         onRefreshCategories = { catViewModel.refreshCategories() },
                         onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
                         onBack = onBack,
+                        onHome = onHome,
                         initialStreamId = initialStreamId,
                     )
                 } else {

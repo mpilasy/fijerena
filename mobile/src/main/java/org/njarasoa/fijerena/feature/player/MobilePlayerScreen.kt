@@ -65,6 +65,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
+import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
@@ -106,6 +107,8 @@ fun MobilePlayerScreen(
     categoryId: String,
     contentType: String,
     onBack: () -> Unit,
+    /** Leaves the player for Home — after a remote Stop from another device of the sync group. */
+    onHome: () -> Unit,
     episodeId: String? = null,
     episodeExtension: String? = null,
     seriesId: String? = null,
@@ -151,6 +154,15 @@ fun MobilePlayerScreen(
                 StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
             }
         }
+    }
+
+    // Another device of the sync group stopped this playback: the explicit Back path below, but
+    // landing on Home. See docs/plans/20261001_live-sync-now-playing-plan.md → Remote Stop.
+    RemoteStopEffect {
+        finalizeSessionAndAwait(activityScopedViewModel.playbackState.value, loaderViewModel)
+        activityScopedViewModel.stop()
+        StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
+        onHome()
     }
 
     val scope = rememberCoroutineScope()

@@ -894,6 +894,13 @@
     <string name="live_sync_now_paused">⏸ Paused · %1$s</string>
     <string name="live_sync_now_programme">%1$s — %2$s</string>
     <string name="live_sync_now_profile">%1$s · %2$s</string>
+    <string name="live_sync_stop">Stop</string>
+    <string name="live_sync_stop_title">Stop playback on %1$s?</string>
+    <string name="live_sync_stop_message">What is playing there stops and the player closes. It can be started again right away.</string>
+    <string name="live_sync_stopping">Stopping…</string>
+    <string name="live_sync_stop_unreachable">Couldn\'t reach %1$s</string>
+    <string name="live_sync_stopped_from">Playback stopped from %1$s</string>
+    <string name="live_sync_stopped_from_another_device">another device</string>
     <string name="live_sync_leave">Leave the sync group</string>
     <string name="live_sync_leave_title">Leave the sync group?</string>
     <string name="live_sync_leave_message">This device stops syncing. Its profiles, providers, favourites and history stay on it.</string>

@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import java.util.UUID
 
 /**
  * Thrown by [StreamingPlaybackService.awaitInstance] when the service was torn down while a
@@ -69,6 +70,9 @@ class StreamingPlaybackService : MediaSessionService() {
 
     private val _currentMetadata = MutableStateFlow(PlayerMetadata())
     val currentMetadata: StateFlow<PlayerMetadata> = _currentMetadata.asStateFlow()
+
+    // A random id per playStream() — see NowPlayingSnapshot.sessionId. Empty until the first one.
+    private val playSessionId = MutableStateFlow("")
 
     private val _droppedFrames = MutableStateFlow(0L)
     val droppedFrames: StateFlow<Long> = _droppedFrames.asStateFlow()
@@ -267,8 +271,8 @@ class StreamingPlaybackService : MediaSessionService() {
     /** Feeds [nowPlaying] from this instance's metadata and state until it is released. */
     private fun publishNowPlaying(scope: CoroutineScope) {
         scope.launch {
-            combine(_currentMetadata, _playbackState) { metadata, state -> metadata to state }
-                .collect { (metadata, state) -> _nowPlaying.update { NowPlayingSnapshot.of(metadata, state, it) } }
+            combine(_currentMetadata, _playbackState, playSessionId) { metadata, state, session -> Triple(metadata, state, session) }
+                .collect { (metadata, state, session) -> _nowPlaying.update { NowPlayingSnapshot.of(metadata, state, it, session.ifEmpty { null }) } }
         }
     }
 
@@ -566,6 +570,8 @@ class StreamingPlaybackService : MediaSessionService() {
         _qualitySwitchCount.value = 0
         analyticsListener?.reset()
         _streamStartTimeMs.value = SystemClock.elapsedRealtime()
+        // A new playback: a remote Stop sent for the previous one must never stop this one.
+        playSessionId.value = UUID.randomUUID().toString()
         _currentMetadata.value = metadata
 
         // Ensure we are in fast-startup mode and buffer profile matches stream type
@@ -782,6 +788,10 @@ class StreamingPlaybackService : MediaSessionService() {
         healthMonitor?.reset()
         mediaSession?.player?.stop()
         _playbackState.value = PlaybackState.Idle
+        // The stopped player keeps its media item, so a headset Play resumes it: that is a new
+        // playback, and a remote Stop sent for the one just stopped must not reach it. Idle
+        // publishes nothing, so the new id is not shown until playback resumes.
+        playSessionId.value = UUID.randomUUID().toString()
         releaseWakeLock()
     }
 

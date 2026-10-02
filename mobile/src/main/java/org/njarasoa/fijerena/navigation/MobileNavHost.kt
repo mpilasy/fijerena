@@ -387,6 +387,7 @@ fun MobileNavHost(
                     onBack = {
                         navController.navigateUp()
                     },
+                    onHome = { navController.popBackStack(Screen.ContentTypeSelection, inclusive = false) },
                 )
             }
 
@@ -432,6 +433,7 @@ fun MobileNavHost(
                     onBack = {
                         navController.navigateUp()
                     },
+                    onHome = { navController.popBackStack(Screen.ContentTypeSelection, inclusive = false) },
                 )
             }
 

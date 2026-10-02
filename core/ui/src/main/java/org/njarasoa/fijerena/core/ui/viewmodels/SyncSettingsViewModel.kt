@@ -16,14 +16,18 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.sync.NowPlayingStore
 import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.network.sync.SyncAccountManager
 import org.njarasoa.fijerena.core.network.sync.SyncApiException
+import org.njarasoa.fijerena.core.network.sync.SyncKey
+import org.njarasoa.fijerena.core.network.sync.SyncKind
 import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
+import org.njarasoa.fijerena.core.network.sync.VolatileRecords
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
@@ -117,13 +121,58 @@ class SyncSettingsViewModel(
         }
     }
 
-    private fun ticker() =
+    private fun ticker(periodMs: Long = STALENESS_CHECK_MS) =
         flow {
             while (true) {
                 emit(System.currentTimeMillis())
-                delay(STALENESS_CHECK_MS)
+                delay(periodMs)
             }
         }
+
+    /** A remote Stop this device sent (phone app only): for which playback, and when. */
+    data class StopRequest(
+        val sessionId: String,
+        val sentAt: Long,
+    )
+
+    enum class StopState { STOPPING, UNREACHABLE }
+
+    private val stopRequests = MutableStateFlow<Map<String, StopRequest>>(emptyMap())
+
+    /**
+     * By device id, the remote Stops still waiting on their device — see [pendingStops]. Re-checked
+     * every [STOP_CHECK_MS], so "Couldn't reach" shows close to [STOP_TIMEOUT_MS].
+     */
+    val stopStates: StateFlow<Map<String, StopState>> =
+        combine(stopRequests, nowPlaying, ticker(STOP_CHECK_MS)) { requests, playing, now ->
+            // A request whose line is gone or shows another session is done: forget it.
+            val open = openStops(requests, playing)
+            if (open.size != requests.size) stopRequests.update { current -> current.filter { (id, request) -> open[id] == request } }
+            pendingStops(open, playing, now)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /**
+     * Asks [deviceId] to stop the playback it is sharing right now: queues a
+     * [SyncKind.REMOTE_COMMAND] naming that playback's session and pushes it at once. The device
+     * obeys only while that same playback is on. See
+     * docs/plans/20261001_live-sync-now-playing-plan.md → Remote Stop.
+     */
+    fun requestStop(deviceId: String) {
+        val sessionId = nowPlaying.value[deviceId]?.sessionId
+        if (sessionId != null) {
+            val me = ui.value.devices?.firstOrNull { it.current }
+            val command =
+                SyncPayloads.RemoteCommand(
+                    command = SyncPayloads.RemoteCommand.STOP,
+                    sessionId = sessionId,
+                    fromDeviceName = me?.name ?: deviceName,
+                    issuedBy = me?.id.orEmpty(),
+                )
+            VolatileRecords.outbox.put(SyncKey(SyncKind.SHARED, "", SyncKind.REMOTE_COMMAND, deviceId), SyncPayloads.encode(command))
+            stopRequests.update { it + (deviceId to StopRequest(sessionId, System.currentTimeMillis())) }
+            manager.requestSync(0)
+        }
+    }
 
     fun onServerUrlChanged(url: String) {
         ui.value = ui.value.copy(serverUrl = url.trim(), serverChecked = false, error = null)
@@ -291,6 +340,30 @@ class SyncSettingsViewModel(
         const val INVITE_POLL_MS = 3_000L
         const val STALENESS_CHECK_MS = 30_000L
         const val DEVICES_REFRESH_MS = 30_000L
+        const val STOP_CHECK_MS = 5_000L
+
+        /** How long a remote Stop may go unanswered before the row says the device couldn't be reached. */
+        const val STOP_TIMEOUT_MS = 90_000L
+
+        /** The [requests] whose device still shows the playback they named. */
+        fun openStops(
+            requests: Map<String, StopRequest>,
+            playing: Map<String, SyncPayloads.NowPlaying>,
+        ): Map<String, StopRequest> = requests.filter { (deviceId, request) -> playing[deviceId]?.sessionId == request.sessionId }
+
+        /**
+         * Each request whose device still shows the playback it named ([playing] holds only
+         * current lines): [StopState.STOPPING], then [StopState.UNREACHABLE] after
+         * [STOP_TIMEOUT_MS]. Done — dropped — once that device's line goes (stopped or stale) or
+         * names another session.
+         */
+        fun pendingStops(
+            requests: Map<String, StopRequest>,
+            playing: Map<String, SyncPayloads.NowPlaying>,
+            now: Long,
+        ): Map<String, StopState> =
+            openStops(requests, playing)
+                .mapValues { (_, request) -> if (now - request.sentAt > STOP_TIMEOUT_MS) StopState.UNREACHABLE else StopState.STOPPING }
 
         /**
          * [entries] joined to the listed, not revoked [devices] by id, keeping only what is

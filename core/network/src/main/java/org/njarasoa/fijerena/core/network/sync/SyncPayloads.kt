@@ -155,6 +155,8 @@ object SyncPayloads {
         val positionMs: Long? = null,
         val durationMs: Long? = null,
         val sentAt: Long,
+        /** The sender's playback id — what a remote Stop names. Null from a sender before Phase 4. */
+        val sessionId: String? = null,
     ) {
         companion object {
             const val PLAYING = "playing"
@@ -182,8 +184,29 @@ object SyncPayloads {
                         positionMs = snapshot.positionMs,
                         durationMs = snapshot.durationMs,
                         sentAt = sentAt,
+                        sessionId = snapshot.sessionId,
                     )
                 }
+        }
+    }
+
+    /**
+     * A command to the device the key names ([SyncKind.REMOTE_COMMAND]). The target obeys only if
+     * [sessionId] is the playback it has on right now — never by clock, so a command re-read
+     * later (a resync from 0) can't match anything. [fromDeviceName] is what the target shows
+     * ("Playback stopped from Pixel 8"); [issuedBy] is the sender's server device id — the
+     * device, not a profile: the command is from one device to another, and the id joins the
+     * devices list. Kept for diagnostics; nothing checks it (any device of the group may send).
+     */
+    @Serializable
+    data class RemoteCommand(
+        val command: String,
+        val sessionId: String,
+        val fromDeviceName: String = "",
+        val issuedBy: String = "",
+    ) {
+        companion object {
+            const val STOP = "stop"
         }
     }
 

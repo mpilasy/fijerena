@@ -41,6 +41,14 @@ class NowPlayingSnapshotTest {
     }
 
     @Test
+    fun `the session id is carried, and a new session is a change worth sending`() {
+        val first = NowPlayingSnapshot.of(movie, PlaybackState.Playing(1_000, 9_000), null, sessionId = "a")!!
+        val replayed = NowPlayingSnapshot.of(movie, PlaybackState.Playing(1_000, 9_000), first, sessionId = "b")!!
+        assertEquals("a", first.sessionId)
+        assertFalse(first.shown() == replayed.shown())
+    }
+
+    @Test
     fun `shown ignores the position`() {
         val a = NowPlayingSnapshot.of(movie, PlaybackState.Playing(1_000, 9_000), null)!!
         val b = NowPlayingSnapshot.of(movie, PlaybackState.Playing(2_000, 9_000), null)!!

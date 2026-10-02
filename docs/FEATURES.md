@@ -304,6 +304,11 @@ device; the server sees only keys and ciphertext. Off on a device until it is se
   playing — "▶ Playing · Malcolm X · Kid", "▶ Live · BBC World News — Newsday · Kid" (programme
   only when the channel has EPG), or "⏸ Paused · …". Updates within seconds of a change, refreshed
   every 60 s while playing or paused; a device silent for 3 minutes shows as idle. Sealed like every record.
+  **Remote Stop (phone app only):** a phone's devices list has **Stop** on another device's playing
+  or paused row; after a confirmation it shows "Stopping…" until that device's line clears (or
+  "Couldn't reach <device>" after ~90 s). The device obeys only for the playback it has on right
+  now (a per-playback session id, never a clock), saves the watch position as Back does, closes
+  the player for Home and shows "Playback stopped from <device>". No Stop button in the TV app.
   Design: `docs/plans/20261001_live-sync-now-playing-plan.md`.
 - Resilient by design: a record a device can't apply waits and is retried (never blocks the rest); a record the server can't accept is rejected on its own; records whose sealed timestamp or deletion flag were altered are dropped; reconnects back off; an unreadable sync link on a device resets it to unlinked rather than crashing.
 - Not synced: which profile and provider a device is using, UI scale, cellular settings, and

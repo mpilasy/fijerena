@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
@@ -68,6 +69,8 @@ fun TvPlayerScreen(
     categoryId: String,
     contentType: String,
     onBack: () -> Unit,
+    /** Leaves the player for Home — after a remote Stop from another device of the sync group. */
+    onHome: () -> Unit,
     episodeId: String? = null,
     episodeExtension: String? = null,
     seriesId: String? = null,
@@ -186,6 +189,15 @@ fun TvPlayerScreen(
             StreamingPlaybackService.getInstance()?.setPositionSaveListener(null)
             playbackViewModel.stopAndRelease()
         }
+    }
+
+    // Another device of the sync group stopped this playback: the explicit Back path (awaited
+    // finalise, so the watch position is saved, then release), but landing on Home. See
+    // docs/plans/20261001_live-sync-now-playing-plan.md → Remote Stop.
+    RemoteStopEffect {
+        finalizeSessionAndAwait(playbackViewModel.playbackState.value, loaderViewModel)
+        playbackViewModel.stopAndRelease()
+        onHome()
     }
 
     // Configure player buffer profile based on content type

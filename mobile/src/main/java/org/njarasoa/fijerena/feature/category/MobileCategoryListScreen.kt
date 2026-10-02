@@ -141,6 +141,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
+import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -169,6 +171,8 @@ fun MobileCategoryListScreen(
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
+    /** Leaves for Home — after a remote Stop of the Live TV dock. */
+    onHome: () -> Unit = {},
     viewModel: CategoryViewModel =
         viewModel(
             factory =
@@ -394,6 +398,16 @@ fun MobileCategoryListScreen(
         LaunchedEffect(dockSuccess?.streamUrl, dockSuccess?.currentEpgProgram?.title) {
             val s = dockSuccess ?: return@LaunchedEffect
             dockPlayback.updateMetadata(s.streamUrl) { it.copy(programTitle = s.currentEpgProgram?.title) }
+        }
+
+        // Another device of the sync group stopped this playback — docked or promoted to full
+        // screen alike: finalise, stop the dock as its close button does, then go Home. See
+        // docs/plans/20261001_live-sync-now-playing-plan.md → Remote Stop.
+        if (dockLoader != null) {
+            RemoteStopEffect {
+                finalizeSessionAndAwait(dockPlayback.playbackState.value, dockLoader)
+                stopDockThen(onHome)
+            }
         }
 
         // Dead-stream watchdog: stop trying rather than let a bad channel buffer in the

@@ -71,8 +71,10 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
     val (status, ui) = viewModel.state.collectAsStateWithLifecycle().value
     val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
     val shareNowPlaying by viewModel.shareNowPlaying.collectAsStateWithLifecycle()
+    val stopStates by viewModel.stopStates.collectAsStateWithLifecycle()
     var scanning by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf<SyncWire.Device?>(null) }
+    var confirmStop by remember { mutableStateOf<SyncWire.Device?>(null) }
     var confirmLeave by remember { mutableStateOf(false) }
 
     LaunchedEffect(status.linked) { if (status.linked) viewModel.loadDevices() }
@@ -133,7 +135,7 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                         onScan = { scanning = true },
                     )
                     ShareNowPlayingRow(shareNowPlaying, viewModel::setShareNowPlaying)
-                    DevicesPanel(ui.devices, nowPlaying, onRemove = { confirmRemove = it })
+                    DevicesPanel(ui.devices, nowPlaying, stopStates, onStop = { confirmStop = it }, onRemove = { confirmRemove = it })
                     CinemaOutlinedButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.live_sync_leave), color = CinemaError)
                     }
@@ -155,6 +157,18 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                 confirmRemove = null
             },
             onDismiss = { confirmRemove = null },
+        )
+    }
+    confirmStop?.let { device ->
+        ConfirmDialog(
+            title = stringResource(R.string.live_sync_stop_title, device.name),
+            message = stringResource(R.string.live_sync_stop_message),
+            confirm = stringResource(R.string.live_sync_stop),
+            onConfirm = {
+                viewModel.requestStop(device.id)
+                confirmStop = null
+            },
+            onDismiss = { confirmStop = null },
         )
     }
     if (confirmLeave) {
@@ -281,6 +295,8 @@ private fun LinkedPanel(
 private fun DevicesPanel(
     devices: List<SyncWire.Device>?,
     nowPlaying: Map<String, SyncPayloads.NowPlaying>,
+    stopStates: Map<String, SyncSettingsViewModel.StopState>,
+    onStop: (SyncWire.Device) -> Unit,
     onRemove: (SyncWire.Device) -> Unit,
 ) {
     val active = devices?.filterNot { it.revoked } ?: return
@@ -297,6 +313,23 @@ private fun DevicesPanel(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                         )
                         nowPlaying[device.id]?.let { Text(nowPlayingLine(it), style = MaterialTheme.typography.bodySmall, color = CinemaAccent) }
+                        stopStates[device.id]?.let { state ->
+                            Text(
+                                if (state == SyncSettingsViewModel.StopState.STOPPING) {
+                                    stringResource(R.string.live_sync_stopping)
+                                } else {
+                                    stringResource(R.string.live_sync_stop_unreachable, device.name)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (state == SyncSettingsViewModel.StopState.STOPPING) MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium) else CinemaError,
+                            )
+                        }
+                    }
+                    // Remote Stop — phone app only (never on TV): another device's current
+                    // playback, once it says which session it is. Hidden while a Stop is on its way.
+                    val canStop = !device.current && nowPlaying[device.id]?.sessionId != null
+                    if (canStop && stopStates[device.id] != SyncSettingsViewModel.StopState.STOPPING) {
+                        TextButton(onClick = { onStop(device) }) { Text(stringResource(R.string.live_sync_stop), color = CinemaError) }
                     }
                     if (!device.current) {
                         TextButton(onClick = { onRemove(device) }) { Text(stringResource(R.string.live_sync_device_remove), color = CinemaError) }

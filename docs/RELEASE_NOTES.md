@@ -6,6 +6,7 @@
 From `docs/plans/20261001_live-sync-now-playing-plan.md`.
 
 - **See what other devices are playing:** Settings → Live sync → Devices shows, for each device of the group, whether it is playing and what — movie, show and episode, or live channel with its current programme — and which profile is watching. Each device opts in with **Share what's playing with my sync group** (off by default, set per device, never synced). A device that stops sending for 3 minutes (switched off at the wall) shows as idle.
+- **Stop playback from the phone:** on a phone, a device that is playing or paused has a **Stop** button in the devices list (never in the TV app). After a confirmation the row shows "Stopping…"; within seconds the other device saves its watch position, closes the player for Home and shows "Playback stopped from <phone>" ("Couldn't reach <device>" after ~90 s without an answer). A Stop only ever applies to the playback it was sent for, so an old command re-read later can't stop a new one.
 - **Media session title:** the playing item's title, show and episode are now set on the media session, so the Android TV system UI and `adb shell dumpsys media_session` show what is playing.
 - No server change; older app versions ignore the new record.
 

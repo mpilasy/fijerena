@@ -459,6 +459,7 @@ fun TvNavHost(
                             // screen underneath a search/EPG-originated preview.
                             navController.popBackStack()
                         },
+                        onHome = { navController.popBackStack(Screen.ContentTypeSelection, inclusive = false) },
                     )
                 }
 
@@ -647,6 +648,7 @@ fun TvNavHost(
                         onBack = {
                             navController.navigateUp()
                         },
+                        onHome = { navController.popBackStack(Screen.ContentTypeSelection, inclusive = false) },
                     )
                 }
 

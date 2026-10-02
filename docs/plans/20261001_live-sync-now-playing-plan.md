@@ -1,6 +1,6 @@
 # Live Sync "Now Playing" Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0-3 done (2026-10-01); Phase 4 in progress. Open questions answered 2026-10-01 (see §6); remote Stop added as Phase 4.
+**Status:** ✅ **COMPLETE** — all phases landed and verified on emulators (2026-10-01)
 **Date:** 2026-10-01
 **Scope:** `core:player` (one flow), `core:network/sync`, `core:ui/sync`, TV + mobile Live sync screens, mobile-only Stop button, TV/mobile player exit on remote stop. No server change.
 
@@ -208,6 +208,56 @@ gets a newer record, keeping "Last seen" and Fix A's `lastSeen` fresh.
    Stop button anywhere in the TV app.
 6. End to end on the emulators: phone stops the TV emulator's movie within seconds; the TV's
    watch position is saved; re-syncing the TV from 0 afterwards does not stop the next playback.
+
+**Done 2026-10-01 (Phase 4, items 1-5).** As planned, with these choices:
+- **Session id** is a random UUID set in `StreamingPlaybackService.playStream` (a seamless recycle
+  or reconnect keeps it), carried by `NowPlayingSnapshot.sessionId` and the `now_playing` payload
+  (`sessionId`, null from older senders). It counts as a shown change, so a replay of the same item
+  publishes the new id (debounced like any other change).
+- **`issuedBy` is the sender's server device id** (from the devices list's current row), not a
+  profile: the command is device to device, and the id joins the devices list. Nothing checks it —
+  any device of the group may send (trust model above); it is there for diagnostics.
+  `fromDeviceName` is the sender's name as the devices list shows it.
+- **`RemoteCommands` lives in `core:network/sync`**, not `core:ui`: `SyncApplier` decides what
+  fires, and `core:network` already depends on `core:player`, so the session check reads
+  `StreamingPlaybackService.nowPlaying` there directly (both lookups are injectable for tests).
+  A command fires only when keyed to this device's id, `command == "stop"`, and its session is the
+  one playing now; each session fires at most once (a process-wide set of fired ids). Commands for
+  other devices aren't even decoded. Nothing is written to either database, and like `now_playing`
+  it is no step of the clocks.
+- **Who obeys:** a `RemoteStopEffect` composable (core:ui) in each playing screen — TV
+  `TvPlayerScreen` and `LiveTvSplitLayout`, mobile `MobilePlayerScreen` and the Live TV dock in
+  `MobileCategoryListScreen` (docked or promoted) — *claims* the stop (first claim wins), shows the
+  toast, then runs that screen's Back path (`finalizeSessionAndAwait`, then `stopAndRelease` on TV /
+  `stop` on mobile) and pops back to Home (`onHome`). The toast goes first so it outlives the screen.
+  **Fallback:** `RemoteStopFallback` (started with the app) waits 3 s; a stop nobody claimed whose
+  session is still on stops the service and shows the toast — playback with no player screen up.
+  No watch position is saved on that path (no screen to save it).
+- **TV split preview and mobile dock:** their Back doesn't finalise the session (the TV split
+  releases on leaving Live TV, the dock's Back just stops); a remote stop there finalises anyway
+  (`finalizeSessionAndAwait` before stopping), so it saves at least what Back saves. For Live TV that
+  write is only the provider's playback-stopped report and a history flush — live watch history is
+  recorded by the 10 s rule while playing, not on exit.
+- **Phone side:** `SyncSettingsViewModel.requestStop` puts the command in `VolatileRecords.outbox`
+  and calls `requestSync(0)`; the row shows "Stopping…" while that device still shows the same
+  session, "Couldn't reach <device>" after 90 s (re-checked every 5 s; Stop is offered again), and
+  nothing once its line goes (stopped or stale) or names another session (`pendingStops`, unit
+  tested). Stop only appears on rows that carry a session id — a sender on an older version can't
+  be stopped. The TV devices list has no Stop.
+- **Emulator run (item 6) passed 2026-10-01.** Stop from the phone confirmed, TV back on Home with
+  the toast in about 3 s, for the TV player (watch position saved: the resume point matched), the
+  split preview and full-screen live. An old command does not stop a new playback after a forced
+  sync pass and more than 90 s; "Couldn't reach TV" shows after about 90 s with the TV app
+  force-stopped; Last seen stays fresh; the phone as sender shows on the TV with no Stop button.
+- **Review fixes:** (1) `StreamingPlaybackService.stop()` renews the session id (a stopped player
+  keeps its media item, so a headset Play would otherwise resume under the old id and be
+  stoppable by, or hide, an old command; Idle publishes nothing, so nothing shows until playback
+  resumes); (2) `SyncSettingsViewModel` drops a stop request once its device's line is gone or
+  shows another session (`openStops`, unit tested); (3) `SyncApplier.applyRemoteCommand` skips a
+  payload that fails to decode instead of deferring it for retry (tested).
+- **Known, accepted:** a Stop that arrives after the target changed channel/item is ignored with no
+  message on the phone ("Stopping…" just clears); the 3 s fallback (no player screen) stops without
+  saving a position and, on TV, without releasing the player.
 
 ## 6. Decisions (answered 2026-10-01)
 

@@ -19,6 +19,11 @@ data class NowPlayingSnapshot(
     /** VOD only, as of the last player state change. */
     val positionMs: Long? = null,
     val durationMs: Long? = null,
+    /**
+     * This playback's id, new on every `playStream` — what a remote Stop names, so a command can
+     * only ever stop the playback it was sent for (Phase 4 of the plan).
+     */
+    val sessionId: String? = null,
 ) {
     /** Without the position: what another device shows, so what a change worth sending is. */
     fun shown(): NowPlayingSnapshot = copy(positionMs = null, durationMs = null)
@@ -36,6 +41,7 @@ data class NowPlayingSnapshot(
             metadata: PlayerMetadata,
             state: PlaybackState,
             previous: NowPlayingSnapshot?,
+            sessionId: String? = null,
         ): NowPlayingSnapshot? {
             val same = previous?.takeIf { it.sameItem(metadata) }
             val paused =
@@ -64,6 +70,7 @@ data class NowPlayingSnapshot(
                     paused = paused,
                     positionMs = progress.first.takeIf { !metadata.isLive },
                     durationMs = progress.second.takeIf { !metadata.isLive },
+                    sessionId = sessionId,
                 )
             }
         }
