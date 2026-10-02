@@ -88,16 +88,37 @@ incrementally and installs it as an update (`install -r`):
 |--------|--------|-------|
 | `scripts/deploy-tv-emulator.sh [serial]` | TV emulator | Picks the emulator with the leanback feature; checks for active playback |
 | `scripts/deploy-mobile-emulator.sh [serial]` | Phone emulator | Picks the emulator *without* leanback, so a TV emulator is never overwritten |
-| `scripts/deploy-tv-ip.sh <ip>[:port] …` | Network TVs | Asks before interrupting playback; backs up user data only per device first: `shared_prefs`, `providers.db*`, and `xtream_v2_user_data.db` (watch state, favourites and sync tables cut out of `xtream_v2.db` on the host with `sqlite3`; the catalogue is left out). `backups/*.tar.gz`, ~50 KB, kept 7 days |
+| `scripts/deploy-tv-ip.sh <ip>[:port] …` | Network TVs | Asks before interrupting playback; backs up user data per device first with `backup-app-data.sh` into `backups/*.tar.gz`, kept 7 days |
 | `scripts/deploy-mobile-usb.sh` | USB phone | No backup — make one by hand (below) |
 
 The raw `adb install` commands further down are what the scripts do, for reference.
 
 > [!CAUTION]
 > **Strict Deployment Rules:**
-> 1. **Back Up Before Installing to Real Hardware — `install -r` is NOT a guaranteed data-safe operation.** Never run `adb uninstall` or clear data to resolve deployment issues. `adb install -r` *usually* preserves Room databases, credentials, favorites, and watch state — but a signing-key mismatch (or other cause) can make it install fresh with no warning, silently wiping everything. This happened for real on 2026-09-08 across 3 household TVs with zero warning from `adb` (it reported "Success" on every device). Before installing to any real device — not an emulator — back up `shared_prefs/*`, `providers.db*` and `xtream_v2.db*` (watch state and favourites live there) first: `adb -s <serial> exec-out "run-as org.njarasoa.fijerena tar -c -C /data/data/org.njarasoa.fijerena shared_prefs databases/providers.db databases/providers.db-wal databases/providers.db-shm databases/xtream_v2.db databases/xtream_v2.db-wal databases/xtream_v2.db-shm" > backup.tar`. `scripts/deploy-tv-ip.sh` keeps only the user tables of `xtream_v2.db` (see the table above): restoring them means copying those tables back into the app's `xtream_v2.db` with the app stopped, which is not scripted yet. `scripts/deploy-mobile-usb.sh` backs up nothing. Do this every time, unprompted — user permission to deploy is not permission to skip the backup.
+> 1. **Back Up Before Installing to Real Hardware — `install -r` is NOT a guaranteed data-safe operation.** Never run `adb uninstall` or clear data to resolve deployment issues. `adb install -r` *usually* preserves Room databases, credentials, favorites, and watch state — but a signing-key mismatch (or other cause) can make it install fresh with no warning, silently wiping everything. This happened for real on 2026-09-08 across 3 household TVs with zero warning from `adb` (it reported "Success" on every device). Before installing to any real device — not an emulator — back up `shared_prefs/*`, `providers.db*` and `xtream_v2.db*` (watch state and favourites live there) first: `adb -s <serial> exec-out "run-as org.njarasoa.fijerena tar -c -C /data/data/org.njarasoa.fijerena shared_prefs databases/providers.db databases/providers.db-wal databases/providers.db-shm databases/xtream_v2.db databases/xtream_v2.db-wal databases/xtream_v2.db-shm" > backup.tar`. Simpler: `scripts/backup-app-data.sh <serial> <out.tar.gz>` backs up user data only (as `deploy-tv-ip.sh` does), and `scripts/restore-app-data.sh <serial> <backup.tar.gz>` puts it back — see Backup & restore below. `scripts/deploy-mobile-usb.sh` backs up nothing. Do this every time, unprompted — user permission to deploy is not permission to skip the backup.
 > 2. **Device Detection:** Always detect device type via `getprop ro.build.characteristics` (or inspect `product:`/`model:` in `adb devices -l`) before deploying. Never assume target identity from port numbers or IPs.
 > 3. **No Auto-Launch:** Never automatically launch the app (`am start` or monkey intents) after install. Let the user launch the app manually when ready.
+
+### Backup & restore
+
+```bash
+scripts/backup-app-data.sh  <serial> backups/<name>.tar.gz   # ~50 KB, needs sqlite3 on the host
+scripts/restore-app-data.sh <serial> backups/<name>.tar.gz   # force-stops the app first
+```
+
+A backup holds user data only: `shared_prefs`, `providers.db` (sources, profiles, guide sources,
+live sync) and `xtream_v2_user_data.db` — the `watch_state`, `favorite_state` and `sync_*` tables,
+copied out of `xtream_v2.db` on the host (its `-wal` comes off the device with it, so uncommitted
+pages aren't lost). The catalogue is left out; a sync downloads it again.
+
+Restore force-stops the app, writes the backup's prefs and `providers.db`, and replaces those tables
+inside the device's current `xtream_v2.db` (catalogue untouched), with the sync triggers held off
+(`sync_clock.applying`) and columns matched by name, so an older backup restores into a newer
+schema. The app must have been opened once since install so `xtream_v2.db` exists. Saved passwords
+don't survive an uninstall or `pm clear` either way (Keystore); the app asks for them again.
+
+Tested 2026-10-02 on the TV emulator: back up, add a favourite (60 → 61), restore → 60, the added
+one gone, watch/sync rows and the 471,796-row catalogue unchanged, `integrity_check` ok, app opens.
 
 ### 1. Emulator Targets
 
