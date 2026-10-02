@@ -27,7 +27,7 @@ When adding a Jellyfin provider, tap **Use Quick Connect** instead of entering a
 Channels organized by provider-defined categories. D-pad Up/Down switches channels without leaving the player (Xtream/Remote M3U). Toasts display channel name for 3 seconds on switch.
 
 **Preview pane (embedded playback):** Browsing Live TV always has a channel playing alongside the list, backed by the same `StreamingPlaybackService` connection used for full-screen — promoting/demoting never restarts the stream.
-- **TV:** Focus-driven split layout (`LiveTvSplitLayout`) — arrowing to a channel debounce-previews it; OK/center promotes to full-screen. Entry always lands on a real "browse" screen underneath the preview (a silently-pushed `CategoryList(showPreviewPane=false)`), so Back from the preview never exits Live TV outright.
+- **TV:** Focus-driven split layout (`LiveTvSplitLayout`) — arrowing to a channel debounce-previews it; OK/center promotes to full-screen. Entry always lands on a real "browse" screen underneath the preview (a silently-pushed `CategoryList(showPreviewPane=false)`), so Back from the preview never exits Live TV outright. Leaving the app (Home, screensaver, HDMI input switch) pauses it and, after 30 s, stops it; coming back plays the channel again at the live edge if it was playing — a pause the viewer made in full screen stays paused.
   - Channel panel shows Recent; Right switches to Favorites, Left back. A row's favourite/remove icons stay hidden until asked for with the key pointing away from the other list (Left on Recent, Right on Favorites); repeating it walks outward through them.
 - **Mobile:** Tap-driven docked mini-player — tapping a channel docks and plays it immediately above the scrollable list; tapping the dock (or its expand affordance) promotes to full-screen. The dock auto-seeds from the last-played channel on entry so Live TV never opens to a bare list. Back from full-screen collapses to the dock; Back from the dock clears it back to the bare list before a further Back leaves Live TV.
 
@@ -299,6 +299,7 @@ device; the server sees only keys and ciphertext. Off on a device until it is se
 - **Manage:** last sync, Sync now, the devices list with Remove, Leave the sync group (local data
   stays).
 - Changes reach other open devices within seconds; a closed app catches up when opened.
+- Resilient by design: a record a device can't apply waits and is retried (never blocks the rest); a record the server can't accept is rejected on its own; records whose sealed timestamp or deletion flag were altered are dropped; reconnects back off; an unreadable sync link on a device resets it to unlinked rather than crashing.
 - Not synced: which profile and provider a device is using, UI scale, cellular settings, and
   Jellyfin favourites and history (Jellyfin keeps those itself).
 
@@ -326,7 +327,8 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 - **Payload size tracking:** API response sizes shown in category grid
 - **EPG DB stats:** programme and channel counts in EPG Browser header
 - **Source labels:** EPG source name shown on each airing in EPG Browser
-- **Cellular Buffer Settings:** multiplier sliders (0.5×–3.0×) for Live and VOD profiles
+- **Cellular Buffer Settings:** multiplier sliders (0.5×–3.0×) for Live and VOD profiles (mobile)
+- **Diagnostics:** the on-device crash log and Android's record of why the app last closed (ANR, crash, low-memory kill), newest first; Share on mobile. See `docs/RUN_GUIDE.md` → Crash log and Diagnostics
 
 ---
 

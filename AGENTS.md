@@ -64,6 +64,9 @@ fijerena/
 3. **String IDs:** All media and category IDs must be `String` (not `Int`) to support diverse provider formats (UUIDs, paths, numeric IDs).
 4. **Dependency Injection:** Always use `AppContainer` (in `core:ui`) to obtain repository singletons (`MediaRepository`, `ProviderRepository`). Never manually instantiate repositories in ViewModels.
 5. **Async Initialization:** ViewModels must initialize repository dependencies asynchronously to prevent UI thread blocking during screen composition.
+6. **Long-lived scopes:** Any scope that outlives a screen (singletons, services, repositories) comes from `AppScopes.create(name, dispatcher)` (`core:player/diagnostics`), never a bare `CoroutineScope(...)` — an exception escaping a bare scope kills the process. `AppScopes` logs it and records it in `CrashLog`.
+7. **Service from Compose:** In a `LaunchedEffect`/composition-scoped coroutine use `StreamingPlaybackService.awaitInstanceOrNull()`, never bare `awaitInstance()` — its `ServiceDestroyedException` escaping a composition coroutine crashes the app.
+8. **`xtream_v2.db` holds user data:** every version bump needs a real `Migration`; the destructive fallback covers only pre-v7 files. See `docs/DATABASE_SCHEMA.md` §3.
 
 ---
 

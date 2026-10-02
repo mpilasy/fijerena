@@ -32,7 +32,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 1. **One finding (or one tight cluster) per commit.** Never mix sync-protocol, player and Compose changes.
 2. **Reproduce before fixing** every PLAUSIBLE item; downgrade or drop it if it doesn't reproduce.
 3. **Device safety.** Emulators first. **Never install, uninstall, `pm clear` or run `connectedAndroidTest` on any device — emulator or hardware — without asking first.** Back up `shared_prefs/*` and `databases/*` with `run-as tar` before any device work (`docs/RUN_GUIDE.md`). Deploy with `scripts/deploy-*.sh`, not hand-rolled gradle + adb.
-4. **Schema/protocol docs travel with the change.** Any Room migration updates `docs/DATABASE_SCHEMA.md` in the same commit. Any sync wire/crypto change updates `server/README.md` and `docs/plans/20260929_live-sync-plan.md` → Security.
+4. **Docs travel with the change** — not only the plan. User-visible or architectural changes update `docs/FEATURES.md`, `docs/NAVIGATION_GUIDE.md`, `docs/RUN_GUIDE.md`, `docs/RELEASE_NOTES.md` and AGENTS.md rules as they apply (caught late for Phases 0–3: done in one catch-up commit). **Schema/protocol docs travel with the change.** Any Room migration updates `docs/DATABASE_SCHEMA.md` in the same commit. Any sync wire/crypto change updates `server/README.md` and `docs/plans/20260929_live-sync-plan.md` → Security.
 5. **New code follows the single-return rule.** Existing early returns are *not* rewritten as part of this plan (that is `20260914_codebase-robustness-plan.md` Phases 2-3) — it is churn, not stability.
 6. **Stable dependencies only.** No RC/alpha bumps proposed here.
 

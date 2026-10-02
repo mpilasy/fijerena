@@ -1,5 +1,39 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Stability & Resilience (Phases 0–3)
+**Release Date:** 2026-10-01
+
+From `docs/plans/20261001_rock-solid-stability-resilience-plan.md` — each item verified against the
+code, most reproduced on an emulator before and after the fix.
+
+### Safety net
+- **Settings → Developer Mode → Diagnostics:** on-device crash log plus Android's record of why the app last closed (ANR, native crash, low-memory kill). Also readable over adb — see `docs/RUN_GUIDE.md`.
+- **App-wide coroutine scopes** no longer crash the app on an uncaught exception; it's logged and recorded instead.
+- **CI** (manual workflow) now runs unit tests, ktlint and the sync server tests before building APKs.
+
+### Data loss and crash loops
+- **Watch history and favourites survive a version mismatch:** `xtream_v2.db` no longer drops every table when no migration path exists; a file from a newer build (an older APK installed over a newer one) is set aside as `xtream_v2.db.v<N>.bak`.
+- **Unreadable sync link no longer crashes every launch:** the store resets and the device shows as unlinked.
+- **Player screens** no longer crash when the playback service is torn down while they wait for it.
+- **Mobile Live TV dock** stops when the toolbar's Back, Search or TV Guide leaves the screen (audio kept playing behind the next screen, even after leaving the app).
+- **Live TV** no longer freezes for good when an automatic stream reconnect fails.
+
+### Live sync
+- One record a device can't apply no longer stops it pulling (it waits and is retried); records deferred on an earlier page survive a failed later page; non-HTTP failures (captive portals) are retried and reported.
+- **Server:** an invalid record is rejected on its own instead of failing the whole batch; records clocked more than a day ahead of the server are rejected. *Takes effect once the sync server is redeployed.*
+- Oversized records no longer block every later upload; the socket reconnect backs off instead of a full sync every 5 s behind a proxy without WebSocket support; dead sockets are detected by protocol pings.
+- A record's timestamp and deletion flag are now sealed too: a server can no longer turn a record into a deletion or rewrite which write wins (compatible with older apps).
+- Applying another device's provider deletion no longer pushes its EPG-source deletions back.
+
+### Playback and lifecycle
+- **TV Live TV picks up again** after Home, the screensaver or an input switch (it came back frozen or black).
+- Provider switch from TV Settings rebuilds the screen stack (old screens stayed alive holding a closed repository).
+- Favourites and progress saved around a profile or provider switch are no longer dropped.
+- A playback service restart no longer leaves track lists and chapters empty; the final watch position on exit is always saved.
+- **Mobile player:** Back closes an open channel panel instead of leaving the player.
+
+---
+
 ## Version: User Profiles & Live Sync
 **Release Date:** 2026-10-01
 
