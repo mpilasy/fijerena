@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
@@ -83,6 +86,36 @@ class SyncSettingsViewModel(
     val nowPlaying: StateFlow<Map<String, SyncPayloads.NowPlaying>> =
         combine(ui, NowPlayingStore.devices, ticker()) { current, entries, now -> currentNowPlaying(current.devices.orEmpty(), entries, now) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    init {
+        refreshDevicesOnNewRecords()
+    }
+
+    /**
+     * The list's "Last seen" ages while the screen is open, and [NowPlayingStore.Entry.isCurrent]
+     * leans on it: so when a newer record arrives, reload the list, at most once per
+     * [DEVICES_REFRESH_MS] (conflate keeps the latest while waiting). Best effort.
+     */
+    private fun refreshDevicesOnNewRecords() {
+        viewModelScope.launch {
+            NowPlayingStore.devices
+                .map { entries -> entries.mapValues { it.value.hlc } }
+                .distinctUntilChanged()
+                .conflate()
+                .collect {
+                    if (ui.value.devices != null && manager.status.value.linked) {
+                        try {
+                            loadDevicesNow()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // Best effort: the list just stays as it was.
+                        }
+                        delay(DEVICES_REFRESH_MS)
+                    }
+                }
+        }
+    }
 
     private fun ticker() =
         flow {
@@ -257,10 +290,11 @@ class SyncSettingsViewModel(
         const val INVITE_TTL_MS = 10 * 60 * 1000L
         const val INVITE_POLL_MS = 3_000L
         const val STALENESS_CHECK_MS = 30_000L
+        const val DEVICES_REFRESH_MS = 30_000L
 
         /**
          * [entries] joined to the listed, not revoked [devices] by id, keeping only what is
-         * current at [now] (see [NowPlayingStore.Entry.isCurrent]): a record of a device no
+         * current at [now] (see [NowPlayingStore.Entry.isCurrent], given the device's server `lastSeen`): a record of a device no
          * longer listed is never shown.
          */
         fun currentNowPlaying(
@@ -270,7 +304,7 @@ class SyncSettingsViewModel(
         ): Map<String, SyncPayloads.NowPlaying> =
             devices
                 .filterNot { it.revoked }
-                .mapNotNull { device -> entries[device.id]?.takeIf { it.isCurrent(now) }?.let { device.id to it.nowPlaying } }
+                .mapNotNull { device -> entries[device.id]?.takeIf { it.isCurrent(now, device.lastSeen) }?.let { device.id to it.nowPlaying } }
                 .toMap()
     }
 

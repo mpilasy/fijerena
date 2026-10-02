@@ -21,14 +21,21 @@ object NowPlayingStore {
         val receivedAt: Long,
     ) {
         /**
-         * Playing or paused, and recent by both clocks: the sender's [SyncPayloads.NowPlaying.sentAt]
-         * catches an old record arriving late (a catch-up pull), this device's [receivedAt] a
-         * sender whose clock runs ahead and has gone quiet.
+         * Playing or paused, and not stale. [receivedAt] (this clock) guards a sender whose clock
+         * runs ahead and has gone quiet. The sender's [SyncPayloads.NowPlaying.sentAt] catches an
+         * old record arriving late (a catch-up pull) — but TV clocks are often wrong, so a record
+         * that looks old by it still counts when the server saw the device within the window:
+         * [lastSeen] is the server's last-seen time for that device (server clock, from the
+         * devices list). A device switched off long ago has an old [lastSeen], so its stale
+         * record stays hidden.
          */
-        fun isCurrent(now: Long): Boolean =
+        fun isCurrent(
+            now: Long,
+            lastSeen: Long? = null,
+        ): Boolean =
             nowPlaying.state != SyncPayloads.NowPlaying.STOPPED &&
-                now - nowPlaying.sentAt <= STALE_AFTER_MS &&
-                now - receivedAt <= STALE_AFTER_MS
+                now - receivedAt <= STALE_AFTER_MS &&
+                (now - nowPlaying.sentAt <= STALE_AFTER_MS || (lastSeen != null && now - lastSeen <= STALE_AFTER_MS))
     }
 
     private val _devices = MutableStateFlow<Map<String, Entry>>(emptyMap())

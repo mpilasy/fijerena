@@ -1,6 +1,6 @@
 # Live Sync "Now Playing" Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0-2 built and unit-tested (2026-10-01); Phase 3 (emulators) running; Phase 4 not started. Open questions answered 2026-10-01 (see §6); remote Stop added as Phase 4.
+**Status:** 🚧 **IN PROGRESS** — Phases 0-3 done (2026-10-01); Phase 4 in progress. Open questions answered 2026-10-01 (see §6); remote Stop added as Phase 4.
 **Date:** 2026-10-01
 **Scope:** `core:player` (one flow), `core:network/sync`, `core:ui/sync`, TV + mobile Live sync screens, mobile-only Stop button, TV/mobile player exit on remote stop. No server change.
 
@@ -86,8 +86,8 @@ Today the devices list only shows each device's last-seen time.
 - TV `SyncSettingsScreen.kt` `DevicesPanel` (`:237`) and mobile `MobileSyncSettingsScreen.kt`
   `DevicesPanel` (`:275`). Strings in en/fr (mg falls back, like the rest of Live sync).
 - **Freshness while looking:** the phone is in the foreground on that screen, so its WebSocket is
-  open and a heartbeat lands within seconds. Opening the app later triggers the usual catch-up
-  pass, which brings the latest heartbeat (≤ 60 s old) straight away.
+  open and a heartbeat lands within seconds. After the phone app restarts the line returns at the
+  next heartbeat (≤ 60 s), not straight away: the store is in memory only.
 
 ### 3.4 Cleanup
 
@@ -175,8 +175,8 @@ provider name, so the item title is used as the channel. The share switch is the
 **Done 2026-10-01 (Phase 2).** `SyncApplier` routes `NOW_PLAYING` to `NowPlayingStore` and leaves
 volatile kinds out of the clock `receive()`, so nothing is written to either database (tested with
 mocked databases). A record is current only if it is playing/paused and both `now - sentAt` and
-`now - receivedAt` are ≤ 3 min — the second guards a sender whose clock runs ahead; known limit: a
-sender more than 3 min *behind* never shows. Stopping on **Leave** lives in
+`now - receivedAt` are ≤ 3 min — the second guards a sender whose clock runs ahead; a sender whose
+clock is more than 3 min *behind* is handled by the Phase 3 fix. Stopping on **Leave** lives in
 `SyncSettingsViewModel.leave()` (queue `stopped`, flush, leave, clear the store) because
 `core:network` can't reach the publisher.
 
@@ -185,6 +185,17 @@ Two emulators linked through a local `workerd` server (`server/` test harness, a
 stability plan's Phase 2): play on the TV emulator, watch the phone emulator's devices list —
 starts within seconds, follows a channel change, shows paused, goes idle on stop, and goes stale
 3 minutes after force-stopping the TV app. Then on the real devices with permission.
+
+**Done 2026-10-01 (Phase 3).** All 7 emulator checks passed: live within ~3 s including the EPG
+programme; one push for 3 quick zaps; a movie playing → paused within 2 s; Back clears at once;
+force-stop makes the line disappear after 3 min 7 s; share off publishes nothing; the media session
+shows titles. Two fixes came out of the run: (A) a TV whose clock is more than 3 min slow never
+showed, so `Entry.isCurrent(now, lastSeen)` now also accepts a record that looks old by the
+sender's `sentAt` when the server's `lastSeen` for that device (devices list, server clock) is
+within 3 min — an old record of a device switched off long ago has an old `lastSeen` and stays
+hidden, and `receivedAt` > 3 min hides regardless; (B) the devices list was only loaded on open, so
+`SyncSettingsViewModel` now reloads it (best effort, at most once per 30 s) when `NowPlayingStore`
+gets a newer record, keeping "Last seen" and Fix A's `lastSeen` fresh.
 
 ### Phase 4 — Remote Stop (phone app only)
 1. `sessionId` in `NowPlayingSnapshot` / the `now_playing` payload, new per `playStream`.

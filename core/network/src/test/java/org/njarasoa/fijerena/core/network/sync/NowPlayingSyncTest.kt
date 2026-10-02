@@ -81,6 +81,15 @@ class NowPlayingSyncTest {
         // A sender whose clock runs an hour ahead, quiet since.
         assertFalse(entry(SyncPayloads.NowPlaying.PLAYING, sentAt = now + 3_600_000, receivedAt = now - NowPlayingStore.STALE_AFTER_MS - 1).isCurrent(now))
         assertFalse(entry(SyncPayloads.NowPlaying.STOPPED, sentAt = now).isCurrent(now))
+        // A sender whose clock is 10 min slow: shown while the server saw it recently...
+        val slow = entry(SyncPayloads.NowPlaying.PLAYING, sentAt = now - 600_000)
+        assertTrue(slow.isCurrent(now, lastSeen = now - 10_000))
+        // ...hidden when the server has not (an old record from a long-off device).
+        assertFalse(slow.isCurrent(now, lastSeen = now - NowPlayingStore.STALE_AFTER_MS - 1))
+        assertFalse(slow.isCurrent(now, lastSeen = null))
+        // Nothing received for 3 min is hidden whatever the server saw.
+        val quiet = entry(SyncPayloads.NowPlaying.PLAYING, sentAt = now - 600_000, receivedAt = now - NowPlayingStore.STALE_AFTER_MS - 1)
+        assertFalse(quiet.isCurrent(now, lastSeen = now))
     }
 
     @Test
