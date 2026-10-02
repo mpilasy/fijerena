@@ -38,6 +38,22 @@ jobs:
       - name: Lint
         run: ./gradlew ktlintCheck
 
+      # docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-20, F-33.
+      - name: User-data databases have no blanket destructive fallback
+        run: |
+          if grep -rnE 'fallbackToDestructiveMigration(OnDowngrade)?\(' --include='*.kt' core/network/src/main | grep -v 'EpgIndexDatabase'; then
+            echo "xtream_v2.db / providers.db hold user data: use fallbackToDestructiveMigrationFrom(<pre-user-data versions>) only."
+            exit 1
+          fi
+
+      - name: Room schemas are committed and current
+        run: |
+          if [ -n "$(git status --porcelain -- core/network/schemas)" ]; then
+            git status --porcelain -- core/network/schemas
+            echo "The build changed a Room schema: bump the database version, add its Migration, and commit core/network/schemas/."
+            exit 1
+          fi
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

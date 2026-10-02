@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): F-35, F-28 done. Phases 5-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): F-35, F-28, F-33 (reduced) done; F-14 next. Phases 5-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -260,6 +260,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `exportSchema = false` in `XtreamDatabase.kt:28`, `SettingsDatabase.kt:24`, `EpgIndexDatabase.kt:22`; `XtreamDatabaseMigrationTest` is `androidTest` and never run by CI.
 - **Mechanism:** Hand-written migration SQL that drifts from the entity fails Room's validation at open → `IllegalStateException` → crash loop on upgrade (or, for `xtream_v2.db` today, F-20's wipe).
 - **Fix:** Export schemas for `XtreamDatabase` and `SettingsDatabase`, commit them, and migrate tests to `MigrationTestHelper` + Robolectric so they run in the JVM unit-test gate. (`EpgIndexDatabase` is a rebuildable cache — destructive fallback is fine there.)
+- **Done 2026-10-01, reduced as agreed:** both databases export their schema (KSP `room.schemaLocation` → `core/network/schemas/`, `XtreamDatabase/24.json`, `SettingsDatabase/15.json` committed). The manual CI workflow gains two gates: no blanket `fallbackToDestructiveMigration(` in the user-data databases, and no uncommitted change under `core/network/schemas/` after the build (an entity changed without a version bump). Not done: converting the migration tests to `MigrationTestHelper` + Robolectric — history starts at v24/v15, so only future migrations can be tested against it.
 
 #### 🆕 F-34: `EpgSyncWorker` calls `setForeground()` outside its error handling [P2, PLAUSIBLE]
 - **Where:** `core/network/.../xmltv/EpgSyncWorker.kt:57-58`.
@@ -319,7 +320,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 7. **F-19** mobile player Back closes panels. ✅
 
 ### Phase 4 — Storage hardening
-1. **F-33** export schemas; `MigrationTestHelper` in JVM tests.
+1. **F-33** export schemas + CI gates (no Robolectric conversion — reduced as agreed). ✅
 2. **F-14** crash-safe profile deletion order + startup resume.
 3. **F-13** favourite `StateFlow` snapshot; remove `runBlocking`.
 4. **F-35** no automatic `VACUUM`; catalogue deletes batched (no migration needed — `auto_vacuum = FULL` already). ✅

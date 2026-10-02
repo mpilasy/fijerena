@@ -21,7 +21,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.SyncClockEntity
         SyncClockEntity::class,
     ],
     version = 15,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class SettingsDatabase : RoomDatabase() {
     abstract fun providerDao(): ProviderDao

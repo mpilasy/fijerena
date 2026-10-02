@@ -2,6 +2,8 @@
 
 This document details the complete database schema for the Fijerena application, including Room SQLite databases and structured SharedPreferences storage.
 
+Room's own exported schema for `xtream_v2.db` and `providers.db` is committed under `core/network/schemas/` (one JSON per version, from `xtream_v2.db` v24 and `providers.db` v15 on). This document is the prose; those files are the exact shape Room validates against.
+
 ---
 
 ## 1. Settings Database (`providers.db`)

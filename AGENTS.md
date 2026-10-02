@@ -292,6 +292,8 @@ A migration means any of: a new `MIGRATION_n_n+1`, a version bump, a new entity,
 - any new SharedPreferences key the migration introduces, especially one-time backfill/purge flags (`watch_state_migrated_v1`, `favorites_migrated_v1`), in the scalar-keys table of §4;
 - when a migration replaces a SharedPreferences blob: remove that key from the §4 table and add a **Retired:** note naming the table that now owns it and the backfill hook that copies it.
 
+**Commit the generated Room schema too.** `xtream_v2.db` and `providers.db` export their schema (`exportSchema = true`, KSP `room.schemaLocation`) to `core/network/schemas/<database class>/<version>.json`. The build writes the new version's file; commit it with the migration. CI fails if a build leaves an uncommitted change there (an entity changed without a version bump) or finds a blanket `fallbackToDestructiveMigration(` in either database. History starts at `xtream_v2.db` v24 / `providers.db` v15 — older versions have no JSON.
+
 ---
 
 ### Plans

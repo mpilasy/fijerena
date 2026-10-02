@@ -25,7 +25,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.execPragma
         SyncClockEntity::class,
     ],
     version = XtreamDatabase.DB_VERSION,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class XtreamDatabase : RoomDatabase() {
     abstract fun categoryDao(): XtreamCategoryDao
