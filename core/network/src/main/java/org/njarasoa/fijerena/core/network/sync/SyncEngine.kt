@@ -5,6 +5,7 @@ import android.util.Log
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
@@ -115,9 +116,14 @@ class SyncEngine(
         crypto: SyncCrypto,
     ): Int {
         val local = LocalRecords(context)
+        val clock = SettingsDatabase.getInstance(context).settingsSyncDao()
         var pushed = 0
+        // Volatile records (now playing) have no version row: they ride with the first batch,
+        // stamped now — a handful at most, well inside the server's 500-record batch limit.
+        var volatile = VolatileRecords.outbox.take { clock.nextClock() }
         while (true) {
-            val outgoing = local.pending(PUSH_BATCH)
+            val outgoing = volatile + local.pending(PUSH_BATCH)
+            volatile = emptyList()
             if (outgoing.isEmpty()) break
             val encoded = outgoing.map { it to SyncCodec.encode(it.record, crypto) }
             // The server refuses payloads over its limit. Sending one anyway used to fail the whole

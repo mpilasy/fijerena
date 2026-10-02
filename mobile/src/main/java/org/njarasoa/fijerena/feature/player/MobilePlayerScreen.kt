@@ -452,6 +452,7 @@ fun MobilePlayerContent(
                         showTitle = state.seriesName,
                         episodeLabel = state.episodeLabel,
                         logoUrl = state.logoUrl,
+                        programTitle = state.currentEpgProgram?.title,
                     )
                 viewModel.playStream(metadata, state.resumePosition)
 
@@ -485,7 +486,13 @@ fun MobilePlayerContent(
     // whatever was known at that instant — almost always still null. Patch them into the OSD's
     // metadata as they land, without touching playback (see PlaybackViewModel.updateMetadata).
     val enrichedState = streamState as? StreamLoaderViewModel.StreamState.Success
-    LaunchedEffect(enrichedState?.seriesName, enrichedState?.episodeLabel, enrichedState?.logoUrl, enrichedState?.description) {
+    LaunchedEffect(
+        enrichedState?.seriesName,
+        enrichedState?.episodeLabel,
+        enrichedState?.logoUrl,
+        enrichedState?.description,
+        enrichedState?.currentEpgProgram?.title,
+    ) {
         if (enrichedState != null) {
             viewModel.updateMetadata(enrichedState.streamUrl) {
                 it.copy(
@@ -493,6 +500,7 @@ fun MobilePlayerContent(
                     episodeLabel = enrichedState.episodeLabel,
                     logoUrl = enrichedState.logoUrl,
                     description = enrichedState.description,
+                    programTitle = enrichedState.currentEpgProgram?.title,
                 )
             }
         }

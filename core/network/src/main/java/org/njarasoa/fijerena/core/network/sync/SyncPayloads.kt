@@ -8,6 +8,7 @@ import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
+import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 
 /**
  * The payload of each [SyncKind], as it travels in [SyncRecord.payload]: only what another device
@@ -136,6 +137,55 @@ object SyncPayloads {
     data class Setting(
         val value: JsonPrimitive,
     )
+
+    /**
+     * What a device is playing ([SyncKind.NOW_PLAYING]). [sentAt] is the sender's wall clock, for
+     * staleness: a device switched off at the wall never sends [STOPPED].
+     */
+    @Serializable
+    data class NowPlaying(
+        val state: String,
+        val title: String = "",
+        val showTitle: String? = null,
+        val episodeLabel: String? = null,
+        val isLive: Boolean = false,
+        val channelName: String? = null,
+        val programTitle: String? = null,
+        val profileName: String = "",
+        val positionMs: Long? = null,
+        val durationMs: Long? = null,
+        val sentAt: Long,
+    ) {
+        companion object {
+            const val PLAYING = "playing"
+            const val PAUSED = "paused"
+            const val STOPPED = "stopped"
+
+            /** [snapshot] null: nothing is playing. */
+            fun of(
+                snapshot: NowPlayingSnapshot?,
+                profileName: String,
+                sentAt: Long,
+            ): NowPlaying =
+                if (snapshot == null) {
+                    NowPlaying(state = STOPPED, profileName = profileName, sentAt = sentAt)
+                } else {
+                    NowPlaying(
+                        state = if (snapshot.paused) PAUSED else PLAYING,
+                        title = snapshot.title,
+                        showTitle = snapshot.showTitle,
+                        episodeLabel = snapshot.episodeLabel,
+                        isLive = snapshot.isLive,
+                        channelName = snapshot.channelName,
+                        programTitle = snapshot.programTitle,
+                        profileName = profileName,
+                        positionMs = snapshot.positionMs,
+                        durationMs = snapshot.durationMs,
+                        sentAt = sentAt,
+                    )
+                }
+        }
+    }
 
     inline fun <reified T> encode(value: T): String = json.encodeToString(value)
 

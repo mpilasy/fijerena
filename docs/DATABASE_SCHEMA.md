@@ -554,6 +554,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 |-----|------|-------------|
 | `dev_mode_<profileId>` | BOOLEAN | Toggles developer features for that profile (absent = off). Replaced the install-wide `dev_mode`, copied to every profile on upgrade |
 | `active_profile_id` | TEXT | Profile using this device; absent means `default`. Per device, never synced |
+| `share_now_playing` | BOOLEAN | Live sync: publish what this device is playing to its sync group (default off). Per device, never synced — see `docs/plans/20261001_live-sync-now-playing-plan.md` |
 | `theme_id` | TEXT | Current dark theme variant (default `deep_night`) |
 | `ui_style_id` | TEXT | Look-and-feel preset, independent of color (default `material`) |
 | `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0) |

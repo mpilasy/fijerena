@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.njarasoa.fijerena.core.player.R
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.player.config.AdaptiveLoadControl
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
+import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
@@ -259,6 +261,15 @@ class StreamingPlaybackService : MediaSessionService() {
         // already acquires it itself the moment playback actually goes active — see
         // onWakeLockRequired below, fired from onIsPlayingChanged/onPlayWhenReadyChanged.
         observeNetworkChanges()
+        serviceScope?.let(::publishNowPlaying)
+    }
+
+    /** Feeds [nowPlaying] from this instance's metadata and state until it is released. */
+    private fun publishNowPlaying(scope: CoroutineScope) {
+        scope.launch {
+            combine(_currentMetadata, _playbackState) { metadata, state -> metadata to state }
+                .collect { (metadata, state) -> _nowPlaying.update { NowPlayingSnapshot.of(metadata, state, it) } }
+        }
     }
 
     private fun observeNetworkChanges() {
@@ -1099,6 +1110,8 @@ class StreamingPlaybackService : MediaSessionService() {
             if (instance === this) {
                 serviceStartRequested.set(false)
                 instance = null
+                // The collector feeding it died with serviceScope above, before it could see Idle.
+                _nowPlaying.value = null
                 // Any caller already suspended in awaitInstance() holds a reference to *this*
                 // deferred, not the field below — reassigning the field alone leaves them awaiting
                 // an object nobody will ever complete again if the service doesn't restart.
@@ -1523,6 +1536,15 @@ class StreamingPlaybackService : MediaSessionService() {
         private val serviceStartRequested = java.util.concurrent.atomic.AtomicBoolean(false)
 
         fun getInstance(): StreamingPlaybackService? = instance
+
+        private val _nowPlaying = MutableStateFlow<NowPlayingSnapshot?>(null)
+
+        /**
+         * What is playing on this device, null when nothing is — process-wide, so it outlives
+         * service instances. Live sync's "now playing" publisher (core:ui) collects it: this
+         * module can't depend on sync. See docs/plans/20261001_live-sync-now-playing-plan.md.
+         */
+        val nowPlaying: StateFlow<NowPlayingSnapshot?> = _nowPlaying.asStateFlow()
 
         /** Atomically claims the right to call startService(). Returns false if already claimed. */
         fun tryClaimStart(): Boolean = serviceStartRequested.compareAndSet(false, true)

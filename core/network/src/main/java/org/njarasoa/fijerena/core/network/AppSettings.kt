@@ -45,6 +45,7 @@ class AppSettings(
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
         private const val KEY_LANGUAGE = "app_language"
+        private const val KEY_SHARE_NOW_PLAYING = "share_now_playing"
         private const val KEY_LAST_SHRINK_AT_MS = "last_shrink_at_ms"
         private const val KEY_LAST_SHRINK_DURATION_MS = "last_shrink_duration_ms"
         private const val KEY_LAST_SHRINK_ROWS_REMOVED = "last_shrink_rows_removed"
@@ -78,6 +79,15 @@ class AppSettings(
     var activeProfileId: String
         get() = prefs.getString(KEY_ACTIVE_PROFILE_ID, null) ?: ProfileEntity.DEFAULT_ID
         set(value) = prefs.edit { putString(KEY_ACTIVE_PROFILE_ID, value) }
+
+    /**
+     * Whether live sync tells the group what this device is playing. Per device — not per profile
+     * and never synced (not in [SYNCED_SETTING_KEYS]): turning it on for the kids' TV must not turn
+     * it on everywhere. Off until turned on. See docs/plans/20261001_live-sync-now-playing-plan.md.
+     */
+    var shareNowPlaying: Boolean
+        get() = prefs.getBoolean(KEY_SHARE_NOW_PLAYING, false)
+        set(value) = prefs.edit { putBoolean(KEY_SHARE_NOW_PLAYING, value) }
 
     /**
      * Developer mode of the active profile — each profile has its own, off until turned on. See

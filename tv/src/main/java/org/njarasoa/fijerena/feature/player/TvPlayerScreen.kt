@@ -159,6 +159,7 @@ fun TvPlayerScreen(
                                     showTitle = success.seriesName,
                                     episodeLabel = success.episodeLabel,
                                     logoUrl = success.logoUrl,
+                                    programTitle = success.currentEpgProgram?.title,
                                 ),
                                 lastKnownPositionMs ?: success.resumePosition,
                             )
@@ -220,6 +221,7 @@ fun TvPlayerScreen(
                     showTitle = state.seriesName,
                     episodeLabel = state.episodeLabel,
                     logoUrl = state.logoUrl,
+                    programTitle = state.currentEpgProgram?.title,
                 )
             playbackViewModel.playStream(metadata, state.resumePosition)
 
@@ -255,7 +257,13 @@ fun TvPlayerScreen(
     // whatever was known at that instant — almost always still null. Patch them into the OSD's
     // metadata as they land, without touching playback (see PlaybackViewModel.updateMetadata).
     val enrichedState = streamState as? StreamLoaderViewModel.StreamState.Success
-    LaunchedEffect(enrichedState?.seriesName, enrichedState?.episodeLabel, enrichedState?.logoUrl, enrichedState?.description) {
+    LaunchedEffect(
+        enrichedState?.seriesName,
+        enrichedState?.episodeLabel,
+        enrichedState?.logoUrl,
+        enrichedState?.description,
+        enrichedState?.currentEpgProgram?.title,
+    ) {
         if (enrichedState != null) {
             playbackViewModel.updateMetadata(enrichedState.streamUrl) {
                 it.copy(
@@ -263,6 +271,7 @@ fun TvPlayerScreen(
                     episodeLabel = enrichedState.episodeLabel,
                     logoUrl = enrichedState.logoUrl,
                     description = enrichedState.description,
+                    programTitle = enrichedState.currentEpgProgram?.title,
                 )
             }
         }

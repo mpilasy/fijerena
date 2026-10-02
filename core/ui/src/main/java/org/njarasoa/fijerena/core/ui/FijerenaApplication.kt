@@ -29,6 +29,7 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.network.NetworkModule
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 
 class FijerenaApplication :
@@ -59,6 +60,8 @@ class FijerenaApplication :
         ProviderSyncManager.getInstance(this).initialize()
         // Live sync between devices, while the app is in use — a no-op until this device is linked.
         SyncManager.getInstance(this).start()
+        // What this device plays, for the group's devices lists — sends nothing until turned on.
+        NowPlayingPublisher.getInstance(this).start()
         // One-time moves of each provider's category filters and the install-wide dev-mode flag to
         // every profile, and the install-wide search history to the default profile — see
         // ProviderRepository.migrateCategoryFiltersToProfiles().

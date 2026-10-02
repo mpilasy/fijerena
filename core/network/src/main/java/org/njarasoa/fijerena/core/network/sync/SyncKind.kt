@@ -28,6 +28,18 @@ object SyncKind {
     /** One setting; keyed by its `app_settings` key. Per profile for dev mode, [SHARED] otherwise. */
     const val SETTING = "setting"
 
+    /**
+     * What a device is playing right now; keyed by its server device id. Volatile — see [VOLATILE]
+     * and `docs/plans/20261001_live-sync-now-playing-plan.md`.
+     */
+    const val NOW_PLAYING = "now_playing"
+
+    /**
+     * Kinds held only in memory, on both ends: pushed from [VolatileRecords], applied to an
+     * in-memory store — never a version row, a tombstone, or a step of the receiver's sync clocks.
+     */
+    val VOLATILE = setOf(NOW_PLAYING)
+
     /** The profile slot of anything the whole household shares. */
     const val SHARED = "shared"
 

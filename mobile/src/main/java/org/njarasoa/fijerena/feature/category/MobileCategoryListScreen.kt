@@ -382,10 +382,18 @@ fun MobileCategoryListScreen(
                         streamUrl = s.streamUrl,
                         isLive = s.isLive,
                         headers = s.streamHeaders,
+                        programTitle = s.currentEpgProgram?.title,
                     ),
                     s.resumePosition,
                 )
             }
+        }
+
+        // The guide lookup lands after playback started, and the programme rolls over while it
+        // plays: patch it into what is playing, for live sync's "now playing".
+        LaunchedEffect(dockSuccess?.streamUrl, dockSuccess?.currentEpgProgram?.title) {
+            val s = dockSuccess ?: return@LaunchedEffect
+            dockPlayback.updateMetadata(s.streamUrl) { it.copy(programTitle = s.currentEpgProgram?.title) }
         }
 
         // Dead-stream watchdog: stop trying rather than let a bad channel buffer in the

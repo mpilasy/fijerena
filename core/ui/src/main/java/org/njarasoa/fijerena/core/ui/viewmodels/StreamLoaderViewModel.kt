@@ -291,6 +291,7 @@ class StreamLoaderViewModel(
                     loadJob =
                         viewModelScope.launch(Dispatchers.IO) {
                             enrichStreamMetadata(streamId, streamName, activeStreams)
+                            if (contentType == ContentType.LIVE_TV) followProgrammes(streamId, streamName, activeStreams)
                         }
                 },
                 onFailure = { error ->
@@ -384,6 +385,23 @@ class StreamLoaderViewModel(
                     episodeLabel = episodeLabel,
                     nextEpisode = nextEpisode,
                 )
+        }
+    }
+
+    /**
+     * Live TV: looks the guide up again once the programme on air ends, so the OSD — and, through
+     * the player's metadata, live sync's "now playing" — roll over with it. Runs inside [loadJob],
+     * so a channel change or leaving the player ends it.
+     */
+    private suspend fun followProgrammes(
+        streamId: String,
+        streamName: String,
+        currentStreams: List<MediaItem>,
+    ) {
+        while (true) {
+            val endsAtSec = ((_state.value as? StreamState.Success)?.takeIf { it.streamId == streamId }?.currentEpgProgram?.endTime) ?: break
+            delay((endsAtSec * 1000 - System.currentTimeMillis()).coerceAtLeast(0L) + PROGRAMME_ROLLOVER_MARGIN_MS)
+            enrichStreamMetadata(streamId, streamName, currentStreams)
         }
     }
 
@@ -677,6 +695,9 @@ class StreamLoaderViewModel(
         }
     }
 }
+
+/** After a programme's end time, so the guide lookup lands on the next one. */
+private const val PROGRAMME_ROLLOVER_MARGIN_MS = 5_000L
 
 @OptIn(UnstableApi::class)
 private class FinalizeSessionSnapshot(

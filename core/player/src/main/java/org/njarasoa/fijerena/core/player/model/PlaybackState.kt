@@ -52,6 +52,9 @@ data class PlayerMetadata(
     // TMDB's transparent-PNG wordmark art for this title, if any — the OSD renders this image
     // in place of [showTitle]/[title] as text when present.
     val logoUrl: String? = null,
+    // Live TV: the EPG programme on air, once the guide lookup resolves and as it rolls over.
+    // Null for VOD and for channels without guide data. Only live sync's "now playing" reads it.
+    val programTitle: String? = null,
 )
 
 data class AudioTrackInfo(

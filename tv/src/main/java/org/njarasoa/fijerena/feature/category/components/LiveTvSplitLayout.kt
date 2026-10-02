@@ -296,6 +296,13 @@ internal fun LiveTvSplitLayout(
         }
     }
 
+    // The guide lookup lands after playback started, and the programme rolls over while it plays:
+    // patch it into what is playing, for live sync's "now playing" (see PlaybackViewModel.updateMetadata).
+    LaunchedEffect(success?.streamUrl, success?.currentEpgProgram?.title) {
+        val s = success ?: return@LaunchedEffect
+        playback.updateMetadata(s.streamUrl) { it.copy(programTitle = s.currentEpgProgram?.title) }
+    }
+
     // Dead-stream watchdog: stop trying rather than let a bad channel buffer in the background
     // indefinitely (background churn on a preview stream caused periodic main-thread ANRs).
     LaunchedEffect(success?.streamId) {
@@ -693,4 +700,5 @@ private fun previewMetadata(s: StreamLoaderViewModel.StreamState.Success) =
         streamUrl = s.streamUrl,
         isLive = s.isLive,
         headers = s.streamHeaders,
+        programTitle = s.currentEpgProgram?.title,
     )

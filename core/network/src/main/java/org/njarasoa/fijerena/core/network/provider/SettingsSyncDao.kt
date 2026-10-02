@@ -28,6 +28,13 @@ interface SettingsSyncDao {
         itemKey: String,
     )
 
+    /** The next tick of the sync clock, for a record with no version row ([org.njarasoa.fijerena.core.network.sync.VolatileRecords]). */
+    @Transaction
+    suspend fun nextClock(): Long {
+        tick()
+        return clock()
+    }
+
     /** Queues one key at the next tick of the sync clock. */
     @Transaction
     suspend fun queue(

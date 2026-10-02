@@ -155,6 +155,17 @@ is playing. Useful for debugging on its own; not needed for the feature.
 5. `SyncEngine.push` sends the publisher's pending record; tests for encode/decode and that a
    heartbeat's `updatedAt` always increases.
 
+**Done 2026-10-01 (Phases 0-1).** As planned, with these choices: the volatile outbox is generic
+(`VolatileRecords`, keyed by `SyncKey`; `SyncKind.VOLATILE` lists the kinds — Phase 4 adds
+`REMOTE_COMMAND` there), stamped from `SettingsSyncDao.nextClock()` so a key's `updatedAt` always
+rises, and an entry is dropped only after the push that took it succeeds. A heartbeat is also sent
+while **paused**, so a paused TV switched off at the wall goes stale too. The live programme is
+patched from the four screens that play live (TV player, TV split preview, mobile player, mobile
+dock) through `updateMetadata`, since `StreamLoaderViewModel` has no `PlaybackViewModel`; it
+re-reads the guide when the programme ends (`followProgrammes()`). On mobile `channelName` holds the
+provider name, so the item title is used as the channel. The share switch is the device pref
+`share_now_playing`; switching it off sends `stopped` only if this process shared something.
+
 ### Phase 2 — Receiver and UI
 1. `SyncApplier`: `NOW_PLAYING` → `NowPlayingStore`; no version, no tombstone. Test that it never
    writes to either database.
