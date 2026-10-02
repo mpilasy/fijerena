@@ -32,6 +32,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
     lint {
+        baseline = file("lint-baseline.xml")
         disable.add("UnsafeOptInUsageError")
     }
     testOptions {

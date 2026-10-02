@@ -1,0 +1,2798 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.4.1" type="baseline" client="gradle" dependencies="false" name="AGP (9.4.1)" variant="all" version="9.4.1">
+
+    <issue
+        id="AppBundleLocaleChanges"
+        message="Found dynamic locale changes, but did not find corresponding Play Core library calls for downloading languages and splitting by language is not disabled in the `bundle` configuration"
+        errorLine1="        config.setLocale(locale)"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/utils/LocaleManager.kt"
+            line="32"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="InflateParams"
+        message="Avoid passing `null` as the view root (needed to resolve layout parameters on the inflated layout&apos;s root element)"
+        errorLine1="                    LayoutInflater.from(ctx).inflate(R.layout.view_embedded_texture_player, null) as PlayerView"
+        errorLine2="                                                                                            ~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/components/EmbeddedPlayerSurface.kt"
+            line="52"
+            column="93"/>
+    </issue>
+
+    <issue
+        id="QueryPermissionsNeeded"
+        message="Consider adding a `&lt;queries>` declaration to your manifest when calling this method; see https://g.co/dev/packagevisibility for details"
+        errorLine1="    return intent.resolveActivity(context.packageManager) != null"
+        errorLine2="                  ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/utils/ExternalLinks.kt"
+            line="32"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of `compileSdk` than 36 is available: 37"
+        errorLine1="    compileSdk = 36"
+        errorLine2="    ~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="8"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_section_provider_playback&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_section_provider_playback&quot;>Source &amp;amp; Playback&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="60"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_section_appearance&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_section_appearance&quot;>Appearance&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="61"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_section_data_sync&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_section_data_sync&quot;>Data &amp;amp; Sync&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_section_advanced&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_section_advanced&quot;>Advanced&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="63"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;provider_category_filters_profile&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;provider_category_filters_profile&quot;>These are %1$s\&apos;s filters. Every profile has its own.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="281"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;provider_more_actions&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;provider_more_actions&quot;>More actions&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="320"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;provider_more_actions_for_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;provider_more_actions_for_format&quot;>More actions for %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="321"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_watch_trailer&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;details_watch_trailer&quot;>▶ Trailer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="358"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_watch_trailer_description&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;details_watch_trailer_description&quot;>Watch trailer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="359"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_community_rating&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;details_community_rating&quot;>Community Rating&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="360"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_tmdb_format&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;details_tmdb_format&quot;>TMDB: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="361"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_tmdb_none&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;details_tmdb_none&quot;>None&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="362"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_stream_name_format&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;details_stream_name_format&quot;>Stream name: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="363"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_other_instances&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;details_other_instances&quot;>Other instances of this title&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="364"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_collection_fallback&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;details_collection_fallback&quot;>Collection&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="365"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_tab_cast&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;details_tab_cast&quot;>Cast&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="366"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_tab_details&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;details_tab_details&quot;>Details&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="367"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_tab_overview&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;details_tab_overview&quot;>Overview&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="368"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_tab_versions&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;details_tab_versions&quot;>Versions&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="369"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_tab_similar&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;details_tab_similar&quot;>Similar&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="370"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_tab_seasons&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;details_tab_seasons&quot;>Seasons&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="371"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_more_like_this&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;details_more_like_this&quot;>More Like This&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="372"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;details_no_link_handler&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;details_no_link_handler&quot;>No app on this device can open that link&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="373"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;series_details_title&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;series_details_title&quot;>TV Show Details&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="378"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;series_seasons_and_episodes_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;series_seasons_and_episodes_format&quot;>%1$d seasons · %2$d episodes&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="384"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;series_resume_episode_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;series_resume_episode_format&quot;>▶ Resume S%1$d:E%2$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="386"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;series_resume_episode_time_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;series_resume_episode_time_format&quot;>▶ Resume S%1$d:E%2$d (%3$s)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="387"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;series_play_episode_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;series_play_episode_format&quot;>▶ Play S%1$d:E%2$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="388"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;series_episodes_header&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;series_episodes_header&quot;>Episodes&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="389"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;series_next_up_title&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;series_next_up_title&quot;>Next Up&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="400"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;continue_watching_up_next&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;continue_watching_up_next&quot;>Up next&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="401"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;series_remaining_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;series_remaining_format&quot;>%1$s remaining&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="402"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_seek_rewind_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;player_seek_rewind_format&quot;>⟲ %1$ds&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="428"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_seek_forward_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;player_seek_forward_format&quot;>%1$ds ⟳&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="429"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_ok_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_ok_button&quot;>OK Button&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="455"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_ok_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_ok_description&quot;>Show/hide controls&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="456"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_double_ok_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_double_ok_button&quot;>Double-tap OK&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="457"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_double_ok_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_double_ok_description&quot;>Toggle stats overlay&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="458"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_back_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_back_button&quot;>BACK Button&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="459"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_back_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_back_description&quot;>Exit player&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="460"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_dpad_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_dpad_button&quot;>D-pad Up/Down&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="461"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_dpad_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_dpad_description&quot;>Change channel (Live TV)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="462"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_pause_resume_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_pause_resume_button&quot;>Pause/Resume&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="463"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_pause_resume_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_pause_resume_description&quot;>Control playback&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="464"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_audio_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_audio_button&quot;>Audio Button&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="465"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_audio_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_audio_description&quot;>Select audio track&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="466"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_subtitle_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_subtitle_button&quot;>Subtitle Button&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="467"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_subtitle_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_subtitle_description&quot;>Enable/disable subtitles&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="468"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_quality_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_quality_button&quot;>Quality Button&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="469"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_quality_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_quality_description&quot;>Select video quality&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="470"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_favorite_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_favorite_button&quot;>Favorite Button&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="471"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_hint_favorite_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_hint_favorite_description&quot;>Add/remove from favorites&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="472"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_video&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_video&quot;>VIDEO&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="475"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_audio&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_audio&quot;>AUDIO&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="476"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_network&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_network&quot;>NETWORK&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="477"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_playback&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_playback&quot;>PLAYBACK&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="478"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_performance&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_performance&quot;>PERFORMANCE&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="479"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_stream&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_stream&quot;>STREAM&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="480"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_device&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_device&quot;>DEVICE&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="481"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_codec&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_codec&quot;>Codec&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="482"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_res&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_res&quot;>Res&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="483"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_fps&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_fps&quot;>FPS&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="484"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_bitrate&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_bitrate&quot;>Bitrate&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="485"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_rate&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_rate&quot;>Rate&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="486"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_ch&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_ch&quot;>Ch&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="487"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_speed&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_speed&quot;>Speed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="488"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_bandwidth&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_bandwidth&quot;>Bandwidth&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="489"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_buffer&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_buffer&quot;>Buffer&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="490"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_buffered&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_buffered&quot;>Buffered&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="491"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_rebuffers&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_rebuffers&quot;>Rebuffers&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="492"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_rebuf_time&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_rebuf_time&quot;>Rebuf Time&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="493"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_abr_switches&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_abr_switches&quot;>ABR Switches&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="494"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_pos&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_pos&quot;>Pos&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="495"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_dur&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_dur&quot;>Dur&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="496"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_dropped&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_dropped&quot;>Dropped&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="497"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_drop_rate&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_drop_rate&quot;>Drop Rate&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="498"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_type&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_type&quot;>Type&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="499"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_retries&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_retries&quot;>Retries&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="500"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_uptime&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_uptime&quot;>Uptime&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="501"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_url&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_url&quot;>URL&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="502"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_model&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_model&quot;>Model&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="503"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_api&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_api&quot;>API&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="504"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_measured_fps&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_measured_fps&quot;>%1$s fps (measured)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="505"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_fps_unit&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_fps_unit&quot;>%1$d fps&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="506"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_seconds_unit&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_seconds_unit&quot;>%1$ds&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="507"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_rebuf_time_format&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_rebuf_time_format&quot;>%1$d.%2$ds&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="508"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_dropped_format&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_stats_dropped_format&quot;>%1$d / %2$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="509"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_category_channels&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_category_channels&quot;>Category Channels&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="512"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_no_last_watched&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_no_last_watched&quot;>No recently watched channels yet&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="513"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_audio_format_hint&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_audio_format_hint&quot;>%1$dch • %2$dkHz&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="516"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_nav_hint&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;player_nav_hint&quot;>Use D-pad to navigate • OK to select • BACK to cancel&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="517"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_drop_rate_recent&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;player_stats_drop_rate_recent&quot;>Drop Rate (10s)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="601"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_app&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;player_stats_app&quot;>APP&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="602"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_heap&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;player_stats_heap&quot;>Heap&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="603"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_heap_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;player_stats_heap_format&quot;>%1$d / %2$d MB (%3$d%%)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="604"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_gc&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;player_stats_gc&quot;>GC&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="605"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_gc_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;player_stats_gc_format&quot;>%1$d runs, %2$d ms&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="606"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;player_stats_ui_skipped&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;player_stats_ui_skipped&quot;>UI Frames Skipped&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="607"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_diagnostics_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;settings_diagnostics_title&quot;>Diagnostics&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="638"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_diagnostics_desc&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;settings_diagnostics_desc&quot;>Crashes and errors recorded on this device, and why the app last closed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="639"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_diagnostics_open&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;settings_diagnostics_open&quot;>Open Diagnostics&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="640"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_diagnostics_empty&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;settings_diagnostics_empty&quot;>Nothing recorded&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="641"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_diagnostics_clear&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;settings_diagnostics_clear&quot;>Clear log&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="642"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_diagnostics_share&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;settings_diagnostics_share&quot;>Share&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="643"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_shrink_database_title&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_shrink_database_title&quot;>Database Maintenance&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="650"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_shrink_database_desc&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_shrink_database_desc&quot;>Remove leftover data from deleted sources and reclaim disk space&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="651"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_shrink_database_button&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_shrink_database_button&quot;>Shrink Database&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="652"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_shrink_database_button_running&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_shrink_database_button_running&quot;>Shrinking…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="653"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_shrink_database_result_format&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_shrink_database_result_format&quot;>Removed %1$d leftover rows, freed %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="654"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_shrink_database_nothing_to_clean&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_shrink_database_nothing_to_clean&quot;>Nothing to clean up — database is already tidy&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="655"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_shrink_database_dev_stats_time&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_shrink_database_dev_stats_time&quot;>Last shrink: Finished at %1$s • Took %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="656"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_shrink_database_dev_stats_delta&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;settings_shrink_database_dev_stats_delta&quot;>%1$d records deleted • %2$s recovered&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="657"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_profiles_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;settings_profiles_title&quot;>Profiles&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="840"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_profiles_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;settings_profiles_description&quot;>Each profile has its own favourites, watch history and recent categories. Sources and settings are shared.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="841"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_profiles_add&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;settings_profiles_add&quot;>Add profile&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="842"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;settings_profiles_active_marker&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;settings_profiles_active_marker&quot;>Using on this device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="843"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_dialog_add_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_dialog_add_title&quot;>New profile&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="844"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_dialog_edit_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_dialog_edit_title&quot;>Edit profile&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="845"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_name_label&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_name_label&quot;>Name&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="846"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_color_label&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_color_label&quot;>Colour&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="847"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_color_option_format&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_color_option_format&quot;>Colour %1$d&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="848"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_save_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_save_button&quot;>Save&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="849"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_delete_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_delete_button&quot;>Delete profile&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="850"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_error_name_required&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_error_name_required&quot;>Enter a name&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="851"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_delete_confirm_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_delete_confirm_title&quot;>Delete %1$s?&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="852"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_delete_confirm_text&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_delete_confirm_text&quot;>Their favourites, watch history and recent categories on every source will be deleted. This can\&apos;t be undone.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="853"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_delete_blocked_active&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_delete_blocked_active&quot;>This device is using that profile. Switch to another profile first.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="854"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_delete_blocked_last&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_delete_blocked_last&quot;>The last profile can\&apos;t be deleted.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="855"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_switching&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_switching&quot;>Switching to %1$s…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="856"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_picker_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_picker_title&quot;>Who\&apos;s watching?&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="857"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_switch_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_switch_description&quot;>Switch profile (%1$s)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="858"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_jellyfin_sign_in_prompt&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_jellyfin_sign_in_prompt&quot;>Sign in to %1$s for this profile&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="859"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;profile_jellyfin_sign_in_button&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;profile_jellyfin_sign_in_button&quot;>Sign in&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="860"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_title&quot;>Live sync&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="862"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_desc&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_desc&quot;>Keep profiles, sources, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="863"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_open&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_open&quot;>Set up&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="864"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_manage&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_manage&quot;>Manage&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="865"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_off&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_off&quot;>Off&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="866"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_server_label&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_server_label&quot;>Sync server address&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="867"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_server_hint&quot; is not translated in &quot;mg&quot; (Malagasy) or &quot;fr&quot; (French)"
+        errorLine1="    &lt;string name=&quot;live_sync_server_hint&quot;>https://sync.example.com&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="868"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_check_server&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_check_server&quot;>Check server&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="869"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_server_found&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_server_found&quot;>Sync server found&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="870"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_setup_secret_label&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_setup_secret_label&quot;>Setup secret&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="871"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_create&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_create&quot;>Start a sync group&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="872"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_join_scan&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_join_scan&quot;>Scan a code to join&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="873"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_join_show_code&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_join_show_code&quot;>Join from a phone&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="874"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_handoff_instructions&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_handoff_instructions&quot;>On a phone already in the sync group, open Settings → Live sync → Scan a code, and point it at this code. This device joins as soon as it is scanned.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="875"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_invite_instructions&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_invite_instructions&quot;>On the device to add, open Settings → Live sync and scan this code. It works once, for 10 minutes.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="876"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_qr_description&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_qr_description&quot;>Pairing code&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="877"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_waiting&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_waiting&quot;>Waiting for the scan…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="878"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_status_syncing&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_status_syncing&quot;>Syncing…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="879"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_status_last&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_status_last&quot;>Last synced %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="880"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_just_now&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_just_now&quot;>just now&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="881"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_status_never&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_status_never&quot;>Not synced yet&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="882"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_status_failed&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_status_failed&quot;>The last sync failed. It is retried automatically.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="883"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_server_line&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_server_line&quot;>Server: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="884"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_now&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_now&quot;>Sync now&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="885"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_add_device&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_add_device&quot;>Add a device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="886"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_scan_code&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_scan_code&quot;>Scan a code&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="887"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_devices_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_devices_title&quot;>Devices&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="888"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_device_this&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_device_this&quot;>This device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="889"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_device_last_seen&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_device_last_seen&quot;>Last seen %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="890"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_device_remove&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_device_remove&quot;>Remove&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="891"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_device_remove_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_device_remove_title&quot;>Remove %1$s?&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="892"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_device_remove_message&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_device_remove_message&quot;>It stops syncing right away. What it already has stays on it.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="893"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_share_playing&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_share_playing&quot;>Share what\&apos;s playing with my sync group&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="894"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_share_playing_desc&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_share_playing_desc&quot;>The group\&apos;s devices see what this device is playing and which profile is watching. Only this device shares it.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="895"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_now_playing&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_now_playing&quot;>▶ Playing · %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="896"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_now_live&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_now_live&quot;>▶ Live · %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="897"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_now_paused&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_now_paused&quot;>⏸ Paused · %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="898"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_now_programme&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_now_programme&quot;>%1$s — %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="899"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_now_profile&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_now_profile&quot;>%1$s · %2$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="900"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_stop&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_stop&quot;>Stop&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="901"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_stop_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_stop_title&quot;>Stop playback on %1$s?&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="902"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_stop_message&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_stop_message&quot;>What is playing there stops and the player closes. It can be started again right away.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="903"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_stopping&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_stopping&quot;>Stopping…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="904"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_stop_unreachable&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_stop_unreachable&quot;>Couldn\&apos;t reach %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="905"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_stopped_from&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_stopped_from&quot;>Playback stopped from %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="906"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_stopped_from_another_device&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_stopped_from_another_device&quot;>another device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="907"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_leave&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_leave&quot;>Leave the sync group&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="908"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_leave_title&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_leave_title&quot;>Leave the sync group?&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="909"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_leave_message&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_leave_message&quot;>This device stops syncing. Its profiles, sources, favourites and history stay on it.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="910"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_scan_hint&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_scan_hint&quot;>Point the camera at the code on the other device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="911"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_camera_permission&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_camera_permission&quot;>Camera access is needed to scan the code.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="912"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_camera_grant&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_camera_grant&quot;>Allow camera&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="913"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_joined&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_joined&quot;>Joined the sync group&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="914"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;live_sync_handed_over&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;live_sync_handed_over&quot;>Sent. The other device joins in a moment.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="915"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;sync_error_unreachable&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;sync_error_unreachable&quot;>Can\&apos;t reach the sync server. Check the address and your connection.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="916"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;sync_error_not_a_server&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;sync_error_not_a_server&quot;>That address isn\&apos;t a Fijerena sync server.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="917"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;sync_error_setup_secret&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;sync_error_setup_secret&quot;>The setup secret is wrong.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="918"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;sync_error_revoked&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;sync_error_revoked&quot;>This device was removed from the sync group.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="919"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;sync_error_code_expired&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;sync_error_code_expired&quot;>The code expired or was already used. Show a new one.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="920"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="MissingTranslation"
+        message="&quot;sync_error_not_a_code&quot; is not translated in &quot;mg&quot; (Malagasy)"
+        errorLine1="    &lt;string name=&quot;sync_error_not_a_code&quot;>That isn\&apos;t a Fijerena pairing code.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="921"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;stale&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_refreshing_stale&quot;>Refreshing %1$d stale guide source(s)...&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="9"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;guide&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_deleted_sources&quot;>Deleted %1$d guide source(s)&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="10"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;file&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_cache_cleaned&quot;>Cleaned up %1$d file(s), freed %2$s&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="13"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;programme&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_purged_programmes&quot;>Purged %1$d programme(s)&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="16"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;refresh&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_status_tasks_queued&quot;>%1$d refresh tasks queued&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="112"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;guide&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_status_processing&quot;>Processing %1$d/%2$d guide sources&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="113"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;guide&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_last_run_stats&quot;>Last Run: Finished at %1$s • %2$d guide sources in %3$s%4$s&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="118"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;errors&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_last_run_errors&quot;> (%1$d errors)&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="119"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;hours&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_automation_freq_hours&quot;>Every %1$d hours&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="125"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;guide&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_delete_selected_confirm_message&quot;>This will permanently remove %1$d guide source(s) and all their indexed data.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="149"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;streams&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;category_streams_count&quot;>%1$d streams&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="159"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;prefix&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;provider_prefixes_value&quot;>%1$d prefix(es): %2$s&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="284"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;added&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;provider_sync_delta&quot;>%1$d added • %2$d updated • %3$d removed&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="294"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;episodes&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;series_total_episodes_format&quot;>%1$d episodes&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="383"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;seasons&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;series_seasons_and_episodes_format&quot;>%1$d seasons · %2$d episodes&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="384"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;seconds&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;player_hint_dismiss_format&quot;>This message will auto-dismiss in %1$d seconds&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="440"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;Guide&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_delete_sources_count_btn&quot;>Delete %1$d Guide Source(s)&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="537"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;more&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_browser_show_more_count&quot;>%1$d more airings&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="570"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;guide&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_summary_not_indexed&quot;>%1$d guide source(s) configured, not yet indexed&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="581"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;runs&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;player_stats_gc_format&quot;>%1$d runs, %2$d ms&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="606"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;leftover&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;settings_shrink_database_result_format&quot;>Removed %1$d leftover rows, freed %2$s&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="654"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;records&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;settings_shrink_database_dev_stats_delta&quot;>%1$d records deleted • %2$s recovered&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="657"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;seconds&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;settings_watch_delay_range_format&quot;>%1$d–%2$d seconds&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="671"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;categories&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;category_count_format&quot;>%1$d categories&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="769"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;results&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;search_results_count_format&quot;>%1$d results&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="778"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;hidden&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;search_results_hidden_format&quot;>%1$d hidden&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="779"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;hours&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;epg_refresh_interval_hours_format&quot;>%1$d hours&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="797"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;streams&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;stream_count_format&quot;>%1$d streams&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="798"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;categories&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;category_filtered_of_total_format&quot;>%1$d of %2$d categories&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="801"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ExportedReceiver"
+        message="Exported receiver does not require permission"
+        errorLine1="        &lt;receiver"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="src/debug/AndroidManifest.xml"
+            line="5"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields (static reference to `AppContainer` which has field `context` pointing to `Context`); this is a memory leak"
+        errorLine1="        @Volatile"
+        errorLine2="        ^">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/di/AppContainer.kt"
+            line="232"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/CategoryViewModel.kt"
+            line="28"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/DiagnosticsViewModel.kt"
+            line="21"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt"
+            line="59"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt"
+            line="40"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt"
+            line="28"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/LoginViewModel.kt"
+            line="29"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/MovieDetailsViewModel.kt"
+            line="23"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProfilesViewModel.kt"
+            line="29"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProviderViewModel.kt"
+            line="132"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: android.content.Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt"
+            line="26"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: android.content.Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SeriesDetailsViewModel.kt"
+            line="24"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SettingsViewModel.kt"
+            line="45"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="This field leaks a context object"
+        errorLine1="    private val context: Context,"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt"
+            line="40"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="TypographyDashes"
+        message="Replace &quot;-&quot; with an &quot;en dash&quot; character (–, &amp;#8211;) ?"
+        errorLine1="    &lt;string name=&quot;provider_watch_history_size_desc&quot;>Nombre de fiches affichées dans la ligne Récents (1-100)&lt;/string>"
+        errorLine2="                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="264"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="TypographyDashes"
+        message="Replace &quot;-&quot; with an &quot;en dash&quot; character (–, &amp;#8211;) ?"
+        errorLine1="    &lt;string name=&quot;provider_watch_history_size_desc&quot;>Cards to show in the Recent row (1-100)&lt;/string>"
+        errorLine2="                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-mg/strings.xml"
+            line="264"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="TypographyDashes"
+        message="Replace &quot;-&quot; with an &quot;en dash&quot; character (–, &amp;#8211;) ?"
+        errorLine1="    &lt;string name=&quot;provider_watch_history_size_desc&quot;>Cards to show in the Recent row (1-100)&lt;/string>"
+        errorLine2="                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="268"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;epg_refresh_in_queue&quot;>Mise à jour déjà en file d\&apos;attente...&lt;/string>"
+        errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="7"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;epg_refresh_in_queue&quot;>Efa manandrana...&lt;/string>"
+        errorLine2="                                        ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-mg/strings.xml"
+            line="7"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;epg_refresh_in_queue&quot;>Refresh already in queue...&lt;/string>"
+        errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="7"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;epg_refreshing_stale&quot;>Mise à jour de %1$d source(s) de guide périmée(s)...&lt;/string>"
+        errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="9"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;epg_refreshing_stale&quot;>Manavao ny %1$d lany andro...&lt;/string>"
+        errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values-mg/strings.xml"
+            line="9"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="TypographyEllipsis"
+        message="Replace &quot;...&quot; with ellipsis character (…, &amp;#8230;) ?"
+        errorLine1="    &lt;string name=&quot;epg_refreshing_stale&quot;>Refreshing %1$d stale guide source(s)...&lt;/string>"
+        errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="9"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `Bitmap.scale` instead?"
+        errorLine1="        val sample = Bitmap.createScaledBitmap(readable, 16, 16, true)"
+        errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/components/AdaptiveLogoImage.kt"
+            line="79"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `Bitmap.get` instead?"
+        errorLine1="                val pixel = sample.getPixel(x, y)"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/components/AdaptiveLogoImage.kt"
+            line="85"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="        Intent(Intent.ACTION_VIEW, Uri.parse(url))"
+        errorLine2="                                   ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/org/njarasoa/fijerena/core/ui/utils/ExternalLinks.kt"
+            line="20"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;androidx.compose.material:material-icons-extended&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="56"
+            column="20"/>
+    </issue>
+
+</issues>

@@ -41,6 +41,7 @@ class PlaybackServiceConnection(
                         try {
                             future.get()
                         } catch (e: Exception) {
+                            // cancellation-ok: future listener on the direct executor, not suspend
                             null
                         }
                     if (controllerFuture === future) controller = built
@@ -53,7 +54,7 @@ class PlaybackServiceConnection(
                 try {
                     MediaController.releaseFuture(future)
                 } catch (e: Exception) {
-                    // Ignore
+                    // cancellation-ok: awaitClose's block is not suspend
                 }
                 if (controllerFuture === future) {
                     controllerFuture = null
@@ -67,7 +68,7 @@ class PlaybackServiceConnection(
             try {
                 MediaController.releaseFuture(future)
             } catch (e: Exception) {
-                // Ignore release errors
+                // cancellation-ok: non-suspend; ignore release errors
             }
         }
         controllerFuture = null

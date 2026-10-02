@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.sync
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -56,6 +57,8 @@ object SettingsSyncQueue {
         scope.launch {
             try {
                 block(SettingsDatabase.getInstance(context).settingsSyncDao())
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w("SettingsSyncQueue", "Couldn't queue a change for sync", e)
             }

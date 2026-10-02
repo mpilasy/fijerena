@@ -1,15 +1,19 @@
 #!/bin/bash
-# Gate for docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-27.
+# Gate for docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-27, widened by
+# docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-19.
 #
-# In any main-source Kotlin file that contains `suspend fun`, a `catch (e: Exception)` (or
-# `catch (_: Exception)`) must be immediately preceded, in the same try, by a
+# In any main-source Kotlin file that contains `suspend fun` or opens a coroutine lambda
+# (`launch`, `async`, `withContext`, `LaunchedEffect`, `produceState`, `flow`/`callbackFlow`,
+# `collect`, ... — see SUSPEND_CODE below), a `catch (e: Exception)` (or `catch (_: Exception)`)
+# must be immediately preceded, in the same try, by a
 # `catch (e: CancellationException) { throw e }` clause — otherwise a cancelled job catches its
 # own cancellation and carries on. For runCatching around suspend calls use
 # `suspendRunCatching` (core:network).
 #
 # Escapes:
 #   - a `// cancellation-ok: <reason>` comment on the catch line or the line right after it
-#     (ktlint moves it there) — non-suspend code, or swallowing is intended;
+#     (ktlint moves it there) — non-suspend code (including a plain function in a scanned file,
+#     or a try with no suspension point), or swallowing is intended;
 #   - a whole file listed in scripts/check-cancellation-allowlist.txt with a reason.
 #
 # Run locally: scripts/check-cancellation.sh
@@ -20,6 +24,9 @@ cd "$ROOT_DIR"
 
 ALLOWLIST="scripts/check-cancellation-allowlist.txt"
 allowed="$(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^$/d' "$ALLOWLIST")"
+
+# A file is scanned when it declares a suspend function or opens a coroutine lambda.
+SUSPEND_CODE='suspend fun|\b(launch|async|withContext|runBlocking|coroutineScope|supervisorScope|withTimeout(OrNull)?|LaunchedEffect|produceState|flow|channelFlow|callbackFlow|rememberCoroutineScope|collect(Latest)?|onEach)\b *(\(|\{)'
 
 failures=0
 while IFS= read -r entry; do
@@ -56,7 +63,7 @@ while IFS= read -r file; do
         echo "$hits"
         failures=$((failures + 1))
     fi
-done < <(grep -rlE --include='*.kt' 'suspend fun' core/*/src/main tv/src/main mobile/src/main | sort)
+done < <(grep -rlE --include='*.kt' "$SUSPEND_CODE" core/*/src/main tv/src/main mobile/src/main | sort)
 
 if [ "$failures" -gt 0 ]; then
     echo

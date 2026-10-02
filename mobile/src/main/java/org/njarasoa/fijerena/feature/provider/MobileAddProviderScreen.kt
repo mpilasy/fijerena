@@ -217,6 +217,7 @@ fun MobileAddProviderScreen(
                     try {
                         ProviderType.valueOf(provider.type)
                     } catch (_: Exception) {
+                        // cancellation-ok: no suspension point in the try
                         ProviderType.XTREAM
                     }
                 if (provider.type == "SMB" && provider.config.isNotBlank()) {
@@ -225,6 +226,7 @@ fun MobileAddProviderScreen(
                         host = json.optString("host", "")
                         shareName = json.optString("share", "")
                     } catch (e: Exception) {
+                        // cancellation-ok: no suspension point in the try
                         android.util.Log.e("MobileAddProviderScreen", "Failed to parse SMB provider config", e)
                     }
                 }

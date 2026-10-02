@@ -187,6 +187,10 @@ sealed interface Screen {
     @Serializable
     data object Diagnostics : Screen
 
+    /** Start destination in crash-loop safe mode (`SafeMode.isActive`), in place of home. */
+    @Serializable
+    data object SafeMode : Screen
+
     /**
      * Player screen destination with stream parameters.
      *

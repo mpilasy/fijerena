@@ -57,6 +57,10 @@ class SettingsViewModelFactory(
                 DiagnosticsViewModel(appContext) as T
             }
 
+            modelClass.isAssignableFrom(SafeModeViewModel::class.java) -> {
+                SafeModeViewModel(appContext as android.app.Application) as T
+            }
+
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
                 SearchViewModel(appContext, contentType) as T
             }

@@ -1,5 +1,14 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Resilience guardrails
+**Release Date:** 2026-10-02
+
+- **Crash-loop safe mode:** if the app dies within 30 s of starting three times in 10 minutes, the next launch opens a safe-mode screen instead of Home and skips the startup work that could be causing it (guide set-up, catalogue and live sync, startup clean-ups). From there, Continue restarts the app normally, Clear caches removes downloaded guide, catalogue and poster data (never your sources, profiles, favourites or watch history), and Show diagnostics opens the crash log. Previously the only way out of a crash loop was clearing the app's data over adb. In English, French and Malagasy. From `docs/plans/20261002_next-level-rock-solid-resilience-plan.md` → R-10.
+- **Debug broadcasts can't be sent by other apps (developers):** the EPG and live-sync debug receivers were exported with no permission, and the EPG one was in every build. Any app on a TV running a debug build could link it to another sync account (and receive every source's password) or force guide downloads. Both now require `android.permission.DUMP`, which only adb holds, and the EPG one exists in debug builds only. `adb shell am broadcast …` works as before. → R-07.
+- **CI checks more (developers):** the manual CI build now uses JDK 21 (the modules target Java 21; it set up 17) and runs Android Lint, with a per-module baseline so only new issues fail. The cancellation check now also scans code that only uses coroutine builders (`LaunchedEffect`, `launch`, `collect`…), not just files with a `suspend fun`; it found four places where a cancelled job carried on, now fixed. → R-19.
+
+---
+
 ## Version: Autoplay next episode
 **Release Date:** 2026-10-02
 

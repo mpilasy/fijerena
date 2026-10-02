@@ -926,4 +926,18 @@
     <string name="player_up_next_countdown_format">Starts in %1$d s</string>
     <string name="player_up_next_play_now">Play now</string>
     <string name="player_up_next_compact_format">Up next · %1$s · %2$d s</string>
+
+    <!-- Crash-loop safe mode (SafeMode, R-10) -->
+    <string name="safe_mode_title">Safe mode</string>
+    <string name="safe_mode_message">Fijerena closed unexpectedly several times in a row, so it started in safe mode: live sync, guide updates and other startup work are paused. Your sources, favourites and watch history are untouched.</string>
+    <string name="safe_mode_hint">Choose Continue to start normally. If it keeps closing, clear caches first.</string>
+    <string name="safe_mode_continue">Continue</string>
+    <string name="safe_mode_clear_caches">Clear caches</string>
+    <string name="safe_mode_clear_confirm_title">Clear caches?</string>
+    <string name="safe_mode_clear_confirm_message">This removes the TV guide index, each source\'s downloaded catalogue and the poster cache. Sources, profiles, favourites and watch history are kept. Everything removed is downloaded again after you continue.</string>
+    <string name="safe_mode_clear_confirm">Clear</string>
+    <string name="safe_mode_clearing">Clearing caches…</string>
+    <string name="safe_mode_cleared">Caches cleared. Choose Continue to start normally.</string>
+    <string name="safe_mode_clear_failed">Some caches couldn\'t be cleared. Diagnostics has the details.</string>
+    <string name="safe_mode_diagnostics">Show diagnostics</string>
 </resources>

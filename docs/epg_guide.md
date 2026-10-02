@@ -529,7 +529,7 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 | `XmltvModels.kt` | Data | XMLTV channel/programme/search models |
 | `EpgBrowserModels.kt` | Data | Browser UI models (program + airings) |
 | `EpgSyncWorker.kt` | CoroutineWorker | Periodic background EPG sync on TV and mobile (WorkManager, foreground service so DNS works in Doze); calls `getStaleSources()` (or `getAllSources()` when `force=true` input data) + `processAllSources()` directly in `doWork()` to hold the wake lock for the full download + ingestion cycle |
-| `EpgSyncDebugReceiver.kt` | BroadcastReceiver | Debug-only receiver (`DEBUG` builds); enqueues an immediate `EpgSyncWorker` OneTimeWorkRequest with `force=true`. Trigger: `adb shell am broadcast -a org.njarasoa.fijerena.DEBUG_EPG_SYNC -p org.njarasoa.fijerena` |
+| `EpgSyncDebugReceiver.kt` | BroadcastReceiver | Debug-only receiver (`src/debug` source set, guarded by the `DUMP` permission so only adb shell can send it); enqueues an immediate `EpgSyncWorker` OneTimeWorkRequest with `force=true`. Trigger: `adb shell am broadcast -a org.njarasoa.fijerena.DEBUG_EPG_SYNC -p org.njarasoa.fijerena` |
 
 ### Queue (`core/network/.../queue/`)
 

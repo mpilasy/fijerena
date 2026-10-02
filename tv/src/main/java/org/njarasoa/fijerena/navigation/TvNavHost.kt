@@ -37,6 +37,7 @@ import org.njarasoa.fijerena.core.network.Result
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.profile.ProfileRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
@@ -54,6 +55,7 @@ import org.njarasoa.fijerena.feature.player.TvPlayerScreen
 import org.njarasoa.fijerena.feature.profile.ProfilePickerScreen
 import org.njarasoa.fijerena.feature.provider.TvAddProviderScreen
 import org.njarasoa.fijerena.feature.provider.TvProviderSelectionScreen
+import org.njarasoa.fijerena.feature.safemode.SafeModeScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
 import org.njarasoa.fijerena.feature.settings.EditProviderScreen
 import org.njarasoa.fijerena.feature.settings.SettingsScreen
@@ -115,7 +117,7 @@ fun TvNavHost(
 
     // Async initialization — use cached provider flag for instant start destination,
     // then verify with Room DB in background
-    LaunchedEffect(Unit) {
+    suspend fun initializeStartup() {
         val providerRepo = ProviderRepository(context.applicationContext)
         val cachedHasProvider = appSettings.hasProviderCache
 
@@ -148,6 +150,17 @@ fun TvNavHost(
         }
     }
 
+    LaunchedEffect(Unit) {
+        if (SafeMode.isActive) {
+            // Crash-loop safe mode: none of initializeStartup()'s provider lookups, migration or
+            // orphan sweep — any of them may be what kept crashing. The safe-mode screen is the
+            // start destination.
+            initializationComplete = true
+        } else {
+            initializeStartup()
+        }
+    }
+
     val isAuthenticated by authViewModel.authResponse.collectAsStateWithLifecycle()
 
     // Floor on the loading screen's time so its animation is actually seen — see
@@ -163,6 +176,8 @@ fun TvNavHost(
         remember(initializationComplete, hasProvider) {
             if (!initializationComplete) {
                 null
+            } else if (SafeMode.isActive) {
+                Screen.SafeMode
             } else if (hasProvider == true && pickProfileAtLaunch) {
                 Screen.ProfilePicker
             } else if (hasProvider == true) {
@@ -202,6 +217,7 @@ fun TvNavHost(
         shape = RectangleShape,
     ) {
         if (initializationComplete && startDestination != null && minimumShownElapsed) {
+            // The first screen is up: this launch counts as healthy if it lives 30 s more.
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
@@ -354,6 +370,9 @@ fun TvNavHost(
                         .SyncSettingsScreen()
                 }
 
+                composable<Screen.SafeMode> {
+                    SafeModeScreen(onShowDiagnostics = { navController.navigateOnce(Screen.Diagnostics) })
+                }
                 composable<Screen.Diagnostics> {
                     org.njarasoa.fijerena.feature.settings
                         .DiagnosticsScreen()

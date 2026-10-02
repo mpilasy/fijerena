@@ -6,6 +6,7 @@ import android.content.Context
 import android.provider.Settings
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -101,6 +102,8 @@ object MediaProviderFactory {
             disconnectScope.launch {
                 try {
                     removed.disconnect()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (_: Exception) {
                 }
             }
@@ -120,6 +123,8 @@ object MediaProviderFactory {
                 removed.forEach { entry ->
                     try {
                         entry.value.disconnect()
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (_: Exception) {
                     }
                 }
@@ -139,6 +144,8 @@ object MediaProviderFactory {
                 removed.forEach { provider ->
                     try {
                         provider.disconnect()
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (_: Exception) {
                     }
                 }
@@ -246,6 +253,7 @@ object MediaProviderFactory {
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
                 )
             } catch (e: Exception) {
+                // cancellation-ok: non-suspend
                 CredentialStoreHealth.markLost(context, fileName, e)
                 context.deleteSharedPreferences(fileName)
                 null
@@ -308,6 +316,7 @@ object MediaProviderFactory {
             val jsonObj = json.parseToJsonElement(configStr).jsonObject
             jsonObj.mapValues { it.value.jsonPrimitive.content }
         } catch (_: Exception) {
+            // cancellation-ok: non-suspend
             emptyMap()
         }
     }
@@ -321,6 +330,7 @@ object MediaProviderFactory {
         return try {
             json.decodeFromString<ProviderSettings>(settingsJson)
         } catch (_: Exception) {
+            // cancellation-ok: non-suspend
             ProviderSettings.DEFAULT
         }
     }

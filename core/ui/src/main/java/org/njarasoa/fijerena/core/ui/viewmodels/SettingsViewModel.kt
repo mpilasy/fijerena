@@ -250,6 +250,7 @@ class SettingsViewModel(
                                 .ofPattern("MMM d, yyyy"),
                         )
                     } catch (_: Exception) {
+                        // cancellation-ok: non-suspend date formatting
                         expDate
                     }
                 } else {

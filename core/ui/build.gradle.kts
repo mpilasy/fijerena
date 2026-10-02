@@ -12,6 +12,7 @@ android {
     }
 
     lint {
+        baseline = file("lint-baseline.xml")
         // values-fr and values-mg are both deliberately partial. Android falls back to the default
         // values/ string per missing key, so an untranslated string renders English rather than
         // breaking — a completeness signal, not a build blocker.

@@ -888,4 +888,18 @@
     <string name="player_up_next_countdown_format">Démarre dans %1$d s</string>
     <string name="player_up_next_play_now">Lire maintenant</string>
     <string name="player_up_next_compact_format">À suivre · %1$s · %2$d s</string>
+
+    <!-- Crash-loop safe mode (SafeMode, R-10) -->
+    <string name="safe_mode_title">Mode sans échec</string>
+    <string name="safe_mode_message">Fijerena s\'est fermée de manière inattendue plusieurs fois de suite et a donc démarré en mode sans échec : la synchronisation en direct, les mises à jour du guide et les autres tâches de démarrage sont en pause. Vos sources, vos favoris et votre historique de visionnage sont intacts.</string>
+    <string name="safe_mode_hint">Choisissez Continuer pour démarrer normalement. Si l\'application se ferme encore, videz d\'abord les caches.</string>
+    <string name="safe_mode_continue">Continuer</string>
+    <string name="safe_mode_clear_caches">Vider les caches</string>
+    <string name="safe_mode_clear_confirm_title">Vider les caches ?</string>
+    <string name="safe_mode_clear_confirm_message">Cela supprime l\'index du guide TV, le catalogue téléchargé de chaque source et le cache des affiches. Les sources, les profils, les favoris et l\'historique de visionnage sont conservés. Tout ce qui est supprimé sera de nouveau téléchargé une fois que vous aurez continué.</string>
+    <string name="safe_mode_clear_confirm">Vider</string>
+    <string name="safe_mode_clearing">Vidage des caches…</string>
+    <string name="safe_mode_cleared">Caches vidés. Choisissez Continuer pour démarrer normalement.</string>
+    <string name="safe_mode_clear_failed">Certains caches n\'ont pas pu être vidés. Les détails sont dans les diagnostics.</string>
+    <string name="safe_mode_diagnostics">Afficher les diagnostics</string>
 </resources>

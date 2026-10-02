@@ -16,7 +16,8 @@ import java.util.concurrent.TimeUnit
  *
  * Trigger: adb shell am broadcast -a org.njarasoa.fijerena.DEBUG_EPG_SYNC -p org.njarasoa.fijerena
  *
- * This class is excluded from release builds via BuildConfig.DEBUG guard in the manifest.
+ * Lives in the `debug` source set, so release builds don't contain it. Its manifest entry requires
+ * `android.permission.DUMP`: the adb shell holds it, other apps on the device don't.
  */
 class EpgSyncDebugReceiver : BroadcastReceiver() {
     override fun onReceive(

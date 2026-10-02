@@ -217,6 +217,7 @@ fun TvPlayerControlsOverlay(
                     if (canFocusPlayPause) reachedPlayPauseFocus = true
                     break
                 } catch (e: Exception) {
+                    // cancellation-ok: no suspension point in the try (withFrameMillis is outside it)
                     attempt++
                     if (attempt >= FOCUS_REQUEST_MAX_ATTEMPTS) {
                         android.util.Log.e("TvPlayerControlsOverlay", "Failed to request focus for controls after $attempt attempts", e)

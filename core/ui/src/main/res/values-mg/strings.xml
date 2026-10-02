@@ -725,4 +725,18 @@
     <string name="player_up_next_countdown_format">Manomboka afaka %1$d s</string>
     <string name="player_up_next_play_now">Alefaso izao</string>
     <string name="player_up_next_compact_format">Manaraka · %1$s · %2$d s</string>
+
+    <!-- Crash-loop safe mode (SafeMode, R-10) -->
+    <string name="safe_mode_title">Fomba voaaro</string>
+    <string name="safe_mode_message">Nikatona tampoka imbetsaka nifanesy i Fijerena, ka natomboka tamin\'ny fomba voaaro: atsahatra vetivety ny fampifanarahana mivantana, ny fanavaozana ny fitarihana ary ny asa hafa amin\'ny fanombohana. Tsy voakitika ny loharanonao, ny ankafizinao ary ny tantaran\'ny fijerenao.</string>
+    <string name="safe_mode_hint">Safidio Tohizo mba hanombohana ara-dalàna. Raha mbola mikatona hatrany, fafao aloha ny cache.</string>
+    <string name="safe_mode_continue">Tohizo</string>
+    <string name="safe_mode_clear_caches">Fafao ny cache</string>
+    <string name="safe_mode_clear_confirm_title">Hofafana ny cache?</string>
+    <string name="safe_mode_clear_confirm_message">Hofafana ny fanondroana ny fitarihana TV, ny katalaogy nalain\'ny loharano tsirairay ary ny cache an\'ny sary. Tazonina ny loharano, ny mombamomba, ny ankafizina ary ny tantaran\'ny fijerena. Halaina indray izay voafafa rehefa manohy ianao.</string>
+    <string name="safe_mode_clear_confirm">Fafao</string>
+    <string name="safe_mode_clearing">Mamafa ny cache…</string>
+    <string name="safe_mode_cleared">Voafafa ny cache. Safidio Tohizo mba hanombohana ara-dalàna.</string>
+    <string name="safe_mode_clear_failed">Misy cache tsy voafafa. Ao amin\'ny Diagnostics ny antsipiriany.</string>
+    <string name="safe_mode_diagnostics">Asehoy ny diagnostics</string>
 </resources>

@@ -17,7 +17,8 @@ import org.njarasoa.fijerena.core.network.sync.SyncEngine
 
 /**
  * Debug builds only: drives live sync over adb until Phase 9's settings screen exists. Results go
- * to logcat under `SyncDebug`.
+ * to logcat under `SyncDebug`. The receiver requires `android.permission.DUMP`, which the adb shell
+ * holds and other apps don't.
  *
  *     adb shell am broadcast -a org.njarasoa.fijerena.DEBUG_SYNC -p org.njarasoa.fijerena --es cmd <cmd> [...]
  *

@@ -15,10 +15,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
       - name: Setup Gradle
@@ -37,6 +37,10 @@ jobs:
 
       - name: Lint
         run: ./gradlew ktlintCheck
+
+      # Existing warnings live in each module's lint-baseline.xml; only new issues fail the build.
+      - name: Android Lint
+        run: ./gradlew lintDebug
 
       # docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-20, F-33.
       - name: User-data databases have no blanket destructive fallback

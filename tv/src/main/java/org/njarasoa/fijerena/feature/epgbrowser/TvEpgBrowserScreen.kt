@@ -352,6 +352,7 @@ private fun EpgBrowserContent(
             try {
                 firstItemFocusRequester.requestFocus()
             } catch (_: Exception) {
+                // cancellation-ok: no suspension point in the try
             }
         }
     }

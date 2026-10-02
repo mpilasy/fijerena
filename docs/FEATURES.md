@@ -358,6 +358,7 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 - **Source labels:** guide source name shown on each airing in EPG Browser
 - **Cellular Buffer Settings:** multiplier sliders (0.5×–3.0×) for Live and VOD profiles (mobile)
 - **Diagnostics:** the on-device crash log and Android's record of why the app last closed (ANR, crash, low-memory kill), newest first; Share on mobile. See `docs/RUN_GUIDE.md` → Crash log and Diagnostics
+- **Crash-loop safe mode** (always on, not a developer setting): when three launches within 10 minutes each end within 30 s of starting, the next launch opens a safe-mode screen instead of Home and skips the startup work that could be the cause — EPG initialisation and auto-refresh, catalogue sync, live sync, the now-playing publisher, the startup migrations, and the nav host's source lookups and orphan sweep. **Continue** restarts the app normally; **Clear caches** (confirmed) removes the EPG index, every source's downloaded catalogue and the poster cache, keeping sources, profiles, favourites and watch history; **Show diagnostics** opens Diagnostics. See `docs/RUN_GUIDE.md` → Crash-loop safe mode
 
 ---
 

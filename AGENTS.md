@@ -68,6 +68,7 @@ fijerena/
 8. **Service from Compose:** In a `LaunchedEffect`/composition-scoped coroutine use `StreamingPlaybackService.awaitInstanceOrNull()`, never bare `awaitInstance()` — its `ServiceDestroyedException` escaping a composition coroutine crashes the app.
 9. **`xtream_v2.db` holds user data:** every version bump needs a real `Migration`; the destructive fallback covers only pre-v7 files. See `docs/DATABASE_SCHEMA.md` §3.
 10. **Secrets never fall back to plaintext:** an encrypted store that can't be opened is reset (`CredentialStoreHealth.markLost`) and, if it still can't be created, replaced by `CredentialStoreHealth.InMemoryPrefs` — never `getSharedPreferences`.
+11. **Startup work that could crash sits behind `SafeMode.isActive`** (`core:player/diagnostics`): `FijerenaApplication.startBackgroundWork()` and the nav hosts' `initializeStartup()` don't run in crash-loop safe mode. New startup work goes inside them, not around them. See `docs/plans/20261002_next-level-rock-solid-resilience-plan.md` → R-10.
 
 ---
 
@@ -225,7 +226,7 @@ scripts/deploy-mobile-usb.sh          # Build + install on a USB phone
 ```bash
 ./gradlew ktlintCheck                 # Check code style
 ./gradlew ktlintFormat                # Auto-format code
-./gradlew lintDebug                   # Run Android Lint
+./gradlew lintDebug                   # Run Android Lint (per-module lint-baseline.xml; only new issues fail)
 ./gradlew check                       # Run all tests and lint
 ```
 
@@ -345,7 +346,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20261002_epg-search-during-refresh-plan.md](docs/plans/20261002_epg-search-during-refresh-plan.md) | **Complete** - all three phases landed (2026-10-02); emulator verification outstanding |
 | [docs/plans/20261002_catalog-sync-cache-churn-plan.md](docs/plans/20261002_catalog-sync-cache-churn-plan.md) | **Complete** - all four phases landed (2026-10-02); Phase 1 verified on bears, Phase 4 on jellyxtream |
 | [docs/plans/20261002_provider-to-source-rename-plan.md](docs/plans/20261002_provider-to-source-rename-plan.md) | **Complete** - both phases landed (2026-10-02); French and Malagasy reviewed as text only |
-| [docs/plans/20261002_next-level-rock-solid-resilience-plan.md](docs/plans/20261002_next-level-rock-solid-resilience-plan.md) | Proposed (2026-10-02) - 26 findings traced in source, none reproduced on a device; only R-23's history removal of `fijerena_settings.json` done |
+| [docs/plans/20261002_next-level-rock-solid-resilience-plan.md](docs/plans/20261002_next-level-rock-solid-resilience-plan.md) | In progress - Phase 0 done (2026-10-02: R-07, R-19, R-10), not yet verified on a device; R-23's history removal of `fijerena_settings.json` done |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 

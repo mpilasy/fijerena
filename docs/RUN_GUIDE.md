@@ -68,7 +68,8 @@ Run style checks and tests before committing code:
 # Auto-format style violations
 ./gradlew ktlintFormat
 
-# Run Android Lint
+# Run Android Lint (each module's lint-baseline.xml lists the warnings that existed when lint was
+# added to CI; only new issues fail. Regenerate one with ./gradlew :<module>:updateLintBaseline)
 ./gradlew lintDebug
 
 # Run unit tests
@@ -219,6 +220,33 @@ adb -s <device-id> shell run-as org.njarasoa.fijerena cat files/crashlog/crashes
 
 The log is capped at 256 KB (oldest half dropped). "Clear log" clears only the app's own entries;
 Android's exit history stays.
+
+### Crash-loop safe mode
+
+Each process start appends a timestamp to `files/safemode/launches` (a plain file, not
+SharedPreferences or Room); 30 s later, if the process is still alive and not in safe mode, the file
+is emptied. Three timestamps within 10 minutes at the next start mean the last three launches died
+early, and that launch starts in safe mode (see `docs/FEATURES.md`). Background-only processes
+(WorkManager, the playback service) count the same way, which is why "healthy" is process lifetime,
+not a screen being shown.
+
+To see it on an emulator (debug build, so `run-as` works), write three recent timestamps and
+cold-start:
+
+```bash
+NOW=$(date +%s%3N)
+adb -s <device-id> shell "run-as org.njarasoa.fijerena sh -c 'mkdir -p files/safemode && printf \"$NOW\n$NOW\n$NOW\n\" > files/safemode/launches'"
+adb -s <device-id> shell am force-stop org.njarasoa.fijerena
+# then launch the app; to leave by hand instead of Continue:
+adb -s <device-id> shell run-as org.njarasoa.fijerena rm files/safemode/launches
+```
+
+### Debug broadcasts
+
+`DEBUG_EPG_SYNC` (`EpgSyncDebugReceiver`, core:network) and `DEBUG_SYNC` (`SyncDebugReceiver`,
+core:ui) exist in debug builds only and require `android.permission.DUMP`, which the adb shell holds
+and other apps don't — so `adb shell am broadcast …` works, and nothing else on the device can link
+the sync account or force refreshes.
 
 ---
 

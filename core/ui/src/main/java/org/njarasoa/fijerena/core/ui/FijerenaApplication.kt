@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.core.network.xtream.ProviderSyncManager
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+import org.njarasoa.fijerena.core.player.diagnostics.SafeMode
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.network.NetworkModule
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
@@ -44,6 +45,9 @@ class FijerenaApplication :
         // First, so anything that goes wrong from here on — startup included — is recorded.
         // Settings → Diagnostics (developer mode) shows it.
         CrashLog.install(this)
+        // Next, before anything that could be what keeps crashing: counts this launch and decides
+        // whether it starts in safe mode — see SafeMode.
+        SafeMode.init(this)
         // Debug-only: log any main-thread disk/DB access (with a stack trace) to pinpoint UI-thread
         // jank/ANRs. Gated on the debuggable flag so it never runs in release.
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
@@ -59,6 +63,14 @@ class FijerenaApplication :
         }
         // Initialize network module for robust DNS resolution
         NetworkModule.init(this)
+        // A remote Stop no player screen took (playback with nothing on screen to obey it).
+        RemoteStopFallback.start(this)
+        // Safe mode (the last launches kept crashing): none of the startup work below, any of which
+        // may be the cause. The safe-mode screen's Continue restarts the process to run it.
+        if (!SafeMode.isActive) startBackgroundWork()
+    }
+
+    private fun startBackgroundWork() {
         // Initialize EPG management
         EpgFileManager.getInstance(this).initialize()
         // Initialize Provider Content sync
@@ -67,8 +79,6 @@ class FijerenaApplication :
         SyncManager.getInstance(this).start()
         // What this device plays, for the group's devices lists — sends nothing until turned on.
         NowPlayingPublisher.getInstance(this).start()
-        // A remote Stop no player screen took (playback with nothing on screen to obey it).
-        RemoteStopFallback.start(this)
         // One-time moves of each provider's category filters and the install-wide dev-mode flag to
         // every profile, and the install-wide search history to the default profile — see
         // ProviderRepository.migrateCategoryFiltersToProfiles().
