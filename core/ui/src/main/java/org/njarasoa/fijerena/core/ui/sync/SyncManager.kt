@@ -243,18 +243,43 @@ class SyncManager private constructor(
         }
     }
 
+    /**
+     * Socket lifecycle runs on several threads (main for foreground/background, OkHttp's for its
+     * callbacks, IO for the reconnect delay): every read-modify-write of [socket], [socketJob] and
+     * [socketRetryDelayMs] holds this lock, so two sockets can never be open at once.
+     */
+    private val socketLock = Any()
+
+    /**
+     * Reconnect delay, separate from [retryDelayMs]: a server whose HTTP API works but whose
+     * WebSocket doesn't (a reverse proxy that doesn't upgrade) used to reconnect every 5 s forever,
+     * with a full sync pass each time — the pass succeeded, so the shared delay kept resetting.
+     * Doubles per failed attempt; resets only once a socket actually opens. See
+     * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-12.
+     */
+    private var socketRetryDelayMs = INITIAL_RETRY_MS
+
     private fun openSocket() {
         val link = store.link ?: return
-        if (socket != null) return
-        socket =
-            api.openSocket(
-                link.serverUrl,
-                link.deviceToken,
-                object : WebSocketListener() {
-                    override fun onOpen(
-                        webSocket: WebSocket,
-                        response: Response,
-                    ) {
+        synchronized(socketLock) {
+            if (socket == null) {
+                socket = api.openSocket(link.serverUrl, link.deviceToken, socketListener)
+            }
+        }
+    }
+
+    private val socketListener =
+        object : WebSocketListener() {
+            override fun onOpen(
+                webSocket: WebSocket,
+                response: Response,
+            ) {
+                synchronized(socketLock) {
+                    if (socket === webSocket) {
+                        socketRetryDelayMs = INITIAL_RETRY_MS
+                        socketJob?.cancel()
+                        // A text ping, not only OkHttp's protocol pings: the server answers it
+                        // without waking up and keeps its time as this device's "last seen".
                         socketJob =
                             scope.launch {
                                 while (isActive) {
@@ -263,56 +288,64 @@ class SyncManager private constructor(
                                 }
                             }
                     }
+                }
+            }
 
-                    override fun onMessage(
-                        webSocket: WebSocket,
-                        text: String,
-                    ) {
-                        if (text == "pong") return
-                        val head = SyncWire.parseHead(text) ?: return
-                        if (head > store.cursor) requestSync(0)
-                    }
+            override fun onMessage(
+                webSocket: WebSocket,
+                text: String,
+            ) {
+                if (text == "pong") return
+                // The server sends its head as soon as a socket opens, so this is also what
+                // catches up on anything announced while disconnected.
+                val head = SyncWire.parseHead(text) ?: return
+                if (head > store.cursor) requestSync(0)
+            }
 
-                    override fun onClosed(
-                        webSocket: WebSocket,
-                        code: Int,
-                        reason: String,
-                    ) = onSocketGone(webSocket, code)
+            override fun onClosed(
+                webSocket: WebSocket,
+                code: Int,
+                reason: String,
+            ) = onSocketGone(webSocket, code)
 
-                    override fun onFailure(
-                        webSocket: WebSocket,
-                        t: Throwable,
-                        response: Response?,
-                    ) {
-                        Log.w(TAG, "Sync socket failed: ${t.message}")
-                        onSocketGone(webSocket, response?.code ?: 0)
-                    }
-                },
-            )
-    }
+            override fun onFailure(
+                webSocket: WebSocket,
+                t: Throwable,
+                response: Response?,
+            ) {
+                Log.w(TAG, "Sync socket failed: ${t.message}")
+                onSocketGone(webSocket, response?.code ?: 0)
+            }
+        }
 
     private fun onSocketGone(
         webSocket: WebSocket,
         code: Int,
     ) {
-        if (socket !== webSocket) return
-        socket = null
-        socketJob?.cancel()
+        val wait =
+            synchronized(socketLock) {
+                if (socket !== webSocket) return
+                socket = null
+                socketJob?.cancel()
+                socketJob = null
+                socketRetryDelayMs.also { socketRetryDelayMs = (it * 2).coerceAtMost(MAX_RETRY_MS) }
+            }
         // Revoked (4001) or refused (401): don't hammer the server.
         if (!foreground || code == REVOKED || code == 401) return
         scope.launch {
-            delay(retryDelayMs)
-            if (foreground && socket == null) {
-                openSocket()
-                requestSync(0) // anything announced while disconnected
-            }
+            delay(wait)
+            if (foreground) openSocket()
         }
     }
 
     private fun closeSocket() {
-        socketJob?.cancel()
-        socket?.close(1000, "background")
-        socket = null
+        synchronized(socketLock) {
+            socketJob?.cancel()
+            socketJob = null
+            socket?.close(1000, "background")
+            socket = null
+            socketRetryDelayMs = INITIAL_RETRY_MS
+        }
     }
 
     companion object {
