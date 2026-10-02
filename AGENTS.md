@@ -332,7 +332,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20260930_profile-architecture-adversarial-review-plan.md](docs/plans/20260930_profile-architecture-adversarial-review-plan.md) | **Resolved** - findings 3, 5, 6, 7 fixed; rest not defects, by design or deferred (2026-09-30) |
 | [docs/plans/20260930_profile-scoped-settings-plan.md](docs/plans/20260930_profile-scoped-settings-plan.md) | **Complete** - filters and dev mode per profile, verified on emulators (2026-09-30) |
 | [docs/plans/20261001_fast-profile-switch-plan.md](docs/plans/20261001_fast-profile-switch-plan.md) | **Complete** (2026-10-01) |
-| [docs/plans/20261001_rock-solid-stability-resilience-plan.md](docs/plans/20261001_rock-solid-stability-resilience-plan.md) | In Progress - Phases 0-4 done; Phase 5 F-27 done (2026-10-01) |
+| [docs/plans/20261001_rock-solid-stability-resilience-plan.md](docs/plans/20261001_rock-solid-stability-resilience-plan.md) | **Complete** - all six phases landed, verified on emulators (2026-10-02); F-13 deferred, F-02 not reproduced, `XtreamDatabaseUpgradeTest` (instrumented) not yet run |
 | [docs/plans/20261001_live-sync-now-playing-plan.md](docs/plans/20261001_live-sync-now-playing-plan.md) | **Complete** - Phases 0-4 landed, verified on emulators (2026-10-01) |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
