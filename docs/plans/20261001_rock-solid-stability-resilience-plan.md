@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phases 2-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 in progress: F-08, F-09, F-23, F-22 done. Phases 3-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -94,11 +94,14 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Mechanism:** The exception escapes `SyncEngine.syncNow` (only `SyncApiException` is handled), so the page's cursor isn't advanced. `SyncManager.runSync` lands in the generic `catch (e: Exception)` which only logs: no `lastError`, no retry scheduled. Every later pass refetches and re-throws on the same record.
 - **Impact:** Sync permanently stuck on that device; settings screen shows no error.
 - **Fix:** In `apply()`, wrap each `applyOne` in `try/catch` (rethrow `CancellationException`), count as `skipped`, log key kind + exception class. Replace `!!` with a re-lookup returning `Outcome.Deferred`. Surface `skipped > 0` in `Status` (dev mode shows detail).
+- **Reproduced 2026-10-01** end to end: TV emulator linked to a local `workerd` server; a host-side test device pushed a hand-sealed `setting` record with payload `{}`. Old build: every pass threw, cursor stuck at 152, `lastError` null.
+- **Done 2026-10-01** (`4f93fffc`), one change from the fix above: a record that throws is **deferred, not skipped** — it waits with the other deferred records and is retried every pass, so a newer app version can still apply it. Recorded in Diagnostics once per kind and exception type; the `Status` counter was not added (Diagnostics covers it). `!!` after presence checks now return `Deferred`. Verified on the same rig: pass completes, cursor moves to 154, the record waits.
 
 #### F-09: Deferred records from earlier pages are lost if a later page fails [P0, CONFIRMED]
 - **Where:** `sync/SyncEngine.kt:80-103`.
 - **Mechanism:** `store.cursor` is persisted per page; `store.deferred` only after the loop. A failure (network, process death, F-08) on page N drops records deferred on pages < N while the cursor has already moved past them.
 - **Fix:** Persist `store.deferred` together with `store.cursor` on every page. (Both live in the same prefs file — write them in one `edit {}`.)
+- **Done 2026-10-01** (`59906bf5`): `SyncAccountStore.savePullProgress(cursor, deferred)` writes both in one commit, every page. Not reproduced on a device (needs a >500-record pull failing mid-way).
 
 #### F-12: Socket reconnect storm when HTTP works but WebSocket doesn't [P1, CONFIRMED — mechanism corrected]
 - **Where:** `SyncManager.kt:284-306` (`onSocketGone`), `:194` (success resets `retryDelayMs`).
@@ -121,11 +124,13 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `server/src/account.ts:224-229` (whole batch → 400 if any record fails `invalid()`), `MAX_PAYLOAD = 64 KiB` (`:10`); `SyncEngine.kt:107-124` (always retries the same oldest-first batch).
 - **Mechanism:** `api.push` throws `SyncApiException(400)`; nothing is marked sent; the next pass picks the same `pending(200)` batch first and fails again. Likely trigger: `CATEGORY_FILTERS` for a large provider (thousands of hidden category ids → base64 + GCM overhead can pass 64 KiB).
 - **Fix:** Server: reject per record (`rejected: [{key, reason: "invalid"}]`) instead of failing the batch. Client: pre-check sealed size, log + mark oversized records as sent with a visible `skipped` count; consider compressing filters. Add a server test for a mixed valid/invalid batch.
+- **Done 2026-10-01**: server (`99c57454`) rejects invalid records one by one as `invalid: <why>` and applies the rest; only a malformed batch is still `400` (new server test: a mixed batch). Client (`2f541d8b`) drops records whose sealed payload is over 64 KiB before sending, logging them and recording them in Diagnostics, and logs non-stale rejections. Compressing filters not done. Old apps already treat any rejection as done.
 
 #### 🆕 F-23: Non-HTTP sync failures stop retrying and show no error [P1, CONFIRMED]
 - **Where:** `sync/SyncApi.kt:153-157` (`json.decodeFromString` outside the `SyncApiException` wrapping), `SyncManager.kt:197-202`.
 - **Mechanism:** A captive portal / proxy returning `200 text/html`, or any `SerializationException`, escapes as a non-`SyncApiException` → logged as "Sync pass crashed", no `lastError`, no backoff retry. Same sink as F-08.
 - **Fix:** Wrap decode failures as `SyncApiException(status, "Unexpected response")`. Make the generic catch set `store.lastError` and schedule the normal backoff.
+- **Done 2026-10-01** (`acb8749d`): non-JSON responses become `SyncApiException`; any other failure of a pass sets `lastError`, is recorded in Diagnostics and backs off like an HTTP failure. Not reproduced on a device (no captive portal on the rig).
 
 #### 🆕 F-25: A device with a wrong clock poisons every device's HLC [P2, CONFIRMED]
 - **Where:** `SyncApplier.kt:96-99` (`receive(max hlc)`), `SettingsSyncDao.kt:97`, `SyncVersionDao.kt:36`; tick = `max(now, hlc + 1)`.
