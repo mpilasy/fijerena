@@ -791,6 +791,7 @@ class SettingsExportManager(
                 password = "",
                 type = ep.type,
                 config = ep.config,
+                rememberForProfile = false,
             )
         if (ep.providerSettings != "{}") {
             try {

@@ -23,6 +23,7 @@ class AppSettings(
     companion object {
         private const val KEY_DEV_MODE = "dev_mode"
         private const val KEY_ACTIVE_PROFILE_ID = "active_profile_id"
+        private const val KEY_LAST_PROVIDER = "last_provider"
         private const val KEY_WATCH_HISTORY_SIZE = "watch_history_size"
         private const val KEY_PROVIDER_NAME = "provider_name"
         private const val KEY_FAVORITES_MAX_SIZE = "favorites_max_size"
@@ -65,10 +66,10 @@ class AppSettings(
         const val DEFAULT_CONTENT_REFRESH_TIME = "04:00"
         const val DEFAULT_CELLULAR_MULTIPLIER = 1.0f
 
-        /** Settings kept the same on every device by live sync; dev mode is per profile. */
+        /** Settings kept the same on every device by live sync; those in [PER_PROFILE_SETTING_KEYS] are per profile. */
         val SYNCED_SETTING_KEYS =
-            listOf(KEY_THEME_ID, KEY_DEV_MODE, KEY_EPG_AUTO_REFRESH, KEY_EPG_REFRESH_TIME, KEY_EPG_REFRESH_INTERVAL)
-        const val DEV_MODE_SETTING_KEY = KEY_DEV_MODE
+            listOf(KEY_THEME_ID, KEY_DEV_MODE, KEY_EPG_AUTO_REFRESH, KEY_EPG_REFRESH_TIME, KEY_EPG_REFRESH_INTERVAL, KEY_LAST_PROVIDER)
+        val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_LAST_PROVIDER)
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
     }
@@ -116,6 +117,22 @@ class AppSettings(
     }
 
     /**
+     * The `providerKey` of the provider [profileId] last picked, on any device — synced, unlike
+     * `providers.isActive`, which is the provider this device is on. A profile switch moves the
+     * device to it. See docs/plans/20261002_profile-last-provider-plan.md.
+     */
+    fun lastProviderKey(profileId: String): String? = prefs.getString(profileKey(KEY_LAST_PROVIDER, profileId), null)
+
+    fun setLastProviderKey(
+        profileId: String,
+        providerKey: String,
+    ) {
+        if (lastProviderKey(profileId) == providerKey) return
+        prefs.edit { putString(profileKey(KEY_LAST_PROVIDER, profileId), providerKey) }
+        SettingsSyncQueue.setting(context, KEY_LAST_PROVIDER, profileId)
+    }
+
+    /**
      * A setting received from another device (live sync): written straight to prefs, not through
      * the setters, which would queue it to be sent back. Keys other than [SYNCED_SETTING_KEYS] are
      * ignored — a newer app version may sync more.
@@ -128,6 +145,7 @@ class AppSettings(
         prefs.edit {
             when (key) {
                 KEY_DEV_MODE -> value.booleanOrNull?.let { putBoolean(devModeKey(profileId), it) }
+                KEY_LAST_PROVIDER -> if (value.isString) putString(profileKey(key, profileId), value.content)
                 KEY_THEME_ID, KEY_EPG_REFRESH_TIME -> if (value.isString) putString(key, value.content)
                 KEY_EPG_AUTO_REFRESH -> value.booleanOrNull?.let { putBoolean(key, it) }
                 KEY_EPG_REFRESH_INTERVAL -> value.intOrNull?.let { putInt(key, it) }
@@ -135,16 +153,16 @@ class AppSettings(
         }
     }
 
-    /** The value of a synced setting as it is sent — [profileId] matters only for dev mode. */
+    /** The value of a synced setting as it is sent — [profileId] matters only for [PER_PROFILE_SETTING_KEYS]. */
     fun syncedSetting(
         key: String,
         profileId: String,
     ): kotlinx.serialization.json.JsonPrimitive? {
-        val stored = if (key == KEY_DEV_MODE) devModeKey(profileId) else key
+        val stored = if (key in PER_PROFILE_SETTING_KEYS) profileKey(key, profileId) else key
         if (!prefs.contains(stored)) return null
         return when (key) {
             KEY_DEV_MODE, KEY_EPG_AUTO_REFRESH -> kotlinx.serialization.json.JsonPrimitive(prefs.getBoolean(stored, false))
-            KEY_THEME_ID, KEY_EPG_REFRESH_TIME -> kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
+            KEY_THEME_ID, KEY_EPG_REFRESH_TIME, KEY_LAST_PROVIDER -> kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
             KEY_EPG_REFRESH_INTERVAL -> kotlinx.serialization.json.JsonPrimitive(prefs.getInt(stored, DEFAULT_EPG_REFRESH_INTERVAL))
             else -> null
         }
@@ -153,7 +171,15 @@ class AppSettings(
     /** Drops a deleted profile's developer-mode flag. */
     fun removeDevMode(profileId: String) = prefs.edit { remove(devModeKey(profileId)) }
 
-    private fun devModeKey(profileId: String) = "${KEY_DEV_MODE}_$profileId"
+    /** Drops a deleted profile's last picked provider. */
+    fun removeLastProvider(profileId: String) = prefs.edit { remove(profileKey(KEY_LAST_PROVIDER, profileId)) }
+
+    private fun devModeKey(profileId: String) = profileKey(KEY_DEV_MODE, profileId)
+
+    private fun profileKey(
+        key: String,
+        profileId: String,
+    ) = "${key}_$profileId"
 
     /**
      * Get or set the maximum size of the watch history queue.

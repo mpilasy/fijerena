@@ -1,6 +1,6 @@
 # Profile Remembers Its Provider Plan
 
-**Status:** Proposed (2026-10-02) — not started
+**Status:** Complete (2026-10-02) — instrumented test not yet run on an emulator
 
 Each profile comes back to the provider it last picked, on every device. Profile A picks
 provider X, profile B moves the device to provider Y; when A is picked again the device goes back
@@ -18,9 +18,10 @@ Context: `docs/plans/20260929_live-sync-plan.md` → User profiles,
 3. **Applied only on profile switch.** A remote change never moves a device that is already on
    that profile — the TV must not jump provider mid-playback because the phone picked another.
    The new value waits for the next switch to that profile.
-4. **Only an explicit pick is remembered** — the provider pickers. Automatic changes (fallback
-   after deleting the active provider, settings import, the switch itself) don't write it, so
-   they never send a change to other devices.
+4. **Only an explicit pick is remembered** — the provider pickers, and adding a provider (it
+   becomes the device's provider, so it is the profile's pick too; added during implementation).
+   Automatic changes (fallback after deleting the active provider, settings import, the switch
+   itself, duplicating a provider) don't write it, so they never send a change to other devices.
 
 ## Today
 
@@ -156,3 +157,18 @@ No Room migration, no new sync kind, no server change.
 ## Phases
 
 Single phase, one commit.
+
+## Done (2026-10-02)
+
+- `AppSettings`: `last_provider_<profileId>` (`lastProviderKey`, `setLastProviderKey` — skips the
+  write and the sync queue when unchanged, `removeLastProvider`); `PER_PROFILE_SETTING_KEYS`
+  replaces the `DEV_MODE_SETTING_KEY` special case in `syncedSetting` and `LocalRecords` seeding;
+  `applyRemoteSetting` stores string values only.
+- `ProviderRepository.pickProvider` (TV/mobile pickers, both nav hosts' provider selection,
+  `ProviderViewModel.selectProvider`); `addProvider(rememberForProfile = activate)`, off for the
+  settings import; `activateLastProvider(profileId)`.
+- `AppContainer.switchProfile` calls `activateLastProvider` after the filter recompute; the
+  `ProfileSwitch` log line reports `provider moved`.
+- Profile deletion removes the key.
+- Tests: `AppSettingsLastProviderTest` (JVM, passing); `ProfileLastProviderTest` (instrumented,
+  compiles, not run — needs an emulator, which wipes the test APK's data).

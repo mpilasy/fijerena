@@ -3,6 +3,7 @@
 ## Version: Fixes
 **Release Date:** 2026-10-02
 
+- **Each profile returns to its own provider:** picking (or adding) a provider is remembered for the profile in use, and synced to the group. Switching to a profile moves the device to the provider it last picked — profile A on X, profile B moves the TV to Y, picking A again brings it back to X. A profile with no pick yet, or whose provider was deleted, stays on the current provider; another device's pick never moves a device already on that profile mid-session. Older app versions ignore the new setting. From `docs/plans/20261002_profile-last-provider-plan.md`.
 - **Debug builds run natively on emulators (developers):** debug APKs now include the x86 and x86_64 native libraries (ffmpeg, SQLite, androidx graphics), so x86 emulators no longer run the app's ARM libraries under binary translation — that had made the 32-bit TV emulator several times slower than real hardware. Release builds stay ARM-only.
 - **Search says "Searching…" while it searches:** the spinner used to read "Loading categories…" for the whole search.
 - **Compose libraries now line up (developers):** the Compose BOM moves from 2025.06.01 to 2026.03.01, so `ui`, `foundation`, `runtime` and `animation` all resolve to 1.10.6 on TV and mobile (they used to be a mix of 1.8.3 and 1.10.0). The TV lists use plain `LazyColumn`/`LazyRow` instead of the abandoned `tv-foundation` `TvLazyColumn`/`TvLazyRow`, which could not run on Compose 1.9+.

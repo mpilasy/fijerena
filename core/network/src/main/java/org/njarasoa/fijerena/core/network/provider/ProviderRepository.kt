@@ -102,6 +102,8 @@ class ProviderRepository(
      * Deactivates all other providers and activates this one, unless [activate] is false — used
      * by [ProviderCopyManager.duplicateProvider] so cloning a provider doesn't steal "active" away
      * from whatever the user currently has selected.
+     * [rememberForProfile] records it as the active profile's last picked provider (synced); the
+     * settings import turns it off, as an imported provider isn't a pick.
      */
     suspend fun addProvider(
         name: String,
@@ -112,6 +114,7 @@ class ProviderRepository(
         config: String = "",
         initialSettings: ProviderSettings = ProviderSettings.DEFAULT,
         activate: Boolean = true,
+        rememberForProfile: Boolean = activate,
     ): Long {
         if (activate) dao.deactivateAll()
         // Category filters are per profile and live in [filtersStore], not in the provider's JSON.
@@ -147,6 +150,8 @@ class ProviderRepository(
         if (initialSettings.categoryFilters != CategoryFilters()) {
             filtersStore.set(id, activeProfileId(), initialSettings.categoryFilters)
         }
+        // Adding a provider moves the device to it, so it is the profile's pick — see [pickProvider].
+        if (rememberForProfile) AppSettings(context).setLastProviderKey(activeProfileId(), entity.providerKey)
         return id
     }
 
@@ -394,6 +399,28 @@ class ProviderRepository(
         dao.activateProvider(id)
         // Clear all cached providers to ensure fresh session on provider switch
         MediaProviderFactory.clearAllCaches()
+    }
+
+    /**
+     * The user picked [id]: makes it active and remembers it as the active profile's provider,
+     * synced to the profile's other devices. Automatic changes (fallback after a delete, import,
+     * profile switch) use [setActiveProvider] so they aren't remembered or sent.
+     */
+    suspend fun pickProvider(id: Long) {
+        setActiveProvider(id)
+        dao.getProviderById(id)?.let { AppSettings(context).setLastProviderKey(activeProfileId(), it.providerKey) }
+    }
+
+    /**
+     * Moves this device to the provider [profileId] last picked, if it still exists here and isn't
+     * already active. Otherwise the device stays where it is. Returns whether it moved.
+     */
+    suspend fun activateLastProvider(profileId: String): Boolean {
+        val key = AppSettings(context).lastProviderKey(profileId) ?: return false
+        val provider = db.settingsSyncDao().providerByKey(key) ?: return false
+        if (provider.isActive) return false
+        setActiveProvider(provider.id)
+        return true
     }
 
     /**

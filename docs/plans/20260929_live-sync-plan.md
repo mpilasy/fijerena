@@ -44,7 +44,8 @@ seq        = server-assigned, monotonically increasing per account
 `provider`, `provider_login`, `category_filters`, `epg_source`, `profile`.
 
 `profileKey` applies to per-person data (`watch`, `watch_clear`, `favorite_*`,
-`provider_login`, `category_filters`, and the per-profile `setting` dev mode). Shared data
+`provider_login`, `category_filters`, and the per-profile `setting`s dev mode and last picked
+provider). Shared data
 (`provider`, `epg_source`, other `setting`s, `profile`) uses a fixed `shared` value in that slot.
 
 **`providerKey` is not `providerId`.** `providerId` is a local autoincrement `Long` — the same
@@ -135,6 +136,7 @@ resurrected by the next device that syncs.
 | EPG sources | yes | |
 | Theme, EPG auto-refresh | yes | |
 | Dev mode | yes, **per profile** | `setting` record with the profile's `profileKey` |
+| Last picked provider | yes, **per profile** | `setting` `last_provider` (value: `providerKey`); applied on profile switch — `docs/plans/20261002_profile-last-provider-plan.md` |
 | Category filters | yes, **per profile and provider** | `category_filters` record (`profileKey` + `providerKey`) |
 | UI scale, cellular multipliers | **no** | Per-device by nature (TV vs phone) |
 | Caches, EPG programme data | no | Re-downloaded |
@@ -426,7 +428,8 @@ final schema. Profiles are also useful on their own (a shared TV) and need no se
    - **Values kept in SharedPreferences** (passwords, Jellyfin logins, category filters, synced
      settings) are queued by `SettingsSyncQueue` just after they are written — no shared
      transaction exists, so a crash in between drops the entry until the next change. Synced
-     settings: theme, dev mode (per profile), EPG auto-refresh on/off, time and interval.
+     settings: theme, dev mode (per profile), last picked provider (per profile, added
+     2026-10-02), EPG auto-refresh on/off, time and interval.
    - **EPG sources** got a `source_key` UUID like providers, and a delete trigger records their
      tombstones.
    - **Not queued: data that existed before Phase 4.** The first sync of a device must upload

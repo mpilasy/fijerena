@@ -554,7 +554,7 @@ fun ContentTypeSelectionScreen(
                                         if (!isActive) {
                                             coroutineScope.launch {
                                                 val providerRepo = ProviderRepository(context.applicationContext)
-                                                providerRepo.setActiveProvider(provider.id)
+                                                providerRepo.pickProvider(provider.id)
                                                 showProviderPicker = false
                                                 refreshTrigger++
                                                 onProviderChanged()

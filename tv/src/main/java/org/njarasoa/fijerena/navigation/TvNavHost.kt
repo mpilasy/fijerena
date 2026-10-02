@@ -674,7 +674,7 @@ fun TvNavHost(
                             coroutineScope.launch {
                                 // Activate the selected provider in Room
                                 val providerRepo = ProviderRepository(context.applicationContext)
-                                providerRepo.setActiveProvider(provider.id)
+                                providerRepo.pickProvider(provider.id)
 
                                 // Clear AppContainer caches to force a fresh repository for the new provider
                                 val container = org.njarasoa.fijerena.core.ui.di.AppContainer.getInstance(context)

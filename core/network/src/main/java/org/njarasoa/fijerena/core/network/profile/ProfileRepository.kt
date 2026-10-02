@@ -87,6 +87,7 @@ class ProfileRepository(
                     }
                     deleteProfilePrefs(id)
                     AppSettings(context).removeDevMode(id)
+                    AppSettings(context).removeLastProvider(id)
                     AppSettings(context).removeProfileSearchHistory(id)
                     CategoryFiltersStore(context).removeProfile(id)
                     if (id == ProfileEntity.DEFAULT_ID) clearDefaultProfileData()

@@ -91,7 +91,7 @@ class LocalRecords(
         }
         val settings = AppSettings(context)
         for (key in AppSettings.SYNCED_SETTING_KEYS) {
-            if (key == AppSettings.DEV_MODE_SETTING_KEY) {
+            if (key in AppSettings.PER_PROFILE_SETTING_KEYS) {
                 profiles.filter { settings.syncedSetting(key, it) != null }.forEach { sync.seed(SyncKind.SETTING, it, key, now) }
             } else if (settings.syncedSetting(key, SyncKind.SHARED) != null) {
                 sync.seed(SyncKind.SETTING, SyncKind.SHARED, key, now)

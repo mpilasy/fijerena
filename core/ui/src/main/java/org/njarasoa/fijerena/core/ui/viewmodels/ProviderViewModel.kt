@@ -223,7 +223,7 @@ class ProviderViewModel(
     fun selectProvider(id: Long) {
         viewModelScope.launch {
             try {
-                providerRepository.setActiveProvider(id)
+                providerRepository.pickProvider(id)
                 _activeProvider.value = providerRepository.getProviderById(id)
                 loadProviders()
             } catch (e: CancellationException) {

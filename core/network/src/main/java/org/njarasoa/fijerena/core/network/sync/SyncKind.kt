@@ -25,7 +25,7 @@ object SyncKind {
     /** An EPG source; keyed by its `source_key`. */
     const val EPG_SOURCE = "epg_source"
 
-    /** One setting; keyed by its `app_settings` key. Per profile for dev mode, [SHARED] otherwise. */
+    /** One setting; keyed by its `app_settings` key. Per profile for dev mode and the last picked provider, [SHARED] otherwise. */
     const val SETTING = "setting"
 
     /**

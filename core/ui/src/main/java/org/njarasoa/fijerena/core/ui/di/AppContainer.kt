@@ -131,7 +131,9 @@ class AppContainer(
      * getMediaRepository() builds one for the new profile. Shared provider sessions are kept —
      * switching person doesn't mean logging back in to Xtream — but Jellyfin's are dropped, since
      * each profile signs in to Jellyfin as its own user. Xtream providers whose category filters
-     * differ between the two profiles get their hidden-category flags recomputed. Callers must also drop any screen still
+     * differ between the two profiles get their hidden-category flags recomputed. The device moves to
+     * the provider the new profile last picked, if it still exists; otherwise it stays on its current
+     * one (see docs/plans/20261002_profile-last-provider-plan.md). Callers must also drop any screen still
      * holding a repository, which the nav hosts do by rebuilding the back stack from home.
      */
     suspend fun switchProfile(profileId: String) {
@@ -143,6 +145,7 @@ class AppContainer(
                 val previousProfileId = appSettings.activeProfileId
                 appSettings.activeProfileId = profileId
                 providerRepository.applyCategoryFiltersForSwitch(previousProfileId, profileId)
+                val movedProvider = providerRepository.activateLastProvider(profileId)
                 val filtered = android.os.SystemClock.elapsedRealtime()
                 mediaRepositories.values.forEach { repo ->
                     try {
@@ -156,7 +159,7 @@ class AppContainer(
                 val done = android.os.SystemClock.elapsedRealtime()
                 android.util.Log.i(
                     "ProfileSwitch",
-                    "to $profileId: ${done - started} ms (lock wait ${locked - started}, filters ${filtered - locked}, teardown ${done - filtered})",
+                    "to $profileId: ${done - started} ms (lock wait ${locked - started}, filters+provider ${filtered - locked}, teardown ${done - filtered}, provider moved $movedProvider)",
                 )
             }
         }

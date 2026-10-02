@@ -279,6 +279,11 @@ Favorites and Last Watched/Continue Watching persist durably in SQLite via Room 
 favourites, watch history, search history, category filters per provider, dev-mode switch and
 Jellyfin login;
 providers, EPG sources and other settings are shared. Which profile is in use is per device.
+Each profile also remembers the provider it last picked (or added), on every device: switching to
+a profile moves the device to that provider. A profile that hasn't picked one yet, or whose
+provider was deleted, stays on the device's current provider. Another device's pick never moves a
+device that is already on that profile — it applies at the next switch
+(`docs/plans/20261002_profile-last-provider-plan.md`).
 Switching takes a fraction of a second: only category rows carry the filter flag, and streams and
 series follow their category at query time (see `docs/plans/20261001_fast-profile-switch-plan.md`).
 
@@ -310,7 +315,8 @@ device; the server sees only keys and ciphertext. Off on a device until it is se
   the player for Home and shows "Playback stopped from <device>". No Stop button in the TV app.
   Design: `docs/plans/20261001_live-sync-now-playing-plan.md`.
 - Resilient by design: a record a device can't apply waits and is retried (never blocks the rest); a record the server can't accept is rejected on its own; records whose sealed timestamp or deletion flag were altered are dropped; reconnects back off; an unreadable sync link on a device resets it to unlinked rather than crashing.
-- Not synced: which profile and provider a device is using, UI scale, cellular settings, and
+- Not synced: which profile and provider a device is using (each profile's last picked provider
+  is synced, and applied when a device switches to that profile), UI scale, cellular settings, and
   Jellyfin favourites and history (Jellyfin keeps those itself).
 
 Design and protocol: `docs/plans/20260929_live-sync-plan.md`.
