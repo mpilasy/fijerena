@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.player
 
+import androidx.activity.compose.BackHandler
 import android.app.Activity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibility
@@ -262,6 +263,13 @@ fun MobilePlayerContent(
     var showLastWatchedOverlay by remember { mutableStateOf(false) }
     var showControls by remember { mutableStateOf(true) }
     var showStats by remember { mutableStateOf(false) }
+
+    // Back closes an open channel panel first, as on TV; without this it left the player
+    // altogether. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-19.
+    BackHandler(enabled = showCategoryOverlay || showLastWatchedOverlay) {
+        showCategoryOverlay = false
+        showLastWatchedOverlay = false
+    }
 
     // Double-tap seek ripple pill (2a) — side is -1 (rewind, left 40%) or +1 (forward, right
     // 40%), 0 means hidden. Accumulates across a burst of rapid taps in the same direction

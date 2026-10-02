@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 in progress: F-16, F-18, F-15, F-06, F-29 done; F-02 not reproduced (no change). Phases 4-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phases 4-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -208,6 +208,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 #### F-19: Mobile player Back exits the player instead of closing an open panel [P2, CONFIRMED]
 - **Where:** `mobile/.../player/MobilePlayerScreen.kt:261-262, 735-778` — no `BackHandler` while `showCategoryOverlay`/`showLastWatchedOverlay` are open (only the stats overlay has one).
 - **Fix:** `BackHandler(enabled = showCategoryOverlay || showLastWatchedOverlay) { close both }`.
+- **Done 2026-10-01** as written. Verified on the phone emulator: docked channel promoted to full screen, swipe opens Category Channels, Back closes it and playback stays full screen.
 
 #### 🆕 F-29: Final watch-progress write can be skipped on exit [P2, PLAUSIBLE]
 - **Where:** `core/ui/.../viewmodels/StreamLoaderViewModel.kt:584-600`.
@@ -302,14 +303,14 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 8. **F-11** `deleteProvider(fromRemote = true)`. *(`3fbaba2d`)*
 - **Server changes (F-22, F-25) take effect only once the sync server is redeployed.** The client-side fixes don't depend on them.
 
-### Phase 3 — Playback & lifecycle
-1. **F-16** TV Live TV resume (split layout + player live-paused rule). ✅
-2. **F-18** TV provider switch pops to graph root. ✅
-3. **F-15** repositories no longer cancel their write queue on close. ✅
-4. **F-06** local future per `callbackFlow`. ✅
-5. **F-29** atomic final progress write. ✅
-6. **F-02** after HLS live reproduction only. — not reproduced, no change.
-7. **F-19** mobile player Back closes panels.
+### Phase 3 — Playback & lifecycle — ✅ done 2026-10-01
+1. **F-16** TV Live TV resume (split layout + player live-paused rule). ✅ *(`cd5d669b`)*
+2. **F-18** TV provider switch pops to graph root — impact smaller than first thought (Home swallows Back). ✅ *(`e68abdb4`)*
+3. **F-15** repositories no longer cancel their write queue on close — not drain-then-cancel. ✅ *(`ec54d016`)*
+4. **F-06** local future per `callbackFlow`. ✅ *(`c769791b`)*
+5. **F-29** atomic final progress write. ✅ *(`a24d164f`)*
+6. **F-02** after HLS live reproduction only. — not reproduced on a throttled live HLS stream, no change. *(`448bbbf2`)*
+7. **F-19** mobile player Back closes panels. ✅
 
 ### Phase 4 — Storage hardening
 1. **F-33** export schemas; `MigrationTestHelper` in JVM tests.
