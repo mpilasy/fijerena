@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.xmltv
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -103,6 +104,8 @@ class XmltvSearchService(
             val channelIds = matchedChannels.map { it.xmltvId }
             val rows = dao.getProgrammesForChannels(channelIds, sourceIds, now, twoHoursLater)
             rowsToSearchResult(rows, searchedFromIndex = true)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "Channel search failed", e)
             null
@@ -128,6 +131,8 @@ class XmltvSearchService(
         return try {
             searchFromIndex(query, now, futureSixDays)
         } catch (e: EpgIndexBusyException) {
+            throw e
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "SQLite search failed", e)

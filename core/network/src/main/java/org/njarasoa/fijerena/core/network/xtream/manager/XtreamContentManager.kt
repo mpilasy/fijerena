@@ -896,6 +896,8 @@ class XtreamContentManager(
                 }
 
                 response
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 XtreamResponse.Failed(e)
             }
@@ -934,6 +936,8 @@ class XtreamContentManager(
                 }
 
                 response
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 XtreamResponse.Failed(e)
             }
