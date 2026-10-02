@@ -137,11 +137,12 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 
 #### 🆕 F-20: `xtream_v2.db` — home of watch history and favourites — is wiped on any unmigrated version change [P0, CONFIRMED]
 - **Where:** `core/network/.../xtream/db/XtreamDatabase.kt:396` (`fallbackToDestructiveMigration(dropAllTables = true)`), `:28` (`exportSchema = false`).
-- **Mechanism:** Since `watch_state` (v17) and `favorite_state` moved into this DB, it holds the only durable copy of user data. Room's destructive fallback fires on any missing migration path **including downgrades** — e.g. installing an older debug APK on a device that had a newer one (routine in this multi-branch, multi-device workflow), or a future version bump that forgets a `Migration`. All history, favourites, sync versions and tombstones vanish silently; with live sync linked, the device then re-seeds and pushes an empty state as the newest.
+- **Mechanism:** Since `watch_state` (v17) and `favorite_state` moved into this DB, it holds the only durable copy of user data. Room's destructive fallback fires on any missing migration path **including downgrades** — e.g. installing an older debug APK on a device that had a newer one (routine in this multi-branch, multi-device workflow), or a future version bump that forgets a `Migration`. All history, favourites, sync versions and tombstones vanish silently, and live sync doesn't bring them back: the pull cursor lives in prefs, so the device never re-pulls what it had already received.
 - **Fix:**
   1. Replace with `fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6)` (pre-`MIGRATION_7_8` catalog-only versions).
   2. Downgrade: before building Room, read `PRAGMA user_version`; if it's newer than `version`, move the file set to `xtream_v2.db.v<N>.bak` (keep the last one), log loudly, start fresh. User data is recoverable by reinstalling the newer build.
   3. Turn on `exportSchema = true` with `room { schemaDirectory(...) }`, commit schemas, and convert `XtreamDatabaseMigrationTest` to `MigrationTestHelper` (F-33).
+  - **Done 2026-10-01** (1 + 2; 3 is F-33): verified on the TV emulator — a v99 file was set aside as `xtream_v2.db.v99.bak`, the app started on an empty v24 DB without crashing, and the event showed in Diagnostics; original data restored afterwards.
   - Longer term: split rebuildable catalog tables from user-data tables into separate DB files so catalog schema churn can never touch user data.
 
 #### F-13: Favourite snapshot can `runBlocking` the main thread [P2, CONFIRMED — downgraded]

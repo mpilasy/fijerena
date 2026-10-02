@@ -204,6 +204,13 @@ Provides full-text search over `epg_programme`.
 ## 3. Xtream Cache Database (`xtream_v2.db`)
 **Version:** 24
 
+**Never dropped for a missing migration.** `fallbackToDestructiveMigrationFrom(1..6)` only: those
+pre-`MIGRATION_7_8` versions held rebuildable catalogue alone. Every later version holds user data
+(`watch_state`, `favorite_state`, sync versions and tombstones), so every version jump needs a real
+`Migration`. A file *newer* than the build (an older APK installed over a newer one) is renamed to
+`xtream_v2.db.v<N>.bak` (plus `-wal`/`-shm`; only the latest set is kept) before Room opens, and the
+app starts with an empty database; the event is recorded in Settings → Diagnostics.
+
 Persistent cache for Xtream Codes API metadata to enable offline browsing, plus the durable
 `watch_state` and `favorite_state` tables. (v10 added FTS4 search tables for streams/series; v11
 added `excluded` flags and indexes; v12 added TMDB detail fields; v13 added `xtream_epg_cache` table;

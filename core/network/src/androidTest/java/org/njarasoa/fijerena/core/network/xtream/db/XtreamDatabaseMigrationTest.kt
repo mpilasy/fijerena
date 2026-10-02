@@ -19,9 +19,9 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
  * the migration under test changes.
  *
  * Reopening through Room afterward exercises Room's own post-migration schema validation, the same
- * check that decides whether a real device's data survives a migration or falls through
- * [XtreamDatabase]'s `fallbackToDestructiveMigration(dropAllTables = true)` and gets wiped —
- * including `watch_state`/`favorite_state`, neither of which is re-fetchable from the server.
+ * check that decides whether a real device's data survives a migration — a mismatch there fails
+ * the open on every launch. ([XtreamDatabase]'s destructive fallback only covers pre-v7 files, so
+ * `watch_state`/`favorite_state`, neither re-fetchable from the server, are never dropped by it.)
  *
  * Uses its own on-disk file (never the app's real `xtream_v2.db`), deleted before and after.
  */
