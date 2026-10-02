@@ -214,7 +214,7 @@ Position saved every 10 seconds (Live TV) or based on progress (VOD). On re-open
 - **D-pad Left/Right** = seek −10s / +10s (VOD only, while controls visible)
 - **KEYCODE_MEDIA_PLAY_PAUSE** = pause/resume (VOD only)
 - **KEYCODE_MEDIA_REWIND** = seek −30s (VOD only)
-- **KEYCODE_MEDIA_FAST_FORWARD** = seek +1 min (VOD only)
+- **KEYCODE_MEDIA_FAST_FORWARD** = move the scrub cursor forward like D-pad Right (10 s per press, accelerating to ~1, 3, then 10 min per second while held); OK commits the seek (VOD only)
 
 **Mobile:**
 - **Single tap** = show/hide controls
