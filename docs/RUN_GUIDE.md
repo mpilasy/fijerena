@@ -104,6 +104,17 @@ adb -s <tv-emulator-id> install -r tv/build/outputs/apk/debug/tv-debug.apk
 adb -s <mobile-emulator-id> install -r mobile/build/outputs/apk/debug/mobile-debug.apk
 ```
 
+#### Test provider: Jellyfin as Xtream
+
+`tools/jellyfin-xtream/xtream_bridge.py` (Python 3, stdlib only) serves a Jellyfin server as an Xtream panel, so the Xtream code paths can be tested against a known library. It holds no credentials: the Xtream username/password the app sends are checked against Jellyfin. Pointing it at another Jellyfin server only means changing `JELLYFIN_URL`.
+
+```bash
+cd tools/jellyfin-xtream
+JELLYFIN_URL=https://sm.njarasoa.org setsid nohup python3 xtream_bridge.py > bridge.log 2>&1 &
+```
+
+In the app, add an Xtream provider with Server URL `http://10.0.2.2:8080` (emulator → host; use the host's LAN IP from real devices) and the Jellyfin username/password. Movie and TV-show libraries become one category each; Live TV and EPG appear only if Jellyfin has Live TV. Playback redirects to Jellyfin, so the device must reach `JELLYFIN_URL` too. Keep `xtream_ids_<host>.db`: it maps Xtream ids to Jellyfin GUIDs, and losing it changes every id (orphaning watch history and favourites).
+
 ### 2. Physical Android TV (NVIDIA Shield, Chromecast, Sony Bravia)
 
 TV devices connect via ADB over TCP/IP (port 5555). Because TV IP addresses drift across sessions via DHCP (on development subnet `192.168.68.0/24`):
