@@ -8,8 +8,8 @@
 # `suspendRunCatching` (core:network).
 #
 # Escapes:
-#   - a `// cancellation-ok: <reason>` comment on the catch line (non-suspend code, or
-#     swallowing is intended);
+#   - a `// cancellation-ok: <reason>` comment on the catch line or the line right after it
+#     (ktlint moves it there) — non-suspend code, or swallowing is intended;
 #   - a whole file listed in scripts/check-cancellation-allowlist.txt with a reason.
 #
 # Run locally: scripts/check-cancellation.sh
@@ -37,6 +37,7 @@ while IFS= read -r file; do
     # CancellationException one, when its first statement is
     # `if (e is CancellationException) throw e`, or when it carries the cancellation-ok marker.
     hits="$(awk '
+        /^[[:space:]]*\/\/ cancellation-ok:/ { pending = ""; next }
         /^[[:space:]]*(\/\/|\*)/ { next }
         pending != "" {
             if ($0 !~ /if \(e is (kotlinx\.coroutines\.)?CancellationException\) throw e/) print pending

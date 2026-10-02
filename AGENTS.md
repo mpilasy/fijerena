@@ -111,6 +111,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **Single return statement** per function only.
 - **OS:** Ubuntu Linux development environment.
 - **Lint:** Run `./gradlew ktlintCheck` to verify style. Use `./gradlew ktlintFormat` to auto-fix.
+  ktlint-gradle 14.2.0 with ktlint 1.8.0 (ktlint-gradle older than 14.1 lints nothing under AGP 9). Rules are in `.editorconfig`; put a `// cancellation-ok: <reason>` marker on the catch line or the line after it.
 
 ---
 
