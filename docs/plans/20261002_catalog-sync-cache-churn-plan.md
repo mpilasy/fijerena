@@ -1,6 +1,6 @@
 # Catalog Sync Cache Churn Plan
 
-**Status:** Phase 1 done (2026-10-02). Phases 2-4 not started.
+**Status:** Phases 1-2 done (2026-10-02). Phases 3-4 not started.
 
 Opening a show the app already has on disk should not re-download it. Today it does: a
 finished 18-season show like Law & Order is fetched again in full from Xtream, plus several TMDB
@@ -87,6 +87,15 @@ unless:
 - the stored list is older than 30 days, a safety net for providers that never bump
   `last_modified` (see finding 6).
 
+**Done (2026-10-02).** `EPISODE_LIST_CACHE_TTL_MS` is 30 days. The first two triggers needed no
+new code: a null stamp already read as "not fresh", and manual refresh already expired it. One gap
+fixed: `getSeriesDetail` returned the in-memory `seriesDetailCache` before looking at the stamp, and
+that cache lives 7 days on the UI's provider instance, which the sync (its own instance) can't
+clear. The in-memory copy is now used only while the stored stamp is fresh. Unit tests:
+`XtreamSeriesEpisodeFreshnessTest` (21-day-old list served from disk, 31-day-old list refetched, a
+series the sync marked changed is refetched even while held in memory). Not checked on a device:
+it needs a provider to change a series between two syncs.
+
 ## Phase 3 — Stop repeat TMDB calls on refetch
 
 - Skip `tmdb.getTvDetails` while `detailFetchedAt` is fresh (7 days, as the content rating
@@ -111,6 +120,6 @@ jellyxtream exercises the Phase 1/2 trigger on the emulators.
 | Phase | What | Depends on |
 |---|---|---|
 | 1 | Hash without `num`, keep cache columns — **done 2026-10-02** | — |
-| 2 | Episode list refresh on change | 1 |
+| 2 | Episode list refresh on change — **done 2026-10-02** | 1 |
 | 3 | TMDB repeat calls | — |
 | 4 | Bridge `last_modified` | — (useful for testing 2) |

@@ -228,7 +228,7 @@ class XtreamMediaProvider(
             }
             // And the persisted episode-list cache (EPISODE_LIST_CACHE_TTL_MS) — without this a
             // manual refresh (TV's header Refresh button, Mobile's pull-to-refresh) would still
-            // serve the on-disk episode list for the rest of its 24h window, making the refresh
+            // serve the on-disk episode list for the rest of its window, making the refresh
             // action look like it did nothing.
             repository.expireEpisodeListCache(id)
         }
@@ -243,25 +243,31 @@ class XtreamMediaProvider(
     override suspend fun getSeriesDetail(seriesId: SeriesId): kotlin.Result<SeriesDetail> {
         // Xtream numbers its catalogue; unwrap once here and keep the rest raw.
         val rawSeriesId = seriesId.raw
-        seriesDetailCache.get(rawSeriesId)?.let { return kotlin.Result.success(it) }
         val id =
             rawSeriesId.toIntOrNull() ?: return kotlin.Result.failure(
                 Exception("Invalid series ID: $rawSeriesId"),
             )
 
-        // Persisted episode-list freshness (24h — see EPISODE_LIST_CACHE_TTL_MS): every
-        // open used to re-hit Xtream for the whole episode list unconditionally, on the reasoning
-        // that ongoing shows add episodes and a longer-lived cache would hide that. In practice
-        // this meant hitting the API on every single visit, including several times a minute
-        // while browsing seasons back and forth. A show the size of Law & Order returns several
-        // hundred episodes on every one of those calls — [getCachedSeriesDetail] already rebuilds
-        // a full SeriesDetail from disk with no network call, this just decides when that's
-        // trustworthy enough to use instead of asking Xtream again.
+        // Persisted episode-list freshness (see EPISODE_LIST_CACHE_TTL_MS): every open used to
+        // re-hit Xtream for the whole episode list unconditionally, on the reasoning that ongoing
+        // shows add episodes and a longer-lived cache would hide that. In practice this meant
+        // hitting the API on every single visit, including several times a minute while browsing
+        // seasons back and forth. A show the size of Law & Order returns several hundred episodes
+        // on every one of those calls — [getCachedSeriesDetail] already rebuilds a full
+        // SeriesDetail from disk with no network call, this just decides when that's trustworthy
+        // enough to use instead of asking Xtream again.
+        //
+        // New episodes are noticed through the catalogue sync instead: a series whose catalogue
+        // entry changed (bears bumps `last_modified` when episodes are added) gets its
+        // episodesFetchedAt cleared, so the next open lands here as not fresh.
         val cachedEntity = repository.getCachedSeriesEntity(id)
         val episodesFresh =
             cachedEntity?.episodesFetchedAt != null &&
                 System.currentTimeMillis() - cachedEntity.episodesFetchedAt < EPISODE_LIST_CACHE_TTL_MS
         if (episodesFresh) {
+            // The in-memory copy is only trusted while the stored list is: the sync that clears
+            // the stamp runs on another provider instance and can't reach this cache.
+            seriesDetailCache.get(rawSeriesId)?.let { return kotlin.Result.success(it) }
             val cached = repository.getCachedSeriesDetail(id)
             if (cached != null) {
                 seriesDetailCache.put(rawSeriesId, cached)
@@ -1006,11 +1012,12 @@ class XtreamMediaProvider(
         // long TTL avoids re-hitting Xtream + TMDB every time a detail screen is reopened.
         private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
 
-        // Separate stamp from DETAIL_CACHE_TTL_MS (different question, and now a different
-        // window): this one guards the episode list itself, not the TMDB-derived enrichment
-        // fields. Shorter than the metadata cache — an ongoing show adds episodes far more often
-        // than its plot/cast/rating changes, so a fresh copy is worth asking for sooner.
-        private const val EPISODE_LIST_CACHE_TTL_MS = 24 * 3600 * 1000L // 24 hours
+        // Separate stamp from DETAIL_CACHE_TTL_MS: this one guards the episode list itself, not
+        // the TMDB-derived enrichment fields. Only a safety net: new episodes normally show up
+        // because the catalogue sync clears the stamp when a series changes, but a provider that
+        // never updates `last_modified` (the jellyxtream bridge, for one) would otherwise never
+        // be asked again. See docs/plans/20261002_catalog-sync-cache-churn-plan.md, Phase 2.
+        private const val EPISODE_LIST_CACHE_TTL_MS = 30 * 24 * 3600 * 1000L // 30 days
         private const val MAX_CONCURRENT_TMDB_REQUESTS = 10
 
         // Below this a row reads as an accident rather than a suggestion, so it is not shown.
