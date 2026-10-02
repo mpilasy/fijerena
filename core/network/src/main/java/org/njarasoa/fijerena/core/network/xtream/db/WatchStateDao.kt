@@ -325,9 +325,6 @@ interface WatchStateDao {
     @Query("DELETE FROM watch_state WHERE providerId = :providerId")
     suspend fun deleteAllProfiles(providerId: Long)
 
-    /** Rows whose provider no longer exists at all — see [org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData]. */
-    @Query("DELETE FROM watch_state WHERE providerId NOT IN (:validProviderIds)")
-    suspend fun deleteOrphaned(validProviderIds: List<Long>): Int
 
     /**
      * Bulk restore from a settings-export import: the whole row is known and authoritative, so a

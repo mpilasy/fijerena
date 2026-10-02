@@ -1,5 +1,12 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Stability & Resilience (Phase 4 — storage)
+**Release Date:** 2026-10-01
+
+- **Deleting a provider no longer needs room for a second copy of the database:** the automatic `VACUUM` after a provider delete (and after orphan cleanup) rewrote the whole database into the WAL — 258 MB on the TV emulator. It's gone (`auto_vacuum = FULL` already returns space as rows go); "Shrink Database" still runs it on request. Catalogue rows are also deleted 1,000 per commit, cutting the delete's own WAL peak from 70 MB to 13 MB on a 285k-row provider.
+
+---
+
 ## Version: Stability & Resilience (Phases 0–3)
 **Release Date:** 2026-10-01
 

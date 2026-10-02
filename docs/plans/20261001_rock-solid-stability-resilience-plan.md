@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phases 4-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): F-35 done. Phases 5-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -178,10 +178,13 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Fix:** `close()` drains first (`awaitPendingWrites()` then cancel) and is made `suspend`. After close, writes log an error in debug builds (`check(!closed)`), so (b) shows up in testing instead of losing data.
 - **Done 2026-10-01, simpler:** `close()` no longer cancels the write queue at all. Everything on it is a short one-shot write keyed by the repository's own provider and profile, so letting queued and late writes finish is always correct — no drain, no `suspend`, no assertion needed. New test `MediaRepositoryFavoritesTest` "writes queued before close, and made after it, still land": failed before (the post-close write was dropped, 50/51), passes now.
 
-#### 🆕 F-35: Full `VACUUM` on the hot database [P2, CONFIRMED]
+#### 🆕 F-35: Automatic `VACUUM` and unbounded deletes on the hot database [P2 → P1, CONFIRMED and measured]
 - **Where:** `ProviderRepository.kt:233-243, 285-292`.
 - **Mechanism:** A full `VACUUM` of `xtream_v2.db` (hundreds of MB with a large catalogue) holds the write lock for its whole duration — every `watch_state` save queues behind it — and needs up to 2× the DB size free, which the low-storage TVs don't have (memory: 5556 already needed `pm clear` for space).
 - **Fix:** Reuse `EpgIndexer`'s approach: `auto_vacuum = INCREMENTAL` (needs one migration with a single full `VACUUM` at upgrade, guarded by a free-space check) then chunked `PRAGMA incremental_vacuum(N)` with `wal_checkpoint(PASSIVE)` between chunks; skip when free space < DB size.
+- **Correction 2026-10-01:** `xtream_v2.db` already runs `auto_vacuum = FULL` (`XtreamEpgCacheDao`'s comment; confirmed in the emulator's file header), so the incremental-vacuum migration above isn't needed: deletes already shrink the file, and the `VACUUM` only defragments.
+- **Measured 2026-10-01**, TV emulator, current build, deleting a duplicate provider while polling file sizes: WAL **0 → 30 → 258 MB → 0** within 3 s — the `VACUUM` rewriting the whole 263 MB database into the WAL. Unbounded catalogue deletes on a host copy of the same database (285k rows): 70 MB WAL peak.
+- **Done 2026-10-01**: no automatic `VACUUM` after a provider delete or an orphan sweep — only the manual "Shrink Database" (`forceVacuum`) runs one. Catalogue and orphan deletes go 1,000 rows per commit through one `deleteInBatches` helper (raw `SupportSQLiteDatabase.delete`, then `invalidationTracker.refreshAsync()`); the per-table DAO deletes it replaced were removed. Verified: same emulator delete, WAL peak **0.4 MB**; host copy, batched: 13 MB (5000-row batches: 31 MB). Test data: a duplicate of `bearstv`, deleted again; emulator backed up first (`backups/emulator-5554-20261001-phase4-pre.tar`). Note: "Duplicate provider" copies no catalogue — only a provider made active and opened would.
 
 ### D. Lifecycle, navigation & UI
 
@@ -316,7 +319,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 1. **F-33** export schemas; `MigrationTestHelper` in JVM tests.
 2. **F-14** crash-safe profile deletion order + startup resume.
 3. **F-13** favourite `StateFlow` snapshot; remove `runBlocking`.
-4. **F-35** incremental vacuum with free-space guard.
+4. **F-35** no automatic `VACUUM`; catalogue deletes batched (no migration needed — `auto_vacuum = FULL` already). ✅
 5. **F-28** no plaintext fallback; "sign in again" state.
 
 ### Phase 5 — Systemic hygiene

@@ -144,13 +144,7 @@ interface FavoriteStateDao {
     @Query("DELETE FROM favorite_state WHERE profileId = :profileId")
     fun deleteProfile(profileId: String)
 
-    /** Provider deletion: every profile's rows go with it. */
-    @Query("DELETE FROM favorite_state WHERE providerId = :providerId")
-    fun deleteAllProfiles(providerId: Long)
 
-    /** Rows whose provider no longer exists at all — see [org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData]. */
-    @Query("DELETE FROM favorite_state WHERE providerId NOT IN (:validProviderIds)")
-    fun deleteOrphaned(validProviderIds: List<Long>): Int
 
     /** Restore path: rewrites `providerId` before insert, so it takes whole rows. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -130,13 +130,7 @@ interface XtreamStreamDao {
         type: String,
     )
 
-    /** Every type at once, for provider deletion — see [ProviderRepository.deleteProvider][org.njarasoa.fijerena.core.network.provider.ProviderRepository.deleteProvider]. */
-    @Query("DELETE FROM xtream_streams WHERE providerId = :providerId")
-    fun deleteAllForProvider(providerId: Long)
 
-    /** Rows whose provider no longer exists at all — see [ProviderRepository.pruneOrphanedCatalogData][org.njarasoa.fijerena.core.network.provider.ProviderRepository.pruneOrphanedCatalogData]. */
-    @Query("DELETE FROM xtream_streams WHERE providerId NOT IN (:validProviderIds)")
-    fun deleteOrphaned(validProviderIds: List<Long>): Int
 
     @Query("SELECT streamId FROM xtream_streams WHERE providerId = :providerId AND type = :type")
     fun getStreamIds(

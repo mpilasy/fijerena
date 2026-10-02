@@ -35,6 +35,17 @@ class ProviderRepository(
     private val context: Context,
 ) {
     companion object {
+        /**
+         * Rows per commit when deleting catalogue data — see [deleteInBatches]. Measured on a copy
+         * of a real 256 MB `xtream_v2.db` deleting a 285k-row provider: WAL peak 70 MB unbounded,
+         * 31 MB at 5000, 19 MB at 2000, 13 MB at 1000.
+         */
+        private const val CATALOG_DELETE_BATCH = 1_000
+
+        /** Every `xtream_v2.db` table keyed by `providerId` that a provider deletion empties. */
+        private val CATALOG_TABLES =
+            listOf("xtream_streams", "xtream_series", "xtream_episodes", "xtream_categories", "favorite_state", "xtream_epg_cache")
+
         private const val KEY_USERNAME = "username"
         private const val KEY_PASSWORD = "password"
         private const val KEY_JELLYFIN_TOKEN = "jellyfin_token"
@@ -222,30 +233,36 @@ class ProviderRepository(
      * the rows are gone (hence the `VACUUM` below).
      */
     private suspend fun clearProviderCatalog(providerId: Long) {
-        // Every DAO call here is a plain blocking Room method, not `suspend` — XtreamDatabase's
-        // builder never calls allowMainThreadQueries(), so without this withContext they would
-        // run on whatever dispatcher the caller happens to be on (ProviderViewModel.deleteProvider
-        // calls in from a bare viewModelScope.launch { }, i.e. Main) and Room would throw.
+        // Off the caller's dispatcher: ProviderViewModel.deleteProvider calls in from a bare
+        // viewModelScope.launch { }, i.e. Main, and these are blocking database writes.
         withContext(Dispatchers.IO) {
             val db = XtreamDatabase.getInstance(context)
-            db.streamDao().deleteAllForProvider(providerId)
-            db.seriesDao().deleteAll(providerId)
-            db.episodeDao().deleteAll(providerId)
-            db.categoryDao().deleteAllForProvider(providerId)
-            db.favoriteStateDao().deleteAllProfiles(providerId)
-            db.epgCacheDao().deleteAll(providerId)
-            try {
-                val sdb = db.openHelper.writableDatabase
-                sdb.execSQL("VACUUM")
-                sdb.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() }
-            } catch (e: Exception) {
-                // VACUUM needs the connection free of any other open transaction/statement; if
-                // one is mid-flight this just skips reclaiming disk space this time around — the
-                // rows themselves are already deleted regardless, which is the correctness-
-                // critical part; VACUUM only recovers the now-unused disk space.
-                android.util.Log.w("ProviderRepository", "VACUUM after provider delete failed", e)
-            }
+            CATALOG_TABLES.forEach { table -> deleteInBatches(db, table, "providerId = $providerId") }
+            db.invalidationTracker.refreshAsync()
         }
+    }
+
+    /**
+     * Deletes [table]'s rows matching [where], [CATALOG_DELETE_BATCH] at a time, each batch its own
+     * commit. `xtream_v2.db` runs `auto_vacuum = FULL`, so each commit moves and frees its pages
+     * there and then: one unbounded `DELETE` of a whole provider's catalogue piles all of that page
+     * movement into one transaction's WAL. Bounded commits keep the WAL small, and the file shrinks
+     * as it goes — which is also why no `VACUUM` follows any more (see
+     * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-35). [where] is built from
+     * provider ids only, never from user input.
+     */
+    private fun deleteInBatches(
+        db: XtreamDatabase,
+        table: String,
+        where: String,
+    ): Int {
+        val sdb = db.openHelper.writableDatabase
+        var total = 0
+        do {
+            val deleted = sdb.delete(table, "rowid IN (SELECT rowid FROM `$table` WHERE $where LIMIT $CATALOG_DELETE_BATCH)", null)
+            total += deleted
+        } while (deleted >= CATALOG_DELETE_BATCH)
+        return total
     }
 
     /**
@@ -268,14 +285,9 @@ class ProviderRepository(
                     val sizeBeforeBytes =
                         (if (dbFile.exists()) dbFile.length() else 0L) + (if (walFile.exists()) walFile.length() else 0L)
 
-                    val rowsRemoved =
-                        db.streamDao().deleteOrphaned(validProviderIds) +
-                            db.seriesDao().deleteOrphaned(validProviderIds) +
-                            db.episodeDao().deleteOrphaned(validProviderIds) +
-                            db.categoryDao().deleteOrphaned(validProviderIds) +
-                            db.favoriteStateDao().deleteOrphaned(validProviderIds) +
-                            db.epgCacheDao().deleteOrphaned(validProviderIds) +
-                            db.watchStateDao().deleteOrphaned(validProviderIds)
+                    val orphaned = "providerId NOT IN (${validProviderIds.joinToString()})"
+                    val rowsRemoved = (CATALOG_TABLES + "watch_state").sumOf { table -> deleteInBatches(db, table, orphaned) }
+                    if (rowsRemoved > 0) db.invalidationTracker.refreshAsync()
 
                     cleanupOrphanedPrefs(validProviderIds.toSet())
 
@@ -286,7 +298,12 @@ class ProviderRepository(
                         deleteProviderEpgSources(orphanId)
                     }
 
-                    if (rowsRemoved > 0 || forceVacuum) {
+                    // Only when asked for (Settings → Shrink Database): auto_vacuum = FULL already
+                    // returns freed pages to the file as rows go, so a VACUUM here only defragments,
+                    // and in WAL mode it rewrites the whole database into the WAL first — a spike as
+                    // big as the database itself (measured: 258 MB) that a low-storage TV may not
+                    // have room for. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-35.
+                    if (forceVacuum) {
                         try {
                             val sdb = db.openHelper.writableDatabase
                             sdb.execSQL("VACUUM")

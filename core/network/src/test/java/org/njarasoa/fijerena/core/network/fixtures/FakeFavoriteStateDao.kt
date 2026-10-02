@@ -60,9 +60,6 @@ class FakeFavoriteStateDao : FavoriteStateDao {
         rows.values.removeAll { it.profileId == profileId }
     }
 
-    override fun deleteAllProfiles(providerId: Long) {
-        rows.values.removeAll { it.providerId == providerId }
-    }
 
     override fun restoreAll(entities: List<FavoriteStateEntity>) {
         entities.forEach { upsert(it) }
@@ -70,11 +67,6 @@ class FakeFavoriteStateDao : FavoriteStateDao {
 
     override fun count(providerId: Long): Int = rows.values.count { it.providerId == providerId }
 
-    override fun deleteOrphaned(validProviderIds: List<Long>): Int {
-        val toRemove = rows.keys.filter { it.providerId !in validProviderIds }
-        toRemove.forEach { rows.remove(it) }
-        return toRemove.size
-    }
 
     override fun get(
         providerId: Long,
