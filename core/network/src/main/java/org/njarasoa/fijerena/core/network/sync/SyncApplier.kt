@@ -83,6 +83,11 @@ class SyncApplier(
          * this device to another profile, then apply it again.
          */
         val activeProfileDeleted: Boolean,
+        /**
+         * Another device deleted the provider this device was using; `deleteProvider` has made the
+         * first remaining one active. The UI must follow it.
+         */
+        val activeProviderDeleted: Boolean = false,
     )
 
     // The order records are applied in: what others depend on first.
@@ -109,6 +114,7 @@ class SyncApplier(
         val changedProviders = mutableSetOf<Long>()
         val changedProviderConfigs = mutableSetOf<Long>()
         var activeProfileDeleted = false
+        var activeProviderDeleted = false
 
         for (record in records.sortedBy { kindOrder.indexOf(it.key.kind).let { i -> if (i < 0) Int.MAX_VALUE else i } }) {
             if (record.key.kind !in kindOrder) {
@@ -128,6 +134,7 @@ class SyncApplier(
                 is Outcome.AppliedProvider -> {
                     applied++
                     changedProviderConfigs += outcome.providerId
+                    activeProviderDeleted = activeProviderDeleted || outcome.activeDeleted
                 }
 
                 Outcome.Skipped -> {
@@ -149,7 +156,7 @@ class SyncApplier(
             sync.receive(newest)
             versions.receive(newest)
         }
-        return Result(applied, skipped, deferred, changedProviders, changedProviderConfigs, activeProfileDeleted)
+        return Result(applied, skipped, deferred, changedProviders, changedProviderConfigs, activeProfileDeleted, activeProviderDeleted)
     }
 
     private sealed interface Outcome {
@@ -162,6 +169,8 @@ class SyncApplier(
         /** A provider's record, login or category filters: see [Result.providerChangedIds]. */
         data class AppliedProvider(
             val providerId: Long,
+            /** It was deleted, and it was this device's active provider. */
+            val activeDeleted: Boolean = false,
         ) : Outcome
 
         data object Skipped : Outcome
@@ -438,7 +447,7 @@ class SyncApplier(
                 val existing = sync.providerByKey(providerKey)
                 existing?.let { providers.deleteProvider(it.id, fromRemote = true) }
                 recordReceivedDeletion(SyncKind.PROVIDER, providerKey, record.hlc)
-                if (existing != null) Outcome.AppliedProvider(existing.id) else Outcome.Applied
+                if (existing != null) Outcome.AppliedProvider(existing.id, activeDeleted = existing.isActive) else Outcome.Applied
             }
 
             else -> {

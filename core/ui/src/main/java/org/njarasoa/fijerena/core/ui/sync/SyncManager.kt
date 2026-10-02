@@ -98,6 +98,12 @@ class SyncManager internal constructor(
                 scope.launch { AppContainer.getInstance(app).onProvidersChanged(providerIds) }
             }
 
+            override fun onActiveProviderDeleted() {
+                // The repository already moved this device to the next provider: drop what screens
+                // hold of the deleted one and send them home, as a profile switch does.
+                scope.launch { AppContainer.getInstance(app).activeProviderChangedExternally() }
+            }
+
             override fun onActiveProfileDeleted() {
                 scope.launch {
                     // Another device deleted the profile this one is using: move to another, then

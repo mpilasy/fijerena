@@ -238,12 +238,8 @@ class ProviderViewModel(
     fun deleteProvider(id: Long) {
         viewModelScope.launch {
             try {
+                // Moves to the first remaining provider if this one was active.
                 providerRepository.deleteProvider(id)
-                // If we deleted the active provider, activate the first remaining one
-                val remaining = providerRepository.getAllProvidersList()
-                if (remaining.isNotEmpty() && remaining.none { it.isActive }) {
-                    providerRepository.setActiveProvider(remaining.first().id)
-                }
                 loadProviders()
             } catch (e: CancellationException) {
                 throw e

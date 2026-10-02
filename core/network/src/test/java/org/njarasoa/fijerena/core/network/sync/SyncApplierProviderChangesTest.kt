@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -13,6 +14,8 @@ import io.mockk.unmockkAll
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.profile.ProfileDao
@@ -54,6 +57,7 @@ class SyncApplierProviderChangesTest {
         coEvery { anyConstructed<ProviderRepository>().applyRemoteProvider(any(), any()) } returns provider.id
         coEvery { anyConstructed<ProviderRepository>().applyRemoteLogin(any(), any(), any()) } returns Unit
         coEvery { anyConstructed<ProviderRepository>().applyRemoteCategoryFilters(any(), any(), any()) } returns Unit
+        coEvery { anyConstructed<ProviderRepository>().deleteProvider(any(), any()) } returns Unit
     }
 
     @After
@@ -92,6 +96,29 @@ class SyncApplierProviderChangesTest {
         runBlocking {
             assertEquals(setOf(provider.id), applier().apply(listOf(loginRecord)).providerChangedIds)
             assertEquals(setOf(provider.id), applier().apply(listOf(filtersRecord)).providerChangedIds)
+        }
+
+    private val providerDeletion = SyncRecord(SyncKey(SyncKind.SHARED, "prov-1", SyncKind.PROVIDER), hlc = 14, deleted = true)
+
+    @Test
+    fun `deleting this device's active provider is reported, so the UI follows the next one`() =
+        runBlocking {
+            coEvery { sync.providerByKey("prov-1") } returns provider.copy(isActive = true)
+
+            val result = applier().apply(listOf(providerDeletion))
+
+            coVerify { anyConstructed<ProviderRepository>().deleteProvider(provider.id, fromRemote = true) }
+            assertEquals(setOf(provider.id), result.providerChangedIds)
+            assertTrue(result.activeProviderDeleted)
+        }
+
+    @Test
+    fun `deleting another provider is not an active-provider change`() =
+        runBlocking {
+            val result = applier().apply(listOf(providerDeletion))
+
+            assertEquals(setOf(provider.id), result.providerChangedIds)
+            assertFalse(result.activeProviderDeleted)
         }
 
     @Test

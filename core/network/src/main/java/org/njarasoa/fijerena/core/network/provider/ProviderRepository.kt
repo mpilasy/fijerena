@@ -266,6 +266,10 @@ class ProviderRepository(
     /**
      * Delete a provider and clean up its encrypted prefs and cache. The deletion is recorded for
      * live sync; its favourite and history tombstones go with it, the provider's own covers them.
+     * If it was the active provider, the first remaining one becomes active — whether the user
+     * deleted it here or another device did ([fromRemote]); only the UI path used to, which left a
+     * device whose provider was deleted elsewhere on "No provider set". See
+     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
      */
     suspend fun deleteProvider(
         id: Long,
@@ -287,6 +291,9 @@ class ProviderRepository(
             filtersStore.removeProvider(id)
             // Clear cached provider instance
             MediaProviderFactory.providerChanged(id)
+            if (entity.isActive) {
+                dao.getAllProvidersList().firstOrNull()?.let { setActiveProvider(it.id) }
+            }
             AppSettings(context).orphanSweepPending = false
         }
     }
@@ -474,11 +481,14 @@ class ProviderRepository(
     }
 
     /**
-     * Set a provider as active (deactivates all others).
+     * Set a provider as active (deactivates all others), in one transaction: never a moment with
+     * no active provider, nor two.
      */
     suspend fun setActiveProvider(id: Long) {
-        dao.deactivateAll()
-        dao.activateProvider(id)
+        db.withTransaction {
+            dao.deactivateAll()
+            dao.activateProvider(id)
+        }
         // Clear all cached providers to ensure fresh session on provider switch
         MediaProviderFactory.clearAllCaches()
     }

@@ -57,4 +57,12 @@ class SyncManagerProviderChangesTest {
 
         coVerify { container.onProvidersChanged(setOf(3L, 4L)) }
     }
+
+    @Test
+    fun `another device deleting the active provider sends the app home on the next one`() {
+        listener.captured.onActiveProviderDeleted()
+        dispatcher.scheduler.runCurrent()
+
+        coVerify { container.activeProviderChangedExternally() }
+    }
 }

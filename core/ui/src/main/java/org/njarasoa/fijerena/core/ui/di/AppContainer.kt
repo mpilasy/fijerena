@@ -186,19 +186,30 @@ class AppContainer(
         }
     }
 
-    private val _externalProfileSwitches = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    private val _externalSwitches = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /**
-     * Profiles switched without the user picking one — live sync moving this device off a profile
-     * another device deleted. The nav hosts rebuild the back stack from home on each, as the
-     * profile picker does after [switchProfile].
+     * The profile or the active provider changed without the user picking one — live sync moving
+     * this device off a profile, or a provider, another device deleted. The nav hosts rebuild the
+     * back stack from home on each, as the profile picker does after [switchProfile].
      */
-    val externalProfileSwitches: SharedFlow<String> = _externalProfileSwitches.asSharedFlow()
+    val externalSwitches: SharedFlow<Unit> = _externalSwitches.asSharedFlow()
 
-    /** [switchProfile], for a switch the UI didn't ask for: announces it on [externalProfileSwitches]. */
+    /** [switchProfile], for a switch the UI didn't ask for: announces it on [externalSwitches]. */
     suspend fun switchProfileExternally(profileId: String) {
         switchProfile(profileId)
-        _externalProfileSwitches.emit(profileId)
+        _externalSwitches.emit(Unit)
+    }
+
+    /**
+     * Another device deleted the provider this one was using, and `ProviderRepository.deleteProvider`
+     * moved it to the first remaining one: every cached repository is dropped, and the switch is
+     * announced on [externalSwitches] so no screen stays on the deleted provider. See
+     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 3.
+     */
+    suspend fun activeProviderChangedExternally() {
+        clearAllCaches()
+        _externalSwitches.emit(Unit)
     }
 
     /**
