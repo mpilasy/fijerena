@@ -267,27 +267,28 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 
 Order: first the safety net that lets us see failures, then data loss and crash loops, then sync, then playback/lifecycle, then systemic hardening and test gates.
 
-### Phase 0 — Safety net (small, lands first)
-1. **F-30** crash/ANR capture + dev-mode Diagnostics screen.
-2. **F-31** CI on push/PR: unit tests, ktlint, server tests.
-3. **F-24** `AppScopes` helper; replace the 12 handler-less scopes. *(Fixes the crash half of F-21 by itself.)*
+### Phase 0 — Safety net (small, lands first) — ✅ done 2026-10-01
+1. **F-30** crash/ANR capture + dev-mode Diagnostics screen. *(`029dc0c0`, `7c4a29dc`, `09eec0d6`)*
+2. **F-31** CI gates: unit tests, ktlint, server tests — in the existing **manual** workflow; push/PR triggers declined. *(`f03b4af9`)*
+3. **F-24** `AppScopes` helper; the 12 handler-less scopes plus the startup one replaced. *(`029dc0c0`)* It did **not** cover F-21 after all: that crash is on the main thread, outside any scope.
 
-### Phase 1 — Data loss & crash loops (P0)
-1. **F-20** stop the destructive fallback on `xtream_v2.db`; downgrade backup path. *(Schema doc updated in the same commit.)*
-2. **F-21** recoverable `SyncAccountStore`.
-3. **F-03** `awaitInstanceOrNull()` at the five Compose call sites; drop the redundant `setContentType` effect.
-4. **F-17** mobile dock stops on toolbar Back / Search / EPG / dispose.
-5. **F-01** clear recycling on error so the hard retry runs.
+### Phase 1 — Data loss & crash loops (P0) — ✅ done 2026-10-01
+1. **F-20** destructive fallback limited to pre-v7; a newer file is set aside as `.bak`. *(`c48bb8e8`)*
+2. **F-21** recoverable `SyncAccountStore`; no plaintext fallback. *(`95d353cd`)*
+3. **F-03** `awaitInstanceOrNull()` at the Compose call sites; redundant `setContentType` effect removed. *(`0e612b59`)*
+4. **F-17** mobile dock stops on toolbar Back / Search / TV Guide. No stop on dispose — it would race the player screen on the same engine. *(`28318e90`)*
+5. **F-01** fault-path guard removed so the hard retry runs. Not yet seen on a device. *(`c439f06f`)*
 
-### Phase 2 — Sync integrity
-1. **F-08** per-record guard in `SyncApplier`; no `!!`.
-2. **F-09** persist `deferred` with `cursor` per page.
-3. **F-23** wrap decode errors; generic failures set `lastError` and back off.
-4. **F-22** per-record server rejection + client size check *(server and client in separate commits; server first, it's backward compatible)*.
-5. **F-12** + **F-26** socket backoff and OkHttp `pingInterval`.
-6. **F-07** AAD v2 with v1 fallback *(docs: `server/README.md`, live-sync plan)*.
-7. **F-25** HLC future-clock guard.
-8. **F-11** `deleteProvider(fromRemote = true)`.
+### Phase 2 — Sync integrity — ✅ done 2026-10-01
+1. **F-08** per-record guard in `SyncApplier`; a record that throws is deferred, not skipped; no `!!`. *(`4f93fffc`)*
+2. **F-09** `deferred` saved with `cursor`, every page. *(`59906bf5`)*
+3. **F-23** decode errors become `SyncApiException`; any failed pass sets `lastError` and backs off. *(`acb8749d`)*
+4. **F-22** per-record server rejection, then the client size check. *(`99c57454` server, `2f541d8b` client)*
+5. **F-12** socket backoff of its own; **F-26** OkHttp `pingInterval`. *(`18282d9f`, `4ed0ddfe`)*
+6. **F-07** `updatedAt`/`deleted` sealed inside the envelope and checked on decode — not an AAD change (that would break devices not yet updated). *(`c59005f0`; live-sync plan → Security updated)*
+7. **F-25** server rejects records more than a day ahead of its clock — not a device-side guard (a device clock stuck in the past would reject everything). *(`6e605964`; `server/README.md` updated)*
+8. **F-11** `deleteProvider(fromRemote = true)`. *(`3fbaba2d`)*
+- **Server changes (F-22, F-25) take effect only once the sync server is redeployed.** The client-side fixes don't depend on them.
 
 ### Phase 3 — Playback & lifecycle
 1. **F-16** TV Live TV resume (split layout + player live-paused rule).
