@@ -204,9 +204,8 @@ class StreamingPlaybackService : MediaSessionService() {
         ) ?: run {
             Log.w(TAG, "performSeamlessRecycle: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
             // setRecycling(true) above already fired — without resetting it here, isRecycling()
-            // stays permanently true (nothing else ever clears it but a Playing state this failed
-            // attempt will never reach), which silently blocks every future attemptStreamRetry()
-            // ("seamless recycle already in progress") forever. Dead player, no retry, no error.
+            // stays true until some later Playing state, and the recycle-grace suppression keeps
+            // hiding every non-Playing state meanwhile.
             setRecycling(false)
             return
         }
@@ -665,13 +664,11 @@ class StreamingPlaybackService : MediaSessionService() {
             return
         }
 
-        // A seamless recycle is already handling recovery for this disruption; don't race it
-        // with a hard, screen-clearing retry.
-        if (isRecycling()) {
-            Log.i(TAG, "Skipping hard retry: seamless recycle already in progress.")
-            return
-        }
-
+        // No "seamless recycle in progress, skip" guard here: this only runs once the player has
+        // reported an error (or a live stream ended), so a recycle in flight is one that just
+        // failed. Skipping left isRecycling stuck true forever — nothing else clears it short of
+        // reaching Playing — so no retry ever ran again: a frozen frame, no spinner, no error.
+        // See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-01.
         // Hard retry should use fast-startup settings
         setRecycling(false)
 

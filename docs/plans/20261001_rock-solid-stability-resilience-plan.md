@@ -59,6 +59,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Trigger:** Health monitor recycles a live channel (stall/low buffer) and the reconnect gets a 4xx/5xx, DNS failure or timeout — the exact conditions that cause recycles.
 - **Impact:** Black/frozen frame, no spinner (non-`Playing` states were suppressed during the recycle grace), no error, no retry, until the user leaves the channel.
 - **Fix:** In `handleStreamEndedOrError()` (error path), if `isRecycling()` clear it and let the hard retry proceed. Keep the guard in `attemptStreamRetry` only for the *no-error* case it was written for. Unit-test the state machine with a fake player (see Phase 6).
+- **Done 2026-10-01:** `attemptStreamRetry()`'s only caller is the fault path, so the guard had no good case to keep — removed. **Not reproduced on a device:** the emulators' provider refused every stream (HTTP 511) that day, so no live recycle could be triggered. Still needs the Phase 6 fake-player test and an on-device check on a working live channel.
 
 #### F-02: Live HLS recycle keeps the old playhead [P2, PLAUSIBLE]
 - **Where:** `StreamingPlaybackService.kt:216` — `player.setMediaSource(mediaSource, false)`.
