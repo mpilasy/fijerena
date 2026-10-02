@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 in progress: F-16, F-18 done. Phases 4-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 in progress: F-16, F-18, F-15 done. Phases 4-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -174,6 +174,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `MediaRepository.kt:258, 1875-1877` (`close()` = `writeScope.cancel()`); callers `AppContainer.kt` `clearAllCaches()` (provider switch), `switchProfile()`, `evictMediaRepository()`.
 - **Mechanism:** (a) Writes queued on `writeDispatcher` but not started are cancelled — a favourite toggle or the final progress save from just before the switch is lost. (b) Any ViewModel still holding the old instance (TV back stack, F-18) keeps calling `writeScope.launch {}` on a cancelled scope — every call is a silent no-op.
 - **Fix:** `close()` drains first (`awaitPendingWrites()` then cancel) and is made `suspend`. After close, writes log an error in debug builds (`check(!closed)`), so (b) shows up in testing instead of losing data.
+- **Done 2026-10-01, simpler:** `close()` no longer cancels the write queue at all. Everything on it is a short one-shot write keyed by the repository's own provider and profile, so letting queued and late writes finish is always correct — no drain, no `suspend`, no assertion needed. New test `MediaRepositoryFavoritesTest` "writes queued before close, and made after it, still land": failed before (the post-close write was dropped, 50/51), passes now.
 
 #### 🆕 F-35: Full `VACUUM` on the hot database [P2, CONFIRMED]
 - **Where:** `ProviderRepository.kt:233-243, 285-292`.
@@ -301,7 +302,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 ### Phase 3 — Playback & lifecycle
 1. **F-16** TV Live TV resume (split layout + player live-paused rule). ✅
 2. **F-18** TV provider switch pops to graph root. ✅
-3. **F-15** drain-then-close repositories; debug assertion on post-close writes.
+3. **F-15** repositories no longer cancel their write queue on close. ✅
 4. **F-06** local future per `callbackFlow`.
 5. **F-29** atomic final progress write.
 6. **F-02** after HLS live reproduction only.

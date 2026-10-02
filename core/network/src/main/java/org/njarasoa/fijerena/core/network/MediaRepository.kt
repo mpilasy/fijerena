@@ -3,7 +3,6 @@ package org.njarasoa.fijerena.core.network
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import kotlinx.coroutines.cancel
 import java.io.Closeable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -1871,7 +1870,13 @@ class MediaRepository(
             else -> MediaType.LIVE_CHANNEL
         }
 
-    override fun close() {
-        writeScope.cancel()
-    }
+    /**
+     * Deliberately leaves the write queue running. Everything on [writeScope] is a short one-shot
+     * write keyed by this repository's provider and profile, so letting it finish is always right —
+     * and a profile or provider switch closes every cached repository while screens may still hold
+     * one: cancelling here dropped whatever was still queued (a favourite toggled, the last progress
+     * save of the stream just left) and silently discarded every later write from those screens.
+     * See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-15.
+     */
+    override fun close() = Unit
 }

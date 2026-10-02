@@ -72,6 +72,20 @@ class MediaRepositoryFavoritesTest {
             assertEquals(150, repository.getFavoritesForContentType(ContentType.MOVIES).size)
         }
 
+    // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-15: a profile or provider
+    // switch closes every cached repository; close() used to cancel the write queue, dropping
+    // whatever was still in it, and every later write from a screen still holding the repository.
+    @Test
+    fun `writes queued before close, and made after it, still land`() =
+        runBlocking {
+            repeat(50) { i -> repository.addFavorite("item$i", "Item $i", "cat1", ContentType.MOVIES) }
+            repository.close()
+            repository.addFavorite("late", "Late", "cat1", ContentType.MOVIES)
+            repository.awaitPendingWrites()
+
+            assertEquals(51, favoriteDao.count(1L))
+        }
+
     @Test
     fun `a favorite survives a new repository reading from the table`() =
         runBlocking {
