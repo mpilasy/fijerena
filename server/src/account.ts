@@ -9,6 +9,7 @@ const MAX_BATCH = 500;
 const MAX_PAGE = 1000;
 const MAX_PAYLOAD = 64 * 1024;
 const PURGE_INTERVAL_MS = 60 * 60 * 1000;
+const MAX_CLOCK_AHEAD_MS = DAY_MS;
 
 /**
  * A record as it travels: opaque key and tags (HMACs), device clock, and the ciphertext payload —
@@ -374,6 +375,12 @@ function cleanName(name: unknown): string {
 function invalid(r: WireRecord): string | null {
   if (!r || typeof r.key !== "string" || r.key.length === 0 || r.key.length > 256) return "record key must be 1-256 characters";
   if (!Number.isSafeInteger(r.updatedAt) || r.updatedAt < 0) return "updatedAt must be a non-negative integer";
+  // Devices' clocks drive last-write-wins, and every device moves its own clock past each record it
+  // receives: one device whose clock ran years ahead (a TV that booted with a bad RTC) would drag
+  // every device's clock forward with it, and its writes would beat everyone else's until then.
+  // This server's clock is the one that can be trusted. See
+  // docs/plans/20261001_rock-solid-stability-resilience-plan.md F-25.
+  if (r.updatedAt > Date.now() + MAX_CLOCK_AHEAD_MS) return "updatedAt is more than a day ahead of the server's clock";
   if (typeof r.deleted !== "boolean") return "deleted must be a boolean";
   if (typeof r.payload !== "string" || r.payload.length > MAX_PAYLOAD) return `payload must be a string of at most ${MAX_PAYLOAD} characters`;
   if (r.cascade !== undefined && (!r.deleted || (r.cascade !== "provider" && r.cascade !== "profile"))) return "cascade is only for provider or profile deletions";

@@ -82,7 +82,8 @@ Devices authenticate with `Authorization: Bearer <deviceToken>`. A record is
 deletions too: keys are one-way, so the encrypted payload is where devices learn which item it
 was. `updatedAt` is the
 device's hybrid logical clock, and a write that isn't newer than the stored version is rejected as
-`stale`. A record that fails validation (payload over 64 KiB, bad fields) is rejected on its own as
+`stale`. A record that fails validation (payload over 64 KiB, bad fields, `updatedAt` more than a day
+ahead of the server's clock) is rejected on its own as
 `invalid: <why>`; the rest of the batch still applies. Only a malformed batch (not an array, over
 500 records) gets `400`. A deletion with `cascade: "provider"` or `"profile"` also drops every other record with the
 same tag. Tombstones are purged after 90 days; a device whose `since` falls before the purge gets

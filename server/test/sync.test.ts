@@ -101,6 +101,7 @@ describe("sync server", () => {
       { key: "k3", updatedAt: 1, deleted: true },
       { key: "k4", updatedAt: 1, deleted: false, payload: "x", cascade: "provider" },
       { key: "big", updatedAt: 1, deleted: false, payload: "x".repeat(64 * 1024 + 1) },
+      { key: "future", updatedAt: Date.now() + 2 * 24 * 60 * 60 * 1000, deleted: false, payload: "x" },
     ];
     const push = await server.request("POST", "/changes", {
       token: deviceToken,
@@ -108,7 +109,7 @@ describe("sync server", () => {
     });
     expect(push.status).toBe(200);
     expect(push.body.accepted).toBe(2);
-    expect(push.body.rejected.map((r: { key: string }) => r.key)).toEqual(["", "k1", "k2", "k3", "k4", "big"]);
+    expect(push.body.rejected.map((r: { key: string }) => r.key)).toEqual(["", "k1", "k2", "k3", "k4", "big", "future"]);
     for (const r of push.body.rejected) expect(r.reason).toMatch(/^invalid: /);
     const all = await server.request("GET", "/changes?since=0", { token: deviceToken });
     expect(all.body.records.map((r: { key: string }) => r.key)).toEqual(["before", "after"]);

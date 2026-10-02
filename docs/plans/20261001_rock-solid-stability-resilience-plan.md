@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 in progress: F-08, F-09, F-23, F-22, F-12, F-26, F-07 done. Phases 3-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 in progress: F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25 done. Phases 3-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -139,6 +139,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `SyncApplier.kt:96-99` (`receive(max hlc)`), `SettingsSyncDao.kt:97`, `SyncVersionDao.kt:36`; tick = `max(now, hlc + 1)`.
 - **Mechanism:** Android TV boxes often boot with a wrong RTC until NTP syncs. Records stamped years ahead (or `Long.MAX_VALUE` from a bug or F-07 tampering) drag every device's clock forward permanently; at `Long.MAX_VALUE`, `hlc + 1` overflows negative and every later local edit loses LWW.
 - **Fix:** Don't take records with `hlc > now + 1 day` into the clock (apply-or-skip them and log), and saturate instead of overflowing. Unit-test in `SyncMergeTest`.
+- **Done 2026-10-01, on the server instead:** a device-side guard measures "future" against the device's own clock — and a TV that booted with its clock in the *past* (the commoner failure) would then skip every honest record. The server's clock is trustworthy, so the server rejects records with `updatedAt` more than a day ahead of it, as `invalid` (per-record, F-22's path); the device logs it and moves on. Since nothing over the cap reaches any device, the overflow case goes too. Server test added. The client tick still can't recover a device whose own clock *was* far ahead and is now corrected (its HLC stays ahead, its writes then rejected) — left as is: no safe local rule tells a wrong wall clock from a wrong HLC.
 
 #### 🆕 F-26: Half-open sync socket is never detected [P2, PLAUSIBLE]
 - **Where:** `SyncManager.kt:240-251` — app-level `"ping"` text every 30 s, nobody checks for the `"pong"`.
