@@ -14,7 +14,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -141,12 +140,6 @@ class RefreshQueueConcurrencyTest {
             assertEquals(1, again.runs.get())
         }
 
-    @Ignore(
-        "bug: RefreshQueue.runTask - a task already polled off the queue but still waiting for a " +
-            "semaphore permit when cancelAll() runs is cancelled inside semaphore.withPermit, before " +
-            "the try block, so its CompletableDeferred is never cancelled/completed and anything " +
-            "awaiting the Deferred returned by submit() hangs forever",
-    )
     @Test
     fun cancelAllCompletesDeferredsOfTasksStillWaitingForAPermit() =
         runBlocking(Dispatchers.Default) {
@@ -160,6 +153,32 @@ class RefreshQueueConcurrencyTest {
             tasks.zip(deferreds).filter { (t, _) -> t.runs.get() == 0 }.forEach { (_, d) ->
                 withTimeout(2_000) { d.join() }
                 assertTrue(d.isCancelled)
+            }
+        }
+
+    /**
+     * Stress test (no seam to hold the poller between dequeue and start): the old cancelAll()
+     * emptied the queue in a second critical section, letting a still-queued task start on a
+     * permit freed by the cancellation. Any task starting after cancelAll() returned is a slip.
+     */
+    @Test
+    fun noQueuedTaskStartsAfterCancelAllReturns() =
+        runBlocking(Dispatchers.Default) {
+            repeat(150) { round ->
+                val tasks = List(20) { GatedTask("slip-$round-$it") }
+                tasks.forEach { RefreshQueue.submit(it) }
+                awaitPermitsTaken(tasks)
+
+                RefreshQueue.cancelAll()
+                val startedAtReturn = tasks.count { it.runs.get() > 0 }
+                delay(15)
+
+                assertEquals(
+                    "round $round: a task started after cancelAll()",
+                    startedAtReturn,
+                    tasks.count { it.runs.get() > 0 },
+                )
+                awaitStableIdle()
             }
         }
 

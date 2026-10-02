@@ -116,34 +116,46 @@ object RefreshQueue {
     }
 
     private suspend fun runTask(queuedTask: QueuedTask) {
-        semaphore.withPermit {
-            // All _activeTaskIds/_isProcessing transitions go through queueMutex so concurrent
-            // completions can't race a read-modify-write on the StateFlow and strand an ID (see
-            // RefreshQueue finding in the concurrency audit).
-            queueMutex.withLock {
-                _activeTaskIds.value = _activeTaskIds.value + queuedTask.task.id
-                _isProcessing.value = true
-            }
-            try {
+        // The permit wait is inside the try so a cancellation while parked on the semaphore still
+        // reaches the catch/finally below: the deferred is settled and the id cleaned up on every
+        // path, instead of the awaiter of submit() hanging forever.
+        try {
+            semaphore.withPermit {
+                // All _activeTaskIds/_isProcessing transitions go through queueMutex so concurrent
+                // completions can't race a read-modify-write on the StateFlow and strand an ID (see
+                // RefreshQueue finding in the concurrency audit).
+                queueMutex.withLock {
+                    // cancelAll() unregisters this task; a cancelled coroutine can still win the
+                    // lock on its fast path, so check registration rather than rely on cancellation.
+                    if (activeTasks[queuedTask.task.id]?.deferred !== queuedTask.deferred) {
+                        throw CancellationException("RefreshQueue task ${queuedTask.task.id} cancelled before start")
+                    }
+                    _activeTaskIds.value = _activeTaskIds.value + queuedTask.task.id
+                    _isProcessing.value = true
+                }
                 queuedTask.task.execute()
                 queuedTask.deferred.complete(Unit)
-            } catch (e: CancellationException) {
-                // Not a task failure — the queue's scope was cancelled (e.g. cancelAll()) or the
-                // task itself was cancelled. Logging it as an error would misreport a normal
-                // pause as a pipeline failure.
-                queuedTask.deferred.cancel(e)
-                throw e
-            } catch (e: Exception) {
-                android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
-                queuedTask.deferred.completeExceptionally(e)
-            } finally {
-                // NonCancellable: this task's own coroutine may already be in the process of
-                // cancelling here (the catch block above rethrows), and queueMutex.withLock is a
-                // suspending call — without this, acquiring a contended lock while cancelling
-                // would throw immediately and skip the cleanup below, leaving the ID stranded in
-                // activeTaskIds and _isProcessing stuck true, the exact bug this is fixing.
-                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
-                    queueMutex.withLock {
+            }
+        } catch (e: CancellationException) {
+            // Not a task failure — the queue's scope was cancelled (e.g. cancelAll()) or the
+            // task itself was cancelled. Logging it as an error would misreport a normal
+            // pause as a pipeline failure.
+            queuedTask.deferred.cancel(e)
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.e("RefreshQueue", "Error processing task ${queuedTask.task.id}", e)
+            queuedTask.deferred.completeExceptionally(e)
+        } finally {
+            // NonCancellable: this task's own coroutine may already be in the process of
+            // cancelling here (the catch block above rethrows), and queueMutex.withLock is a
+            // suspending call — without this, acquiring a contended lock while cancelling
+            // would throw immediately and skip the cleanup below, leaving the ID stranded in
+            // activeTaskIds and _isProcessing stuck true, the exact bug this is fixing.
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                queueMutex.withLock {
+                    // Only clean up our own registration: after cancelAll() the id may already
+                    // belong to a newer run of the same task, which must not be touched.
+                    if (activeTasks[queuedTask.task.id]?.deferred === queuedTask.deferred) {
                         activeTasks.remove(queuedTask.task.id)
                         _activeTaskIds.value = _activeTaskIds.value - queuedTask.task.id
                         _isProcessing.value = _activeTaskIds.value.isNotEmpty()
@@ -165,17 +177,23 @@ object RefreshQueue {
     }
 
     /**
-     * Cancel all executing and pending tasks.
+     * Cancel all executing and pending tasks. Cancels the running tasks and empties the queue in
+     * one critical section, so the poller can never start a still-queued task in between.
      */
     suspend fun cancelAll() {
         queueMutex.withLock {
-            activeTasks.values.forEach { it.job.cancel() }
+            activeTasks.values.forEach {
+                it.job.cancel()
+                it.deferred.cancel()
+            }
             activeTasks.clear()
+            queue.forEach { it.deferred.cancel() }
+            queue.clear()
+            _queuedTaskIds.value = emptySet()
             // Otherwise the sync spinner stays stuck on and stranded IDs block re-submission
             // until each cancelled task's own coroutine gets scheduled to run its finally block.
             _activeTaskIds.value = emptySet()
             _isProcessing.value = false
         }
-        clear()
     }
 }
