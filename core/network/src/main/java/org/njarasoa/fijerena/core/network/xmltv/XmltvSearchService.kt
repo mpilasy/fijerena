@@ -116,7 +116,7 @@ class XmltvSearchService(
 
     /**
      * Search programme titles in the local EPG index: every programme that hasn't ended yet, with
-     * no upper limit — however far ahead the guide goes (ingest keeps up to 7 days).
+     * no upper limit — however far ahead the guide goes.
      *
      * @param query Case-insensitive substring to match
      * @return [XmltvSearchResult] or null if no index is available.

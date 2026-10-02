@@ -77,7 +77,7 @@ A refresh that would re-download and re-parse an unchanged source is pure waste.
 
 1. **Conditional request.** `downloadSource` sends `If-None-Match` / `If-Modified-Since` from the source's stored `etag` / `last_modified_header`. A `304 Not Modified` short-circuits with no body read at all.
 2. **Content hash.** For non-`.gz` sources a SHA-256 is computed in the same read pass and compared to `last_content_sha256`. `.gz` sources cannot be hashed at download time — gzip's mtime header taints the raw bytes even when the decompressed content is identical — so `ingestDownloadedSource` hashes the *decompressed* stream instead (`hashDecompressedGzip`, a read-and-discard pass, not a parse) before committing to a real ingest.
-3. **Staleness guard (`canSkipIngest`).** A hash match only skips ingestion within `STALENESS_FORCE_INGEST_MS` (24h) of the last real ingest. `ingestFromStream` windows programmes against wall-clock time (`cutoffEpoch` / `futureLimitEpoch`), so a byte-identical static file re-ingested days later still extends the guide further into the future — skipping it forever would silently freeze the guide window while the source kept reporting healthy refreshes.
+3. **Staleness guard (`canSkipIngest`).** A hash match only skips ingestion within `STALENESS_FORCE_INGEST_MS` (24h) of the last real ingest. `ingestFromStream` drops programmes that ended more than 12h ago against wall-clock time (`cutoffEpoch`; there is no future limit), so a byte-identical static file re-ingested days later still clears out long-ended programmes — skipping it forever would let them pile up while the source kept reporting healthy refreshes.
 
 A confirmed-unchanged source:
 - skips `EpgIndexer.ingestFromStream` entirely,
@@ -253,7 +253,7 @@ The FTS4 virtual table with `unicode61` tokenizer enables sub-100ms full-text se
 **Key functions:**
 - `initialize()` — restores `Indexed` state from metadata without re-indexing
 - `setIndexing()` — sets state to `Indexing` if not already `Indexed`. Called once before parallel ingestion begins to coordinate state across concurrent source processing.
-- `ingestFromStream(inputStream, sourceId, timezoneOverrideHours, onProgress)` — returns `IngestionStats(channelsIngested, programmesIngested)`. Uses 500-row batch INSERTs with Room `withTransaction`. Commits per-batch (not one giant transaction). Inserts channels with `IGNORE` conflict strategy, programmes with `REPLACE` on unique `(channel_id, start_epoch)`. Yields CPU between batches (`delay(5)` for channels, `delay(100)` for programmes) to avoid starving video playback. Skips programmes whose end time is before yesterday.
+- `ingestFromStream(inputStream, sourceId, timezoneOverrideHours, onProgress)` — returns `IngestionStats(channelsIngested, programmesIngested)`. Uses 500-row batch INSERTs with Room `withTransaction`. Commits per-batch (not one giant transaction). Inserts channels with `IGNORE` conflict strategy, programmes with `REPLACE` on unique `(channel_id, start_epoch)`. Yields CPU between batches (`delay(5)` for channels, `delay(100)` for programmes) to avoid starving video playback. Skips programmes that ended more than 12 hours ago; no future limit.
 - `ingestFromXtreamEpg(epgByStreamId, streamInfo, providerId)` — ingests EPG data from the Xtream API. Creates/upserts an `EpgSource` with `ingestMethod=XTREAM_API`, clears old data for that source, then batch-inserts.
 - `swapAndRebuildFts(sourceIds)` — staging path: moves the sources' staging rows into the primary tables, rebuilds FTS and writes metadata in **one** transaction. WAL readers see the old guide + old FTS until the commit, then the new pair, so nothing is marked stale and search keeps working through the refresh. Failure rolls both back and restores the previous state; throws.
 - `rebuildFtsAndUpdateState()` — direct (low-storage) path and standalone rebuilds: rebuild FTS index and update metadata after all sources processed. Internally calls `markFtsStale()` at entry (so the old index remains valid during the dispatch gap, degrading only for the actual rebuild window) and `markFtsClean()` on success. Callers do not call these flags themselves. Triggers an update to `EpgPipelineStatsEntity` in `providers.db` with the final run summary.
@@ -330,7 +330,7 @@ Standalone screen for full-text searching across the entire XMLTV dataset. Acces
 
 If the index isn't built yet (`EpgIndexState.NotIndexed`), `search()` returns `null` directly. If the FTS index is stale (`isFtsStale()` — direct-path refresh, or an interrupted rebuild being redone), both FTS steps are skipped for a title-only `LIKE '%…%'` scan of `epg_programme.title_lowercase` (`EpgIndexDao.searchByTitleLike`, `EpgSearchPath.LIKE_FALLBACK`; `\ % _` escaped) — seconds on 2M+ rows, same 10 s timeout. Only if that times out or fails does it throw `EpgIndexBusyException`; `EpgBrowserViewModel` shows why (`UiState.IndexBusy`) and reruns the query once the index is `Indexed`. The staging path never marks it stale.
 
-Programme search covers every programme that hasn't ended yet, with no upper limit (ingest keeps up to 7 days ahead). Channel search covers now to 2 hours ahead. Max 500 results.
+Programme search covers every programme that hasn't ended yet, with no upper limit (ingest has none either). Channel search covers now to 2 hours ahead. Max 500 results.
 
 ### EpgBrowserViewModel
 
@@ -379,7 +379,7 @@ EPG is configured via **Settings -> Manage EPG Data** (`Screen.EpgManagement(pro
 
 **Source deletion cleanup:** Deleting a source also removes all associated channels and programmes from the index database.
 
-**Import date filter:** During ingestion, programmes whose end time is before yesterday (current time - 24h) are skipped. This reduces database size and speeds up indexing.
+**Import date filter:** During ingestion, programmes that ended more than 12 hours ago are skipped; nothing ahead is dropped. This reduces database size and speeds up indexing.
 
 **Per-source progress:** Both mobile and TV show per-source progress with percentage, phase label ("Downloading"/"Ingesting"), byte counts, and channel/programme counts. A cancel button is visible during processing. During `Clearing` state, a blocking overlay is shown.
 

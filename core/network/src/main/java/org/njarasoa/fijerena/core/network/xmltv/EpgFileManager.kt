@@ -1294,11 +1294,10 @@ class EpgFileManager private constructor(
     /**
      * Whether a matching content hash is trustworthy enough to skip re-ingesting. A hash match
      * alone isn't sufficient: [org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer]
-     * windows programmes against wall-clock time on ingest (see its `cutoffEpoch`/
-     * `futureLimitEpoch`), so a byte-identical static file re-ingested days later would still
-     * extend the guide further into the future — skipping that ingest would silently freeze the
-     * guide window while the source keeps reporting healthy refreshes. Forcing a real ingest once
-     * a day bounds how stale that window can get.
+     * drops programmes against wall-clock time on ingest (see its `cutoffEpoch`), so re-ingesting
+     * a byte-identical static file days later still clears out programmes that have long ended —
+     * skipping that ingest forever would let them pile up while the source keeps reporting
+     * healthy refreshes. Forcing a real ingest once a day bounds how stale the guide can get.
      */
     private fun canSkipIngest(
         source: EpgSourceEntity,
