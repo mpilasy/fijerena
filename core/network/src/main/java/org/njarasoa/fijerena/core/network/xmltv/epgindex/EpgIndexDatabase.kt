@@ -70,7 +70,7 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                         raw.execSQL("CREATE TABLE _page_size_seed (x INTEGER)")
                         raw.execSQL("DROP TABLE _page_size_seed")
                     }
-            } catch (e: Exception) {
+            } catch (e: Exception) { // cancellation-ok: non-suspend
                 Log.w(TAG, "Could not seed page size — index will use the SQLite default", e)
             }
         }
@@ -103,7 +103,7 @@ abstract class EpgIndexDatabase : RoomDatabase() {
                                 // for any statement that produces rows, so it goes through
                                 // execPragma, which steps the cursor so the statement actually runs.
                                 db.execPragma("PRAGMA journal_size_limit = 10485760")
-                            } catch (e: Exception) {
+                            } catch (e: Exception) { // cancellation-ok: non-suspend
                                 Log.w(TAG, "Failed to run DB maintenance", e)
                             }
                         }

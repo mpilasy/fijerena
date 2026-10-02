@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.xtream.manager
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -81,6 +82,8 @@ class XtreamEpgManager(
                 if (removed > 0) {
                     Log.i(TAG, "EPG cache sweep removed $removed stale rows in ${System.currentTimeMillis() - started}ms")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "EPG cache sweep failed after $removed rows", e)
             }
@@ -123,6 +126,8 @@ class XtreamEpgManager(
                         try {
                             val fresh = service.getEpgForStream(streamId)
                             cacheEpg(streamId, fresh)
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             // Ignore network errors when refreshing
                         }
@@ -201,6 +206,8 @@ class XtreamEpgManager(
             val epg = service.getEpgForStream(streamId)
             if (cache) cacheEpg(streamId, epg)
             epg
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             // Continue on failure - EPG may not be available for all channels
             null
@@ -234,7 +241,7 @@ class XtreamEpgManager(
     private fun decode(payload: String): EpgResponse? =
         try {
             json.decodeFromString<EpgResponse>(payload)
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend
             null
         }
 

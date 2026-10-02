@@ -69,7 +69,7 @@ class LocalMediaProvider(
                 items = its
                 connected = true
                 Result.success(Unit)
-            } catch (e: Exception) {
+            } catch (e: Exception) { // cancellation-ok: no suspension point in the try (blocking I/O)
                 Result.failure(e)
             }
         }

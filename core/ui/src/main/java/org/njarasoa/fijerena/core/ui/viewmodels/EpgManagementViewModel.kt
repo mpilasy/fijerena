@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -254,6 +255,8 @@ class EpgManagementViewModel(
                     if (programmeCount > 0 && indexer.state.value is EpgIndexState.NotIndexed) {
                         indexer.initialize()
                     }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (_: Exception) {
                     _dbStats.value = DbStats()
                 }

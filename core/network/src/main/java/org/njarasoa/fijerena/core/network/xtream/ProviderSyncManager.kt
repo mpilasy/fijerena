@@ -174,7 +174,7 @@ class ProviderSyncManager private constructor(private val context: Context) {
                 target.add(Calendar.HOUR_OF_DAY, REFRESH_INTERVAL_HOURS)
             }
             return (target.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend
             Log.w(TAG, "Failed to calculate delay for $time", e)
             return 0
         }
@@ -245,6 +245,8 @@ class ProviderSyncManager private constructor(private val context: Context) {
                 } else {
                     SyncResult.Failed(outcome.errorOrNull() ?: "Sync failed")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Manual sync threw for provider: $providerId", e)
                 SyncResult.Failed(e.message ?: "Sync failed")

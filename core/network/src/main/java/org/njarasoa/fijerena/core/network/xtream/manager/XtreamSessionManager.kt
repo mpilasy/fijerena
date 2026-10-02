@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
 
 import android.content.Context
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -106,6 +107,8 @@ class XtreamSessionManager(
                         val authResponse =
                             try {
                                 service.authenticate()
+                            } catch (e: CancellationException) {
+                                throw e
                             } catch (e: Exception) {
                                 Log.e(TAG, "Authentication failed for ${credentials.url}", e)
                                 throw e
@@ -237,6 +240,8 @@ class XtreamSessionManager(
                     // Trigger an immediate background refresh if the index is empty
                     EpgFileManager.getInstance(context).refreshOutdatedSources(providerId)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e("XtreamSessionManager", "Failed to auto-add XMLTV source", e)
             }

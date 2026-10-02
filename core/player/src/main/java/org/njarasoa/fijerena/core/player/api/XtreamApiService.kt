@@ -337,7 +337,7 @@ class XtreamApiService(
                         parameter("action", action)
                         params()
                     }.bodyAsText()
-            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 return XtreamResponse.Failed(e)

@@ -123,7 +123,7 @@ class EpgFileManager private constructor(
                         .removePrefix("www.")
                         .take(30)
                 }
-            } catch (e: Exception) {
+            } catch (e: Exception) { // cancellation-ok: non-suspend
                 "Source"
             }
     }
@@ -291,7 +291,7 @@ class EpgFileManager private constructor(
                 Log.w(TAG, "Low storage detected: available=${availableSpace/1024/1024}MB, db=${dbSize/1024/1024}MB. Falling back to blocking sync.")
             }
             isSafe
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend
             Log.w(TAG, "Failed to check storage for staging, defaulting to false", e)
             false
         }
@@ -359,6 +359,8 @@ class EpgFileManager private constructor(
             }
 
             prefs.edit { putBoolean(KEY_MIGRATED_TO_SOURCES, true) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "Migration from AppSettings failed", e)
         }
@@ -734,7 +736,7 @@ class EpgFileManager private constructor(
                     while (remaining != null) {
                         try {
                             remaining.tmpFile.delete()
-                        } catch (e: Exception) {
+                        } catch (e: Exception) { // cancellation-ok: non-suspend
                             Log.w(TAG, "Error cleaning up temporary file for ${remaining.label}", e)
                         }
                         remaining = ingestionQueue.tryReceive().getOrNull()
@@ -793,6 +795,8 @@ class EpgFileManager private constructor(
                 try {
                     indexer.rebuildFtsAndUpdateState()
                     indexer.incrementalVacuum()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 }
@@ -826,7 +830,7 @@ class EpgFileManager private constructor(
                 )
             _state.value = finalState
             updateLastPipelineStats(finalState)
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: cleans up, then rethrows CancellationException below
             withContext(NonCancellable) {
                 EpgIndexer.getInstance(context).endBulkIngestion(useStaging)
             }
@@ -1017,6 +1021,8 @@ class EpgFileManager private constructor(
                 try {
                     indexer.rebuildFtsAndUpdateState()
                     indexer.incrementalVacuum()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "FTS rebuild failed: ${e.message}", e)
                 }
@@ -1046,7 +1052,7 @@ class EpgFileManager private constructor(
                 )
             _state.value = finalState
             updateLastPipelineStats(finalState)
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: cleans up, then rethrows CancellationException below
             withContext(NonCancellable) {
                 EpgIndexer.getInstance(context).endBulkIngestion(useStaging)
             }
@@ -1093,6 +1099,8 @@ class EpgFileManager private constructor(
                 ingestMutex.withLock {
                     EpgIndexer.getInstance(context).clearAll()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Clear all data failed: ${e.message}", e)
             } finally {
@@ -1317,7 +1325,7 @@ class EpgFileManager private constructor(
                 }
             }
             digest.digest().joinToString("") { "%02x".format(it) }
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend
             Log.w(TAG, "Decompressed-content hash failed, proceeding with full ingest", e)
             null
         }
@@ -1369,7 +1377,7 @@ class EpgFileManager private constructor(
                 if (isGzip) {
                     try {
                         GZIPInputStream(bufferedStream, STREAM_BUFFER_SIZE)
-                    } catch (e: Exception) {
+                    } catch (e: Exception) { // cancellation-ok: non-suspend, rethrows
                         // GZIPInputStream's constructor reads and validates the magic bytes
                         // before this assignment completes — on a corrupt/non-gzip file it
                         // throws here, before `stream.use { }` below ever gets a stream to
@@ -1513,7 +1521,7 @@ class EpgFileManager private constructor(
                 target.add(java.util.Calendar.DAY_OF_YEAR, 1)
             }
             return (target.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend
             Log.w(TAG, "Failed to calculate delay for $time", e)
             return 0
         }
@@ -1558,7 +1566,7 @@ class EpgFileManager private constructor(
                 .listFiles { file ->
                     file.name.startsWith("xmltv_") && file.isFile
                 }?.toList() ?: emptyList()
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend
             emptyList()
         }
 
@@ -1575,7 +1583,7 @@ class EpgFileManager private constructor(
                 }
             }
             return CleanupResult(filesDeleted, bytesFreed)
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend
             Log.w(TAG, "Cleanup failed", e)
             return CleanupResult(0, 0)
         }
@@ -1623,6 +1631,8 @@ class EpgFileManager private constructor(
                     totalProgrammes = completed.totalProgrammes,
                 )
             SettingsDatabase.getInstance(context).epgPipelineStatsDao().insertStats(stats)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save pipeline stats: ${e.message}")
         }

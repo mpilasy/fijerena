@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
@@ -111,6 +112,8 @@ class SearchViewModel(
             val repo =
                 try {
                     ensureRepo()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (_: Exception) {
                     return@launch
                 }

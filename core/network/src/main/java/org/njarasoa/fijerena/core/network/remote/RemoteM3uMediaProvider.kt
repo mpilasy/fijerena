@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network.remote
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -59,6 +60,8 @@ class RemoteM3uMediaProvider(
                     connected = true
                     Result.success(Unit)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Result.failure(e)
             }
@@ -135,6 +138,8 @@ class RemoteM3uMediaProvider(
                 } finally {
                     if (tmpFile.exists()) tmpFile.delete()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 lastError = e
                 Log.w(TAG, "M3U download error (attempt $attempt): ${e.message}")

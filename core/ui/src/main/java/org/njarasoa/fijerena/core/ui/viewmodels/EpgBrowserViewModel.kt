@@ -8,6 +8,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.filter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -318,6 +319,8 @@ class EpgBrowserViewModel(
                             .providerDao()
                             .getActiveProvider()
                     _activeProviderName.value = provider?.name
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     android.util.Log.e("EpgBrowserViewModel", "Failed to load active provider name", e)
                 }
@@ -348,6 +351,8 @@ class EpgBrowserViewModel(
                     android.util.Log.d("EpgBrowserViewModel", "Fetched ${streams.size} streams in ${t1 - t0}ms for new matcher")
                     streams
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e("EpgBrowserViewModel", "Failed to ensure channel matcher", e)
             }
@@ -364,6 +369,8 @@ class EpgBrowserViewModel(
                         providerId?.let { settingsDb.epgSourceDao().getEnabledSourcesForProvider(it) }
                             ?: emptyList()
                     _sourceLabels.value = sources.associate { it.id to it.label }
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     android.util.Log.e("EpgBrowserViewModel", "Failed to load EPG source labels", e)
                 }

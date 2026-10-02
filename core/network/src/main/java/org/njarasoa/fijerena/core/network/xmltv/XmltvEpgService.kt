@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -234,6 +235,8 @@ class XmltvEpgService(
                 val merged = (cachedResult ?: emptyMap()) + result
                 cacheEpg(merged)
                 merged
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to query XMLTV EPG from index: ${e.message}", e)
                 emptyMap()
@@ -289,6 +292,8 @@ class XmltvEpgService(
                 }
 
                 result
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to query now-playing from index: ${e.message}", e)
                 emptyMap()
@@ -318,7 +323,7 @@ class XmltvEpgService(
                 parsedEpgCache = it
                 parsedEpgTimestamp = timestamp
             }
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend
             Log.w(TAG, "Failed to deserialize cached EPG", e)
             null
         }
@@ -334,7 +339,7 @@ class XmltvEpgService(
             }
             parsedEpgCache = data
             parsedEpgTimestamp = now
-        } catch (e: Exception) {
+        } catch (e: Exception) { // cancellation-ok: non-suspend
             Log.w(TAG, "Failed to cache XMLTV EPG", e)
         }
     }
