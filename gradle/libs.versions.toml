@@ -2,7 +2,7 @@
 # Core Build Tools
 agp = "9.4.1"
 kotlin = "2.3.0"
-ktlint = "12.1.2"
+ktlint = "14.2.0"
 
 # Core Android
 coreKtx = "1.18.0"

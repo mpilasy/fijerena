@@ -11,7 +11,7 @@ plugins {
 subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
-        version.set("1.5.0")
+        version.set("1.8.0")
     }
 
     // Prohibit all uninstall tasks across all modules to prevent accidental loss of app data/state
