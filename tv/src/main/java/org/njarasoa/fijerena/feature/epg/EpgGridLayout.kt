@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.tv.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -213,12 +215,37 @@ fun EpgGridLayout(
             val horizontalScrollState = rememberLazyListState()
             val verticalScrollState = rememberLazyListState()
 
-            // Auto-scroll to current time on load
+            // Initial focus: the first channel's on-air programme (its first programme when none is
+            // on air), falling back to that channel's name cell if the programme isn't composed.
+            val firstChannelFocusRequester = remember { FocusRequester() }
+            val firstProgramFocusRequester = remember { FocusRequester() }
+            var initialFocusDone by remember { mutableStateOf(false) }
+            val firstRowPrograms = channelRows.first().programs
+            val initialProgramId =
+                (
+                    firstRowPrograms.firstOrNull { nowEpochSeconds.value in it.startTime..it.endTime }
+                        ?: firstRowPrograms.firstOrNull()
+                )?.id
+
+            // Auto-scroll to current time on load, then take initial focus once
             LaunchedEffect(currentTimeSlot) {
                 if (currentTimeSlot > 0 && currentTimeSlot < timeSlots.size) {
                     horizontalScrollState.animateScrollToItem(
                         currentTimeSlot.coerceIn(0, timeSlots.lastIndex),
                     )
+                }
+                if (!initialFocusDone) {
+                    initialFocusDone = true
+                    withFrameNanos { }
+                    try {
+                        firstProgramFocusRequester.requestFocus()
+                    } catch (_: IllegalStateException) {
+                        try {
+                            firstChannelFocusRequester.requestFocus()
+                        } catch (_: IllegalStateException) {
+                            // Nothing composed yet; leave focus to the system.
+                        }
+                    }
                 }
             }
 
@@ -266,7 +293,10 @@ fun EpgGridLayout(
                                         row.channel.categoryId,
                                     )
                                 },
-                                modifier = Modifier.width(TvDimensions.epgChannelColumnWidth.scaled(scale)),
+                                modifier =
+                                    Modifier
+                                        .width(TvDimensions.epgChannelColumnWidth.scaled(scale))
+                                        .then(if (index == 0) Modifier.focusRequester(firstChannelFocusRequester) else Modifier),
                             )
 
                             Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
@@ -281,6 +311,8 @@ fun EpgGridLayout(
                                 onProgramSelected = { program ->
                                     onProgramSelected(program, row.channel)
                                 },
+                                initialFocusProgramId = if (index == 0) initialProgramId else null,
+                                initialFocusRequester = firstProgramFocusRequester,
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -507,6 +539,8 @@ private fun ProgramRow(
     cardStyle: EpgCardStyle,
     scrollState: LazyListState,
     onProgramSelected: (EpgProgram) -> Unit,
+    initialFocusProgramId: String?,
+    initialFocusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
@@ -529,6 +563,7 @@ private fun ProgramRow(
                 nowEpochSeconds = nowEpochSeconds,
                 cardStyle = cardStyle,
                 onClick = { onProgramSelected(program) },
+                modifier = if (program.id == initialFocusProgramId) Modifier.focusRequester(initialFocusRequester) else Modifier,
             )
         }
     }
@@ -540,6 +575,7 @@ private fun ProgramCell(
     nowEpochSeconds: State<Long>,
     cardStyle: EpgCardStyle,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     // Shared tick instead of per-cell System.currentTimeMillis(), read through derivedStateOf so a
@@ -563,7 +599,7 @@ private fun ProgramCell(
     Card(
         onClick = onClick,
         modifier =
-            Modifier
+            modifier
                 .width(calculateProgramWidth(program.duration, scale))
                 .fillMaxHeight()
                 .padding(Spacing.xxs.scaled(scale))
