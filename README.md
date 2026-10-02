@@ -47,7 +47,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Multi-Audio Tracks** - Language and format selection (Stereo, 5.1, 7.1)
 - **Subtitles/Captions** - Support for SRT, VTT, TTML, CEA-608/708
 - **Adaptive Quality** - Manual and automatic bitrate selection
-- **Episode Navigation** - Swipe or D-pad Left/Right to skip between episodes in-player
+- **Episode Navigation** - Previous / Next episode buttons in the player controls
 - **Content-Type and Network Aware Buffering** (`NetworkBufferProfile`):
   - Wi-Fi/Ethernet: Live TV 15-30s buffer, VOD 30-60s
   - Cellular: deeper buffers (Live TV 50s, VOD 40-100s), scaled by the dev-mode multipliers
@@ -83,13 +83,13 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
   - **Build**: Compile time and git hash for version tracking
 - **Channel Switching** - D-pad up/down for live TV channel navigation
 - **Channel Overlays** - Category and last-watched side panels (D-pad Left/Right on TV, swipe on mobile)
-- **VOD Seek Controls** - TV: Left/Right scrubs a cursor (10s per press, faster while held) and seeks on release; mobile: −1 min / +5 min buttons
+- **VOD Seek Controls** - TV: Left/Right (or the remote's REW/FF) moves a scrub cursor, 10s per press and faster while held, and OK seeks there; mobile: −1 min / +5 min buttons
 - **Double-Tap Seek** - Mobile double-tap on the left or right of the video seeks 10s back or forward
 - **VOD Time Display** - Current position, remaining time, estimated end time
 - **Cross-Type Search** - Unified "ALL" search across Live TV, Movies, and TV Shows from the Home screen
 - **Developer Mode** - Payload size tracking and debug information
 - **Cache Management** - Per-content-type cache with statistics
-- **Robust EPG Retries** - Each guide source download is retried up to 3 times; the background guide refresh (`EpgSyncWorker`) is retried up to 5 times with WorkManager backoff
+- **Robust EPG Retries** - A failed guide refresh is retried up to 5 times with exponential backoff (1, 2, 4, 8, 16 min); each download inside it is retried 3 times
 - **EPG Change Detection** - Conditional requests (`If-None-Match` / `If-Modified-Since`) plus a content hash; an unchanged source skips download and ingestion entirely and is shown as "Unchanged"
 - **Sync Delta Reporting** - Source screens show what the last catalog sync actually changed ("No changes since last sync", or added/updated/removed counts)
 - **UI Scale Adjustment** - 40%, 60%, 80% (default) or 100% sizing for category and grid views (TV)

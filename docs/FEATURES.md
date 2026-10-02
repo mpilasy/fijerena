@@ -32,13 +32,13 @@ Channels organized by provider-defined categories. D-pad Up/Down switches channe
 - **Mobile:** Tap-driven docked mini-player — tapping a channel docks and plays it immediately above the scrollable list; tapping the dock (or its expand affordance) promotes to full-screen. The dock auto-seeds from the last-played channel on entry so Live TV never opens to a bare list. Back from full-screen collapses to the dock; Back from the dock clears it back to the bare list before a further Back leaves Live TV.
 
 ### Movies (VOD)
-Movie details screen with plot, cast, director, genre, rating, year, duration, video/audio tech info. Play or Resume (if progress saved). Auto-resume saves position every 5 seconds, resumes if 2–95% complete. A watched/unwatched toggle sits beside the favorite toggle — marking watched hides the resume bar immediately; unmarking re-derives it from a fresh lookup.
+Movie details screen with plot, cast, director, genre, rating, year, duration, video/audio tech info. Play or Resume (if progress saved). Auto-resume saves position every 10 seconds, resumes if 2–95% complete. A watched/unwatched toggle sits beside the favorite toggle — marking watched hides the resume bar immediately; unmarking re-derives it from a fresh lookup.
 
 ### TV Shows
 Season accordion with episode list. Auto-expands the next unwatched season. Episode thumbnails, per-episode metadata, resume support. Series-level metadata with season fallback.
 - **Episode list caching (Xtream):** a show's episode list is stored on the device and reused until the provider's catalogue shows the series changed (its `last_modified`, which panels bump when episodes are added), the viewer refreshes the show, or 30 days pass. Stored TMDB synopses are kept across those refetches, and TMDB is asked only for seasons still missing one.
 - **TMDB Enrichment:** Fetches per-episode synopses from TMDB when available, ensuring high-quality metadata even when IPTV providers offer minimal descriptions. The TMDB id comes from the series info, else from the series listing. The player's info panel shows the episode's own synopsis only — never the series' — and an episode without one has it fetched from TMDB when it starts playing.
-- **Episode Navigation:** Swipe (mobile) or D-pad Left/Right (TV) to jump between episodes directly from the player.
+- **Episode Navigation:** **⏮ Previous** / **Next ⏭** buttons in the player controls (TV and mobile) jump between episodes, into the neighbouring season when needed.
 - **Play next episode automatically** (Settings → Playback, per profile, off by default; Xtream TV shows only — not Jellyfin, which keeps its own play state): near the end of an episode that has a next one — the one the player's Next button plays, into the next season if needed — a small translucent "Up next" card appears in the top-right corner over the still-playing video (TV: inside the safe margins, under the clock while the controls are up; mobile: below the status bar and cutout), one line like "Up next · S1:E2 · 45 s" with Play now and Cancel beside it. It appears when the time left is at most 90 s or 15 % of the episode's length, whichever is shorter (`CinemaAnimation.upNextLeadMs`, `UP_NEXT_LEAD_FRACTION`: 90 s for a 22-minute episode, 45 s for a 5-minute one), or straight away when playback starts or is moved inside that window; with an unknown duration it never appears early. "N" is the playback time left, so it stops with the video (paused, buffering, app in the background). **Play now** skips to the next episode at once, the way Next does. **Cancel** — or Back — hides the card for this episode (it doesn't come back, even after seeking) and playback carries on; that episode then ends as before, back to the episode list. If the episode ends with the card not cancelled, the next one plays at once (only once the app is in the foreground; a phone in picture-in-picture counts, and the card is hidden there). TV: the card takes focus on "Play now" as it appears; with the controls up, both stay usable, and Down from the player reaches the card when it isn't focused. Off, with no next episode, or on Jellyfin, the player leaves at the end as before; movies and Live TV are unaffected.
 - **Mark Watched:** TV — long-press an episode card (the existing D-pad long-press convention). Mobile — tap the watched badge itself, shown filled or outline.
 
@@ -78,7 +78,6 @@ Standalone programme title search across all indexed XMLTV data.
 - Access: Home screen → calendar / date range icon (visible when EPG index is ready)
 - **Freshness Tracking:** Displays last index update time in the header.
 - **Customizable Refresh:** Configurable refresh interval (4h, 8h, 12h, 24h, 48h) or "Never".
-- **Robust Retries:** Automatic retry mechanism (5 attempts with exponential backoff: 1m to 16m) for failed updates.
 - **Smart Refresh:** Shows a "Refresh Data" button when indexed programmes are stale according to the selected interval.
 - Results grouped by start date (Today, Tomorrow, weekday name, or "EEEE, MMM d" for later dates), then by programme within each date
 - Time window: every programme that hasn't ended yet, no upper limit (ingest keeps everything ahead the source provides), max 500 results per query. Channel search: what's on now or starts in the next 2 hours
@@ -109,7 +108,7 @@ Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 - First source clears existing data (full rebuild); subsequent sources append
 - Selective refresh: can refresh selected sources, failed sources, or outdated sources
 - Source deletion cleans up associated channels and programmes from the index
-- Import date filter: programmes ending before yesterday are skipped during ingestion
+- Import date filter: programmes that ended more than 12 hours ago are skipped during ingestion (`EpgIndexer`)
 - Stray file cleanup: detects and removes orphaned cache files not tied to any source
 - Clear All Data: instant DB destroy+recreate (not row-by-row delete), shows blocking overlay, sources preserved
 - Actions: Refresh All, Refresh Selected, Refresh Failed, Refresh Outdated, Cleanup Files, Purge >2 days, Clear All Data
@@ -126,6 +125,15 @@ Settings → Export Settings / Import Settings.
 
 **Not exported:** passwords (EncryptedSharedPreferences), cache, EPG programme data.
 
+**Selective import:** On import, a "Select What to Import" dialog presents checkboxes for each section — General Settings, Sources, Guide sources, Favorites. Only checked sections are imported.
+
+**Import conflict resolution:** when an imported source name matches an existing one, a dialog offers:
+- **Overwrite** — update URL, username, type, config, and per-source settings in place
+- **Duplicate** — add as a new source with `(imported)` suffix
+- **Skip** — leave the existing entry unchanged
+
+Guide sources are merged by URL; duplicates are skipped silently. Favorites are merged with existing ones; duplicates (by item ID) are skipped.
+
 ---
 
 ## Architecture & Performance
@@ -138,15 +146,6 @@ A custom, manual dependency injection container (`AppContainer`) provides single
 
 ### Asynchronous UI State
 All ViewModels (e.g., `CategoryViewModel`, `SearchViewModel`, `EpgViewModel`) initialize their repository dependencies asynchronously. This completely eliminates UI thread blocking (`runBlocking`) during the crucial composition phase, ensuring the app remains perfectly smooth and responsive on constrained TV hardware (like older Fire TV sticks or Sony Bravia TVs) during startup or intensive search operations.
-
-**Selective import:** On import, a "Select What to Import" dialog presents checkboxes for each section — General Settings, Sources, Guide sources, Favorites. Only checked sections are imported.
-
-**Import conflict resolution:** when an imported source name matches an existing one, a dialog offers:
-- **Overwrite** — update URL, username, type, config, and per-source settings in place
-- **Duplicate** — add as a new source with `(imported)` suffix
-- **Skip** — leave the existing entry unchanged
-
-Guide sources are merged by URL; duplicates are skipped silently. Favorites are merged with existing ones; duplicates (by item ID) are skipped.
 
 ---
 
@@ -167,8 +166,8 @@ Before playback, the app POSTs a `DeviceProfile` to Jellyfin's `/Items/{id}/Play
 
 | Profile | Min | Max | Notes |
 |---------|-----|-----|-------|
-| WiFi Live TV | 2s | 8s | Low-latency |
-| WiFi VOD | 5s | 50s | Fast startup |
+| WiFi Live TV | 15s | 30s | Playback starts after 0.5s buffered |
+| WiFi VOD | 30s | 60s | Playback starts after 2.5s buffered; 10s back buffer |
 | Cellular Live TV | 50s | 50s | (multiplier-scaled) |
 | Cellular VOD | 40s | 100s | (multiplier-scaled) |
 
@@ -212,14 +211,13 @@ Position saved every 10 seconds (Live TV) or based on progress (VOD). On re-open
 - **D-pad Up/Down** = switch channel (Live TV only)
 - **D-pad Left** = open category channel overlay (Live TV); if last-watched overlay is open, closes it instead
 - **D-pad Right** = open last-watched channel overlay (Live TV); if category overlay is open, closes it instead
-- **D-pad Left/Right** = seek −10s / +10s (VOD only, while controls visible)
+- **D-pad Left/Right** = move a scrub cursor back/forward (VOD only, while controls are hidden): 10 s per press, accelerating to ~1, 3, then 10 min per second while held; **OK** commits the seek, **Back** cancels it
 - **KEYCODE_MEDIA_PLAY_PAUSE** = pause/resume (VOD only)
-- **KEYCODE_MEDIA_REWIND** = seek −30s (VOD only)
-- **KEYCODE_MEDIA_FAST_FORWARD** = move the scrub cursor forward like D-pad Right (10 s per press, accelerating to ~1, 3, then 10 min per second while held); OK commits the seek (VOD only)
+- **KEYCODE_MEDIA_REWIND / FAST_FORWARD** = move the same scrub cursor as D-pad Left/Right (VOD only)
 
 **Mobile:**
 - **Single tap** = show/hide controls
-- **Double-tap** = pause/resume (VOD only; no effect on Live TV)
+- **Double-tap** = seek 10 s back (left 40% of the screen) or forward (right 40%); VOD only, the centre does nothing
 - **Swipe up/down** = switch channel (Live TV only)
 - **Swipe right** = open category channel overlay (Live TV)
 - **Swipe left** = open last-watched channel overlay (Live TV)
@@ -262,17 +260,17 @@ Appear alongside provider categories in the category list:
 | Category | Content Types | Description |
 |----------|---------------|-------------|
 | **Continue Watching** | Movies, TV Shows | Items with 2–95% progress, most recent first |
+| **Favorites** | All | Starred items, configurable max display (10–500) |
+| **Last Watched** | All | Chronological history (Live: added after the watch delay, 10 s by default, Settings → Playback; VOD: 2% threshold), configurable display size (1–100) |
+| **Recent Categories** | All | Recently browsed categories (max 20, deduplicated) |
 
 The home screen's **Continue Watching** shelf (Movies and TV Shows together) shows one card per
 show: mid-watch, its episode resumes; once an episode is finished, the card offers the next one
 ("Up next", next season after a season's last episode), fetching the show's episode list from the
 provider if this device never stored it (a show watched on another device). After a show's last
 episode it leaves the shelf. Movies show only while mid-watch.
-| **Favorites** | All | Starred items, configurable max display (10–500) |
-| **Last Watched** | All | Chronological history (Live: 10s delay; VOD: 2% threshold), configurable display size (1–100) |
-| **Recent Categories** | All | Recently browsed categories (max 20, deduplicated) |
 
-Favorites and Last Watched/Continue Watching persist durably in SQLite via Room (`favorite_state` and `watch_state` tables in `xtream_v2.db` v16). Configurable size settings bound only the rendered category row, never what is stored. Recent Categories is stored as a capped convenience list in per-provider SharedPreferences.
+Favorites and Last Watched/Continue Watching persist durably in SQLite via Room (`favorite_state` and `watch_state` tables in `xtream_v2.db`, added in v16 and v15). Configurable size settings bound only the rendered category row, never what is stored. Recent Categories is stored as a capped convenience list in per-provider SharedPreferences.
 
 ---
 
@@ -328,14 +326,26 @@ Design and protocol: `docs/plans/20260929_live-sync-plan.md`.
 
 ## Themes
 
-4 dark themes switchable at runtime without restart:
+4 dark color themes switchable at runtime without restart (`CinemaThemePalette`):
 
 | Theme | Accent | Background |
 |-------|--------|------------|
 | **Deep Night** (default) | Electric Blue `#2979FF` | `#0F1014` |
-| **AMOLED Black** | Electric Blue `#2979FF` | `#000000` |
-| **Emerald** | Green `#00C853` | `#0F1014` |
-| **Crimson** | Red `#FF1744` | `#0F1014` |
+| **AMOLED Black** | Near-white `#E0E0E0` | `#000000` |
+| **Amethyst** | Purple `#9C6BFF` | `#0F1014` |
+| **Teal** | Teal `#26C6DA` | `#0F1014` |
+
+### Look and Feel
+
+Independent of the color theme, a platform-inspired **look and feel** (`UiStyle`) sets shapes, type
+weight, grid spacing, focus effect, dialog style and icon style: **Material** (default),
+**Cupertino**, **Roku** (no focus zoom, outline only) and **BRAVIA**. Any theme combines with any
+look and feel.
+
+### Language
+
+English (default), French and Malagasy, chosen in Settings (`AppSettings.language`). Strings not
+yet translated fall back to English.
 
 ---
 
@@ -358,13 +368,15 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 | Active Source | Shows current source name, URL, and subscription info (Xtream: expiry, max connections, trial status) |
 | Last Sync | Timestamp plus what the sync actually changed — "No changes since last sync", or "N added • N updated • N removed". Xtream only, and hidden when the last sync errored (the counts belong to the last *successful* run and would read as a partial success) |
 | Manage Sources | CRUD for all sources; set active |
-| Theme | Select from 4 dark themes |
+| Theme | Select from 4 dark color themes |
+| Look and Feel | Material, Cupertino, Roku or BRAVIA |
+| Language | English, French or Malagasy |
 | Manage EPG Data | Add/edit/delete XMLTV sources, trigger refresh |
 | Export Settings | Save sources + guide sources + global config to JSON |
 | Import Settings | Load JSON; conflict dialog for name clashes |
 | Cache Management | View size breakdown; clear per content type or all |
 | Shrink Database | Purges orphaned catalog rows from deleted sources and compacts `xtream_v2.db` with WAL truncation |
-| UI Scale | 70–100%; scales category grid and item cards |
+| UI Scale | 40%, 60%, 80% (default) or 100%; scales category grid and item cards |
 | Play next episode automatically | (Playback) Per profile and synced, off by default: near the end of an episode the next one is offered and starts when it ends (Xtream TV shows) |
 | Developer Mode | Enables debug overlays and advanced settings |
 | Cellular Buffer Settings | (dev mode) Tune cellular buffer multipliers |
@@ -387,7 +399,7 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 |--------|-----------|
 | **NVIDIA Shield** | AV1 → HEVC → AVC codec priority; hardware AV1 decode |
 | **Sony Bravia** | HEVC → AVC priority; reduced animations on mid-range processors |
-| **Chromecast with GTV** | Compact window layout |
+| **Chromecast with GTV** | AV1 → HEVC → AVC codec priority |
 | **Android phone/tablet** | Portrait locked except during playback (sensor-based) |
 
 TV safe margins: 56dp horizontal, 32dp vertical on all root containers.

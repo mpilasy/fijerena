@@ -131,14 +131,15 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **Pause:** Explicit via pause button or `KEYCODE_MEDIA_PLAY_PAUSE`. Mobile double-tap no longer pauses — see Mobile Gestures below.
 - **Seeking / Navigation:** 
   - **VOD:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
-  - **TV Shows:** D-pad Left/Right (TV) or Swipe (Mobile) to skip between episodes in-player.
+  - **TV:** with controls hidden, D-pad Left/Right and REW/FF move a scrub cursor (`stepScrubCursor`, `scrubStepMs`); OK commits, Back cancels.
+  - **TV Shows:** ⏮ Previous / Next ⏭ buttons in the player controls (TV and mobile) skip between episodes.
 - **Channel Overlays (Live TV):** D-pad Left/Right (TV) or Swipe (Mobile) open channel overlays. TV: `TvChannelListOverlay(panelAlignment=…)` with `slideInHorizontally` and `GlassPanel(backgroundAlpha=0.5f)`. Mobile: `MobileChannelListSheet`.
 - **Preview Pane / Dock (Live TV browse):** Channel plays alongside the list while browsing — TV: focus-driven split (`LiveTvSplitLayout`); Mobile: tap-driven docked mini-player (`MobileCategoryListScreen`). Both promote to full-screen on the same engine connection (no restart). Each platform guarantees Back always has a real stopover before exiting Live TV — see `docs/NAVIGATION_GUIDE.md` → "Live TV Preview / Dock Back-Stack".
 - **Mobile Gestures:** `detectTapGestures` (tap=controls; double-tap=10s relative seek, VOD only — left 40% of the width rewinds, right 40% seeks forward, center 20% does nothing). Merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
 
 ### Features
 
-- **Stats Overlay:** Double-tap OK. Comprehensive diagnostics (codecs, network speed, dropped frames, build info). Repositionable to 4 corners via D-pad. Non-focusable on TV.
+- **Stats Overlay:** Opened from the stats button in the player controls; double-OK or Back dismisses it. Comprehensive diagnostics (codecs, network speed, dropped frames, build info). Non-focusable on TV, so the remote keeps controlling playback.
 - **Stream Info Overlay:** Top-left panel showing resolution and codec underneath the title.
 - **Auto-resume:** Saves position every 10s (Live) or based on progress (VOD); resumes if 2-95% progress.
 - **Watch History Rules:**
