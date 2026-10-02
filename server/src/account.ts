@@ -223,15 +223,19 @@ export class Account extends DurableObject<Env> {
     const body = (await request.json().catch(() => null)) as { records?: WireRecord[] } | null;
     const records = body?.records;
     if (!Array.isArray(records) || records.length > MAX_BATCH) return error(400, `records must be an array of at most ${MAX_BATCH}`);
-    for (const record of records) {
-      const problem = invalid(record);
-      if (problem) return error(400, problem);
-    }
 
+    // An invalid record is rejected on its own, never the whole batch: a device retries its
+    // oldest pending records first, so one record it can't help sending (a payload over the size
+    // limit, say) failing the batch with a 400 blocked every later change from that device for good.
     const rejected: { key: string; reason: string }[] = [];
     let accepted = 0;
     this.ctx.storage.transactionSync(() => {
       for (const r of records) {
+        const problem = invalid(r);
+        if (problem) {
+          rejected.push({ key: typeof r?.key === "string" ? r.key : "", reason: `invalid: ${problem}` });
+          continue;
+        }
         const existing = this.sql.exec<{ updated_at: number }>("SELECT updated_at FROM records WHERE key = ?", r.key).toArray()[0];
         // A delayed upload must not roll state back: an older or equal version loses.
         if (existing && existing.updated_at >= r.updatedAt) {

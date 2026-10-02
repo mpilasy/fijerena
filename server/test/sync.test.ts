@@ -87,16 +87,31 @@ describe("sync server", () => {
 
   it("rejects malformed batches", async () => {
     const { deviceToken } = await server.createAccount();
-    for (const bad of [
-      { records: "nope" },
-      { records: [{ key: "", updatedAt: 1, deleted: false, payload: "x" }] },
-      { records: [{ key: "k", updatedAt: -1, deleted: false, payload: "x" }] },
-      { records: [{ key: "k", updatedAt: 1, deleted: false }] },
-      { records: [{ key: "k", updatedAt: 1, deleted: true }] },
-      { records: [{ key: "k", updatedAt: 1, deleted: false, payload: "x", cascade: "provider" }] },
-    ]) {
+    for (const bad of [{ records: "nope" }, {}, { records: Array.from({ length: 501 }, (_, i) => record(`k${i}`, 1)) }]) {
       expect((await server.request("POST", "/changes", { token: deviceToken, body: bad })).status).toBe(400);
     }
+  });
+
+  it("rejects invalid records one by one and keeps the rest of the batch", async () => {
+    const { deviceToken } = await server.createAccount();
+    const invalidRecords = [
+      { key: "", updatedAt: 1, deleted: false, payload: "x" },
+      { key: "k1", updatedAt: -1, deleted: false, payload: "x" },
+      { key: "k2", updatedAt: 1, deleted: false },
+      { key: "k3", updatedAt: 1, deleted: true },
+      { key: "k4", updatedAt: 1, deleted: false, payload: "x", cascade: "provider" },
+      { key: "big", updatedAt: 1, deleted: false, payload: "x".repeat(64 * 1024 + 1) },
+    ];
+    const push = await server.request("POST", "/changes", {
+      token: deviceToken,
+      body: { records: [record("before", 1), ...invalidRecords, record("after", 2)] },
+    });
+    expect(push.status).toBe(200);
+    expect(push.body.accepted).toBe(2);
+    expect(push.body.rejected.map((r: { key: string }) => r.key)).toEqual(["", "k1", "k2", "k3", "k4", "big"]);
+    for (const r of push.body.rejected) expect(r.reason).toMatch(/^invalid: /);
+    const all = await server.request("GET", "/changes?since=0", { token: deviceToken });
+    expect(all.body.records.map((r: { key: string }) => r.key)).toEqual(["before", "after"]);
   });
 
   it("keeps accounts apart", async () => {
