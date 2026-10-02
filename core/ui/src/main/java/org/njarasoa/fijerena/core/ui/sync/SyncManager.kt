@@ -91,6 +91,13 @@ class SyncManager internal constructor(
                 scope.launch { AppContainer.getInstance(app).reloadAfterRemoteChange(providerIds) }
             }
 
+            override fun onProvidersChanged(providerIds: Set<Long>) {
+                // A password, URL, login or filter changed on another device: the next screen to
+                // ask gets a repository built with it. See R-06 step 2 of
+                // docs/plans/20261002_next-level-rock-solid-resilience-plan.md.
+                scope.launch { AppContainer.getInstance(app).onProvidersChanged(providerIds) }
+            }
+
             override fun onActiveProfileDeleted() {
                 scope.launch {
                     // Another device deleted the profile this one is using: move to another, then

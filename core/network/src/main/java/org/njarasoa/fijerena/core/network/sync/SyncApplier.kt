@@ -74,6 +74,11 @@ class SyncApplier(
         /** Providers whose favourites or history changed: refresh their `MediaRepository`. */
         val userDataChangedProviderIds: Set<Long>,
         /**
+         * Providers whose record, login or category filters were applied (or which were deleted):
+         * drop their cached `MediaRepository` so the next use builds one with the new values.
+         */
+        val providerChangedIds: Set<Long>,
+        /**
          * Another device deleted the profile this device is using. The record is deferred; switch
          * this device to another profile, then apply it again.
          */
@@ -102,6 +107,7 @@ class SyncApplier(
         var skipped = 0
         val deferred = mutableListOf<SyncRecord>()
         val changedProviders = mutableSetOf<Long>()
+        val changedProviderConfigs = mutableSetOf<Long>()
         var activeProfileDeleted = false
 
         for (record in records.sortedBy { kindOrder.indexOf(it.key.kind).let { i -> if (i < 0) Int.MAX_VALUE else i } }) {
@@ -117,6 +123,11 @@ class SyncApplier(
                 is Outcome.AppliedUserData -> {
                     applied++
                     changedProviders += outcome.providerId
+                }
+
+                is Outcome.AppliedProvider -> {
+                    applied++
+                    changedProviderConfigs += outcome.providerId
                 }
 
                 Outcome.Skipped -> {
@@ -138,13 +149,18 @@ class SyncApplier(
             sync.receive(newest)
             versions.receive(newest)
         }
-        return Result(applied, skipped, deferred, changedProviders, activeProfileDeleted)
+        return Result(applied, skipped, deferred, changedProviders, changedProviderConfigs, activeProfileDeleted)
     }
 
     private sealed interface Outcome {
         data object Applied : Outcome
 
         data class AppliedUserData(
+            val providerId: Long,
+        ) : Outcome
+
+        /** A provider's record, login or category filters: see [Result.providerChangedIds]. */
+        data class AppliedProvider(
             val providerId: Long,
         ) : Outcome
 
@@ -408,18 +424,21 @@ class SyncApplier(
         return when (val resolution = SyncMerge.resolve(record, local)) {
             Resolution.Upsert -> {
                 val remote = SyncPayloads.decode<SyncPayloads.Provider>(record.payload)
-                inSettingsApply {
-                    adoptMatchingProvider(providerKey, remote)
-                    providers.applyRemoteProvider(providerKey, remote)
-                    markSettingsVersion(SyncKind.PROVIDER, SyncKind.SHARED, providerKey, record.hlc)
-                }
-                Outcome.Applied
+                val id =
+                    inSettingsApply {
+                        adoptMatchingProvider(providerKey, remote)
+                        val id = providers.applyRemoteProvider(providerKey, remote)
+                        markSettingsVersion(SyncKind.PROVIDER, SyncKind.SHARED, providerKey, record.hlc)
+                        id
+                    }
+                Outcome.AppliedProvider(id)
             }
 
             Resolution.Delete -> {
-                sync.providerByKey(providerKey)?.let { providers.deleteProvider(it.id, fromRemote = true) }
+                val existing = sync.providerByKey(providerKey)
+                existing?.let { providers.deleteProvider(it.id, fromRemote = true) }
                 recordReceivedDeletion(SyncKind.PROVIDER, providerKey, record.hlc)
-                Outcome.Applied
+                if (existing != null) Outcome.AppliedProvider(existing.id) else Outcome.Applied
             }
 
             else -> {
@@ -583,7 +602,7 @@ class SyncApplier(
                     }
                     markSettingsVersion(key.kind, key.profileKey, key.providerKey, record.hlc)
                 }
-                Outcome.Applied
+                Outcome.AppliedProvider(providerId)
             }
 
             else -> {

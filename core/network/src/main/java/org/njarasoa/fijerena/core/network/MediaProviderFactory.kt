@@ -111,6 +111,21 @@ object MediaProviderFactory {
     }
 
     /**
+     * Told the id of each provider whose settings or login changed in the app ([providerChanged]).
+     * `AppContainer` sets it to drop its cached `MediaRepository` along with the provider, which
+     * otherwise kept the old, disconnected instance and reconnected it with the old login. See
+     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
+     */
+    @Volatile
+    var providerChangedListener: ((Long) -> Unit)? = null
+
+    /** A provider's settings or login changed: [clearCache], then tell [providerChangedListener]. */
+    fun providerChanged(providerId: Long) {
+        clearCache(providerId)
+        providerChangedListener?.invoke(providerId)
+    }
+
+    /**
      * Drops the cached providers whose session belongs to one profile — Jellyfin, whose login is
      * per profile — so the next [create] signs in as the newly active profile. Everything else is
      * shared by all profiles and keeps its session. Called on profile switch.

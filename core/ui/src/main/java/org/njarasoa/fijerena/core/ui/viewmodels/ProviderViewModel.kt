@@ -379,7 +379,7 @@ class ProviderViewModel(
             try {
                 if (id != null) {
                     providerRepository.saveQuickConnectLogin(id, username, token, userId)
-                    AppContainer.getInstance(context).evictMediaRepository(id)
+                    AppContainer.getInstance(context).onProvidersChanged(setOf(id))
                 } else {
                     val newId = providerRepository.addProvider(name, url, username, "", "JELLYFIN", "")
                     providerRepository.saveJellyfinSession(newId, token, userId)
@@ -454,10 +454,10 @@ class ProviderViewModel(
         try {
             if (id != null) {
                 providerRepository.updateProvider(id, name, url, username, password, type, config)
-                // Credentials may have changed — evict the cached MediaRepository so the
-                // next getMediaRepository() call rebuilds it instead of reusing one built
-                // from the old URL/username/password.
-                AppContainer.getInstance(context).evictMediaRepository(id)
+                // Credentials may have changed — evict the cached MediaRepository now, before
+                // onComplete, so the next getMediaRepository() call rebuilds it instead of
+                // reusing one built from the old URL/username/password.
+                AppContainer.getInstance(context).onProvidersChanged(setOf(id))
             } else {
                 providerRepository.addProvider(name, url, username, password, type, config, initialSettings)
             }

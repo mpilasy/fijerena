@@ -260,7 +260,7 @@ class ProviderRepository(
             }
         }
         // Clear cached provider instance since credentials may have changed
-        MediaProviderFactory.clearCache(id)
+        MediaProviderFactory.providerChanged(id)
     }
 
     /**
@@ -286,7 +286,7 @@ class ProviderRepository(
             settingsCache.keys.removeAll { it.first == id }
             filtersStore.removeProvider(id)
             // Clear cached provider instance
-            MediaProviderFactory.clearCache(id)
+            MediaProviderFactory.providerChanged(id)
             AppSettings(context).orphanSweepPending = false
         }
     }
@@ -592,7 +592,7 @@ class ProviderRepository(
         getProviderPrefs(providerId, profileId).edit { remove(KEY_PASSWORD) }
         SettingsSyncQueue.providerLogin(context, providerId, profileId)
         saveJellyfinSession(providerId, token, userId)
-        MediaProviderFactory.clearCache(providerId)
+        MediaProviderFactory.providerChanged(providerId)
     }
 
     /**
@@ -610,13 +610,16 @@ class ProviderRepository(
                     .remove(KEY_JELLYFIN_USER_ID)
             }
             SettingsSyncQueue.providerLogin(context, provider.id, ProfileEntity.DEFAULT_ID)
-            MediaProviderFactory.clearCache(provider.id)
+            MediaProviderFactory.providerChanged(provider.id)
         }
     }
 
     // --- Live sync: changes received from another device (phase 5) ---
     // These write without queueing: the caller (SyncApplier) holds the sync clock's `applying` flag
     // for the database writes, and prefs writes here simply skip SettingsSyncQueue.
+    // They clear only the factory's provider: they run inside SyncApplier's transaction, so the
+    // cached MediaRepository is dropped after the pass instead, once the change is committed
+    // (SyncApplier.Result.providerChangedIds → SyncEngine.Listener.onProvidersChanged).
 
     /** [profileId]'s own Jellyfin login on [entity] as it is sent, or null if it has none. */
     internal fun syncedLogin(
@@ -772,7 +775,7 @@ class ProviderRepository(
         settingsCache.keys.removeAll { it.first == providerId }
         settingsCache[providerId to profileId] = settings
         // Clear cached provider so it picks up new settings
-        MediaProviderFactory.clearCache(providerId)
+        MediaProviderFactory.providerChanged(providerId)
 
         // Recompute category-filter exclusion flags immediately, purely locally (no network) —
         // lets a filter change take effect right away instead of waiting for the next sync.

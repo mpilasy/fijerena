@@ -28,6 +28,12 @@ class SyncEngine(
     interface Listener {
         fun onUserDataChanged(providerIds: Set<Long>) {}
 
+        /**
+         * Providers whose record, login or category filters changed (or which were deleted), once
+         * the page that changed them is committed: drop what is cached of them.
+         */
+        fun onProvidersChanged(providerIds: Set<Long>) {}
+
         /** Another device deleted the profile this one is using: switch away, then sync again. */
         fun onActiveProfileDeleted() {}
     }
@@ -95,6 +101,7 @@ class SyncEngine(
             applied += result.applied
             activeProfileDeleted = activeProfileDeleted || result.activeProfileDeleted
             if (result.userDataChangedProviderIds.isNotEmpty()) listener?.onUserDataChanged(result.userDataChangedProviderIds)
+            if (result.providerChangedIds.isNotEmpty()) listener?.onProvidersChanged(result.providerChangedIds)
             val deferredKeys = result.deferred.map { crypto.keyId(it.key) }.toSet()
             waiting = batch.filter { it.key in deferredKeys }.takeLast(MAX_DEFERRED)
             // Together, every page: saving only the cursor here (and the waiting records after

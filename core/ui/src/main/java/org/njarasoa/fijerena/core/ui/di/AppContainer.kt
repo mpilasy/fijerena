@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -13,6 +14,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Dependency Injection container for the app.
@@ -36,6 +38,13 @@ class AppContainer(
      */
     private val mediaRepositories = mutableMapOf<Long, MediaRepository>()
     private val mutex = Mutex()
+
+    // Runs the evictions MediaProviderFactory.providerChanged asks for, which can't wait on [mutex].
+    private val scope = AppScopes.create("AppContainer", Dispatchers.IO)
+
+    init {
+        MediaProviderFactory.providerChangedListener = { providerId -> scope.launch { onProvidersChanged(setOf(providerId)) } }
+    }
 
     /**
      * Provides a MediaRepository instance for the specified provider ID.
@@ -203,18 +212,24 @@ class AppContainer(
     }
 
     /**
-     * Evicts a single cached MediaRepository. Call this after a provider's credentials
-     * change (URL/username/password) so the next getMediaRepository() call rebuilds it
-     * with a fresh MediaProvider instead of reusing one built from the old credentials.
+     * The settings, URL or login of [providerIds] changed, here or on another device: their cached
+     * MediaRepository and the factory's provider go together, under [mutex], so the next
+     * getMediaRepository() builds both from the new values. Before, only the factory's copy was
+     * dropped and the repository reconnected its old instance with the old login. A screen still
+     * holding the old repository keeps it until it asks again; playback in progress keeps its
+     * stream URL. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
      */
-    suspend fun evictMediaRepository(providerId: Long) {
+    suspend fun onProvidersChanged(providerIds: Set<Long>) {
         mutex.withLock {
-            val repo = mediaRepositories.remove(providerId)
-            try {
-                repo?.close()
-            } catch (e: Exception) {
-                // cancellation-ok: non-suspend
-                android.util.Log.w("AppContainer", "Error closing MediaRepository during eviction for provider $providerId", e)
+            providerIds.forEach { providerId ->
+                val repo = mediaRepositories.remove(providerId)
+                try {
+                    repo?.close()
+                } catch (e: Exception) {
+                    // cancellation-ok: non-suspend
+                    android.util.Log.w("AppContainer", "Error closing MediaRepository during eviction for provider $providerId", e)
+                }
+                MediaProviderFactory.clearCache(providerId)
             }
         }
     }

@@ -78,7 +78,7 @@ class SyncEnginePaginationTest {
             val batch = firstArg<List<SyncRecord>>()
             applied += batch
             val waiting = batch.filter { it.key.itemId in waitingItems }
-            SyncApplier.Result(batch.size - waiting.size, 0, waiting, emptySet(), false)
+            SyncApplier.Result(batch.size - waiting.size, 0, waiting, emptySet(), emptySet(), false)
         }
         mockkConstructor(LocalRecords::class)
         coEvery { anyConstructed<LocalRecords>().pending(any()) } returns emptyList()
