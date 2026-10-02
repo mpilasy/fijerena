@@ -405,7 +405,7 @@ fun MobilePlayerContent(
                 ContentType.MOVIES, ContentType.TV_SHOWS -> PlayerConfigFactory.ContentType.VOD
                 else -> PlayerConfigFactory.ContentType.VOD
             }
-        StreamingPlaybackService.awaitInstance().setContentType(playerContentType)
+        StreamingPlaybackService.awaitInstanceOrNull()?.setContentType(playerContentType)
     }
 
     // Start playback when URL is ready or channel changes

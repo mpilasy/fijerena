@@ -1538,6 +1538,22 @@ class StreamingPlaybackService : MediaSessionService() {
             return kotlinx.coroutines.withTimeout(AWAIT_INSTANCE_TIMEOUT_MS) { deferred.await() }
         }
 
+        /**
+         * [awaitInstance], or null when the service never came up in time or was torn down while
+         * waiting — for callers with nothing to do in either case. Composition-scoped effects must
+         * use this: a [ServiceDestroyedException] escaping a `LaunchedEffect` crashes the app.
+         * Genuine cancellation still propagates. See
+         * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-03.
+         */
+        suspend fun awaitInstanceOrNull(): StreamingPlaybackService? =
+            try {
+                awaitInstance()
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                null
+            } catch (e: ServiceDestroyedException) {
+                null
+            }
+
         fun getPlaybackState(service: StreamingPlaybackService): StateFlow<PlaybackState> = service.playbackState
 
         fun getCurrentMetadata(service: StreamingPlaybackService): StateFlow<PlayerMetadata> = service.currentMetadata

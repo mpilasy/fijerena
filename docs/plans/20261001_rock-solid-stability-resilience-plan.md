@@ -72,6 +72,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Correction to draft:** `withTimeout`'s `TimeoutCancellationException` is a `CancellationException` — it ends the effect silently, it does **not** crash. The draft's "10 s hang then crash" in `LiveTvSplitLayout` (old F-16) is therefore only this `ServiceDestroyedException` path; there is no UI freeze (the effect suspends, it doesn't block).
 - **Trigger:** Leaving the TV player (`stopAndRelease`) while another surface's effect is still awaiting; `stopAndRelease` → re-entry races.
 - **Fix:** One helper, e.g. `suspend fun StreamingPlaybackService.Companion.awaitInstanceOrNull(): StreamingPlaybackService?` returning null on timeout/destroyed (rethrowing real cancellation). Use it at all five sites. Drop `LiveTvSplitLayout`'s `setContentType(LIVE_TV)` effect entirely — `StreamingPlaybackService.playStream()` already sets the profile from `metadata.isLive` (`:562-568`).
+- **Done 2026-10-01:** `StreamingPlaybackService.awaitInstanceOrNull()`; the four remaining effects use it and `LiveTvSplitLayout`'s `setContentType` effect is gone. Smoke-tested on the TV emulator: no-target split state, preview start, rapid Back/re-enter ×3 — no crash.
 
 #### F-06: `PlaybackServiceConnection` shares mutable state across flow collections [P1, CONFIRMED]
 - **Where:** `core/player/.../service/PlaybackServiceConnection.kt:16-17, 26-49`.

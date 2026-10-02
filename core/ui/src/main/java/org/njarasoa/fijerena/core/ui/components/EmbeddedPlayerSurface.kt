@@ -40,8 +40,7 @@ fun EmbeddedPlayerSurface(
     // recycled) so the AndroidView update block re-runs and (re)binds the live player.
     var bindTick by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
-        StreamingPlaybackService.awaitInstance()
-        bindTick++
+        if (StreamingPlaybackService.awaitInstanceOrNull() != null) bindTick++
     }
 
     AndroidView(

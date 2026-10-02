@@ -185,12 +185,12 @@ fun TvPlayerScreen(
                 ContentType.MOVIES, ContentType.TV_SHOWS -> PlayerConfigFactory.ContentType.VOD
                 else -> PlayerConfigFactory.ContentType.VOD
             }
-        StreamingPlaybackService.awaitInstance().setContentType(playerContentType)
+        StreamingPlaybackService.awaitInstanceOrNull()?.setContentType(playerContentType)
     }
 
     // Set up auto-save listener for playback position
     LaunchedEffect(Unit) {
-        StreamingPlaybackService.awaitInstance().setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
+        StreamingPlaybackService.awaitInstanceOrNull()?.setPositionSaveListener { position, duration, isPaused, audioIndex, subtitleIndex ->
             lastKnownPositionMs = position
             loaderViewModel.recordHistory(position, duration, isPaused, audioIndex, subtitleIndex)
         }
