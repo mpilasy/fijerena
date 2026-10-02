@@ -7,11 +7,14 @@ import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -119,7 +122,16 @@ class StreamLoaderViewModel(
 
     // Job to handle delayed history saving (mimics original 5s delay)
     private var historyJob: Job? = null
+
+    // The load in flight (resolve the URL, publish Success). A new load cancels the previous one.
     private var loadJob: Job? = null
+
+    // EPG / plot enrichment of the stream that is playing; its own job so starting it never
+    // cancels the load that launched it.
+    private var enrichJob: Job? = null
+
+    // Live TV category channel list refresh after a channel pick from another category.
+    private var categoryListJob: Job? = null
 
     init {
         currentCategoryId = categoryId
@@ -164,6 +176,8 @@ class StreamLoaderViewModel(
                         )
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("StreamLoader", "Initialization error", e)
                 _state.value = StreamState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
@@ -239,6 +253,9 @@ class StreamLoaderViewModel(
                     val isFav = repo.isFavoriteSuspend(streamId, contentType)
                     val activeStreams = if (currentStreams.isNotEmpty()) currentStreams else streamList
 
+                    // A superseded load must not publish over the load that replaced it.
+                    currentCoroutineContext().ensureActive()
+
                     // Emit Success immediately so player begins network buffering & decoding right away
                     _state.value =
                         StreamState.Success(
@@ -287,8 +304,8 @@ class StreamLoaderViewModel(
                     }
 
                     // Enrich metadata (EPG & Plot description) asynchronously in background
-                    loadJob?.cancel()
-                    loadJob =
+                    enrichJob?.cancel()
+                    enrichJob =
                         viewModelScope.launch(Dispatchers.IO) {
                             enrichStreamMetadata(streamId, streamName, activeStreams)
                             if (contentType == ContentType.LIVE_TV) followProgrammes(streamId, streamName, activeStreams)
@@ -298,6 +315,8 @@ class StreamLoaderViewModel(
                     _state.value = StreamState.Error(friendlyErrorMessage(error, context, appSettings.isDevMode))
                 },
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e("StreamLoader", "Failed to load stream $streamId", e)
             _state.value = StreamState.Error(friendlyErrorMessage(e, context, appSettings.isDevMode))
@@ -390,7 +409,7 @@ class StreamLoaderViewModel(
 
     /**
      * Live TV: looks the guide up again once the programme on air ends, so the OSD — and, through
-     * the player's metadata, live sync's "now playing" — roll over with it. Runs inside [loadJob],
+     * the player's metadata, live sync's "now playing" — roll over with it. Runs inside [enrichJob],
      * so a channel change or leaving the player ends it.
      */
     private suspend fun followProgrammes(
@@ -412,10 +431,16 @@ class StreamLoaderViewModel(
         }
     }
 
+    /** Cancels the load in flight and its enrichment; the category list refresh is kept. */
+    private fun cancelLoads() {
+        loadJob?.cancel()
+        enrichJob?.cancel()
+    }
+
     fun loadStream(item: MediaItem) {
         lastLoadRequest = item
         requestedStreamId = item.id
-        loadJob?.cancel()
+        cancelLoads()
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
                 val repo = mediaRepository ?: return@launch
@@ -427,11 +452,14 @@ class StreamLoaderViewModel(
 
                 // Fast path: start loading stream immediately
                 loadStreamInternal(item.id, item.name, currentStreams)
+                // Superseded while resolving: leave the category state to the load that replaced us.
+                ensureActive()
 
                 // If category changed, refresh category stream list asynchronously in background
                 if (item.categoryId != currentCategoryId && contentType == ContentType.LIVE_TV) {
                     currentCategoryId = item.categoryId
-                    launch {
+                    categoryListJob?.cancel()
+                    categoryListJob = viewModelScope.launch(Dispatchers.IO) {
                         val result = repo.getItems(currentCategoryId, contentType)
                         result.fold(
                             onSuccess = { items ->
@@ -456,7 +484,7 @@ class StreamLoaderViewModel(
         currentEpisodeId = nextEpisode.id
         currentEpisodeExtension = nextEpisode.extension
         requestedStreamId = nextEpisode.id
-        loadJob?.cancel()
+        cancelLoads()
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
                 if (mediaRepository == null) return@launch
@@ -480,7 +508,7 @@ class StreamLoaderViewModel(
     fun loadStreamLight(item: MediaItem) {
         lastLoadRequest = item
         requestedStreamId = item.id
-        loadJob?.cancel()
+        cancelLoads()
         loadJob =
             viewModelScope.launch(Dispatchers.IO) {
                 if (mediaRepository == null) return@launch

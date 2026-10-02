@@ -22,5 +22,3 @@ core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewMod
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt # DB stats fallback
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/SearchViewModel.kt # early return@launch on repo failure; the query path already rethrows
 #
-# Being edited by the live-sync now-playing work; convert once that lands:
-core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/StreamLoaderViewModel.kt # stream init/load error reporting
