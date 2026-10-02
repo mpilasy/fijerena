@@ -66,6 +66,7 @@ for TARGET in "${REACHABLE[@]}"; do
     fi
 done
 
+command -v sqlite3 >/dev/null || { echo "ERROR: sqlite3 is needed to back up the TVs' user data (apt install sqlite3)." >&2; exit 1; }
 ./gradlew :tv:assembleDebug
 mkdir -p "$BACKUP_DIR"
 # Keep a week of backups: anything older than 7 days goes before this run adds its own.
@@ -84,14 +85,28 @@ for TARGET in "${REACHABLE[@]}"; do
         # every device had actually wiped all of them). Back up first, every time, unprompted.
         SAFE_NAME="${TARGET//[:.]/_}"
         if adb -s "$TARGET" shell pm path org.njarasoa.fijerena >/dev/null 2>&1; then
-            # xtream_v2.db holds watch state and favourites; its -wal can hold commits not yet
-            # checkpointed into the main file, so it goes with it. Gzipped: ~150 MB -> ~60 MB on bears.
+            # User data only: shared_prefs (settings, category filters), providers.db (sources,
+            # profiles, guide sources, sync) and the user tables of xtream_v2.db (watch state,
+            # favourites, sync bookkeeping). The rest of xtream_v2.db is the catalogue, which a
+            # sync downloads again, so it is copied off with its -wal (uncheckpointed commits live
+            # there), cut down to those tables on this machine, and discarded.
             BACKUP_FILE="$BACKUP_DIR/${SAFE_NAME}-$(date +%Y%m%d-%H%M%S).tar.gz"
-            if adb -s "$TARGET" exec-out "run-as org.njarasoa.fijerena tar -c -C /data/data/org.njarasoa.fijerena shared_prefs databases/providers.db databases/providers.db-wal databases/providers.db-shm databases/xtream_v2.db databases/xtream_v2.db-wal databases/xtream_v2.db-shm" 2>/dev/null | gzip -1 > "$BACKUP_FILE" \
-                && tar -tzf "$BACKUP_FILE" 2>/dev/null | grep -qx 'databases/providers.db'; then
-                # (gzip of an empty stream is still a non-empty file, so check the archive's contents.)
+            STAGE="$(mktemp -d)"
+            if adb -s "$TARGET" exec-out "run-as org.njarasoa.fijerena tar -c -C /data/data/org.njarasoa.fijerena shared_prefs databases/providers.db databases/providers.db-wal databases/providers.db-shm databases/xtream_v2.db databases/xtream_v2.db-wal databases/xtream_v2.db-shm" 2>/dev/null | tar -x -C "$STAGE" \
+                && [ -s "$STAGE/databases/providers.db" ] && [ -s "$STAGE/databases/xtream_v2.db" ] \
+                && sqlite3 "$STAGE/databases/xtream_v2.db" \
+                    "ATTACH '$STAGE/databases/xtream_v2_user_data.db' AS u;
+                     CREATE TABLE u.watch_state AS SELECT * FROM watch_state;
+                     CREATE TABLE u.favorite_state AS SELECT * FROM favorite_state;
+                     CREATE TABLE u.sync_version AS SELECT * FROM sync_version;
+                     CREATE TABLE u.sync_tombstone AS SELECT * FROM sync_tombstone;
+                     CREATE TABLE u.sync_clock AS SELECT * FROM sync_clock;" \
+                && rm -f "$STAGE"/databases/xtream_v2.db "$STAGE"/databases/xtream_v2.db-wal "$STAGE"/databases/xtream_v2.db-shm \
+                && tar -czf "$BACKUP_FILE" -C "$STAGE" shared_prefs databases; then
+                rm -rf "$STAGE"
                 echo "Backed up $TARGET data -> $BACKUP_FILE"
             else
+                rm -rf "$STAGE"
                 rm -f "$BACKUP_FILE"
                 echo "ERROR: backup failed for $TARGET, which has an existing install — aborting its install rather than risk an unprotected wipe." >&2
                 exit 1
