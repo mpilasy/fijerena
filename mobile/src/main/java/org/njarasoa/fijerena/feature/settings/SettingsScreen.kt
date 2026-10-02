@@ -46,6 +46,7 @@ fun MobileSettingsScreen(
     onUiStyleChanged: (String) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onCellularBuffers: () -> Unit = {},
+    onDiagnostics: () -> Unit = {},
     onLiveSync: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
@@ -227,6 +228,7 @@ fun MobileSettingsScreen(
                 uiState = uiState,
                 viewModel = viewModel,
                 onCellularBuffers = onCellularBuffers,
+                onDiagnostics = onDiagnostics,
             )
 
             // === Live sync ===

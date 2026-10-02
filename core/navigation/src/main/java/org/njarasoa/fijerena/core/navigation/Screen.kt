@@ -183,6 +183,10 @@ sealed interface Screen {
     @Serializable
     data object SyncSettings : Screen
 
+    /** Settings → Diagnostics (developer mode only): recorded crashes and process exit reasons. */
+    @Serializable
+    data object Diagnostics : Screen
+
     /**
      * Player screen destination with stream parameters.
      *

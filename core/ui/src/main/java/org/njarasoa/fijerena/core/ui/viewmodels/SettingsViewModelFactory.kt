@@ -44,6 +44,9 @@ class SettingsViewModelFactory(
             modelClass.isAssignableFrom(SyncSettingsViewModel::class.java) -> {
                 SyncSettingsViewModel(appContext as android.app.Application) as T
             }
+            modelClass.isAssignableFrom(DiagnosticsViewModel::class.java) -> {
+                DiagnosticsViewModel(appContext) as T
+            }
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
                 SearchViewModel(appContext, contentType) as T
             }

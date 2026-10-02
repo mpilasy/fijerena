@@ -344,6 +344,10 @@ fun TvNavHost(
                     org.njarasoa.fijerena.feature.settings.SyncSettingsScreen()
                 }
 
+                composable<Screen.Diagnostics> {
+                    org.njarasoa.fijerena.feature.settings.DiagnosticsScreen()
+                }
+
                 composable<Screen.EpgBrowser> {
                     TvEpgBrowserScreen(
                         onBack = { navController.navigateUp() },
@@ -744,6 +748,9 @@ fun TvNavHost(
                         },
                         onLiveSync = {
                             navController.navigateOnce(Screen.SyncSettings)
+                        },
+                        onDiagnostics = {
+                            navController.navigateOnce(Screen.Diagnostics)
                         },
                         onProviderChanged = {
                             coroutineScope.launch {

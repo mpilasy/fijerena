@@ -604,6 +604,12 @@
     <string name="settings_developer_mode_title">Mode développeur</string>
     <string name="settings_developer_mode_desc">Activer les statistiques techniques et les fonctionnalités de débogage</string>
     <string name="settings_configure_cellular_buffers_button">Configurer les mémoires tampons cellulaires</string>
+    <string name="settings_diagnostics_title">Diagnostics</string>
+    <string name="settings_diagnostics_desc">Plantages et erreurs enregistrés sur cet appareil, et raison de la dernière fermeture de l\'application</string>
+    <string name="settings_diagnostics_open">Ouvrir les diagnostics</string>
+    <string name="settings_diagnostics_empty">Rien d\'enregistré</string>
+    <string name="settings_diagnostics_clear">Effacer le journal</string>
+    <string name="settings_diagnostics_share">Partager</string>
     <string name="settings_export_import_section_title">Exporter / Importer</string>
     <string name="settings_export_import_desc">Exporter tous les paramètres vers un fichier ou importer depuis un autre appareil</string>
     <string name="common_export">Exporter</string>

@@ -45,6 +45,7 @@ fun SettingsScreen(
     onUiScaleChanged: (Float) -> Unit = {},
     onManageProviders: () -> Unit = {},
     onLiveSync: () -> Unit = {},
+    onDiagnostics: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -323,6 +324,7 @@ fun SettingsScreen(
                         onDevModeChanged = { enabled ->
                             viewModel.updateDevMode(enabled)
                         },
+                        onDiagnostics = onDiagnostics,
                         scale = scale,
                     )
                 }

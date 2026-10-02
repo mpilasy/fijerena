@@ -634,6 +634,12 @@
     <string name="settings_developer_mode_title">Developer Mode</string>
     <string name="settings_developer_mode_desc">Enable stats for nerds and debug features</string>
     <string name="settings_configure_cellular_buffers_button">Configure Cellular Buffers</string>
+    <string name="settings_diagnostics_title">Diagnostics</string>
+    <string name="settings_diagnostics_desc">Crashes and errors recorded on this device, and why the app last closed</string>
+    <string name="settings_diagnostics_open">Open Diagnostics</string>
+    <string name="settings_diagnostics_empty">Nothing recorded</string>
+    <string name="settings_diagnostics_clear">Clear log</string>
+    <string name="settings_diagnostics_share">Share</string>
     <string name="settings_export_import_section_title">Export / Import</string>
     <string name="settings_export_import_desc">Export all settings to a file or import from another device</string>
     <string name="common_export">Export</string>

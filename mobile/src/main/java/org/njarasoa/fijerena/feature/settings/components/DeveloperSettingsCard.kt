@@ -25,7 +25,8 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 fun DeveloperSettingsCard(
     uiState: SettingsUiState,
     viewModel: SettingsViewModel,
-    onCellularBuffers: () -> Unit
+    onCellularBuffers: () -> Unit,
+    onDiagnostics: () -> Unit,
 ) {
     SettingsSection(title = stringResource(R.string.settings_developer_mode_title)) {
         Row(
@@ -56,6 +57,13 @@ fun DeveloperSettingsCard(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.settings_configure_cellular_buffers_button))
+            }
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            CinemaButton(
+                onClick = onDiagnostics,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.settings_diagnostics_open))
             }
         }
     }

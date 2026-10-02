@@ -522,6 +522,9 @@ fun MobileNavHost(
                     onCellularBuffers = {
                         navController.navigateOnce(Screen.CellularBufferSettings)
                     },
+                    onDiagnostics = {
+                        navController.navigateOnce(Screen.Diagnostics)
+                    },
                     onLiveSync = {
                         navController.navigateOnce(Screen.SyncSettings)
                     },
@@ -556,6 +559,10 @@ fun MobileNavHost(
 
             composable<Screen.SyncSettings> {
                 org.njarasoa.fijerena.feature.settings.MobileSyncSettingsScreen(onBack = { navController.navigateUp() })
+            }
+
+            composable<Screen.Diagnostics> {
+                org.njarasoa.fijerena.feature.settings.MobileDiagnosticsScreen(onBack = { navController.navigateUp() })
             }
 
             // Cellular Buffer Settings Screen
