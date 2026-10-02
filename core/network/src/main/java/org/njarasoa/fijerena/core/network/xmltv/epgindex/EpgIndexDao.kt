@@ -122,6 +122,36 @@ interface EpgIndexDao {
         maxResults: Int = 500,
     ): List<EpgSearchResultRow>
 
+    /**
+     * Title-only substring search that doesn't touch FTS, for when the FTS index is stale (a
+     * low-storage refresh writing straight into epg_programme, or an interrupted rebuild).
+     * A full scan — seconds, not milliseconds, on 2M+ rows. [pattern] must already be lowercased
+     * and have `\`, `%` and `_` escaped with `\`.
+     */
+    @Query(
+        """
+        SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
+        FROM (
+            SELECT p2.*
+            FROM epg_programme p2
+            WHERE p2.title_lowercase LIKE '%' || :pattern || '%' ESCAPE '\'
+              AND p2.source_id IN (:sourceIds)
+              AND p2.end_epoch > :windowStart AND p2.start_epoch <= :windowEnd
+            ORDER BY p2.start_epoch ASC
+            LIMIT :maxResults
+        ) p
+        INNER JOIN epg_channel c ON c.xmltv_id = p.channel_id AND c.source_id = p.source_id
+        ORDER BY p.start_epoch ASC
+        """,
+    )
+    suspend fun searchByTitleLike(
+        pattern: String,
+        sourceIds: List<Long>,
+        windowStart: Long,
+        windowEnd: Long,
+        maxResults: Int = 500,
+    ): List<EpgSearchResultRow>
+
     // --------------- Paged queries for large datasets (2M+ rows) ---------------
 
     @Query(

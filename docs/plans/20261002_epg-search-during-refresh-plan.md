@@ -1,6 +1,6 @@
 # EPG Search During Refresh Plan
 
-**Status:** In progress — Phases 1-2 landed (2026-10-02)
+**Status:** Complete — all three phases landed (2026-10-02); emulator verification outstanding
 
 While an EPG refresh was running, the EPG browser's programme search showed nothing — no
 results and no reason. The user asked for search to work through every stage of a refresh, and
@@ -70,6 +70,11 @@ translated string.
   and results may be incomplete. When the index becomes `Indexed`, the view model reruns the query
   so the full FTS results replace them.
 - A timeout or SQL failure still throws `EpgIndexBusyException` → Phase 1 message.
+
+**Done (2026-10-02).** `EpgIndexDao.searchByTitleLike`, `EpgSearchPath.LIKE_FALLBACK` (dev stats
+line shows `[LIKE fallback]`), `epg_browser_partial_results_note` in warning colour under the stats
+line on both screens. No JVM test: the query only runs against SQLite, and core:network has no
+Robolectric — covered by the emulator check below.
 
 ## Verification
 

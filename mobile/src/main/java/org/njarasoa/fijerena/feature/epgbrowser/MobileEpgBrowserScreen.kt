@@ -62,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
+import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
 import org.njarasoa.fijerena.core.network.xmltv.formatAiringTime
@@ -491,6 +492,14 @@ private fun MobileResultsContent(
                     vertical = CinemaSpacing.xxs,
                 ),
         )
+        if (results.searchPath == EpgSearchPath.LIKE_FALLBACK) {
+            Text(
+                text = stringResource(R.string.epg_browser_partial_results_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = CinemaWarning,
+                modifier = Modifier.padding(horizontal = Spacing.md, vertical = CinemaSpacing.xxs),
+            )
+        }
 
         if (displayDateGroups.isEmpty()) {
             Box(

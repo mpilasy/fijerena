@@ -312,8 +312,15 @@ class EpgBrowserViewModel(
         }
         viewModelScope.launch {
             indexer.state.collect { state ->
-                val busy = _uiState.value as? UiState.IndexBusy
-                if (state is EpgIndexState.Indexed && busy != null) performSearch(busy.query)
+                if (state !is EpgIndexState.Indexed) return@collect
+                // A busy search, or a LIKE-fallback one that may be incomplete, gets the full
+                // FTS answer once the index is ready.
+                when (val current = _uiState.value) {
+                    is UiState.IndexBusy -> performSearch(current.query)
+                    is UiState.Results ->
+                        if (current.searchPath == EpgSearchPath.LIKE_FALLBACK) performSearch(current.query)
+                    else -> {}
+                }
             }
         }
         _epgSearchHistory.value = appSettings.getEpgSearchHistory()
@@ -766,6 +773,7 @@ fun EpgBrowserViewModel.UiState.Results.statsLine(): String {
                 when (searchPath) {
                     EpgSearchPath.FTS_PHRASE -> " [FTS phrase]"
                     EpgSearchPath.FTS_AND -> " [FTS AND]"
+                    EpgSearchPath.LIKE_FALLBACK -> " [LIKE fallback]"
                     EpgSearchPath.NONE -> " [indexed]"
                 }
         }

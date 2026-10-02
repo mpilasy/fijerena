@@ -712,6 +712,7 @@
     <string name="epg_browser_no_results_format">Tsy nahita valiny ho an\'ny \'%1$s\'</string>
     <string name="epg_browser_busy_refreshing_format">Eo am-panavaozana ny fandaharana. Hotanterahina rehefa vonona izy ny fikarohanao \'%1$s\'.</string>
     <string name="epg_browser_busy_rebuilding_format">Eo am-panamboarana indray ny fanondroana fikarohana. Hotanterahina rehefa vonona izy ny fikarohanao \'%1$s\'.</string>
+    <string name="epg_browser_partial_results_note">Eo am-panavaozana ny fandaharana: fikarohana amin\'ny lohateny ihany no aseho, mety tsy feno. Havaozina ny valiny rehefa vita.</string>
     <string name="provider_error_add_failed">Tsy nahomby ny fampidirana ny mpanome</string>
     <string name="provider_error_select_failed">Tsy nahomby ny fisafidianana ny mpanome</string>
     <string name="provider_error_delete_failed">Tsy nahomby ny famafana ny mpanome</string>

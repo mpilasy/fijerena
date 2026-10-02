@@ -792,6 +792,7 @@
     <string name="epg_browser_no_results_format">Aucun résultat trouvé pour \'%1$s\'</string>
     <string name="epg_browser_busy_refreshing_format">Le guide est en cours de mise à jour. Votre recherche « %1$s » sera lancée dès qu\'il sera prêt.</string>
     <string name="epg_browser_busy_rebuilding_format">L\'index de recherche est en cours de reconstruction. Votre recherche « %1$s » sera lancée dès qu\'il sera prêt.</string>
+    <string name="epg_browser_partial_results_note">Le guide est en cours de mise à jour : recherche plus lente, sur les titres seulement, qui peut manquer des programmes. Les résultats se mettront à jour à la fin.</string>
     <string name="provider_error_add_failed">Échec de l\'ajout du fournisseur</string>
     <string name="provider_error_select_failed">Échec de la sélection du fournisseur</string>
     <string name="provider_error_delete_failed">Échec de la suppression du fournisseur</string>

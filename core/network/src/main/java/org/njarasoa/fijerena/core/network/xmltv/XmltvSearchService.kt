@@ -16,9 +16,9 @@ import java.util.Locale
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
- * Thrown when a search hits the FTS index while it's marked stale (mid-ingest or mid-rebuild).
- * Distinct from a genuine "no results" so callers can tell the user to wait instead of
- * silently reporting nothing found.
+ * Thrown when the FTS index is marked stale (mid-ingest or mid-rebuild) and the LIKE fallback
+ * couldn't answer either (timed out or failed). Distinct from a genuine "no results" so callers
+ * can tell the user to wait instead of silently reporting nothing found.
  */
 class EpgIndexBusyException : Exception("EPG index optimizing, please wait...")
 
@@ -165,7 +165,25 @@ class XmltvSearchService(
         if (sourceIds.isEmpty()) {
             result = rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
         } else if (indexer.isFtsStale()) {
-            throw EpgIndexBusyException()
+            // FTS doesn't match epg_programme right now; scan titles directly instead of refusing.
+            val pattern = escapeLike(sanitizeQuery(query).lowercase(Locale.ROOT))
+            if (pattern.isBlank()) {
+                result = rowsToSearchResult(emptyList(), searchedFromIndex = true, searchPath = EpgSearchPath.NONE)
+            } else {
+                val likeRows =
+                    try {
+                        withTimeoutOrNull(FTS_TIMEOUT_MS) {
+                            dao.searchByTitleLike(pattern, sourceIds, windowStart, windowEnd)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "LIKE fallback search failed", e)
+                        null
+                    }
+                        ?: throw EpgIndexBusyException()
+                result = rowsToSearchResult(likeRows, searchedFromIndex = true, searchPath = EpgSearchPath.LIKE_FALLBACK)
+            }
         } else {
             // 1. Try Raw FTS Query (Supports OR, NEAR, etc.)
             val rawFtsQuery = buildRawFtsQuery(query)
@@ -244,6 +262,12 @@ class XmltvSearchService(
             "\"$sanitized\"*"
         }
     }
+
+    private fun escapeLike(text: String): String =
+        text
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
 
     private fun sanitizeQuery(query: String): String =
         query

@@ -75,6 +75,7 @@ import androidx.tv.material3.Surface
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
+import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
 import org.njarasoa.fijerena.core.network.xmltv.formatAiringTime
@@ -705,6 +706,19 @@ private fun ResultsContent(
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             modifier = Modifier.padding(bottom = Spacing.sm.scaled(scale)),
         )
+        if (results.searchPath == EpgSearchPath.LIKE_FALLBACK) {
+            Text(
+                text = stringResource(R.string.epg_browser_partial_results_note),
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontSize =
+                            MaterialTheme.typography.bodyMedium.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaWarning,
+                modifier = Modifier.padding(bottom = Spacing.sm.scaled(scale)),
+            )
+        }
 
         if (displayDateGroups.isEmpty()) {
             Box(

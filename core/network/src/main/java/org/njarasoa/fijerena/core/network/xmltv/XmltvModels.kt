@@ -30,6 +30,9 @@ data class XmltvData(
 enum class EpgSearchPath {
     FTS_PHRASE,
     FTS_AND,
+
+    /** FTS was stale (index mid-refresh): title-only LIKE scan, possibly incomplete. */
+    LIKE_FALLBACK,
     NONE,
 }
 

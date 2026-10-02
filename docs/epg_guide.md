@@ -324,11 +324,11 @@ Standalone screen for full-text searching across the entire XMLTV dataset. Acces
 
 **Class** (`core/network/.../xmltv/XmltvSearchService.kt`) implementing dual-path search.
 
-**Search strategy (in order, both via FTS — no LIKE or XML-scan fallback exists):**
+**Search strategy (in order; no XML-scan fallback exists):**
 1. **Raw FTS query** — preserves user-provided FTS operators (OR/NEAR/NOT), appends a prefix wildcard `*` to the last token. Typically <100ms.
 2. **Safe FTS retry** — if the raw query returns nothing (or throws, e.g. malformed syntax), strips `" * ( ) :` and retries as a quoted AND-style phrase query.
 
-If the index isn't built yet (`EpgIndexState.NotIndexed`), `search()` returns `null` directly. If the FTS index is stale (`isFtsStale()` — direct-path refresh, or an interrupted rebuild being redone), the query throws `EpgIndexBusyException`; `EpgBrowserViewModel` shows why (`UiState.IndexBusy`) and reruns the query once the index is `Indexed`. The staging path never marks it stale.
+If the index isn't built yet (`EpgIndexState.NotIndexed`), `search()` returns `null` directly. If the FTS index is stale (`isFtsStale()` — direct-path refresh, or an interrupted rebuild being redone), both FTS steps are skipped for a title-only `LIKE '%…%'` scan of `epg_programme.title_lowercase` (`EpgIndexDao.searchByTitleLike`, `EpgSearchPath.LIKE_FALLBACK`; `\ % _` escaped) — seconds on 2M+ rows, same 10 s timeout. Only if that times out or fails does it throw `EpgIndexBusyException`; `EpgBrowserViewModel` shows why (`UiState.IndexBusy`) and reruns the query once the index is `Indexed`. The staging path never marks it stale.
 
 All queries time-windowed: past 1 day to future 6 days. Max 500 results.
 
@@ -524,7 +524,7 @@ data class EpgSearchResultRow(val id: Long, val channelId: String, val title: St
 |------|------|-------------|
 | `EpgFileManager.kt` | Singleton | Channel-based download-ingest pipeline manager |
 | `XmltvParser.kt` | Object | Streaming XMLTV parser with timezone override |
-| `XmltvSearchService.kt` | Class | Two-tier FTS search (raw query, then sanitized safe-AND retry); no LIKE or XML-scan fallback |
+| `XmltvSearchService.kt` | Class | Two-tier FTS search (raw query, then sanitized safe-AND retry); title-only LIKE scan while FTS is stale; no XML-scan fallback |
 | `XmltvEpgService.kt` | Class | XMLTV -> EpgResponse adapter for grid |
 | `XmltvModels.kt` | Data | XMLTV channel/programme/search models |
 | `EpgBrowserModels.kt` | Data | Browser UI models (program + airings) |
