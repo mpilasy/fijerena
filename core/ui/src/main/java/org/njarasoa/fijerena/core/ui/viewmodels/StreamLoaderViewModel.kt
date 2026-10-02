@@ -7,6 +7,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -587,7 +588,11 @@ class StreamLoaderViewModel(
         audioTrackIndex: Int? = null,
         subtitleTrackIndex: Int? = null,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        // ATOMIC: NonCancellable below only protects the write once it has started. Called from
+        // a screen's onDispose, this launch can be cancelled with viewModelScope before the IO
+        // dispatcher ever runs it — a DEFAULT start then never runs the body at all, and the
+        // final position is lost. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-29.
+        viewModelScope.launch(Dispatchers.IO, start = CoroutineStart.ATOMIC) {
             // NonCancellable: this coroutine is a child of viewModelScope, which gets cancelled
             // the moment the screen popping back (e.g. Back press) clears this ViewModel —
             // without this, that cancellation could land mid-write and truncate the

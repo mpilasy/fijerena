@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 in progress: F-16, F-18, F-15, F-06 done. Phases 4-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 in progress: F-16, F-18, F-15, F-06, F-29 done. Phases 4-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -212,6 +212,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `core/ui/.../viewmodels/StreamLoaderViewModel.kt:584-600`.
 - **Mechanism:** `viewModelScope.launch(IO) { withContext(NonCancellable) { … } }` — `NonCancellable` only protects the body once it starts. If the ViewModel is cleared before the IO dispatch picks the coroutine up, a `DEFAULT`-start launch is cancelled before running and the final position is never written.
 - **Fix:** `launch(Dispatchers.IO, start = CoroutineStart.ATOMIC)`, or hand the write to the repository's own write scope (which F-15 now drains on close).
+- **Done 2026-10-01**: `ATOMIC` start on `stopPlayback()`'s launch. Not reproduced (the window is a dispatch delay); coroutine semantics are well defined.
 
 ### E. Systemic hardening
 
@@ -305,7 +306,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 2. **F-18** TV provider switch pops to graph root. ✅
 3. **F-15** repositories no longer cancel their write queue on close. ✅
 4. **F-06** local future per `callbackFlow`. ✅
-5. **F-29** atomic final progress write.
+5. **F-29** atomic final progress write. ✅
 6. **F-02** after HLS live reproduction only.
 7. **F-19** mobile player Back closes panels.
 
