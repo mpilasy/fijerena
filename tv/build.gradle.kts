@@ -52,6 +52,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Emulators are x86/x86_64; without these the debug build ran its ARM libraries
+            // under binary translation there. Release stays ARM-only (every real device).
+            ndk {
+                abiFilters += listOf("x86", "x86_64")
+            }
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

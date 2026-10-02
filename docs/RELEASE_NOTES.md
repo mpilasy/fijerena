@@ -3,6 +3,7 @@
 ## Version: Fixes
 **Release Date:** 2026-10-02
 
+- **Debug builds run natively on emulators (developers):** debug APKs now include the x86 and x86_64 native libraries (ffmpeg, SQLite, androidx graphics), so x86 emulators no longer run the app's ARM libraries under binary translation — that had made the 32-bit TV emulator several times slower than real hardware. Release builds stay ARM-only.
 - **Search says "Searching…" while it searches:** the spinner used to read "Loading categories…" for the whole search.
 - **Compose libraries now line up (developers):** the Compose BOM moves from 2025.06.01 to 2026.03.01, so `ui`, `foundation`, `runtime` and `animation` all resolve to 1.10.6 on TV and mobile (they used to be a mix of 1.8.3 and 1.10.0). The TV lists use plain `LazyColumn`/`LazyRow` instead of the abandoned `tv-foundation` `TvLazyColumn`/`TvLazyRow`, which could not run on Compose 1.9+.
 - **Xtream search no longer stalls on common words:** searching "the" on a ~250k-title provider sat on "Loading categories…" for about 45 s on the TV emulator. The wait was the count of matches hidden by category filters: SQLite checked every excluded category against every matching title (≈5 s per content type on a desktop for "the"). The count now walks the matches once — 4.95 s → 0.05 s (Movies), 5.6 s → 0.02 s (Live TV), 0.31 s → 0.01 s (TV Shows) on a 300k-row test catalogue, same counts. Logcat now reports each search: `SearchViewModel: Search "the": N results in Xms`.
