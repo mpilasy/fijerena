@@ -1,6 +1,6 @@
 # Catalog Sync Cache Churn Plan
 
-**Status:** Phases 1, 2 and 4 done (2026-10-02). Phase 3 in progress.
+**Status:** Complete (2026-10-02). All four phases landed; Phase 4 checked against a stub Jellyfin only.
 
 Opening a show the app already has on disk should not re-download it. Today it does: a
 finished 18-season show like Law & Order is fetched again in full from Xtream, plus several TMDB
@@ -104,6 +104,23 @@ it needs a provider to change a series between two syncs.
   they haven't been asked within the TMDB cache window. Check first whether `plotFetchedAt` on
   `xtream_episodes` already records "asked, TMDB had nothing"; reuse it if so.
 
+**Done (2026-10-02).**
+- **Found while doing it:** the stored TMDB synopses were read *after* `resolveSeriesInfo`, whose
+  `getSeriesInfo` replaces every episode row (REPLACE), stored plots included. So every refetch
+  saw no stored synopses and asked TMDB for every season again. They are now read before the
+  fetch.
+- Season requests cover only seasons that still have an episode without a synopsis. The
+  in-memory cache is keyed by (TMDB series, season) instead of by series, so a later visit asks
+  only for seasons it hasn't asked this session.
+- `tv/{id}` is skipped while `detailFetchedAt` is fresh (7 days) and Xtream sent a release date
+  and a plot. Year isn't required: Xtream never sends one, and the disk-rebuilt detail goes
+  without it too.
+- Not done: recording "TMDB had nothing" per episode. With Phase 2 a refetch happens only when the
+  series changed or after 30 days, so the repeat cost is small; revisit if TMDB calls show up.
+- Unit tests: `XtreamSeriesTmdbCallsTest` (stored synopses read before the fetch, only the
+  missing season requested, fresh details not refetched, stale details refetched). Not checked on
+  a device.
+
 ## Phase 4 (optional) — Make the bridge behave like bears
 
 `tools/jellyfin-xtream`: send the newest episode's `DateCreated` as the series' `last_modified`, so
@@ -129,5 +146,5 @@ the real `sm.njarasoa.org` data was not queried. Restart the :8080 bridge to pic
 |---|---|---|
 | 1 | Hash without `num`, keep cache columns — **done 2026-10-02** | — |
 | 2 | Episode list refresh on change — **done 2026-10-02** | 1 |
-| 3 | TMDB repeat calls | — |
+| 3 | TMDB repeat calls — **done 2026-10-02** | — |
 | 4 | Bridge `last_modified` — **done 2026-10-02** | — (useful for testing 2) |

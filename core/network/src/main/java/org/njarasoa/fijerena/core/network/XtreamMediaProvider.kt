@@ -46,9 +46,9 @@ class XtreamMediaProvider(
     // concurrently on different dispatchers.
     private val searchDataSizes = ConcurrentHashMap<String, Long>()
 
-    // Cache: tmdbSeriesId -> (season, episodeNumber) -> overview.
+    // Cache: (tmdbSeriesId, season) -> (season, episodeNumber) -> overview.
     // Keeps reopens cheap without hitting TMDB again this session.
-    private val tmdbOverviewCache = ConcurrentHashMap<Int, Map<Pair<Int, Int>, String>>()
+    private val tmdbOverviewCache = ConcurrentHashMap<Pair<Int, Int>, Map<Pair<Int, Int>, String>>()
 
     // Full movie/series detail (plot, cast, genre, rating, contentRating, episodes, etc.) rarely
     // changes, but assembling it costs a live Xtream call plus TMDB enrichment — cache the fully
@@ -275,13 +275,15 @@ class XtreamMediaProvider(
             }
         }
 
+        // Xtream re-sends the episode list on every fetch, and it rarely carries synopses — so fill
+        // in the ones TMDB gave us last time before deciding whether to ask TMDB again. Without
+        // this the season fetches below repeat on every fetch, since their in-memory cache dies
+        // with the process. Read before resolveSeriesInfo: storing the new episode list replaces
+        // the episode rows, and the stored plots with them.
+        val storedPlots = repository.getPersistedEpisodePlots(id)
         return when (val result = resolveSeriesInfo(id)) {
             is XtreamResponse.Ok -> {
-                // Xtream re-sends the episode list on every visit, and it rarely carries synopses —
-                // so fill in the ones TMDB gave us last time before deciding whether to ask TMDB
-                // again. Without this the season fetches below repeat on every cold start, since
-                // their in-memory cache dies with the process.
-                val detail = result.value.toDomain(rawSeriesId).withPlots(repository.getPersistedEpisodePlots(id))
+                val detail = result.value.toDomain(rawSeriesId).withPlots(storedPlots)
                 val tmdbSeriesId =
                     resolveSeriesTmdbId(
                         result.value.info
@@ -305,7 +307,16 @@ class XtreamMediaProvider(
                     if (certification != null) {
                         enriched = enriched.copy(metadata = enriched.metadata.copy(contentRating = certification))
                     }
-                    val tmdbDetails = suspendRunCatching { tmdb.getTvDetails(tmdbSeriesId) }.getOrNull()
+                    // Only fills release date, year and plot when Xtream left them out, so skip it
+                    // while the stored TMDB details are fresh and Xtream sent a date and a plot.
+                    // Year alone doesn't count: Xtream never sends one, and a series rebuilt from
+                    // disk (buildCachedSeriesDetail) goes without it too.
+                    val needsTmdbDetails =
+                        !cachedRatingFresh ||
+                            enriched.metadata.releaseDate == null ||
+                            enriched.metadata.plot.isNullOrBlank()
+                    val tmdbDetails =
+                        if (needsTmdbDetails) suspendRunCatching { tmdb.getTvDetails(tmdbSeriesId) }.getOrNull() else null
                     if (tmdbDetails != null) {
                         val newReleaseDate = enriched.metadata.releaseDate ?: tmdbDetails.firstAirDate
                         val newYear = enriched.metadata.year ?: tmdbDetails.year
@@ -415,19 +426,23 @@ class XtreamMediaProvider(
         detail: SeriesDetail,
         tmdbSeriesId: Int,
     ): SeriesDetail {
-        // ⚡ Bolt: Avoid flatten().mapNotNull() to prevent intermediate list allocations
+        // Only the seasons that still have an episode without a synopsis: on a long show most
+        // seasons are already filled in from earlier visits.
         val seasonNumbers = mutableSetOf<Int>()
         detail.episodes.values.forEach { episodesList ->
             episodesList.forEach { ep ->
-                ep.seasonNumber?.let { seasonNumbers.add(it) }
+                if (ep.metadata.plot.isNullOrBlank()) ep.seasonNumber?.let { seasonNumbers.add(it) }
             }
         }
 
-        val overviews =
-            tmdbOverviewCache[tmdbSeriesId] ?: fetchTmdbOverviews(
-                tmdbSeriesId,
-                seasonNumbers,
-            ).also { tmdbOverviewCache[tmdbSeriesId] = it }
+        val missing = seasonNumbers.filterNot { tmdbOverviewCache.containsKey(tmdbSeriesId to it) }.toSet()
+        if (missing.isNotEmpty()) {
+            val fetched = fetchTmdbOverviews(tmdbSeriesId, missing)
+            missing.forEach { season ->
+                tmdbOverviewCache[tmdbSeriesId to season] = fetched.filterKeys { it.first == season }
+            }
+        }
+        val overviews = seasonNumbers.flatMap { tmdbOverviewCache[tmdbSeriesId to it].orEmpty().entries }.associate { it.toPair() }
 
         if (overviews.isEmpty()) return detail
 
