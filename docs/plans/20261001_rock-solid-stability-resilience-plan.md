@@ -269,6 +269,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `core/network/.../xmltv/EpgSyncWorker.kt:57-58`.
 - **Mechanism:** On Android 12+ a worker that starts while the app is in the background can get `ForegroundServiceStartNotAllowedException` from `setForeground`. It's outside the `try`, so every background run fails before syncing (Shield is Android 11 — unaffected; Chromecast with Google TV is 12/14 — likely affected). `pruneOrphanedCatalogData()` (`:83`) also runs outside the `try`.
 - **Fix:** Reproduce on a Google TV emulator first. Then wrap `setForeground` (continue without foreground on failure; the inline FTS rule from memory still applies) and move the prune inside the `try`.
+- **Done 2026-10-02 (pending emulator check):** `setForeground()` is wrapped — on failure (other than cancellation) it logs, records via `CrashLog.record("EpgSyncWorker setForeground", e)` and carries on without foreground; `pruneOrphanedCatalogData()` moved inside the main `try` (a failure now means retry, not a crashed run). FTS/EPG import stays inline in `doWork()`. **Emulator steps (API-36 TV):** (1) `adb logcat -c`; open the app, then press HOME and wait ≥ 60 s (`adb shell dumpsys activity processes | grep fijerena` should show it not top/visible; optionally `adb shell am kill org.njarasoa.fijerena` and `adb shell dumpsys deviceidle force-idle` to mimic Doze). (2) `adb shell am broadcast -a org.njarasoa.fijerena.DEBUG_EPG_SYNC -p org.njarasoa.fijerena` (enqueues a force `EpgSyncWorker`). (3) `adb logcat -s EpgSyncWorker:* WM-WorkerWrapper:* AndroidRuntime:*`. **Before the fix** (build of the parent commit) expect `ForegroundServiceStartNotAllowedException` and the worker finishing as failed/retry with no `doWork: starting` line; **after** expect `setForeground refused — continuing without foreground` followed by `doWork: starting` and `refresh complete` (or "all sources fresh"). If the exception never appears on the unfixed build (WorkManager's job may hold a start exemption), record that and the finding is downgraded to defensive hardening; confirm after-fix still syncs. Leave Doze with `adb shell dumpsys deviceidle unforce`.
 
 #### F-10: Jellyfin HTTP client never closed [P3, CONFIRMED — downgraded]
 - **Where:** `jellyfin/JellyfinApiService.kt:56-73, 642-646`.
@@ -332,7 +333,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 ### Phase 5 — Systemic hygiene
 1. **F-27** `suspendRunCatching` + convert the listed files + CI grep gate. ✅ (18 other files allow-listed in `scripts/check-cancellation-allowlist.txt`)
 2. **F-32** align Compose BOM (stable) + emulator D-pad smoke pass; refresh AGENTS.md version table. ✅ code done 2026-10-02 (smoke pass pending)
-3. **F-34** after Google TV emulator reproduction.
+3. **F-34** after Google TV emulator reproduction. ✅ code 2026-10-02, pending emulator check.
 4. **F-10**, **F-36**, **F-37** opportunistically when those files are touched.
 
 ### Phase 6 — Regression tests that lock it in (written alongside each phase, listed here as the gate)

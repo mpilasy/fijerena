@@ -15,6 +15,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
  * WorkManager worker for background EPG sync (all device types).
@@ -56,7 +57,17 @@ class EpgSyncWorker(
     }
 
     override suspend fun doWork(): Result {
-        setForeground(getForegroundInfo())
+        // Android 12+ refuses a foreground start from a background-started worker
+        // (ForegroundServiceStartNotAllowedException). That must not fail the run: carry on
+        // without foreground status — the sync itself still works while the process is alive.
+        try {
+            setForeground(getForegroundInfo())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "doWork: setForeground refused — continuing without foreground (${e.javaClass.simpleName})", e)
+            CrashLog.record("EpgSyncWorker setForeground", e)
+        }
 
         // ConnectivityManager.activeNetwork can return null briefly on cold start while
         // the network stack initialises for the new process. Wait up to 15s before proceeding.
@@ -81,10 +92,10 @@ class EpgSyncWorker(
             Log.i(TAG, "doWork: no active provider, nothing to sync")
             return Result.success()
         }
-        // Routine maintenance: sweep orphaned catalog data left by deleted providers
-        providerRepo.pruneOrphanedCatalogData(forceVacuum = false)
 
         return try {
+            // Routine maintenance: sweep orphaned catalog data left by deleted providers
+            providerRepo.pruneOrphanedCatalogData(forceVacuum = false)
             val staleSources = if (force) {
                 Log.i(TAG, "doWork: force=true, refreshing all sources of provider $providerId")
                 fileManager.getAllSources(providerId)
