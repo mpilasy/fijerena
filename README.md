@@ -118,7 +118,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Minimum SDK**: 30 (Android 11)
 - **Target SDK**: 35 (Android 15)
 - **Compile SDK**: 36 (Android 16)
-- **Architectures**: ARM64, ARMv7, x86_64, x86
+- **Architectures**: ARM64, ARMv7 (release); debug builds add x86 and x86_64 so emulators run natively
 
 ## 🛠️ Tech Stack
 
@@ -126,26 +126,26 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 | Component | Technology | Version |
 |-----------|-----------|---------|
 | Language | Kotlin | 2.3.0 |
-| Build System | Gradle | 9.4.1 |
-| Build System | Android Gradle Plugin (AGP) | 9.2.1 |
-| UI Framework | Jetpack Compose | 2025.06.01 BOM |
+| Build System | Gradle | 9.6.0 |
+| Build System | Android Gradle Plugin (AGP) | 9.4.1 |
+| UI Framework | Jetpack Compose | 2026.03.01 BOM (ui/foundation/runtime/animation 1.10.6) |
 | Material Design | Material 3 | 1.4.0 (`strictly`) |
-| TV Components | androidx.tv.material3 / tv-foundation | 1.0.0-alpha10 |
+| TV Components | androidx.tv.material3 (lists are plain LazyColumn/LazyRow) | 1.0.0-alpha10 |
 | Video Player | Media3 (ExoPlayer) | 1.7.1 |
-| Networking | Ktor (OkHttp engine) | 3.4.0 |
-| Serialization | kotlinx.serialization | 1.8.0 |
+| Networking | Ktor (OkHttp engine) | 3.5.2 |
+| Serialization | kotlinx.serialization | 1.11.0 |
 | Database | Room (FTS4) | 2.8.4 |
 | SQLite | Bundled requery build (FTS5 capable) | 3.49.0 |
 | Background Work | WorkManager | 2.10.1 |
 | Paging | androidx.paging | 3.3.6 |
-| Image Loading | Coil | 3.1.0 |
+| Image Loading | Coil | 3.5.0 |
 | Navigation | Navigation Compose | 2.8.5 |
-| Coroutines | kotlinx.coroutines | 1.7.3 |
-| SMB Client | smbj (Hierynomus) | 0.13.0 |
+| Coroutines | kotlinx.coroutines | 1.11.0 |
+| SMB Client | smbj (Hierynomus) | 0.15.0 |
 
-`gradle/libs.versions.toml` is authoritative. The Compose BOM is deliberately pinned to 2025.06.x —
-see the comment in that file before raising it (`tv-foundation` alpha10 calls a prefetch API removed
-in Compose 1.9).
+`gradle/libs.versions.toml` is authoritative. The TV app no longer uses `tv-foundation`'s lazy lists
+(its alpha10 calls a prefetch API removed in Compose 1.9), which is what let the Compose BOM move off
+2025.06.x. Compose 1.11+ needs `compileSdk` 37.
 
 ### Architecture
 - **Multi-Module**: Separate modules for mobile, TV, and core functionality

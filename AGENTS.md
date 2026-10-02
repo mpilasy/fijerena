@@ -90,6 +90,9 @@ Every interactive `@Composable` must be D-pad navigable.
 - Use `focusRestorer()` and `focusable()`.
 - Implement clear focus indicators: Scale 1.0 -> 1.1 (200ms tween), 2dp blue border, 8dp glow. See `FocusModifiers.kt`.
 - Avoid complex animations on mid-range TV chipsets (e.g., Sony Bravia).
+- **Lists are plain `LazyColumn`/`LazyRow`.** Never `TvLazyColumn`/`TvLazyRow`: `tv-foundation` 1.0.0-alpha10 calls a prefetch API removed in Compose 1.9 and crashes on scroll.
+- **Back on TV:** where a focused `Button`/`Surface` exists, intercept Back in `onPreviewKeyEvent` on the root — `BackHandler` misses the first press. See `docs/NAVIGATION_GUIDE.md` → "TV Back on Detail Screens".
+- **Every screen/panel lands focus somewhere visible on open and returns it to where the user was on Back** — see `docs/NAVIGATION_GUIDE.md` → "D-Pad Focus Handling".
 
 ### 3. Safe Margins (TV Overscan)
 
@@ -180,7 +183,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 - **Search:**
   - **Global Search:** Unified "ALL" search across Live TV, Movies, and TV Shows from the Content Type Selection screen.
   - **Collapsible Groups:** Results grouped by source with collapsible headers (saved via `rememberSaveable`).
-  - **Xtream:** Two-phase parallel search with multi-word matching.
+  - **Xtream:** Local FTS4 prefix search over the synced catalogue (`xtream_streams_fts` / `xtream_series_fts`), no network call; a second FTS query counts matches hidden by category filters.
   - **Jellyfin:** Server-side search.
 - **Virtual Categories:** Favorites (configurable 10-500), Last Watched (1-100), Continue Watching (VOD), Recent Categories.
 - **Mark Watched/Unwatched:** Manual toggle on movie details (icon beside the favorite toggle), TV content lists and search (`FavoriteContextMenuDialog`/`SearchFavoriteDialog` second action row), TV episode cards (long-press), and the mobile episode watched badge (itself the tap target). Each surface reuses its existing affordance — do not invent a new one.

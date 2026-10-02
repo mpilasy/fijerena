@@ -38,6 +38,10 @@ AGP builds APKs under each module's standard build directory:
 ./gradlew :mobile:assembleDebug
 ```
 
+Debug APKs carry native libraries for `arm64-v8a`, `armeabi-v7a`, `x86` and `x86_64`, so x86 emulators
+(the TV AVD is a 32-bit x86 image) run the app natively instead of translating its ARM libraries —
+timings taken on an emulator are only meaningful on such a build. Release builds stay ARM-only.
+
 > [!IMPORTANT]
 > **Pre-Deployment Clean Build Rule:** Whenever code changes span multiple modules (such as modifying `core:*` libraries consumed by `:tv` or `:mobile`), do **not** deploy from an incremental build. Always run a clean build to prevent stale intermediate DEX shards (`NoClassDefFoundError`):
 > ```bash

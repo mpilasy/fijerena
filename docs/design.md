@@ -303,7 +303,7 @@ ViewModels live in `core:ui` so both TV and mobile share identical business logi
 | ViewModel | Purpose |
 |-----------|---------|
 | `CategoryViewModel` | Category listing, item loading, search pre-fetching |
-| `SearchViewModel` | Two-phase search (cache sweep + network), result streaming |
+| `SearchViewModel` | Search across content types (Xtream: local FTS; Jellyfin: server), hidden-match counts |
 | `EpgViewModel` | EPG guide grid data, channel/programme resolution |
 | `EpgBrowserViewModel` | Programme FTS search, result grouping |
 | `EpgManagementViewModel` | Multi-source EPG CRUD, ingestion trigger |
@@ -319,7 +319,7 @@ ViewModels live in `core:ui` so both TV and mobile share identical business logi
 
 - D-pad key handling: OK = show controls, Double-OK = dismiss stats overlay (if visible), Back = dismiss stats or exit
 - Channel switching: D-pad up/down (Live TV only, disabled for VOD)
-- Controls overlay: TvLazyRow of buttons (Play/Pause, Audio, Subtitle, Quality, Stats, Favorite)
+- Controls overlay: Row of buttons (Play/Pause, Audio, Subtitle, Quality, Stats, Favorite)
 - Stream info display: title, **resolution/codec info**, EPG current/next programme, progress bar. Uses `basicMarquee()` for long titles.
 - Channel Overlays: Slide-in panels (Category/Last Watched) are 25% screen width. Channel names use `basicMarquee()`.
 - Stats overlay: static at top-right corner, non-focusable (allows background stream control)
@@ -416,11 +416,11 @@ Watch state and Favorites are durable across all non-Jellyfin providers. Configu
 
 ### Xtream (Client-Side)
 
-Two-phase parallel search:
-1. **Phase 1 (instant):** Sweep cached categories for matches
-2. **Phase 2 (network):** Fetch uncached categories with semaphore=20, streaming results, 200 max
-
-Background pre-fetching warms cache on category screen init.
+Local FTS4 search over the synced catalogue — no network call. Each word becomes a prefix term (`the*`)
+matched against `xtream_streams_fts` / `xtream_series_fts`, up to 200 results per content type. A second
+FTS query per type counts matches in categories hidden by the provider's category filters (the "N hidden"
+note); it uses `+s.categoryId` so SQLite drives the lookup from the FTS matches rather than the
+categoryId index (see the AGENTS.md Performance & Bug Journal).
 
 ### Cross-Type Search ("ALL")
 

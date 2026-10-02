@@ -135,7 +135,7 @@ On TV, `BackHandler` alone is **not** enough on a screen where a `Button`/`Surfa
 
 `:tv`'s `MovieDetailsScreen` and `EpisodeSelectionScreen` therefore intercept Back in `onPreviewKeyEvent` on their root `LazyColumn`. Preview dispatch runs top-down, before any descendant sees the event, so it wins the race regardless of what swallows it further down — the same pattern `TvDpadEscape.kt` uses for the analogous Up/Down-in-a-text-field problem. The `BackHandler`s remain as an inert fallback.
 
-Use this pattern for any new TV screen whose base state has focusable buttons and a Back action.
+Use this pattern for any new TV screen whose base state has focusable buttons and a Back action — and for overlays/panels that *replace* that root (the episode detail panel in `EpisodeSelectionScreen` intercepts on the screen's root `Box` while it is open, since the `LazyColumn` with the interceptor isn't composed then).
 
 ## AuthViewModel
 
@@ -192,6 +192,13 @@ Each screen should implement:
 - `Modifier.focusable()` on interactive elements
 - `Modifier.focusRestorer()` for returning focus
 - TV-safe padding for overscan (56dp horizontal, 32dp vertical)
+
+Focus must land somewhere visible when a screen or panel appears, and return to where the user was:
+- **Back from details** (movie/series) focuses the row that was opened — `StreamList` remembers it per category (`rememberSaveable`), falling back to the last played item; Live TV follows the playing channel.
+- **Closing the episode detail panel** focuses that episode's card (the tab row if Next/Previous crossed into another season).
+- **TV Guide** opens on the current programme of the first channel that has programmes (separator rows without programmes are skipped), retrying for a few frames until the row is composed.
+- **End of a row:** the last Continue Watching card cancels Right (`focusProperties { right = FocusRequester.Cancel }`) so focus doesn't escape to the top bar.
+- Request focus only once the target is composed; guard `requestFocus()` (it threw on an unattached node before Compose 1.9 and only logs since).
 
 ## Adding New Screens
 

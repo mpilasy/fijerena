@@ -341,7 +341,7 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 
 ### Search UI
 
-**TV** (`tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt`): GlassPanel search, TvLazyColumn with date group headers, D-pad navigable, search source indicator, indexing progress banner.
+**TV** (`tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt`): GlassPanel search, LazyColumn with date group headers, D-pad navigable, search source indicator, indexing progress banner.
 
 **Mobile** (`mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt`): Scaffold, LazyColumn with sticky date headers and expandable programme cards, linear progress during indexing.
 

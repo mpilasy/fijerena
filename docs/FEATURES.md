@@ -83,7 +83,7 @@ Standalone programme title search across all indexed XMLTV data.
 - SQLite FTS4 MATCH for fast search (<100ms): a raw query first, then a sanitized "safe" AND-style retry if that returns nothing — no LIKE or XML-scan fallback
 - Programme titles and channel names scroll with `basicMarquee` when they overflow
 - Mobile: sticky date headers with expandable programme cards showing up to 3 airings (tap to expand all)
-- TV: date headers with GlassPanel programme cards in TvLazyColumn
+- TV: date headers with GlassPanel programme cards in a LazyColumn
 
 ---
 
