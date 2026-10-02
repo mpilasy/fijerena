@@ -66,7 +66,7 @@ for TARGET in "${REACHABLE[@]}"; do
     fi
 done
 
-./gradlew clean :tv:assembleDebug
+./gradlew :tv:assembleDebug
 mkdir -p "$BACKUP_DIR"
 
 # Installs run in parallel — safe now that the build (the part that was actually racing before,

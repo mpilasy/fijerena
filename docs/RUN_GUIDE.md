@@ -43,9 +43,9 @@ Debug APKs carry native libraries for `arm64-v8a`, `armeabi-v7a`, `x86` and `x86
 timings taken on an emulator are only meaningful on such a build. Release builds stay ARM-only.
 
 > [!IMPORTANT]
-> **Pre-Deployment Clean Build Rule:** Whenever code changes span multiple modules (such as modifying `core:*` libraries consumed by `:tv` or `:mobile`), do **not** deploy from an incremental build. Always run a clean build to prevent stale intermediate DEX shards (`NoClassDefFoundError`):
+> **Incremental deploys, clean on demand:** the deploy scripts build incrementally (no `clean`, since 2026-10-02), so a repeat deploy takes seconds. A stale intermediate DEX shard after changes across modules (`core:*` consumed by `:tv`/`:mobile`) shows up as a `NoClassDefFoundError` at runtime; if that happens, clean and deploy again:
 > ```bash
-> ./gradlew clean assembleDebug
+> ./gradlew clean && scripts/deploy-tv-emulator.sh   # or whichever deploy script
 > ```
 
 ### Release Builds (Production)

@@ -41,7 +41,7 @@ if [ "$IS_STREAMING" = true ]; then
     fi
 fi
 
-./gradlew clean :tv:assembleDebug
+./gradlew :tv:assembleDebug
 
 adb -s "$SERIAL" install -r tv/build/outputs/apk/debug/tv-debug.apk
 

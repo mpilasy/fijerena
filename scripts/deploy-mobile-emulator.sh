@@ -25,7 +25,7 @@ if [ -z "$SERIAL" ]; then
     exit 1
 fi
 
-./gradlew clean :mobile:assembleDebug
+./gradlew :mobile:assembleDebug
 
 adb -s "$SERIAL" install -r mobile/build/outputs/apk/debug/mobile-debug.apk
 
