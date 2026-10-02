@@ -245,6 +245,18 @@ fun MobileCategoryListScreen(
         ViewModelProvider(context as ComponentActivity)[PlaybackViewModel::class.java].stop()
         dockTarget = null
     }
+    // The toolbar's Back, Search and TV Guide leave this screen without going through the
+    // BackHandler above. The dock's engine is Activity-scoped, so leaving it playing kept the
+    // stream's audio going behind the next screen — and, its ON_STOP observer gone with this
+    // screen, even after the app was backgrounded. Stop it on the way out, not on dispose: the
+    // player screen shares the same engine and may already be starting its own stream by then.
+    // See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-17.
+    val stopDockThen: (() -> Unit) -> Unit = { leave ->
+        if (isLiveTv && dockTarget != null) {
+            ViewModelProvider(context as ComponentActivity)[PlaybackViewModel::class.java].stop()
+        }
+        leave()
+    }
 
     // Auto-seed the dock so entry never lands on a bare list — mirrors TV's
     // LiveTvSplitLayout: an explicit initialStreamId (search/EPG deep link) wins, otherwise
@@ -483,7 +495,7 @@ fun MobileCategoryListScreen(
                         )
                     },
                     navigationIcon = {
-                        CinemaIconButton(onClick = onBack,
+                        CinemaIconButton(onClick = { stopDockThen(onBack) },
                             icon = {
                                 Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back), tint = CinemaTextPrimary)
                             }
@@ -500,7 +512,7 @@ fun MobileCategoryListScreen(
                                     supportsNativeEpg ||
                                         epgIndexState is EpgIndexState.Indexed
                                 if (selectedCatId != null && selectedCatName != null && hasEpgData) {
-                                    CinemaIconButton(onClick = { onEpgClick(selectedCatId, selectedCatName) },
+                                    CinemaIconButton(onClick = { stopDockThen { onEpgClick(selectedCatId, selectedCatName) } },
                                         icon = {
                                             Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide), tint = CinemaTextPrimary)
                                         }
@@ -508,7 +520,7 @@ fun MobileCategoryListScreen(
                                 }
                             }
                         }
-                        CinemaIconButton(onClick = onSearchClick,
+                        CinemaIconButton(onClick = { stopDockThen(onSearchClick) },
                             icon = {
                                 Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
                             }
