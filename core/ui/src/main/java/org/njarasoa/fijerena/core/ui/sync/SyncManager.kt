@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.cancellation.CancellationException
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
+import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
 /**
  * Runs live sync while the app is in use — see `docs/plans/20260929_live-sync-plan.md` → Flow.
@@ -195,17 +196,27 @@ class SyncManager private constructor(
                 closeSocket()
                 return
             }
-            if (foreground) {
-                val wait = retryDelayMs
-                retryDelayMs = (retryDelayMs * 2).coerceAtMost(MAX_RETRY_MS)
-                requestSync(wait)
-            }
+            retryLater()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            // Used to only log: no error on the settings screen, no retry — sync silently stopped
+            // until the app next came to the foreground. See
+            // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-23.
             Log.e(TAG, "Sync pass crashed", e)
+            CrashLog.record("sync pass", e)
+            store.lastError = "${e.javaClass.simpleName}: ${e.message}"
+            retryLater()
         } finally {
             refreshStatus()
+        }
+    }
+
+    private fun retryLater() {
+        if (foreground) {
+            val wait = retryDelayMs
+            retryDelayMs = (retryDelayMs * 2).coerceAtMost(MAX_RETRY_MS)
+            requestSync(wait)
         }
     }
 

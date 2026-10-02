@@ -154,7 +154,16 @@ class SyncApi(
                 if (!it.isSuccessful && !(acceptGone && it.code == 410)) {
                     throw SyncApiException(it.code, "Sync server answered ${it.code}: $text")
                 }
-                json.decodeFromString<T>(text)
+                // A captive portal or a proxy can answer 200 with an HTML page: that's a server we
+                // couldn't really reach, retried like one — not a crash of the sync pass. See
+                // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-23.
+                try {
+                    json.decodeFromString<T>(text)
+                } catch (e: kotlinx.serialization.SerializationException) {
+                    throw SyncApiException(it.code, "Unexpected response from the sync server (HTTP ${it.code}): ${text.take(120)}", e)
+                } catch (e: IllegalArgumentException) {
+                    throw SyncApiException(it.code, "Unexpected response from the sync server (HTTP ${it.code}): ${text.take(120)}", e)
+                }
             }
         }
 }
