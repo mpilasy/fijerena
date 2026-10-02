@@ -216,6 +216,8 @@ The remaining items were verified line-by-line against HEAD, yielding **7 verifi
 
 ## 4. Verification Strategy
 
+**Emulator run 2026-10-02 (TV emulator, build c53002a5, Xtream via the `jellyxtream` bridge; SMB/Local/M3U out of scope by choice):** playback Home → resume → play again: PLAYING within 2 s, no `awaitInstance` hang; 5× rapid stop/restart: no crash; memory during VOD playback: Total PSS ~214–242 MB, Native Heap PSS 35–54 MB and not growing over a minute (no 1 GB buffer growth); three rapid "Sync Data Now" presses ran one sync; a sync left mid-run completed without recording an error; EPG worker's next run ≥ 2 h away with a daily interval. Not covered: EPG-sync memory and EPG search (the Xtream test provider has no guide), browsing during a sync (the test catalogue syncs in ~150 ms), Jellyfin playback (no login on the test profile), and heap profiling with Android Studio. `RefreshQueue` concurrency and `ProviderSyncRunner` cancellation are now covered by unit tests (see the round-2 plan).
+
 **Status: not yet done.** Each phase's touched modules passed `ktlintCheck` + `compileDebugKotlin` before commit, but nothing below has been run.
 
 1. **Unit & Concurrency Tests:** — partly done (the two bullets below)
