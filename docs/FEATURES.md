@@ -299,6 +299,12 @@ device; the server sees only keys and ciphertext. Off on a device until it is se
 - **Manage:** last sync, Sync now, the devices list with Remove, Leave the sync group (local data
   stays).
 - Changes reach other open devices within seconds; a closed app catches up when opened.
+- **Now playing:** with **Share what's playing with my sync group** on (per device, off by
+  default, never synced), a device's row in every other member's devices list shows what it is
+  playing — "▶ Playing · Malcolm X · Kid", "▶ Live · BBC World News — Newsday · Kid" (programme
+  only when the channel has EPG), or "⏸ Paused · …". Updates within seconds of a change, refreshed
+  every 60 s while playing or paused; a device silent for 3 minutes shows as idle. Sealed like every record.
+  Design: `docs/plans/20261001_live-sync-now-playing-plan.md`.
 - Resilient by design: a record a device can't apply waits and is retried (never blocks the rest); a record the server can't accept is rejected on its own; records whose sealed timestamp or deletion flag were altered are dropped; reconnects back off; an unreadable sync link on a device resets it to unlinked rather than crashing.
 - Not synced: which profile and provider a device is using, UI scale, cellular settings, and
   Jellyfin favourites and history (Jellyfin keeps those itself).

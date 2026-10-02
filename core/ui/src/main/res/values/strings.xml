@@ -887,6 +887,13 @@
     <string name="live_sync_device_remove">Remove</string>
     <string name="live_sync_device_remove_title">Remove %1$s?</string>
     <string name="live_sync_device_remove_message">It stops syncing right away. What it already has stays on it.</string>
+    <string name="live_sync_share_playing">Share what\'s playing with my sync group</string>
+    <string name="live_sync_share_playing_desc">The group\'s devices see what this device is playing and which profile is watching. Only this device shares it.</string>
+    <string name="live_sync_now_playing">▶ Playing · %1$s</string>
+    <string name="live_sync_now_live">▶ Live · %1$s</string>
+    <string name="live_sync_now_paused">⏸ Paused · %1$s</string>
+    <string name="live_sync_now_programme">%1$s — %2$s</string>
+    <string name="live_sync_now_profile">%1$s · %2$s</string>
     <string name="live_sync_leave">Leave the sync group</string>
     <string name="live_sync_leave_title">Leave the sync group?</string>
     <string name="live_sync_leave_message">This device stops syncing. Its profiles, providers, favourites and history stay on it.</string>

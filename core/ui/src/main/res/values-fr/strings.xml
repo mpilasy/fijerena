@@ -849,6 +849,13 @@
     <string name="live_sync_device_remove">Retirer</string>
     <string name="live_sync_device_remove_title">Retirer %1$s ?</string>
     <string name="live_sync_device_remove_message">Il cesse de se synchroniser immédiatement. Ce qu\'il a déjà reste dessus.</string>
+    <string name="live_sync_share_playing">Partager ce qui est en lecture avec mon groupe de synchronisation</string>
+    <string name="live_sync_share_playing_desc">Les appareils du groupe voient ce que cet appareil lit et quel profil regarde. Seul cet appareil le partage.</string>
+    <string name="live_sync_now_playing">▶ Lecture · %1$s</string>
+    <string name="live_sync_now_live">▶ En direct · %1$s</string>
+    <string name="live_sync_now_paused">⏸ En pause · %1$s</string>
+    <string name="live_sync_now_programme">%1$s — %2$s</string>
+    <string name="live_sync_now_profile">%1$s · %2$s</string>
     <string name="live_sync_leave">Quitter le groupe de synchronisation</string>
     <string name="live_sync_leave_title">Quitter le groupe de synchronisation ?</string>
     <string name="live_sync_leave_message">Cet appareil cesse de se synchroniser. Ses profils, fournisseurs, favoris et historique restent dessus.</string>

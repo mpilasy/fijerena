@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -39,11 +40,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
+import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -66,6 +69,8 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
     val resources = LocalResources.current
     val viewModel: SyncSettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val (status, ui) = viewModel.state.collectAsStateWithLifecycle().value
+    val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
+    val shareNowPlaying by viewModel.shareNowPlaying.collectAsStateWithLifecycle()
     var scanning by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf<SyncWire.Device?>(null) }
     var confirmLeave by remember { mutableStateOf(false) }
@@ -127,7 +132,8 @@ fun MobileSyncSettingsScreen(onBack: () -> Unit) {
                         onAddDevice = viewModel::showInvite,
                         onScan = { scanning = true },
                     )
-                    DevicesPanel(ui.devices, onRemove = { confirmRemove = it })
+                    ShareNowPlayingRow(shareNowPlaying, viewModel::setShareNowPlaying)
+                    DevicesPanel(ui.devices, nowPlaying, onRemove = { confirmRemove = it })
                     CinemaOutlinedButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.live_sync_leave), color = CinemaError)
                     }
@@ -274,6 +280,7 @@ private fun LinkedPanel(
 @Composable
 private fun DevicesPanel(
     devices: List<SyncWire.Device>?,
+    nowPlaying: Map<String, SyncPayloads.NowPlaying>,
     onRemove: (SyncWire.Device) -> Unit,
 ) {
     val active = devices?.filterNot { it.revoked } ?: return
@@ -289,6 +296,7 @@ private fun DevicesPanel(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                         )
+                        nowPlaying[device.id]?.let { Text(nowPlayingLine(it), style = MaterialTheme.typography.bodySmall, color = CinemaAccent) }
                     }
                     if (!device.current) {
                         TextButton(onClick = { onRemove(device) }) { Text(stringResource(R.string.live_sync_device_remove), color = CinemaError) }
@@ -296,6 +304,24 @@ private fun DevicesPanel(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ShareNowPlayingRow(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md)) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.live_sync_share_playing), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(R.string.live_sync_share_playing_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

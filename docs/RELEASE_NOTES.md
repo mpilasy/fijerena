@@ -5,7 +5,9 @@
 
 From `docs/plans/20261001_live-sync-now-playing-plan.md`.
 
+- **See what other devices are playing:** Settings → Live sync → Devices shows, for each device of the group, whether it is playing and what — movie, show and episode, or live channel with its current programme — and which profile is watching. Each device opts in with **Share what's playing with my sync group** (off by default, set per device, never synced). A device that stops sending for 3 minutes (switched off at the wall) shows as idle.
 - **Media session title:** the playing item's title, show and episode are now set on the media session, so the Android TV system UI and `adb shell dumpsys media_session` show what is playing.
+- No server change; older app versions ignore the new record.
 
 ---
 
@@ -39,7 +41,7 @@ code, most reproduced on an emulator before and after the fix.
 
 ### Live sync
 - One record a device can't apply no longer stops it pulling (it waits and is retried); records deferred on an earlier page survive a failed later page; non-HTTP failures (captive portals) are retried and reported.
-- **Server:** an invalid record is rejected on its own instead of failing the whole batch; records clocked more than a day ahead of the server are rejected. *Takes effect once the sync server is redeployed.*
+- **Server:** an invalid record is rejected on its own instead of failing the whole batch; records clocked more than a day ahead of the server are rejected. *Deployed to the Cloudflare server 2026-10-01; self-hosted servers need a redeploy.*
 - Oversized records no longer block every later upload; the socket reconnect backs off instead of a full sync every 5 s behind a proxy without WebSocket support; dead sockets are detected by protocol pings.
 - A record's timestamp and deletion flag are now sealed too: a server can no longer turn a record into a deletion or rewrite which write wins (compatible with older apps).
 - Applying another device's provider deletion no longer pushes its EPG-source deletions back.

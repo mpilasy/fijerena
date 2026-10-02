@@ -169,6 +169,20 @@ class SyncManager private constructor(
         }
     }
 
+    /**
+     * One pass now, waited for — a last push before unlinking. Best effort: a failure is only
+     * logged, since nothing must stop the device leaving.
+     */
+    suspend fun flush() {
+        try {
+            engine.syncNow(listener)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Last sync pass failed: ${e.message}")
+        }
+    }
+
     private suspend fun runPasses() {
         if (!passRunning.compareAndSet(false, true)) {
             passAgain = true

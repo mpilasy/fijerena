@@ -29,11 +29,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.QrCode
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
+import org.njarasoa.fijerena.core.ui.sync.nowPlayingLine
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -45,6 +47,7 @@ import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -58,6 +61,8 @@ fun SyncSettingsScreen() {
     val context = LocalContext.current
     val viewModel: SyncSettingsViewModel = viewModel(factory = SettingsViewModelFactory(context))
     val (status, ui) = viewModel.state.collectAsStateWithLifecycle().value
+    val nowPlaying by viewModel.nowPlaying.collectAsStateWithLifecycle()
+    val shareNowPlaying by viewModel.shareNowPlaying.collectAsStateWithLifecycle()
     val scale = LocalUiScale.current
     var confirmRemove by remember { mutableStateOf<SyncWire.Device?>(null) }
     var confirmLeave by remember { mutableStateOf(false) }
@@ -94,7 +99,13 @@ fun SyncSettingsScreen() {
                 onSyncNow = viewModel::syncNow,
                 onAddDevice = viewModel::showInvite,
             )
-            DevicesPanel(ui.devices, onRemove = { confirmRemove = it })
+            TvSwitchRow(
+                checked = shareNowPlaying,
+                onCheckedChange = viewModel::setShareNowPlaying,
+                label = stringResource(R.string.live_sync_share_playing),
+                description = stringResource(R.string.live_sync_share_playing_desc),
+            )
+            DevicesPanel(ui.devices, nowPlaying, onRemove = { confirmRemove = it })
             // Rare and drastic: out of the main row, after everything else.
             CinemaSecondaryButton(onClick = { confirmLeave = true }, text = stringResource(R.string.live_sync_leave))
         } else {
@@ -236,6 +247,7 @@ private fun LinkedPanel(
 @Composable
 private fun DevicesPanel(
     devices: List<SyncWire.Device>?,
+    nowPlaying: Map<String, SyncPayloads.NowPlaying>,
     onRemove: (SyncWire.Device) -> Unit,
 ) {
     val scale = LocalUiScale.current
@@ -252,6 +264,7 @@ private fun DevicesPanel(
                             style = MaterialTheme.typography.bodySmall,
                             color = CinemaTextSecondary,
                         )
+                        nowPlaying[device.id]?.let { Text(nowPlayingLine(it), style = MaterialTheme.typography.bodySmall, color = CinemaAccent) }
                     }
                     if (!device.current) {
                         Spacer(Modifier.width(Spacing.sm.scaled(scale)))

@@ -11,14 +11,18 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.sync.NowPlayingStore
 import org.njarasoa.fijerena.core.network.sync.PairingQr
 import org.njarasoa.fijerena.core.network.sync.SyncAccountManager
 import org.njarasoa.fijerena.core.network.sync.SyncApiException
+import org.njarasoa.fijerena.core.network.sync.SyncPayloads
 import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.sync.NowPlayingPublisher
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 
 /**
@@ -30,6 +34,7 @@ class SyncSettingsViewModel(
 ) : ViewModel() {
     private val accounts = SyncAccountManager(app)
     private val manager = SyncManager.getInstance(app)
+    private val publisher = NowPlayingPublisher.getInstance(app)
     private val deviceName = Build.MODEL ?: "Device"
 
     /** What the screen is doing beyond showing the status. */
@@ -64,6 +69,28 @@ class SyncSettingsViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), manager.status.value to ui.value)
 
     val currentUi: StateFlow<Ui> = ui.asStateFlow()
+
+    /** The device-local "Share what's playing with my sync group" switch. */
+    val shareNowPlaying: StateFlow<Boolean> = publisher.isSharing
+
+    fun setShareNowPlaying(enabled: Boolean) = publisher.setSharing(enabled)
+
+    /**
+     * What each listed device is playing, by device id — only devices playing or paused right
+     * now. Re-checked every [STALENESS_CHECK_MS] too, so a device that went quiet drops off while
+     * the screen is open.
+     */
+    val nowPlaying: StateFlow<Map<String, SyncPayloads.NowPlaying>> =
+        combine(ui, NowPlayingStore.devices, ticker()) { current, entries, now -> currentNowPlaying(current.devices.orEmpty(), entries, now) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    private fun ticker() =
+        flow {
+            while (true) {
+                emit(System.currentTimeMillis())
+                delay(STALENESS_CHECK_MS)
+            }
+        }
 
     fun onServerUrlChanged(url: String) {
         ui.value = ui.value.copy(serverUrl = url.trim(), serverChecked = false, error = null)
@@ -188,7 +215,12 @@ class SyncSettingsViewModel(
     fun leave() =
         action {
             inviteJob?.cancel()
+            // Best effort, while still linked: other devices drop this one's line now, not when
+            // it goes stale.
+            publisher.stopBeforeLeaving()
+            manager.flush()
             accounts.leave()
+            NowPlayingStore.clear()
             manager.onLinkChanged()
             ui.value = Ui()
         }
@@ -220,10 +252,26 @@ class SyncSettingsViewModel(
         }
     }
 
-    private companion object {
+    internal companion object {
         /** The server's pairing-code lifetime. */
         const val INVITE_TTL_MS = 10 * 60 * 1000L
         const val INVITE_POLL_MS = 3_000L
+        const val STALENESS_CHECK_MS = 30_000L
+
+        /**
+         * [entries] joined to the listed, not revoked [devices] by id, keeping only what is
+         * current at [now] (see [NowPlayingStore.Entry.isCurrent]): a record of a device no
+         * longer listed is never shown.
+         */
+        fun currentNowPlaying(
+            devices: List<SyncWire.Device>,
+            entries: Map<String, NowPlayingStore.Entry>,
+            now: Long,
+        ): Map<String, SyncPayloads.NowPlaying> =
+            devices
+                .filterNot { it.revoked }
+                .mapNotNull { device -> entries[device.id]?.takeIf { it.isCurrent(now) }?.let { device.id to it.nowPlaying } }
+                .toMap()
     }
 
     private fun friendly(e: Exception): String {

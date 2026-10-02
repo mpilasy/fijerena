@@ -1,6 +1,6 @@
 # Live Sync "Now Playing" Plan
 
-**Status:** 📋 **PROPOSED** — not started. Open questions answered 2026-10-01 (see §6); remote Stop added as Phase 4.
+**Status:** 🚧 **IN PROGRESS** — Phases 0-2 built and unit-tested (2026-10-01); Phase 3 (emulators) running; Phase 4 not started. Open questions answered 2026-10-01 (see §6); remote Stop added as Phase 4.
 **Date:** 2026-10-01
 **Scope:** `core:player` (one flow), `core:network/sync`, `core:ui/sync`, TV + mobile Live sync screens, mobile-only Stop button, TV/mobile player exit on remote stop. No server change.
 
@@ -171,6 +171,14 @@ provider name, so the item title is used as the channel. The share switch is the
    writes to either database.
 2. `SyncSettingsViewModel` join + staleness rule (3 min), unit-tested with a fake clock.
 3. Devices rows on TV and mobile; the share setting in both Live sync screens.
+
+**Done 2026-10-01 (Phase 2).** `SyncApplier` routes `NOW_PLAYING` to `NowPlayingStore` and leaves
+volatile kinds out of the clock `receive()`, so nothing is written to either database (tested with
+mocked databases). A record is current only if it is playing/paused and both `now - sentAt` and
+`now - receivedAt` are ≤ 3 min — the second guards a sender whose clock runs ahead; known limit: a
+sender more than 3 min *behind* never shows. Stopping on **Leave** lives in
+`SyncSettingsViewModel.leave()` (queue `stopped`, flush, leave, clear the store) because
+`core:network` can't reach the publisher.
 
 ### Phase 3 — End to end
 Two emulators linked through a local `workerd` server (`server/` test harness, as used for the

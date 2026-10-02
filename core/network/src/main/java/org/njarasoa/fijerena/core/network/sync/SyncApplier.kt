@@ -81,6 +81,7 @@ class SyncApplier(
             SyncKind.FAVORITE_STREAM,
             SyncKind.FAVORITE_CATEGORY,
             SyncKind.WATCH,
+            SyncKind.NOW_PLAYING,
         )
 
     suspend fun apply(records: List<SyncRecord>): Result {
@@ -109,7 +110,8 @@ class SyncApplier(
                 }
             }
         }
-        records.maxOfOrNull { it.hlc }?.let { newest ->
+        // Volatile records are no step of the clocks: they write nothing to either database.
+        records.filterNot { it.key.kind in SyncKind.VOLATILE }.maxOfOrNull { it.hlc }?.let { newest ->
             sync.receive(newest)
             versions.receive(newest)
         }
@@ -158,9 +160,20 @@ class SyncApplier(
             SyncKind.EPG_SOURCE -> applyEpgSource(record)
             SyncKind.SETTING -> applySetting(record)
             SyncKind.PROVIDER_LOGIN, SyncKind.CATEGORY_FILTERS -> applyProviderScopedSetting(record)
+            SyncKind.NOW_PLAYING -> applyNowPlaying(record)
             else -> Outcome.Skipped
         }
     }
+
+    /** Into [NowPlayingStore] only — no version, no tombstone (none is ever sent). Keyed by device id. */
+    private fun applyNowPlaying(record: SyncRecord): Outcome =
+        if (record.deleted) {
+            Outcome.Skipped
+        } else {
+            val entry = NowPlayingStore.Entry(SyncPayloads.decode(record.payload), record.hlc, System.currentTimeMillis())
+            NowPlayingStore.receive(record.key.itemId, entry)
+            Outcome.Applied
+        }
 
     // --- Facts about this device ---
 
