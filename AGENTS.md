@@ -67,6 +67,7 @@ fijerena/
 6. **Long-lived scopes:** Any scope that outlives a screen (singletons, services, repositories) comes from `AppScopes.create(name, dispatcher)` (`core:player/diagnostics`), never a bare `CoroutineScope(...)` — an exception escaping a bare scope kills the process. `AppScopes` logs it and records it in `CrashLog`.
 7. **Service from Compose:** In a `LaunchedEffect`/composition-scoped coroutine use `StreamingPlaybackService.awaitInstanceOrNull()`, never bare `awaitInstance()` — its `ServiceDestroyedException` escaping a composition coroutine crashes the app.
 8. **`xtream_v2.db` holds user data:** every version bump needs a real `Migration`; the destructive fallback covers only pre-v7 files. See `docs/DATABASE_SCHEMA.md` §3.
+9. **Secrets never fall back to plaintext:** an encrypted store that can't be opened is reset (`CredentialStoreHealth.markLost`) and, if it still can't be created, replaced by `CredentialStoreHealth.InMemoryPrefs` — never `getSharedPreferences`.
 
 ---
 

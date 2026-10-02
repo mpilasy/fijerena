@@ -33,11 +33,19 @@ fun friendlyErrorMessage(
         e is IOException -> context.getString(R.string.error_network)
         else -> {
             val msg = e.message.orEmpty()
-            when {
+            val isAuthFailure =
                 msg.contains("401") ||
                     msg.contains("403") ||
-                    msg.contains("Unauthorized", ignoreCase = true) ->
-                    context.getString(R.string.error_unauthorized)
+                    msg.contains("Unauthorized", ignoreCase = true) ||
+                    // XtreamSessionManager's own wording: user_info.auth != 1, or no usable password.
+                    msg.contains("Invalid credentials", ignoreCase = true) ||
+                    msg.contains("credentials are invalid", ignoreCase = true) ||
+                    msg.contains("Password not stored", ignoreCase = true)
+            when {
+                // A saved login this device had to reset (lost Keystore key) explains a failed
+                // login better than "check your username and password". See CredentialStoreHealth.
+                isAuthFailure && CredentialStoreHealth.anyLost(context) -> context.getString(R.string.error_saved_login_lost)
+                isAuthFailure -> context.getString(R.string.error_unauthorized)
                 else -> context.getString(R.string.error_generic)
             }
         }

@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): F-35 done. Phases 5-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 done 2026-10-01 (F-08, F-09, F-23, F-22, F-12, F-26, F-07, F-25, F-11). Phase 3 done 2026-10-01 (F-16, F-18, F-15, F-06, F-29, F-19; F-02 not reproduced, no change). Phase 4 in progress (steps 1–2 agreed: F-35, F-28, F-33 reduced, F-14; F-13 deferred): F-35, F-28 done. Phases 5-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -236,6 +236,9 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `ProviderRepository.kt:816-839` (delete on failure, then **plain `SharedPreferences` fallback**), `AccountManager.kt:62-80` (delete on failure), `MediaProviderFactory.kt:228-248` (delete, return null).
 - **Mechanism:** A Keystore hiccup deletes the user's saved logins with no message (they just see auth failures); a second failure in `ProviderRepository` stores passwords **unencrypted**.
 - **Fix:** Remove the plaintext fallback. On recovery-by-delete, set a per-provider "credentials lost" flag the UI turns into "Sign in again" instead of a generic error. (The store replacement itself stays deferred — `20260828_secret-store-migration-plan.md`.)
+- **Done 2026-10-01**: the two plaintext fallbacks (`ProviderRepository.getProviderPrefs`, `AccountManager.encryptedPrefs`) became `CredentialStoreHealth.InMemoryPrefs` — a login entered then works for that run and is never written to disk. Every reset (those two plus `MediaProviderFactory`'s Jellyfin session) is recorded by `CredentialStoreHealth.markLost` (plain flag + Diagnostics); `friendlyErrorMessage` shows "This device lost a saved login… enter the password again" for an auth failure while a flag is set; user-driven saves (add, edit, login screen) and a login restored by sync clear it. No new screens: every login error already goes through `friendlyErrorMessage` on both platforms.
+- **Found while testing:** the lost password was *empty*, not missing, so `XtreamSessionManager` sent an empty-password login and the provider answered `511` — the screen said "Something went wrong". An empty password now hits the existing "Password not stored" check (no request sent), and that wording, "Invalid credentials" and "credentials are invalid" count as auth failures (Xtream's auth failure used to show the generic message too).
+- **Verified** on the TV emulator by zeroing the keysets of `bearstv`'s two credentials files: app stays up, both resets in Diagnostics, Live TV shows the lost-login message. Files restored byte-for-byte and the flag cleared afterwards; Live TV connects again. `FriendlyErrorTest` +5 cases.
 
 #### 🆕 F-30: No crash or ANR capture [P1]
 - **Where:** No `Thread.setDefaultUncaughtExceptionHandler`, no `ApplicationExitInfo` use anywhere; no crash reporter.
@@ -320,7 +323,7 @@ Order: first the safety net that lets us see failures, then data loss and crash 
 2. **F-14** crash-safe profile deletion order + startup resume.
 3. **F-13** favourite `StateFlow` snapshot; remove `runBlocking`.
 4. **F-35** no automatic `VACUUM`; catalogue deletes batched (no migration needed — `auto_vacuum = FULL` already). ✅
-5. **F-28** no plaintext fallback; "sign in again" state.
+5. **F-28** no plaintext fallback; "sign in again" state. ✅
 
 ### Phase 5 — Systemic hygiene
 1. **F-27** `suspendRunCatching` + convert the listed files + CI grep gate.

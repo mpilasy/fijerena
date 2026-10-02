@@ -26,6 +26,7 @@ class AccountManager(
     // eagerly it blocked the first frame; deferred, the cost lands on whichever caller reads
     // first — so [warmUp] exists to make that caller a background one.
     private val prefs: SharedPreferences by lazy { encryptedPrefs(context, providerId) }
+    private val appContext = context.applicationContext
 
     private val json =
         Json {
@@ -73,13 +74,15 @@ class AccountManager(
                     val name = fileName(providerId)
                     try {
                         createEncryptedPrefs(context, name)
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
                         val appContext = context.applicationContext
+                        CredentialStoreHealth.markLost(appContext, name, e)
                         appContext.deleteSharedPreferences(name)
                         try {
                             createEncryptedPrefs(appContext, name)
                         } catch (_: Exception) {
-                            appContext.getSharedPreferences(name, Context.MODE_PRIVATE)
+                            // Never a plaintext file — see CredentialStoreHealth.InMemoryPrefs.
+                            CredentialStoreHealth.InMemoryPrefs()
                         }
                     }
                 }.also { sharedPrefs[providerId] = it }
@@ -111,6 +114,7 @@ class AccountManager(
             putString(KEY_AUTH_RESPONSE, json.encodeToString(authResponse))
             apply()
         }
+        CredentialStoreHealth.clear(appContext)
     }
 
     fun getCredentials(): StoredCredentials? {

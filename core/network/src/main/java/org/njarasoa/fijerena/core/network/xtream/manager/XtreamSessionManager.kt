@@ -92,8 +92,11 @@ class XtreamSessionManager(
                         accountManager.getCredentials()
                             ?: throw Exception("No stored credentials found")
 
+                    // Empty, not only missing: a credentials file reset after a lost Keystore key
+                    // seeds an empty password, and logging in with it just earns a server error
+                    // that says nothing about why. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-28.
                     val password =
-                        credentials.password
+                        credentials.password?.takeIf { it.isNotEmpty() }
                             ?: throw Exception("Password not stored. Please login again.")
 
                     var serviceAssigned = false

@@ -160,7 +160,7 @@ the fact without logcat having been attached:
   newest first, the app's own crash log — uncaught exceptions, and exceptions absorbed by the
   app-wide coroutine scopes (`AppScopes`), sync records that couldn't be applied, a database set
   aside on downgrade — together with Android's record of why recent processes ended (ANR, native
-  crash, low-memory kill, package update…).
+  crash, low-memory kill, package update…). Credential files the app had to reset (unreadable after a Keystore reset) appear as `credentials reset: <file>`.
 - Off-device:
 
 ```bash

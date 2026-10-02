@@ -4,6 +4,7 @@
 **Release Date:** 2026-10-01
 
 - **Deleting a provider no longer needs room for a second copy of the database:** the automatic `VACUUM` after a provider delete (and after orphan cleanup) rewrote the whole database into the WAL — 258 MB on the TV emulator. It's gone (`auto_vacuum = FULL` already returns space as rows go); "Shrink Database" still runs it on request. Catalogue rows are also deleted 1,000 per commit, cutting the delete's own WAL peak from 70 MB to 13 MB on a 285k-row provider.
+- **Saved logins are never stored unencrypted, and a lost one says so:** when a device can't decrypt a saved login (its secure key store was reset), it used to fall back to plain storage after a second failure; it now keeps a newly entered login in memory only. A failed login then says "This device lost a saved login… enter the password again" instead of "Something went wrong", and no longer tries the server with an empty password. Xtream's own "invalid credentials" response now shows the login-failed message rather than the generic one.
 
 ---
 

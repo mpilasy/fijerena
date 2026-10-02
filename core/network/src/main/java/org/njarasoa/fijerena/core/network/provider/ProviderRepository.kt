@@ -140,6 +140,7 @@ class ProviderRepository(
                 putString(KEY_USERNAME, username)
                     .putString(KEY_PASSWORD, password)
             }
+            org.njarasoa.fijerena.core.network.CredentialStoreHealth.clear(context)
             SettingsSyncQueue.providerLogin(context, id, loginProfile)
         }
         if (initialSettings.categoryFilters != CategoryFilters()) {
@@ -179,6 +180,7 @@ class ProviderRepository(
             getProviderPrefs(id, loginProfile).edit { putString(KEY_USERNAME, username) }
         }
         getProviderPrefs(id, loginProfile).edit { putString(KEY_PASSWORD, password) }
+        org.njarasoa.fijerena.core.network.CredentialStoreHealth.clear(context)
         // The password lives outside the row, so no trigger sees it change. A Jellyfin login is
         // its profile's own record; any other provider's login is part of the provider record.
         if (effectiveType == "JELLYFIN") {
@@ -585,6 +587,7 @@ class ProviderRepository(
             if (login?.password == null) remove(KEY_PASSWORD) else putString(KEY_PASSWORD, login.password)
             remove(KEY_JELLYFIN_TOKEN).remove(KEY_JELLYFIN_USER_ID)
         }
+        if (login?.password != null) org.njarasoa.fijerena.core.network.CredentialStoreHealth.clear(context)
         MediaProviderFactory.clearCache(providerId)
     }
 
@@ -781,6 +784,7 @@ class ProviderRepository(
         getProviderPrefs(providerId, ProfileEntity.DEFAULT_ID).edit {
             putString(KEY_PASSWORD, password)
         }
+        org.njarasoa.fijerena.core.network.CredentialStoreHealth.clear(context)
     }
 
     /** Every profile's credentials for the provider: the shared file and each profile's own. */
@@ -862,7 +866,8 @@ class ProviderRepository(
                         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
                     )
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    org.njarasoa.fijerena.core.network.CredentialStoreHealth.markLost(context, fileName, e)
                     context.deleteSharedPreferences(fileName)
                     try {
                         EncryptedSharedPreferences.create(
@@ -873,7 +878,8 @@ class ProviderRepository(
                             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
                         )
                     } catch (_: Exception) {
-                        context.getSharedPreferences(fileName, Context.MODE_PRIVATE)
+                        // Never a plaintext file — see CredentialStoreHealth.InMemoryPrefs.
+                        org.njarasoa.fijerena.core.network.CredentialStoreHealth.InMemoryPrefs()
                     }
                 }
             prefs

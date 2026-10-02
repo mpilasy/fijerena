@@ -245,7 +245,8 @@ object MediaProviderFactory {
                     EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
                 )
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                CredentialStoreHealth.markLost(context, fileName, e)
                 context.deleteSharedPreferences(fileName)
                 null
             }

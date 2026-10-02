@@ -15,6 +15,7 @@
     <string name="error_ssl">Échec de la connexion sécurisée. Vérifiez l\'adresse du serveur.</string>
     <string name="error_network">Erreur réseau. Vérifiez votre connexion et réessayez.</string>
     <string name="error_unauthorized">Échec de la connexion. Vérifiez votre nom d\'utilisateur et votre mot de passe.</string>
+    <string name="error_saved_login_lost">Cet appareil a perdu un identifiant enregistré (son coffre de clés sécurisé a été réinitialisé). Modifiez le fournisseur et saisissez à nouveau le mot de passe.</string>
     <string name="error_generic">Une erreur s\'est produite. Veuillez réessayer.</string>
     <string name="sync_error_download_failed">Échec du téléchargement</string>
     <string name="sync_error_upload_failed">Échec de l\'envoi</string>
