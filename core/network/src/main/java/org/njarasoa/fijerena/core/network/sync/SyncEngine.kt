@@ -95,10 +95,16 @@ class SyncEngine(
             if (result.userDataChangedProviderIds.isNotEmpty()) listener?.onUserDataChanged(result.userDataChangedProviderIds)
             val deferredKeys = result.deferred.map { crypto.keyId(it.key) }.toSet()
             waiting = batch.filter { it.key in deferredKeys }.takeLast(MAX_DEFERRED)
-            page.records.lastOrNull()?.seq?.let { store.cursor = it }
+            // Together, every page: saving only the cursor here (and the waiting records after
+            // the loop) lost the records this page deferred whenever a later page failed — the
+            // cursor had already moved past them, so nothing ever fetched them again. See
+            // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-09.
+            store.savePullProgress(
+                cursor = page.records.lastOrNull()?.seq ?: store.cursor,
+                deferred = waiting.map { json.encodeToString(it) }.toSet(),
+            )
             if (!page.more) break
         }
-        store.deferred = waiting.map { json.encodeToString(it) }.toSet()
         if (activeProfileDeleted) listener?.onActiveProfileDeleted()
         return PullOutcome(applied, waiting.size, activeProfileDeleted)
     }

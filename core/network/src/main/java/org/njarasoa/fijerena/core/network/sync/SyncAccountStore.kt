@@ -115,6 +115,15 @@ class SyncAccountStore(
         get() = prefs?.getStringSet(KEY_DEFERRED, emptySet()).orEmpty()
         set(value) = prefs?.edit(commit = true) { putStringSet(KEY_DEFERRED, value) } ?: Unit
 
+    /** [cursor] and [deferred] in one commit, so a crash can't leave one advanced without the other. */
+    fun savePullProgress(
+        cursor: Long,
+        deferred: Set<String>,
+    ) = prefs?.edit(commit = true) {
+        putLong(KEY_CURSOR, cursor)
+        putStringSet(KEY_DEFERRED, deferred)
+    } ?: Unit
+
     var lastSyncAt: Long
         get() = prefs?.getLong(KEY_LAST_SYNC, 0) ?: 0
         set(value) = prefs?.edit(commit = true) { putLong(KEY_LAST_SYNC, value) } ?: Unit
