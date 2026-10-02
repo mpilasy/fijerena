@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -628,6 +629,7 @@ class StreamLoaderViewModel(
      * [stopPlaybackAwaited] instead: see its kdoc and
      * docs/plans/20260908_episode-selection-fragility-plan.md.
      */
+    @kotlin.OptIn(DelicateCoroutinesApi::class) // CoroutineStart.ATOMIC
     fun stopPlayback(
         position: Long,
         duration: Long,
