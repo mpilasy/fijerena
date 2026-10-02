@@ -349,13 +349,23 @@ internal fun EpisodeListContent(
         }
     }
 
+    // Closing the detail panel (Back, or the panel's own onBack) remembers which episode was open so
+    // the effect below can hand focus back to its row: the panel replaces the whole LazyColumn, so
+    // closing it leaves nothing focused otherwise.
+    var reopenedEpisodeId by remember { mutableStateOf<String?>(null) }
+    val reopenedEpisodeFocusRequester = remember { FocusRequester() }
+    val closeEpisodePanel: () -> Unit = {
+        reopenedEpisodeId = selectedEpisode?.id
+        selectedEpisode = null
+    }
+
     // Handle back press: dismiss detail panel first, then navigate back. Two handlers, not one
     // with a branch inside — the base-list case (selectedEpisode == null) needs its own explicit
     // BackHandler too. Fallback only in practice — the real fix is the LazyColumn's
     // onPreviewKeyEvent below (see its comment); confirmed on a real Shield that this
     // BackHandler alone never fires on the first press while a focused TV Button has focus.
     BackHandler(enabled = selectedEpisode != null) {
-        selectedEpisode = null
+        closeEpisodePanel()
     }
     // Fallback for any state where the LazyColumn's onPreviewKeyEvent below isn't in the tree
     // yet — same focusInSection branch as that handler, and the same "an unconditional onBack()
@@ -514,15 +524,15 @@ internal fun EpisodeListContent(
     // to scroll to find it — but only when it's actually the reason this season is selected. A
     // manual tab focus/click must never yank the list back to the resume spot (or anywhere
     // else); it stays exactly where the user left it.
+    // Items above the episodes: the hero and the section tabs, then with several seasons the
+    // pinned season tabs and the gap under them.
+    val headerItemCount = 2 + if (hasMultipleSeasons) 2 else 0
     LaunchedEffect(resumeState.resumeEpisodeId) {
         val targetId = resumeState.resumeEpisodeId ?: return@LaunchedEffect
         if (seriesDetail.seasonNumberContaining(targetId) != resumeState.selectedSeason) return@LaunchedEffect
         val seasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: return@LaunchedEffect
         val episodeIndex = seasonEpisodes.indexOfFirst { it.id == targetId }
         if (episodeIndex < 0) return@LaunchedEffect
-        // Items above the episodes: the hero and the section tabs, then with several seasons the
-        // pinned season tabs and the gap under them.
-        val headerItemCount = 2 + if (hasMultipleSeasons) 2 else 0
         // A jump, not an animation: while a slow scroll ran, nothing held focus and the system
         // put it on a season tab, pulling the list back up (seen on a Shield).
         listState.scrollToItem(headerItemCount + episodeIndex)
@@ -727,6 +737,28 @@ internal fun EpisodeListContent(
         }
     }
 
+    // After the episode panel closes, put focus back on the row that was open. The list was out of
+    // the tree while the panel showed, so wait a frame for it, scroll the row into view if the
+    // restored offset left it out, then request. If the row isn't in this season's list (stepped to
+    // another season with Next/Previous), fall back to the tab row.
+    LaunchedEffect(selectedEpisode) {
+        val targetId = reopenedEpisodeId
+        if (selectedEpisode == null && targetId != null) {
+            withFrameNanos { }
+            val index = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()]?.indexOfFirst { it.id == targetId } ?: -1
+            if (index >= 0 && listState.layoutInfo.visibleItemsInfo.none { it.key == targetId }) {
+                listState.scrollToItem(headerItemCount + index)
+                withFrameNanos { }
+            }
+            try {
+                if (index >= 0) reopenedEpisodeFocusRequester.requestFocus() else tabRowFocusRequester.requestFocus()
+            } catch (_: IllegalStateException) {
+                // Row or tab row not composed; leave focus to the system rather than crash.
+            }
+            reopenedEpisodeId = null
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (selectedEpisode != null) {
             val current = selectedEpisode!!
@@ -752,7 +784,7 @@ internal fun EpisodeListContent(
                     resumeState.setResumeEpisode(episodeId, season = null)
                     onEpisodeSelected(episodeId, episodeTitle, extension, startFromBeginning)
                 },
-                onBack = { selectedEpisode = null },
+                onBack = closeEpisodePanel,
             )
         } else {
             // Show series details & episode list
@@ -1115,7 +1147,13 @@ internal fun EpisodeListContent(
                                         }
                                     ).padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
                                         .onFocusChanged { if (it.hasFocus) focusInSection = true }
-                                        .testTag("episode_${episode.id}"),
+                                        .then(
+                                            if (episode.id == reopenedEpisodeId) {
+                                                Modifier.focusRequester(reopenedEpisodeFocusRequester)
+                                            } else {
+                                                Modifier
+                                            },
+                                        ).testTag("episode_${episode.id}"),
                                 onClick = {
                                     selectedEpisode = episode
                                 },
