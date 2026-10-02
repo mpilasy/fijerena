@@ -134,6 +134,13 @@ fallback was not needed. Verified only against a local stub Jellyfin on a spare 
 `Fields` list is honoured as in Jellyfin): the Jellyfin password is not stored anywhere on disk, so
 the real `sm.njarasoa.org` data was not queried. Restart the :8080 bridge to pick it up.
 
+
+**Follow-up (2026-10-02).** Checked against the real server after restarting the bridge:
+`last_modified` moved on 56 of 68 jellyxtream series (e.g. Poirot 2025-05-19 to 2026-09-29), so
+Jellyfin does fill `DateLastMediaAdded` for series. A second sync then showed 47 movies "updated"
+every time: they sit in two Jellyfin libraries, the bridge listed them under both with one stream
+id, and the app kept whichever copy came last. `library_items` now lists each item once, under
+the first library by name; three syncs in a row report no changes.
 ## Open questions
 
 1. ~~Safety-net age for Phase 2~~ — decided 2026-10-02: 30 days.

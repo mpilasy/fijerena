@@ -261,10 +261,16 @@ def categories(kind):
 
 def library_items(kind, item_type):
     def load():
-        out = []
-        for lib in libraries(kind):
+        # An item in two libraries comes back from both with the same Id. Xtream gives each stream
+        # one category, and a client keeps whichever copy it reads last (the app saw such movies
+        # switch category on every sync), so list it once, under the first library by name.
+        out, seen = [], set()
+        for lib in sorted(libraries(kind), key=lambda v: (v["Name"], v["Id"])):
             for it in jf.items(ParentId=lib["Id"], IncludeItemTypes=item_type, Fields=LIST_FIELDS,
                                SortBy="SortName"):
+                if it["Id"] in seen:
+                    continue
+                seen.add(it["Id"])
                 out.append((str(ids.num(lib["Id"])), it))
         return out
     return cached(f"items:{item_type}", load)
