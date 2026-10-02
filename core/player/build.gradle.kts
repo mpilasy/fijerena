@@ -34,6 +34,13 @@ android {
     lint {
         disable.add("UnsafeOptInUsageError")
     }
+    testOptions {
+        unitTests {
+            // StreamingPlaybackServiceRecoveryTest builds the service on the JVM: its Handler,
+            // Log and SystemClock calls must return defaults instead of throwing "not mocked".
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
@@ -62,6 +69,7 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

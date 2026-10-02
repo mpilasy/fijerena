@@ -396,8 +396,13 @@ abstract class XtreamDatabase : RoomDatabase() {
          * start fresh; installing the newer build again and restoring the `.bak` set recovers it.
          * See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-20.
          */
-        private fun setAsideIfNewer(context: Context) {
-            val file = context.getDatabasePath(DB_NAME)
+        // internal, with [name], not private: XtreamDatabaseUpgradeTest (androidTest) runs it on a
+        // file of its own, never the app's real xtream_v2.db.
+        internal fun setAsideIfNewer(
+            context: Context,
+            name: String = DB_NAME,
+        ) {
+            val file = context.getDatabasePath(name)
             val fileVersion =
                 if (file.exists()) {
                     try {
@@ -412,63 +417,77 @@ abstract class XtreamDatabase : RoomDatabase() {
                     0
                 }
             if (fileVersion > DB_VERSION) {
-                val backupBase = "$DB_NAME.v$fileVersion.bak"
-                file.parentFile?.listFiles { f -> f.name.startsWith("$DB_NAME.v") && f.name.contains(".bak") }?.forEach { it.delete() }
+                val backupBase = "$name.v$fileVersion.bak"
+                file.parentFile?.listFiles { f -> f.name.startsWith("$name.v") && f.name.contains(".bak") }?.forEach { it.delete() }
                 listOf("", "-wal", "-shm").forEach { suffix ->
                     val part = java.io.File(file.path + suffix)
                     if (part.exists()) part.renameTo(java.io.File(file.parentFile, backupBase + suffix))
                 }
-                val notice = IllegalStateException("$DB_NAME is v$fileVersion, newer than this build's v$DB_VERSION: moved to $backupBase, starting empty")
+                val notice = IllegalStateException("$name is v$fileVersion, newer than this build's v$DB_VERSION: moved to $backupBase, starting empty")
                 android.util.Log.e("XtreamDatabase", notice.message, notice)
                 org.njarasoa.fijerena.core.player.diagnostics.CrashLog.record("database downgrade", notice)
             }
         }
 
+        /** Every migration, in order. internal: the migration tests check and run exactly these. */
+        internal val ALL_MIGRATIONS: Array<Migration> =
+            arrayOf(
+                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
+                MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
+                MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
+                MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24,
+            )
+
         fun getInstance(context: Context): XtreamDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: run {
                     setAsideIfNewer(context.applicationContext)
-                    Room
-                        .databaseBuilder(
-                            context.applicationContext,
-                            XtreamDatabase::class.java,
-                            DB_NAME,
-                        ).addMigrations(
-                            MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
-                            MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
-                            MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
-                            MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24,
-                        )
-                        .fallbackToDestructiveMigrationFrom(dropAllTables = true, *PRE_USER_DATA_VERSIONS)
-                        // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC
-                        // silently falls back to TRUNCATE (readers block on writes) on any device
-                        // ActivityManager reports as low-RAM, which several of this app's actual
-                        // Android TV targets plausibly are.
-                        .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-                        .addCallback(
-                            object : RoomDatabase.Callback() {
-                                override fun onOpen(db: SupportSQLiteDatabase) {
-                                    // NORMAL is safe under WAL (only FULL protects against an OS
-                                    // crash, not an app crash, and this is WAL — see SQLite docs) and
-                                    // avoids an fsync on every transaction. journal_size_limit caps
-                                    // how large the WAL file is allowed to grow before SQLite
-                                    // truncates it back down after a checkpoint, instead of the file
-                                    // growing unbounded across this catalogue's frequent syncs.
-                                    try {
-                                        db.execSQL("PRAGMA synchronous = NORMAL")
-                                        db.execPragma("PRAGMA journal_size_limit = 10485760") // 10MB
-                                    } catch (e: Exception) {
-                                        android.util.Log.w("XtreamDatabase", "Failed to run DB maintenance", e)
-                                    }
-                                    // Not in the try: without the triggers, changes would silently
-                                    // never sync. A failure here must surface.
-                                    XtreamSyncTriggers.install(db)
-                                }
-                            },
-                        )
-                        .build()
+                    build(context.applicationContext)
                         .also { INSTANCE = it }
                 }
             }
+
+        /**
+         * The database exactly as the app opens it. internal, with [name]: XtreamDatabaseUpgradeTest
+         * (androidTest) opens files of its own through it, never the app's real xtream_v2.db.
+         */
+        internal fun build(
+            context: Context,
+            name: String = DB_NAME,
+        ): XtreamDatabase =
+            Room
+                .databaseBuilder(
+                    context,
+                    XtreamDatabase::class.java,
+                    name,
+                ).addMigrations(*ALL_MIGRATIONS)
+                .fallbackToDestructiveMigrationFrom(dropAllTables = true, *PRE_USER_DATA_VERSIONS)
+                // Explicit rather than relying on JournalMode.AUTOMATIC's default: AUTOMATIC
+                // silently falls back to TRUNCATE (readers block on writes) on any device
+                // ActivityManager reports as low-RAM, which several of this app's actual
+                // Android TV targets plausibly are.
+                .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+                .addCallback(
+                    object : RoomDatabase.Callback() {
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            // NORMAL is safe under WAL (only FULL protects against an OS
+                            // crash, not an app crash, and this is WAL — see SQLite docs) and
+                            // avoids an fsync on every transaction. journal_size_limit caps
+                            // how large the WAL file is allowed to grow before SQLite
+                            // truncates it back down after a checkpoint, instead of the file
+                            // growing unbounded across this catalogue's frequent syncs.
+                            try {
+                                db.execSQL("PRAGMA synchronous = NORMAL")
+                                db.execPragma("PRAGMA journal_size_limit = 10485760") // 10MB
+                            } catch (e: Exception) {
+                                android.util.Log.w("XtreamDatabase", "Failed to run DB maintenance", e)
+                            }
+                            // Not in the try: without the triggers, changes would silently
+                            // never sync. A failure here must surface.
+                            XtreamSyncTriggers.install(db)
+                        }
+                    },
+                )
+                .build()
     }
 }

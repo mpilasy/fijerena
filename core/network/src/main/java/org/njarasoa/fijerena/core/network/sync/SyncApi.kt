@@ -133,7 +133,8 @@ class SyncApi(
      * the void and live updates silently stopped until the app next came to the foreground. See
      * docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-26.
      */
-    private val socketClient: OkHttpClient by lazy { client.newBuilder().pingInterval(SOCKET_PING_SECONDS, TimeUnit.SECONDS).build() }
+    // internal, not private: SyncApiSocketTest checks the ping interval it is built with.
+    internal val socketClient: OkHttpClient by lazy { client.newBuilder().pingInterval(SOCKET_PING_SECONDS, TimeUnit.SECONDS).build() }
 
     private suspend inline fun <reified T> call(
         serverUrl: String,

@@ -26,6 +26,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+
+    testOptions {
+        unitTests {
+            // SyncManagerSocketTest runs SyncManager on the JVM: its Log calls must return
+            // defaults instead of throwing "not mocked".
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
@@ -76,6 +84,7 @@ dependencies {
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

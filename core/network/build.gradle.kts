@@ -43,6 +43,10 @@ android {
             isReturnDefaultValues = true
         }
     }
+    // MigrationTestHelper (XtreamDatabaseUpgradeTest) reads the exported schemas from the test APK's assets.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 dependencies {

@@ -115,6 +115,35 @@ describe("sync server", () => {
     expect(all.body.records.map((r: { key: string }) => r.key)).toEqual(["before", "after"]);
   });
 
+  // F-22: one oversized record used to fail the whole batch with a 400; the device retried the
+  // same oldest-first batch every pass and never pushed anything again. See
+  // docs/plans/20261001_rock-solid-stability-resilience-plan.md F-22.
+  it("takes a payload at the size limit, rejects one past it, and the device's next push goes through", async () => {
+    const { deviceToken } = await server.createAccount();
+    const limit = 64 * 1024;
+    const push = await server.request("POST", "/changes", {
+      token: deviceToken,
+      body: {
+        records: [
+          record("small", 1),
+          record("at-limit", 2, { payload: "x".repeat(limit) }),
+          record("oversized", 3, { payload: "x".repeat(limit + 1) }),
+          record("after", 4),
+        ],
+      },
+    });
+    expect(push.status).toBe(200);
+    expect(push.body).toMatchObject({ head: 3, accepted: 3 });
+    expect(push.body.rejected).toHaveLength(1);
+    expect(push.body.rejected[0]).toMatchObject({ key: "oversized" });
+    expect(push.body.rejected[0].reason).toMatch(/^invalid: payload/);
+
+    const next = await server.request("POST", "/changes", { token: deviceToken, body: { records: [record("later", 5)] } });
+    expect(next.body).toMatchObject({ head: 4, accepted: 1, rejected: [] });
+    const all = await server.request("GET", "/changes?since=0", { token: deviceToken });
+    expect(all.body.records.map((r: { key: string }) => r.key)).toEqual(["small", "at-limit", "after", "later"]);
+  });
+
   it("keeps accounts apart", async () => {
     const a = await server.createAccount();
     const b = await server.createAccount();

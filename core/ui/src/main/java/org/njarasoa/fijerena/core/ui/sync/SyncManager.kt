@@ -5,6 +5,7 @@ import android.app.Application
 import android.os.Bundle
 import android.util.Log
 import androidx.room.InvalidationTracker
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -43,13 +44,15 @@ import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
  *   leaves it (flush what is pending). No background work: a closed app catches up when opened.
  * - Failures retry with backoff while in the foreground. A refused token (revoked) stops retrying.
  */
-class SyncManager private constructor(
+class SyncManager internal constructor(
     private val app: Application,
+    // Parameters, internal, only so SyncManagerSocketTest can run the socket lifecycle on a test
+    // dispatcher against a fake socket factory ([SyncApi.openSocket]); the app uses the defaults.
+    private val scope: CoroutineScope = AppScopes.create("SyncManager", Dispatchers.IO),
+    private val store: SyncAccountStore = SyncAccountStore(app),
+    private val engine: SyncEngine = SyncEngine(app, store = store),
+    private val api: SyncApi = SyncApi(),
 ) {
-    private val scope = AppScopes.create("SyncManager", Dispatchers.IO)
-    private val store = SyncAccountStore(app)
-    private val engine = SyncEngine(app, store = store)
-    private val api = SyncApi()
     private val startedActivities = AtomicInteger(0)
 
     /** What the sync settings screen shows. */
@@ -234,14 +237,14 @@ class SyncManager private constructor(
         }
     }
 
-    private fun onForeground() {
+    internal fun onForeground() {
         foreground = true
         if (!engine.isLinked) return
         openSocket()
         requestSync(0)
     }
 
-    private fun onBackground() {
+    internal fun onBackground() {
         foreground = false
         closeSocket()
         requestSync(0) // flush what is pending while the process is still alive

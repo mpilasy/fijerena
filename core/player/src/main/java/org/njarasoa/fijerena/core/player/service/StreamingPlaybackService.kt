@@ -47,11 +47,14 @@ class ServiceDestroyedException(message: String) : Exception(message)
 
 @androidx.media3.common.util.UnstableApi
 class StreamingPlaybackService : MediaSessionService() {
-    private var mediaSession: MediaSession? = null
+    // internal, not private (with mediaSourceFactory, mainHandler, performSeamlessRecycle and
+    // handleStreamEndedOrError): StreamingPlaybackServiceRecoveryTest drives the retry/recycle
+    // state machine directly, with a fake player.
+    internal var mediaSession: MediaSession? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var playerListener: PlayerListener? = null
     private var analyticsListener: PerformanceAnalyticsListener? = null
-    private var mediaSourceFactory: StreamingMediaSourceFactory? = null
+    internal var mediaSourceFactory: StreamingMediaSourceFactory? = null
 
     // Guards releasePlayerAndSession() against running twice on the same instance —
     // stopAndRelease() calls it directly, then onDestroy() (fired later by stopSelf(), or by the
@@ -127,7 +130,7 @@ class StreamingPlaybackService : MediaSessionService() {
     // about to flip to Error/Idle. Live retries reconnect to the live edge instead, so they
     // never read this.
     private var pendingResumePositionMs: Long = 0L
-    private val mainHandler = Handler(Looper.getMainLooper())
+    internal var mainHandler = Handler(Looper.getMainLooper())
     private var pendingRetry: Runnable? = null
 
     private var adaptiveLoadControl: AdaptiveLoadControl? = null
@@ -187,7 +190,7 @@ class StreamingPlaybackService : MediaSessionService() {
         }
     }
 
-    private fun performSeamlessRecycle(metadata: PlayerMetadata, currentPos: Long) {
+    internal fun performSeamlessRecycle(metadata: PlayerMetadata, currentPos: Long) {
         val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer
             ?: run {
                 Log.w(TAG, "performSeamlessRecycle: no-op, mediaSession/player unavailable.")
@@ -739,7 +742,7 @@ class StreamingPlaybackService : MediaSessionService() {
         pendingRetry = null
     }
 
-    private fun handleStreamEndedOrError(errorMessage: String?) {
+    internal fun handleStreamEndedOrError(errorMessage: String?) {
         val metadata = _currentMetadata.value
         if (errorMessage == null && !metadata.isLive) {
             // Natural end of VOD content — not a fault, never retried. Grab the duration while

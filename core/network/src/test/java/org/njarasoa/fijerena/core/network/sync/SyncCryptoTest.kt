@@ -5,6 +5,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.junit.Test
 import javax.crypto.spec.SecretKeySpec
 
@@ -84,5 +86,64 @@ class SyncCryptoTest {
         val eveKey = HandoffKeys.sharedKey(eve.private, HandoffKeys.publicKey(phone.public.encoded), "h1")
         assertNull(Aead.open(eveKey, sealed, "h1".toByteArray()))
         assertNull(Aead.open(SecretKeySpec(tvSide.encoded, "AES"), sealed, "h2".toByteArray()))
+    }
+
+    /**
+     * The envelope and codec exactly as apps before F-07 (`c59005f0`) had them: seal with the key
+     * id as AAD, and an envelope without the sealed `updatedAt`/`deleted` copies.
+     */
+    @Serializable
+    private data class LegacyEnvelope(
+        val profileKey: String,
+        val providerKey: String,
+        val kind: String,
+        val itemId: String = "",
+        val contentType: String = "",
+        val payload: String? = null,
+    )
+
+    private val legacyJson = Json { ignoreUnknownKeys = true }
+
+    private fun legacyEncode(
+        record: SyncRecord,
+        crypto: SyncCrypto,
+    ): SyncWire.Record {
+        val keyId = crypto.keyId(record.key)
+        val k = record.key
+        val envelope = LegacyEnvelope(k.profileKey, k.providerKey, k.kind, k.itemId, k.contentType, record.payload)
+        return SyncWire.Record(keyId, updatedAt = record.hlc, deleted = record.deleted, payload = crypto.seal(legacyJson.encodeToString(envelope), aad = keyId))
+    }
+
+    private fun legacyDecode(
+        wire: SyncWire.Record,
+        crypto: SyncCrypto,
+    ): SyncRecord? {
+        val opened = crypto.open(wire.payload, aad = wire.key) ?: return null
+        val e = runCatching { legacyJson.decodeFromString<LegacyEnvelope>(opened) }.getOrNull() ?: return null
+        val key = SyncKey(e.profileKey, e.providerKey, e.kind, e.itemId, e.contentType)
+        return if (crypto.keyId(key) != wire.key) null else SyncRecord(key, wire.updatedAt, wire.deleted, e.payload)
+    }
+
+    // F-07 was done without changing the AAD (the planned "AAD v2" would have made every device not
+    // yet updated drop the new records), so devices on either side of the update keep reading each
+    // other's records. See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-07.
+    @Test
+    fun `this app reads records sealed by an app from before the sealed metadata`() {
+        val crypto = AccountKeyCrypto(AccountKeyCrypto.newAccountKey())
+        val favorite = SyncRecord(key, hlc = 1_000, payload = """{"name":"Film"}""")
+        val deletion = SyncRecord(key, hlc = 2_000, deleted = true)
+
+        assertEquals(favorite, SyncCodec.decode(legacyEncode(favorite, crypto), crypto))
+        assertEquals(deletion, SyncCodec.decode(legacyEncode(deletion, crypto), crypto))
+    }
+
+    @Test
+    fun `an app from before the sealed metadata reads records this app seals`() {
+        val crypto = AccountKeyCrypto(AccountKeyCrypto.newAccountKey())
+        val favorite = SyncRecord(key, hlc = 1_000, payload = """{"name":"Film"}""")
+        val deletion = SyncRecord(key, hlc = 2_000, deleted = true)
+
+        assertEquals(favorite, legacyDecode(SyncCodec.encode(favorite, crypto), crypto))
+        assertEquals(deletion, legacyDecode(SyncCodec.encode(deletion, crypto), crypto))
     }
 }

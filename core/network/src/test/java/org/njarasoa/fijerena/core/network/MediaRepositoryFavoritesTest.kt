@@ -20,6 +20,10 @@ import org.njarasoa.fijerena.core.network.fixtures.FakeFavoriteStateDao
 import org.njarasoa.fijerena.core.network.fixtures.FakeWatchStateDao
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateDao
+import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Favourites on `favorite_state` — see `docs/plans/20260828_favorites-durable-storage-plan.md`.
@@ -84,6 +88,37 @@ class MediaRepositoryFavoritesTest {
             repository.awaitPendingWrites()
 
             assertEquals(51, favoriteDao.count(1L))
+        }
+
+    // F-15 again, made deterministic: above, the 50 writes usually finish before close() runs, so
+    // only the late write proves anything. Here the first write is held mid-flight, so the second
+    // is certainly still queued — not started — when close() runs. A close() that cancels the
+    // queue drops it.
+    @Test
+    fun `close drains a favourite write still queued behind a running one`() =
+        runBlocking {
+            val started = CountDownLatch(1)
+            val release = CountDownLatch(1)
+            val gated =
+                object : FavoriteStateDao by favoriteDao {
+                    override fun upsertClearingTombstone(entity: FavoriteStateEntity) {
+                        if (entity.itemId == "first") {
+                            started.countDown()
+                            release.await(5, TimeUnit.SECONDS)
+                        }
+                        favoriteDao.upsertClearingTombstone(entity)
+                    }
+                }
+            val gatedRepository = MediaRepository(context, 1L, ProfileEntity.DEFAULT_ID, watchStateDao = FakeWatchStateDao(), favoriteStateDao = gated)
+
+            gatedRepository.addFavorite("first", "First", "cat1", ContentType.MOVIES)
+            assertTrue(started.await(5, TimeUnit.SECONDS))
+            gatedRepository.addFavorite("queued", "Queued", "cat1", ContentType.MOVIES)
+            gatedRepository.close()
+            release.countDown()
+            gatedRepository.awaitPendingWrites()
+
+            assertEquals(setOf("first", "queued"), favoriteDao.getAll(1L, ProfileEntity.DEFAULT_ID).map { it.itemId }.toSet())
         }
 
     @Test
