@@ -1,5 +1,14 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Live Sync — Now Playing
+**Release Date:** 2026-10-01
+
+From `docs/plans/20261001_live-sync-now-playing-plan.md`.
+
+- **Media session title:** the playing item's title, show and episode are now set on the media session, so the Android TV system UI and `adb shell dumpsys media_session` show what is playing.
+
+---
+
 ## Version: Stability & Resilience (Phase 4 — storage)
 **Release Date:** 2026-10-01
 

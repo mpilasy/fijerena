@@ -201,6 +201,7 @@ class StreamingPlaybackService : MediaSessionService() {
             isLive = metadata.isLive,
             onRetry = { _streamRetryCount.update { it + 1 } },
             transferListener = bandwidthMeter,
+            metadata = metadata,
         ) ?: run {
             Log.w(TAG, "performSeamlessRecycle: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
             // setRecycling(true) above already fired — without resetting it here, isRecycling()
@@ -578,6 +579,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 isLive = metadata.isLive,
                 onRetry = { _streamRetryCount.update { it + 1 } },
                 transferListener = startupTiming,
+                metadata = metadata,
             ) ?: run {
                 Log.w(TAG, "playStream: no-op, mediaSourceFactory unavailable or createMediaSource() returned null.")
                 return
@@ -700,6 +702,7 @@ class StreamingPlaybackService : MediaSessionService() {
                         isLive = metadata.isLive,
                         onRetry = { _streamRetryCount.update { it + 1 } },
                         transferListener = bandwidthMeter,
+                        metadata = metadata,
                     ) ?: return@Runnable
 
                 player.setMediaSource(mediaSource)

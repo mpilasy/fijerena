@@ -3,11 +3,13 @@ package org.njarasoa.fijerena.core.player.source
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
+import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.network.NetworkModule
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 
@@ -32,11 +34,13 @@ class StreamingMediaSourceFactory(private val context: Context) {
         isLive: Boolean = false,
         onRetry: (() -> Unit)? = null,
         transferListener: androidx.media3.datasource.TransferListener? = null,
+        metadata: PlayerMetadata? = null,
     ): MediaSource {
         val mediaItem =
             MediaItem
                 .Builder()
                 .setUri(streamUrl)
+                .apply { if (metadata != null) setMediaMetadata(metadata.toMediaMetadata()) }
                 .build()
 
         // Configure common HTTP factory
@@ -65,4 +69,15 @@ class StreamingMediaSourceFactory(private val context: Context) {
             .setLoadErrorHandlingPolicy(errorPolicy)
             .createMediaSource(mediaItem)
     }
+
+    private fun PlayerMetadata.toMediaMetadata(): MediaMetadata =
+        MediaMetadata
+            .Builder()
+            .setTitle(title)
+            .setDisplayTitle(showTitle ?: title)
+            .setAlbumTitle(showTitle)
+            .setSubtitle(episodeLabel)
+            .setStation(channelName.ifEmpty { null })
+            .setDescription(description)
+            .build()
 }
