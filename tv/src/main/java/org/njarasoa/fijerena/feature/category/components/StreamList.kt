@@ -27,6 +27,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -203,13 +204,24 @@ internal fun StreamList(
     val isRecentList = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID
     val isWatchable = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
 
-    // Auto-scroll and focus on last played item (on initial load and when returning from player).
+    // Auto-scroll and focus on the opened or last played item (on initial load and when returning
+    // from details/player).
     // Keyed to selectedCategoryId so switching list context (e.g. the Live TV preview panel's
     // Last Watched <-> Favorites toggle) resets it — otherwise, since lastPlayedItemId (the
     // current channel) stays the same across that toggle, the guard below would treat a
     // *second* visit to an already-visited list as already handled and skip re-focusing, leaving
     // focus wherever it landed after the previously-focused Card was disposed by the switch away.
     var lastFocusedItemId by remember(selectedCategoryId) { mutableStateOf<String?>(null) }
+
+    // Movie/series row last opened from this list. Opening details doesn't play anything, so
+    // lastPlayedItemId never points at it, and on Back the whole destination recomposes from
+    // scratch — CategoryList's own "focus the selected category" effect then won and focus landed
+    // in the left pane. Saveable so it survives the nav round-trip (NavHost keeps each back-stack
+    // entry's saved state); keyed to the category so another list doesn't inherit it. Movies and
+    // series only: Live TV keeps following lastPlayedItemId, which tracks channel zapping in the
+    // player.
+    var openedItemId by rememberSaveable(selectedCategoryId) { mutableStateOf<String?>(null) }
+    val focusTargetId = openedItemId ?: lastPlayedItemId
 
     // Entrance animation plays once per item: LazyColumn recycles item composition off the ends
     // of the scroll buffer, and D-pad scrolling churns that buffer constantly, so without this
@@ -218,15 +230,15 @@ internal fun StreamList(
     // across every stream id seen this session.
     val enteredStreamIds = remember(streams) { mutableSetOf<String>() }
 
-    LaunchedEffect(streams, streamsLoading, lastPlayedItemId) {
+    LaunchedEffect(streams, streamsLoading, focusTargetId) {
         // Skip entirely while streamsLoading: that branch renders a spinner, not the list, so no
         // Card exists yet for the FocusRequester to attach to. Previously this ran anyway, always
         // failed, and — critically — still marked lastFocusedItemId as handled, so once the list
         // actually finished loading a moment later the guard below was already tripped and this
         // never got a second chance. Focus was left stuck on the header's refresh button (the
         // first focusable in the composed tree) for good.
-        if (!streamsLoading && !streams.isNullOrEmpty() && lastPlayedItemId != null && lastPlayedItemId != lastFocusedItemId) {
-            val lastPlayedIndex = streams.indexOfFirst { it.id == lastPlayedItemId }
+        if (!streamsLoading && !streams.isNullOrEmpty() && focusTargetId != null && focusTargetId != lastFocusedItemId) {
+            val lastPlayedIndex = streams.indexOfFirst { it.id == focusTargetId }
             if (lastPlayedIndex != -1) {
                 listState.animateScrollToItem(lastPlayedIndex)
                 // Small delay so the target item is actually composed and its FocusRequester
@@ -238,7 +250,7 @@ internal fun StreamList(
                     // Only mark handled on success, so a failed attempt (e.g. still racing
                     // composition) gets retried on the next recomposition instead of being
                     // silently given up on forever.
-                    lastFocusedItemId = lastPlayedItemId
+                    lastFocusedItemId = focusTargetId
                 } catch (_: IllegalStateException) {
                 }
             }
@@ -394,7 +406,15 @@ internal fun StreamList(
                                 isWatchable = isWatchable,
                                 isRecentList = isRecentList,
                                 nowPlayingProgram = nowPlaying[item.id],
-                                onClick = { onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType)) },
+                                onClick = {
+                                    if (isWatchable) {
+                                        // Already focused: mark handled too, so the effect above
+                                        // doesn't scroll this row to the top as the screen leaves.
+                                        lastFocusedItemId = item.id
+                                        openedItemId = item.id
+                                    }
+                                    onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType))
+                                },
                                 onToggleFavorite = {
                                     categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
                                 },
@@ -406,8 +426,8 @@ internal fun StreamList(
                                         null
                                     },
                                 onFocused = { onStreamFocused(item) },
-                                // Only the last-played item gets a focus requester for auto-scroll
-                                focusRequester = if (item.id == lastPlayedItemId) lastPlayedFocusRequester else null,
+                                // Only the focus-return target gets a focus requester for auto-scroll
+                                focusRequester = if (item.id == focusTargetId) lastPlayedFocusRequester else null,
                                 thumbnailScale = thumbnailScale,
                                 rowActionsMode = rowActionsMode,
                                 cardStyle = cardStyle,
