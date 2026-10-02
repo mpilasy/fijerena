@@ -19,7 +19,8 @@ fijerena/
   network/       Provider implementations, API clients, EPG, Room databases
   navigation/    Type-safe navigation routes (Screen sealed interface)
   ui/            Shared theme tokens, components, ViewModels
-  data/          Auth ViewModel (legacy)```
+  data/          Auth ViewModel (legacy)
+```
 
 ### Dependency Graph
 
@@ -89,9 +90,9 @@ RemoteM3uMediaProvider           -- remote M3U URL fetching + parsing
 
 | Store | Purpose | Location |
 |-------|---------|----------|
-| `providers.db` (Room v10) | Provider configurations (name, URL, type, config JSON, active flag, sync stats + last-sync delta), EPG sources (incl. change-detection validators), pipeline stats | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity` |
-| `xtream_v2.db` (Room v17) | Xtream catalog cache (categories, streams, series, episodes, per-stream EPG payloads, FTS4), the provider-agnostic `watch_state` table, and the provider-agnostic `favorite_state` table | `Xtream*Entity`, `WatchStateEntity`, `FavoriteStateEntity` |
-| `epg_index.db` (Room v16) | EPG programme index with FTS4 search | See EPG section |
+| `providers.db` (`SettingsDatabase`, Room v15) | Provider configurations (name, URL, type, config JSON, active flag, sync stats + last-sync delta), EPG sources (incl. change-detection validators), pipeline stats, profiles, live-sync bookkeeping | `ProviderEntity`, `EpgSourceEntity`, `EpgPipelineStatsEntity`, profile and sync entities |
+| `xtream_v2.db` (Room v24) | Xtream catalog cache (categories, streams, series, episodes, per-stream EPG payloads, FTS4), the provider-agnostic `watch_state` table, and the provider-agnostic `favorite_state` table | `Xtream*Entity`, `WatchStateEntity`, `FavoriteStateEntity` |
+| `epg_index.db` (Room v17) | EPG programme index with FTS4 search | See EPG section |
 | EncryptedSharedPreferences | Per-provider passwords (keyed by provider ID) | `provider_creds_{id}`, `xtream_secure_credentials` |
 | `xtream_cache_{id}` SharedPreferences | Per-provider Xtream category/item cache | JSON blobs |
 | `media_cache_{id}` SharedPreferences | Per-provider recent categories (max 20 per content type), last-browsed position | JSON blobs + scalars |
@@ -140,8 +141,8 @@ Buffers swap dynamically at runtime via `AdaptiveLoadControl` without restarting
 
 | Profile | Min Buffer | Max Buffer | Playback Buffer | Rebuffer |
 |---------|-----------|-----------|----------------|---------|
-| WiFi Live TV | 2s | 8s | 500ms | 500ms |
-| WiFi VOD | 5s | 50s | 1s | 2s |
+| WiFi Live TV | 15s | 30s | 500ms | 1s |
+| WiFi VOD | 30s | 60s | 2.5s | 10s |
 | Cellular Live TV | 50s | 50s | 2.5s | 5s |
 | Cellular VOD | 40s | 100s | 8s | 10s |
 
@@ -166,11 +167,11 @@ Cellular buffers support a user-configurable multiplier (0.5x - 3.0x) persisted 
 - **HLS** (`.m3u8`) - primary format for Xtream providers
 - **DASH** (`.mpd`) - adaptive streaming
 - **MPEG-TS** (`.ts`, `.mpeg`) - raw transport streams
-- **SMB** (`smb://`) - via custom `SmbDataSource`
+- **SMB** - `SmbMediaProvider` hands the player an `smb://` URI; `core:player` has no SMB-specific data source
 - **Content URIs** (`content://`) - local file access
 
-Codec priority varies by device:
-- NVIDIA Shield: AV1 -> HEVC -> AVC
+Codec priority varies by device (`DeviceCapabilities`):
+- NVIDIA Shield, Chromecast with Google TV: AV1 -> HEVC -> AVC
 - Sony Bravia: HEVC -> AVC
 - Generic: AVC fallback
 
@@ -180,7 +181,7 @@ FFmpeg extension (from Jellyfin pre-built) provides software decoding for AC3, E
 
 ## Navigation
 
-Type-safe navigation using `kotlinx.serialization` with Navigation Compose; routes are defined once in `core:navigation/Screen.kt` and shared by both `tv/navigation/TvNavHost.kt` (D-pad, no on-screen back buttons except error screens) and `mobile/navigation/MobileNavHost.kt` (touch, portrait-locked except player). Startup lands on `ContentTypeSelection` if a provider is configured, otherwise `Settings`.
+Type-safe navigation using `kotlinx.serialization` with Navigation Compose; routes are defined once in `core:navigation/Screen.kt` and shared by both `tv/navigation/TvNavHost.kt` (D-pad, no on-screen back buttons except error screens) and `mobile/navigation/MobileNavHost.kt` (touch, portrait-locked except player). Startup lands on `ContentTypeSelection` (Home) if a provider is configured — on TV through `ProfilePicker` when there is more than one profile — otherwise `Settings`.
 
 **See [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) for the full `Screen` definition list and navigation flow diagram** — kept in one place to avoid the two copies drifting out of sync.
 
@@ -220,7 +221,7 @@ Fijerena adopts a **Content-First with Glassmorphism accents** hybrid style:
 - **Content-First Cards:** Category grids prioritize poster thumbnails with gradient text overlays fading from the bottom rather than heavy card borders or elevation.
 - **Glassmorphism Panels:** Frosted translucent surfaces (`GlassPanel` with `CinemaAlpha.glassPanel` background alpha) are used for player controls, channel overlays, and dialogs.
 - **Fallback Handling:** For providers or items lacking poster artwork, solid dark cards with accent-colored category icons and initials ensure a clean layout.
-- **D-Pad Focus:** TV navigation emphasizes animated scale-up (1.0 -> 1.1 with 200ms tween), subtle accent border, and 8dp glow rather than boxy borders.
+- **D-Pad Focus:** TV focus scale, outline and shadow come from the selected look and feel (see Focus System below).
 
 ### Theme Architecture
 
@@ -229,6 +230,7 @@ CinemaThemePalette (data class)   -- complete color set per theme
 CinemaThemeHolder (singleton)     -- @Volatile current palette for non-composable access
 LocalCinemaTheme (CompositionLocal) -- composable access
 
+core:ui color values: core/ui/.../theme/CinemaColors.kt  (CinemaAccent, CinemaSurface, … as get() properties)
 TV re-exports:    tv/.../theme/CinemaColors.kt    (computed get() properties)
 Mobile re-exports: mobile/.../theme/Color.kt       (computed get() properties)
 ```
@@ -245,24 +247,33 @@ The app supports user-selectable UI scaling (0.4x - 1.0x).
 | Theme | ID | Accent | Background | Surface |
 |-------|----|--------|-----------|---------|
 | Deep Night (default) | `deep_night` | `#2979FF` Electric Blue | `#0F1014` | `#161A20` |
-| AMOLED Black | `amoled_black` | `#2979FF` | `#000000` | `#0A0A0A` |
-| Emerald | `emerald` | `#00C853` Green | `#0F1014` | `#161A20` |
-| Crimson | `crimson` | `#FF1744` Red | `#0F1014` | `#161A20` |
+| AMOLED Black | `amoled_black` | `#E0E0E0` near-white | `#000000` | `#0A0A0A` |
+| Amethyst | `amethyst` | `#9C6BFF` Purple | `#0F1014` | `#161A20` |
+| Teal | `teal` | `#26C6DA` Teal | `#0F1014` | `#161A20` |
 
 Secondary accent (Vivid Orange `#FF6D00`) is constant across all themes.
+
+### Look and Feel (`UiStyle`)
+
+Independent of the palette, `UiStyle` (`core/ui/.../theme/UiStyle.kt`) carries shape, type weight and
+tracking, dialog position and scrim, grid spacing and focus effect, and icon style. Four presets —
+**Material** (default), **Cupertino**, **Roku** and **BRAVIA** — selected in Settings
+(`AppSettings.uiStyleId`), exposed as `LocalUiStyle` and mirrored in `UiStyleHolder` for
+non-composable code. Any palette combines with any style.
 
 ### Design Token Files
 
 | Token File | Module | Contents |
 |-----------|--------|----------|
-| `CinemaColors` | core:ui | Base color palette definition |
+| `CinemaColors.kt` | core:ui | `Cinema*` color values read from the active palette |
 | `CinemaAlpha` | core:ui | Opacity constants (glass, scrim, tint, text levels) |
 | `CinemaAnimation` | core:ui | Duration constants (stats update, controls auto-hide, toast) |
 | `CinemaCornerRadius` | core:ui | Border radius constants |
 | `CinemaSpacing` | core:ui | Spacing scale (xxs through xxl) |
 | `CinemaThemePalette` | core:ui | Theme palette data class + 4 predefined palettes |
 | `TvDimensions` | tv | TV-specific sizes (dialog widths, progress bars, dot sizes) |
-| `TvFocusTokens` | tv | Focus state parameters (scale, border, glow) |
+| `TvFocusTokens` | tv | Focus state parameters (scale, border, glow), driven by `LocalUiStyle` |
+| `UiStyle` | core:ui | Look-and-feel presets (Material, Cupertino, Roku, BRAVIA) |
 | `MobileDimensions` | mobile | Mobile-specific sizes (icon sizes, overlay widths) |
 
 ### Typography
@@ -271,9 +282,7 @@ Secondary accent (Vivid Orange `#FF6D00`) is constant across all themes.
 
 ### Focus System (TV)
 
-- Scale: 1.0 -> 1.1 (200ms tween)
-- Border: 2dp blue border
-- Glow: 8dp glow effect
+- Scale, outline and shadow come from `LocalUiStyle.current.grid` via `TvFocusTokens`: focus scale 1.0 (Roku, outline only) to 1.09 (Cupertino); outline width 3dp when the style uses one, never below `minFocusBorderWidth` (2dp)
 - Implementation: `FocusModifiers.kt`
 - Every `@Composable` must be D-pad navigable using `focusRestorer()` and `focusable()`
 
@@ -289,8 +298,9 @@ Secondary accent (Vivid Orange `#FF6D00`) is constant across all themes.
 
 ### TV Components (`tv/ui/components/`)
 
-- **Cards:** `CinemaSelectableCard`, `CinemaInfoCard`, `CinemaCompactCard`, `CinemaStandardCard`
-- **Buttons:** `CinemaPrimaryButton`, `CinemaSecondaryButton`, `CinemaTertiaryButton`, `CinemaIconButton`, `CinemaDangerButton`
+- **Buttons** (`buttons/CinemaButton.kt`): `CinemaButton`, `CinemaPrimaryButton`, `CinemaSecondaryButton`, `CinemaIconButton`, `CinemaDangerButton`, `CinemaDangerIconButton`
+- **Detail screens:** `TvDetailHero`, `AmbientBackdrop`, `RelatedTitlesRow`, `TvSectionTabs`
+- **Panels and input:** `TvGlassPanel`, `TvSearchTextField`, `ReadOnlyFieldWithEdit`
 - **Effects:** `AccentBlock` (content-type gradients)
 - **Modifiers:** `FocusModifiers` (D-pad focus states)
 
@@ -298,7 +308,7 @@ Secondary accent (Vivid Orange `#FF6D00`) is constant across all themes.
 
 ## Shared ViewModels (`core:ui/viewmodels/`)
 
-ViewModels live in `core:ui` so both TV and mobile share identical business logic. Each has a corresponding `ViewModelFactory` for manual dependency injection.
+ViewModels live in `core:ui` so both TV and mobile share identical business logic. Most have a `…ViewModelFactory` for manual dependency injection.
 
 | ViewModel | Purpose |
 |-----------|---------|
@@ -309,7 +319,13 @@ ViewModels live in `core:ui` so both TV and mobile share identical business logi
 | `EpgManagementViewModel` | Multi-source EPG CRUD, ingestion trigger |
 | `ProviderViewModel` | Provider CRUD, active provider switching |
 | `LoginViewModel` | Credential validation, provider creation |
-| `PlaybackViewModel` | Playback control (delegates to `StreamingPlaybackService`) |
+| `MovieDetailsViewModel` / `SeriesDetailsViewModel` | Detail screens, TMDB enrichment, episode lists |
+| `StreamLoaderViewModel` | Resolves what to play and starts it (incl. next episode) |
+| `SettingsViewModel` | Settings screen state |
+| `ProfilesViewModel` | Profiles and the "Who's watching?" picker |
+| `SyncSettingsViewModel` | Live sync setup, pairing, devices |
+| `DiagnosticsViewModel` | Dev-mode crash log and process-exit history |
+| `PlaybackViewModel` (`core:player`) | Playback control (delegates to `StreamingPlaybackService`) |
 
 ---
 
@@ -322,7 +338,7 @@ ViewModels live in `core:ui` so both TV and mobile share identical business logi
 - Controls overlay: Row of buttons (Play/Pause, Audio, Subtitle, Quality, Stats, Favorite)
 - Stream info display: title, **resolution/codec info**, EPG current/next programme, progress bar. Uses `basicMarquee()` for long titles.
 - Channel Overlays: Slide-in panels (Category/Last Watched) are 25% screen width. Channel names use `basicMarquee()`.
-- Stats overlay: static at top-right corner, non-focusable (allows background stream control)
+- Stats overlay: opened from the Stats button, non-focusable (allows background stream control)
 - Auto-hide: controls after 15s, stream info after 3s
 
 ### Mobile Player (`mobile/feature/player/MobilePlayerScreen.kt`)
@@ -357,7 +373,7 @@ Updates every ~500ms via polling loop.
 
 | Screen | File | Description |
 |--------|------|-------------|
-| Content Type Selection | `contentselection/ContentTypeSelectionScreen.kt` | Live TV / Movies / TV Shows picker |
+| Home (Content Type Selection) | `contentselection/ContentTypeSelectionScreen.kt` | Live TV / Movies / TV Shows picker |
 | Category Grid | `category/TvCategoryGridScreen.kt` | Category sidebar + item grid |
 | Movie Details | `movie/MovieDetailsScreen.kt` | Movie info, play/resume buttons |
 | Episode Selection | `episode/EpisodeSelectionScreen.kt` | Season accordion, episode list |
@@ -370,30 +386,32 @@ Updates every ~500ms via polling loop.
 | EPG Guide | `epg/TvEpgGuideScreen.kt` + `epg/EpgGridLayout.kt` | TV guide time grid |
 | EPG Management | `epg/TvEpgManagementScreen.kt` | Multi-source EPG configuration |
 | EPG Search | `epgbrowser/TvEpgBrowserScreen.kt` | Programme search |
-| Stats Overlay (generic) | `common/StatsOverlay.kt` | Reusable stats component for non-player screens |
+| Profile Picker | `profile/ProfilePickerScreen.kt` | "Who's watching?" |
+| Live Sync | `settings/SyncSettingsScreen.kt` | Sync group setup, pairing, devices |
+| Diagnostics | `settings/DiagnosticsScreen.kt` | Crash log and exit history (dev mode) |
 
-`login/TvLoginScreen.kt` still exists on disk but `Screen.Login` is not wired into `TvNavHost.kt` — dead code left over from the login-screen removal (see RELEASE_NOTES.md, Phase 4).
+The stats overlay is `ui/player/components/overlays/TvStatsOverlay.kt` (mobile: `MobileStatsOverlay`). `Screen.Login` is defined but not in either nav graph; its screens were deleted.
 
 ### Mobile Screens (`mobile/feature/`)
 
 | Screen | File | Description |
 |--------|------|-------------|
-| Content Type Selection | `contentselection/ContentTypeSelectionScreen.kt` | Content type picker |
+| Home (Content Type Selection) | `contentselection/ContentTypeSelectionScreen.kt` | Content type picker |
 | Category List | `category/MobileCategoryListScreen.kt` | Category list + item grid |
 | Movie Details | `movie/MovieDetailsScreen.kt` | Movie info, play/resume buttons |
 | Episode Selection | `episode/EpisodeSelectionScreen.kt` | Season/episode picker |
 | Player | `player/MobilePlayerScreen.kt` | Touch-based playback controls |
 | Search | `search/SearchScreen.kt` | Search input + results |
 | Settings | `settings/SettingsScreen.kt` | App configuration |
-| Edit Provider | `settings/EditProviderScreen.kt` | Provider editor |
 | Cellular Buffer Settings | `settings/MobileCellularBufferSettingsScreen.kt` | Buffer multiplier sliders (dev mode) |
 | Provider Selection | `provider/ProviderSelectionScreen.kt` | Provider list |
 | Add Provider | `provider/MobileAddProviderScreen.kt` | New provider form |
 | EPG Guide | `epg/MobileEpgGuideScreen.kt` + `epg/MobileEpgTimeline.kt` | TV guide |
 | EPG Management | `epg/MobileEpgManagementScreen.kt` | EPG source management |
 | EPG Browser | `epgbrowser/MobileEpgBrowserScreen.kt` | Programme search |
-
-`login/LoginScreen.kt` still exists on disk but `Screen.Login` is not wired into `MobileNavHost.kt` — dead code left over from the login-screen removal (see RELEASE_NOTES.md, "Mobile Login Screen Removal").
+| Profile Picker | `profile/ProfilePickerScreen.kt` | "Who's watching?" |
+| Live Sync | `settings/MobileSyncSettingsScreen.kt` | Sync group setup, pairing, devices |
+| Diagnostics | `settings/MobileDiagnosticsScreen.kt` | Crash log and exit history (dev mode), Share |
 
 ---
 
@@ -403,9 +421,9 @@ Virtual categories appear alongside provider categories in the category list:
 
 | Category | Content Types | Retention / Limit | Storage |
 |----------|--------------|-------------------|---------|
-| Continue Watching | Movies, TV Shows | In-progress VOD items (2-95% watched) | Derived from Room `watch_state` table (`xtream_v2.db` v16) |
-| Favorites | All | User-curated via star button in player; configurable display size (10–500) | Room `favorite_state` table (`xtream_v2.db` v16) |
-| Last Watched | All | Chronological history, auto-updated on play; configurable display size (1–100) | Derived from Room `watch_state` table (`xtream_v2.db` v16) |
+| Continue Watching | Movies, TV Shows | In-progress VOD items (2-95% watched) | Derived from Room `watch_state` table (`xtream_v2.db`) |
+| Favorites | All | User-curated via star button in player; configurable display size (10–500) | Room `favorite_state` table (`xtream_v2.db`) |
+| Last Watched | All | Chronological history, auto-updated on play; configurable display size (1–100) | Derived from Room `watch_state` table (`xtream_v2.db`) |
 | Recent Categories | All | Recently browsed categories (max 20, per content type) | Per-provider SharedPreferences |
 
 Watch state and Favorites are durable across all non-Jellyfin providers. Configurable history and favorite size settings bound only the rendered row, never what is stored in SQLite. Recent Categories remains the only bounded convenience blob.
@@ -424,7 +442,7 @@ categoryId index (see the AGENTS.md Performance & Bug Journal).
 
 ### Cross-Type Search ("ALL")
 
-Global search accessible from the Content Type Selection screen via search button. Searches across Live TV, Movies, and TV Shows simultaneously. Results are grouped by content type with collapsible headers (state saved via `rememberSaveable`). Navigation from results is dynamically routed based on content type: Live TV → Player, Movies → MovieDetails, TV Shows → EpisodeSelection.
+Global search accessible from the home screen (`ContentTypeSelection`) via the search button. Searches across Live TV, Movies, and TV Shows simultaneously. Results are grouped by content type with collapsible headers (state saved via `rememberSaveable`). Navigation from results is dynamically routed based on content type: Live TV → Player, Movies → MovieDetails, TV Shows → EpisodeSelection.
 
 ### Jellyfin (Server-Side)
 
@@ -517,7 +535,7 @@ TV and mobile share `applicationId` -- use `adb -s <device>` when deploying to b
 - **Player:** Media3 (ExoPlayer), Jellyfin pre-built FFmpeg decoder
 - **Database:** Room with KSP
 - **Navigation:** Navigation Compose with kotlinx.serialization routes
-- **SMB:** `com.hierynomus:smbj:0.13.0`
+- **SMB:** `com.hierynomus:smbj:0.15.0`
 - **Encryption:** EncryptedSharedPreferences (per-provider passwords)
 - **Background:** WorkManager (EPG sync)
 
@@ -529,9 +547,8 @@ TV and mobile share `applicationId` -- use `adb -s <device>` when deploying to b
 |--------|---------------|
 | NVIDIA Shield | Enable AV1/HEVC codecs, full hardware acceleration |
 | Sony Bravia | Avoid complex UI animations (mid-range processors), HEVC->AVC codec priority |
-| Chromecast w/ Google TV | Responsive to compact window sizes, lower DPI |
+| Chromecast w/ Google TV | AV1 -> HEVC -> AVC codec priority; 2 GB RAM class device |
 | Mobile phones | Portrait locked (except player), touch controls, cellular buffer profiles |
-| Tablets | `WindowSizeClass` for adaptive layout switching |
 
 ### TV Overscan Safety
 
