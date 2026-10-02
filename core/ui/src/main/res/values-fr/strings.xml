@@ -177,10 +177,10 @@
     <string name="login_footer_text">Contactez votre fournisseur IPTV pour obtenir vos identifiants</string>
 
     <!-- Provider Setup -->
-    <string name="provider_add_title">Ajouter un fournisseur</string>
-    <string name="provider_edit_title">Modifier le fournisseur</string>
-    <string name="provider_name_label">Nom du fournisseur</string>
-    <string name="provider_type_label">Type de fournisseur</string>
+    <string name="provider_add_title">Ajouter une source</string>
+    <string name="provider_edit_title">Modifier la source</string>
+    <string name="provider_name_label">Nom de la source</string>
+    <string name="provider_type_label">Type de source</string>
     <string name="provider_url_label">URL du serveur</string>
     <string name="provider_username_label">Nom d\'utilisateur</string>
     <string name="provider_password_label">Mot de passe</string>
@@ -189,13 +189,13 @@
     <string name="provider_refresh_button">Actualiser</string>
     <string name="provider_quick_connect_title">Connexion rapide</string>
     <string name="provider_data_management_title">Gestion des données</string>
-    <string name="provider_settings_title">Paramètres du fournisseur</string>
+    <string name="provider_settings_title">Paramètres de la source</string>
     <string name="provider_name_placeholder_xtream">ex. Mon IPTV</string>
     <string name="provider_name_placeholder_jellyfin">ex. Mon serveur Jellyfin</string>
     <string name="provider_name_placeholder_smb">ex. Media NAS</string>
     <string name="provider_name_placeholder_local">ex. Vidéos locales</string>
     <string name="provider_name_placeholder_remote_m3u">ex. Ma Playlist M3U</string>
-    <string name="provider_error_name_required">Le nom du fournisseur est requis</string>
+    <string name="provider_error_name_required">Le nom de la source est requis</string>
     <string name="provider_error_url_required">L\'URL du serveur est requise</string>
     <string name="provider_error_username_required">Le nom d\'utilisateur est requis</string>
     <string name="provider_error_password_required">Le mot de passe est requis</string>
@@ -204,12 +204,12 @@
     <string name="provider_error_m3u_url_required">L\'URL de la playlist M3U est requise</string>
     <string name="provider_connecting">Connexion…</string>
     <string name="provider_saving">Enregistrement…</string>
-    <string name="provider_update_button">Mettre à jour le fournisseur</string>
+    <string name="provider_update_button">Mettre à jour la source</string>
     <string name="provider_connection_failed">Échec de la connexion</string>
     <string name="provider_save_anyway">Enregistrer quand même</string>
     <string name="provider_go_back">Retour</string>
     <string name="provider_clear_cache_all_title">Vider tout le cache ?</string>
-    <string name="provider_clear_cache_all_message">Ceci supprimera les données en cache de ce fournisseur (Direct, Films, Séries : catégories et flux). L\'application les téléchargera à nouveau.</string>
+    <string name="provider_clear_cache_all_message">Ceci supprimera les données en cache de cette source (Direct, Films, Séries : catégories et flux). L\'application les téléchargera à nouveau.</string>
     <string name="provider_clear_all_button">Tout effacer</string>
     <string name="provider_clear_cache_live_title">Vider le cache TV en direct ?</string>
     <string name="provider_clear_cache_live_message">Ceci supprimera toutes les catégories et chaînes en direct du cache.</string>
@@ -307,19 +307,19 @@
     <string name="provider_qc_waiting">En attente d\'approbation…</string>
 
     <!-- Provider Selection -->
-    <string name="provider_selection_title">Fournisseurs</string>
-    <string name="provider_loading">Chargement des fournisseurs…</string>
-    <string name="provider_no_providers">Aucun fournisseur configuré</string>
-    <string name="provider_delete_confirm_title">Supprimer le fournisseur ?</string>
+    <string name="provider_selection_title">Sources</string>
+    <string name="provider_loading">Chargement des sources…</string>
+    <string name="provider_no_providers">Aucune source configurée</string>
+    <string name="provider_delete_confirm_title">Supprimer la source ?</string>
     <string name="provider_delete_confirm_message">Supprimer \"%1$s\" ? Toutes les données en cache seront supprimées.</string>
     <string name="provider_active_label">Actif</string>
     <string name="provider_duplicate_button">Dupliquer</string>
-    <string name="provider_duplicate_title">Dupliquer le fournisseur</string>
+    <string name="provider_duplicate_title">Dupliquer la source</string>
     <string name="provider_duplicate_name_default_format">%1$s (copie)</string>
-    <string name="provider_duplicate_name_label">Nom du nouveau fournisseur</string>
+    <string name="provider_duplicate_name_label">Nom de la nouvelle source</string>
     <string name="provider_copy_to_button">Copier vers…</string>
-    <string name="provider_copy_to_title">Copier vers un fournisseur</string>
-    <string name="provider_copy_to_target_label">Fournisseur cible</string>
+    <string name="provider_copy_to_title">Copier vers une source</string>
+    <string name="provider_copy_to_target_label">Source cible</string>
     <string name="provider_copy_to_options_label">Éléments à copier</string>
     <string name="provider_copy_to_settings_label">Paramètres</string>
     <string name="provider_copy_to_favorites_label">Favoris</string>
@@ -492,13 +492,13 @@
     <string name="player_nav_hint">D-pad pour naviguer • OK pour séléctionner • RETOUR pour annuler</string>
 
     <!-- Edit Provider URL -->
-    <string name="edit_provider_title">Modifier l\'URL du fournisseur</string>
-    <string name="edit_provider_subtitle">Changer l\'URL du fournisseur</string>
+    <string name="edit_provider_title">Modifier l\'URL de la source</string>
+    <string name="edit_provider_subtitle">Changer l\'URL de la source</string>
     <string name="edit_provider_credentials_preserved_hint">Vos identifiants seront conservés</string>
-    <string name="edit_provider_url_label">URL du fournisseur</string>
+    <string name="edit_provider_url_label">URL de la source</string>
     <string name="edit_provider_url_empty_error">L\'URL ne peut pas être vide</string>
-    <string name="edit_provider_update_success">URL du fournisseur mise à jour avec succès</string>
-    <string name="edit_provider_update_failed">Échec de la mise à jour de l\'URL du fournisseur</string>
+    <string name="edit_provider_update_success">URL de la source mise à jour avec succès</string>
+    <string name="edit_provider_update_failed">Échec de la mise à jour de l\'URL de la source</string>
 
     <!-- Player Controls extras -->
     <string name="player_rewind_1min_description">Retour rapide 1 min</string>
@@ -519,11 +519,11 @@
     <string name="player_stats_stream_health">Santé du flux</string>
 
     <!-- Settings: Provider Card -->
-    <string name="settings_provider_section_title">Fournisseur</string>
+    <string name="settings_provider_section_title">Source</string>
     <string name="settings_provider_expires_label">Expire le</string>
     <string name="settings_provider_max_connections_label">Connexions max.</string>
     <string name="settings_provider_trial_account_label">Compte d\'essai</string>
-    <string name="settings_provider_manage_button">Gérer les fournisseurs</string>
+    <string name="settings_provider_manage_button">Gérer les sources</string>
 
     <!-- EPG Management extras -->
     <string name="epg_automation_disabled">Désactivé</string>
@@ -619,11 +619,11 @@
     <string name="settings_quick_import_button">Importation rapide depuis Téléchargements</string>
     <string name="settings_import_select_title">Sélectionner quoi importer</string>
     <string name="settings_import_general_label">Paramètres généraux</string>
-    <string name="settings_import_providers_count_format">Fournisseurs (%1$d)</string>
+    <string name="settings_import_providers_count_format">Sources (%1$d)</string>
     <string name="settings_import_epg_sources_count_format">Sources de guide (%1$d)</string>
     <string name="settings_import_favorites_label">Favoris</string>
-    <string name="settings_import_provider_conflict_title">Conflit de fournisseur</string>
-    <string name="settings_import_conflict_message">Le(s) fournisseur(s) suivant(s) existe(nt) déjà :\n\n%1$s\n\nQue souhaitez-vous faire ?</string>
+    <string name="settings_import_provider_conflict_title">Conflit de source</string>
+    <string name="settings_import_conflict_message">La ou les sources suivantes existent déjà :\n\n%1$s\n\nQue souhaitez-vous faire ?</string>
     <string name="common_overwrite">Écraser</string>
     <string name="common_duplicate">Dupliquer</string>
     <string name="settings_import_skip_duplicates_button">Ignorer les doublons</string>
@@ -637,8 +637,8 @@
 
     <!-- Content Type Selection -->
     <string name="content_select_type_title">Sélectionner le type de contenu</string>
-    <string name="content_switch_provider_title">Changer de fournisseur</string>
-    <string name="content_switch_provider_description_format">Changer de fournisseur, fournisseur actuel : %1$s</string>
+    <string name="content_switch_provider_title">Changer de source</string>
+    <string name="content_switch_provider_description_format">Changer de source, source actuelle : %1$s</string>
     <string name="content_type_live_tv_description">Regarder des chaînes de télévision en direct</string>
     <string name="content_type_movies_description">Parcourir les films à la demande</string>
     <string name="content_type_tv_shows_description">Regarder des séries et des épisodes</string>
@@ -664,7 +664,7 @@
 
     <!-- Edit Provider URL (TV) -->
     <string name="edit_provider_current_url_format">URL actuelle : %1$s</string>
-    <string name="edit_provider_url_placeholder">Saisir la nouvelle URL du fournisseur</string>
+    <string name="edit_provider_url_placeholder">Saisir la nouvelle URL de la source</string>
     <string name="edit_provider_save_reauth_button">Enregistrer et se reconnecter</string>
 
     <!-- EPG Management (TV) -->
@@ -702,7 +702,7 @@
     <!-- TV Settings: Export/Import Card -->
     <string name="settings_export_button">Exporter les paramètres</string>
     <string name="settings_import_button">Importer les paramètres</string>
-    <string name="settings_import_conflict_intro">Le(s) fournisseur(s) suivant(s) existe(nt) déjà :</string>
+    <string name="settings_import_conflict_intro">La ou les sources suivantes existent déjà :</string>
     <string name="settings_import_choose_action">Que souhaitez-vous faire ?</string>
 
     <!-- TV Settings: Theme Card -->
@@ -739,7 +739,7 @@
     <string name="search_no_results_type_format_tv">Aucun résultat dans %1$s pour \'%2$s\'. Essayez d\'autres mots-clés.</string>
     <string name="search_results_count_format">%1$d résultats</string>
     <string name="search_results_hidden_format">%1$d masqués</string>
-    <string name="provider_none_label">Aucun fournisseur</string>
+    <string name="provider_none_label">Aucune source</string>
 
     <!-- Punctuation-adjacent literal audit fixes -->
     <string name="player_stats_build_format">Build : %1$s (%2$s)</string>
@@ -763,7 +763,7 @@
     <string name="category_filtered_of_total_format">%1$d sur %2$d catégories</string>
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
-    <string name="epg_error_not_supported">L\'EPG n\'est pas pris en charge par ce fournisseur</string>
+    <string name="epg_error_not_supported">L\'EPG n\'est pas pris en charge par cette source</string>
     <string name="epg_error_load_channels_format">Échec du chargement des chaînes : %1$s</string>
     <string name="epg_error_no_channels_in_category">Aucune chaîne trouvée dans cette catégorie</string>
     <string name="epg_error_load_data_format">Échec du chargement des données EPG : %1$s</string>
@@ -793,14 +793,14 @@
     <string name="epg_browser_busy_refreshing_format">Le guide est en cours de mise à jour. Votre recherche « %1$s » sera lancée dès qu\'il sera prêt.</string>
     <string name="epg_browser_busy_rebuilding_format">L\'index de recherche est en cours de reconstruction. Votre recherche « %1$s » sera lancée dès qu\'il sera prêt.</string>
     <string name="epg_browser_partial_results_note">Le guide est en cours de mise à jour : recherche plus lente, sur les titres seulement, qui peut manquer des programmes. Les résultats se mettront à jour à la fin.</string>
-    <string name="provider_error_add_failed">Échec de l\'ajout du fournisseur</string>
-    <string name="provider_error_select_failed">Échec de la sélection du fournisseur</string>
-    <string name="provider_error_delete_failed">Échec de la suppression du fournisseur</string>
-    <string name="provider_error_update_failed">Échec de la mise à jour du fournisseur</string>
-    <string name="provider_error_save_failed">Échec de l\'enregistrement du fournisseur</string>
+    <string name="provider_error_add_failed">Échec de l\'ajout de la source</string>
+    <string name="provider_error_select_failed">Échec de la sélection de la source</string>
+    <string name="provider_error_delete_failed">Échec de la suppression de la source</string>
+    <string name="provider_error_update_failed">Échec de la mise à jour de la source</string>
+    <string name="provider_error_save_failed">Échec de l\'enregistrement de la source</string>
     <!-- Profils (docs/plans/20260929_live-sync-plan.md → User profiles) -->
     <string name="settings_profiles_title">Profils</string>
-    <string name="settings_profiles_description">Chaque profil a ses propres favoris, historique et catégories récentes. Les fournisseurs et les paramètres sont partagés.</string>
+    <string name="settings_profiles_description">Chaque profil a ses propres favoris, historique et catégories récentes. Les sources et les paramètres sont partagés.</string>
     <string name="settings_profiles_add">Ajouter un profil</string>
     <string name="settings_profiles_active_marker">Utilisé sur cet appareil</string>
     <string name="profile_dialog_add_title">Nouveau profil</string>
@@ -812,7 +812,7 @@
     <string name="profile_delete_button">Supprimer le profil</string>
     <string name="profile_error_name_required">Saisissez un nom</string>
     <string name="profile_delete_confirm_title">Supprimer %1$s ?</string>
-    <string name="profile_delete_confirm_text">Ses favoris, son historique et ses catégories récentes sur tous les fournisseurs seront supprimés. Cette action est irréversible.</string>
+    <string name="profile_delete_confirm_text">Ses favoris, son historique et ses catégories récentes sur toutes les sources seront supprimés. Cette action est irréversible.</string>
     <string name="profile_delete_blocked_active">Cet appareil utilise ce profil. Passez d\'abord à un autre profil.</string>
     <string name="profile_delete_blocked_last">Le dernier profil ne peut pas être supprimé.</string>
     <string name="continue_watching_up_next">À suivre</string>
@@ -823,7 +823,7 @@
     <string name="profile_jellyfin_sign_in_button">Se connecter</string>
     <!-- Live sync (docs/plans/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Synchronisation en direct</string>
-    <string name="live_sync_desc">Gardez les profils, fournisseurs, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter.</string>
+    <string name="live_sync_desc">Gardez les profils, sources, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter.</string>
     <string name="live_sync_open">Configurer</string>
     <string name="live_sync_manage">Gérer</string>
     <string name="live_sync_off">Désactivée</string>
@@ -869,7 +869,7 @@
     <string name="live_sync_stopped_from_another_device">un autre appareil</string>
     <string name="live_sync_leave">Quitter le groupe de synchronisation</string>
     <string name="live_sync_leave_title">Quitter le groupe de synchronisation ?</string>
-    <string name="live_sync_leave_message">Cet appareil cesse de se synchroniser. Ses profils, fournisseurs, favoris et historique restent dessus.</string>
+    <string name="live_sync_leave_message">Cet appareil cesse de se synchroniser. Ses profils, sources, favoris et historique restent dessus.</string>
     <string name="live_sync_scan_hint">Visez le code affiché sur l\'autre appareil</string>
     <string name="live_sync_camera_permission">L\'accès à la caméra est nécessaire pour scanner le code.</string>
     <string name="live_sync_camera_grant">Autoriser la caméra</string>

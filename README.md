@@ -4,7 +4,7 @@
 
 ![App Icon](mobile/src/main/res/mipmap-xxxhdpi/ic_launcher.webp)
 
-**A feature-rich multi-provider media player for Android**
+**A feature-rich multi-source media player for Android**
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-blue.svg)](https://kotlinlang.org)
 [![Android](https://img.shields.io/badge/Android-11+-green.svg)](https://developer.android.com)
@@ -19,19 +19,19 @@
 
 ## 📖 Overview
 
-Fijerena is a native Android media player built entirely with Kotlin and Jetpack Compose, designed to deliver an exceptional viewing experience across both mobile and TV platforms. With support for multiple media provider types, advanced playback features, and a modern Material 3 design, Fijerena provides a unified interface for accessing your media library from various sources.
+Fijerena is a native Android media player built entirely with Kotlin and Jetpack Compose, designed to deliver an exceptional viewing experience across both mobile and TV platforms. With support for multiple media source types, advanced playback features, and a modern Material 3 design, Fijerena provides a unified interface for accessing your media library from various sources.
 
 The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its adaptive icon, symbolizing a world of content at your fingertips.
 
 ## ✨ Key Features
 
-### 🎬 Multi-Provider Support
+### 🎬 Multi-Source Support
 - **Xtream Codes API** - Full IPTV support with Live TV, Movies, TV Shows, and EPG
 - **Jellyfin** - Self-hosted media server integration with playback progress sync and Quick Connect auth
 - **SMB/CIFS** - Direct access to network shares (SMB2/3)
 - **Local Storage** - Local media files and M3U playlist support
-- Seamlessly switch between multiple providers
-- Per-provider encrypted credential storage
+- Seamlessly switch between multiple sources
+- Per-source encrypted credential storage
 - Automatic session restoration
 
 ### 📺 Content Types
@@ -90,7 +90,7 @@ The app features the iconic Blue Marble (Earth) with red/cyan 3D glasses as its 
 - **Cache Management** - Per-content-type cache with statistics
 - **Robust EPG Retries** - Automatic 5-attempt retry loop with exponential backoff for EPG updates
 - **EPG Change Detection** - Conditional requests (`If-None-Match` / `If-Modified-Since`) plus a content hash; an unchanged source skips download and ingestion entirely and is shown as "Unchanged"
-- **Sync Delta Reporting** - Provider screens show what the last catalog sync actually changed ("No changes since last sync", or added/updated/removed counts)
+- **Sync Delta Reporting** - Source screens show what the last catalog sync actually changed ("No changes since last sync", or added/updated/removed counts)
 - **UI Scale Adjustment** - 70%-100% sizing options
 - **Cellular Buffer Tuning** - Adjustable cellular buffer multipliers (0.5x-3.0x) in dev mode
 
@@ -203,7 +203,7 @@ cd fijerena
 4. Click **OK** and wait for Gradle sync to complete
 
 ### Configuration
-No additional configuration is required for the initial build. The app will prompt for provider setup on first launch.
+No additional configuration is required for the initial build. The app will prompt for source setup on first launch.
 
 ## 🔨 Building
 

@@ -24,7 +24,7 @@
     <string name="settings_export_error_import_failed">Tsy nahomby ny fampidirana</string>
     <string name="settings_export_error_invalid_format">Diso ny endriky ny rakitra</string>
     <string name="settings_export_summary_import_failed_format">Tsy nahomby ny fampidirana: %1$s</string>
-    <string name="settings_export_summary_providers_format">Mpanome: %1$s</string>
+    <string name="settings_export_summary_providers_format">Loharano: %1$s</string>
     <string name="settings_export_item_added_format">%1$d nampidirina</string>
     <string name="settings_export_item_overwritten_format">%1$d nosoloana</string>
     <string name="settings_export_item_skipped_format">%1$d nihoarana</string>

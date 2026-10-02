@@ -177,10 +177,10 @@
     <string name="login_footer_text">Contact your IPTV provider for credentials</string>
 
     <!-- Provider Setup -->
-    <string name="provider_add_title">Add Provider</string>
-    <string name="provider_edit_title">Edit Provider</string>
-    <string name="provider_name_label">Provider Name</string>
-    <string name="provider_type_label">Provider Type</string>
+    <string name="provider_add_title">Hampiditra loharano</string>
+    <string name="provider_edit_title">Hanova loharano</string>
+    <string name="provider_name_label">Anaran\'ny loharano</string>
+    <string name="provider_type_label">Karazana loharano</string>
     <string name="provider_url_label">Server URL</string>
     <string name="provider_username_label">Username</string>
     <string name="provider_password_label">Password</string>
@@ -189,13 +189,13 @@
     <string name="provider_refresh_button">Refresh</string>
     <string name="provider_quick_connect_title">Quick Connect</string>
     <string name="provider_data_management_title">Data Management</string>
-    <string name="provider_settings_title">Provider Settings</string>
+    <string name="provider_settings_title">Fandrindrana ny loharano</string>
     <string name="provider_name_placeholder_xtream">e.g. My IPTV</string>
     <string name="provider_name_placeholder_jellyfin">e.g. My Jellyfin Server</string>
     <string name="provider_name_placeholder_smb">e.g. NAS Media</string>
     <string name="provider_name_placeholder_local">e.g. Local Videos</string>
     <string name="provider_name_placeholder_remote_m3u">e.g. My M3U Playlist</string>
-    <string name="provider_error_name_required">Provider name is required</string>
+    <string name="provider_error_name_required">Ilaina ny anaran\'ny loharano</string>
     <string name="provider_error_url_required">Server URL is required</string>
     <string name="provider_error_username_required">Username is required</string>
     <string name="provider_error_password_required">Password is required</string>
@@ -204,12 +204,12 @@
     <string name="provider_error_m3u_url_required">M3U Playlist URL is required</string>
     <string name="provider_connecting">Connecting…</string>
     <string name="provider_saving">Saving…</string>
-    <string name="provider_update_button">Update Provider</string>
+    <string name="provider_update_button">Havaozina ny loharano</string>
     <string name="provider_connection_failed">Connection Failed</string>
     <string name="provider_save_anyway">Save Anyway</string>
     <string name="provider_go_back">Go Back</string>
     <string name="provider_clear_cache_all_title">Clear All Cache?</string>
-    <string name="provider_clear_cache_all_message">This will remove this provider\'s cached Live TV, Movies and TV Shows data (categories and streams). The app will re-download it from the server.</string>
+    <string name="provider_clear_cache_all_message">Hofafana ny angona voatahirin\'ity loharano ity ho an\'ny Live TV, Sarimihetsika ary Andian-tantara (sokajy sy fantsakana). Haka azy indray amin\'ny mpizara ny rindranasa.</string>
     <string name="provider_clear_all_button">Clear All</string>
     <string name="provider_clear_cache_live_title">Clear Live TV Cache?</string>
     <string name="provider_clear_cache_live_message">This will remove all cached Live TV data (categories and streams).</string>
@@ -306,19 +306,19 @@
     <string name="provider_qc_waiting">Waiting for approval…</string>
 
     <!-- Provider Selection -->
-    <string name="provider_selection_title">Providers</string>
-    <string name="provider_loading">Loading providers…</string>
-    <string name="provider_no_providers">No providers configured</string>
-    <string name="provider_delete_confirm_title">Delete Provider?</string>
-    <string name="provider_delete_confirm_message">Delete \"%1$s\"? All cached data for this provider will be removed.</string>
+    <string name="provider_selection_title">Loharano</string>
+    <string name="provider_loading">Maka ny loharano…</string>
+    <string name="provider_no_providers">Tsy misy loharano voalamina</string>
+    <string name="provider_delete_confirm_title">Hofafana ve ny loharano?</string>
+    <string name="provider_delete_confirm_message">Hofafana ve i \"%1$s\"? Hofafana daholo ny angona voatahirin\'ity loharano ity.</string>
     <string name="provider_active_label">Active</string>
     <string name="provider_duplicate_button">Duplicate</string>
-    <string name="provider_duplicate_title">Duplicate Provider</string>
+    <string name="provider_duplicate_title">Handika loharano</string>
     <string name="provider_duplicate_name_default_format">%1$s (copy)</string>
-    <string name="provider_duplicate_name_label">New provider name</string>
+    <string name="provider_duplicate_name_label">Anaran\'ny loharano vaovao</string>
     <string name="provider_copy_to_button">Copy to…</string>
-    <string name="provider_copy_to_title">Copy To Provider</string>
-    <string name="provider_copy_to_target_label">Target provider</string>
+    <string name="provider_copy_to_title">Handika any amin\'ny loharano</string>
+    <string name="provider_copy_to_target_label">Loharano tanjona</string>
     <string name="provider_copy_to_options_label">What to copy</string>
     <string name="provider_copy_to_settings_label">Settings</string>
     <string name="provider_copy_to_favorites_label">Favorites</string>
@@ -420,20 +420,20 @@
     <string name="player_press_back_exit">Press OK to hide controls • Press BACK to exit</string>
 
     <!-- Edit Provider URL -->
-    <string name="edit_provider_title">Hanova ny URL\'ny mpampiantrano</string>
-    <string name="edit_provider_subtitle">Hanova ny URL\'ny mpampiantrano</string>
+    <string name="edit_provider_title">Hanova ny URL\'ny loharano</string>
+    <string name="edit_provider_subtitle">Hanova ny URL\'ny loharano</string>
     <string name="edit_provider_credentials_preserved_hint">Hotehirizina ny fangatahana fidirana</string>
-    <string name="edit_provider_url_label">URL\'ny mpampiantrano</string>
+    <string name="edit_provider_url_label">URL\'ny loharano</string>
     <string name="edit_provider_url_empty_error">Tsy azo avela ho banga ny URL</string>
-    <string name="edit_provider_update_success">Voavaozina soa aman-tsara ny URL\'ny mpampiantrano</string>
-    <string name="edit_provider_update_failed">Tsy nahomby ny fanavaozana ny URL\'ny mpampiantrano</string>
+    <string name="edit_provider_update_success">Voavaozina soa aman-tsara ny URL\'ny loharano</string>
+    <string name="edit_provider_update_failed">Tsy nahomby ny fanavaozana ny URL\'ny loharano</string>
 
     <!-- Settings: Provider Card -->
-    <string name="settings_provider_section_title">Mpampiantrano</string>
+    <string name="settings_provider_section_title">Loharano</string>
     <string name="settings_provider_expires_label">Ho tapitra</string>
     <string name="settings_provider_max_connections_label">Fifandraisana fara-fahabetsahany</string>
     <string name="settings_provider_trial_account_label">Kaonty fitsapana</string>
-    <string name="settings_provider_manage_button">Hitantana ny mpampiantrano</string>
+    <string name="settings_provider_manage_button">Hitantana ny loharano</string>
 
     <!-- EPG Management extras -->
     <string name="epg_automation_disabled">Disabled</string>
@@ -539,11 +539,11 @@
     <string name="settings_quick_import_button">Fampidirana haingana avy amin\'ny Downloads</string>
     <string name="settings_import_select_title">Safidio izay ho ampidirina</string>
     <string name="settings_import_general_label">Fandrindrana ankapobeny</string>
-    <string name="settings_import_providers_count_format">Mpampiantrano (%1$d)</string>
+    <string name="settings_import_providers_count_format">Loharano (%1$d)</string>
     <string name="settings_import_epg_sources_count_format">Loharanon\'ny fitarihana (%1$d)</string>
     <string name="settings_import_favorites_label">Tiana indrindra</string>
-    <string name="settings_import_provider_conflict_title">Fifanoherana amin\'ny mpampiantrano</string>
-    <string name="settings_import_conflict_message">Efa misy ireto mpampiantrano ireto:\n\n%1$s\n\nInona no tianao hatao?</string>
+    <string name="settings_import_provider_conflict_title">Fifanoherana amin\'ny loharano</string>
+    <string name="settings_import_conflict_message">Efa misy ireto loharano ireto:\n\n%1$s\n\nInona no tianao hatao?</string>
     <string name="common_overwrite">Soloy</string>
     <string name="common_duplicate">Adivory</string>
     <string name="settings_import_skip_duplicates_button">Tsy raharahaina ny mitovy</string>
@@ -557,8 +557,8 @@
 
     <!-- Content Type Selection -->
     <string name="content_select_type_title">Safidio ny karazana atiny</string>
-    <string name="content_switch_provider_title">Ovao ny fantsakana</string>
-    <string name="content_switch_provider_description_format">Ovao ny fantsakana, fantsakana ampiasaina izao: %1$s</string>
+    <string name="content_switch_provider_title">Ovao ny loharano</string>
+    <string name="content_switch_provider_description_format">Ovao ny loharano, loharano ampiasaina izao: %1$s</string>
     <string name="content_type_live_tv_description">Jereo ny fandaharana mivantana</string>
     <string name="content_type_movies_description">Jereo ireo sarimihetsika</string>
     <string name="content_type_tv_shows_description">Jereo ireo tantara an-tsary</string>
@@ -622,7 +622,7 @@
     <!-- TV Settings: Export/Import Card -->
     <string name="settings_export_button">Alefaso ny fandrindrana</string>
     <string name="settings_import_button">Ampidiro ny fandrindrana</string>
-    <string name="settings_import_conflict_intro">Efa misy ireto mpanome tolotra ireto:</string>
+    <string name="settings_import_conflict_intro">Efa misy ireto loharano ireto:</string>
     <string name="settings_import_choose_action">Inona no tianao hatao?</string>
 
     <!-- TV Settings: Theme Card -->
@@ -659,7 +659,7 @@
     <string name="search_no_results_type_format_tv">Tsy nahita valiny ao amin\'ny %1$s ho an\'ny \'%2$s\'. Andramo teny hafa.</string>
     <string name="search_results_count_format">Valiny %1$d</string>
     <string name="search_results_hidden_format">%1$d nafenina</string>
-    <string name="provider_none_label">Tsy misy mpanome</string>
+    <string name="provider_none_label">Tsy misy loharano</string>
 
     <!-- Punctuation-adjacent literal audit fixes -->
     <string name="player_stats_build_format">Build: %1$s (%2$s)</string>
@@ -683,7 +683,7 @@
     <string name="category_filtered_of_total_format">%1$d amin\'ny %2$d sokajy</string>
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
-    <string name="epg_error_not_supported">Tsy raisin\'ity mpanome ity ny EPG</string>
+    <string name="epg_error_not_supported">Tsy raisin\'ity loharano ity ny EPG</string>
     <string name="epg_error_load_channels_format">Tsy nahomby ny fakana ny fandaharana: %1$s</string>
     <string name="epg_error_no_channels_in_category">Tsy nisy fandaharana hita amin\'ity sokajy ity</string>
     <string name="epg_error_load_data_format">Tsy nahomby ny fakana angona EPG: %1$s</string>
@@ -713,11 +713,11 @@
     <string name="epg_browser_busy_refreshing_format">Eo am-panavaozana ny fandaharana. Hotanterahina rehefa vonona izy ny fikarohanao \'%1$s\'.</string>
     <string name="epg_browser_busy_rebuilding_format">Eo am-panamboarana indray ny fanondroana fikarohana. Hotanterahina rehefa vonona izy ny fikarohanao \'%1$s\'.</string>
     <string name="epg_browser_partial_results_note">Eo am-panavaozana ny fandaharana: fikarohana amin\'ny lohateny ihany no aseho, mety tsy feno. Havaozina ny valiny rehefa vita.</string>
-    <string name="provider_error_add_failed">Tsy nahomby ny fampidirana ny mpanome</string>
-    <string name="provider_error_select_failed">Tsy nahomby ny fisafidianana ny mpanome</string>
-    <string name="provider_error_delete_failed">Tsy nahomby ny famafana ny mpanome</string>
-    <string name="provider_error_update_failed">Tsy nahomby ny fanavaozana ny mpanome</string>
-    <string name="provider_error_save_failed">Tsy nahomby ny fitehirizana ny mpanome</string>
+    <string name="provider_error_add_failed">Tsy nahomby ny fampidirana ny loharano</string>
+    <string name="provider_error_select_failed">Tsy nahomby ny fisafidianana ny loharano</string>
+    <string name="provider_error_delete_failed">Tsy nahomby ny famafana ny loharano</string>
+    <string name="provider_error_update_failed">Tsy nahomby ny fanavaozana ny loharano</string>
+    <string name="provider_error_save_failed">Tsy nahomby ny fitehirizana ny loharano</string>
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Alefaso ho azy ny fizarana manaraka</string>
     <string name="settings_autoplay_next_episode_desc">Rehefa ho tapitra ny fizarana iray, aroso ny manaraka ary manomboka ho azy rehefa vita izy. Ho an\'ity mombamomba ity.</string>

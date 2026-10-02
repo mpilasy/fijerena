@@ -1,6 +1,6 @@
 # Rename "Provider" to "Source" in the UI Plan
 
-**Status:** Phase 1 done (2026-10-02); Phase 2 in progress. Decisions taken 2026-10-02 (all recommendations accepted, see below).
+**Status:** Complete (2026-10-02). Both phases landed. Decisions taken 2026-10-02 (all recommendations accepted, see below).
 
 The app calls everything it plays from a "provider". That word sounds like a paid company, but
 the app's providers include Xtream services, M3U playlists, the user's own Jellyfin server, SMB
@@ -218,6 +218,20 @@ meant the user-facing EPG sources; `docs/epg_guide.md` is technical and keeps "s
 is: Malagasy "fantsakana" where it means a channel or stream. Checked: `:tv` builds and the TV
 EPG management screen reads "Add Guide Source", "… 3 guide sources in …". French and Malagasy
 were reviewed as text only, not on screen.
+
+**Phase 2 done (2026-10-02).** 46 English, 43 French and 38 Malagasy string values now say
+"source" / "source" (feminine agreement) / "loharano"; the Malagasy pass also replaced the mixed
+"mpampiantrano", "mpanome" and "fantsakana" used for providers and translated the 19 that were
+still English. Kept, as decided: `login_footer_text` (the IPTV company) and
+`provider_url_placeholder_xtream` (an example URL). Not added: French and Malagasy translations for
+keys that never had one (e.g. `settings_section_provider_playback`, `settings_shrink_database_desc`),
+which still fall back to English, now "Source & Playback". Docs: README and FEATURES user-facing
+wording, the RUN_GUIDE test-source steps; NAVIGATION_GUIDE is code-level and keeps "provider",
+as do FEATURES lines where "provider" means the IPTV company. `AGENTS.md` has the wording rule;
+RELEASE_NOTES has the entry. Checked: `:tv` and `:mobile` build; on the TV emulator the home
+header ("Switch Source, current source: …"), Settings ("Source & Playback", "Source", "Manage
+Sources", profiles text), the Sources screen ("Add Source") and Edit Source ("Source Type",
+"Source Name", "Source Settings") read correctly. French and Malagasy reviewed as text only.
 
 ### Check step
 

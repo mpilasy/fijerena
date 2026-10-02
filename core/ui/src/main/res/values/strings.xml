@@ -57,7 +57,7 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
-    <string name="settings_section_provider_playback">Provider &amp; Playback</string>
+    <string name="settings_section_provider_playback">Source &amp; Playback</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_data_sync">Data &amp; Sync</string>
     <string name="settings_section_advanced">Advanced</string>
@@ -181,10 +181,10 @@
     <string name="login_footer_text">Contact your IPTV provider for credentials</string>
 
     <!-- Provider Setup -->
-    <string name="provider_add_title">Add Provider</string>
-    <string name="provider_edit_title">Edit Provider</string>
-    <string name="provider_name_label">Provider Name</string>
-    <string name="provider_type_label">Provider Type</string>
+    <string name="provider_add_title">Add Source</string>
+    <string name="provider_edit_title">Edit Source</string>
+    <string name="provider_name_label">Source Name</string>
+    <string name="provider_type_label">Source Type</string>
     <string name="provider_url_label">Server URL</string>
     <string name="provider_username_label">Username</string>
     <string name="provider_password_label">Password</string>
@@ -193,13 +193,13 @@
     <string name="provider_refresh_button">Refresh</string>
     <string name="provider_quick_connect_title">Quick Connect</string>
     <string name="provider_data_management_title">Data Management</string>
-    <string name="provider_settings_title">Provider Settings</string>
+    <string name="provider_settings_title">Source Settings</string>
     <string name="provider_name_placeholder_xtream">e.g. My IPTV</string>
     <string name="provider_name_placeholder_jellyfin">e.g. My Jellyfin Server</string>
     <string name="provider_name_placeholder_smb">e.g. NAS Media</string>
     <string name="provider_name_placeholder_local">e.g. Local Videos</string>
     <string name="provider_name_placeholder_remote_m3u">e.g. My M3U Playlist</string>
-    <string name="provider_error_name_required">Provider name is required</string>
+    <string name="provider_error_name_required">Source name is required</string>
     <string name="provider_error_url_required">Server URL is required</string>
     <string name="provider_error_username_required">Username is required</string>
     <string name="provider_error_password_required">Password is required</string>
@@ -208,12 +208,12 @@
     <string name="provider_error_m3u_url_required">M3U Playlist URL is required</string>
     <string name="provider_connecting">Connecting…</string>
     <string name="provider_saving">Saving…</string>
-    <string name="provider_update_button">Update Provider</string>
+    <string name="provider_update_button">Update Source</string>
     <string name="provider_connection_failed">Connection Failed</string>
     <string name="provider_save_anyway">Save Anyway</string>
     <string name="provider_go_back">Go Back</string>
     <string name="provider_clear_cache_all_title">Clear All Cache?</string>
-    <string name="provider_clear_cache_all_message">This will remove this provider\'s cached Live TV, Movies and TV Shows data (categories and streams). The app will re-download it from the server.</string>
+    <string name="provider_clear_cache_all_message">This will remove this source\'s cached Live TV, Movies and TV Shows data (categories and streams). The app will re-download it from the server.</string>
     <string name="provider_clear_all_button">Clear All</string>
     <string name="provider_clear_cache_live_title">Clear Live TV Cache?</string>
     <string name="provider_clear_cache_live_message">This will remove all cached Live TV data (categories and streams).</string>
@@ -311,21 +311,21 @@
     <string name="provider_qc_waiting">Waiting for approval…</string>
 
     <!-- Provider Selection -->
-    <string name="provider_selection_title">Providers</string>
-    <string name="provider_loading">Loading providers…</string>
-    <string name="provider_no_providers">No providers configured</string>
-    <string name="provider_delete_confirm_title">Delete Provider?</string>
-    <string name="provider_delete_confirm_message">Delete \"%1$s\"? All cached data for this provider will be removed.</string>
+    <string name="provider_selection_title">Sources</string>
+    <string name="provider_loading">Loading sources…</string>
+    <string name="provider_no_providers">No sources configured</string>
+    <string name="provider_delete_confirm_title">Delete Source?</string>
+    <string name="provider_delete_confirm_message">Delete \"%1$s\"? All cached data for this source will be removed.</string>
     <string name="provider_active_label">Active</string>
     <string name="provider_more_actions">More actions</string>
     <string name="provider_more_actions_for_format">More actions for %1$s</string>
     <string name="provider_duplicate_button">Duplicate</string>
-    <string name="provider_duplicate_title">Duplicate Provider</string>
+    <string name="provider_duplicate_title">Duplicate Source</string>
     <string name="provider_duplicate_name_default_format">%1$s (copy)</string>
-    <string name="provider_duplicate_name_label">New provider name</string>
+    <string name="provider_duplicate_name_label">New source name</string>
     <string name="provider_copy_to_button">Copy to…</string>
-    <string name="provider_copy_to_title">Copy To Provider</string>
-    <string name="provider_copy_to_target_label">Target provider</string>
+    <string name="provider_copy_to_title">Copy To Source</string>
+    <string name="provider_copy_to_target_label">Target source</string>
     <string name="provider_copy_to_options_label">What to copy</string>
     <string name="provider_copy_to_settings_label">Settings</string>
     <string name="provider_copy_to_favorites_label">Favorites</string>
@@ -517,20 +517,20 @@
     <string name="player_nav_hint">Use D-pad to navigate • OK to select • BACK to cancel</string>
 
     <!-- Edit Provider URL -->
-    <string name="edit_provider_title">Edit Provider URL</string>
-    <string name="edit_provider_subtitle">Change Provider URL</string>
+    <string name="edit_provider_title">Edit Source URL</string>
+    <string name="edit_provider_subtitle">Change Source URL</string>
     <string name="edit_provider_credentials_preserved_hint">Your credentials will be preserved</string>
-    <string name="edit_provider_url_label">Provider URL</string>
+    <string name="edit_provider_url_label">Source URL</string>
     <string name="edit_provider_url_empty_error">URL cannot be empty</string>
-    <string name="edit_provider_update_success">Provider URL updated successfully</string>
-    <string name="edit_provider_update_failed">Failed to update provider URL</string>
+    <string name="edit_provider_update_success">Source URL updated successfully</string>
+    <string name="edit_provider_update_failed">Failed to update source URL</string>
 
     <!-- Settings: Provider Card -->
-    <string name="settings_provider_section_title">Provider</string>
+    <string name="settings_provider_section_title">Source</string>
     <string name="settings_provider_expires_label">Expires</string>
     <string name="settings_provider_max_connections_label">Max connections</string>
     <string name="settings_provider_trial_account_label">Trial account</string>
-    <string name="settings_provider_manage_button">Manage Providers</string>
+    <string name="settings_provider_manage_button">Manage Sources</string>
 
     <!-- EPG Management extras -->
     <string name="epg_automation_disabled">Disabled</string>
@@ -648,7 +648,7 @@
     <string name="settings_quick_import_not_found">Settings file not found in Downloads or app folder</string>
     <string name="settings_quick_import_button">Quick Import from Downloads</string>
     <string name="settings_shrink_database_title">Database Maintenance</string>
-    <string name="settings_shrink_database_desc">Remove leftover data from deleted providers and reclaim disk space</string>
+    <string name="settings_shrink_database_desc">Remove leftover data from deleted sources and reclaim disk space</string>
     <string name="settings_shrink_database_button">Shrink Database</string>
     <string name="settings_shrink_database_button_running">Shrinking…</string>
     <string name="settings_shrink_database_result_format">Removed %1$d leftover rows, freed %2$s</string>
@@ -657,11 +657,11 @@
     <string name="settings_shrink_database_dev_stats_delta">%1$d records deleted • %2$s recovered</string>
     <string name="settings_import_select_title">Select What to Import</string>
     <string name="settings_import_general_label">General Settings</string>
-    <string name="settings_import_providers_count_format">Providers (%1$d)</string>
+    <string name="settings_import_providers_count_format">Sources (%1$d)</string>
     <string name="settings_import_epg_sources_count_format">Guide sources (%1$d)</string>
     <string name="settings_import_favorites_label">Favorites</string>
-    <string name="settings_import_provider_conflict_title">Provider Conflict</string>
-    <string name="settings_import_conflict_message">The following provider(s) already exist:\n\n%1$s\n\nWhat would you like to do?</string>
+    <string name="settings_import_provider_conflict_title">Source Conflict</string>
+    <string name="settings_import_conflict_message">The following source(s) already exist:\n\n%1$s\n\nWhat would you like to do?</string>
     <string name="common_overwrite">Overwrite</string>
     <string name="common_duplicate">Duplicate</string>
     <string name="settings_import_skip_duplicates_button">Skip Duplicates</string>
@@ -675,8 +675,8 @@
 
     <!-- Content Type Selection -->
     <string name="content_select_type_title">Select Content Type</string>
-    <string name="content_switch_provider_title">Switch Provider</string>
-    <string name="content_switch_provider_description_format">Switch Provider, current provider: %1$s</string>
+    <string name="content_switch_provider_title">Switch Source</string>
+    <string name="content_switch_provider_description_format">Switch Source, current source: %1$s</string>
     <string name="content_type_live_tv_description">Watch live television channels</string>
     <string name="content_type_movies_description">Browse on-demand movies</string>
     <string name="content_type_tv_shows_description">Watch series and episodes</string>
@@ -702,7 +702,7 @@
 
     <!-- Edit Provider URL (TV) -->
     <string name="edit_provider_current_url_format">Current URL: %1$s</string>
-    <string name="edit_provider_url_placeholder">Enter new provider URL</string>
+    <string name="edit_provider_url_placeholder">Enter new source URL</string>
     <string name="edit_provider_save_reauth_button">Save &amp; Re-authenticate</string>
 
     <!-- EPG Management (TV) -->
@@ -740,7 +740,7 @@
     <!-- TV Settings: Export/Import Card -->
     <string name="settings_export_button">Export Settings</string>
     <string name="settings_import_button">Import Settings</string>
-    <string name="settings_import_conflict_intro">The following provider(s) already exist:</string>
+    <string name="settings_import_conflict_intro">The following source(s) already exist:</string>
     <string name="settings_import_choose_action">What would you like to do?</string>
 
     <!-- TV Settings: Theme Card -->
@@ -777,7 +777,7 @@
     <string name="search_no_results_type_format_tv">No results found in %1$s for \'%2$s\'. Try different keywords.</string>
     <string name="search_results_count_format">%1$d results</string>
     <string name="search_results_hidden_format">%1$d hidden</string>
-    <string name="provider_none_label">No provider</string>
+    <string name="provider_none_label">No source</string>
 
     <!-- Punctuation-adjacent literal audit fixes -->
     <string name="player_stats_build_format">Build: %1$s (%2$s)</string>
@@ -801,7 +801,7 @@
     <string name="category_filtered_of_total_format">%1$d of %2$d categories</string>
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
-    <string name="epg_error_not_supported">EPG is not supported by this provider</string>
+    <string name="epg_error_not_supported">EPG is not supported by this source</string>
     <string name="epg_error_load_channels_format">Failed to load channels: %1$s</string>
     <string name="epg_error_no_channels_in_category">No channels found in this category</string>
     <string name="epg_error_load_data_format">Failed to load EPG data: %1$s</string>
@@ -831,14 +831,14 @@
     <string name="epg_browser_busy_refreshing_format">The guide is updating. Your search for \'%1$s\' will run as soon as it\'s ready.</string>
     <string name="epg_browser_busy_rebuilding_format">The search index is being rebuilt. Your search for \'%1$s\' will run as soon as it\'s ready.</string>
     <string name="epg_browser_partial_results_note">The guide is updating: showing a slower title-only search, which may miss some programmes. Results refresh when the update is done.</string>
-    <string name="provider_error_add_failed">Failed to add provider</string>
-    <string name="provider_error_select_failed">Failed to select provider</string>
-    <string name="provider_error_delete_failed">Failed to delete provider</string>
-    <string name="provider_error_update_failed">Failed to update provider</string>
-    <string name="provider_error_save_failed">Failed to save provider</string>
+    <string name="provider_error_add_failed">Failed to add source</string>
+    <string name="provider_error_select_failed">Failed to select source</string>
+    <string name="provider_error_delete_failed">Failed to delete source</string>
+    <string name="provider_error_update_failed">Failed to update source</string>
+    <string name="provider_error_save_failed">Failed to save source</string>
     <!-- Profiles (docs/plans/20260929_live-sync-plan.md → User profiles) -->
     <string name="settings_profiles_title">Profiles</string>
-    <string name="settings_profiles_description">Each profile has its own favourites, watch history and recent categories. Providers and settings are shared.</string>
+    <string name="settings_profiles_description">Each profile has its own favourites, watch history and recent categories. Sources and settings are shared.</string>
     <string name="settings_profiles_add">Add profile</string>
     <string name="settings_profiles_active_marker">Using on this device</string>
     <string name="profile_dialog_add_title">New profile</string>
@@ -850,7 +850,7 @@
     <string name="profile_delete_button">Delete profile</string>
     <string name="profile_error_name_required">Enter a name</string>
     <string name="profile_delete_confirm_title">Delete %1$s?</string>
-    <string name="profile_delete_confirm_text">Their favourites, watch history and recent categories on every provider will be deleted. This can\'t be undone.</string>
+    <string name="profile_delete_confirm_text">Their favourites, watch history and recent categories on every source will be deleted. This can\'t be undone.</string>
     <string name="profile_delete_blocked_active">This device is using that profile. Switch to another profile first.</string>
     <string name="profile_delete_blocked_last">The last profile can\'t be deleted.</string>
     <string name="profile_switching">Switching to %1$s…</string>
@@ -860,7 +860,7 @@
     <string name="profile_jellyfin_sign_in_button">Sign in</string>
     <!-- Live sync (docs/plans/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Live sync</string>
-    <string name="live_sync_desc">Keep profiles, providers, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves.</string>
+    <string name="live_sync_desc">Keep profiles, sources, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves.</string>
     <string name="live_sync_open">Set up</string>
     <string name="live_sync_manage">Manage</string>
     <string name="live_sync_off">Off</string>
@@ -907,7 +907,7 @@
     <string name="live_sync_stopped_from_another_device">another device</string>
     <string name="live_sync_leave">Leave the sync group</string>
     <string name="live_sync_leave_title">Leave the sync group?</string>
-    <string name="live_sync_leave_message">This device stops syncing. Its profiles, providers, favourites and history stay on it.</string>
+    <string name="live_sync_leave_message">This device stops syncing. Its profiles, sources, favourites and history stay on it.</string>
     <string name="live_sync_scan_hint">Point the camera at the code on the other device</string>
     <string name="live_sync_camera_permission">Camera access is needed to scan the code.</string>
     <string name="live_sync_camera_grant">Allow camera</string>

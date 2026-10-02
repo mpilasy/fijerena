@@ -4,9 +4,9 @@ A native Android media player supporting Xtream IPTV, Jellyfin, SMB shares, Loca
 
 ---
 
-## Provider Types
+## Source Types
 
-| Provider | Live TV | Movies | TV Shows | Search | Progress Sync | Auth |
+| Source | Live TV | Movies | TV Shows | Search | Progress Sync | Auth |
 |----------|---------|--------|----------|--------|---------------|------|
 | **Xtream** | Yes | Yes | Yes | Client-side | No | Username/password |
 | **Jellyfin** | No | Yes | Yes | Server-side | Yes | Username/password or Quick Connect |
@@ -14,10 +14,10 @@ A native Android media player supporting Xtream IPTV, Jellyfin, SMB shares, Loca
 | **Local** | M3U only | Yes | No | Filename | No | No |
 | **Remote M3U** | Yes | No | No | Title match | No | No |
 
-Multiple providers can be configured simultaneously. Switch active provider from Settings → Manage Providers.
+Multiple sources can be configured simultaneously. Switch active source from Settings → Manage Sources.
 
 ### Jellyfin Quick Connect
-When adding a Jellyfin provider, tap **Use Quick Connect** instead of entering a password. The app displays a 6-digit code that you approve on the Jellyfin web UI or another client. On approval the app receives and stores the access token automatically — no password is ever stored or required.
+When adding a Jellyfin source, tap **Use Quick Connect** instead of entering a password. The app displays a 6-digit code that you approve on the Jellyfin web UI or another client. On approval the app receives and stores the access token automatically — no password is ever stored or required.
 
 ---
 
@@ -122,7 +122,7 @@ Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
 
 Settings → Export Settings / Import Settings.
 
-**Exported:** all provider configs (name, URL, username, type, config JSON, per-provider settings), all guide source URLs, per-provider favorites (item ID, name, category, content type), and global AppSettings (theme, UI scale, the active profile's dev mode, EPG auto-refresh, cellular buffer multipliers).
+**Exported:** all source configs (name, URL, username, type, config JSON, per-source settings), all guide source URLs, per-source favorites (item ID, name, category, content type), and global AppSettings (theme, UI scale, the active profile's dev mode, EPG auto-refresh, cellular buffer multipliers).
 
 **Not exported:** passwords (EncryptedSharedPreferences), cache, EPG programme data.
 
@@ -139,11 +139,11 @@ A custom, manual dependency injection container (`AppContainer`) provides single
 ### Asynchronous UI State
 All ViewModels (e.g., `CategoryViewModel`, `SearchViewModel`, `EpgViewModel`) initialize their repository dependencies asynchronously. This completely eliminates UI thread blocking (`runBlocking`) during the crucial composition phase, ensuring the app remains perfectly smooth and responsive on constrained TV hardware (like older Fire TV sticks or Sony Bravia TVs) during startup or intensive search operations.
 
-**Selective import:** On import, a "Select What to Import" dialog presents checkboxes for each section — General Settings, Providers, Guide sources, Favorites. Only checked sections are imported.
+**Selective import:** On import, a "Select What to Import" dialog presents checkboxes for each section — General Settings, Sources, Guide sources, Favorites. Only checked sections are imported.
 
-**Import conflict resolution:** when an imported provider name matches an existing one, a dialog offers:
-- **Overwrite** — update URL, username, type, config, and per-provider settings in place
-- **Duplicate** — add as a new provider with `(imported)` suffix
+**Import conflict resolution:** when an imported source name matches an existing one, a dialog offers:
+- **Overwrite** — update URL, username, type, config, and per-source settings in place
+- **Duplicate** — add as a new source with `(imported)` suffix
 - **Skip** — leave the existing entry unchanged
 
 Guide sources are merged by URL; duplicates are skipped silently. Favorites are merged with existing ones; duplicates (by item ID) are skipped.
@@ -279,12 +279,12 @@ Favorites and Last Watched/Continue Watching persist durably in SQLite via Room 
 ## Profiles
 
 "Who's watching?" picker at launch (and from the header avatar). Each profile has its own
-favourites, watch history, search history, category filters per provider, dev-mode switch,
+favourites, watch history, search history, category filters per source, dev-mode switch,
 "Play next episode automatically" switch and Jellyfin login;
-providers, guide sources and other settings are shared. Which profile is in use is per device.
-Each profile also remembers the provider it last picked (or added), on every device: switching to
-a profile moves the device to that provider. A profile that hasn't picked one yet, or whose
-provider was deleted, stays on the device's current provider. Another device's pick never moves a
+sources, guide sources and other settings are shared. Which profile is in use is per device.
+Each profile also remembers the source it last picked (or added), on every device: switching to
+a profile moves the device to that source. A profile that hasn't picked one yet, or whose
+source was deleted, stays on the device's current source. Another device's pick never moves a
 device that is already on that profile — it applies at the next switch
 (`docs/plans/20261002_profile-last-provider-plan.md`).
 Switching takes a fraction of a second: only category rows carry the filter flag, and streams and
@@ -294,7 +294,7 @@ series follow their category at query time (see `docs/plans/20261001_fast-profil
 
 ## Live Sync
 
-Settings → Live sync. Keeps profiles, providers, guide sources, favourites, watch progress, category
+Settings → Live sync. Keeps profiles, sources, guide sources, favourites, watch progress, category
 filters and selected settings the same on every device of a group, through a sync server the user
 runs (Cloudflare Worker or self-hosted Docker image, `server/`). Everything is encrypted on the
 device; the server sees only keys and ciphertext. Off on a device until it is set up there.
@@ -318,7 +318,7 @@ device; the server sees only keys and ciphertext. Off on a device until it is se
   the player for Home and shows "Playback stopped from <device>". No Stop button in the TV app.
   Design: `docs/plans/20261001_live-sync-now-playing-plan.md`.
 - Resilient by design: a record a device can't apply waits and is retried (never blocks the rest); a record the server can't accept is rejected on its own; records whose sealed timestamp or deletion flag were altered are dropped; reconnects back off; an unreadable sync link on a device resets it to unlinked rather than crashing.
-- Not synced: which profile and provider a device is using (each profile's last picked provider
+- Not synced: which profile and source a device is using (each profile's last picked source
   is synced, and applied when a device switches to that profile), UI scale, cellular settings, and
   Jellyfin favourites and history (Jellyfin keeps those itself).
 
@@ -355,21 +355,21 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 
 | Setting | Description |
 |---------|-------------|
-| Active Provider | Shows current provider name, URL, and subscription info (Xtream: expiry, max connections, trial status) |
+| Active Source | Shows current source name, URL, and subscription info (Xtream: expiry, max connections, trial status) |
 | Last Sync | Timestamp plus what the sync actually changed — "No changes since last sync", or "N added • N updated • N removed". Xtream only, and hidden when the last sync errored (the counts belong to the last *successful* run and would read as a partial success) |
-| Manage Providers | CRUD for all providers; set active |
+| Manage Sources | CRUD for all sources; set active |
 | Theme | Select from 4 dark themes |
 | Manage EPG Data | Add/edit/delete XMLTV sources, trigger refresh |
-| Export Settings | Save providers + guide sources + global config to JSON |
+| Export Settings | Save sources + guide sources + global config to JSON |
 | Import Settings | Load JSON; conflict dialog for name clashes |
 | Cache Management | View size breakdown; clear per content type or all |
-| Shrink Database | Purges orphaned catalog rows from deleted providers and compacts `xtream_v2.db` with WAL truncation |
+| Shrink Database | Purges orphaned catalog rows from deleted sources and compacts `xtream_v2.db` with WAL truncation |
 | UI Scale | 70–100%; scales category grid and item cards |
 | Play next episode automatically | (Playback) Per profile and synced, off by default: near the end of an episode the next one is offered and starts when it ends (Xtream TV shows) |
 | Developer Mode | Enables debug overlays and advanced settings |
 | Cellular Buffer Settings | (dev mode) Tune cellular buffer multipliers |
 
-### Per-Provider Settings (in Edit Provider)
+### Per-Source Settings (in Edit Source)
 
 | Setting | Default | Range |
 |---------|---------|-------|

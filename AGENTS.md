@@ -205,6 +205,8 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 | **Local** | M3U only | Yes | No | No | Filename | No |
 | **Remote M3U** | Yes | No | No | No | Yes | No |
 
+**Wording:** in the UI these are **sources** ("Add Source", "Manage Sources"; French *source*, feminine; Malagasy *loharano*), and EPG/XMLTV feeds are **guide sources** (*source de guide*, *loharanon'ny fitarihana*). Code keeps "provider" (`ProviderEntity`, the `providers` table, `providerId`, string keys such as `provider_add_title`), so new strings use the new words with the old key style. "Provider" stays only where it means the company that sells the IPTV service (`login_footer_text`). See `docs/plans/20261002_provider-to-source-rename-plan.md`.
+
 ---
 
 ## Development Workflow
@@ -341,6 +343,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20261002_profile-last-provider-plan.md](docs/plans/20261002_profile-last-provider-plan.md) | **Complete** - each profile returns to the provider it last picked (synced), verified on emulators (2026-10-02) |
 | [docs/plans/20261002_epg-search-during-refresh-plan.md](docs/plans/20261002_epg-search-during-refresh-plan.md) | **Complete** - all three phases landed (2026-10-02); emulator verification outstanding |
 | [docs/plans/20261002_catalog-sync-cache-churn-plan.md](docs/plans/20261002_catalog-sync-cache-churn-plan.md) | **Complete** - all four phases landed (2026-10-02); Phase 1 verified on bears, Phase 4 on jellyxtream |
+| [docs/plans/20261002_provider-to-source-rename-plan.md](docs/plans/20261002_provider-to-source-rename-plan.md) | **Complete** - both phases landed (2026-10-02); French and Malagasy reviewed as text only |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 
