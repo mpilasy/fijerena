@@ -338,6 +338,12 @@ The records reveal provider hosts, usernames, passwords and full viewing history
 - **End-to-end encryption.** Account key (256-bit) generated on the first device. Payloads
   encrypted with AES-GCM on device. Record keys sent as `HMAC(accountKey, key)` so the server can
   upsert by key without learning item ids. Server sees opaque keys, ciphertext, `seq`.
+- **Clock and deletion flag sealed too** (added 2026-10-01). `updatedAt` and `deleted` travel in
+  the clear for the server's last-write-wins and cascades, and also inside the sealed envelope;
+  `SyncCodec.decode` drops a record whose two copies differ, so a server can't turn a record into
+  a deletion or rewrite which write wins. Envelopes from before the change carry no copies and are
+  accepted as they are; older apps ignore the extra fields. See
+  `20261001_rock-solid-stability-resilience-plan.md` → F-07.
 - **Pairing.** New device scans a QR code shown by an already-paired device (TV shows, phone
   scans — or the other way round). QR carries the **server URL**, the account key and a one-time
   pairing token, so a new device never has the URL typed in by hand. Account

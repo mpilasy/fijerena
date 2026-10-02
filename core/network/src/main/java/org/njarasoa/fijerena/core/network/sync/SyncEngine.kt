@@ -90,7 +90,7 @@ class SyncEngine(
             }
             // Records waiting for a provider or profile get another go with each page.
             val batch = waiting + page.records
-            val result = applier.apply(batch.mapNotNull { decode(it, crypto) })
+            val result = applier.apply(batch.mapNotNull { SyncCodec.decode(it, crypto) })
             applied += result.applied
             activeProfileDeleted = activeProfileDeleted || result.activeProfileDeleted
             if (result.userDataChangedProviderIds.isNotEmpty()) listener?.onUserDataChanged(result.userDataChangedProviderIds)
@@ -119,7 +119,7 @@ class SyncEngine(
         while (true) {
             val outgoing = local.pending(PUSH_BATCH)
             if (outgoing.isEmpty()) break
-            val encoded = outgoing.map { it to encode(it.record, crypto) }
+            val encoded = outgoing.map { it to SyncCodec.encode(it.record, crypto) }
             // The server refuses payloads over its limit. Sending one anyway used to fail the whole
             // batch, and since the oldest pending records always go first, nothing from this
             // device was ever pushed again. It can't succeed later either: drop it, loudly. See
@@ -142,47 +142,6 @@ class SyncEngine(
             if (outgoing.size < PUSH_BATCH) break
         }
         return pushed
-    }
-
-    private fun encode(
-        record: SyncRecord,
-        crypto: SyncCrypto,
-    ): SyncWire.Record {
-        val key = record.key
-        val keyId = crypto.keyId(key)
-        val cascade =
-            when {
-                !record.deleted -> null
-                key.kind == SyncKind.PROVIDER -> "provider"
-                key.kind == SyncKind.PROFILE -> "profile"
-                else -> null
-            }
-        return SyncWire.Record(
-            key = keyId,
-            providerTag = key.providerKey.takeIf { it.isNotEmpty() }?.let(crypto::tag),
-            profileTag =
-                when {
-                    key.kind == SyncKind.PROFILE -> crypto.tag(key.itemId)
-                    key.profileKey != SyncKind.SHARED -> crypto.tag(key.profileKey)
-                    else -> null
-                },
-            updatedAt = record.hlc,
-            deleted = record.deleted,
-            payload = crypto.seal(json.encodeToString(SyncWire.Envelope.of(record)), aad = keyId),
-            cascade = cascade,
-        )
-    }
-
-    /** Null for a record this device can't open (another account key) or read (a newer app's shape). */
-    private fun decode(
-        wire: SyncWire.Record,
-        crypto: SyncCrypto,
-    ): SyncRecord? {
-        val opened = crypto.open(wire.payload, aad = wire.key) ?: return null
-        val envelope = runCatching { json.decodeFromString<SyncWire.Envelope>(opened) }.getOrNull() ?: return null
-        // The key must be the one the envelope names, or a server could swap payloads between records.
-        if (crypto.keyId(envelope.key()) != wire.key) return null
-        return SyncRecord(envelope.key(), wire.updatedAt, wire.deleted, envelope.payload)
     }
 
     private companion object {

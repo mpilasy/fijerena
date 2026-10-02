@@ -1,6 +1,6 @@
 # Rock-Solid Stability & Resilience Plan
 
-**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 in progress: F-08, F-09, F-23, F-22, F-12, F-26 done. Phases 3-6 not started.
+**Status:** 🚧 **IN PROGRESS** — Phases 0 and 1 done 2026-10-01 (F-24, F-30, F-31; F-20, F-21, F-03, F-17, F-01). Phase 2 in progress: F-08, F-09, F-23, F-22, F-12, F-26, F-07 done. Phases 3-6 not started.
 **Date:** 2026-10-01
 **Scope:** `core:player`, `core:network`, `core:ui`, `core:navigation`, `tv`, `mobile`, `server`, CI
 **Goal:** No crash loops, no silent data loss, no playback dead-ends, no silently stalled sync — and the tooling (crash capture, CI gates, tests) to *prove* it stays that way.
@@ -87,6 +87,7 @@ The draft's roadmap also used a different F-numbering from its own catalog (e.g.
 - **Where:** `core/network/.../sync/SyncEngine.kt:150` (`seal(..., aad = keyId)`), `:160` (`open(..., aad = wire.key)`), `:165` (trusts `wire.updatedAt`, `wire.deleted`).
 - **Mechanism:** AAD binds only the key id. A compromised or buggy server can flip `deleted=false→true` on any record (remote wipe of a favourite/provider/profile), or rewrite `updatedAt` to win/lose LWW at will.
 - **Fix:** AAD v2 = `"v2|$keyId|$updatedAt|$deleted"`. Seal with v2. Open with v2, fall back to v1 (`keyId` only) for records already on the server; re-push v1 records on next local change. The server is unchanged (it never decrypts) — the draft's `server/src/account.ts` edit is not needed. Document in `server/README.md` + live-sync plan → Security.
+- **Done 2026-10-01, differently:** not an AAD change — that would make every not-yet-updated device silently drop the new records it can't open. `updatedAt`/`deleted` are instead sealed inside the envelope too, and `SyncCodec.decode` (encode/decode moved out of `SyncEngine` to be testable) drops a record whose sealed and clear copies differ. Older apps ignore the extra envelope fields; envelopes from before the change are accepted as they are (the remaining gap: an old record replayed with altered metadata). `SyncCodecTest` covers round trip, flipped deletion, rewritten clock, legacy envelope. End to end on the TV emulator: a legacy record applied, a record with a mismatched sealed clock dropped and the cursor moved past it.
 
 #### F-08: One unreadable record stalls pulling forever, silently [P0, CONFIRMED]
 - **Where:** `sync/SyncApplier.kt:78-99` (no per-record guard); throwing sites `:185-186, 188, 238, 290, 371-372, 448-457` (`SyncPayloads.decode`, `requireNotNull`, `!!` after a presence check); `core/ui/.../sync/SyncManager.kt:197-202`.

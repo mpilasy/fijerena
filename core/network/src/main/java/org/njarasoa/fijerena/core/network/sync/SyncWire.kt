@@ -138,6 +138,9 @@ object SyncWire {
         val itemId: String = "",
         val contentType: String = "",
         val payload: String? = null,
+        /** Sealed copies of the wire record's `updatedAt`/`deleted` (see SyncCodec.decode); null in records from before them. */
+        val updatedAt: Long? = null,
+        val deleted: Boolean? = null,
     ) {
         fun key() = SyncKey(profileKey, providerKey, kind, itemId, contentType)
 
@@ -150,6 +153,8 @@ object SyncWire {
                     record.key.itemId,
                     record.key.contentType,
                     record.payload,
+                    record.hlc,
+                    record.deleted,
                 )
         }
     }
