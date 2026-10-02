@@ -88,7 +88,7 @@ incrementally and installs it as an update (`install -r`):
 |--------|--------|-------|
 | `scripts/deploy-tv-emulator.sh [serial]` | TV emulator | Picks the emulator with the leanback feature; checks for active playback |
 | `scripts/deploy-mobile-emulator.sh [serial]` | Phone emulator | Picks the emulator *without* leanback, so a TV emulator is never overwritten |
-| `scripts/deploy-tv-ip.sh <ip>[:port] …` | Network TVs | Asks before interrupting playback; backs up `shared_prefs` + `providers.db*` per device first |
+| `scripts/deploy-tv-ip.sh <ip>[:port] …` | Network TVs | Asks before interrupting playback; backs up `shared_prefs` + `providers.db*` per device first into `backups/`, keeping 7 days |
 | `scripts/deploy-mobile-usb.sh` | USB phone | No backup — make one by hand (below) |
 
 The raw `adb install` commands further down are what the scripts do, for reference.

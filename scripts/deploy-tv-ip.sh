@@ -68,6 +68,8 @@ done
 
 ./gradlew :tv:assembleDebug
 mkdir -p "$BACKUP_DIR"
+# Keep a week of backups: anything older than 7 days goes before this run adds its own.
+find "$BACKUP_DIR" -maxdepth 1 -name '*.tar' -mtime +7 -print -delete
 
 # Installs run in parallel — safe now that the build (the part that was actually racing before,
 # via a shared output directory) has already finished: each install only reads the finished APK
