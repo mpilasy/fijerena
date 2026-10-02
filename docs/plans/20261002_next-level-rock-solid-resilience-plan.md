@@ -132,7 +132,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 ### C. Provider & sync state (architect)
 
 #### R-06: Provider instances, settings and the active provider go stale after sync and edits [P1, CONFIRMED] (absorbs draft F-05; root cause of prior F-10's "not clean")
-- **Complexity:** High · **Risk:** High — reshapes provider ownership (AppContainer, factory, 58 ProviderRepository sites, sync listener); touches every screen that holds a repository and Jellyfin sessions. Split into steps: shared settings cache, eviction hook, active-provider promotion, then the singleton sweep.
+- **Complexity:** Medium (steps 1-3) · **Risk:** Medium — split into four steps, each its own commit verified on two linked emulators before the next; steps 1-3 fix every symptom without changing who owns what, and step 4 (the 58-site singleton sweep, the part that was High/High) is optional cleanup, deferred.
 - **Where:**
   - `AppContainer.mediaRepositories` (`core/ui/.../di/AppContainer.kt:36-104`) caches a `MediaRepository` bound to a provider instance.
   - `MediaProviderFactory.clearCache` (`MediaProviderFactory.kt:98-109`) evicts and **disconnects** the factory's copy, but leaves the repository's reference alone.
@@ -140,7 +140,11 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
   - `ProviderRepository.settingsCache` is per instance (`:88`), and the code constructs 58 separate `ProviderRepository(...)` instances. `SyncApplier` and `SettingsViewModel` each clear only their own cache, so `AppContainer.providerRepository` keeps serving the old settings.
   - A remote delete of the active provider (`SyncApplier.applyProvider` → `deleteProvider(fromRemote = true)`) leaves no active provider. Only the UI path in `ProviderViewModel.deleteProvider` (`:237-251`) promotes another one. `setActiveProvider` (`:402-407`) runs `deactivateAll` and `activateProvider` outside a transaction.
 - **Impact:** a password, URL, Jellyfin login or category filter changed on another device does not take effect here until the app restarts. The repository reconnects its old, disconnected instance with the old credentials, and on Jellyfin two sessions with different logins can now coexist. Deleting the active provider on another device leaves this device showing "No provider set" on Home and in browse.
-- **Fix:** give the provider lifecycle one owner. Move the settings cache to a process-wide object (or drop it and read through Room with an invalidation), and make `ProviderRepository` a singleton via `AppContainer` (finally doing the declined F-36 sweep, now for correctness rather than hygiene). Add `AppContainer.onProviderChanged(id)`, which evicts the repository and the factory entry together, and call it from the `SyncEngine.Listener` (a new `onProvidersChanged(ids)` callback) and from every `clearCache` site. Move "promote the next provider if the active one was deleted" into `ProviderRepository.deleteProvider`, inside a transaction with `setActiveProvider`.
+- **Fix:** four steps, one commit each, each verified on two emulators linked through the local sync server before the next starts:
+  1. **One settings cache.** Move `ProviderRepository.settingsCache` to a process-wide object shared by every instance, so a write through any instance (sync, Settings, import) clears it for all. Fixes stale category filters and provider settings. Complexity Low · Risk Low.
+  2. **A "provider changed" hook.** `AppContainer.onProviderChanged(id)` evicts the cached `MediaRepository` and the factory's provider together; `SyncEngine.Listener` gains `onProvidersChanged(ids)`, called after a pass that applied provider, login or category-filter records, and every `MediaProviderFactory.clearCache` call site in the app calls the container hook instead. A screen that still holds the old repository gets a fresh one on its next `getMediaRepository()`; playback in progress keeps its stream URL and is not interrupted. Fixes stale credentials, URLs and Jellyfin logins after a change on another device. Complexity Medium · Risk Medium (Jellyfin session teardown order; must not cut a playing stream).
+  3. **Active-provider promotion on delete.** Move "if the active provider was deleted, activate the first remaining one" from `ProviderViewModel.deleteProvider` into `ProviderRepository.deleteProvider`, and make `setActiveProvider` (`deactivateAll` + `activateProvider`) one transaction. The remote-delete path then lands on another provider and fires the step 2 hook. Fixes "No provider set" after another device deletes the active one. Complexity Low · Risk Low-Medium (navigation must follow the new active provider, as a profile switch already does).
+  4. **Optional: `ProviderRepository` as a singleton** via `AppContainer`, replacing the 58 `ProviderRepository(...)` constructions (the prior F-36 sweep). After steps 1-3 it is no longer needed for correctness; deferred unless a step shows per-instance state still matters. Complexity High · Risk Medium (wide mechanical change).
 
 #### 🆕 R-08: Catalogue sync failures are reported as success [P1, CONFIRMED]
 - **Complexity:** Medium · **Risk:** Medium — changes what counts as a failed sync; wrong classification could flag a healthy provider as broken or cause worker retry storms.
@@ -312,12 +316,14 @@ Order: first stop data loss and launch crashes, then make failures visible and r
 - **Acceptance:** a malformed `epg_refresh_time` record from a debug sync server → EPG management opens. A connection killed during `get_vod_streams` → Settings shows the error, and the worker retries.
 
 ### Phase 3: Playback & provider state (P1)
-**Complexity:** High · **Risk:** High — R-06 is the largest change in the plan; land it in steps, each verified on two linked emulators.
-1. **R-04** position events no longer tied to one service instance.
-2. **R-06** a single provider-lifecycle owner, process-wide settings cache, active-provider promotion on delete.
-3. **R-13** atomic channel snapshot.
-4. **R-12** exception-safe teardown.
-- **Acceptance:** TV emulator: play VOD → HOME → return → 30 s → `watch_state` updated. Two emulators linked: change a provider's password on A → B plays with the new one without a restart. Delete the active provider on A → B lands on another provider.
+**Complexity:** Medium · **Risk:** Medium — lowered from High/High (2026-10-02) by splitting R-06 into steps and deferring its singleton sweep; R-04 is the other medium-risk item. Several commits instead of one: R-06's steps each land and get verified on their own, the rest go in one commit.
+1. **R-13** atomic channel snapshot, and **R-12** exception-safe teardown (low risk, first).
+2. **R-04** position events no longer tied to one service instance.
+3. **R-06 step 1** one settings cache. Verify: change a category filter on A → B's lists follow without a restart.
+4. **R-06 step 2** "provider changed" hook. Verify: change a provider's password (and a Jellyfin login) on A → B plays with the new one without a restart; a stream playing on B is not cut.
+5. **R-06 step 3** active-provider promotion on delete. Verify: delete the active provider on A → B lands on another provider's Home.
+6. **R-06 step 4** deferred (optional cleanup; see R-06).
+- **Acceptance:** TV emulator: play VOD → HOME → return → 30 s → `watch_state` updated; plus each R-06 step's check above, on two emulators linked through the local sync server.
 
 ### Phase 4: TV focus & error UX
 **Complexity:** Medium · **Risk:** Medium — focus changes on every TV screen; gated by the full D-pad smoke pass.
