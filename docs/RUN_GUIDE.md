@@ -8,8 +8,8 @@ Unified guide for building, installing, and deploying Fijerena across both **And
 
 - **JDK:** OpenJDK 21
 - **Android SDK:** Command-line tools or Android Studio
-- **API Targets:** `minSdk = 30` (Android 11+), `targetSdk = 36`
-- **Gradle:** 9.4.1+ (via `./gradlew` wrapper)
+- **API Targets:** `minSdk = 30` (Android 11+), `targetSdk = 35`, `compileSdk = 36`
+- **Gradle:** 9.6.0 via the `./gradlew` wrapper (AGP 9.4.1); sources compile to Java 21
 
 Verify environment:
 ```bash
@@ -81,9 +81,21 @@ Run style checks and tests before committing code:
 
 Both TV and Mobile share the identical `applicationId`: `org.njarasoa.fijerena`.
 
+Prefer the deploy scripts over hand-run `gradlew` + `adb install`; each builds the right APK
+incrementally and installs it as an update (`install -r`):
+
+| Script | Target | Notes |
+|--------|--------|-------|
+| `scripts/deploy-tv-emulator.sh [serial]` | TV emulator | Picks the emulator with the leanback feature; checks for active playback |
+| `scripts/deploy-mobile-emulator.sh [serial]` | Phone emulator | Picks the emulator *without* leanback, so a TV emulator is never overwritten |
+| `scripts/deploy-tv-ip.sh <ip>[:port] …` | Network TVs | Asks before interrupting playback; backs up `shared_prefs` + `providers.db*` per device first |
+| `scripts/deploy-mobile-usb.sh` | USB phone | No backup — make one by hand (below) |
+
+The raw `adb install` commands further down are what the scripts do, for reference.
+
 > [!CAUTION]
 > **Strict Deployment Rules:**
-> 1. **Back Up Before Installing to Real Hardware — `install -r` is NOT a guaranteed data-safe operation.** Never run `adb uninstall` or clear data to resolve deployment issues. `adb install -r` *usually* preserves Room databases, credentials, favorites, and watch state — but a signing-key mismatch (or other cause) can make it install fresh with no warning, silently wiping everything. This happened for real on 2026-09-08 across 3 household TVs with zero warning from `adb` (it reported "Success" on every device). Before installing to any real device — not an emulator — back up `shared_prefs/*` and `providers.db*` first: `adb -s <serial> exec-out "run-as org.njarasoa.fijerena tar -c -C /data/data/org.njarasoa.fijerena shared_prefs databases/providers.db databases/providers.db-wal databases/providers.db-shm" > backup.tar`. Do this every time, unprompted — user permission to deploy is not permission to skip the backup.
+> 1. **Back Up Before Installing to Real Hardware — `install -r` is NOT a guaranteed data-safe operation.** Never run `adb uninstall` or clear data to resolve deployment issues. `adb install -r` *usually* preserves Room databases, credentials, favorites, and watch state — but a signing-key mismatch (or other cause) can make it install fresh with no warning, silently wiping everything. This happened for real on 2026-09-08 across 3 household TVs with zero warning from `adb` (it reported "Success" on every device). Before installing to any real device — not an emulator — back up `shared_prefs/*`, `providers.db*` and `xtream_v2.db*` (watch state and favourites live there) first: `adb -s <serial> exec-out "run-as org.njarasoa.fijerena tar -c -C /data/data/org.njarasoa.fijerena shared_prefs databases/providers.db databases/providers.db-wal databases/providers.db-shm databases/xtream_v2.db databases/xtream_v2.db-wal databases/xtream_v2.db-shm" > backup.tar`. `scripts/deploy-tv-ip.sh` backs up only `shared_prefs` and `providers.db*`; `scripts/deploy-mobile-usb.sh` backs up nothing. Do this every time, unprompted — user permission to deploy is not permission to skip the backup.
 > 2. **Device Detection:** Always detect device type via `getprop ro.build.characteristics` (or inspect `product:`/`model:` in `adb devices -l`) before deploying. Never assume target identity from port numbers or IPs.
 > 3. **No Auto-Launch:** Never automatically launch the app (`am start` or monkey intents) after install. Let the user launch the app manually when ready.
 

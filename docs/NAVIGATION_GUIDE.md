@@ -21,7 +21,8 @@ sealed interface Screen {
     @Serializable data object ProviderSelection : Screen
     @Serializable data class AddProvider(val editId: Long = -1L) : Screen
     @Serializable data object Login : Screen  // Legacy, not in nav graph
-    @Serializable data object ContentTypeSelection : Screen
+    @Serializable data object ProfilePicker : Screen  // "Who's watching?"
+    @Serializable data object ContentTypeSelection : Screen  // Home
     @Serializable data object EditProvider : Screen  // Legacy
     @Serializable data object Settings : Screen
     @Serializable data class CategoryList(
@@ -38,6 +39,7 @@ sealed interface Screen {
     @Serializable data object EpgBrowser : Screen
     @Serializable data class EpgManagement(val providerId: Long) : Screen
     @Serializable data object CellularBufferSettings : Screen  // Dev mode only
+    @Serializable data object SyncSettings : Screen  // Settings → Live sync
     @Serializable data object Diagnostics : Screen  // Dev mode only: recorded crashes, process exits
     @Serializable data class Player(
         val streamId: String, val streamName: String, val categoryId: String, val contentType: String,
@@ -72,9 +74,10 @@ navController.navigate(Screen.AddProvider(editId = 5L))  // Edit provider with I
 ```
 App Startup
 ├─ No provider configured → Settings
-└─ Provider configured → last content type → CategoryList (or ContentTypeSelection)
+├─ Provider configured, TV with more than one profile → ProfilePicker → ContentTypeSelection
+└─ Provider configured otherwise (mobile always) → ContentTypeSelection
 
-ContentTypeSelection
+ContentTypeSelection (Home; ProfilePicker also opens from the header avatar)
 ├─→ EpgBrowser (calendar/date range icon, visible when EPG indexed)
 ├─→ Search("ALL") [Global Search]
 │     ├─→ Player (if result is LIVE_TV)
@@ -95,13 +98,14 @@ ContentTypeSelection
       │     ├─→ AddProvider (new)
       │     └─→ AddProvider(editId) (edit)
       ├─→ EpgManagement(providerId)
+      ├─→ SyncSettings (Live sync)
       ├─→ CellularBufferSettings (dev mode only, mobile)
       └─→ Diagnostics (dev mode only)
 ```
 
 ### Global Search Routing
 
-Global search (`Screen.Search("ALL")`) is accessible from the Content Type Selection screen. Because results can come from different repositories, navigation from a search result is dynamically routed based on the result's `contentType`:
+Global search (`Screen.Search("ALL")`) is accessible from the home screen (`ContentTypeSelection`). Because results can come from different repositories, navigation from a search result is dynamically routed based on the result's `contentType`:
 
 - **Live TV**: Routes directly to `Screen.Player`.
 - **Movies**: Routes to `Screen.MovieDetails`.
@@ -111,7 +115,7 @@ The `SearchViewModel` manages categories and individual stream results across al
 
 ### Navigation Rules
 
-1. **Startup → ContentTypeSelection**: Always lands on Content Type Selection if a provider is configured.
+1. **Startup → ContentTypeSelection**: Lands on the home screen (`ContentTypeSelection`) if a provider is configured, on TV through `ProfilePicker` first when there is more than one profile (mobile goes straight home).
 2. **Startup → Settings**: If no provider configured.
 3. **ContentTypeSelection → CategoryList**: Standard push.
 4. **CategoryList → Player**: Standard push (content-type aware routing).
@@ -168,7 +172,7 @@ Located in `:mobile/navigation/MobileNavHost.kt`
 
 ### Startup Logic
 
-On startup, the app checks for a configured provider via `ProviderRepository`. If a provider exists, it navigates to the Content Type Selection screen. If not, it navigates to Settings.
+On startup, the app checks for a configured provider via `ProviderRepository`. If a provider exists, it navigates to the home screen (`ContentTypeSelection`), on TV through `ProfilePicker` when there is more than one profile; mobile goes straight home. If not, it navigates to Settings.
 
 ### Transitions
 - **Enter**: Slide left + fade in

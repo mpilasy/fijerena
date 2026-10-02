@@ -276,7 +276,7 @@ Favorites and Last Watched/Continue Watching persist durably in SQLite via Room 
 
 ## Profiles
 
-"Who's watching?" picker at launch (and from the header avatar). Each profile has its own
+"Who's watching?" picker at launch on TV when there is more than one profile, and from the header avatar on TV and mobile. Each profile has its own
 favourites, watch history, search history, category filters per source, dev-mode switch,
 "Play next episode automatically" switch and Jellyfin login;
 sources, guide sources and other settings are shared. Which profile is in use is per device.
