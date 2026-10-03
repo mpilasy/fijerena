@@ -1,5 +1,17 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: UX overhaul, day 4
+**Release Date:** 2026-10-03
+
+- **TV Guide is a real time grid:** programmes sit under their real times on one shared time axis, with a line at the current time and past programmes dimmed; it opens on what is on air now; Up/Down keep the time as you move between channels, Left/Right step programme by programme, and Up from the top row reaches labelled date, search and refresh buttons. → Part III GD2.
+- **TV: Live TV follows the list you picked from:** pick a channel from a category and the preview shows that category (tabs for it, Recent and Favourites), Up/Down in full screen zap through the same list, and the side list in full screen is the same list. → Part II LT2.
+- **TV Sources:** each source is a row you can select to edit, with labelled Use, Guide and ⋮ buttons lined up in columns; focus starts on the source in use; the actions menu starts on Edit with Delete last. → Part I T4.
+- **Mobile Edit Source:** login details with Save and Cancel right under them; settings that apply at once, content filters, library data and a red-outlined Danger zone below; leaving with unsaved login changes asks before discarding them. → Part I M4.
+
+Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
+
+---
+
 ## Version: UX overhaul, day 3
 **Release Date:** 2026-10-03
 
