@@ -982,7 +982,7 @@ private fun CategoryResultItem(
                 .tvLongPress(onLongPress),
         colors =
             CardDefaults.colors(
-                containerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
+                containerColor = CinemaSurface,
                 contentColor = CinemaTextPrimary,
                 focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
                 focusedContentColor = CinemaTextPrimary,
