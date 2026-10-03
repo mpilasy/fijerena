@@ -25,7 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -88,13 +94,22 @@ fun TvSelectorDialog(
         initialFocusRequester.requestFocusWithRetry()
     }
 
+    // Inert fallback: Back is taken in onPreviewKeyEvent below while focus is on a row, since a
+    // focused TV Button/Surface can swallow the first press before BackHandler sees it
+    // (AGENTS.md → Back on TV).
     BackHandler { onDismiss() }
 
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy)),
+                .background(CinemaBackground.copy(alpha = CinemaAlpha.overlayHeavy))
+                .onPreviewKeyEvent { keyEvent ->
+                    val isBack = keyEvent.key == Key.Back
+                    // Close on KeyUp, so the release does not land on the button focus returns to.
+                    if (isBack && keyEvent.type == KeyEventType.KeyUp) onDismiss()
+                    isBack
+                },
         contentAlignment = Alignment.Center,
     ) {
         TvGlassPanel(
@@ -109,9 +124,14 @@ fun TvSelectorDialog(
                     Modifier
                         .padding(Spacing.xxl)
                         .verticalScroll(rememberScrollState())
-                        // Keep focus inside the dialog. `exit = Cancel` (carried over from the
-                        // four dialogs this replaced) also blocked movement *between* the options,
-                        // so the picker opened on the active track and then would not move at all.
+                        // Keep focus inside the dialog. This is an overlay in the player's own
+                        // tree, not a Dialog window, so without the cancelled exit a D-pad press
+                        // past the first/last row, or Left/Right, moved on to the player controls
+                        // behind it. focusProperties must sit right before focusGroup so the
+                        // exit belongs to the group: without the group (the four dialogs this
+                        // replaced) it froze focus on the row the picker opened on. The scroll
+                        // brings each focused row into view, so long track lists follow focus.
+                        .focusProperties { onExit = { cancelFocusChange() } }
                         .focusGroup(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {

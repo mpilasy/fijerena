@@ -109,6 +109,7 @@ fun TvPlayerControlsOverlay(
     onShowQualitySelector: () -> Unit,
     onShowChapterSelector: () -> Unit,
     onShowStats: () -> Unit,
+    pickerOpen: Boolean = false,
     scrubPositionMs: Long? = null,
     onScrubStep: (nativeEvent: android.view.KeyEvent, forward: Boolean) -> Unit = { _, _ -> },
     onCommitScrub: () -> Unit = {},
@@ -190,6 +191,21 @@ fun TvPlayerControlsOverlay(
     val favoriteFocusRequester = remember { FocusRequester() }
     val statsFocusRequester = remember { FocusRequester() }
     val safeIconFocusRequester = if (onToggleFavorite != null) favoriteFocusRequester else statsFocusRequester
+
+    // When a track picker closes (Back or a choice), focus goes back to the button that opened it,
+    // instead of being left on nothing once the picker's rows leave composition.
+    val chapterFocusRequester = remember { FocusRequester() }
+    val audioFocusRequester = remember { FocusRequester() }
+    val subtitleFocusRequester = remember { FocusRequester() }
+    val qualityFocusRequester = remember { FocusRequester() }
+    var pickerOpener by remember { mutableStateOf<FocusRequester?>(null) }
+    LaunchedEffect(pickerOpen) {
+        val opener = pickerOpener
+        if (!pickerOpen && opener != null) {
+            pickerOpener = null
+            opener.requestFocusWithRetry(fallback = safeIconFocusRequester)
+        }
+    }
 
     // One-shot per OSD session: once focus has landed on the play/pause button, later
     // Playing<->Paused/Buffering flicker must not keep yanking focus away from wherever the
@@ -635,7 +651,11 @@ fun TvPlayerControlsOverlay(
                         val chapters = remember(metadata) { viewModel.getChapters() }
                         if (chapters.isNotEmpty()) {
                             CinemaButton(
-                                onClick = onShowChapterSelector,
+                                onClick = {
+                                    pickerOpener = chapterFocusRequester
+                                    onShowChapterSelector()
+                                },
+                                modifier = Modifier.focusRequester(chapterFocusRequester),
                                 colors =
                                     ButtonDefaults.colors(
                                         containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
@@ -651,7 +671,11 @@ fun TvPlayerControlsOverlay(
                         // Audio track selector
                         if (audioTrackCount > 1) {
                             CinemaButton(
-                                onClick = onShowAudioTrackSelector,
+                                onClick = {
+                                    pickerOpener = audioFocusRequester
+                                    onShowAudioTrackSelector()
+                                },
+                                modifier = Modifier.focusRequester(audioFocusRequester),
                                 colors =
                                     ButtonDefaults.colors(
                                         containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
@@ -667,7 +691,11 @@ fun TvPlayerControlsOverlay(
                         // Subtitle selector
                         if (subtitleTrackCount > 0) {
                             CinemaButton(
-                                onClick = onShowSubtitleSelector,
+                                onClick = {
+                                    pickerOpener = subtitleFocusRequester
+                                    onShowSubtitleSelector()
+                                },
+                                modifier = Modifier.focusRequester(subtitleFocusRequester),
                                 colors =
                                     ButtonDefaults.colors(
                                         containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
@@ -683,7 +711,11 @@ fun TvPlayerControlsOverlay(
                         // Quality selector
                         if (qualityCount > 1) {
                             CinemaButton(
-                                onClick = onShowQualitySelector,
+                                onClick = {
+                                    pickerOpener = qualityFocusRequester
+                                    onShowQualitySelector()
+                                },
+                                modifier = Modifier.focusRequester(qualityFocusRequester),
                                 colors =
                                     ButtonDefaults.colors(
                                         containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),

@@ -193,7 +193,9 @@ fun PlayerScreen(
     )
 
     // Ensure focus is requested when no overlays are visible — on the "Up next" card while it is up.
-    LaunchedEffect(state.showControls, state.showCategoryOverlay, state.showLastWatchedOverlay, upNextVisible) {
+    // Keyed on isModalOpen too: a track picker keeps focus while the OSD auto-hides behind it, so
+    // focus comes back to the player when it closes.
+    LaunchedEffect(state.showControls, state.showCategoryOverlay, state.showLastWatchedOverlay, upNextVisible, state.isModalOpen) {
         if (!upNextVisible) upNextFocused = false
         val noOverlays = !state.showControls && !state.showCategoryOverlay && !state.showLastWatchedOverlay
         if (noOverlays && upNextVisible) {
@@ -483,6 +485,7 @@ fun PlayerScreen(
                 onShowQualitySelector = { state.showQualitySelector = true },
                 onShowChapterSelector = { state.showChapterSelector = true },
                 onShowStats = { state.showStats = !state.showStats },
+                pickerOpen = state.isModalOpen,
                 scrubPositionMs = state.scrubPositionMs,
                 onScrubStep = { nativeEvent, forward -> stepScrubCursor(state, currentPs, nativeEvent, forward) },
                 onCommitScrub = { commitScrub(state, viewModel) },
