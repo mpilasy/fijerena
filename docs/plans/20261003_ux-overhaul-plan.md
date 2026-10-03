@@ -11,10 +11,22 @@ in their own `docs:` commit, never amended into a lane's code commit.
 
 | Lane | Done | Current | Next |
 |---|---|---|---|
-| 1 Mobile settings | M1, M2, M3 (2026-10-03, phone), M4 (2026-10-03, phone) | — | M5 |
-| 2 TV focus + Live TV | LT1, Phases 1–3 (2026-10-03, TV), LT2 (2026-10-03, TV) | — | LT3 |
-| 3 Core + guide | A-W4, A-W6, GD0, GD0b, GD1, GD2 (2026-10-03) | — | GD3 (mobile grid) |
-| 4 TV settings | T1, T2, T3 (2026-10-03, TV), T4 (2026-10-03, TV) | — | T5 → T6 |
+| 1 Mobile settings | M1–M4 (2026-10-03, phone) | — | M5 |
+| 2 TV focus + Live TV | LT1, LT2, Phases 1–3 (2026-10-03, TV) | — | LT3 → LT4 → LT5 → LT6 → LT7 |
+| 3 Core + guide | A-W4, A-W6, GD0, GD0b, GD1, GD2 (2026-10-03) | — | GD3 → GD4; GD5 after LT4 |
+| 4 TV settings | T1–T4 (2026-10-03, TV) | — | T5 → T6 |
+
+### Open follow-ups (small items found while verifying; fold into the named phase)
+
+| From | Item | Fold into |
+|---|---|---|
+| GD2 | A focused 5-minute cell shows no text (label dropped by the min-width rule) — show the focused programme's title/time in the header or expand the label on focus. | GD4 or GD6 |
+| GD2 | Resting header-button labels in the guide are low contrast (read as disabled). | GD6 |
+| GD1 | `NoGuide` is judged on the global index state, not per source. | GD4 |
+| GD0b | Device check with a kill mid-refresh not done (unit tests only). | Part III guide round (GD6) |
+| T4 | Delete in the Sources actions menu is a filled orange `CinemaDangerButton` — loud for a last item; consider outlined. | T5 |
+| T3 / M3 | `settings_profiles_title`, `live_sync_title`, `provider_more_actions*` lacked fr/mg (T4 added the `provider_more_actions*` ones); audit fr/mg for keys used by the new screens. | M5 / T6 |
+| Phase 2 | `TvDimensions.epgTimeHeaderHeight` and a few strings are now unused (`epg_error_not_supported`, `epg_error_no_data_for_channels`, `settings_about_app_version`, `provider_update_button` on mobile). | cleanup commit after T6 |
 
 Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
 release time (`docs/RUN_GUIDE.md`).
