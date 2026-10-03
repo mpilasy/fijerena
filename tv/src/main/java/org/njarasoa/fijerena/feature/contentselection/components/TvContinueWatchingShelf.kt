@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
@@ -54,6 +56,8 @@ fun TvContinueWatchingShelf(
     items: List<ContinueWatchingItem>,
     onItemSelected: (ContinueWatchingItem) -> Unit,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
+    itemModifier: (ContinueWatchingItem) -> Modifier = { Modifier },
 ) {
     if (items.isNotEmpty()) {
         Column(modifier = modifier) {
@@ -64,6 +68,7 @@ fun TvContinueWatchingShelf(
                 modifier = Modifier.padding(bottom = Spacing.sm, start = Spacing.xxs),
             )
             LazyRow(
+                state = listState,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 contentPadding = PaddingValues(horizontal = Spacing.xxs),
             ) {
@@ -74,7 +79,7 @@ fun TvContinueWatchingShelf(
                         // Right on the last card stays put: without this the focus search leaves
                         // the row and lands on the top bar (Settings).
                         modifier =
-                            Modifier.focusProperties {
+                            itemModifier(item).focusProperties {
                                 if (index == items.lastIndex) right = FocusRequester.Cancel
                             },
                     )

@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,8 +59,18 @@ fun RelatedTitlesRow(
     items: List<MediaItem>,
     onItemClick: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
+    // The card Back should land on (the one that opened another details screen): scrolled into
+    // view here, and given [focusTargetModifier] so the caller can focus it.
+    focusTargetId: String? = null,
+    focusTargetModifier: Modifier = Modifier,
 ) {
     if (items.isEmpty()) return
+
+    val rowState = rememberLazyListState()
+    LaunchedEffect(focusTargetId) {
+        val index = items.indexOfFirst { it.id == focusTargetId }
+        if (index >= 0) rowState.scrollToItem(index)
+    }
 
     val cardStyle = relatedTitleCardStyle()
 
@@ -70,6 +82,7 @@ fun RelatedTitlesRow(
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
         LazyRow(
+            state = rowState,
             // Coming back to the row lands on the card the user left, not back at the start.
             modifier = Modifier.focusRestorer(),
             // A focused card grows past its layout bounds, and the row clips its children — without
@@ -78,7 +91,12 @@ fun RelatedTitlesRow(
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             items(items, key = { it.id }) { item ->
-                RelatedTitleCard(item = item, cardStyle = cardStyle, onClick = { onItemClick(item) })
+                RelatedTitleCard(
+                    item = item,
+                    cardStyle = cardStyle,
+                    onClick = { onItemClick(item) },
+                    modifier = if (item.id == focusTargetId) focusTargetModifier else Modifier,
+                )
             }
         }
     }
@@ -136,11 +154,12 @@ private fun RelatedTitleCard(
     item: MediaItem,
     cardStyle: RelatedCardStyle,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
     Card(
         onClick = onClick,
-        modifier = Modifier.width(TvDimensions.posterWidth),
+        modifier = modifier.width(TvDimensions.posterWidth),
         colors = cardStyle.colors,
         scale = cardStyle.cardScale,
         border = cardStyle.border,

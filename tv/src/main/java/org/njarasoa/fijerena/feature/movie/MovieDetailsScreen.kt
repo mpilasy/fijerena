@@ -102,6 +102,9 @@ import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -310,11 +313,26 @@ private fun MovieDetailsContent(
     val safeTabIndex = selectedTabIndex.coerceIn(0, tabs.lastIndex)
     val tabLabels = tabs.map { movieDetailTabLabel(it) }
 
+    // Back from what Start Over, the Category button or a related title opened lands on that
+    // control. Play/Resume needs none of this: the effect below lands there anyway. The category
+    // button and related cards live in the tab section (item 2), so it is scrolled in first.
+    val returnFocus = rememberNavReturnFocus()
+    val movieListState = rememberLazyListState()
+    NavReturnFocusEffect(returnFocus, fallback = playButtonFocusRequester) { key ->
+        if (key != RETURN_START_OVER) movieListState.scrollToItem(TAB_SECTION_ITEM_INDEX)
+    }
+    val relatedReturnId = returnFocus.key?.takeIf { it.startsWith(RETURN_RELATED_PREFIX) }?.removePrefix(RETURN_RELATED_PREFIX)
+    val playFromStart: () -> Unit = {
+        returnFocus.leaveFrom(RETURN_START_OVER)
+        onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true)
+    }
+
     // Request focus on Play/Resume button when screen loads or resume data arrives — unless the
     // user has switched to an alternate stream at some point on this screen, in which case focus
-    // stays on the stream name row so the D-pad doesn't silently land on Play.
+    // stays on the stream name row so the D-pad doesn't silently land on Play — or Back is about
+    // to hand focus to another control (above).
     LaunchedEffect(resumePositionMs) {
-        if (streamSwitchSignal == 0) {
+        if (streamSwitchSignal == 0 && returnFocus.key == null) {
             playButtonFocusRequester.requestFocusWithRetry()
         }
     }
@@ -359,7 +377,6 @@ private fun MovieDetailsContent(
         // Titles row paid its full layout cost while sitting entirely off-screen — 85ms of a 215ms
         // measure pass on every rebuild of this screen, which is why backing out of the player was
         // slow. EpisodeSelectionScreen already builds these same rows as LazyColumn items.
-        val movieListState = rememberLazyListState()
         LazyColumn(
             state = movieListState,
             // Confirmed on a real Shield (logcat): the first Back press while a focused TV Button
@@ -469,8 +486,11 @@ private fun MovieDetailsContent(
                             modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow).then(upScrollToTop),
                         )
                         CinemaIconButton(
-                            onClick = { onPlayMovie(movieId, movieDetail.name.ifEmpty { movieName }, extension, true) },
-                            modifier = downToTabRow.then(upScrollToTop),
+                            onClick = playFromStart,
+                            modifier =
+                                downToTabRow
+                                    .then(upScrollToTop)
+                                    .navReturnFocusTarget(returnFocus, RETURN_START_OVER),
                             icon = {
                                 Icon(
                                     imageVector = CinemaIcons.Replay,
@@ -625,7 +645,11 @@ private fun MovieDetailsContent(
                                     onAlternateStreamSelected(it)
                                 },
                                 onStreamFocusedChanged = { streamRowFocused = it },
-                                onCategorySelected = onCategorySelected,
+                                onCategorySelected = {
+                                    returnFocus.leaveFrom(RETURN_CATEGORY)
+                                    onCategorySelected()
+                                },
+                                categoryButtonFocusRequester = returnFocus.requesterFor(RETURN_CATEGORY),
                                 titleSmallStyle = scaledStyles.titleSmall,
                                 bodySmallStyle = scaledStyles.bodySmall,
                             )
@@ -635,7 +659,12 @@ private fun MovieDetailsContent(
                             RelatedTitlesRow(
                                 title = stringResource(R.string.details_more_like_this),
                                 items = relatedTitles.moreLikeThis,
-                                onItemClick = onRelatedTitleSelected,
+                                onItemClick = { item ->
+                                    returnFocus.leaveFrom(RETURN_RELATED_PREFIX + item.id)
+                                    onRelatedTitleSelected(item)
+                                },
+                                focusTargetId = relatedReturnId,
+                                focusTargetModifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_RELATED_PREFIX + relatedReturnId),
                             )
                         }
 
@@ -643,7 +672,12 @@ private fun MovieDetailsContent(
                             RelatedTitlesRow(
                                 title = relatedTitles.collectionName ?: stringResource(R.string.details_collection_fallback),
                                 items = relatedTitles.collection,
-                                onItemClick = onRelatedTitleSelected,
+                                onItemClick = { item ->
+                                    returnFocus.leaveFrom(RETURN_RELATED_PREFIX + item.id)
+                                    onRelatedTitleSelected(item)
+                                },
+                                focusTargetId = relatedReturnId,
+                                focusTargetModifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_RELATED_PREFIX + relatedReturnId),
                             )
                         }
 
@@ -656,6 +690,14 @@ private fun MovieDetailsContent(
         }
     }
 }
+
+// Keys for the controls that navigate away from movie details — see rememberNavReturnFocus.
+private const val RETURN_START_OVER = "startOver"
+private const val RETURN_CATEGORY = "category"
+private const val RETURN_RELATED_PREFIX = "related:"
+
+/** The selected tab's section in the details LazyColumn: after the hero (0) and the tab row (1). */
+private const val TAB_SECTION_ITEM_INDEX = 2
 
 @Composable
 private fun LoadingScreen() {
@@ -733,6 +775,7 @@ private fun DetailsTabContent(
     onCategorySelected: () -> Unit,
     titleSmallStyle: TextStyle,
     bodySmallStyle: TextStyle,
+    categoryButtonFocusRequester: FocusRequester? = null,
 ) {
     val scale = LocalUiScale.current
     val context = LocalContext.current
@@ -877,6 +920,7 @@ private fun DetailsTabContent(
             CinemaSecondaryButton(
                 onClick = onCategorySelected,
                 text = stringResource(R.string.details_category_format, categoryName),
+                modifier = categoryButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
             )
         }
     }

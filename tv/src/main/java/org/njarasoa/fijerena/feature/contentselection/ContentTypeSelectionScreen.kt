@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,8 +79,10 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -113,7 +117,10 @@ import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatch
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
+import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -300,6 +307,29 @@ fun ContentTypeSelectionScreen(
 
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
 
+    // Back from whatever a card or header button opened lands on that card or button, not on the
+    // first focusable (the "Switch Source" chip). A Continue Watching card waits for the shelf to
+    // reload and is scrolled into view first; a card that left the shelf (finished) falls back to
+    // the first hero card.
+    val returnFocus = rememberNavReturnFocus()
+    val shelfListState = rememberLazyListState()
+    val heroFallbackFocus = remember { FocusRequester() }
+    NavReturnFocusEffect(returnFocus, fallback = heroFallbackFocus) { key ->
+        if (key.startsWith(RETURN_CONTINUE_WATCHING_PREFIX)) {
+            val itemId = key.removePrefix(RETURN_CONTINUE_WATCHING_PREFIX)
+            val items =
+                withTimeoutOrNull(RETURN_SHELF_WAIT_MS) {
+                    snapshotFlow { continueWatchingItems }.first { items -> items.any { it.id == itemId } }
+                }
+            val index = items?.indexOfFirst { it.id == itemId } ?: -1
+            if (index >= 0) shelfListState.scrollToItem(index)
+        }
+    }
+    val leaveTo: (String, () -> Unit) -> Unit = { key, navigate ->
+        returnFocus.leaveFrom(key)
+        navigate()
+    }
+
     CompositionLocalProvider(LocalUiScale provides uiScale) {
         val scale = LocalUiScale.current
 
@@ -401,7 +431,8 @@ fun ContentTypeSelectionScreen(
                             }
                             if (hasEpgData) {
                                 CinemaIconButton(
-                                    onClick = onEpgBrowser,
+                                    onClick = { leaveTo(RETURN_EPG_BROWSER, onEpgBrowser) },
+                                    modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_EPG_BROWSER),
                                     icon = {
                                         Icon(
                                             imageVector = CinemaIcons.DateRange,
@@ -412,7 +443,8 @@ fun ContentTypeSelectionScreen(
                                 )
                             }
                             CinemaIconButton(
-                                onClick = onSearch,
+                                onClick = { leaveTo(RETURN_SEARCH, onSearch) },
+                                modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_SEARCH),
                                 icon = {
                                     Icon(
                                         imageVector = CinemaIcons.Search,
@@ -425,8 +457,11 @@ fun ContentTypeSelectionScreen(
                             activeProfile?.let { profile ->
                                 val switchLabel = stringResource(R.string.profile_switch_description, profile.name)
                                 CinemaIconButton(
-                                    onClick = onChooseProfile,
-                                    modifier = Modifier.semantics { contentDescription = switchLabel },
+                                    onClick = { leaveTo(RETURN_PROFILE, onChooseProfile) },
+                                    modifier =
+                                        Modifier
+                                            .semantics { contentDescription = switchLabel }
+                                            .navReturnFocusTarget(returnFocus, RETURN_PROFILE),
                                     icon = {
                                         ProfileAvatar(
                                             name = profile.name,
@@ -438,7 +473,8 @@ fun ContentTypeSelectionScreen(
                                 )
                             }
                             CinemaIconButton(
-                                onClick = onSettings,
+                                onClick = { leaveTo(RETURN_SETTINGS, onSettings) },
+                                modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_SETTINGS),
                                 icon = {
                                     Icon(
                                         imageVector = CinemaIcons.Settings,
@@ -453,8 +489,9 @@ fun ContentTypeSelectionScreen(
                     if (needsSignIn) {
                         JellyfinSignInPanel(
                             providerName = providerName,
-                            onSignIn = { onSignInRequired(activeProviderId) },
+                            onSignIn = { leaveTo(RETURN_SIGN_IN) { onSignInRequired(activeProviderId) } },
                             scale = scale,
+                            signInButtonFocusRequester = returnFocus.requesterFor(RETURN_SIGN_IN),
                         )
                     } else {
                         // Content type hero cards. Scrollable, not just fillMaxSize: the hero row plus
@@ -487,8 +524,13 @@ fun ContentTypeSelectionScreen(
                                         showTotal = isDevMode,
                                         showLivePulse = true,
                                         gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
-                                        onClick = { onContentTypeSelected(NavContentType.LIVE_TV) },
-                                        modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
+                                        onClick = { leaveTo(RETURN_LIVE_TV) { onContentTypeSelected(NavContentType.LIVE_TV) } },
+                                        modifier =
+                                            Modifier
+                                                .weight(1f)
+                                                .then(if (cardIndex == 1) Modifier.focusRequester(heroFallbackFocus) else Modifier)
+                                                .staggeredEntrance(cardIndex++)
+                                                .navReturnFocusTarget(returnFocus, RETURN_LIVE_TV),
                                     )
                                 }
 
@@ -500,8 +542,13 @@ fun ContentTypeSelectionScreen(
                                         categoryCounts = moviesCounts,
                                         showTotal = isDevMode,
                                         gradientColors = listOf(CinemaAccent, CinemaAccentDark),
-                                        onClick = { onContentTypeSelected(NavContentType.MOVIES) },
-                                        modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
+                                        onClick = { leaveTo(RETURN_MOVIES) { onContentTypeSelected(NavContentType.MOVIES) } },
+                                        modifier =
+                                            Modifier
+                                                .weight(1f)
+                                                .then(if (cardIndex == 1) Modifier.focusRequester(heroFallbackFocus) else Modifier)
+                                                .staggeredEntrance(cardIndex++)
+                                                .navReturnFocusTarget(returnFocus, RETURN_MOVIES),
                                     )
                                 }
 
@@ -513,8 +560,13 @@ fun ContentTypeSelectionScreen(
                                         categoryCounts = tvShowsCounts,
                                         showTotal = isDevMode,
                                         gradientColors = listOf(CinemaAccentLight, CinemaAccent),
-                                        onClick = { onContentTypeSelected(NavContentType.TV_SHOWS) },
-                                        modifier = Modifier.weight(1f).staggeredEntrance(cardIndex++),
+                                        onClick = { leaveTo(RETURN_TV_SHOWS) { onContentTypeSelected(NavContentType.TV_SHOWS) } },
+                                        modifier =
+                                            Modifier
+                                                .weight(1f)
+                                                .then(if (cardIndex == 1) Modifier.focusRequester(heroFallbackFocus) else Modifier)
+                                                .staggeredEntrance(cardIndex++)
+                                                .navReturnFocusTarget(returnFocus, RETURN_TV_SHOWS),
                                     )
                                 }
                             }
@@ -522,7 +574,13 @@ fun ContentTypeSelectionScreen(
                             if (continueWatchingItems.isNotEmpty()) {
                                 TvContinueWatchingShelf(
                                     items = continueWatchingItems,
-                                    onItemSelected = onContinueWatchingSelected,
+                                    onItemSelected = { item ->
+                                        leaveTo(RETURN_CONTINUE_WATCHING_PREFIX + item.id) { onContinueWatchingSelected(item) }
+                                    },
+                                    listState = shelfListState,
+                                    itemModifier = { item ->
+                                        Modifier.navReturnFocusTarget(returnFocus, RETURN_CONTINUE_WATCHING_PREFIX + item.id)
+                                    },
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
@@ -600,6 +658,20 @@ fun ContentTypeSelectionScreen(
         }
     } // CompositionLocalProvider
 }
+
+// Keys for the controls that navigate away from Home — see rememberNavReturnFocus.
+private const val RETURN_LIVE_TV = "liveTv"
+private const val RETURN_MOVIES = "movies"
+private const val RETURN_TV_SHOWS = "tvShows"
+private const val RETURN_EPG_BROWSER = "epgBrowser"
+private const val RETURN_SEARCH = "search"
+private const val RETURN_PROFILE = "profile"
+private const val RETURN_SETTINGS = "settings"
+private const val RETURN_SIGN_IN = "signIn"
+private const val RETURN_CONTINUE_WATCHING_PREFIX = "cw:"
+
+/** How long Back waits for the Continue Watching shelf to reload before giving up on its card. */
+private const val RETURN_SHELF_WAIT_MS = 2_000L
 
 /**
  * Hero card with gradient background, icon, and category count.
@@ -801,6 +873,7 @@ private fun JellyfinSignInPanel(
     providerName: String,
     onSignIn: () -> Unit,
     scale: Float,
+    signInButtonFocusRequester: FocusRequester? = null,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -821,6 +894,7 @@ private fun JellyfinSignInPanel(
         CinemaPrimaryButton(
             onClick = onSignIn,
             text = stringResource(R.string.profile_jellyfin_sign_in_button),
+            modifier = signInButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
         )
     }
 }

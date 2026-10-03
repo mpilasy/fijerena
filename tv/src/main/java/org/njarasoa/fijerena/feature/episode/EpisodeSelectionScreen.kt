@@ -148,6 +148,9 @@ import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -380,6 +383,17 @@ internal fun EpisodeListContent(
         }
     }
 
+    // Back from what the Details tab's Category button or a Similar card opened lands on that
+    // control, its tab section (the item after the tab row) scrolled in first. Play and the episode
+    // panel need none of this: Back from the player lands on the resume card (effect below). While
+    // this composition is such a return, the resume card's own scroll/focus effects stand down, or
+    // the anchor arriving later would yank focus off the control.
+    val returnFocus = rememberNavReturnFocus()
+    NavReturnFocusEffect(returnFocus, fallback = tabRowFocusRequester) {
+        listState.scrollToItem(TABS_ITEM_INDEX + 1)
+    }
+    val relatedReturnId = returnFocus.key?.takeIf { it.startsWith(RETURN_RELATED_PREFIX) }?.removePrefix(RETURN_RELATED_PREFIX)
+
     // Track refresh state for animation
     var targetRotation by remember { mutableStateOf(0f) }
 
@@ -530,6 +544,7 @@ internal fun EpisodeListContent(
     // pinned season tabs and the gap under them.
     val headerItemCount = 2 + if (hasMultipleSeasons) 2 else 0
     LaunchedEffect(resumeState.resumeEpisodeId) {
+        if (returnFocus.isReturn) return@LaunchedEffect
         val targetId = resumeState.resumeEpisodeId ?: return@LaunchedEffect
         if (seriesDetail.seasonNumberContaining(targetId) != resumeState.selectedSeason) return@LaunchedEffect
         val seasonEpisodes = sortedEpisodesBySeason[resumeState.selectedSeason?.toString()] ?: return@LaunchedEffect
@@ -701,7 +716,7 @@ internal fun EpisodeListContent(
     // and the system hands it to the first season tab (seen on a Shield): [awaitingFirstFocus]
     // stops that stray focus from selecting its season.
     LaunchedEffect(resumeState.resumeEpisodeId) {
-        if (streamSwitchSignal != 0) {
+        if (streamSwitchSignal != 0 || returnFocus.isReturn) {
             awaitingFirstFocus = false
         } else {
             val target = resumeState.resumeEpisodeId
@@ -1258,10 +1273,14 @@ internal fun EpisodeListContent(
                                         onAlternateStreamSelected(it)
                                     },
                                     onStreamFocusedChanged = { streamRowFocused = it },
-                                    onCategorySelected = onCategorySelected,
+                                    onCategorySelected = {
+                                        returnFocus.leaveFrom(RETURN_CATEGORY)
+                                        onCategorySelected()
+                                    },
                                     titleSmallStyle = scaledStyles.titleSmall,
                                     bodySmallStyle = scaledStyles.bodySmall,
                                     topFocusModifier = upToTabRow,
+                                    categoryButtonFocusRequester = returnFocus.requesterFor(RETURN_CATEGORY),
                                 )
                             }
                         }
@@ -1281,7 +1300,13 @@ internal fun EpisodeListContent(
                                 RelatedTitlesRow(
                                     title = stringResource(R.string.details_more_like_this),
                                     items = relatedTitles.moreLikeThis,
-                                    onItemClick = onRelatedTitleSelected,
+                                    onItemClick = { item ->
+                                        returnFocus.leaveFrom(RETURN_RELATED_PREFIX + item.id)
+                                        onRelatedTitleSelected(item)
+                                    },
+                                    focusTargetId = relatedReturnId,
+                                    focusTargetModifier =
+                                        Modifier.navReturnFocusTarget(returnFocus, RETURN_RELATED_PREFIX + relatedReturnId),
                                     modifier = Modifier.padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale)),
                                 )
                             }
@@ -1350,6 +1375,7 @@ private fun SeriesDetailsTabContent(
     // non-focusable Text when there are no alternate streams to switch between — in that case
     // the Category button, if present, becomes the actual top instead.
     topFocusModifier: Modifier = Modifier,
+    categoryButtonFocusRequester: FocusRequester? = null,
 ) {
     val scale = LocalUiScale.current
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -1392,7 +1418,9 @@ private fun SeriesDetailsTabContent(
                 text = stringResource(R.string.details_category_format, categoryName),
                 // Only the actual top of the section forwards Up to the tab row — with no
                 // alternates, the picker above is plain Text and this button is it instead.
-                modifier = if (alternateStreams.isEmpty()) topFocusModifier else Modifier,
+                modifier =
+                    (if (alternateStreams.isEmpty()) topFocusModifier else Modifier)
+                        .then(categoryButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
             )
         }
     }
@@ -2283,6 +2311,10 @@ private fun LoadingScreen() {
 
 /** The section tab row's index in the episode list: right after the hero. */
 private const val TABS_ITEM_INDEX = 1
+
+// Keys for the controls that navigate away from series details — see rememberNavReturnFocus.
+private const val RETURN_CATEGORY = "category"
+private const val RETURN_RELATED_PREFIX = "related:"
 
 /** How long the screen waits for the resume episode's card to scroll into view before focusing Play instead. */
 private const val RESUME_CARD_WAIT_MS = 2_000L

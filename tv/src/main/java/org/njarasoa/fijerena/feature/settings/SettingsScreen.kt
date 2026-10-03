@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -30,6 +31,8 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.*
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -144,6 +147,12 @@ fun SettingsScreen(
 
     val scale = LocalUiScale.current
 
+    // Back from Manage Sources, Live Sync or Diagnostics lands on the button that opened it, at
+    // the scroll position the list had — not on the first card at the top.
+    val listState = rememberLazyListState()
+    val returnFocus = rememberNavReturnFocus()
+    NavReturnFocusEffect(returnFocus, listState = listState)
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
@@ -171,6 +180,7 @@ fun SettingsScreen(
 
             // Settings List
             LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                 // Scrolling a focused card out of view and back otherwise loses it: the item is
@@ -205,8 +215,12 @@ fun SettingsScreen(
                         subscriptionMaxCons = uiState.subscriptionMaxCons,
                         subscriptionIsTrial = uiState.subscriptionIsTrial,
                         subscriptionStatus = uiState.subscriptionStatus,
-                        onManageProviders = onManageProviders,
+                        onManageProviders = {
+                            returnFocus.leaveFrom(RETURN_PROVIDERS, listState)
+                            onManageProviders()
+                        },
                         scale = scale,
+                        manageButtonFocusRequester = returnFocus.requesterFor(RETURN_PROVIDERS),
                     )
                 }
 
@@ -282,7 +296,14 @@ fun SettingsScreen(
                 }
 
                 item {
-                    LiveSyncSettingsCard(onOpen = onLiveSync, scale = scale)
+                    LiveSyncSettingsCard(
+                        onOpen = {
+                            returnFocus.leaveFrom(RETURN_LIVE_SYNC, listState)
+                            onLiveSync()
+                        },
+                        scale = scale,
+                        openButtonFocusRequester = returnFocus.requesterFor(RETURN_LIVE_SYNC),
+                    )
                 }
 
                 // Export / Import Settings
@@ -328,8 +349,12 @@ fun SettingsScreen(
                         onDevModeChanged = { enabled ->
                             viewModel.updateDevMode(enabled)
                         },
-                        onDiagnostics = onDiagnostics,
+                        onDiagnostics = {
+                            returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
+                            onDiagnostics()
+                        },
                         scale = scale,
+                        diagnosticsButtonFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
                     )
                 }
 
@@ -387,6 +412,11 @@ fun SettingsScreen(
         }
     }
 }
+
+// Keys for the buttons that navigate away from Settings — see rememberNavReturnFocus.
+private const val RETURN_PROVIDERS = "providers"
+private const val RETURN_LIVE_SYNC = "liveSync"
+private const val RETURN_DIAGNOSTICS = "diagnostics"
 
 /**
  * Groups the settings list into visual waypoints (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,

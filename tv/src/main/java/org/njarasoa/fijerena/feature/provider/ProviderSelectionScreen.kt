@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -27,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -40,6 +43,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.ui.R
@@ -54,6 +59,10 @@ import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.*
 
@@ -88,6 +97,16 @@ fun TvProviderSelectionScreen(
         viewModel.loadProviders()
     }
 
+    // Back from Add, Edit (opened from a row's overflow menu) or a row's EPG sources lands on the
+    // button that led there, once the reloaded list is back on screen.
+    val listState = rememberLazyListState()
+    val returnFocus = rememberNavReturnFocus()
+    NavReturnFocusEffect(returnFocus, listState = listState) {
+        withTimeoutOrNull(RETURN_LIST_WAIT_MS) {
+            snapshotFlow { uiState }.first { it is ProviderUiState.SingleProvider || it is ProviderUiState.MultipleProviders }
+        }
+    }
+
     val scale = LocalUiScale.current
 
     Column(
@@ -116,7 +135,11 @@ fun TvProviderSelectionScreen(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             CinemaIconButton(
-                onClick = onAddProvider,
+                onClick = {
+                    returnFocus.leaveFrom(RETURN_ADD)
+                    onAddProvider()
+                },
+                modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_ADD),
                 icon = {
                     Icon(
                         CinemaIcons.Add,
@@ -184,8 +207,13 @@ fun TvProviderSelectionScreen(
                 ProviderList(
                     providers = listOf(state.provider),
                     onSelect = onProviderSelected,
-                    onManageEpg = onManageEpg,
+                    onManageEpg = { id ->
+                        returnFocus.leaveFrom(RETURN_EPG_PREFIX + id, listState)
+                        onManageEpg(id)
+                    },
                     onMoreActions = { actionsMenuProvider = it },
+                    listState = listState,
+                    returnFocus = returnFocus,
                 )
             }
 
@@ -193,8 +221,13 @@ fun TvProviderSelectionScreen(
                 ProviderList(
                     providers = state.providers,
                     onSelect = onProviderSelected,
-                    onManageEpg = onManageEpg,
+                    onManageEpg = { id ->
+                        returnFocus.leaveFrom(RETURN_EPG_PREFIX + id, listState)
+                        onManageEpg(id)
+                    },
                     onMoreActions = { actionsMenuProvider = it },
+                    listState = listState,
+                    returnFocus = returnFocus,
                 )
             }
         }
@@ -258,7 +291,10 @@ fun TvProviderSelectionScreen(
         ProviderActionsMenuDialog(
             provider = provider,
             canCopyTo = allProviders.size > 1,
-            onEdit = { onEditProvider(provider.id) },
+            onEdit = {
+                returnFocus.leaveFrom(RETURN_MORE_PREFIX + provider.id, listState)
+                onEditProvider(provider.id)
+            },
             onDuplicate = { duplicateProvider = provider },
             onCopyTo = { copyFromProvider = provider },
             onDelete = { deleteConfirmProvider = provider },
@@ -317,9 +353,12 @@ private fun ProviderList(
     onSelect: (ProviderEntity) -> Unit,
     onManageEpg: (Long) -> Unit,
     onMoreActions: (ProviderEntity) -> Unit,
+    listState: LazyListState,
+    returnFocus: NavReturnFocus,
 ) {
     val scale = LocalUiScale.current
     LazyColumn(
+        state = listState,
         contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
         verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
         modifier = Modifier.fillMaxSize().focusRestorer(),
@@ -374,6 +413,7 @@ private fun ProviderList(
                     if (MediaProviderFactory.hasLiveTv(provider)) {
                         CinemaIconButton(
                             onClick = { onManageEpg(provider.id) },
+                            modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_EPG_PREFIX + provider.id),
                             icon = {
                                 Icon(
                                     CinemaIcons.LiveTv,
@@ -387,6 +427,7 @@ private fun ProviderList(
                     // text labels — see ProviderActionsMenuDialog.
                     CinemaIconButton(
                         onClick = { onMoreActions(provider) },
+                        modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_MORE_PREFIX + provider.id),
                         icon = {
                             Icon(
                                 CinemaIcons.MoreVert,
@@ -400,3 +441,11 @@ private fun ProviderList(
         }
     }
 }
+
+// Keys for the buttons that navigate away — see rememberNavReturnFocus.
+private const val RETURN_ADD = "add"
+private const val RETURN_EPG_PREFIX = "epg:"
+private const val RETURN_MORE_PREFIX = "more:"
+
+/** How long Back waits for the reloaded provider list before handing focus back anyway. */
+private const val RETURN_LIST_WAIT_MS = 2_000L

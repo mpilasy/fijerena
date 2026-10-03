@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -28,6 +30,7 @@ fun DeveloperSettingsCard(
     onDevModeChanged: (Boolean) -> Unit,
     onDiagnostics: () -> Unit,
     scale: Float,
+    diagnosticsButtonFocusRequester: FocusRequester? = null,
 ) {
     GlassPanel(
         modifier = Modifier.fillMaxWidth(),
@@ -52,7 +55,11 @@ fun DeveloperSettingsCard(
                         modifier = Modifier.weight(1f),
                     )
                     Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                    CinemaSecondaryButton(onClick = onDiagnostics, text = stringResource(R.string.settings_diagnostics_open))
+                    CinemaSecondaryButton(
+                        onClick = onDiagnostics,
+                        text = stringResource(R.string.settings_diagnostics_open),
+                        modifier = diagnosticsButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+                    )
                 }
             }
         }

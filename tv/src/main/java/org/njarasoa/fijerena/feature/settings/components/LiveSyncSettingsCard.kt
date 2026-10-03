@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,6 +34,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun LiveSyncSettingsCard(
     onOpen: () -> Unit,
     scale: Float,
+    openButtonFocusRequester: FocusRequester? = null,
 ) {
     val app = LocalContext.current.applicationContext as Application
     val status by SyncManager.getInstance(app).status.collectAsStateWithLifecycle()
@@ -64,6 +67,7 @@ fun LiveSyncSettingsCard(
             CinemaPrimaryButton(
                 onClick = onOpen,
                 text = stringResource(if (status.linked) R.string.live_sync_manage else R.string.live_sync_open),
+                modifier = openButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
             )
         }
     }

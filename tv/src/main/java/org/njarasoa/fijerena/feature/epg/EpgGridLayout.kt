@@ -38,6 +38,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -77,6 +78,10 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -166,7 +171,12 @@ fun EpgGridLayout(
 ) {
     val configuration = LocalConfiguration.current
     val scale = LocalUiScale.current
-    var isSearchActive by remember { mutableStateOf(false) }
+    // Saveable: Back from a search result's preview comes back to the search, not the grid.
+    var isSearchActive by rememberSaveable { mutableStateOf(false) }
+
+    // Back from a channel's preview lands on the programme or channel cell that opened it (or the
+    // search result), not on the guide's first-open target.
+    val returnFocus = rememberNavReturnFocus()
 
     // Held as State, not read here: reading it in this scope would make the 60s tick recompose the
     // whole grid. Only ProgramCell reads it, and only through a derived on-air flag (see below).
@@ -209,6 +219,7 @@ fun EpgGridLayout(
                 searchResults = searchResults,
                 onSearchQueryChanged = onSearchQueryChanged,
                 onProgramSelected = onProgramSelected,
+                returnFocus = returnFocus,
             )
         } else if (channelRows.isEmpty()) {
             EmptyEpgMessage()
@@ -221,6 +232,9 @@ fun EpgGridLayout(
             // back to that row's channel name cell, then to the first focusable cell.
             val firstChannelFocusRequester = remember { FocusRequester() }
             val firstProgramFocusRequester = remember { FocusRequester() }
+            // A programme that scrolled out of the shared time axis falls back to its channel cell.
+            val returnChannelFocusRequester = remember { FocusRequester() }
+            NavReturnFocusEffect(returnFocus, listState = verticalScrollState, fallback = returnChannelFocusRequester)
             val focusManager = LocalFocusManager.current
             var initialFocusDone by remember { mutableStateOf(false) }
             val initialRowIndex = channelRows.indexOfFirst { it.programs.isNotEmpty() }.coerceAtLeast(0)
@@ -231,9 +245,10 @@ fun EpgGridLayout(
                         ?: initialRowPrograms.firstOrNull()
                 )?.id
 
-            // Auto-scroll to current time on load
+            // Auto-scroll to current time on load — not on a return, which keeps the time axis where
+            // the user left it (saved) so the programme they opened is still there.
             LaunchedEffect(currentTimeSlot) {
-                if (currentTimeSlot > 0 && currentTimeSlot < timeSlots.size) {
+                if (!returnFocus.isReturn && currentTimeSlot > 0 && currentTimeSlot < timeSlots.size) {
                     horizontalScrollState.animateScrollToItem(
                         currentTimeSlot.coerceIn(0, timeSlots.lastIndex),
                     )
@@ -242,7 +257,7 @@ fun EpgGridLayout(
 
             // Keyed on the data, not run once: rows may arrive after the first composition.
             LaunchedEffect(initialRowIndex, channelRows.size) {
-                if (!initialFocusDone) {
+                if (!initialFocusDone && !returnFocus.isReturn) {
                     verticalScrollState.scrollToItem(initialRowIndex)
                     initialFocusDone =
                         requestInitialFocus(
@@ -287,10 +302,13 @@ fun EpgGridLayout(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             // Channel name on the left
+                            val channelReturnKey = RETURN_CHANNEL_PREFIX + row.channel.id
+                            val programReturnPrefix = RETURN_PROGRAM_PREFIX + row.channel.id + RETURN_PROGRAM_SEPARATOR
                             ChannelItem(
                                 channel = row.channel,
                                 cardStyle = cardStyle,
                                 onClick = {
+                                    returnFocus.leaveFrom(channelReturnKey, verticalScrollState)
                                     onChannelSelected(
                                         row.channel.id,
                                         row.channel.name,
@@ -308,6 +326,13 @@ fun EpgGridLayout(
                                             } else {
                                                 Modifier
                                             },
+                                        ).navReturnFocusTarget(returnFocus, channelReturnKey)
+                                        .then(
+                                            if (returnFocus.key?.startsWith(programReturnPrefix) == true) {
+                                                Modifier.focusRequester(returnChannelFocusRequester)
+                                            } else {
+                                                Modifier
+                                            },
                                         ),
                             )
 
@@ -321,10 +346,14 @@ fun EpgGridLayout(
                                 cardStyle = cardStyle,
                                 scrollState = horizontalScrollState,
                                 onProgramSelected = { program ->
+                                    returnFocus.leaveFrom(programReturnPrefix + program.id, verticalScrollState)
                                     onProgramSelected(program, row.channel)
                                 },
                                 initialFocusProgramId = if (index == initialRowIndex) initialProgramId else null,
                                 initialFocusRequester = firstProgramFocusRequester,
+                                programModifier = { program ->
+                                    Modifier.navReturnFocusTarget(returnFocus, programReturnPrefix + program.id)
+                                },
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -356,6 +385,13 @@ private suspend fun requestInitialFocus(
 }
 
 private const val INITIAL_FOCUS_ATTEMPTS = 20
+
+// Keys for the cells that open a channel's preview — see rememberNavReturnFocus. A programme's key
+// is prefix + channel id + separator + programme id, so its channel cell can tell it is the fallback.
+private const val RETURN_CHANNEL_PREFIX = "channel:"
+private const val RETURN_PROGRAM_PREFIX = "program:"
+private const val RETURN_PROGRAM_SEPARATOR = "\n"
+private const val RETURN_SEARCH_PREFIX = "search:"
 
 @Composable
 private fun EpgHeader(
@@ -583,6 +619,7 @@ private fun ProgramRow(
     initialFocusProgramId: String?,
     initialFocusRequester: FocusRequester,
     modifier: Modifier = Modifier,
+    programModifier: (EpgProgram) -> Modifier = { Modifier },
 ) {
     val scale = LocalUiScale.current
 
@@ -604,7 +641,9 @@ private fun ProgramRow(
                 nowEpochSeconds = nowEpochSeconds,
                 cardStyle = cardStyle,
                 onClick = { onProgramSelected(program) },
-                modifier = if (program.id == initialFocusProgramId) Modifier.focusRequester(initialFocusRequester) else Modifier,
+                modifier =
+                    (if (program.id == initialFocusProgramId) Modifier.focusRequester(initialFocusRequester) else Modifier)
+                        .then(programModifier(program)),
             )
         }
     }
@@ -680,8 +719,11 @@ private fun EpgSearchContent(
     searchResults: List<EpgViewModel.EpgSearchResult>,
     onSearchQueryChanged: (String) -> Unit,
     onProgramSelected: (EpgProgram, MediaItem) -> Unit,
+    returnFocus: NavReturnFocus,
 ) {
     val scale = LocalUiScale.current
+    val listState = rememberLazyListState()
+    NavReturnFocusEffect(returnFocus, listState = listState)
 
     Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(
@@ -714,6 +756,7 @@ private fun EpgSearchContent(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize().focusRestorer(),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
             ) {
@@ -725,9 +768,14 @@ private fun EpgSearchContent(
                     contentType = { "epg_search_result" },
                 ) { index ->
                     val result = searchResults[index]
+                    val returnKey = RETURN_SEARCH_PREFIX + result.channel.id + RETURN_PROGRAM_SEPARATOR + result.program.id
                     SearchResultItem(
                         result = result,
-                        onClick = { onProgramSelected(result.program, result.channel) },
+                        onClick = {
+                            returnFocus.leaveFrom(returnKey, listState)
+                            onProgramSelected(result.program, result.channel)
+                        },
+                        modifier = Modifier.navReturnFocusTarget(returnFocus, returnKey),
                     )
                 }
             }
@@ -739,6 +787,7 @@ private fun EpgSearchContent(
 private fun SearchResultItem(
     result: EpgViewModel.EpgSearchResult,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val scale = LocalUiScale.current
@@ -756,7 +805,7 @@ private fun SearchResultItem(
     Card(
         onClick = onClick,
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .onFocusChanged { isFocused = it.isFocused },
         colors =

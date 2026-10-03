@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -99,6 +100,10 @@ import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -156,6 +161,9 @@ fun SearchScreen(
     val configuration = LocalConfiguration.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
+
+    // Back from a result's details (or a category) lands on that result — see SearchResultsList.
+    val returnFocus = rememberNavReturnFocus()
 
     // Favorite long-press state
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
@@ -241,6 +249,7 @@ fun SearchScreen(
                             devStats = devStats,
                             contentType = contentType,
                             searchHistory = searchHistory,
+                            returnFocus = returnFocus,
                             onSearchSubmit = { viewModel.performSearch(it) },
                             onHistoryItemClick = { term ->
                                 viewModel.performSearch(term)
@@ -376,6 +385,7 @@ private fun SearchContent(
     devStats: String?,
     contentType: String,
     searchHistory: List<String>,
+    returnFocus: NavReturnFocus,
     onSearchSubmit: (String) -> Unit,
     onHistoryItemClick: (String) -> Unit,
     onHistoryItemRemove: (String) -> Unit,
@@ -466,6 +476,7 @@ private fun SearchContent(
                 isSearching = isSearching,
                 searchProgress = searchProgress,
                 devStats = devStats,
+                returnFocus = returnFocus,
                 onResultClick = onResultClick,
                 onResultLongPress = onResultLongPress,
                 onCategoryClick = onCategoryClick,
@@ -576,11 +587,17 @@ private fun SearchResultsList(
     isSearching: Boolean,
     searchProgress: String?,
     devStats: String?,
+    returnFocus: NavReturnFocus,
     onResultClick: (SearchResult) -> Unit,
     onResultLongPress: (SearchResult) -> Unit,
     onCategoryClick: (CategorySearchResult) -> Unit,
     onCategoryLongPress: (CategorySearchResult) -> Unit,
 ) {
+    // Back from a result's details hands focus to that result (keyed by its LazyColumn key), at the
+    // scroll position the list had when it was opened.
+    val listState = rememberLazyListState()
+    NavReturnFocusEffect(returnFocus, listState = listState)
+
     // Stable within a query's results — only add missing keys, never discard existing
     // FocusRequesters, so focus targeting survives recomposition mid-query. Keyed to
     // categoryResults/results so a new query drops the old query's requesters instead of
@@ -591,8 +608,10 @@ private fun SearchResultsList(
     var expandedGroups by rememberSaveable { mutableStateOf(setOf("LIVE_TV", "MOVIES", "TV_SHOWS")) }
 
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
+    // — not when Back has just rebuilt the list and NavReturnFocusEffect is about to hand focus to
+    // the result that was opened.
     LaunchedEffect(categoryResults, results, isSearching) {
-        if (!isSearching && (categoryResults.isNotEmpty() || results.isNotEmpty())) {
+        if (returnFocus.key == null && !isSearching && (categoryResults.isNotEmpty() || results.isNotEmpty())) {
             firstItemFocusRequester.requestFocusWithRetry()
         }
     }
@@ -682,6 +701,7 @@ private fun SearchResultsList(
                 }
 
             LazyColumn(
+                state = listState,
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                 modifier = Modifier.fillMaxSize(),
             ) {
@@ -708,9 +728,13 @@ private fun SearchResultsList(
                                     key = { _, it -> "cat_${it.categoryId}_${it.contentType}" },
                                     contentType = { _, _ -> "category" },
                                 ) { index, catResult ->
+                                    val returnKey = "cat_${catResult.categoryId}_${catResult.contentType}"
                                     CategoryResultItem(
                                         result = catResult,
-                                        onClick = { onCategoryClick(catResult) },
+                                        onClick = {
+                                            returnFocus.leaveFrom(returnKey, listState)
+                                            onCategoryClick(catResult)
+                                        },
                                         onLongPress = { onCategoryLongPress(catResult) },
                                         modifier =
                                             if (isFirstItem &&
@@ -719,7 +743,7 @@ private fun SearchResultsList(
                                                 Modifier.focusRequester(firstItemFocusRequester)
                                             } else {
                                                 Modifier
-                                            },
+                                            }.navReturnFocusTarget(returnFocus, returnKey),
                                     )
                                     if (isFirstItem && index == 0) isFirstItem = false
                                 }
@@ -729,9 +753,14 @@ private fun SearchResultsList(
                                     key = { _, it -> "stream_${it.itemId}_${it.categoryId}_${it.contentType}" },
                                     contentType = { _, _ -> "stream" },
                                 ) { index, result ->
+                                    val returnKey = "stream_${result.itemId}_${result.categoryId}_${result.contentType}"
                                     SearchResultItem(
                                         result = result,
-                                        onClick = { onResultClick(result) },
+                                        onClick = {
+                                            returnFocus.leaveFrom(returnKey, listState)
+                                            onResultClick(result)
+                                        },
+                                        modifier = Modifier.navReturnFocusTarget(returnFocus, returnKey),
                                         onLongPress = { onResultLongPress(result) },
                                         focusRequester =
                                             if (isFirstItem &&
@@ -762,11 +791,17 @@ private fun SearchResultsList(
                             key = { _, it -> "cat_${it.categoryId}_${it.contentType}" },
                             contentType = { _, _ -> "category" },
                         ) { index, catResult ->
+                            val returnKey = "cat_${catResult.categoryId}_${catResult.contentType}"
                             CategoryResultItem(
                                 result = catResult,
-                                onClick = { onCategoryClick(catResult) },
+                                onClick = {
+                                    returnFocus.leaveFrom(returnKey, listState)
+                                    onCategoryClick(catResult)
+                                },
                                 onLongPress = { onCategoryLongPress(catResult) },
-                                modifier = if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier,
+                                modifier =
+                                    (if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier)
+                                        .navReturnFocusTarget(returnFocus, returnKey),
                             )
                         }
                     }
@@ -785,9 +820,14 @@ private fun SearchResultsList(
                             ->
                             "${it.itemId}_${it.categoryId}"
                         }, contentType = { _, _ -> "stream" }) { index, result ->
+                            val returnKey = "${result.itemId}_${result.categoryId}"
                             SearchResultItem(
                                 result = result,
-                                onClick = { onResultClick(result) },
+                                onClick = {
+                                    returnFocus.leaveFrom(returnKey, listState)
+                                    onResultClick(result)
+                                },
+                                modifier = Modifier.navReturnFocusTarget(returnFocus, returnKey),
                                 onLongPress = { onResultLongPress(result) },
                                 focusRequester =
                                     if (categoryResults.isEmpty() &&
@@ -987,13 +1027,14 @@ private fun CategoryResultItem(
 private fun SearchResultItem(
     result: SearchResult,
     onClick: () -> Unit,
-    onLongPress: () -> Unit = {},
     focusRequester: FocusRequester?,
+    modifier: Modifier = Modifier,
+    onLongPress: () -> Unit = {},
 ) {
     Card(
         onClick = onClick,
         modifier =
-            Modifier
+            modifier
                 .padding(horizontal = Spacing.md)
                 .fillMaxWidth()
                 .height(TvDimensions.cardHeight)

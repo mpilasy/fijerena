@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -33,6 +35,7 @@ fun ProviderSettingsCard(
     subscriptionStatus: String? = null,
     onManageProviders: () -> Unit,
     scale: Float,
+    manageButtonFocusRequester: FocusRequester? = null,
 ) {
     val bodySmallStyle =
         MaterialTheme.typography.bodySmall.copy(
@@ -117,6 +120,7 @@ fun ProviderSettingsCard(
                 CinemaSecondaryButton(
                     onClick = onManageProviders,
                     text = stringResource(R.string.settings_provider_manage_button),
+                    modifier = manageButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
                 )
             }
         }

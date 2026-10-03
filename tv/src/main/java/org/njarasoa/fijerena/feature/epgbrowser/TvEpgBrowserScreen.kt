@@ -41,6 +41,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,7 +110,11 @@ import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
 import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
+import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -339,7 +344,11 @@ private fun EpgBrowserContent(
     // aiming `down` at an unattached requester would stop Down working at all.
     val historyFocusRequester = remember { FocusRequester() }
     var localQuery by remember { mutableStateOf("") }
-    var matchedOnly by remember { mutableStateOf(true) }
+    // Saveable: Back from a channel must find the same filtered list, or the airing it came from
+    // may have moved or gone.
+    var matchedOnly by rememberSaveable { mutableStateOf(true) }
+    // Back from a channel's preview lands on the airing row that opened it — see ResultsContent.
+    val returnFocus = rememberNavReturnFocus()
     val scale = LocalUiScale.current
     val hasResults = (uiState as? EpgBrowserViewModel.UiState.Results)?.totalPrograms ?: 0 > 0
 
@@ -348,8 +357,9 @@ private fun EpgBrowserContent(
     val showsHistory = uiState is EpgBrowserViewModel.UiState.Idle && epgSearchHistory.isNotEmpty()
 
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
+    // (not when Back is about to hand focus to the airing that was opened).
     LaunchedEffect(uiState) {
-        if (uiState is EpgBrowserViewModel.UiState.Results) {
+        if (returnFocus.key == null && uiState is EpgBrowserViewModel.UiState.Results) {
             firstItemFocusRequester.requestFocusWithRetry()
         }
     }
@@ -419,9 +429,9 @@ private fun EpgBrowserContent(
             }
         }
 
-        // Auto-focus on screen open
+        // Auto-focus on screen open (not on a return from a channel)
         LaunchedEffect(Unit) {
-            searchFocusRequester.requestFocusWithRetry()
+            if (returnFocus.key == null) searchFocusRequester.requestFocusWithRetry()
         }
 
         // Dev mode: show EPG DB stats
@@ -587,6 +597,7 @@ private fun EpgBrowserContent(
                     matchedOnly = matchedOnly,
                     onNavigateToPlayer = onNavigateToPlayer,
                     firstItemFocusRequester = firstItemFocusRequester,
+                    returnFocus = returnFocus,
                 )
             }
 
@@ -710,6 +721,7 @@ private fun ResultsContent(
     searchMode: EpgBrowserViewModel.SearchMode = EpgBrowserViewModel.SearchMode.PROGRAMME,
     matchedOnly: Boolean = true,
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    returnFocus: NavReturnFocus,
     firstItemFocusRequester: FocusRequester? = null,
 ) {
     val scale = LocalUiScale.current
@@ -777,6 +789,7 @@ private fun ResultsContent(
                     indices
                 }
             val listState = rememberLazyListState()
+            NavReturnFocusEffect(returnFocus, listState = listState)
             val pinnedHeaderLabel by remember {
                 derivedStateOf {
                     val firstVisible = listState.firstVisibleItemIndex
@@ -800,12 +813,17 @@ private fun ResultsContent(
                             key = { _, it -> it.id },
                             contentType = { _, _ -> "program" },
                         ) { index, program ->
+                            val returnKeyPrefix = RETURN_AIRING_PREFIX + program.id + RETURN_AIRING_SEPARATOR
                             ProgramCard(
                                 program = program,
                                 nowEpoch = nowEpoch,
                                 isDevMode = isDevMode,
                                 sourceLabels = sourceLabels,
                                 onNavigateToPlayer = onNavigateToPlayer,
+                                onAiringLeave = { airingIndex -> returnFocus.leaveFrom(returnKeyPrefix + airingIndex, listState) },
+                                airingModifier = { airingIndex ->
+                                    Modifier.navReturnFocusTarget(returnFocus, returnKeyPrefix + airingIndex)
+                                },
                                 modifier =
                                     if (isFirstItem && index == 0) {
                                         isFirstItem = false
@@ -829,6 +847,10 @@ private fun ResultsContent(
         }
     }
 }
+
+// Key of the airing row that opened a channel: prefix + programme id + separator + airing index.
+private const val RETURN_AIRING_PREFIX = "airing:"
+private const val RETURN_AIRING_SEPARATOR = "#"
 
 @Composable
 private fun DateHeader(
@@ -860,6 +882,10 @@ private fun ProgramCard(
     sourceLabels: Map<Long, String> = emptyMap(),
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier,
+    // Called with the airing's index just before one of its rows opens a channel; airingModifier
+    // decorates each row (the caller marks the one Back returns to).
+    onAiringLeave: (Int) -> Unit = {},
+    airingModifier: (Int) -> Modifier = { Modifier },
 ) {
     val scale = LocalUiScale.current
     var pendingConfirmAiring by remember { mutableStateOf<EpgBrowserAiring?>(null) }
@@ -945,14 +971,18 @@ private fun ProgramCard(
 
             // Airings
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            program.airings.forEach { airing ->
+            program.airings.forEachIndexed { airingIndex, airing ->
                 AiringRow(
                     airing = airing,
                     nowEpoch = nowEpoch,
                     isDevMode = isDevMode,
                     sourceLabels = sourceLabels,
-                    onNavigateToPlayer = onNavigateToPlayer,
+                    onNavigateToPlayer = { streamId, streamName, categoryId ->
+                        onAiringLeave(airingIndex)
+                        onNavigateToPlayer(streamId, streamName, categoryId)
+                    },
                     onRequestConfirmation = { pendingConfirmAiring = it },
+                    modifier = airingModifier(airingIndex),
                 )
             }
 
@@ -980,6 +1010,7 @@ private fun ProgramCard(
                                 // A second click before the dialog leaves doesn't open the player twice (R-20).
                                 if (pendingConfirmAiring != null) {
                                     pendingConfirmAiring = null
+                                    onAiringLeave(program.airings.indexOf(pending))
                                     onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
                                 }
                             }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
@@ -1013,6 +1044,7 @@ private fun ProgramCard(
 private fun AiringRow(
     airing: EpgBrowserAiring,
     nowEpoch: Long,
+    modifier: Modifier = Modifier,
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
@@ -1126,7 +1158,7 @@ private fun AiringRow(
             }
         },
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         rowContent()
     }

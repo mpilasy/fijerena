@@ -42,6 +42,9 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -105,6 +108,12 @@ internal fun TwoColumnLayout(
             categories.associateBy { it.id }
         }
 
+    // Back from Search or the TV Guide lands on the header button that opened it. Runs once the
+    // screen is RESUMED, after CategoryList's and StreamList's own focus effects, so it has the
+    // last word. Rows opened from the stream list are StreamList's own business (openedItemId).
+    val returnFocus = rememberNavReturnFocus()
+    NavReturnFocusEffect(returnFocus)
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
         Row(
@@ -120,7 +129,11 @@ internal fun TwoColumnLayout(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CinemaIconButton(
-                    onClick = onSearchClick,
+                    onClick = {
+                        returnFocus.leaveFrom(RETURN_SEARCH)
+                        onSearchClick()
+                    },
+                    modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_SEARCH),
                     icon = {
                         Icon(
                             imageVector = CinemaIcons.Search,
@@ -137,8 +150,12 @@ internal fun TwoColumnLayout(
                     val selectedCategoryName = categoryMap[selectedCategoryId]?.name
                     if (selectedCategoryName != null) {
                         CinemaSecondaryButton(
-                            onClick = { onEpgClick(selectedCategoryId, selectedCategoryName) },
+                            onClick = {
+                                returnFocus.leaveFrom(RETURN_TV_GUIDE)
+                                onEpgClick(selectedCategoryId, selectedCategoryName)
+                            },
                             text = stringResource(R.string.common_tv_guide),
+                            modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_TV_GUIDE),
                         )
                     }
                 }
@@ -248,3 +265,7 @@ internal fun TwoColumnLayout(
         }
     }
 }
+
+// Keys for the header buttons that navigate away — see rememberNavReturnFocus.
+private const val RETURN_SEARCH = "search"
+private const val RETURN_TV_GUIDE = "tvGuide"
