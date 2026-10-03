@@ -96,12 +96,12 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
-import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.TvSearchField
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -250,6 +250,8 @@ fun SearchScreen(
                             contentType = contentType,
                             searchHistory = searchHistory,
                             returnFocus = returnFocus,
+                            // A "more like this" arrival is already searching; don't cover it with the keyboard.
+                            mayOpenKeyboard = initialQuery.isNullOrBlank(),
                             onSearchSubmit = { viewModel.performSearch(it) },
                             onHistoryItemClick = { term ->
                                 viewModel.performSearch(term)
@@ -386,6 +388,7 @@ private fun SearchContent(
     contentType: String,
     searchHistory: List<String>,
     returnFocus: NavReturnFocus,
+    mayOpenKeyboard: Boolean,
     onSearchSubmit: (String) -> Unit,
     onHistoryItemClick: (String) -> Unit,
     onHistoryItemRemove: (String) -> Unit,
@@ -419,9 +422,19 @@ private fun SearchContent(
     val hasResults = categoryResults.isNotEmpty() || results.isNotEmpty() || isSearching
     val showsHistory = !hasResults && query.isEmpty() && searchHistory.isNotEmpty()
 
+    // Entry (Part II Phase 7, F-S-1/F-S-2): the field without the keyboard when there are recent
+    // searches, so Down reaches them; straight into the keyboard for a first search. Not on a
+    // Back from a result — NavReturnFocusEffect lands on that result instead.
+    var editing by remember {
+        mutableStateOf(mayOpenKeyboard && returnFocus.key == null && query.isEmpty() && !hasResults && searchHistory.isEmpty())
+    }
+    LaunchedEffect(Unit) {
+        if (returnFocus.key == null && !editing) searchFocusRequester.requestFocusWithRetry()
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Search field
-        TvSearchTextField(
+        TvSearchField(
             modifier =
                 if (showsHistory) {
                     Modifier.focusProperties { down = historyFocusRequester }
@@ -437,6 +450,8 @@ private fun SearchContent(
             },
             placeholder = stringResource(R.string.search_stream_name_placeholder),
             focusRequester = searchFocusRequester,
+            editing = editing,
+            onEditingChange = { editing = it },
             showClearButton = localQuery.isNotEmpty() || results.isNotEmpty() || categoryResults.isNotEmpty(),
         )
 

@@ -107,11 +107,11 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
-import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.TvSearchField
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
@@ -356,6 +356,13 @@ private fun EpgBrowserContent(
     // target to aim at.
     val showsHistory = uiState is EpgBrowserViewModel.UiState.Idle && epgSearchHistory.isNotEmpty()
 
+    // Entry (Part II Phase 7): the field without the keyboard when there are recent searches, so
+    // Down reaches them; straight into the keyboard for a first search. Not on a return from a
+    // channel — NavReturnFocusEffect lands on the airing instead.
+    var editing by remember {
+        mutableStateOf(returnFocus.key == null && uiState is EpgBrowserViewModel.UiState.Idle && epgSearchHistory.isEmpty())
+    }
+
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
     // (not when Back is about to hand focus to the airing that was opened).
     LaunchedEffect(uiState) {
@@ -404,7 +411,7 @@ private fun EpgBrowserContent(
 
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
 
-                TvSearchTextField(
+                TvSearchField(
                     modifier =
                         if (showsHistory) {
                             Modifier.focusProperties { down = historyFocusRequester }
@@ -424,6 +431,8 @@ private fun EpgBrowserContent(
                             EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_enter_channel_placeholder)
                         },
                     focusRequester = searchFocusRequester,
+                    editing = editing,
+                    onEditingChange = { editing = it },
                     showClearButton = localQuery.isNotEmpty() || hasResults,
                 )
             }
@@ -431,7 +440,7 @@ private fun EpgBrowserContent(
 
         // Auto-focus on screen open (not on a return from a channel)
         LaunchedEffect(Unit) {
-            if (returnFocus.key == null) searchFocusRequester.requestFocusWithRetry()
+            if (returnFocus.key == null && !editing) searchFocusRequester.requestFocusWithRetry()
         }
 
         // Dev mode: show EPG DB stats

@@ -232,6 +232,10 @@ Two-column TV screens (Live TV browse, Movies, TV Shows: `TwoColumnLayout`) are 
 
 A content row (a channel, title or episode in `StreamList`, a category in `CategoryList`, the Live TV preview panel's rows) is one focus stop: OK does the row's job, and **long-press OK or the Menu key** opens its action menu (`FavoriteContextMenuDialog`: Add/Remove favorite first and focused, Mark watched on Movies / TV Shows, Remove from Recent last, Cancel) — UX overhaul plan Part II P3. A row shows a small "⋮" at its end while focused as the hint; it is not focusable. There are no hidden trailing ★ / ✓ / 🗑 buttons on content rows any more, so Right from a category goes straight to its items and Right from an item goes nowhere. The rule is for content rows only (P3a): Settings' Sources rows, whose few actions are the row's point, keep their visible labelled buttons.
 
+### Search fields (`TvSearchField`)
+
+A focused Compose text field opens the keyboard, and on TV the keyboard then takes every D-pad key, so the Search and EPG Browser query fields are `TvSearchField` (`tv/ui/components/input/TvSearchField.kt`, UX overhaul plan Part II P4): at rest the field is an ordinary focus stop showing the query or placeholder, so Up/Down/Left/Right move focus as anywhere else and Right reaches the clear (×) and search buttons beside it. **OK** turns it into the text field, focused, keyboard open; the IME's Search/Done action submits, **Back** closes the keyboard (submitting when the text changed), and focus comes back to the resting field. Back is taken with `onInterceptKeyBeforeSoftKeyboard` on the text field, before the keyboard can swallow it to hide itself. The editing state is hoisted: both screens open on the field without the keyboard when there are recent searches (Down reaches them) and straight into the keyboard when there are none; a return from a result uses `NavReturnFocus` as before. Use it for any new TV text field the user reaches with the D-pad on the way to something else. `scripts/focus-walks/search.txt` walks it.
+
 ## Adding New Screens
 
 ### 1. Define Screen in :core:navigation
