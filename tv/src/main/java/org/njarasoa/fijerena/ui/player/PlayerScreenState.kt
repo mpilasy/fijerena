@@ -40,8 +40,9 @@ class PlayerScreenState(
             showStreamInfoState = value
             if (value) showStreamInfoTick++
         }
-    var showCategoryOverlay by mutableStateOf(false)
-    var showLastWatchedOverlay by mutableStateOf(false)
+
+    // Live TV's channel panel (LT3), open over the video. Left or Right opens it; Back closes it.
+    var showChannelPanel by mutableStateOf(false)
     var showChapterSelector by mutableStateOf(false)
 
     /**
@@ -51,8 +52,7 @@ class PlayerScreenState(
      */
     val isModalOpen: Boolean
         get() =
-            showCategoryOverlay ||
-                showLastWatchedOverlay ||
+            showChannelPanel ||
                 showAudioTrackSelector ||
                 showSubtitleSelector ||
                 showQualitySelector ||

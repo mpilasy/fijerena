@@ -1,0 +1,25 @@
+# Live TV full screen (PlayerScreen + LiveTvChannelPanel over the video, LT3), TV emulator,
+# source iptv.
+# Start: in full screen, panel closed, OSD hidden — Home → Live TV (the preview opens on the
+# last played channel with context Recent), OK on the current row, then wait for the stream-info
+# banner to hide. Focus is on the player root, which has no text, so there is no @start.
+# Covers L-3 / L-4 as LT3 leaves them: Left and Right both open the one channel panel (the
+# preview's, same tabs and rows); inside it Left/Right on the tab row switch tabs, Up/Down move
+# rows; Back closes it and focus returns to the player. OK on a row tunes and closes the panel,
+# deliberately not walked (it changes the channel).
+# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# Right opens the panel on the playing channel's row — the first row of Recent, which is
+# newest-first. Its text varies, so it is not asserted.
+RIGHT
+# Up from the first row lands on the selected tab.
+UP	Recent
+# Right on a tab moves to the next tab and switches the list to it (the zap order follows).
+RIGHT	Favorites
+# Down enters the rows: the playing channel when it is a favourite, else the first row (text
+# varies). With no favourites nothing below is focusable and focus stays on the tab.
+DOWN
+# Back closes the panel; focus goes back to the player root (no text, not asserted).
+BACK
+# Left opens the same panel again, on the tab it was left on (Favorites): on the playing
+# channel's row when the list has it, else the first row (text varies).
+LEFT

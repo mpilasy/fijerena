@@ -36,16 +36,20 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
- * The Live TV preview's channel panel (LT2): a tab row — the picked category when there is one ·
+ * The Live TV channel panel (LT2, LT3): a tab row — the picked category when there is one ·
  * Recent · Favourites, with Refresh at its end — over the rows of the selected [ChannelContext].
+ * One component in two places: docked beside the preview, and over the video in full screen
+ * ([overlay], hosted by `PlayerScreen`, which owns opening, Back and keeping focus inside).
  *
  * Keys: Up from the first row lands on the selected tab, whichever node above it Compose's
  * geometric search picked; Left/Right on the tabs switch the list (focus follows selection, as
  * [TvSectionTabs] does everywhere); Left/Right on a row do nothing — the rows are a `tvPane`
  * with no neighbours; Down from the tabs enters the rows on the current channel when the list
- * has it, else the first row; OK on a row promotes it to full screen. An empty list is a line of
- * text, not a Refresh button, so focus stays on the tabs (L-10). Refresh is at the end of the
- * tab row, no longer a stop between the tabs and the first row (L-13).
+ * has it, else the first row; OK on a row promotes it to full screen, or tunes it in full
+ * screen. The rows take focus on the current channel when they appear, so the overlay opens on
+ * it. An empty list is a line of text, not a Refresh button, so focus stays on the tabs (L-10).
+ * Refresh is at the end of the tab row, no longer a stop between the tabs and the first row
+ * (L-13).
  */
 @Composable
 internal fun LiveTvChannelPanel(
@@ -67,6 +71,8 @@ internal fun LiveTvChannelPanel(
     onStreamPromote: (MediaItem) -> Unit,
     onStreamFocused: (MediaItem) -> Unit,
     onRefresh: () -> Unit,
+    /** Full screen: the panel has just opened over the video and must hold focus at once. */
+    overlay: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
@@ -76,10 +82,13 @@ internal fun LiveTvChannelPanel(
     val labels = tabs.map { it.label() }
 
     // An empty tab has nothing focusable below the tabs, so focus goes (or stays) there — also
-    // when the last favourite is removed from its row and the row disappears under focus.
+    // when the last favourite is removed from its row and the row disappears under focus. Over
+    // the video the tabs also hold focus while the list loads, since the player gave it up when
+    // the panel opened; the rows take it on the current channel once they are there.
     val isEmpty = !streamsLoading && streams != null && streams.isEmpty()
-    LaunchedEffect(context, isEmpty) {
-        if (isEmpty) tabsEntry.requestFocusWithRetry()
+    val focusTabs = isEmpty || (overlay && streamsLoading)
+    LaunchedEffect(context, focusTabs) {
+        if (focusTabs) tabsEntry.requestFocusWithRetry()
     }
 
     Column(modifier = modifier) {
@@ -160,7 +169,7 @@ internal fun LiveTvChannelPanel(
     }
 }
 
-/** The tab (and full-screen flyout) title of a [ChannelContext]: the category's name, or the virtual list's label. */
+/** The tab title of a [ChannelContext]: the category's name, or the virtual list's label. */
 @Composable
 internal fun ChannelContext.label(): String =
     when (this) {

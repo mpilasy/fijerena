@@ -43,9 +43,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
-import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.ui.components.TvErrorState
-import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 import org.njarasoa.fijerena.ui.player.UpNextState
 import org.njarasoa.fijerena.ui.theme.*
@@ -328,11 +326,6 @@ private fun PlayerContent(
     onBack: () -> Unit,
     upNextState: UpNextState,
 ) {
-    // The flyout offers channels to switch to, so the one already playing is filtered out —
-    // unlike the split preview panel, which keeps it as the highlighted row. Held in display
-    // order so watching past the delay doesn't re-sort the list the viewer may have open.
-    val publishedRecentStreams by loaderViewModel.recentItems.collectAsStateWithLifecycle()
-    val recentStreams = rememberStableRecentOrder(publishedRecentStreams)
     val scope = rememberCoroutineScope()
     PlayerScreen(
         viewModel = playbackViewModel,
@@ -354,15 +347,6 @@ private fun PlayerContent(
         isFavorite = data.isFavorite,
         currentEpgProgram = data.currentEpgProgram,
         nextEpgProgram = data.nextEpgProgram,
-        channelList = ImmutableMediaList(data.categoryStreams),
-        recentStreams =
-            remember(recentStreams, data.streamId) {
-                ImmutableMediaList(recentStreams.filter { it.id != data.streamId })
-            },
-        onStreamSelected = { item ->
-            finalizeSession(playbackViewModel.playbackState.value, loaderViewModel)
-            loaderViewModel.loadStream(item)
-        },
         onToggleFavorite = {
             loaderViewModel.toggleFavorite()
         },

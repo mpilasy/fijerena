@@ -18,6 +18,7 @@ fun handlePlayerKeyEvent(
     currentMetadata: PlayerMetadata,
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
+    hasChannelPanel: Boolean,
 ): Boolean {
     // suppressNextCenterKeyUp is only ever set true from the Center/Enter KeyDown branch in
     // handleKeyDown, which is gated on `!state.isModalOpen` — so it can never be set true while
@@ -53,7 +54,7 @@ fun handlePlayerKeyEvent(
             }
 
             else -> {
-                handleKeyDown(keyEvent, state, viewModel, playbackState, currentMetadata, onNextChannel, onPreviousChannel)
+                handleKeyDown(keyEvent, state, viewModel, playbackState, currentMetadata, onNextChannel, onPreviousChannel, hasChannelPanel)
             }
         }
     return handled
@@ -67,12 +68,13 @@ private fun handleKeyDown(
     currentMetadata: PlayerMetadata,
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
+    hasChannelPanel: Boolean,
 ): Boolean {
     val handled =
         when (keyEvent.key) {
             Key.DirectionCenter, Key.Enter -> {
-                // Let D-pad OK activate whatever's focused inside an open modal (e.g. select a
-                // channel in the category/last-watched overlay) instead of revealing the OSD —
+                // Let D-pad OK activate whatever's focused inside an open modal (e.g. tune a
+                // channel in the channel panel) instead of revealing the OSD —
                 // mirrors the isModalOpen guard on Up/Down/Left/Right below.
                 if (state.isModalOpen) {
                     false
@@ -163,15 +165,13 @@ private fun handleKeyDown(
 
             Key.DirectionLeft -> {
                 if (state.isModalOpen) {
-                    // A track picker or overlay owns the D-pad; do not also seek or swap overlays.
+                    // A track picker or the channel panel owns the D-pad; do not also seek.
                     false
                 } else if (!state.showControls && currentMetadata.isLive) {
-                    // Live TV: Left opens category overlay (or closes last-watched)
-                    when {
-                        state.showLastWatchedOverlay -> state.showLastWatchedOverlay = false
-                        else -> state.showCategoryOverlay = true
-                    }
-                    true
+                    // Live TV: Left and Right both open the one channel panel (LT3, Decision 4).
+                    // Once it is open, isModalOpen (above) leaves the D-pad to the panel.
+                    if (hasChannelPanel) state.showChannelPanel = true
+                    hasChannelPanel
                 } else if (!state.showControls && !currentMetadata.isLive) {
                     // VOD: move scrub cursor backward; OK commits the seek
                     stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = false)
@@ -184,15 +184,12 @@ private fun handleKeyDown(
 
             Key.DirectionRight -> {
                 if (state.isModalOpen) {
-                    // A track picker or overlay owns the D-pad; do not also seek or swap overlays.
+                    // A track picker or the channel panel owns the D-pad; do not also seek.
                     false
                 } else if (!state.showControls && currentMetadata.isLive) {
-                    // Live TV: Right opens last-watched overlay (or closes category)
-                    when {
-                        state.showCategoryOverlay -> state.showCategoryOverlay = false
-                        else -> state.showLastWatchedOverlay = true
-                    }
-                    true
+                    // Live TV: the same panel as Left.
+                    if (hasChannelPanel) state.showChannelPanel = true
+                    hasChannelPanel
                 } else if (!state.showControls && !currentMetadata.isLive) {
                     // VOD: move scrub cursor forward; OK commits the seek
                     stepScrubCursor(state, playbackState, keyEvent.nativeKeyEvent, forward = true)

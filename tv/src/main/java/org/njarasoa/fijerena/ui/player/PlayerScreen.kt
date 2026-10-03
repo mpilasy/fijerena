@@ -9,9 +9,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -28,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -37,7 +41,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,12 +51,10 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
-import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
-import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
 import org.njarasoa.fijerena.core.ui.components.showUpNext
@@ -62,6 +63,7 @@ import org.njarasoa.fijerena.core.ui.components.upNextSecondsLeft
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
+import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.player.components.BufferingContent
 import org.njarasoa.fijerena.ui.player.components.EndedContent
 import org.njarasoa.fijerena.ui.player.components.ErrorContent
@@ -70,7 +72,6 @@ import org.njarasoa.fijerena.ui.player.components.dialogs.ChapterSelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.QualitySelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.SubtitleSelectorDialog
 import org.njarasoa.fijerena.ui.player.components.overlays.ControlHintsOverlay
-import org.njarasoa.fijerena.ui.player.components.overlays.TvChannelListOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvPlayerControlsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvStatsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvUpNextOverlay
@@ -89,15 +90,12 @@ fun PlayerScreen(
     nextEpgProgram: EpgProgram? = null,
     currentStreamId: String? = null,
     /**
-     * The list Up/Down zap through (the caller's `onNextChannel`/`onPreviousChannel` walk it) and
-     * the Left flyout shows: the channel's context list from the Live TV preview (LT2), the
-     * category's channels from the standalone route.
+     * Live TV's channel panel (LT3): the preview's own panel, drawn over the video from the right
+     * while open. Left or Right opens it when neither it nor the OSD is showing; Back closes it,
+     * and focus returns to the player. The panel calls `close` once it has tuned a row. Null (the
+     * standalone route, VOD only on TV) leaves Left/Right to the scrub cursor.
      */
-    channelList: ImmutableMediaList = ImmutableMediaList(),
-    channelListTitle: String = stringResource(R.string.player_category_channels),
-    // The Right flyout. Still a separate list until LT3 folds both flyouts into the one panel.
-    recentStreams: ImmutableMediaList = ImmutableMediaList(),
-    onStreamSelected: ((MediaItem) -> Unit)? = null,
+    channelPanel: (@Composable (close: () -> Unit) -> Unit)? = null,
     nextEpisode: EpisodeItem? = null,
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
     // Whether the provider lets episodes roll on to [nextEpisode] — Xtream, not Jellyfin.
@@ -166,12 +164,9 @@ fun PlayerScreen(
                 state.scrubPositionMs = null
             }
 
-            state.showCategoryOverlay -> {
-                state.showCategoryOverlay = false
-            }
-
-            state.showLastWatchedOverlay -> {
-                state.showLastWatchedOverlay = false
+            // Inert fallback: Back is taken in onPreviewKeyEvent below while the panel is open.
+            state.showChannelPanel -> {
+                state.showChannelPanel = false
             }
 
             state.showStats || state.showControls || state.showStreamInfo -> {
@@ -201,10 +196,10 @@ fun PlayerScreen(
 
     // Ensure focus is requested when no overlays are visible — on the "Up next" card while it is up.
     // Keyed on isModalOpen too: a track picker keeps focus while the OSD auto-hides behind it, so
-    // focus comes back to the player when it closes.
-    LaunchedEffect(state.showControls, state.showCategoryOverlay, state.showLastWatchedOverlay, upNextVisible, state.isModalOpen) {
+    // focus comes back to the player when it closes. Closing the channel panel lands here too.
+    LaunchedEffect(state.showControls, state.showChannelPanel, upNextVisible, state.isModalOpen) {
         if (!upNextVisible) upNextFocused = false
-        val noOverlays = !state.showControls && !state.showCategoryOverlay && !state.showLastWatchedOverlay
+        val noOverlays = !state.showControls && !state.showChannelPanel
         if (noOverlays && upNextVisible) {
             withFrameMillis {}
             upNextFocus.requestFocus()
@@ -228,8 +223,8 @@ fun PlayerScreen(
                 .background(CinemaBackground)
                 .then(
                     // Only make the player box focusable when controls and menus are NOT visible.
-                    // This allows focus to pass to the active overlay (e.g. Category List).
-                    if (!state.showControls && !state.showCategoryOverlay && !state.showLastWatchedOverlay) {
+                    // This allows focus to pass to the active overlay (e.g. the channel panel).
+                    if (!state.showControls && !state.showChannelPanel) {
                         Modifier
                             .focusRequester(state.focusRequester)
                             .focusable()
@@ -252,6 +247,16 @@ fun PlayerScreen(
                         "onPreviewKeyEvent: action=${keyEvent.nativeKeyEvent.action}, code=${keyEvent.nativeKeyEvent.keyCode}",
                     )
                     when {
+                        // Channel panel open: Back closes it (on KeyUp, so the release does not
+                        // land on the player). Taken here, top-down, because a focused row
+                        // swallows the first Back before BackHandler sees it (AGENTS.md → Back on
+                        // TV). Every other key goes on to the panel: the handler below leaves the
+                        // D-pad and OK alone while isModalOpen.
+                        state.showChannelPanel && keyEvent.key == Key.Back -> {
+                            if (keyEvent.type == KeyEventType.KeyUp) state.showChannelPanel = false
+                            true
+                        }
+
                         // "Up next" card up: Back hides it and playback carries on. Taken here,
                         // top-down, because a focused TV Button swallows the first Back before
                         // BackHandler sees it (AGENTS.md → Back on TV).
@@ -280,6 +285,7 @@ fun PlayerScreen(
                                 currentMetadata = currentMetadata,
                                 onNextChannel = onNextChannel,
                                 onPreviousChannel = onPreviousChannel,
+                                hasChannelPanel = channelPanel != null,
                             )
                         }
                     }
@@ -465,11 +471,11 @@ fun PlayerScreen(
             )
         }
 
-        // Modern unified controls overlay (mobile-style). Declared before the category/
-        // last-watched overlays below so that on the rare overlap (a channel-zap's showStreamInfo
-        // hasn't auto-hidden yet when the flyout opens) it renders underneath them, never on top —
-        // opening a flyout is never itself a reason to show this. hideTopBars still exists for
-        // that overlap case, so the compact top bars don't double up with the flyout's own title.
+        // Modern unified controls overlay (mobile-style). Declared before the channel panel below
+        // so that on the rare overlap (a channel-zap's showStreamInfo hasn't auto-hidden yet when
+        // the panel opens) it renders underneath it, never on top — opening the panel is never
+        // itself a reason to show this. hideTopBars still exists for that overlap case, so the
+        // compact top bars don't double up with the panel's tab row.
         AnimatedVisibility(
             visible = state.showControls || state.showStreamInfo,
             enter = fadeIn(),
@@ -486,7 +492,7 @@ fun PlayerScreen(
                 isFavorite = isFavorite,
                 onToggleFavorite = onToggleFavorite,
                 showFullControls = state.showControls,
-                hideTopBars = state.showCategoryOverlay || state.showLastWatchedOverlay,
+                hideTopBars = state.showChannelPanel,
                 onShowAudioTrackSelector = { state.showAudioTrackSelector = true },
                 onShowSubtitleSelector = { state.showSubtitleSelector = true },
                 onShowQualitySelector = { state.showQualitySelector = true },
@@ -506,7 +512,7 @@ fun PlayerScreen(
             TvUpNextOverlay(
                 episode = next,
                 secondsLeft = upNextSecondsLeft(state.livePosition, state.liveDuration),
-                belowClock = state.showControls && !(state.showCategoryOverlay || state.showLastWatchedOverlay),
+                belowClock = state.showControls && !state.showChannelPanel,
                 playNowFocus = upNextFocus,
                 onFocusChanged = { upNextFocused = it },
                 onPlayNow = { playUpNext(next) },
@@ -514,47 +520,52 @@ fun PlayerScreen(
             )
         }
 
-        // Category streams overlay — slides in from the left
-        AnimatedVisibility(
-            visible = state.showCategoryOverlay,
-            enter = slideInHorizontally { -it },
-            exit = slideOutHorizontally { -it },
-        ) {
-            TvChannelListOverlay(
-                title = channelListTitle,
-                streams = channelList,
-                panelAlignment = Alignment.CenterStart,
-                currentStreamId = currentStreamId,
-                onSelect = { item ->
-                    state.showCategoryOverlay = false
-                    onStreamSelected?.invoke(item)
-                },
-                onDismiss = { state.showCategoryOverlay = false },
-            )
-        }
-
-        // Last watched overlay — slides in from the right
-        AnimatedVisibility(
-            visible = state.showLastWatchedOverlay,
-            enter = slideInHorizontally { it },
-            exit = slideOutHorizontally { it },
-        ) {
-            TvChannelListOverlay(
-                title = stringResource(R.string.category_recent_label),
-                streams = recentStreams,
-                panelAlignment = Alignment.CenterEnd,
-                // The preview's Recent keeps the current channel (LT2): open on it, not row 0.
-                currentStreamId = currentStreamId,
-                emptyMessage = stringResource(R.string.player_no_last_watched),
-                onSelect = { item ->
-                    state.showLastWatchedOverlay = false
-                    onStreamSelected?.invoke(item)
-                },
-                onDismiss = { state.showLastWatchedOverlay = false },
-            )
+        // Live TV's channel panel (LT3) — slides in from the right, where the preview docks it.
+        channelPanel?.let { panel ->
+            AnimatedVisibility(
+                visible = state.showChannelPanel,
+                enter = slideInHorizontally { it },
+                exit = slideOutHorizontally { it },
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(CinemaBackground.copy(alpha = CinemaAlpha.tint))
+                            .padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
+                ) {
+                    TvGlassPanel(
+                        modifier =
+                            Modifier
+                                .align(Alignment.CenterEnd)
+                                .fillMaxWidth(CHANNEL_PANEL_WIDTH_FRACTION)
+                                .fillMaxHeight()
+                                // Keep focus inside while open: this is an overlay in the
+                                // player's own tree, so a D-pad press past the tab row or the
+                                // last row would otherwise move on to whatever lies behind
+                                // (AGENTS.md → In-tree overlays trap focus). Only while open: it
+                                // animates out focused, and a cancelled exit would also block the
+                                // player taking focus back on close. focusProperties directly
+                                // before focusGroup, so the exit belongs to the group.
+                                .focusProperties { onExit = { if (state.showChannelPanel) cancelFocusChange() } }
+                                .focusGroup(),
+                        backgroundAlpha = CHANNEL_PANEL_BACKGROUND_ALPHA,
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize().padding(Spacing.lg)) {
+                            panel { state.showChannelPanel = false }
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
+/** The full-screen channel panel's share of the width, as the preview docks it. */
+private const val CHANNEL_PANEL_WIDTH_FRACTION = 0.34f
+
+/** The glass the channel flyouts had over video, kept for the panel. */
+private const val CHANNEL_PANEL_BACKGROUND_ALPHA = 0.5f
 
 /** Keys the "Up next" card's buttons get while it holds focus. */
 private val UP_NEXT_CARD_KEYS =
