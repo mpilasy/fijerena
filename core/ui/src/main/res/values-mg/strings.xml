@@ -653,7 +653,7 @@
     <string name="epg_browser_index_stats_format">EPG Index: %1$s</string>
     <string name="category_now_playing_badge">▶ Mandeha</string>
     <string name="category_of_total_format">amin\'ny %1$d</string>
-    <string name="settings_ui_scale_section_title">Refin\'ny sokajy/tabilao</string>
+    <string name="settings_ui_scale_section_title">Haben\'ny soratra sy ny tabilao</string>
     <string name="settings_ui_scale_desc">Ovay ny endri-tsoratra, ny elanelana, ary ny haben\'ny singa ho an\'ny sokajy/tabilao</string>
 
     <!-- Connection test error messages -->
@@ -732,4 +732,21 @@
     <string name="newer_data_reset_confirm_title">Haverina ve ny loharano?</string>
     <string name="newer_data_reset_confirm_message">Atokana avokoa ny loharano, ny mombamomba ary ny loharanon\'ny fitarihana rehetra amin\'ity fitaovana ity, ary miverina manomboka tsy misy ny fampiharana. Raha apetraka ny dikan-teny vaovao kokoa ary averina ny tahiry dia miverina izy ireo.</string>
     <string name="newer_data_reset_confirm">Avereno</string>
+
+    <!-- Settings overhaul (docs/plans/20261003_ux-overhaul-plan.md): groups, scope chips, rows -->
+    <string name="settings_group_source_guide">Loharano sy fitarihana</string>
+    <string name="settings_group_display">Fisehoana</string>
+    <string name="settings_group_backup_storage">Tahiry sy fitahirizana</string>
+    <string name="settings_group_about_advanced">Momba sy mandroso</string>
+    <string name="settings_scope_device">Ity fitaovana ity</string>
+    <string name="settings_scope_profile">Ity mombamomba ity</string>
+    <string name="settings_scope_source">Ity loharano ity</string>
+    <string name="settings_scope_synced">Ampifanarahina</string>
+    <string name="settings_switch_source">Hanova loharano</string>
+    <string name="settings_edit_this_source">Hanitsy ity loharano ity</string>
+    <string name="settings_applies_immediately">Mihatra avy hatrany ny fanovana eto</string>
+    <string name="settings_per_source_playback_hint">Ny famerenana ho azy, ny haben\'ny andalana Vao haingana ary ny endrika fampitana dia apetraka isaky ny loharano</string>
+    <string name="settings_filters_hint">Ny sivana votoaty ho an\'i %1$s dia apetraka isaky ny loharano</string>
+    <string name="common_custom">Safidy manokana</string>
+    <string name="settings_custom_value_format">%1$s (manokana)</string>
 </resources>

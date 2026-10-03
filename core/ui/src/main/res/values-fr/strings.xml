@@ -733,7 +733,7 @@
     <string name="epg_browser_index_stats_format">Index EPG : %1$s</string>
     <string name="category_now_playing_badge">▶ Lecture en cours</string>
     <string name="category_of_total_format">sur %1$d</string>
-    <string name="settings_ui_scale_section_title">Échelle Catégorie/Grille</string>
+    <string name="settings_ui_scale_section_title">Taille du texte et de la grille</string>
     <string name="settings_ui_scale_desc">Ajuster la police, l\'espacement et la taille des éléments pour les vues catégorie/grille</string>
 
     <!-- Connection test error messages -->
@@ -895,4 +895,21 @@
     <string name="newer_data_reset_confirm_title">Réinitialiser les sources ?</string>
     <string name="newer_data_reset_confirm_message">Toutes les sources, tous les profils et toutes les sources de guide de cet appareil sont mis de côté, et l\'application redémarre sans aucune. Installer la version plus récente et restaurer la sauvegarde les fait revenir.</string>
     <string name="newer_data_reset_confirm">Réinitialiser</string>
+
+    <!-- Settings overhaul (docs/plans/20261003_ux-overhaul-plan.md): groups, scope chips, rows -->
+    <string name="settings_group_source_guide">Source et guide</string>
+    <string name="settings_group_display">Affichage</string>
+    <string name="settings_group_backup_storage">Sauvegarde et stockage</string>
+    <string name="settings_group_about_advanced">À propos et avancé</string>
+    <string name="settings_scope_device">Cet appareil</string>
+    <string name="settings_scope_profile">Ce profil</string>
+    <string name="settings_scope_source">Cette source</string>
+    <string name="settings_scope_synced">Synchronisé</string>
+    <string name="settings_switch_source">Changer de source</string>
+    <string name="settings_edit_this_source">Modifier cette source</string>
+    <string name="settings_applies_immediately">Les changements ici s\'appliquent immédiatement</string>
+    <string name="settings_per_source_playback_hint">La reprise automatique, la taille de la ligne Récents et le format de flux se règlent par source</string>
+    <string name="settings_filters_hint">Les filtres de contenu de %1$s se règlent par source</string>
+    <string name="common_custom">Personnalisé</string>
+    <string name="settings_custom_value_format">%1$s (personnalisé)</string>
 </resources>

@@ -771,7 +771,7 @@
     <string name="epg_browser_index_stats_format">EPG Index: %1$s</string>
     <string name="category_now_playing_badge">▶ Playing</string>
     <string name="category_of_total_format">of %1$d</string>
-    <string name="settings_ui_scale_section_title">Category/Grid UI Scale</string>
+    <string name="settings_ui_scale_section_title">Text &amp; grid size</string>
     <string name="settings_ui_scale_desc">Adjust font, spacing, and element sizes for category/grid views</string>
 
     <!-- Connection test error messages (ProviderViewModel) -->
@@ -933,4 +933,21 @@
     <string name="newer_data_reset_confirm_title">Reset sources?</string>
     <string name="newer_data_reset_confirm_message">Every source, profile and guide source on this device is set aside, and the app restarts with none. Installing the newer version and restoring the backup brings them back.</string>
     <string name="newer_data_reset_confirm">Reset</string>
+
+    <!-- Settings overhaul (docs/plans/20261003_ux-overhaul-plan.md): groups, scope chips, rows -->
+    <string name="settings_group_source_guide">Source &amp; guide</string>
+    <string name="settings_group_display">Display</string>
+    <string name="settings_group_backup_storage">Backup &amp; storage</string>
+    <string name="settings_group_about_advanced">About &amp; advanced</string>
+    <string name="settings_scope_device">This device</string>
+    <string name="settings_scope_profile">This profile</string>
+    <string name="settings_scope_source">This source</string>
+    <string name="settings_scope_synced">Synced</string>
+    <string name="settings_switch_source">Switch source</string>
+    <string name="settings_edit_this_source">Edit this source</string>
+    <string name="settings_applies_immediately">Changes here apply immediately</string>
+    <string name="settings_per_source_playback_hint">Auto-resume, Recent row size and stream format are set per source</string>
+    <string name="settings_filters_hint">Content filters for %1$s are set per source</string>
+    <string name="common_custom">Custom</string>
+    <string name="settings_custom_value_format">%1$s (custom)</string>
 </resources>
