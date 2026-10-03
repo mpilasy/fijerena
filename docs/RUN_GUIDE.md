@@ -248,6 +248,49 @@ core:ui) exist in debug builds only and require `android.permission.DUMP`, which
 and other apps don't — so `adb shell am broadcast …` works, and nothing else on the device can link
 the sync account or force refreshes.
 
+### Focus walks
+
+`scripts/tv-focus-walk.sh` drives the TV app with D-pad keys and reads which node has focus after
+each one, the way the 2026-10-03 focus audit did (`uiautomator dump`, then the `focused="true"`
+node's text and content-desc plus its descendants', first four joined by ` / `). It needs `adb` and
+`python3` on the host, nothing on the device.
+
+```bash
+scripts/tv-focus-walk.sh scripts/focus-walks/home.txt                 # assert; exit 1 on any mismatch
+scripts/tv-focus-walk.sh -s emulator-5554 -d 0.6 scripts/focus-walks/*.txt
+scripts/tv-focus-walk.sh -r scripts/focus-walks/home.txt              # record: rewrite the expectations
+```
+
+`-s` picks the device (default: the first `emulator-*` in `adb devices`); `-d` is the pause after
+each key in seconds (default 0.45, raise it on a slow emulator). The script prints one line per step
+(`N  KEY  →  <focused text>  OK | MISMATCH (expected "…")`) and a summary per file.
+
+A walk file is one step per line, `KEY<TAB>expected`, where KEY is `UP`, `DOWN`, `LEFT`, `RIGHT`,
+`CENTER`, `BACK`, `MENU` or `WAIT <seconds>`, and `expected` is a substring of the focused text. A
+step with no expectation sends the key without checking. A first line `@start <substring>` asserts
+the focus before any key is sent, so a walk can check it started on the right screen. `#` comments
+and blank lines are kept as they are.
+
+Two modes: without `-r` the file is a test — every expectation is checked, all files are run, and
+the script exits 1 if any step mismatched. With `-r` it is a recorder — the keys
+are sent, the observed text is printed and written back into the file as the new expectations
+(comments kept), which is how a phase that changes focus order updates the walks in the same commit.
+
+One driver per emulator: the script, a person with the remote, and any other script sending keys
+must never share a device at the same time, or the focus read after each key belongs to someone
+else's key. Put the app on the walk's start screen by hand first; the script does not navigate there.
+
+The recorded walks under `scripts/focus-walks/` encode today's behaviour (the findings in
+`docs/plans/20261003_ux-overhaul-plan.md`, Part II), not the target, so later phases flip the
+expectations they fix. They were written from the plan's notes, not from a run: re-record each with
+`-r` on the emulator before relying on it.
+
+| Walk | Start on | Covers |
+|------|----------|--------|
+| `home.txt` | Home, focus on the Switch Source chip | F-H-1, F-H-2 (header Down lands on the rightmost card, not reversible) |
+| `live-tv-browse.txt` | Live TV browse list, focus on a stream row | F-C-3, F-C-4, F-C-5, F-C-6 (Left lands on a category level with the row, then on Search; hidden star button; Refresh in the Up path) |
+| `settings.txt` | Settings, focus on the first profile row | Part I T-2, T-5 (watch-delay chips `5s`/`15s`/`30s`; the first becomes `10s` after T1) |
+
 ---
 
 ## Device-Specific Tips

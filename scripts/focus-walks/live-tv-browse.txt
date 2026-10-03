@@ -1,0 +1,22 @@
+# Live TV browse (TwoColumnLayout + StreamList), TV emulator, source iptv, no guide indexed.
+# Start: Home → Live TV. Today this lands on the bare browse list (L-1) with focus on a
+# stream row (F-C-1); the row's text is whichever stream is first, so there is no @start.
+# Covers F-C-3, F-C-4, F-C-5, F-C-6 (R1, R2, R3, R5). Expectations are today's behaviour.
+# Recorded 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# Up from the first stream reaches the refresh icon above the list (F-C-6).
+UP	Refresh streams
+# Up from there reaches a header button — TV Guide or Search, whichever is nearest; not asserted.
+UP
+DOWN
+DOWN	Recent
+# Right from the Recent category enters the item pane: a stream row (text varies).
+RIGHT
+# Right from a stream reveals its hidden star button (F-C-5).
+RIGHT	Add to Favorites
+# Down from the star goes to the next row, not the next star (F-C-5).
+DOWN
+LEFT
+# Left from an item lands on a category level with it, not the selected one (F-C-3).
+LEFT
+# Left from any category lands on Search, top-left (F-C-4).
+LEFT	Search

@@ -721,7 +721,7 @@ See Decisions 3–5 at the end of this plan.
 
 | Phase | Scope | Main files | Effort | Risk | Why |
 |---|---|---|---|---|---|
-| 1 | P6 focus-walk script + expected sequences for the screens walked here (records today's behaviour; later phases update the expectations). | `scripts/tv-focus-walk.sh`, `scripts/focus-walks/*.txt` | M | Low | tooling only |
+| 1 | P6 focus-walk script + expected sequences for the screens walked here (records today's behaviour; later phases update the expectations). **Done 2026-10-03** — verified against a stub adb; the three walks must be re-recorded with `-r` on the emulator at the day-1 check. | `scripts/tv-focus-walk.sh`, `scripts/focus-walks/*.txt` | M | Low | tooling only |
 | 2 | P1 + P2; apply to category screens (Live TV / Movies / TV Shows). | new `TvPane.kt`, `TwoColumnLayout.kt`, `CategoryList.kt`, `StreamList.kt` | L | High | Compose focus APIs are quirky; touches all category screens |
 | 3 | P3 row action menu; remove hidden row buttons in category lists and Live preview. | `StreamList.kt`, `LiveTvSplitLayout.kt`, `FavoriteMenuDialog.kt` | M | Med | behaviour change: hidden buttons removed; long-press on tv-material `Surface` |
 | 4 | Home entry/header focus; dead Live TV card. | `ContentTypeSelectionScreen.kt` | S | Low |  |

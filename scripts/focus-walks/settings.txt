@@ -1,0 +1,14 @@
+# Settings (SettingsScreen), TV emulator, profile Kid, two profiles.
+# Start: Settings just opened, focus on the first profile row (Profiles card at the top);
+# its text is the profile's name, so there is no @start.
+# Covers Part I T-2 (watch delay: default 10 s but chips are 5/15/30/60, nothing selected)
+# and T-5 (2x2 chip grid). Expectations are today's behaviour.
+# Recorded 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+DOWN
+DOWN	Add profile
+DOWN	Manage Sources
+# First watch-delay chip. Becomes 10s after Part I T1 (presets 5/10/15/30/60/120).
+DOWN	5s
+RIGHT	15s
+# The chips are a 2x2 grid (5s 15s / 30s 60s); Down from 15s may land on 60s instead — re-record.
+DOWN	30s
