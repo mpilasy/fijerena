@@ -1,5 +1,19 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: UX overhaul, day 5
+**Release Date:** 2026-10-03
+
+- **TV: one channel list in Live TV:** the list beside the preview and the list over the video in full screen are now the same panel — tabs for the category, Recent and Favourites, focus on the playing channel. In full screen, Left or Right opens it, OK switches channel, Back closes it. → Part II LT3.
+- **TV Home opens on your content:** focus starts on the first card, Down from the top bar returns to the card you were on, and the Live TV card is dimmed and skipped when the source has no channels. → Part II Phase 4.
+- **TV Edit Source in two columns:** login details on the left with Cancel / Save connection; settings, content filters, library data and a red-outlined Danger zone on the right; leaving with unsaved login changes asks first. → Part I T5.
+- **Mobile guide sources and settings:** the guide sources screen is titled with the source, lists its guides first and tells same-named guides apart; guide auto-refresh is in Settings → Source & guide and guide maintenance in Backup & storage; Live sync's Scan and Sync now buttons match. → Part I M5.
+- **Mobile TV Guide on a real time grid:** one time ruler that scrolls with every channel row, a line at now, past programmes dimmed, day tabs, and a details sheet with "Watch channel" when you tap a programme. → Part III GD3.
+- **Translations:** every English text now has a French and a Malagasy version. → follow-up.
+
+Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
+
+---
+
 ## Version: UX overhaul, day 4
 **Release Date:** 2026-10-03
 

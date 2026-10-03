@@ -12,6 +12,6 @@ RIGHT	Switch profile (Kid) / K
 DOWN	Live TV / Watch live channels / 179 categories
 RIGHT	Movies / Browse on-demand / 39 categories
 # Up from Movies: whichever header button is above it (geometric, unchanged) — not checked.
-UP
+UP	EPG Search
 # Phase 4: back down to the card focused last (Movies).
 DOWN	Movies / Browse on-demand / 39 categories
