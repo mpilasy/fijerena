@@ -4,7 +4,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,7 +39,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -75,10 +74,10 @@ import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSuccess
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
@@ -181,7 +180,6 @@ internal fun StreamList(
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier,
     thumbnailScale: Float = 1f,
-    rowActionsMode: RowActionsMode = RowActionsMode.ON_FOCUS_RIGHT,
     /**
      * This column's pane in a two-pane screen (see `Modifier.tvPane`): Left leaves it for
      * [categoriesPane], and the list takes entry focus once loaded (F-C-1). Null (the Live TV
@@ -213,6 +211,32 @@ internal fun StreamList(
     val cardStyle = streamCardStyle(scale)
     val isRecentList = selectedCategoryId == CategoryViewModel.RECENT_CATEGORY_ID
     val isWatchable = contentType == ContentType.MOVIES || contentType == ContentType.TV_SHOWS
+    val canRemoveFromRecent = isRecentList && categoryViewModel.supportsRemoveFromRecent
+
+    // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key on a row opens this
+    // menu for it, in place of the hidden trailing ★/✓/🗑 buttons that used to be extra Right
+    // stops. The target is rebuilt from the live sets so the menu shows the row's current state.
+    var actionsItem by remember { mutableStateOf<MediaItem?>(null) }
+    actionsItem?.let { item ->
+        FavoriteContextMenuDialog(
+            target =
+                FavoriteMenuTarget.Stream(
+                    itemId = item.id,
+                    itemName = item.name,
+                    categoryId = item.categoryId,
+                    contentType = contentType,
+                    isFavorite = item.id in favoriteIds,
+                    isWatched = if (isWatchable) item.id in watchedIds else null,
+                    isInRecent = canRemoveFromRecent,
+                    seriesId = item.seriesId,
+                ),
+            onConfirm = { categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType) },
+            onDismiss = { actionsItem = null },
+            onToggleWatched = if (isWatchable) ({ categoryViewModel.toggleWatchedStream(item.id, contentType) }) else null,
+            onRemoveFromRecent =
+                if (canRemoveFromRecent) ({ categoryViewModel.removeFromRecent(item.id, contentType, item.seriesId) }) else null,
+        )
+    }
 
     // Auto-scroll and focus on the opened or last played item (on initial load and when returning
     // from details/player).
@@ -433,8 +457,6 @@ internal fun StreamList(
                                 isFavorite = item.id in favoriteIds,
                                 watchProgress = watchProgress[item.id] ?: 0f,
                                 isWatched = item.id in watchedIds,
-                                isWatchable = isWatchable,
-                                isRecentList = isRecentList,
                                 nowPlayingProgram = nowPlaying[item.id],
                                 onClick = {
                                     if (isWatchable) {
@@ -445,20 +467,10 @@ internal fun StreamList(
                                     }
                                     onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType))
                                 },
-                                onToggleFavorite = {
-                                    categoryViewModel.toggleFavoriteStream(item.id, item.name, item.categoryId, contentType)
-                                },
-                                onToggleWatched = { categoryViewModel.toggleWatchedStream(item.id, contentType) },
-                                onRemoveFromRecent =
-                                    if (isRecentList && categoryViewModel.supportsRemoveFromRecent) {
-                                        { categoryViewModel.removeFromRecent(item.id, contentType, item.seriesId) }
-                                    } else {
-                                        null
-                                    },
+                                onOpenActions = { actionsItem = item },
                                 onFocused = { onStreamFocused(item) },
                                 cardModifier = Modifier.paneItem(pane, item.id),
                                 thumbnailScale = thumbnailScale,
-                                rowActionsMode = rowActionsMode,
                                 cardStyle = cardStyle,
                                 modifier =
                                     // remember-scoped so a recomposition of an already-visible item
@@ -479,24 +491,6 @@ internal fun StreamList(
     }
 }
 
-/** How a row's action icons (favorite/watched/remove-from-recent) appear and are reached. */
-internal enum class RowActionsMode {
-    /** Shown to the right of the focused row; DPAD Right from the card reaches them. */
-    ON_FOCUS_RIGHT,
-
-    /**
-     * Hidden until DPAD Left from the card reveals them on its left; further Left walks outward
-     * through them, Right walks back to the card and hides them again.
-     */
-    REVEAL_LEFT,
-
-    /** Mirror of [REVEAL_LEFT]: revealed on the card's right by DPAD Right. */
-    REVEAL_RIGHT,
-}
-
-/** Row actions, listed nearest-to-the-card first. */
-private enum class RowAction { FAVORITE, WATCHED, REMOVE_FROM_RECENT }
-
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun StreamItem(
@@ -504,64 +498,18 @@ private fun StreamItem(
     isFavorite: Boolean = false,
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
-    isWatchable: Boolean = false,
-    isRecentList: Boolean = false,
     nowPlayingProgram: EpgProgram? = null,
     onClick: () -> Unit,
-    onToggleFavorite: () -> Unit = {},
-    onToggleWatched: () -> Unit = {},
-    onRemoveFromRecent: (() -> Unit)? = null,
+    /** Long-press OK or the Menu key: open the row's action menu (P3). */
+    onOpenActions: () -> Unit,
     onFocused: () -> Unit = {},
     /** Applied to the card itself (the focusable), not the row. */
     cardModifier: Modifier = Modifier,
     thumbnailScale: Float = 1f,
-    rowActionsMode: RowActionsMode = RowActionsMode.ON_FOCUS_RIGHT,
     cardStyle: StreamCardStyle,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
-    // Action row (favorite/watched/remove-from-recent) reveals on focus (or on demand, see
-    // RowActionsMode) and is reachable via the D-pad from the card — the D-pad-native equivalent of mobile's swipe reveal, replacing
-    // the old press-and-hold context menu for individual streams (category long-press is
-    // unaffected). rowHasFocus (not just the card's own isFocused) keeps the row composed while
-    // focus is on one of its action buttons, since it would otherwise vanish the instant focus
-    // leaves the card.
-    var rowHasFocus by remember { mutableStateOf(false) }
-    val cardFocusRequester = remember { FocusRequester() }
-    // In the REVEAL_* modes the actions stay hidden even while the row has focus, until the
-    // outward D-pad key asks for them (the Live TV preview pane, where the other horizontal key
-    // switches between Recent and Favorites).
-    val revealOnDemand = rowActionsMode != RowActionsMode.ON_FOCUS_RIGHT
-    val actionsOnLeft = rowActionsMode == RowActionsMode.REVEAL_LEFT
-    val outwardKey = if (actionsOnLeft) Key.DirectionLeft else Key.DirectionRight
-    val inwardKey = if (actionsOnLeft) Key.DirectionRight else Key.DirectionLeft
-    var actionsRevealed by remember { mutableStateOf(false) }
-    // Set by the card's outward key press; the first action only gets composed by the
-    // recomposition that follows, so the focus request has to wait for it.
-    var focusFirstAction by remember { mutableStateOf(false) }
-    val hasRemoveFromRecent = onRemoveFromRecent != null
-    val actions =
-        remember(isWatchable, hasRemoveFromRecent) {
-            buildList {
-                add(RowAction.FAVORITE)
-                if (isWatchable) add(RowAction.WATCHED)
-                if (hasRemoveFromRecent) add(RowAction.REMOVE_FROM_RECENT)
-            }
-        }
-    val actionFocusRequesters = remember { List(RowAction.entries.size) { FocusRequester() } }
-    val showActions = rowHasFocus && (!revealOnDemand || actionsRevealed)
-    // Hide again once focus has really left the row. Not done straight from onFocusChanged: a
-    // focus hop from the card to an action reports a transient hasFocus=false first, and hiding
-    // the actions there would remove the very button focus is landing on.
-    LaunchedEffect(rowHasFocus) {
-        if (!rowHasFocus) actionsRevealed = false
-    }
-    LaunchedEffect(focusFirstAction) {
-        if (focusFirstAction) {
-            actionFocusRequesters[0].requestFocusWithRetry()
-            focusFirstAction = false
-        }
-    }
     // Marquee only while focused. BounceMarqueeNode runs a withFrameNanos loop that invalidates
     // draw every frame for as long as its text overflows, and IPTV channel names overflow
     // constantly — with it applied unconditionally, every visible row kept two such loops running
@@ -570,232 +518,135 @@ private fun StreamItem(
     // node draws the same clipped text a plain Text does.
     var isFocused by remember { mutableStateOf(false) }
 
-    Row(
+    Card(
+        onClick = onClick,
+        onLongClick = onOpenActions,
         modifier =
             modifier
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
-                .focusGroup()
+                .then(cardModifier)
                 .onFocusChanged {
-                    rowHasFocus = it.hasFocus
+                    isFocused = it.isFocused
+                    if (it.isFocused) onFocused()
+                }.onKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown || event.key != Key.Menu) return@onKeyEvent false
+                    onOpenActions()
+                    true
                 },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+        colors = cardStyle.colors,
+        shape = cardStyle.shape,
+        scale = cardStyle.cardScale,
+        glow = cardStyle.glow,
     ) {
-        val actionButtons: @Composable () -> Unit = {
-            if (showActions) {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    // Laid out left to right, so the left-side variant reverses the list to keep
-                    // the first action next to the card.
-                    val order = if (actionsOnLeft) actions.indices.reversed() else actions.indices
-                    for (index in order) {
-                        val actionModifier =
-                            Modifier
-                                .focusRequester(actionFocusRequesters[index])
-                                .onPreviewKeyEvent { event ->
-                                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                                    when (event.key) {
-                                        inwardKey -> {
-                                            if (index == 0) {
-                                                cardFocusRequester.requestFocus()
-                                                actionsRevealed = false
-                                            } else {
-                                                actionFocusRequesters[index - 1].requestFocus()
-                                            }
-                                            true
-                                        }
+        Column {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.sm.scaled(scale)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
+            ) {
+                // Poster thumbnail
+                CinemaThumbnail(
+                    url = item.thumbnailUrl,
+                    fallbackLetter = item.name.firstOrNull(),
+                    contentType = ThumbnailContentType.DEFAULT,
+                    overlayGradient = true,
+                    modifier =
+                        Modifier
+                            .size(
+                                width = (TvDimensions.posterWidth * thumbnailScale).scaled(scale),
+                                height = (TvDimensions.posterHeight * thumbnailScale).scaled(scale),
+                            ),
+                )
 
-                                        outwardKey -> {
-                                            if (index < actions.lastIndex) {
-                                                actionFocusRequesters[index + 1].requestFocus()
-                                                true
-                                            } else {
-                                                // Dead end in the preview pane — don't let focus
-                                                // escape sideways out of the list.
-                                                revealOnDemand
-                                            }
-                                        }
-
-                                        else -> {
-                                            false
-                                        }
-                                    }
-                                }
-                        when (actions[index]) {
-                            RowAction.FAVORITE -> {
-                                CinemaIconButton(
-                                    onClick = onToggleFavorite,
-                                    size = TvDimensions.iconLarge.scaled(scale),
-                                    modifier = actionModifier,
-                                    icon = {
-                                        Icon(
-                                            imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                            contentDescription =
-                                                stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
-                                            tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
-                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                        )
-                                    },
-                                )
-                            }
-
-                            RowAction.WATCHED -> {
-                                CinemaIconButton(
-                                    onClick = onToggleWatched,
-                                    size = TvDimensions.iconLarge.scaled(scale),
-                                    modifier = actionModifier,
-                                    icon = {
-                                        Icon(
-                                            imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                                            contentDescription =
-                                                stringResource(if (isWatched) R.string.watched_unmark else R.string.watched_mark),
-                                            tint = if (isWatched) CinemaAccent else CinemaTextPrimary,
-                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                        )
-                                    },
-                                )
-                            }
-
-                            RowAction.REMOVE_FROM_RECENT -> {
-                                CinemaIconButton(
-                                    onClick = { onRemoveFromRecent?.invoke() },
-                                    size = TvDimensions.iconLarge.scaled(scale),
-                                    modifier = actionModifier,
-                                    icon = {
-                                        Icon(
-                                            imageVector = CinemaIcons.Delete,
-                                            contentDescription = stringResource(R.string.recent_remove),
-                                            tint = CinemaError,
-                                            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                        )
-                                    },
-                                )
-                            }
+                // Text info
+                val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (isFavorite) {
+                            Text(
+                                text = "\u2605",
+                                style = cardStyle.titleMedium,
+                                color = CinemaAccent,
+                            )
                         }
+
+                        if (isWatched) {
+                            Icon(
+                                imageVector = CinemaIcons.CheckCircle,
+                                contentDescription = stringResource(R.string.content_watched_badge),
+                                tint = CinemaSuccess,
+                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+                            )
+                        }
+
+                        parsedTitle.badge?.let { LanguageBadge(it) }
+
+                        Text(
+                            // See mobile's StreamCard — provider data occasionally sends a blank
+                            // name (e.g. "EN -  (US)" with nothing between the dashes).
+                            text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
+                            style = cardStyle.titleMedium,
+                            color = CinemaTextPrimary,
+                            maxLines = 1,
+                            modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
+                        )
+                    }
+                    // Rating (e.g. "7.9 | PG-13")
+                    item.metadata.rating?.let { rating ->
+                        RatingBadge(
+                            rating = rating,
+                            textColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
+                            style = cardStyle.bodySmall,
+                        )
+                    }
+                    // "What's On Now" for Live TV
+                    nowPlayingProgram?.let { program ->
+                        Text(
+                            text = stringResource(R.string.epg_now_prefix, program.title),
+                            style = cardStyle.bodySmall,
+                            color = CinemaOrangeLight,
+                            maxLines = 1,
+                            modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
+                        )
                     }
                 }
+
+                // Discoverability hint for the action menu: a glyph, not a focus stop, on the
+                // focused row only (plan Decisions 1).
+                if (isFocused) RowActionsHint()
             }
-        }
 
-        if (actionsOnLeft) actionButtons()
-
-        Card(
-            onClick = onClick,
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .then(cardModifier)
-                    .onFocusChanged {
-                        isFocused = it.isFocused
-                        if (it.isFocused) onFocused()
-                    }.focusRequester(cardFocusRequester)
-                    .onPreviewKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown || event.key != outwardKey) return@onPreviewKeyEvent false
-                        actionsRevealed = true
-                        focusFirstAction = true
-                        true
-                    },
-            colors = cardStyle.colors,
-            shape = cardStyle.shape,
-            scale = cardStyle.cardScale,
-            glow = cardStyle.glow,
-        ) {
-            Column {
-                Row(
+            // Progress bar
+            if (watchProgress > 0f) {
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { watchProgress },
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(Spacing.sm.scaled(scale)),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                ) {
-                    // Poster thumbnail
-                    CinemaThumbnail(
-                        url = item.thumbnailUrl,
-                        fallbackLetter = item.name.firstOrNull(),
-                        contentType = ThumbnailContentType.DEFAULT,
-                        overlayGradient = true,
-                        modifier =
-                            Modifier
-                                .size(
-                                    width = (TvDimensions.posterWidth * thumbnailScale).scaled(scale),
-                                    height = (TvDimensions.posterHeight * thumbnailScale).scaled(scale),
-                                ),
-                    )
-
-                    // Text info
-                    val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (isFavorite) {
-                                Text(
-                                    text = "\u2605",
-                                    style = cardStyle.titleMedium,
-                                    color = CinemaAccent,
-                                )
-                            }
-
-                            if (isWatched) {
-                                Icon(
-                                    imageVector = CinemaIcons.CheckCircle,
-                                    contentDescription = stringResource(R.string.content_watched_badge),
-                                    tint = CinemaSuccess,
-                                    modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                )
-                            }
-
-                            parsedTitle.badge?.let { LanguageBadge(it) }
-
-                            Text(
-                                // See mobile's StreamCard — provider data occasionally sends a blank
-                                // name (e.g. "EN -  (US)" with nothing between the dashes).
-                                text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
-                                style = cardStyle.titleMedium,
-                                color = CinemaTextPrimary,
-                                maxLines = 1,
-                                modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
-                            )
-                        }
-                        // Rating (e.g. "7.9 | PG-13")
-                        item.metadata.rating?.let { rating ->
-                            RatingBadge(
-                                rating = rating,
-                                textColor = CinemaAccent.copy(alpha = CinemaAlpha.textMedium),
-                                style = cardStyle.bodySmall,
-                            )
-                        }
-                        // "What's On Now" for Live TV
-                        nowPlayingProgram?.let { program ->
-                            Text(
-                                text = stringResource(R.string.epg_now_prefix, program.title),
-                                style = cardStyle.bodySmall,
-                                color = CinemaOrangeLight,
-                                maxLines = 1,
-                                modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
-                            )
-                        }
-                    }
-                }
-
-                // Progress bar
-                if (watchProgress > 0f) {
-                    androidx.compose.material3.LinearProgressIndicator(
-                        progress = { watchProgress },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = TvDimensions.borderFocused.scaled(scale))
-                                .height(TvDimensions.resumeBarHeight.scaled(scale)),
-                        color = CinemaAccent,
-                        trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
-                    )
-                }
+                            .padding(bottom = TvDimensions.borderFocused.scaled(scale))
+                            .height(TvDimensions.resumeBarHeight.scaled(scale)),
+                    color = CinemaAccent,
+                    trackColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.focusedTint),
+                )
             }
         }
-
-        if (!actionsOnLeft) actionButtons()
     }
+}
+
+/** The "⋮" at the end of a focused content row (StreamList and CategoryList): long-press OK or Menu opens its actions. */
+@Composable
+internal fun RowActionsHint() {
+    Icon(
+        imageVector = CinemaIcons.MoreVert,
+        contentDescription = stringResource(R.string.row_actions_hint),
+        tint = CinemaTextSecondary,
+        modifier = Modifier.size(TvDimensions.iconSmall.scaled(LocalUiScale.current)),
+    )
 }

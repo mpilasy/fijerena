@@ -595,23 +595,13 @@ internal fun LiveTvSplitLayout(
                     fullScreen = true
                 },
                 onStreamFocused = { item -> focusedItemFlow.value = item },
-                // Row actions stay hidden until asked for with the key pointing away from the
-                // other list: Left on Recent, Right on Favorites.
-                rowActionsMode =
-                    if (listSource == PreviewListSource.FAVORITES) {
-                        RowActionsMode.REVEAL_RIGHT
-                    } else {
-                        RowActionsMode.REVEAL_LEFT
-                    },
                 modifier =
                     Modifier
                         .weight(0.34f)
                         .fillMaxHeight()
                         // Left/Right toggles Recent <-> Favorites regardless of which row
-                        // in the list is focused. onKeyEvent (bubble-up), not onPreviewKeyEvent,
-                        // so a row gets first say: it consumes the key that reveals/walks its
-                        // action icons (Left on Recent, Right on Favorites) and lets the other
-                        // one through to here.
+                        // in the list is focused. Row actions are on long-press OK / Menu
+                        // (StreamList, P3), so neither key is taken by a row any more.
                         .onKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown) {
                                 false
@@ -682,7 +672,6 @@ private fun LiveTvChannelList(
     onStreamFocused: (MediaItem) -> Unit,
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier,
-    rowActionsMode: RowActionsMode = RowActionsMode.ON_FOCUS_RIGHT,
 ) {
     StreamList(
         streams = streams,
@@ -715,7 +704,6 @@ private fun LiveTvChannelList(
         onRefreshStreams = onRefreshStreams,
         modifier = modifier,
         thumbnailScale = 0.5f,
-        rowActionsMode = rowActionsMode,
     )
 }
 

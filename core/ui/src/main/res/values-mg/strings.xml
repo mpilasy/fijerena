@@ -757,4 +757,6 @@
     <string name="settings_language_desc">Fiteny ho an\'ny menio sy ny hafatra</string>
     <!-- M3 -->
     <string name="provider_use_button">Ampiasaina</string>
+    <!-- Phase 3 -->
+    <string name="row_actions_hint">Tazony ny OK na tsindrio Menu hahitana ny asa</string>
 </resources>

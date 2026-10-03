@@ -958,4 +958,6 @@
     <string name="settings_language_desc">Language for menus and messages</string>
     <!-- M3 -->
     <string name="provider_use_button">Use</string>
+    <!-- Phase 3 -->
+    <string name="row_actions_hint">Hold OK or press Menu for actions</string>
 </resources>

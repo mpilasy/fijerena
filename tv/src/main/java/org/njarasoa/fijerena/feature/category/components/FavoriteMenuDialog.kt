@@ -34,11 +34,13 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 
 /**
- * Themed context menu dialog for a long-pressed category/stream: favorite toggle always, watched
- * toggle too when [onToggleWatched] is given — `target.isWatched == null` (Live TV, categories)
- * is what keeps callers from passing one. See docs/plans/20260828_watch-state-durable-storage-plan.md Phase 6.
- * Two independent actions rather than an AlertDialog's usual confirm/cancel pair: each row commits
- * immediately, `onDismiss` alone closes the menu.
+ * Themed context menu dialog for a category/stream row (long-press OK or the Menu key — UX
+ * overhaul plan Part II P3): favorite toggle always, watched toggle too when [onToggleWatched] is
+ * given — `target.isWatched == null` (Live TV, categories) is what keeps callers from passing one.
+ * See docs/plans/20260828_watch-state-durable-storage-plan.md Phase 6. Independent actions rather
+ * than an AlertDialog's usual confirm/cancel pair: each row commits immediately, `onDismiss` alone
+ * closes the menu. Focus opens on the first row, the favorite toggle (removing a favorite asks
+ * first); the destructive Remove from Recent sits last, just above Cancel.
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -61,7 +63,7 @@ fun FavoriteContextMenuDialog(
         if (isWatched == true) stringResource(R.string.watched_unmark) else stringResource(R.string.watched_mark)
     val recentActionText = stringResource(R.string.recent_remove)
 
-    val cancelFocusRequester = remember { FocusRequester() }
+    val firstActionFocusRequester = remember { FocusRequester() }
 
     if (showConfirmDialog) {
         CinemaAlertDialog(
@@ -126,6 +128,34 @@ fun FavoriteContextMenuDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
+                    TvInputListItem(
+                        selected = false,
+                        onClick = {
+                            if (isFavorite) {
+                                showConfirmDialog = true
+                            } else {
+                                onConfirm()
+                                onDismiss()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().focusRequester(firstActionFocusRequester),
+                        leadingContent = {
+                            Icon(
+                                imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(TvDimensions.iconSmall),
+                                tint = if (isFavorite) CinemaError else CinemaAccent,
+                            )
+                        },
+                        headlineContent = {
+                            Text(
+                                text = favoriteActionText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isFavorite) CinemaError else CinemaTextPrimary,
+                            )
+                        },
+                    )
+
                     if (onToggleWatched != null && isWatched != null) {
                         TvInputListItem(
                             selected = false,
@@ -180,36 +210,8 @@ fun FavoriteContextMenuDialog(
 
                     TvInputListItem(
                         selected = false,
-                        onClick = {
-                            if (isFavorite) {
-                                showConfirmDialog = true
-                            } else {
-                                onConfirm()
-                                onDismiss()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        leadingContent = {
-                            Icon(
-                                imageVector = if (isFavorite) CinemaIcons.StarBorder else CinemaIcons.Star,
-                                contentDescription = null,
-                                modifier = Modifier.size(TvDimensions.iconSmall),
-                                tint = if (isFavorite) CinemaError else CinemaAccent,
-                            )
-                        },
-                        headlineContent = {
-                            Text(
-                                text = favoriteActionText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (isFavorite) CinemaError else CinemaTextPrimary,
-                            )
-                        },
-                    )
-
-                    TvInputListItem(
-                        selected = false,
                         onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth().focusRequester(cancelFocusRequester),
+                        modifier = Modifier.fillMaxWidth(),
                         leadingContent = {
                             Icon(
                                 imageVector = CinemaIcons.Close,
@@ -228,7 +230,7 @@ fun FavoriteContextMenuDialog(
                     )
                 }
             },
-            initialFocus = cancelFocusRequester,
+            initialFocus = firstActionFocusRequester,
             confirmButton = {},
             containerColor = CinemaSurface,
             titleContentColor = CinemaTextPrimary,

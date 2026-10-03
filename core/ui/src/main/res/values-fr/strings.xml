@@ -920,4 +920,6 @@
     <string name="settings_language_desc">Langue des menus et des messages</string>
     <!-- M3 -->
     <string name="provider_use_button">Utiliser</string>
+    <!-- Phase 3 -->
+    <string name="row_actions_hint">Maintenez OK ou appuyez sur Menu pour les actions</string>
 </resources>

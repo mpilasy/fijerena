@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,14 +32,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -63,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableCategoryList
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
@@ -163,6 +161,23 @@ internal fun CategoryList(
 
     val scale = LocalUiScale.current
     val cardStyle = categoryCardStyle(scale)
+
+    // Row actions (UX overhaul plan Part II P3): long-press OK or the Menu key on a category opens
+    // this menu, in place of the hidden ★ that was an extra Right stop before the items (F-C-5).
+    var actionsCategory by remember { mutableStateOf<MediaCategory?>(null) }
+    actionsCategory?.let { category ->
+        FavoriteContextMenuDialog(
+            target =
+                FavoriteMenuTarget.Category(
+                    categoryId = category.id,
+                    categoryName = category.name,
+                    contentType = contentType,
+                    isFavorite = category.id in favoriteCategoryIds,
+                ),
+            onConfirm = { categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType) },
+            onDismiss = { actionsCategory = null },
+        )
+    }
     val typography = MaterialTheme.typography
     val scaledTitleLarge =
         remember(scale, typography) {
@@ -294,9 +309,7 @@ internal fun CategoryList(
                             cardStyle = cardStyle,
                             isFavorite = category.id in favoriteCategoryIds,
                             onClick = { onCategorySelected(category.id) },
-                            onToggleFavorite = {
-                                categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
-                            },
+                            onOpenActions = { actionsCategory = category },
                             cardModifier = Modifier.paneItem(paneFocus, category.id),
                             modifier =
                                 // See StreamList: remember-scoped so recomposition of a visible row
@@ -385,7 +398,8 @@ private fun CategoryItem(
     cardStyle: CategoryCardStyle,
     isFavorite: Boolean = false,
     onClick: () -> Unit,
-    onToggleFavorite: (() -> Unit)? = null,
+    /** Long-press OK or the Menu key: open the row's action menu (P3). Null (virtual categories) means no menu. */
+    onOpenActions: (() -> Unit)? = null,
     /** Applied to the card itself (the focusable), not the row. */
     cardModifier: Modifier = Modifier,
     modifier: Modifier = Modifier,
@@ -399,99 +413,52 @@ private fun CategoryItem(
     // loop running. At rest the two look identical: fraction is 0, so the node draws the same
     // clipped text a plain Text does.
     var isFocused by remember { mutableStateOf(false) }
-    // Same D-pad-native reveal pattern as StreamList's StreamItem — DPAD Right from the card
-    // reaches the favorite toggle, DPAD Left returns; no long-press, no dialog. Virtual
-    // categories pass onToggleFavorite = null, so no icon is ever composed/reachable for them.
-    var rowHasFocus by remember { mutableStateOf(false) }
-    val cardFocusRequester = remember { FocusRequester() }
-    val actionsFocusRequester = remember { FocusRequester() }
 
-    Row(
+    Card(
+        onClick = onClick,
+        onLongClick = onOpenActions,
         modifier =
             modifier
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
-                .focusGroup()
-                .onFocusChanged { rowHasFocus = it.hasFocus },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+                .then(cardModifier)
+                .onFocusChanged { isFocused = it.isFocused }
+                .onKeyEvent { event ->
+                    if (onOpenActions == null || event.type != KeyEventType.KeyDown || event.key != Key.Menu) return@onKeyEvent false
+                    onOpenActions()
+                    true
+                },
+        colors = if (isSelected) cardStyle.selectedColors else cardStyle.colors,
+        shape = cardStyle.shape,
+        scale = cardStyle.cardScale,
+        glow = cardStyle.glow,
     ) {
-        Card(
-            onClick = onClick,
+        Row(
             modifier =
                 Modifier
-                    .weight(1f)
-                    .then(cardModifier)
-                    .onFocusChanged { isFocused = it.isFocused }
-                    .focusRequester(cardFocusRequester)
-                    .then(
-                        if (onToggleFavorite != null) {
-                            Modifier.onPreviewKeyEvent { event ->
-                                if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionRight) {
-                                    return@onPreviewKeyEvent false
-                                }
-                                actionsFocusRequester.requestFocus()
-                                true
-                            }
-                        } else {
-                            Modifier
-                        },
-                    ),
-            colors = if (isSelected) cardStyle.selectedColors else cardStyle.colors,
-            shape = cardStyle.shape,
-            scale = cardStyle.cardScale,
-            glow = cardStyle.glow,
+                    .fillMaxWidth()
+                    .padding(Spacing.md.scaled(scale)),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
         ) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(Spacing.md.scaled(scale)),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-            ) {
-                if (isFavorite) {
-                    Text(
-                        text = "\u2605",
-                        style = scaledTitleMedium,
-                        color = CinemaAccent,
-                    )
-                }
+            if (isFavorite) {
                 Text(
-                    text = category.name,
+                    text = "\u2605",
                     style = scaledTitleMedium,
-                    color = CinemaTextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
+                    color = CinemaAccent,
                 )
             }
-        }
-
-        if (rowHasFocus && onToggleFavorite != null) {
-            CinemaIconButton(
-                onClick = onToggleFavorite,
-                size = TvDimensions.iconLarge.scaled(scale),
-                modifier =
-                    Modifier
-                        .focusRequester(actionsFocusRequester)
-                        .onPreviewKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionLeft) {
-                                return@onPreviewKeyEvent false
-                            }
-                            cardFocusRequester.requestFocus()
-                            true
-                        },
-                icon = {
-                    Icon(
-                        imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                        contentDescription =
-                            stringResource(if (isFavorite) R.string.favorite_remove else R.string.favorite_add),
-                        tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
-                        modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                    )
-                },
+            Text(
+                text = category.name,
+                style = scaledTitleMedium,
+                color = CinemaTextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                // weight(1f) keeps the hint below at the row's end.
+                modifier = Modifier.weight(1f).then(if (isFocused) Modifier.bounceMarquee() else Modifier),
             )
+            // See StreamItem: a glyph, not a focus stop, on the focused row only.
+            if (isFocused && onOpenActions != null) RowActionsHint()
         }
     }
 }
