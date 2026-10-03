@@ -58,7 +58,6 @@ import org.njarasoa.fijerena.feature.provider.TvProviderSelectionScreen
 import org.njarasoa.fijerena.feature.safemode.NewerDataScreen
 import org.njarasoa.fijerena.feature.safemode.SafeModeScreen
 import org.njarasoa.fijerena.feature.search.SearchScreen
-import org.njarasoa.fijerena.feature.settings.EditProviderScreen
 import org.njarasoa.fijerena.feature.settings.SettingsScreen
 
 /**
@@ -402,19 +401,6 @@ fun TvNavHost(
                                     initialStreamId = streamId,
                                 ),
                             )
-                        },
-                    )
-                }
-
-                // Edit Provider Screen
-                composable<Screen.EditProvider> {
-                    EditProviderScreen(
-                        onBack = {
-                            navController.navigateUp()
-                        },
-                        onSuccess = {
-                            // After successful update, navigate back to category list
-                            navController.navigateUp()
                         },
                     )
                 }

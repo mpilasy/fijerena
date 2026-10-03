@@ -57,13 +57,6 @@ sealed interface Screen {
     data object ContentTypeSelection : Screen
 
     /**
-     * Edit provider URL screen destination.
-     * Allows users to change the provider URL without re-entering credentials.
-     */
-    @Serializable
-    data object EditProvider : Screen
-
-    /**
      * Settings screen destination.
      * Allows users to configure app settings like dev mode, watch history size, etc.
      */

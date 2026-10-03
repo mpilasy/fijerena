@@ -23,7 +23,6 @@ sealed interface Screen {
     @Serializable data object Login : Screen  // Legacy, not in nav graph
     @Serializable data object ProfilePicker : Screen  // "Who's watching?"
     @Serializable data object ContentTypeSelection : Screen  // Home
-    @Serializable data object EditProvider : Screen  // Legacy
     @Serializable data object Settings : Screen
     @Serializable data class CategoryList(
         val contentType: String, val initialCategoryId: String? = null,

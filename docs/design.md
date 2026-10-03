@@ -381,7 +381,6 @@ Updates every ~500ms via polling loop.
 | Player | `player/TvPlayerScreen.kt` + `ui/player/PlayerScreen.kt` | Video playback with D-pad controls |
 | Search | `search/SearchScreen.kt` | Search input + results grid |
 | Settings | `settings/SettingsScreen.kt` | App configuration |
-| Edit Provider | `settings/EditProviderScreen.kt` | Provider URL/settings editor |
 | Provider Selection | `provider/ProviderSelectionScreen.kt` | Provider list with CRUD |
 | Add Provider | `provider/TvAddProviderScreen.kt` | New provider form |
 | EPG Guide | `epg/TvEpgGuideScreen.kt` + `epg/EpgGridLayout.kt` | TV guide time grid |

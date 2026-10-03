@@ -491,15 +491,6 @@
     <string name="player_audio_format_hint">%1$dch • %2$dkHz</string>
     <string name="player_nav_hint">D-pad pour naviguer • OK pour séléctionner • RETOUR pour annuler</string>
 
-    <!-- Edit Provider URL -->
-    <string name="edit_provider_title">Modifier l\'URL de la source</string>
-    <string name="edit_provider_subtitle">Changer l\'URL de la source</string>
-    <string name="edit_provider_credentials_preserved_hint">Vos identifiants seront conservés</string>
-    <string name="edit_provider_url_label">URL de la source</string>
-    <string name="edit_provider_url_empty_error">L\'URL ne peut pas être vide</string>
-    <string name="edit_provider_update_success">URL de la source mise à jour avec succès</string>
-    <string name="edit_provider_update_failed">Échec de la mise à jour de l\'URL de la source</string>
-
     <!-- Player Controls extras -->
     <string name="player_rewind_1min_description">Retour rapide 1 min</string>
     <string name="player_fast_forward_5min_description">Avance rapide 5 min</string>
@@ -661,11 +652,6 @@
     <string name="provider_filter_add_rules_section_label">Ajouter des règles (séparées par des virgules) :</string>
     <string name="provider_filter_rules_placeholder">p. ex. XXX, Adult, 18+</string>
     <string name="provider_filter_choose_match_type_prompt">Choisir le type de correspondance :</string>
-
-    <!-- Edit Provider URL (TV) -->
-    <string name="edit_provider_current_url_format">URL actuelle : %1$s</string>
-    <string name="edit_provider_url_placeholder">Saisir la nouvelle URL de la source</string>
-    <string name="edit_provider_save_reauth_button">Enregistrer et se reconnecter</string>
 
     <!-- EPG Management (TV) -->
     <string name="epg_source_selected_description">Sélectionné</string>

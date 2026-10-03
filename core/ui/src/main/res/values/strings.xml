@@ -516,15 +516,6 @@
     <string name="player_audio_format_hint">%1$dch • %2$dkHz</string>
     <string name="player_nav_hint">Use D-pad to navigate • OK to select • BACK to cancel</string>
 
-    <!-- Edit Provider URL -->
-    <string name="edit_provider_title">Edit Source URL</string>
-    <string name="edit_provider_subtitle">Change Source URL</string>
-    <string name="edit_provider_credentials_preserved_hint">Your credentials will be preserved</string>
-    <string name="edit_provider_url_label">Source URL</string>
-    <string name="edit_provider_url_empty_error">URL cannot be empty</string>
-    <string name="edit_provider_update_success">Source URL updated successfully</string>
-    <string name="edit_provider_update_failed">Failed to update source URL</string>
-
     <!-- Settings: Provider Card -->
     <string name="settings_provider_section_title">Source</string>
     <string name="settings_provider_expires_label">Expires</string>
@@ -699,11 +690,6 @@
     <string name="provider_filter_add_rules_section_label">Add rules (comma-separated):</string>
     <string name="provider_filter_rules_placeholder">e.g., XXX, Adult, 18+</string>
     <string name="provider_filter_choose_match_type_prompt">Choose match type:</string>
-
-    <!-- Edit Provider URL (TV) -->
-    <string name="edit_provider_current_url_format">Current URL: %1$s</string>
-    <string name="edit_provider_url_placeholder">Enter new source URL</string>
-    <string name="edit_provider_save_reauth_button">Save &amp; Re-authenticate</string>
 
     <!-- EPG Management (TV) -->
     <string name="epg_source_selected_description">Selected</string>

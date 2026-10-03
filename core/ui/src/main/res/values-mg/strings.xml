@@ -419,15 +419,6 @@
     <string name="player_remove_favorite">Remove Favorite</string>
     <string name="player_press_back_exit">Press OK to hide controls • Press BACK to exit</string>
 
-    <!-- Edit Provider URL -->
-    <string name="edit_provider_title">Hanova ny URL\'ny loharano</string>
-    <string name="edit_provider_subtitle">Hanova ny URL\'ny loharano</string>
-    <string name="edit_provider_credentials_preserved_hint">Hotehirizina ny fangatahana fidirana</string>
-    <string name="edit_provider_url_label">URL\'ny loharano</string>
-    <string name="edit_provider_url_empty_error">Tsy azo avela ho banga ny URL</string>
-    <string name="edit_provider_update_success">Voavaozina soa aman-tsara ny URL\'ny loharano</string>
-    <string name="edit_provider_update_failed">Tsy nahomby ny fanavaozana ny URL\'ny loharano</string>
-
     <!-- Settings: Provider Card -->
     <string name="settings_provider_section_title">Loharano</string>
     <string name="settings_provider_expires_label">Ho tapitra</string>
@@ -581,11 +572,6 @@
     <string name="provider_filter_add_rules_section_label">Hampidira fitsipika (misarahan\'ny faingo):</string>
     <string name="provider_filter_rules_placeholder">o.h. XXX, Adult, 18+</string>
     <string name="provider_filter_choose_match_type_prompt">Safidio ny karazam-pifanarahana:</string>
-
-    <!-- Edit Provider URL (TV) -->
-    <string name="edit_provider_current_url_format">URL ankehitriny: %1$s</string>
-    <string name="edit_provider_url_placeholder">Ampidiro ny URL vaovao</string>
-    <string name="edit_provider_save_reauth_button">Tehirizo sy midira indray</string>
 
     <!-- EPG Management (TV) -->
     <string name="epg_source_selected_description">Voafidy</string>
