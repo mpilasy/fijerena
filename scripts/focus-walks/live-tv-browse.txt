@@ -1,7 +1,8 @@
 # Live TV browse (TwoColumnLayout + StreamList), TV emulator, source iptv, no guide indexed.
-# Start: Home → Live TV. Today this lands on the bare browse list (L-1) with focus on a
-# stream row: the last played channel when it is in the list, else the first (F-C-1, P2); the
-# row's text varies, so there is no @start.
+# Start: Home → Live TV, then Back from the preview it opens on the last channel (LT1; the
+# preview is a layer on this same entry since LT7 — with no last channel, Home → Live TV lands
+# here directly). Focus is on a stream row: the channel the preview was playing when it is in the
+# list, else the first (F-C-1, P2, LT6); the row's text varies, so there is no @start.
 # Covers F-C-2..F-C-6 (R1, R2, R3, R5). Expectations are Part II Phase 2 behaviour (tvPane):
 # the two columns are panes, Left/Right move between them, Up/Down stay in a column — and
 # Phase 3 (P3): rows have no hidden trailing buttons; long-press OK / Menu opens a row's menu.

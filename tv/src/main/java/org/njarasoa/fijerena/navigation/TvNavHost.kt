@@ -238,46 +238,25 @@ fun TvNavHost(
                     BackHandler {}
                     val navigateToContentType: (org.njarasoa.fijerena.core.navigation.ContentType) -> Unit = { contentType ->
                         if (contentType.name == ContentType.LIVE_TV) {
-                            // Live TV never lands full-screen or bare — the classic
-                            // categories/streams browse screen goes underneath (so Back from the
-                            // preview lands on a real screen, same as Movies/TV Shows), then the
-                            // preview on top of it.
+                            // Live TV is one entry (LT7): the browse screen, with the preview as a
+                            // layer over it, open on the last channel — so Back from the preview
+                            // lands on a real browse screen, same as Movies/TV Shows, and Back again
+                            // comes Home. See TvCategoryGridScreen.
                             //
-                            // Both pushes happen here, after the lookup, with no suspend point
-                            // between them — that ordering is the whole point. Pushing the browse
-                            // screen first and *then* awaiting the repository put a suspend point
-                            // between the two navigations, so the browse screen became the current
-                            // destination for real: it composed, built its own CategoryViewModel,
-                            // and ran a full categories → streams → now-playing-EPG load for a
-                            // screen the user never saw. Confirmed on a Shield — Back from the
-                            // preview landed on a fully-populated 280-category list that had
-                            // loaded itself in the background. Navigating twice in one frame
-                            // leaves the entry on the back stack without ever composing it, so it
-                            // costs nothing until Back actually reveals it.
-                            //
-                            // The preview is skipped entirely when there is no channel to seed it
-                            // with: it would render an empty pane with no way to reach the
-                            // categories, stranding a first-run user. Browsing is the useful
-                            // screen then, and picking a channel from it pushes the preview anyway.
+                            // The preview is skipped when there is no channel to open it on: it
+                            // would render an empty pane with no way to reach the categories,
+                            // stranding a first-run user. Browsing is the useful screen then, and
+                            // OK on a channel there opens the preview anyway.
                             coroutineScope.launch {
                                 val repository = AppContainer.getInstance(context).getMediaRepository()
-                                val hasChannelToPreview = repository.getLastItemId(ContentType.LIVE_TV) != null
                                 navController.navigateOnce(
-                                    Screen.CategoryList(contentType.name, showPreviewPane = false),
+                                    Screen.CategoryList(
+                                        contentType.name,
+                                        initialStreamId = repository.getLastItemId(ContentType.LIVE_TV),
+                                        showPreviewPane = false,
+                                    ),
                                 ) {
                                     popUpTo(Screen.ContentTypeSelection) { inclusive = false }
-                                }
-                                if (hasChannelToPreview) {
-                                    // Plain navigate, not navigateOnce: the browse entry just
-                                    // pushed above is the current destination and is not RESUMED
-                                    // yet, so navigateOnce's double-tap guard dropped this push
-                                    // every time and Live TV always opened on the bare list
-                                    // (docs/plans/20261003_ux-overhaul-plan.md → Part II, L-1).
-                                    // The guard is still on the first push, which is what a
-                                    // double OK on the card would repeat.
-                                    navController.navigate(
-                                        Screen.CategoryList(contentType.name, showPreviewPane = true),
-                                    )
                                 }
                             }
                         } else {
@@ -420,16 +399,6 @@ fun TvNavHost(
                         initialCategoryId = categoryListScreen.initialCategoryId,
                         initialStreamId = categoryListScreen.initialStreamId,
                         showPreviewPane = categoryListScreen.showPreviewPane,
-                        // Back from the Live TV preview lands on the channel it was playing (LT6):
-                        // the preview leaves that channel's id on the entry underneath, and the
-                        // entry takes it (once) when Back rebuilds it.
-                        returnedLiveChannelId =
-                            remember { backStackEntry.savedStateHandle.remove<String>(LIVE_PLAYING_CHANNEL_KEY) },
-                        onLiveChannelPlaying = { streamId ->
-                            if (navController.currentBackStackEntry == backStackEntry) {
-                                navController.previousBackStackEntry?.savedStateHandle?.set(LIVE_PLAYING_CHANNEL_KEY, streamId)
-                            }
-                        },
                         onStreamSelected = { itemId, streamName, categoryId, target ->
                             when (target) {
                                 // Continue Watching: the card represents the show, not the
@@ -473,10 +442,9 @@ fun TvNavHost(
                                     )
                                 }
 
-                                // Live TV: land on the preview pane, not full-screen. Reachable
-                                // from the classic browse screen too (showPreviewPane=false,
-                                // e.g. the one silently pushed under the main-menu preview) —
-                                // same rule applies there as everywhere else.
+                                // Live TV: land on the preview pane, not full-screen. Browse opens
+                                // its preview as a layer itself (TvCategoryGridScreen, LT7); this
+                                // is only the channel panel's fallback for a row it cannot resolve.
                                 is BrowseTarget.Channel -> {
                                     navController.navigateOnce(
                                         Screen.CategoryList(
@@ -509,9 +477,9 @@ fun TvNavHost(
                         },
                         onBack = {
                             // A single pop always lands on whatever pushed this entry — the
-                            // content-type screen normally, or the silently-pushed bare browse
-                            // screen underneath the Live TV main-menu preview, or the search/EPG
-                            // screen underneath a search/EPG-originated preview.
+                            // content-type screen normally, or the search/EPG screen underneath a
+                            // search/EPG-originated preview. Live TV browse's own preview layer
+                            // closes back to browse before this is reached (LT7).
                             navController.popBackStack()
                         },
                         onHome = { navController.popBackStack(Screen.ContentTypeSelection, inclusive = false) },
@@ -875,6 +843,3 @@ fun TvNavHost(
         }
     }
 }
-
-/** The Live TV channel a preview entry was playing, left on the entry under it for Back (LT6). */
-private const val LIVE_PLAYING_CHANNEL_KEY = "live_playing_channel"

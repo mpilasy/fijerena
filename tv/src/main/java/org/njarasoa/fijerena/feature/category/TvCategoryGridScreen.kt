@@ -2,6 +2,7 @@
 
 package org.njarasoa.fijerena.feature.category
 
+import android.app.Application
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -11,19 +12,28 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.HasDefaultViewModelProviderFactory
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import kotlinx.coroutines.delay
@@ -64,14 +74,12 @@ fun TvCategoryGridScreen(
     contentType: String,
     initialCategoryId: String? = null,
     initialStreamId: String? = null,
-    showPreviewPane: Boolean = true,
     /**
-     * Live TV browse, rebuilt by Back from the preview: the channel the preview was playing
-     * (LT6). The list lands on it — or on the selected category when the list does not have it.
+     * Live TV only. True: this entry is the preview alone, opened on [initialStreamId] from Search,
+     * the TV Guide or the EPG Browser; Back leaves it. False: the Live TV browse entry, with the
+     * preview as a layer over it (LT7) — open on entry when [initialStreamId] is set.
      */
-    returnedLiveChannelId: String? = null,
-    /** Live TV preview: called with the channel it plays each time that changes (LT6). */
-    onLiveChannelPlaying: (streamId: String) -> Unit = {},
+    showPreviewPane: Boolean = true,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onSearchClick: () -> Unit = {},
     /** The TV Guide for a list; with a channel when opened from the player (its row gets entry focus). */
@@ -148,8 +156,6 @@ fun TvCategoryGridScreen(
         contentType = contentType,
         initialStreamId = initialStreamId,
         showPreviewPane = showPreviewPane,
-        returnedLiveChannelId = returnedLiveChannelId,
-        onLiveChannelPlaying = onLiveChannelPlaying,
     )
 }
 
@@ -173,8 +179,6 @@ private fun CategoryGridContent(
     contentType: String,
     initialStreamId: String? = null,
     showPreviewPane: Boolean = true,
-    returnedLiveChannelId: String? = null,
-    onLiveChannelPlaying: (streamId: String) -> Unit = {},
 ) {
     val scale = LocalUiScale.current
     val safeMarginModifier =
@@ -184,6 +188,43 @@ private fun CategoryGridContent(
                 horizontal = Spacing.tvSafeMarginHorizontal,
                 vertical = Spacing.tvSafeMarginVertical,
             )
+
+    // Live TV is one nav entry (LT7). The preview — and full screen, promoted inside it — is a layer
+    // over the browse list, as the dock is on mobile, not an entry of its own: open while
+    // livePreviewChannelId names the channel it opened on (Home → Live TV: the last channel, passed
+    // as initialStreamId; browse: the channel OK was pressed on), closed by Back. An entry with
+    // showPreviewPane is the preview alone and has no browse under it.
+    // Browse is not composed under the preview: its rows would stay in the focus tree, and its own
+    // focus effects keep running, behind an opaque preview or the full-screen player. Its saved
+    // state is kept for it instead (browseState), and it shares this CategoryViewModel, so the list
+    // the channel was picked from is the preview's ChannelContext (LT2) and Back rebuilds browse
+    // without reloading the categories.
+    val isLiveTv = contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV
+    val isLiveBrowse = isLiveTv && !showPreviewPane
+    var livePreviewChannelId by rememberSaveable { mutableStateOf(initialStreamId.takeIf { isLiveBrowse }) }
+    val showLivePreview = isLiveTv && (showPreviewPane || livePreviewChannelId != null)
+    // The channel the preview plays now, after any retune or zap: Back hands it to browse, which
+    // lands on it (LT6). Plain remember, as the nav hand-off it replaces was taken once: a return
+    // from Search or the TV Guide rebuilds browse without it.
+    var livePlayingChannelId by remember { mutableStateOf<String?>(null) }
+    var returnedLiveChannelId by remember { mutableStateOf<String?>(null) }
+    val browseState = rememberSaveableStateHolder()
+    // The layer's ViewModels go when it closes — in an effect, so after its own teardown
+    // (stopAndRelease) has run.
+    val previewViewModels: LivePreviewViewModels = viewModel()
+    LaunchedEffect(showLivePreview) {
+        if (!showLivePreview) previewViewModels.clear()
+    }
+    val closeLivePreview: () -> Unit = {
+        returnedLiveChannelId = livePlayingChannelId
+        livePreviewChannelId = null
+        // What resuming the browse entry did on Back from a preview entry, and Recent reloaded as
+        // the fresh browse under Home's preview loaded it — after the preview recorded its channels.
+        catViewModel.refreshLastPlayedItem()
+        catViewModel.refreshWatchStateOnResume()
+        val browsed = (catViewModel.uiState.value as? CategoryViewModel.UiState.Success)?.selectedCategoryId
+        if (browsed == CategoryViewModel.RECENT_CATEGORY_ID) catViewModel.loadStreams(browsed)
+    }
 
     // 5% padding for TV overscan safety — applied per-branch rather than around the whole
     // `when`, since LiveTvSplitLayout's promoted full-screen player must NOT inherit it (it
@@ -217,7 +258,7 @@ private fun CategoryGridContent(
                 is CategoryViewModel.UiState.Success -> {
                     val immutableCategories = remember(state.categories) { ImmutableCategoryList(state.categories) }
                     val immutableStreams = remember(state.streams) { state.streams?.let { ImmutableMediaList(it) } }
-                    if (contentType == org.njarasoa.fijerena.core.player.domain.ContentType.LIVE_TV && showPreviewPane) {
+                    if (showLivePreview) {
                         val ctx = LocalContext.current
                         val devMode =
                             remember {
@@ -225,36 +266,10 @@ private fun CategoryGridContent(
                                     .AppSettings(ctx.applicationContext)
                                     .isDevMode
                             }
-                        LiveTvSplitLayout(
-                            categoryViewModel = catViewModel,
-                            categories = immutableCategories,
-                            selectedCategoryId = state.selectedCategoryId,
-                            streams = immutableStreams,
-                            streamsLoading = state.streamsLoading,
-                            categoriesRefreshing = state.categoriesRefreshing,
-                            lastPlayedItemId = state.lastPlayedItemId,
-                            nowPlaying = nowPlaying,
-                            contentType = contentType,
-                            isDevMode = devMode,
-                            favoriteIds = favoriteIds,
-                            favoriteCategoryIds = favoriteCategoryIds,
-                            watchProgress = watchProgress,
-                            watchedIds = watchedIds,
-                            onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
-                            onStreamSelected = onStreamSelected,
-                            onRefreshCategories = { catViewModel.refreshCategories() },
-                            onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
-                            onBack = onBack,
-                            onHome = onHome,
-                            initialStreamId = initialStreamId,
-                            onPlayingChannel = onLiveChannelPlaying,
-                            // The player's Guide button (GD5), only when the source has a guide.
-                            onOpenGuide = onEpgClick.takeIf { supportsNativeEpg || epgIndexState is EpgIndexState.Indexed },
-                        )
-                    } else {
-                        AmbientBackdrop(modifier = Modifier.fillMaxSize())
-                        Box(modifier = safeMarginModifier) {
-                            TwoColumnLayout(
+                        CompositionLocalProvider(
+                            LocalViewModelStoreOwner provides rememberLayerOwner(previewViewModels.store()),
+                        ) {
+                            LiveTvSplitLayout(
                                 categoryViewModel = catViewModel,
                                 categories = immutableCategories,
                                 selectedCategoryId = state.selectedCategoryId,
@@ -262,38 +277,71 @@ private fun CategoryGridContent(
                                 streamsLoading = state.streamsLoading,
                                 categoriesRefreshing = state.categoriesRefreshing,
                                 lastPlayedItemId = state.lastPlayedItemId,
-                                returnedPlayingId = returnedLiveChannelId,
                                 nowPlaying = nowPlaying,
                                 contentType = contentType,
+                                isDevMode = devMode,
                                 favoriteIds = favoriteIds,
                                 favoriteCategoryIds = favoriteCategoryIds,
                                 watchProgress = watchProgress,
                                 watchedIds = watchedIds,
-                                supportsNativeEpg = supportsNativeEpg,
-                                epgIndexState = epgIndexState,
-                                onCategorySelected = { categoryId ->
-                                    catViewModel.loadStreams(categoryId)
-                                },
-                                onStreamSelected = { streamId, streamName, categoryId, target ->
-                                    // A channel carries the list it was picked from — Recent,
-                                    // Favourites or the browsed category — not its real category,
-                                    // so the preview pushed for it opens on that list
-                                    // (LiveTvSplitLayout's ChannelContext, LT2). Movies and
-                                    // series keep the item's category: details screens want it.
-                                    val pickedFrom =
-                                        if (target is BrowseTarget.Channel) state.selectedCategoryId ?: categoryId else categoryId
-                                    onStreamSelected(streamId, streamName, pickedFrom, target)
-                                },
-                                onRefreshCategories = {
-                                    catViewModel.refreshCategories()
-                                },
-                                onRefreshStreams = { categoryId ->
-                                    catViewModel.refreshStreams(categoryId)
-                                },
-                                onSearchClick = onSearchClick,
-                                onEpgClick = { categoryId, categoryName -> onEpgClick(categoryId, categoryName, null) },
-                                onBack = onBack,
+                                onCategorySelected = { categoryId -> catViewModel.loadStreams(categoryId) },
+                                onStreamSelected = onStreamSelected,
+                                onRefreshCategories = { catViewModel.refreshCategories() },
+                                onRefreshStreams = { categoryId -> catViewModel.refreshStreams(categoryId) },
+                                onBack = if (isLiveBrowse) closeLivePreview else onBack,
+                                onHome = onHome,
+                                initialStreamId = if (isLiveBrowse) livePreviewChannelId else initialStreamId,
+                                onPlayingChannel = { streamId -> livePlayingChannelId = streamId },
+                                // The player's Guide button (GD5), only when the source has a guide.
+                                onOpenGuide = onEpgClick.takeIf { supportsNativeEpg || epgIndexState is EpgIndexState.Indexed },
                             )
+                        }
+                    } else {
+                        AmbientBackdrop(modifier = Modifier.fillMaxSize())
+                        browseState.SaveableStateProvider(BROWSE_STATE_KEY) {
+                            Box(modifier = safeMarginModifier) {
+                                TwoColumnLayout(
+                                    categoryViewModel = catViewModel,
+                                    categories = immutableCategories,
+                                    selectedCategoryId = state.selectedCategoryId,
+                                    streams = immutableStreams,
+                                    streamsLoading = state.streamsLoading,
+                                    categoriesRefreshing = state.categoriesRefreshing,
+                                    lastPlayedItemId = state.lastPlayedItemId,
+                                    returnedPlayingId = returnedLiveChannelId,
+                                    nowPlaying = nowPlaying,
+                                    contentType = contentType,
+                                    favoriteIds = favoriteIds,
+                                    favoriteCategoryIds = favoriteCategoryIds,
+                                    watchProgress = watchProgress,
+                                    watchedIds = watchedIds,
+                                    supportsNativeEpg = supportsNativeEpg,
+                                    epgIndexState = epgIndexState,
+                                    onCategorySelected = { categoryId ->
+                                        catViewModel.loadStreams(categoryId)
+                                    },
+                                    onStreamSelected = { streamId, streamName, categoryId, target ->
+                                        // OK on a channel opens the preview layer on it (LT7). The
+                                        // list it was picked from — the browsed category, Recent or
+                                        // Favourites — is this CategoryViewModel's selection, so it
+                                        // is the preview's ChannelContext (LT2).
+                                        if (target is BrowseTarget.Channel) {
+                                            livePreviewChannelId = target.streamId
+                                        } else {
+                                            onStreamSelected(streamId, streamName, categoryId, target)
+                                        }
+                                    },
+                                    onRefreshCategories = {
+                                        catViewModel.refreshCategories()
+                                    },
+                                    onRefreshStreams = { categoryId ->
+                                        catViewModel.refreshStreams(categoryId)
+                                    },
+                                    onSearchClick = onSearchClick,
+                                    onEpgClick = { categoryId, categoryName -> onEpgClick(categoryId, categoryName, null) },
+                                    onBack = onBack,
+                                )
+                            }
                         }
                     }
                 }
@@ -309,6 +357,43 @@ private fun CategoryGridContent(
                     }
                 }
             }
+        }
+    }
+}
+
+/** The browse layer's key in its SaveableStateHolder (LT7). */
+private const val BROWSE_STATE_KEY = "browse"
+
+/**
+ * The Live TV preview layer's ViewModels (LT7) — its `PlaybackViewModel` and
+ * `StreamLoaderViewModel` — in a store of their own, held by the entry. They live as long as the
+ * layer is open, as they did when the preview was a nav entry: across a trip to the TV Guide and
+ * back, and an activity recreate, but not past Back to browse — a loader left behind would still
+ * write its channel into Recent after the watch delay, and the next opening would start from its
+ * stale stream. Popping the entry clears them too.
+ */
+internal class LivePreviewViewModels : ViewModel() {
+    private var store: ViewModelStore? = null
+
+    fun store(): ViewModelStore = store ?: ViewModelStore().also { store = it }
+
+    fun clear() {
+        store?.clear()
+        store = null
+    }
+
+    override fun onCleared() = clear()
+}
+
+/** A [ViewModelStoreOwner] over [store] that can build `AndroidViewModel`s (`PlaybackViewModel`). */
+@Composable
+private fun rememberLayerOwner(store: ViewModelStore): ViewModelStoreOwner {
+    val application = LocalContext.current.applicationContext as Application
+    return remember(store) {
+        object : ViewModelStoreOwner, HasDefaultViewModelProviderFactory {
+            override val viewModelStore = store
+            override val defaultViewModelProviderFactory: ViewModelProvider.Factory =
+                ViewModelProvider.AndroidViewModelFactory.getInstance(application)
         }
     }
 }

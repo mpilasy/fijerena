@@ -5,7 +5,9 @@
 # The rows' text varies, so there is no @start and nothing below is asserted — re-record with
 # -r on the emulator before relying on it.
 # Covers L-9: Back from the preview used to land on the channel that opened it (or on the
-# category row); it now lands on the channel playing when the preview was left.
+# category row); it now lands on the channel playing when the preview was left. Since LT7 the
+# preview and full screen are layers on the browse entry, not entries of their own; the keys and
+# the expected focus are unchanged.
 # Written 2026-10-03 from the plan.
 # OK opens the preview on this channel; the panel shows this category, focus on its row.
 CENTER

@@ -153,11 +153,9 @@ internal fun LiveTvSplitLayout(
     // guards against re-firing on every streams refresh). Two cases:
     // - initialStreamId set: the user picked this exact channel to get here (EPG search, catalog
     //   search, the per-category EPG guide).
-    // - No initialStreamId, but a lastPlayedItemId exists: entered from the main menu with
-    //   nothing specific picked — auto-seed with the last-watched channel so entry never lands on
-    //   a bare list. The caller (TvNavHost) is responsible for making sure there's a real "browse"
-    //   screen underneath this one on the back stack for this case, since Back here always just
-    //   pops rather than clearing back to a bare list in place.
+    // - No initialStreamId, but a lastPlayedItemId exists: nothing specific picked — auto-seed
+    //   with the last-watched channel so entry never lands on a bare list. (Home → Live TV passes
+    //   the last channel as initialStreamId, and this preview is a layer over browse there — LT7.)
     var hasSeeded by remember { mutableStateOf(false) }
     // The channel full screen was showing when the OSD's Guide button left this screen (GD5): Back
     // from the guide rebuilds this screen, and it comes back to that channel, not the entry one.
@@ -185,10 +183,9 @@ internal fun LiveTvSplitLayout(
     var fullScreen by rememberSaveable { mutableStateOf(false) }
 
     // Back: while full-screen, demote to the split (same behavior as the plan's "Back from
-    // full-screen returns to split, preview keeps playing"). Otherwise leave this screen — where
-    // that lands depends entirely on what TvNavHost pushed underneath (the inviting search/EPG
-    // screen, the classic browse screen for main-menu entry, or nothing further for regular
-    // category/stream browsing). BackHandler (not a key-event intercept) is required — consuming
+    // full-screen returns to split, preview keeps playing"). Otherwise onBack: close this layer
+    // to the browse list under it (LT7), or leave the entry for the search/EPG screen that pushed
+    // it. BackHandler (not a key-event intercept) is required — consuming
     // the key event alone doesn't stop the NavController's own back callback, so an intercept
     // would double-pop out of the app.
     androidx.activity.compose.BackHandler {
@@ -250,8 +247,8 @@ internal fun LiveTvSplitLayout(
     }
 
     val target = previewTarget
-    // The browse screen under this one is rebuilt on Back and lands on this channel (LT6) — the
-    // one tuned now, after any zap or retune, not the one that opened the preview.
+    // Browse, rebuilt when Back closes this layer, lands on this channel (LT6) — the one tuned
+    // now, after any zap or retune, not the one that opened the preview.
     val currentOnPlayingChannel by rememberUpdatedState(onPlayingChannel)
     LaunchedEffect(target?.id) {
         target?.id?.let { currentOnPlayingChannel(it) }
