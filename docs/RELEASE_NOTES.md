@@ -1,5 +1,18 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: UX overhaul, day 1
+**Release Date:** 2026-10-03
+
+- **TV: Live TV opens on the preview again:** Home → Live TV lands on the last channel playing next to the Recent list, as designed; since 2026-09-23 it always opened on the bare list. → Part II LT1.
+- **TV Settings:** the watch-delay choices are 5 / 10 / 15 / 30 / 60 / 120 s, so the 10 s default shows as selected; a selected option no longer looks like the focused one; switch rows are not tinted when on; Playback and UI scale sit in panels like the other cards; the EPG line is a row that opens the active source's guide sources, and Back returns to it. → Part I T1.
+- **Mobile Settings:** navigation buttons are outlined instead of filled, profile rows show a chevron, the EPG line opens the active source's guide sources, About shows the build hash and time, and the selected stream-format / playlist chips use the accent colour. → Part I M1.
+- **Edit Source:** the source type can no longer be changed on an existing source (both platforms); on TV, focus starts on the name field. → Part I A-W6.
+- **Developers:** `scripts/tv-focus-walk.sh` sends D-pad keys to the TV emulator and checks which control has focus after each (`docs/RUN_GUIDE.md` → Focus walks); the dead `EditProvider` route and its strings are gone. → Part II Phase 1, Part I A-W4.
+
+Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
+
+---
+
 ## Version: Back where you were
 **Release Date:** 2026-10-02
 

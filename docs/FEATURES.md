@@ -93,7 +93,7 @@ Standalone programme title search across all indexed XMLTV data.
 
 ## EPG Management (Multi-Source)
 
-Settings → Manage EPG Data. Add, edit, and delete XMLTV source URLs.
+Settings → Manage Sources → the source's guide icon, or the Settings → EPG row (opens the active source's guide sources). Add, edit, and delete XMLTV source URLs.
 
 - Per-source label and timezone offset override (applies during parsing)
 - Status indicator: green = ingested < interval, yellow = > interval stale, red = error, gray = disabled
@@ -378,7 +378,8 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 | Theme | Select from 4 dark color themes |
 | Look and Feel | Material, Cupertino, Roku or BRAVIA |
 | Language | English, French or Malagasy |
-| Manage EPG Data | Add/edit/delete XMLTV sources, trigger refresh |
+| Guide Sources (EPG row) | Opens the active source's guide sources: add/edit/delete XMLTV sources, trigger refresh |
+| Watch delay | 5 / 10 / 15 / 30 / 60 / 120 s before a live channel counts as watched (10 s default) |
 | Export Settings | Save sources + guide sources + global config to JSON |
 | Import Settings | Load JSON; conflict dialog for name clashes |
 | Cache Management | View size breakdown; clear per content type or all |
