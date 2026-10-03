@@ -150,6 +150,7 @@ import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.CurrentIndicatorEdge
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
@@ -2075,19 +2076,14 @@ private fun SeasonTab(
         if (isFocused) onSelected()
     }
 
-    val containerColor =
-        when {
-            isFocused && isSelected -> TvFocusTokens.focusedSelectedContainer
-            isFocused -> TvFocusTokens.focusedContainer
-            isSelected -> TvFocusTokens.selectedContainer
-            else -> Color.Transparent
-        }
+    // P5: the selected tab keeps the resting look and is marked by a bottom accent bar plus
+    // accent text; only focus lifts the container.
+    val containerColor = if (isFocused) TvFocusTokens.focusedContainer else Color.Transparent
 
     val textColor =
         when {
-            isFocused && isSelected -> CinemaAccentLight
+            isSelected -> TvFocusTokens.currentText
             isFocused -> CinemaTextPrimary
-            isSelected -> CinemaAccent
             else -> CinemaTextSecondary
         }
 
@@ -2102,7 +2098,11 @@ private fun SeasonTab(
                 }.graphicsLayer {
                     scaleX = focusScale
                     scaleY = focusScale
-                }.background(
+                }.currentIndicator(
+                    active = isSelected,
+                    shape = RoundedCornerShape(CornerRadius.medium),
+                    edge = CurrentIndicatorEdge.Bottom,
+                ).background(
                     color = containerColor,
                     shape = RoundedCornerShape(CornerRadius.medium),
                 ).then(
@@ -2110,12 +2110,6 @@ private fun SeasonTab(
                         Modifier.border(
                             width = TvFocusTokens.focusBorderWidth,
                             color = CinemaAccentLight,
-                            shape = RoundedCornerShape(CornerRadius.medium),
-                        )
-                    } else if (isSelected) {
-                        Modifier.border(
-                            width = TvFocusTokens.borderThin,
-                            color = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
                             shape = RoundedCornerShape(CornerRadius.medium),
                         )
                     } else {

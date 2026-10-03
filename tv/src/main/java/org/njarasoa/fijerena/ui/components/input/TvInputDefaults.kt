@@ -109,11 +109,15 @@ object TvInputDefaults {
         )
 }
 
+/** Which edge [currentIndicator] draws its bar along: the leading edge for rows, the bottom for tabs. */
+enum class CurrentIndicatorEdge { Start, Bottom }
+
 /**
  * The one "selected / current" mark (UX overhaul plan Part II P5): a [TvFocusTokens.currentBarWidth]
- * bar in [TvFocusTokens.currentAccent] along the leading edge, drawn over the content and clipped
- * to [shape]. Pair it with [TvFocusTokens.currentText] for the row's title. It sits on top of
- * whatever the focus look draws, so a focused current row keeps its bar.
+ * bar in [TvFocusTokens.currentAccent] along the leading edge (or the bottom edge, for tabs — see
+ * [edge]), drawn over the content and clipped to [shape]. Pair it with [TvFocusTokens.currentText]
+ * for the row's title. It sits on top of whatever the focus look draws, so a focused current row
+ * keeps its bar.
  *
  * Put it on a node that fills the row's container — inside a tv `Surface` / `Card`'s content, which
  * the container already clips and scales. Outside one (as [TvInputListItem] must, `ListItem` pads
@@ -126,6 +130,7 @@ fun Modifier.currentIndicator(
     active: Boolean,
     shape: Shape = RectangleShape,
     containerScale: () -> Float = { TvFocusTokens.defaultScale },
+    edge: CurrentIndicatorEdge = CurrentIndicatorEdge.Start,
 ): Modifier {
     // Always in the chain, drawing nothing while inactive: adding and removing a node as the
     // selection moves would restructure a focused row's modifier chain.
@@ -133,14 +138,24 @@ fun Modifier.currentIndicator(
     val width = TvFocusTokens.currentBarWidth
     return drawWithCache {
         val clip = Path().apply { addOutline(shape.createOutline(size, layoutDirection, this@drawWithCache)) }
-        val barWidth = width.toPx()
-        val barLeft = if (layoutDirection == LayoutDirection.Ltr) 0f else size.width - barWidth
+        val thickness = width.toPx()
+        val (barTopLeft, barSize) =
+            when (edge) {
+                CurrentIndicatorEdge.Start -> {
+                    val barLeft = if (layoutDirection == LayoutDirection.Ltr) 0f else size.width - thickness
+                    Offset(barLeft, 0f) to Size(thickness, size.height)
+                }
+
+                CurrentIndicatorEdge.Bottom -> {
+                    Offset(0f, size.height - thickness) to Size(size.width, thickness)
+                }
+            }
         onDrawWithContent {
             drawContent()
             if (active) {
                 scale(containerScale()) {
                     clipPath(clip) {
-                        drawRect(color = color, topLeft = Offset(barLeft, 0f), size = Size(barWidth, size.height))
+                        drawRect(color = color, topLeft = barTopLeft, size = barSize)
                     }
                 }
             }

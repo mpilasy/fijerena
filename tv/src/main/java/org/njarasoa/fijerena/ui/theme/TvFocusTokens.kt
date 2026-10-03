@@ -71,16 +71,6 @@ object TvFocusTokens {
         @Composable @ReadOnlyComposable
         get() = CinemaSurfaceLight
 
-    /** Container behind a selected tab that does not currently hold focus (`TvSectionTabs`, season tabs). */
-    val selectedContainer: Color
-        @Composable @ReadOnlyComposable
-        get() = CinemaAccent.copy(alpha = CinemaAlpha.tint)
-
-    /** Container behind a selected tab that also holds focus: a brighter accent, selected *and* lifted. */
-    val focusedSelectedContainer: Color
-        @Composable @ReadOnlyComposable
-        get() = CinemaAccent.copy(alpha = CinemaAlpha.scrim)
-
     /** Width of the "current" bar on a selected / current row's leading edge (see `Modifier.currentIndicator`). */
     val currentBarWidth: Dp = 4.dp
 
