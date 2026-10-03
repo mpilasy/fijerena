@@ -413,6 +413,16 @@ fun TvNavHost(
                         initialCategoryId = categoryListScreen.initialCategoryId,
                         initialStreamId = categoryListScreen.initialStreamId,
                         showPreviewPane = categoryListScreen.showPreviewPane,
+                        // Back from the Live TV preview lands on the channel it was playing (LT6):
+                        // the preview leaves that channel's id on the entry underneath, and the
+                        // entry takes it (once) when Back rebuilds it.
+                        returnedLiveChannelId =
+                            remember { backStackEntry.savedStateHandle.remove<String>(LIVE_PLAYING_CHANNEL_KEY) },
+                        onLiveChannelPlaying = { streamId ->
+                            if (navController.currentBackStackEntry == backStackEntry) {
+                                navController.previousBackStackEntry?.savedStateHandle?.set(LIVE_PLAYING_CHANNEL_KEY, streamId)
+                            }
+                        },
                         onStreamSelected = { itemId, streamName, categoryId, target ->
                             when (target) {
                                 // Continue Watching: the card represents the show, not the
@@ -845,3 +855,6 @@ fun TvNavHost(
         }
     }
 }
+
+/** The Live TV channel a preview entry was playing, left on the entry under it for Back (LT6). */
+private const val LIVE_PLAYING_CHANNEL_KEY = "live_playing_channel"

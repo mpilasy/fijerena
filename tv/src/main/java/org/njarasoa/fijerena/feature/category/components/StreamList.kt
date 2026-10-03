@@ -188,6 +188,12 @@ internal fun StreamList(
      */
     paneFocus: PaneFocusState? = null,
     categoriesPane: PaneFocusState? = null,
+    /**
+     * False when focus belongs to the other pane on this open: the list takes neither entry focus
+     * nor the target row's, now or later (Back from the Live TV preview when this list lacks the
+     * channel that was playing, LT6). D-pad entry still lands on the remembered row.
+     */
+    takeEntryFocus: Boolean = true,
     /** The title / Refresh / count header above the rows. The Live TV preview panel draws its tab row instead (LT2). */
     showHeader: Boolean = true,
     /**
@@ -289,7 +295,7 @@ internal fun StreamList(
     // Entry focus (F-C-1): a pane's list takes focus once per composition when it first has rows,
     // even with no target — on the remembered row (a Back return), else the first.
     var entryPending by remember { mutableStateOf(paneFocus != null) }
-    LaunchedEffect(selectedCategoryId, streamsLoading, focusTargetId, focusTargetIndex, streams.isNullOrEmpty()) {
+    LaunchedEffect(selectedCategoryId, streamsLoading, focusTargetId, focusTargetIndex, streams.isNullOrEmpty(), takeEntryFocus) {
         // Skip entirely while streamsLoading: that branch renders a spinner, not the list, so no
         // Card exists yet for the FocusRequester to attach to. Previously this ran anyway, always
         // failed, and — critically — still marked lastFocusedItemId as handled, so once the list
@@ -297,6 +303,13 @@ internal fun StreamList(
         // never got a second chance. Focus was left stuck on the header's refresh button (the
         // first focusable in the composed tree) for good.
         if (streamsLoading || streams.isNullOrEmpty()) return@LaunchedEffect
+        if (!takeEntryFocus) {
+            // The other pane has focus on this open (LT6): count it as handled, so a later list
+            // that has the target doesn't pull focus off the category the user is on.
+            lastFocusedItemId = focusTargetId
+            entryPending = false
+            return@LaunchedEffect
+        }
         if (focusTargetId != null && focusTargetId != lastFocusedItemId && focusTargetIndex != -1) {
             // Only mark handled on success, so a failed attempt (e.g. still racing
             // composition) gets another go when the effect's keys change instead of being

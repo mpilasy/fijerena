@@ -115,6 +115,8 @@ internal fun LiveTvSplitLayout(
     onBack: () -> Unit,
     onHome: () -> Unit,
     initialStreamId: String? = null,
+    /** Called with the channel this screen plays each time that changes, for Back (LT6). */
+    onPlayingChannel: (streamId: String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
@@ -238,6 +240,12 @@ internal fun LiveTvSplitLayout(
     }
 
     val target = previewTarget
+    // The browse screen under this one is rebuilt on Back and lands on this channel (LT6) — the
+    // one tuned now, after any zap or retune, not the one that opened the preview.
+    val currentOnPlayingChannel by rememberUpdatedState(onPlayingChannel)
+    LaunchedEffect(target?.id) {
+        target?.id?.let { currentOnPlayingChannel(it) }
+    }
     // INCLUDE keeps the current channel reachable even before the delayed history write lands,
     // so there's always a row to OK-press for promote, and a zap neighbour. Not done for
     // Favorites — there it's expected the current channel may simply not be one, same as any

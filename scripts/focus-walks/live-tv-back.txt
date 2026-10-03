@@ -1,0 +1,26 @@
+# Live TV Back from the preview (LT6), TV emulator, source iptv, a category with at least four
+# channels.
+# Start: the browse screen (Home → Live TV, then Back from the preview it opens), a category
+# selected and focus on one of its channel rows, at least three rows above the end of the list.
+# The rows' text varies, so there is no @start and nothing below is asserted — re-record with
+# -r on the emulator before relying on it.
+# Covers L-9: Back from the preview used to land on the channel that opened it (or on the
+# category row); it now lands on the channel playing when the preview was left.
+# Written 2026-10-03 from the plan.
+# OK opens the preview on this channel; the panel shows this category, focus on its row.
+CENTER
+# Two rows down; the preview retunes to the focused row once focus has rested (800 ms).
+DOWN
+DOWN
+WAIT 2
+# OK promotes the focused (now playing) channel to full screen.
+CENTER
+# Down zaps to the next channel of the same list.
+DOWN
+WAIT 3
+# Back demotes to the preview: focus on the zapped-to channel's row in the panel.
+BACK
+# Back leaves the preview. Expected: the browse list with focus on the zapped-to channel (three
+# rows below the one the walk started on), not the row that opened the preview and not the
+# category row.
+BACK

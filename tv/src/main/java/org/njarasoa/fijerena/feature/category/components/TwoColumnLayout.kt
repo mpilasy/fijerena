@@ -63,6 +63,8 @@ internal fun TwoColumnLayout(
     lastPlayedItemId: String?,
     nowPlaying: ImmutableNowPlaying,
     contentType: String,
+    /** Live TV, Back from the preview: the channel it was playing (LT6). */
+    returnedPlayingId: String? = null,
     favoriteIds: ImmutableStringSet = ImmutableStringSet(),
     favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
@@ -120,6 +122,17 @@ internal fun TwoColumnLayout(
     // row across the Back round trip.
     val categoriesPane = rememberPaneFocus()
     val itemsPane = rememberPaneFocus()
+
+    // Back from the Live TV preview (LT6): the channel it was playing is the current channel here
+    // — lastPlayedItemId only moves once a channel has been watched past the watch delay, so it
+    // still names the one that opened the preview. When the list on screen has it, the items pane
+    // lands on that row and remembers it; when it does not (the channel was played from another
+    // list, or Recent has not recorded it yet), focus stays on the selected category.
+    val currentItemId = returnedPlayingId ?: lastPlayedItemId
+    val playingNotListed =
+        remember(returnedPlayingId, streams, streamsLoading) {
+            returnedPlayingId != null && !streamsLoading && streams != null && streams.none { it.id == returnedPlayingId }
+        }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
@@ -240,7 +253,7 @@ internal fun TwoColumnLayout(
                 // Entry focus (F-C-1): the selected category only while the item pane has nothing
                 // to land on; once the category's rows are there (or on Back, when they already
                 // are) StreamList lands on its entry row.
-                focusSelectedOnOpen = streams.isNullOrEmpty(),
+                focusSelectedOnOpen = streams.isNullOrEmpty() || playingNotListed,
                 modifier =
                     Modifier
                         .weight(0.3f)
@@ -253,7 +266,7 @@ internal fun TwoColumnLayout(
                 streamsLoading = streamsLoading,
                 selectedCategoryId = selectedCategoryId,
                 selectedCategoryName = selectedCategoryId?.let { categoryMap[it]?.name },
-                lastPlayedItemId = lastPlayedItemId,
+                lastPlayedItemId = currentItemId,
                 nowPlaying = nowPlaying,
                 contentType = contentType,
                 categoryViewModel = categoryViewModel,
@@ -272,6 +285,7 @@ internal fun TwoColumnLayout(
                 onRefreshStreams = onRefreshStreams,
                 paneFocus = itemsPane,
                 categoriesPane = categoriesPane,
+                takeEntryFocus = !playingNotListed,
                 modifier =
                     Modifier
                         .weight(0.7f)

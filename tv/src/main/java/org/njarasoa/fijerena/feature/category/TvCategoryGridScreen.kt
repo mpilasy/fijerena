@@ -65,6 +65,13 @@ fun TvCategoryGridScreen(
     initialCategoryId: String? = null,
     initialStreamId: String? = null,
     showPreviewPane: Boolean = true,
+    /**
+     * Live TV browse, rebuilt by Back from the preview: the channel the preview was playing
+     * (LT6). The list lands on it — or on the selected category when the list does not have it.
+     */
+    returnedLiveChannelId: String? = null,
+    /** Live TV preview: called with the channel it plays each time that changes (LT6). */
+    onLiveChannelPlaying: (streamId: String) -> Unit = {},
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onSearchClick: () -> Unit = {},
     onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
@@ -140,6 +147,8 @@ fun TvCategoryGridScreen(
         contentType = contentType,
         initialStreamId = initialStreamId,
         showPreviewPane = showPreviewPane,
+        returnedLiveChannelId = returnedLiveChannelId,
+        onLiveChannelPlaying = onLiveChannelPlaying,
     )
 }
 
@@ -163,6 +172,8 @@ private fun CategoryGridContent(
     contentType: String,
     initialStreamId: String? = null,
     showPreviewPane: Boolean = true,
+    returnedLiveChannelId: String? = null,
+    onLiveChannelPlaying: (streamId: String) -> Unit = {},
 ) {
     val scale = LocalUiScale.current
     val safeMarginModifier =
@@ -235,6 +246,7 @@ private fun CategoryGridContent(
                             onBack = onBack,
                             onHome = onHome,
                             initialStreamId = initialStreamId,
+                            onPlayingChannel = onLiveChannelPlaying,
                         )
                     } else {
                         AmbientBackdrop(modifier = Modifier.fillMaxSize())
@@ -247,6 +259,7 @@ private fun CategoryGridContent(
                                 streamsLoading = state.streamsLoading,
                                 categoriesRefreshing = state.categoriesRefreshing,
                                 lastPlayedItemId = state.lastPlayedItemId,
+                                returnedPlayingId = returnedLiveChannelId,
                                 nowPlaying = nowPlaying,
                                 contentType = contentType,
                                 favoriteIds = favoriteIds,
