@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
 import org.njarasoa.fijerena.core.network.utils.await
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.device.DeviceDetector
 import org.njarasoa.fijerena.core.player.device.DeviceType
@@ -404,6 +405,8 @@ class EpgFileManager private constructor(
     fun initialize() {
         scope.launch {
             migrateFromAppSettings()
+            // Once per install: the duplicate automatic Xtream guide sources older builds left.
+            AutoXmltvSources.cleanUpOnce(context)
             val indexer = EpgIndexer.getInstance(context)
             val ftsWasStale = indexer.initialize()
             cleanupStrayFiles()

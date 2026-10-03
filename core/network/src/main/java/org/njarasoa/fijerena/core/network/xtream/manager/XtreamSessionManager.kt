@@ -7,13 +7,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
-import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.resultOf
 import org.njarasoa.fijerena.core.network.suspendResultOf
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
 import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
@@ -27,6 +29,7 @@ class XtreamSessionManager(
 ) {
     private companion object {
         const val TAG = "XtreamSession"
+        const val LIVE_CHECK_TIMEOUT_MS = 10_000L
     }
 
     var apiService: XtreamApiService? = null
@@ -73,8 +76,8 @@ class XtreamSessionManager(
                         replaceApiService(service)
                         serviceAssigned = true
 
-                        // Auto-discover and add XMLTV source
-                        ensureXmltvSourceAdded(url, username, password)
+                        // One automatic XMLTV guide source, while the account has live channels
+                        reconcileAutoXmltvSource(service, url, username, password)
 
                         authResponse
                     } finally {
@@ -139,8 +142,8 @@ class XtreamSessionManager(
                         replaceApiService(service)
                         serviceAssigned = true
 
-                        // Auto-discover and add XMLTV source
-                        ensureXmltvSourceAdded(credentials.url, credentials.username, password)
+                        // One automatic XMLTV guide source, while the account has live channels
+                        reconcileAutoXmltvSource(service, credentials.url, credentials.username, password)
 
                         authResponse
                     } finally {
@@ -202,8 +205,8 @@ class XtreamSessionManager(
                         replaceApiService(service)
                         serviceAssigned = true
 
-                        // Auto-discover and add XMLTV source
-                        ensureXmltvSourceAdded(newUrl, credentials.username, password)
+                        // One automatic XMLTV guide source, carried over from the old server
+                        reconcileAutoXmltvSource(service, newUrl, credentials.username, password, previousUrl = credentials.url)
 
                         authResponse
                     } finally {
@@ -215,38 +218,65 @@ class XtreamSessionManager(
             }
         }
 
-    private suspend fun ensureXmltvSourceAdded(
+    /**
+     * Keeps this source's automatic XMLTV guide source (`<server>/xmltv.php?…`) in line with the
+     * login: rewritten in place on a credential change, duplicates removed, added only when the
+     * account has live channels and removed when it has none. See [AutoXmltvSources].
+     */
+    private suspend fun reconcileAutoXmltvSource(
+        service: XtreamApiService,
         baseUrl: String,
         user: String,
         pass: String,
+        previousUrl: String? = null,
     ) {
         // EPG sources belong to a provider - without a real provider id there is nothing to attach to.
         if (providerId > 0) {
             try {
-                val normalizedUrl = baseUrl.trimEnd('/')
-                val xmltvUrl = "$normalizedUrl/xmltv.php?username=$user&password=$pass"
-                val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-
-                val existing = sourceDao.getSourceByUrl(xmltvUrl, providerId)
-                if (existing == null) {
-                    val label = EpgFileManager.extractLabel(baseUrl) + " (Bulk)"
-                    sourceDao.insertSource(
-                        EpgSourceEntity(
-                            url = xmltvUrl,
-                            label = label,
-                            enabled = true,
-                            providerId = providerId,
-                        ),
+                val needsRefresh =
+                    AutoXmltvSources.reconcile(
+                        sourceDao = SettingsDatabase.getInstance(context).epgSourceDao(),
+                        deleteIndexRows = AutoXmltvSources.indexRowsDeleter(context),
+                        providerId = providerId,
+                        providerUrl = baseUrl,
+                        username = user,
+                        password = pass,
+                        hasLiveChannels = hasLiveChannels(service),
+                        previousProviderUrl = previousUrl,
                     )
-                    // Trigger an immediate background refresh if the index is empty
+                if (needsRefresh) {
+                    // Added or rewritten: fetch its guide now rather than at the next scheduled run.
                     EpgFileManager.getInstance(context).refreshOutdatedSources(providerId)
                 }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                android.util.Log.e("XtreamSessionManager", "Failed to auto-add XMLTV source", e)
+                Log.e(TAG, Redact.text("Failed to update the automatic XMLTV source\n${Log.getStackTraceString(e)}"))
             }
         }
+    }
+
+    /**
+     * Whether the account has live channels: yes when the catalogue already holds some; otherwise
+     * asks the server for its live categories (one small request, an empty list meaning none).
+     * Null when that request fails or takes too long — then nothing is added or removed.
+     */
+    private suspend fun hasLiveChannels(service: XtreamApiService): Boolean? {
+        val cached = XtreamDatabase.getInstance(context).streamDao().hasStreams(providerId, XtreamStreamEntity.TYPE_LIVE)
+        val result =
+            if (cached) {
+                true
+            } else {
+                try {
+                    withTimeoutOrNull(LIVE_CHECK_TIMEOUT_MS) { service.getCategories().isNotEmpty() }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, Redact.text("Live categories check failed: ${e.message}"))
+                    null
+                }
+            }
+        return result
     }
 
     /**

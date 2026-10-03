@@ -138,6 +138,13 @@ interface XtreamStreamDao {
         type: String,
     )
 
+    /** Whether the catalogue holds any stream of [type] for [providerId] — an index probe, no count. */
+    @Query("SELECT EXISTS(SELECT 1 FROM xtream_streams WHERE providerId = :providerId AND type = :type)")
+    fun hasStreams(
+        providerId: Long,
+        type: String,
+    ): Boolean
+
     @Query("SELECT streamId FROM xtream_streams WHERE providerId = :providerId AND type = :type")
     fun getStreamIds(
         providerId: Long,

@@ -131,7 +131,7 @@ Download progress is computed from `downloadedBytes / contentLength`. Ingestion 
 `cancelProcessing()` cancels the coroutine `processJob` and calls `RefreshQueue.cancelAll()`, which cancels every currently executing task (up to 3 concurrently) and clears all pending tasks. The state is immediately set to `Idle`.
 
 **Lifecycle:**
-- `initialize()` — called from `MainActivity.onCreate()`, migrates legacy single-URL config, schedules the WorkManager periodic sync based on the user-selected interval
+- `initialize()` — called from `MainActivity.onCreate()`, migrates legacy single-URL config, runs the one-time cleanup of automatic Xtream guide sources (below), schedules the WorkManager periodic sync based on the user-selected interval
 - `launchRefreshStale()` — refresh all sources older than `staleThresholdMs` (interval/2)
 - `launchRefreshFailed()` — retry sources whose last attempt errored
 - `launchRefreshSelected(selectedIds)` — refresh a user-selected subset of sources
@@ -139,10 +139,14 @@ Download progress is computed from `downloadedBytes / contentLength`. Ingestion 
 - `launchClearAllData()` — cancel processing, set state to `Clearing`, delegate to `EpgIndexer.clearAll()`
 - `cancelProcessing()` — cancel the current processing job and all queued tasks
 - `updateAutoRefreshSchedule(forceReschedule)` — (re)schedules the periodic `EpgSyncWorker` (`epg_sync`) at the selected interval; on a forced reschedule the first run is delayed to the configured refresh time (`epgRefreshTime`). "Never" cancels it.
-- `refreshOutdatedSources(providerId)` — on Xtream session start (`XtreamSessionManager`), submits the stale sources to `RefreshQueue` as `epg_auto_refresh`
+- `refreshOutdatedSources(providerId)` — on Xtream session start (`XtreamSessionManager`), when the automatic guide source was added or rewritten, submits the stale sources to `RefreshQueue` as `epg_auto_refresh`
 - Auto-refresh: `EpgSyncWorker` calls `processAllSources(staleSources)`, which runs `processAllSourcesInternal` directly (not through `RefreshQueue`) so the work stays under the worker's wake lock
 
 Each source URL is managed via `EpgSourceEntity` in Room. Mobile background sync via `EpgSyncWorker` (WorkManager, periodic interval from settings).
+
+**Automatic Xtream guide sources** (`xtream/manager/AutoXmltvSources.kt`, GD0c):
+
+An Xtream source gets at most one guide source by itself: `<server>/xmltv.php?username=…&password=…`, labelled `<host> (Bulk)`. No column marks it — `isAutoXmltvSource` recognises the provider's own server (scheme, host, port, path) plus `/xmltv.php` with credentials, and the ` (Bulk)` label; anything else is hand-added and never touched (a renamed one included). After every successful login (`login`, `restoreSession`, `updateProviderUrl`) `XtreamSessionManager` reconciles it: rewritten in place when the credentials (or, on a URL change, the server) changed, with its ingest state and validators reset so the next refresh is a real download; duplicates deleted; added only when the account has live channels and deleted when it has none. Live channels = any `LIVE` row in this source's catalogue, else one `get_live_categories` request (empty = none; a failure or a 10 s timeout = unknown, which adds and removes nothing). Before this, the source was de-duplicated by its full URL, so each credential change added a row, and accounts without live TV got one too. A one-time cleanup at start (`AutoXmltvSources.cleanUpOnce`, flag `auto_xmltv_sources_cleaned_v1` in `AppSettings`) collapses what older builds left: per Xtream source it keeps the row on the current login (rewritten if none is), deletes the rest, and deletes it when no live channels are known (catalogue has films but no live channels after a clean full sync); it adds nothing. Deleted sources lose their guide index rows. All writes go through `EpgSourceDao`, so live sync carries the rewrites and deletions to the group's other devices.
 
 ### RefreshQueue
 
