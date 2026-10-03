@@ -13,7 +13,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 |---|---|---|---|
 | 1 Mobile settings | M1 (2026-10-03, phone), M2 (merged 2026-10-03, emulator check pending) | — | M3 |
 | 2 TV focus + Live TV | LT1, Phase 1 (2026-10-03, TV) | Phase 2 `tvPane` (since 2026-10-03) | Phase 3 → LT2 |
-| 3 Core + guide | A-W4, A-W6, GD0 (2026-10-03, both) | GD0b (since 2026-10-03) | GD1 |
+| 3 Core + guide | A-W4, A-W6, GD0 (2026-10-03, both), GD0b (merged 2026-10-03, device check pending) | — | GD1 |
 | 4 TV settings | T1 (2026-10-03, TV), T2 (merged 2026-10-03, emulator check pending) | — | T4 → T5 → T6; T3 after Phase 2 |
 
 Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
@@ -953,7 +953,7 @@ TV                                                  Mobile
 | Phase | Scope | Main files | Effort | Risk | Why |
 |---|---|---|---|---|---|
 | GD0 | Investigate G-11 (empty index despite "ingested"). **Done 2026-10-03** — cause found, see III.H. | `EpgIndexer.kt`, `EpgFileManager.kt`, safe-mode clear path | M | Low | investigation |
-| GD0b | **Fix G-11** (III.H): on the staging path write a source's `markIngested` stats and validators only after `swapAndRebuildFts` commits; send `If-None-Match` / `If-Modified-Since` and allow the hash skip only when the index holds rows for that source; call `resetAllIngestionState()` next to both `clearAll()` call sites (check it doesn't queue settings-sync records). **In progress (lane 3, since 2026-10-03).** | `EpgFileManager.kt`, `SafeModeViewModel.kt`, `EpgSourceDao.kt` | M | Med | ingestion ordering; verify with a kill mid-refresh on the emulator |
+| GD0b | **Fix G-11** (III.H): on the staging path write a source's `markIngested` stats and validators only after `swapAndRebuildFts` commits; send `If-None-Match` / `If-Modified-Since` and allow the hash skip only when the index holds rows for that source; call `resetAllIngestionState()` next to both `clearAll()` call sites (check it doesn't queue settings-sync records). **Done 2026-10-03** — 7 unit tests (`EpgFileManagerChangeDetectionTest`), no sync side effect (reset touches only non-synced columns); on-device kill-mid-refresh check pending. | `EpgFileManager.kt`, `SafeModeViewModel.kt`, `EpgSourceDao.kt` | M | Med | ingestion ordering; verify with a kill mid-refresh on the emulator |
 | GD1 | **Data honesty, no layout change**: resolve virtual categories (G-2); skip marker rows (G-7); `NoListings`/`NoGuide` states + "N of M · source · updated" line (G-3, G-5); drop the parsed cache on index swap (G-4); dev stats out of the title (G-10). Existing TV/mobile screens show the states. | `EpgViewModel.kt`, `XmltvEpgService.kt`, `MediaRepository.kt`, both guide screens, strings ×3 | M | Med | cache invalidation + virtual categories + states on both UIs |
 | GD2 | **`GuideLayout` + TV grid** rebuilt on it: one scroll state, time-placed cells, now line, dimmed past; TV focus rules (entry on on-air cell, Up/Down keep time, labelled header row, Back closes search not the guide). | new `core/ui/.../guide/GuideLayout.kt`, `EpgGridLayout.kt` → `TvGuideGrid.kt`, `TvEpgGuideScreen.kt` | XL | High | new layout engine; 50×N cells perf; TV focus |
 | GD3 | **Mobile grid** on `GuideLayout`: shared time axis, date tabs, Now, details sheet. | `MobileEpgTimeline.kt` → `MobileGuideGrid.kt`, `MobileEpgGuideScreen.kt` | L | Med |  |
