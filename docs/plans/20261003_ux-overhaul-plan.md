@@ -11,7 +11,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 
 | Lane | Done | Current | Next |
 |---|---|---|---|
-| 1 Mobile settings | M1, M2 (2026-10-03, phone) | M3 (since 2026-10-03) | M4 |
+| 1 Mobile settings | M1, M2 (2026-10-03, phone), M3 (merged 2026-10-03, phone check pending) | — | M4 |
 | 2 TV focus + Live TV | LT1, Phase 1, Phase 2 (2026-10-03, TV) | Phase 3 row menu (since 2026-10-03) | LT2 |
 | 3 Core + guide | A-W4, A-W6, GD0, GD0b (2026-10-03) | GD1 (since 2026-10-03) | GD2 |
 | 4 TV settings | T1, T2 (2026-10-03, TV) | T3 two-pane (since 2026-10-03) | T4 → T5 → T6 |
@@ -387,7 +387,7 @@ Scan) (M-11).
 | M1 | Quick wins: button hierarchy (M-2), chip colour (M-9 part), profile chevrons (M-5), EPG row tappable (A-4), About build info (M-12). **Done 2026-10-03**, verified on the phone emulator (outlined actions, chevrons, EPG row opens EPG Management, About shows build hash/time). | `ProviderSettingsCard.kt`, `DeveloperSettingsCard.kt`, `LiveSyncSettingsCard.kt`, `ExportImportSettingsCard.kt`, `ProfilesSettingsCard.kt`, `EpgSettingsCard.kt`, `AboutSettingsCard.kt`, `ProviderSettingsSection.kt` | S | Low |  |
 | M2 | `SettingsListRow` + grouped list in shared IA order + value-row pickers (M-1, M-3, M-4, M-6). **Done 2026-10-03**, verified on the phone emulator (7 groups, scope chips, value rows, Theme/Look/Language/Watch-delay pickers incl. Custom, dev-only rows). Notes: watch-delay row still titled "Watch delay (seconds)"; expired-subscription date no longer red in the source row (restore in M3/M4); `settings_profiles_description` dropped. | `SettingsScreen.kt`, all cards | L | Med | new row component + pickers; every card rewritten |
 | M2b | Remove cellular buffer screen and route (M-7, with A-W5). | `MobileCellularBufferSettingsScreen.kt`, `DeveloperSettingsCard.kt`, `MobileNavHost.kt`, `core/navigation/Screen.kt`, strings | S | Low | with A-W5 (Med) |
-| M3 | Sources list + overflow menu (M-8, A-10). **In progress (lane 1, since 2026-10-03).** | `ProviderSelectionScreen.kt`, `ProviderCopyDialogs.kt` | M | Med | overflow replaces 6 inline actions |
+| M3 | Sources list + overflow menu (M-8, A-10). **Done 2026-10-03** (compile + ktlint; phone check pending). Also fixed the M2 follow-ups (expired date red again; watch-delay row title). Note: `provider_more_actions*` strings have no fr/mg (pre-existing). | `ProviderSelectionScreen.kt`, `ProviderCopyDialogs.kt` | M | Med | overflow replaces 6 inline actions |
 | M4 | Edit Source grouping, save/cancel placement, discard dialog (M-9, A-6, A-7, A-8). | `MobileAddProviderScreen.kt`, `ProviderFormSection.kt`, `ProviderSettingsSection.kt`, `DataManagementSection.kt` | L | Med | discard dialog + save placement |
 | M5 | EPG Management order + labels; Live sync buttons (M-10, M-11, A-9). | `MobileEpgManagementScreen.kt`, `MobileSyncSettingsScreen.kt` | M | Med | moves global controls |
 
