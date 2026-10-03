@@ -45,7 +45,7 @@ Season accordion with episode list. Auto-expands the next unwatched season. Epis
 - **Mark Watched:** TV — long-press an episode card (the existing D-pad long-press convention). Mobile — tap the watched badge itself, shown filled or outline.
 
 ### EPG Guide (TV Guide)
-Live TV only. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute slots. Auto-scrolls to "now". Date navigation (prev/next day, jump to today). Click channel or programme to start playback. Backed by `XmltvEpgService`'s 12-hour SharedPreferences cache (`PARSED_CACHE_TTL_MS`).
+Live TV only. The header says how many channels have listings, whether they came from the XMLTV guide or the source's own EPG, and when the guide was updated; a guide with nothing for the chosen channels shows "No listings" with the reason. Recent / Favourites guides list those channels; category separators (`#### … ####`) are not channels. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute slots. Auto-scrolls to "now". Date navigation (prev/next day, jump to today). Click channel or programme to start playback. Backed by `XmltvEpgService`'s 12-hour SharedPreferences cache (`PARSED_CACHE_TTL_MS`).
 
 ---
 

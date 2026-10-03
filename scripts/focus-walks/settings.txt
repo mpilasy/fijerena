@@ -19,27 +19,27 @@ UP	Live sync
 UP	Display
 UP	Playback
 # Right enters the pane on the group's first row.
-RIGHT	Count as watched after
-DOWN	Play next episode automatically
+RIGHT	Count as watched after / How long to watch a channel before it's added to Last Watched / This device / 10 s ›
+DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends. · This profile
 # Down at the end of the pane stays put.
-DOWN	Play next episode automatically
+DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends. · This profile
 # Left from anywhere in the pane returns to the rail row of the group.
 LEFT	Playback
-RIGHT	Count as watched after
+RIGHT	Count as watched after / How long to watch a channel before it's added to Last Watched / This device / 10 s ›
 # OK opens the picker in the pane, focus on the current value (10 s by default).
 CENTER	10 s
 # Left closes the picker, focus back on the row (T2 follow-up).
-LEFT	Count as watched after
+LEFT	Count as watched after / How long to watch a channel before it's added to Last Watched / This device / 10 s ›
 LEFT	Playback
 UP	Source & guide
 RIGHT	Switch source
-DOWN	Edit this source
-DOWN	Guide Sources
+DOWN	Edit this source / ›
+DOWN	Guide Sources / 4.4K channels, 177.8K programmes
 LEFT	Source & guide
 UP	Profiles
 # Up at the top of the rail stays put (the header has nothing to focus).
 UP	Profiles
 # Right lands on the first profile row; its text is the profile's name.
-RIGHT	Kid
+RIGHT	A / atr
 # Back in the pane returns to the rail row, not out of Settings.
 BACK	Profiles

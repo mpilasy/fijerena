@@ -1,5 +1,17 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: UX overhaul, day 3
+**Release Date:** 2026-10-03
+
+- **TV Settings in two panes:** a list of seven groups on the left (Profiles, Source & guide, Playback, Display, Live sync, Backup & storage, About & advanced) and the group's settings on the right; Up/Down on the list swaps the pane, Right enters it, Left comes back, Back in the pane returns to the list. The header shows the profile and source in use. Left now also closes a picker. → Part I T3.
+- **TV: hold OK (or press Menu) for a row's actions:** favourite, mark watched and remove-from-Recent live in a menu on every channel, title, episode and category row; the hidden buttons that appeared beside a focused row are gone, so Right from a category goes straight to its items. A small ⋮ on the focused row hints at it. → Part II Phase 3.
+- **Mobile Sources:** tap a source to edit it; one "Use" button per row and a ⋮ menu for guide sources, duplicate, copy and delete (last, in red) replace six icon buttons. → Part I M3.
+- **TV Guide tells the truth:** the guide for Recent / Favourites shows those channels (it used to show the catalogue's first 50); category separators are no longer listed as channels; the header says how many channels have listings, where they came from (XMLTV guide or the source's own) and when the guide was updated; a guide with nothing for these channels says "No listings" and why instead of showing an empty grid; a freshly refreshed guide appears without pressing Refresh. → Part III GD1.
+
+Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
+
+---
+
 ## Version: UX overhaul, day 2
 **Release Date:** 2026-10-03
 
