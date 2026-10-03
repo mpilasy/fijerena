@@ -32,7 +32,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * EPG status in Settings, as a row that opens the active source's guide sources. Guide sources
- * belong to a source, so the row is disabled while there is no active one.
+ * belong to a source, so the row is disabled while there is no active one. [extraRows] go under
+ * it in the same panel (Guide auto-refresh, T6).
  */
 @Composable
 fun EpgSettingsCard(
@@ -42,6 +43,7 @@ fun EpgSettingsCard(
     onGuideSources: (providerId: Long) -> Unit,
     scale: Float,
     rowFocusRequester: FocusRequester? = null,
+    extraRows: @Composable () -> Unit = {},
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
@@ -114,6 +116,8 @@ fun EpgSettingsCard(
                 },
                 headlineContent = { Text(stringResource(R.string.epg_sources_header)) },
             )
+            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+            extraRows()
         }
     }
 }

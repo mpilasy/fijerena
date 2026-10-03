@@ -42,6 +42,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncSettingsViewModel
+import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
@@ -101,13 +102,13 @@ fun SyncSettingsScreen() {
                 onClose = { if (ui.handoffQr != null) viewModel.cancelHandoff() else viewModel.hideInvite() },
             )
         } else if (status.linked) {
+            // T-14 order: status + Sync now → Add a device → share switch → devices → danger zone.
             LinkedPanel(
                 status = status,
                 devMode = viewModel.devMode,
-                busy = ui.busy,
                 onSyncNow = viewModel::syncNow,
-                onAddDevice = viewModel::showInvite,
             )
+            CinemaPrimaryButton(onClick = viewModel::showInvite, text = stringResource(R.string.live_sync_add_device), enabled = !ui.busy)
             TvSwitchRow(
                 checked = shareNowPlaying,
                 onCheckedChange = viewModel::setShareNowPlaying,
@@ -115,8 +116,13 @@ fun SyncSettingsScreen() {
                 description = stringResource(R.string.live_sync_share_playing_desc),
             )
             DevicesPanel(ui.devices, nowPlaying, onRemove = { confirmRemove = it })
-            // Rare and drastic: out of the main row, after everything else.
-            CinemaSecondaryButton(onClick = { confirmLeave = true }, text = stringResource(R.string.live_sync_leave))
+            // Rare and drastic: last, under its own heading, outlined in the error colour.
+            Text(
+                stringResource(R.string.provider_section_danger_zone),
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaError,
+            )
+            ProviderDangerButton(onClick = { confirmLeave = true }, text = stringResource(R.string.live_sync_leave))
         } else {
             SetupPanel(ui, viewModel)
         }
@@ -234,9 +240,7 @@ private fun PairingPanel(
 private fun LinkedPanel(
     status: SyncManager.Status,
     devMode: Boolean,
-    busy: Boolean,
     onSyncNow: () -> Unit,
-    onAddDevice: () -> Unit,
 ) {
     val scale = LocalUiScale.current
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
@@ -262,10 +266,7 @@ private fun LinkedPanel(
                 color = CinemaTextSecondary,
             )
             Spacer(Modifier.height(Spacing.xs.scaled(scale)))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                CinemaPrimaryButton(onClick = onAddDevice, text = stringResource(R.string.live_sync_add_device), enabled = !busy)
-                CinemaSecondaryButton(onClick = onSyncNow, text = stringResource(R.string.live_sync_now), enabled = !status.syncing)
-            }
+            CinemaSecondaryButton(onClick = onSyncNow, text = stringResource(R.string.live_sync_now), enabled = !status.syncing)
         }
     }
 }
@@ -306,7 +307,7 @@ private fun DevicesPanel(
                     }
                     if (!device.current) {
                         Spacer(Modifier.width(Spacing.sm.scaled(scale)))
-                        CinemaDangerButton(onClick = { onRemove(device) }, text = stringResource(R.string.live_sync_device_remove))
+                        CinemaSecondaryButton(onClick = { onRemove(device) }, text = stringResource(R.string.live_sync_device_remove))
                     }
                 }
             }

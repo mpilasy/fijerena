@@ -3,16 +3,13 @@ package org.njarasoa.fijerena.feature.epg
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -22,13 +19,12 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import org.njarasoa.fijerena.core.network.EPG_REFRESH_INTERVAL_OPTIONS
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
@@ -37,12 +33,18 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 
+/**
+ * One source's guide sources (A-9, T6): "Guide sources · <source>", the list under its bulk
+ * actions, and an empty state that offers to add one. Guide auto-refresh and maintenance are
+ * device-wide and live in Settings (Source & guide, Backup & storage).
+ */
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun TvEpgManagementScreen(
@@ -58,17 +60,22 @@ fun TvEpgManagementScreen(
                 },
         )
 
-    val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = emptyList())
+    // null until the first emission, so the empty state doesn't flash (or take focus) while the
+    // list loads.
+    val sources by viewModel.sources.collectAsStateWithLifecycle(initialValue = null)
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val latestProgrammeTimes by viewModel.latestProgrammeTimes.collectAsStateWithLifecycle()
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
-    val indexState by viewModel.indexState.collectAsStateWithLifecycle()
-    val queuedTaskIds by viewModel.queuedTaskIds.collectAsStateWithLifecycle()
-    val lastPipelineStats by viewModel.lastPipelineStats.collectAsStateWithLifecycle()
-    val epgSettings by viewModel.epgSettings.collectAsStateWithLifecycle()
-    val nextRefreshAtMs by viewModel.nextRefreshAtMs.collectAsStateWithLifecycle()
+    val providerName by produceState<String?>(initialValue = null, providerId) {
+        value =
+            AppContainer
+                .getInstance(context.applicationContext)
+                .providerRepository
+                .getProviderById(providerId)
+                ?.name
+    }
 
     val nowMs = remember { System.currentTimeMillis() }
 
@@ -82,14 +89,21 @@ fun TvEpgManagementScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
-    var showClearConfirm by remember { mutableStateOf(false) }
-    var showTimePicker by remember { mutableStateOf(false) }
-    var showIntervalPicker by remember { mutableStateOf(false) }
-    val intervalOptions = EPG_REFRESH_INTERVAL_OPTIONS
     var deletingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var deleteSelectedIds by remember { mutableStateOf<Set<Long>?>(null) }
 
     val scale = LocalUiScale.current
+    val sourceList = sources.orEmpty()
+    val firstSourceId = sourceList.firstOrNull()?.id
+
+    // Entry focus, once the list has loaded: the first guide source, or Add guide source when
+    // there is none (the TV focus contract, plan Part I, B).
+    val firstRowFocus = remember { FocusRequester() }
+    val addFocus = remember { FocusRequester() }
+    val loaded = sources != null
+    LaunchedEffect(loaded) {
+        if (loaded) (if (firstSourceId != null) firstRowFocus else addFocus).requestFocusWithRetry()
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -102,9 +116,13 @@ fun TvEpgManagementScreen(
                     ),
         ) {
             Text(
-                text = stringResource(R.string.epg_management_title),
+                text =
+                    providerName?.let { stringResource(R.string.epg_management_title_format, it) }
+                        ?: stringResource(R.string.epg_sources_header),
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
 
             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
@@ -114,221 +132,73 @@ fun TvEpgManagementScreen(
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                 modifier = Modifier.fillMaxSize().focusRestorer(),
             ) {
-                // Header Actions
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                    ) {
-                        CinemaPrimaryButton(
-                            onClick = { showAddDialog = true },
-                            text = stringResource(R.string.epg_add_source),
-                        )
-
-                        if (selectedIds.isNotEmpty()) {
-                            CinemaSecondaryButton(
-                                onClick = {
-                                    viewModel.refreshSelected(selectedIds)
-                                    viewModel.clearSelection()
-                                },
-                                text = stringResource(R.string.epg_refresh_selected_btn, selectedIds.size),
+                if (sources?.isEmpty() == true) {
+                    // Empty state: one line and the one thing to do here.
+                    item {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(top = Spacing.lg.scaled(scale)),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                        ) {
+                            Text(
+                                stringResource(R.string.epg_summary_no_sources),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
                             )
-
-                            CinemaDangerButton(
-                                onClick = { deleteSelectedIds = selectedIds },
-                                text = stringResource(R.string.epg_delete_selected_btn, selectedIds.size),
-                            )
-                        }
-
-                        if (staleSourceCount > 0) {
-                            CinemaSecondaryButton(
-                                onClick = { viewModel.refreshStale() },
-                                text = stringResource(R.string.epg_refresh_stale_btn, staleSourceCount),
-                            )
-                        }
-
-                        if (failedSourceCount > 0) {
-                            CinemaSecondaryButton(
-                                onClick = { viewModel.refreshFailed() },
-                                text = stringResource(R.string.epg_retry_failed_btn, failedSourceCount),
+                            CinemaPrimaryButton(
+                                onClick = { showAddDialog = true },
+                                text = stringResource(R.string.epg_add_source),
+                                modifier = Modifier.focusRequester(addFocus),
                             )
                         }
                     }
-                }
+                } else if (sources != null) {
+                    // Add, and the bulk actions over this list.
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                        ) {
+                            CinemaPrimaryButton(
+                                onClick = { showAddDialog = true },
+                                text = stringResource(R.string.epg_add_source),
+                                modifier = Modifier.focusRequester(addFocus),
+                            )
 
-                // Processing Status
-                item {
-                    EpgStatusCard(processingState, indexState, queuedTaskIds, lastPipelineStats, scale)
-                }
-
-                // Maintenance Actions
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                    ) {
-                        // Maintenance Card
-                        GlassPanel(modifier = Modifier.weight(1f)) {
-                            Row(
-                                modifier = Modifier.padding(Spacing.md.scaled(scale)),
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(stringResource(R.string.epg_maintenance_title), style = MaterialTheme.typography.titleMedium)
-                                    Text(
-                                        stringResource(R.string.epg_maintenance_desc_tv),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                    )
-                                }
-
+                            if (selectedIds.isNotEmpty()) {
                                 CinemaSecondaryButton(
-                                    onClick = { viewModel.cleanupFiles() },
-                                    text = stringResource(R.string.epg_cleanup_btn),
-                                )
-
-                                CinemaSecondaryButton(
-                                    onClick = { viewModel.purgeOldProgrammes() },
-                                    text = stringResource(R.string.epg_purge_btn),
+                                    onClick = {
+                                        viewModel.refreshSelected(selectedIds)
+                                        viewModel.clearSelection()
+                                    },
+                                    text = stringResource(R.string.epg_refresh_selected_btn, selectedIds.size),
                                 )
 
                                 CinemaDangerButton(
-                                    onClick = { showClearConfirm = true },
-                                    text = stringResource(R.string.epg_clear_all_data_btn),
+                                    onClick = { deleteSelectedIds = selectedIds },
+                                    text = stringResource(R.string.epg_delete_selected_btn, selectedIds.size),
                                 )
                             }
-                        }
 
-                        // Automation Card
-                        GlassPanel(modifier = Modifier.weight(0.6f)) {
-                            Column(
-                                modifier = Modifier.padding(Spacing.md.scaled(scale)),
-                                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column {
-                                        Text(stringResource(R.string.epg_auto_refresh_title), style = MaterialTheme.typography.titleMedium)
-                                        val intervalText =
-                                            when (val interval = epgSettings.epgRefreshInterval) {
-                                                -1 -> {
-                                                    stringResource(R.string.epg_automation_disabled)
-                                                }
+                            if (staleSourceCount > 0) {
+                                CinemaSecondaryButton(
+                                    onClick = { viewModel.refreshStale() },
+                                    text = stringResource(R.string.epg_refresh_stale_btn, staleSourceCount),
+                                )
+                            }
 
-                                                else -> {
-                                                    val freq =
-                                                        if (interval ==
-                                                            24
-                                                        ) {
-                                                            stringResource(R.string.epg_automation_freq_daily)
-                                                        } else {
-                                                            stringResource(R.string.epg_automation_freq_hours, interval)
-                                                        }
-                                                    // 0 = no next run (a malformed start time, or not computed yet):
-                                                    // formatted, it read as the epoch, "Next at 6:00 PM" (R-09).
-                                                    val timeStr =
-                                                        android.text.format.DateFormat
-                                                            .getTimeFormat(
-                                                                context,
-                                                            ).format(java.util.Date(nextRefreshAtMs))
-                                                    if (nextRefreshAtMs > 0L) {
-                                                        freq + stringResource(R.string.epg_automation_next_at, timeStr)
-                                                    } else {
-                                                        freq
-                                                    }
-                                                }
-                                            }
-                                        Text(
-                                            intervalText,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                                        )
-                                    }
-
-                                    androidx.tv.material3.Surface(
-                                        checked = epgSettings.autoRefreshEnabled,
-                                        onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
-                                        colors =
-                                            androidx.tv.material3.ToggleableSurfaceDefaults.colors(
-                                                containerColor =
-                                                    org.njarasoa.fijerena.core.ui.theme.CinemaSurface.copy(
-                                                        alpha = org.njarasoa.fijerena.core.ui.theme.CinemaAlpha.glass,
-                                                    ),
-                                                contentColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                                                focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                                                focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-                                            ),
-                                        scale =
-                                            androidx.tv.material3.ToggleableSurfaceDefaults.scale(
-                                                focusedScale = 1.15f,
-                                            ),
-                                        shape =
-                                            androidx.tv.material3.ToggleableSurfaceDefaults.shape(
-                                                shape = androidx.compose.foundation.shape.CircleShape,
-                                            ),
-                                    ) {
-                                        androidx.compose.material3.Switch(
-                                            checked = viewModel.autoRefreshEnabled,
-                                            onCheckedChange = null,
-                                            modifier = Modifier.padding(Spacing.xxs.scaled(scale)),
-                                            colors =
-                                                androidx.compose.material3.SwitchDefaults.colors(
-                                                    checkedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-                                                    checkedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                                                    uncheckedThumbColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                                                    uncheckedTrackColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant,
-                                                ),
-                                        )
-                                    }
-                                }
-
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                                ) {
-                                    CinemaSecondaryButton(
-                                        onClick = { showIntervalPicker = true },
-                                        text =
-                                            when (val interval = epgSettings.epgRefreshInterval) {
-                                                -1 -> {
-                                                    stringResource(
-                                                        R.string.epg_automation_frequency,
-                                                        stringResource(R.string.epg_automation_freq_never),
-                                                    )
-                                                }
-
-                                                24 -> {
-                                                    stringResource(
-                                                        R.string.epg_automation_frequency,
-                                                        stringResource(R.string.epg_automation_freq_daily),
-                                                    )
-                                                }
-
-                                                else -> {
-                                                    stringResource(
-                                                        R.string.epg_automation_frequency,
-                                                        stringResource(R.string.epg_automation_freq_hours, interval),
-                                                    )
-                                                }
-                                            },
-                                    )
-                                    if (epgSettings.epgRefreshInterval != -1) {
-                                        CinemaSecondaryButton(
-                                            onClick = { showTimePicker = true },
-                                            text = stringResource(R.string.epg_automation_start_label, epgSettings.epgRefreshTime),
-                                        )
-                                    }
-                                }
+                            if (failedSourceCount > 0) {
+                                CinemaSecondaryButton(
+                                    onClick = { viewModel.refreshFailed() },
+                                    text = stringResource(R.string.epg_retry_failed_btn, failedSourceCount),
+                                )
                             }
                         }
                     }
                 }
 
                 // Source rows
-                items(sources, key = { it.id }, contentType = { "source" }) { source ->
+                items(sourceList, key = { it.id }, contentType = { "source" }) { source ->
                     val isSelected = selectedIds.contains(source.id)
                     val latestTime = latestProgrammeTimes[source.id] ?: 0L
 
@@ -358,6 +228,8 @@ fun TvEpgManagementScreen(
                                 androidx.tv.material3.Surface(
                                     checked = isSelected,
                                     onCheckedChange = { viewModel.toggleSelection(source.id) },
+                                    modifier =
+                                        if (source.id == firstSourceId) Modifier.focusRequester(firstRowFocus) else Modifier,
                                     colors =
                                         androidx.tv.material3.ToggleableSurfaceDefaults.colors(
                                             containerColor =
@@ -408,7 +280,7 @@ fun TvEpgManagementScreen(
                                         style = MaterialTheme.typography.titleMedium,
                                     )
                                     Text(
-                                        text = source.url,
+                                        text = guideSourceUrlHint(source.url),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                         maxLines = 1,
@@ -566,40 +438,6 @@ fun TvEpgManagementScreen(
         )
     }
 
-    if (showClearConfirm) {
-        CinemaAlertDialog(
-            onDismissRequest = { showClearConfirm = false },
-            confirmButton = {
-                CinemaDangerButton(
-                    onClick = {
-                        viewModel.clearDatabase()
-                        showClearConfirm = false
-                    },
-                    text = stringResource(R.string.epg_clear_everything_btn),
-                )
-            },
-            dismissButton = {
-                CinemaSecondaryButton(
-                    onClick = { showClearConfirm = false },
-                    text = stringResource(R.string.common_cancel),
-                )
-            },
-            title = {
-                Text(
-                    stringResource(R.string.epg_clear_db_confirm_title),
-                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                )
-            },
-            text = {
-                Text(
-                    stringResource(R.string.epg_clear_db_confirm_message),
-                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                )
-            },
-            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
-        )
-    }
-
     deletingSource?.let { source ->
         CinemaAlertDialog(
             onDismissRequest = { deletingSource = null },
@@ -672,106 +510,10 @@ fun TvEpgManagementScreen(
             containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
         )
     }
-
-    if (showTimePicker) {
-        TvTimePickerDialog(
-            initialTime = epgSettings.epgRefreshTime,
-            onDismiss = { showTimePicker = false },
-            onConfirm = { time ->
-                viewModel.setEpgRefreshTime(time)
-                showTimePicker = false
-            },
-            scale = scale,
-        )
-    }
-
-    if (showIntervalPicker) {
-        CinemaAlertDialog(
-            onDismissRequest = { showIntervalPicker = false },
-            title = {
-                Text(
-                    stringResource(R.string.epg_refresh_interval_title),
-                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                    intervalOptions.forEach { interval ->
-                        val label =
-                            if (interval ==
-                                -1
-                            ) {
-                                stringResource(R.string.epg_automation_freq_never)
-                            } else {
-                                stringResource(R.string.epg_refresh_interval_hours_format, interval)
-                            }
-                        val isSelected = epgSettings.epgRefreshInterval == interval
-                        androidx.tv.material3.Surface(
-                            checked = isSelected,
-                            onCheckedChange = {
-                                viewModel.setEpgRefreshInterval(interval)
-                                if (interval == -1) {
-                                    viewModel.setAutoRefreshEnabled(false)
-                                } else {
-                                    viewModel.setAutoRefreshEnabled(true)
-                                }
-                                showIntervalPicker = false
-                            },
-                            colors =
-                                androidx.tv.material3.ToggleableSurfaceDefaults.colors(
-                                    containerColor =
-                                        if (isSelected) {
-                                            org.njarasoa.fijerena.core.ui.theme.CinemaAccent.copy(
-                                                alpha = 0.2f,
-                                            )
-                                        } else {
-                                            org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-                                                .copy(alpha = 0.5f)
-                                        },
-                                    contentColor =
-                                        if (isSelected) {
-                                            org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-                                        } else {
-                                            org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
-                                        },
-                                    focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                                    focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-                                ),
-                            shape =
-                                androidx.tv.material3.ToggleableSurfaceDefaults
-                                    .shape(MaterialTheme.shapes.small),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(Spacing.sm.scaled(scale)),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = if (isSelected) CinemaIcons.RadioButtonChecked else CinemaIcons.RadioButtonUnchecked,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                                    tint =
-                                        if (isSelected) {
-                                            org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-                                        } else {
-                                            org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-                                        },
-                                )
-                                Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-                                Text(label)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
-        )
-    }
 }
 
 @Composable
-private fun localizedEpgPhase(phase: String): String =
+internal fun localizedEpgPhase(phase: String): String =
     when (phase) {
         "Downloading" -> stringResource(R.string.epg_phase_downloading)
         "Ingesting" -> stringResource(R.string.epg_phase_ingesting)
@@ -822,117 +564,28 @@ private fun SourceStat(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun EpgStatusCard(
-    multiState: MultiSourceState,
-    indexState: EpgIndexState,
-    queuedTaskIds: Set<String>,
-    lastRun: org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity?,
-    scale: Float,
-) {
-    GlassPanel {
-        Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
-            Text(stringResource(R.string.epg_system_status), style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+private val secretQueryValue = Regex("""([?&;](?:password|pass|pwd|token|api_key|api-key|access_token)=)[^&#]+""", RegexOption.IGNORE_CASE)
 
-            // Indexer State
-            val indexText =
-                when (indexState) {
-                    is EpgIndexState.Indexed -> {
-                        stringResource(
-                            R.string.epg_database_label,
-                            stringResource(R.string.epg_database_ready, NumberUtils.formatCount(indexState.programmeCount)),
-                        )
-                    }
-
-                    is EpgIndexState.Indexing -> {
-                        stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_indexing))
-                    }
-
-                    is EpgIndexState.Optimizing -> {
-                        stringResource(
-                            R.string.epg_database_label,
-                            stringResource(R.string.epg_database_optimizing),
-                        )
-                    }
-
-                    is EpgIndexState.NotIndexed -> {
-                        stringResource(R.string.epg_database_label, stringResource(R.string.epg_database_empty))
-                    }
-
-                    is EpgIndexState.Failed -> {
-                        stringResource(R.string.epg_database_error_prefixed, indexState.reason)
-                    }
-                }
-            Text(indexText, style = MaterialTheme.typography.bodySmall)
-
-            // Current Pipeline State
-            val currentStatusText =
-                when (multiState) {
-                    is MultiSourceState.Idle -> {
-                        val queued = queuedTaskIds.count { it.startsWith("epg_refresh_") }
-                        if (queued > 0) {
-                            stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_tasks_queued, queued))
-                        } else {
-                            stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
-                        }
-                    }
-
-                    is MultiSourceState.Processing -> {
-                        stringResource(
-                            R.string.epg_current_status,
-                            stringResource(R.string.epg_status_processing, multiState.completedCount, multiState.totalSources),
-                        )
-                    }
-
-                    is MultiSourceState.Retrying -> {
-                        val nextRetry = NumberUtils.formatTimestamp(LocalContext.current, multiState.nextRetryAtMs)
-                        stringResource(
-                            R.string.epg_current_status,
-                            stringResource(R.string.epg_status_retrying, multiState.attempt, multiState.maxAttempts, nextRetry),
-                        )
-                    }
-
-                    is MultiSourceState.Completed -> {
-                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_finished))
-                    }
-
-                    is MultiSourceState.Finalizing -> {
-                        stringResource(
-                            R.string.epg_current_status,
-                            stringResource(R.string.epg_status_finalizing, localizedEpgPhase(multiState.phase)),
-                        )
-                    }
-
-                    is MultiSourceState.Clearing -> {
-                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_clearing))
-                    }
-
-                    is MultiSourceState.Error -> {
-                        stringResource(R.string.epg_current_status_error, multiState.reason)
-                    }
-
-                    else -> {
-                        stringResource(R.string.epg_current_status, stringResource(R.string.epg_status_idle))
-                    }
-                }
-            Text(currentStatusText, style = MaterialTheme.typography.bodySmall)
-
-            // Last Pipeline Run
-            lastRun?.let { stats ->
-                val context = LocalContext.current
-                val time = NumberUtils.formatTimestamp(context, stats.updatedAtMs)
-                val duration = NumberUtils.formatDuration(stats.durationMs)
-                val errorText = if (stats.errors > 0) stringResource(R.string.epg_last_run_errors, stats.errors) else ""
-                Text(
-                    text = stringResource(R.string.epg_last_run_stats, time, stats.sourcesProcessed, duration, errorText),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
-                )
-            }
+/**
+ * A guide source's URL shortened to what tells same-label rows apart (M-10, as on mobile):
+ * host[:port], then the last path segment and the query, with password-like values masked and
+ * any user:pass@ dropped. Unparseable input comes back with the same masking.
+ */
+private fun guideSourceUrlHint(url: String): String {
+    val uri = runCatching { java.net.URI(url.trim()) }.getOrNull()
+    val host = uri?.rawAuthority?.substringAfterLast('@')
+    val tail =
+        listOfNotNull(
+            uri?.rawPath?.substringAfterLast('/')?.takeIf { it.isNotEmpty() },
+            uri?.rawQuery?.let { "?$it" },
+        ).joinToString("")
+    val hint =
+        when {
+            host.isNullOrEmpty() -> url.replace(Regex("""://[^/?#@]+@"""), "://")
+            tail.isEmpty() -> host
+            else -> "$host … $tail"
         }
-    }
+    return hint.replace(secretQueryValue, "$1•••")
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -1036,151 +689,4 @@ private fun EpgSourceEditDialog(
             }
         },
     )
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun TvTimePickerDialog(
-    initialTime: String,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
-    scale: Float,
-) {
-    val parts = initialTime.split(":")
-    var hour by remember { mutableStateOf(parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 0) }
-    var minute by remember {
-        mutableStateOf(
-            parts
-                .getOrNull(1)
-                ?.toIntOrNull()
-                ?.let { (it / 5) * 5 }
-                ?.coerceIn(0, 55) ?: 0,
-        )
-    }
-
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                stringResource(R.string.epg_set_refresh_time_title),
-                color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-            )
-        },
-        text = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TimeSpinnerColumn(
-                    value = hour,
-                    label = stringResource(R.string.epg_hour_label),
-                    displayText = "%02d".format(hour),
-                    onIncrement = { hour = (hour + 1) % 24 },
-                    onDecrement = { hour = (hour + 23) % 24 },
-                    scale = scale,
-                )
-
-                Text(
-                    text = ":",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-                    modifier = Modifier.padding(horizontal = Spacing.md.scaled(scale)),
-                )
-
-                TimeSpinnerColumn(
-                    value = minute,
-                    label = stringResource(R.string.epg_minute_label),
-                    displayText = "%02d".format(minute),
-                    onIncrement = { minute = (minute + 5) % 60 },
-                    onDecrement = { minute = (minute + 55) % 60 },
-                    scale = scale,
-                )
-            }
-        },
-        confirmButton = {
-            CinemaPrimaryButton(
-                onClick = { onConfirm("%02d:%02d".format(hour, minute)) },
-                text = stringResource(R.string.provider_save_button),
-            )
-        },
-        dismissButton = {
-            CinemaSecondaryButton(onClick = onDismiss, text = stringResource(R.string.common_cancel))
-        },
-        containerColor = org.njarasoa.fijerena.core.ui.theme.CinemaSurface,
-    )
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun TimeSpinnerColumn(
-    value: Int,
-    label: String,
-    displayText: String,
-    onIncrement: () -> Unit,
-    onDecrement: () -> Unit,
-    scale: Float,
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-        )
-        androidx.tv.material3.Surface(
-            onClick = onIncrement,
-            colors =
-                androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                    containerColor =
-                        org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-                            .copy(alpha = 0.5f),
-                    focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                    focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-                ),
-            scale =
-                androidx.tv.material3.ClickableSurfaceDefaults
-                    .scale(focusedScale = 1.1f),
-            shape =
-                androidx.tv.material3.ClickableSurfaceDefaults
-                    .shape(MaterialTheme.shapes.small),
-        ) {
-            Icon(
-                imageVector = CinemaIcons.KeyboardArrowUp,
-                contentDescription = stringResource(R.string.epg_increase_description_format, label),
-                modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(TvDimensions.iconMedium.scaled(scale)),
-            )
-        }
-        Text(
-            text = displayText,
-            style = MaterialTheme.typography.displaySmall,
-            color = org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary,
-            modifier = Modifier.padding(vertical = Spacing.xs.scaled(scale)),
-        )
-        androidx.tv.material3.Surface(
-            onClick = onDecrement,
-            colors =
-                androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                    containerColor =
-                        org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
-                            .copy(alpha = 0.5f),
-                    focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                    focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-                ),
-            scale =
-                androidx.tv.material3.ClickableSurfaceDefaults
-                    .scale(focusedScale = 1.1f),
-            shape =
-                androidx.tv.material3.ClickableSurfaceDefaults
-                    .shape(MaterialTheme.shapes.small),
-        ) {
-            Icon(
-                imageVector = CinemaIcons.KeyboardArrowDown,
-                contentDescription = stringResource(R.string.epg_decrease_description_format, label),
-                modifier = Modifier.padding(Spacing.sm.scaled(scale)).size(TvDimensions.iconMedium.scaled(scale)),
-            )
-        }
-    }
 }

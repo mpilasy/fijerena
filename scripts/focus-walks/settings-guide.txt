@@ -1,0 +1,44 @@
+# T6 — the guide's device-wide controls in Settings (SettingsScreen), TV emulator, source iptv,
+# auto-refresh at its defaults (on, every 24 hours, 02:00).
+# Start: Settings just opened, focus on the rail row "Profiles".
+# Source & guide ends with "Guide auto-refresh" (value row, This device); OK drills into a
+# sub-pane in place of the rows: the Auto-Refresh switch (entry focus), EPG Refresh Interval
+# (its own picker, opening on the current value) and Set Refresh Time (the hour/minute dialog).
+# Backup & storage ends with "Guide data maintenance" (database line as its value); OK drills
+# into Cleanup (entry focus), Purge, then Clear All Data last under Danger zone. Left or Back
+# leaves a sub-pane with focus back on its row. Never press OK on Cleanup / Purge / Clear.
+# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+@start Profiles
+DOWN	Source & guide
+RIGHT	Switch source
+DOWN	Edit this source
+DOWN	Guide Sources
+DOWN	Guide auto-refresh / This device / Daily · 02:00 ›
+# Down at the end of the pane stays put.
+DOWN	Guide auto-refresh
+CENTER	Auto-Refresh
+DOWN	EPG Refresh Interval
+DOWN	Set Refresh Time
+DOWN	Set Refresh Time
+UP	EPG Refresh Interval
+# The frequency picker opens on the current value; Left closes it onto its row.
+CENTER	24 hours
+LEFT	EPG Refresh Interval
+# Left leaves the sub-pane, focus back on the Settings row; Left again goes to the rail.
+LEFT	Guide auto-refresh
+LEFT	Source & guide
+DOWN	Playback
+DOWN	Display
+DOWN	Live sync
+DOWN	Backup & storage
+RIGHT	Export Settings
+DOWN	Shrink Database
+DOWN	Guide data maintenance
+CENTER	Cleanup
+DOWN	Purge
+DOWN	Clear All Data
+DOWN	Clear All Data
+UP	Purge
+# Back leaves the sub-pane onto its row, Back again returns to the rail.
+BACK	Guide data maintenance
+BACK	Backup & storage

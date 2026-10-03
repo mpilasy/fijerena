@@ -1,0 +1,17 @@
+# T6 — Live sync (SyncSettingsScreen), TV emulator linked to a sync group with one other device.
+# Start: opened from Settings → Live sync → Manage, focus on Sync now (the first focusable).
+# T-14 order, top to bottom: status + Sync now → Add a device → the share switch → each other
+# device's Remove (secondary) → Danger zone: Leave the sync group (outlined, error colour).
+# Remove and Leave keep their confirm dialogs; never press OK on them.
+# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+@start Sync now
+DOWN	Add a device
+DOWN	Share what's playing
+DOWN	Remove
+DOWN	Leave the sync group
+UP	Remove
+UP	Share what's playing
+UP	Add a device
+UP	Sync now
+# Back leaves to Settings, focus back on Manage.
+BACK	Manage

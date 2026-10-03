@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.*
 import kotlinx.coroutines.launch
@@ -40,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.LocaleManager
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
@@ -80,6 +82,8 @@ fun SettingsScreen(
     val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9, T6).
+    val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
 
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
@@ -151,6 +155,15 @@ fun SettingsScreen(
 
     // Re-check provider when returning from provider management screens
     val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            epgViewModel.toastMessage.collect { message ->
+                android.widget.Toast
+                    .makeText(context, message.asString(context), android.widget.Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }
+    }
     val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     LaunchedEffect(lifecycleState) {
         if (lifecycleState == Lifecycle.State.RESUMED) {
@@ -351,6 +364,14 @@ fun SettingsScreen(
                             )
                         }
 
+                        SettingPicker.GUIDE_AUTO_REFRESH -> {
+                            GuideAutoRefreshPane(viewModel = epgViewModel, onBack = closePicker)
+                        }
+
+                        SettingPicker.GUIDE_MAINTENANCE -> {
+                            GuideMaintenancePane(viewModel = epgViewModel, onBack = closePicker)
+                        }
+
                         null -> {
                             val entryModifier = Modifier.paneItem(contentPane, contentEntryKey)
                             LazyColumn(
@@ -429,6 +450,14 @@ fun SettingsScreen(
                                                 },
                                                 scale = scale,
                                                 rowFocusRequester = returnFocus.requesterFor(RETURN_EPG),
+                                                extraRows = {
+                                                    GuideAutoRefreshRow(
+                                                        viewModel = epgViewModel,
+                                                        onOpen = { openPicker(SettingPicker.GUIDE_AUTO_REFRESH) },
+                                                        focusRequester =
+                                                            returnFocus.requesterFor(SettingPicker.GUIDE_AUTO_REFRESH.returnKey),
+                                                    )
+                                                },
                                             )
                                         }
                                     }
@@ -530,6 +559,13 @@ fun SettingsScreen(
                                                 lastShrinkDurationMs = uiState.lastShrinkDurationMs,
                                                 lastShrinkRowsRemoved = uiState.lastShrinkRowsRemoved,
                                                 lastShrinkBytesReclaimed = uiState.lastShrinkBytesReclaimed,
+                                            )
+                                        }
+                                        item {
+                                            GuideMaintenanceCard(
+                                                viewModel = epgViewModel,
+                                                onOpen = { openPicker(SettingPicker.GUIDE_MAINTENANCE) },
+                                                focusRequester = returnFocus.requesterFor(SettingPicker.GUIDE_MAINTENANCE.returnKey),
                                             )
                                         }
                                     }
@@ -639,7 +675,11 @@ enum class SettingsGroup(
     val entryKey: String get() = "$name:first"
 }
 
-/** The choice settings that drill into a [SettingsPickerPane]; [returnKey] names the row for rememberNavReturnFocus. */
+/**
+ * The rows that drill into a pane in place of the group's rows — a [SettingsPickerPane] for the
+ * choice settings, a sub-pane for the guide's device-wide controls (T6); [returnKey] names the row
+ * for rememberNavReturnFocus.
+ */
 enum class SettingPicker(
     val returnKey: String,
 ) {
@@ -648,6 +688,8 @@ enum class SettingPicker(
     TEXT_SIZE("picker:textSize"),
     WATCH_DELAY("picker:watchDelay"),
     LANGUAGE("picker:language"),
+    GUIDE_AUTO_REFRESH("picker:guideAutoRefresh"),
+    GUIDE_MAINTENANCE("picker:guideMaintenance"),
 }
 
 /** Title on the left; the active profile's avatar and name and the active source on the right (T-7). */
