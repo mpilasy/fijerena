@@ -958,4 +958,9 @@
     <string name="settings_guide_auto_refresh_title">Mise à jour auto du guide</string>
     <string name="settings_guide_auto_refresh_summary_format">%1$s · %2$s</string>
     <string name="settings_guide_maintenance_title">Maintenance des données du guide</string>
+    <!-- GD3 -->
+    <string name="epg_guide_header_title_format">Guide TV · %1$s</string>
+    <string name="epg_tab_today">Aujourd\'hui</string>
+    <string name="epg_tab_tomorrow">Demain</string>
+    <string name="epg_details_watch_channel">Regarder la chaîne</string>
 </resources>

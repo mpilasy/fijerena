@@ -795,4 +795,9 @@
     <string name="settings_guide_auto_refresh_title">Fanavaozana ho azy ny fitarihana</string>
     <string name="settings_guide_auto_refresh_summary_format">%1$s · %2$s</string>
     <string name="settings_guide_maintenance_title">Fikojakojana ny angon\'ny fitarihana</string>
+    <!-- GD3 -->
+    <string name="epg_guide_header_title_format">Fandaharana · %1$s</string>
+    <string name="epg_tab_today">Anio</string>
+    <string name="epg_tab_tomorrow">Rahampitso</string>
+    <string name="epg_details_watch_channel">Hijery ny fantsona</string>
 </resources>

@@ -143,4 +143,19 @@ class GuideLayoutTest {
         assertEquals("d", GuideLayout.programAt(programs, dayStart + 300 * 60)?.id)
         assertNull(GuideLayout.programAt(emptyList(), dayStart))
     }
+
+    @Test
+    fun thePhoneScalePutsOneHourAt160Dp() {
+        val density = 2.75f
+        val phone =
+            GuideLayout(
+                pxPerMinute = GuideLayout.PHONE_DP_PER_MINUTE * density,
+                windowStartSec = dayStart,
+                windowEndSec = dayEnd,
+                minLabelWidthPx = 48f * density,
+            )
+
+        assertEquals(160f * density, phone.xFor(dayStart + 3600), 0.01f)
+        assertEquals(24 * 160f * density, phone.totalWidthPx, 0.1f)
+    }
 }

@@ -994,4 +994,9 @@
     <string name="settings_guide_auto_refresh_title">Guide auto-refresh</string>
     <string name="settings_guide_auto_refresh_summary_format">%1$s · %2$s</string>
     <string name="settings_guide_maintenance_title">Guide data maintenance</string>
+    <!-- GD3 -->
+    <string name="epg_guide_header_title_format">TV Guide · %1$s</string>
+    <string name="epg_tab_today">Today</string>
+    <string name="epg_tab_tomorrow">Tomorrow</string>
+    <string name="epg_details_watch_channel">Watch channel</string>
 </resources>

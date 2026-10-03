@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.core.player.model.EpgProgram
  * the range the caller asks for ([cellsIn]), so a day of 50 channels is not 50 × N cards.
  */
 class GuideLayout(
-    /** Horizontal scale: pixels per minute (for 1 h = 240 dp, `4 * density`). */
+    /** Horizontal scale: pixels per minute (for 1 h = 240 dp, `4 * density`; see [DP_PER_MINUTE], [PHONE_DP_PER_MINUTE]). */
     val pxPerMinute: Float,
     /** Epoch seconds at x = 0 — the start of the day the grid shows. */
     val windowStartSec: Long,
@@ -138,8 +138,11 @@ class GuideLayout(
         const val SECONDS_PER_MINUTE = 60f
         const val DEFAULT_TICK_STEP_MIN = 30
 
-        /** 1 hour = 240 dp. */
+        /** 1 hour = 240 dp (TV). */
         const val DP_PER_MINUTE = 4f
+
+        /** 1 hour = 160 dp: the phone's scale (GD3), so about two hours fit beside the channel column. */
+        const val PHONE_DP_PER_MINUTE = 160f / 60f
 
         /** A hairline, so a zero-length listing is still a card and not a gap. */
         const val MIN_CELL_WIDTH_PX = 2f
