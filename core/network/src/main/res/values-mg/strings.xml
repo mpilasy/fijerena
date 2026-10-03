@@ -59,4 +59,6 @@
     <string name="epg_error_no_sources">Tsy misy loharanon\'ny fitarihana hodinihina</string>
     <string name="epg_error_processing_failed">Tsy nahomby ny fanodinana</string>
     <string name="epg_error_source_not_found">Tsy hita ny loharanon\'ny fitarihana</string>
+    <!-- Translations backfill 2026-10-03 -->
+    <string name="error_saved_login_lost">Very ny fidirana voatahiry tamin\'ity fitaovana ity (naverina tamin\'ny voalohany ny fitehirizana ny fanalahidiny miafina). Ovay ny loharano ary ampidiro indray ny tenimiafina.</string>
 </resources>
