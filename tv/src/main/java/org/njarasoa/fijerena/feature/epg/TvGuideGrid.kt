@@ -258,6 +258,7 @@ fun TvGuideGrid(
     }
 
     headerPane.bind(selectedKey = null, firstKey = HEADER_PREV, listState = null, indexOf = { HEADER_KEYS.indexOf(it) })
+    focus.onExitUp = { scope.launch { headerPane.focusEntry() } }
 
     Column(
         modifier =
@@ -643,6 +644,13 @@ private class GuideFocus {
     private val requesters = HashMap<String, FocusRequester>()
 
     /**
+     * Where Up from the first row goes: the header. Set by the grid's owner. Not left to Compose's
+     * geometric search — the header buttons sit at the far right, outside the channel column's beam,
+     * so from a channel cell (or any cell left of them) Up found nothing and the header was unreachable.
+     */
+    var onExitUp: () -> Unit = {}
+
+    /**
      * Row index and programme (null for a channel cell) of the focused cell; -1 / null when none.
      * A move sets them to its target before focus lands ([moveTo]), so a held key steps on from
      * where the last press was going rather than from a cell still waiting for its scroll.
@@ -744,8 +752,9 @@ private class GuideFocus {
             }
 
             Key.DirectionUp -> {
-                // From the first row, Up leaves to the header (Compose finds it above).
-                if (focusedRow == 0) false else movers.moveRows(-1).let { true }
+                // From the first row, Up leaves to the header.
+                if (focusedRow == 0) onExitUp() else movers.moveRows(-1)
+                true
             }
 
             Key.DirectionDown -> {
