@@ -300,7 +300,7 @@ non-composable code. Any palette combines with any style.
 
 - **Buttons** (`buttons/CinemaButton.kt`): `CinemaButton`, `CinemaPrimaryButton`, `CinemaSecondaryButton`, `CinemaIconButton`, `CinemaDangerButton`, `CinemaDangerIconButton`
 - **Detail screens:** `TvDetailHero`, `AmbientBackdrop`, `RelatedTitlesRow`, `TvSectionTabs`
-- **Panels and input:** `TvGlassPanel`, `TvSearchTextField`, `ReadOnlyFieldWithEdit`
+- **Panels and input:** `TvGlassPanel`, `TvSearchField` (`input/`), `ReadOnlyFieldWithEdit`
 - **Effects:** `AccentBlock` (content-type gradients)
 - **Modifiers:** `FocusModifiers` (D-pad focus states)
 
@@ -383,7 +383,7 @@ Updates every ~500ms via polling loop.
 | Settings | `settings/SettingsScreen.kt` | App configuration |
 | Provider Selection | `provider/ProviderSelectionScreen.kt` | Provider list with CRUD |
 | Add Provider | `provider/TvAddProviderScreen.kt` | New provider form |
-| EPG Guide | `epg/TvEpgGuideScreen.kt` + `epg/EpgGridLayout.kt` | TV guide time grid |
+| EPG Guide | `epg/TvEpgGuideScreen.kt` + `epg/TvGuideGrid.kt` | TV guide time grid |
 | EPG Management | `epg/TvEpgManagementScreen.kt` | Multi-source EPG configuration |
 | EPG Search | `epgbrowser/TvEpgBrowserScreen.kt` | Programme search |
 | Profile Picker | `profile/ProfilePickerScreen.kt` | "Who's watching?" |
@@ -408,7 +408,7 @@ The stats overlay is `ui/player/components/overlays/TvStatsOverlay.kt` (mobile: 
 | Cellular Buffer Settings | `settings/MobileCellularBufferSettingsScreen.kt` | Buffer multiplier sliders (dev mode) |
 | Provider Selection | `provider/ProviderSelectionScreen.kt` | Provider list |
 | Add Provider | `provider/MobileAddProviderScreen.kt` | New provider form |
-| EPG Guide | `epg/MobileEpgGuideScreen.kt` + `epg/MobileEpgTimeline.kt` | TV guide |
+| EPG Guide | `epg/MobileEpgGuideScreen.kt` + `epg/MobileGuideGrid.kt` | TV guide |
 | EPG Management | `epg/MobileEpgManagementScreen.kt` | EPG source management |
 | EPG Browser | `epgbrowser/MobileEpgBrowserScreen.kt` | Programme search |
 | Profile Picker | `profile/ProfilePickerScreen.kt` | "Who's watching?" |

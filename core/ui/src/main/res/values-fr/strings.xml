@@ -97,7 +97,6 @@
     <string name="epg_search_placeholder">Rechercher des programmes</string>
     <string name="epg_search_no_results">Aucun programme trouvé</string>
     <string name="epg_search_close">Fermer la recherche</string>
-    <string name="epg_no_program_found">Aucun programme trouvé</string>
     <string name="epg_system_status">État du système</string>
     <string name="epg_database_label">Base de données : %1$s</string>
     <string name="epg_database_empty">Vide</string>
@@ -204,7 +203,6 @@
     <string name="provider_error_m3u_url_required">L\'URL de la playlist M3U est requise</string>
     <string name="provider_connecting">Connexion…</string>
     <string name="provider_saving">Enregistrement…</string>
-    <string name="provider_update_button">Mettre à jour la source</string>
     <string name="provider_connection_failed">Échec de la connexion</string>
     <string name="provider_save_anyway">Enregistrer quand même</string>
     <string name="provider_go_back">Retour</string>
@@ -411,8 +409,6 @@
     <string name="player_stats">Stats</string>
     <string name="player_info">Infos</string>
     <string name="player_remaining_ends_at_format">Restant : %1$s  •  Finit à %2$s</string>
-    <string name="player_controls_title">🎮 Commandes du lecteur</string>
-    <string name="player_hint_dismiss_format">Ce message disparaîtra dans %1$d secondes</string>
     <string name="player_resume">Reprendre</string>
     <string name="player_pause">Pause</string>
     <string name="player_stats_hint">Double-tap OK pour masquer • RETOUR pour quitter</string>
@@ -425,26 +421,6 @@
     <string name="player_add_favorite">Ajouter aux favoris</string>
     <string name="player_remove_favorite">Retirer des favoris</string>
     <string name="player_press_back_exit">OK pour masquer • RETOUR pour quitter</string>
-
-    <!-- Control Hints -->
-    <string name="player_hint_ok_button">Bouton OK</string>
-    <string name="player_hint_ok_description">Afficher/masquer les commandes</string>
-    <string name="player_hint_double_ok_button">Double-tap OK</string>
-    <string name="player_hint_double_ok_description">Afficher les statistiques</string>
-    <string name="player_hint_back_button">Bouton RETOUR</string>
-    <string name="player_hint_back_description">Quitter le lecteur</string>
-    <string name="player_hint_dpad_button">D-pad Haut/Bas</string>
-    <string name="player_hint_dpad_description">Changer de chaîne (Direct)</string>
-    <string name="player_hint_pause_resume_button">Pause/Reprise</string>
-    <string name="player_hint_pause_resume_description">Contrôler la lecture</string>
-    <string name="player_hint_audio_button">Bouton Audio</string>
-    <string name="player_hint_audio_description">Séléctionner la piste audio</string>
-    <string name="player_hint_subtitle_button">Bouton Sous-titres</string>
-    <string name="player_hint_subtitle_description">Activer les sous-titres</string>
-    <string name="player_hint_quality_button">Bouton Qualité</string>
-    <string name="player_hint_quality_description">Séléctionner la qualité vidéo</string>
-    <string name="player_hint_favorite_button">Bouton Favoris</string>
-    <string name="player_hint_favorite_description">Gérer les favoris</string>
 
     <!-- Stats Labels -->
     <string name="player_stats_video">VIDÉO</string>
@@ -591,7 +567,6 @@
     <string name="common_max">Max</string>
     <string name="common_seconds_decimal_format">%1$ss</string>
     <string name="settings_about_section_title">À propos</string>
-    <string name="settings_about_app_version">Fijerena v1.0.0</string>
     <string name="settings_about_tagline">Lecteur multimédia natif premium pour Android</string>
     <string name="settings_developer_mode_title">Mode développeur</string>
     <string name="settings_developer_mode_desc">Activer les statistiques techniques et les fonctionnalités de débogage</string>
@@ -749,11 +724,9 @@
     <string name="category_filtered_of_total_format">%1$d sur %2$d catégories</string>
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
-    <string name="epg_error_not_supported">L\'EPG n\'est pas pris en charge par cette source</string>
     <string name="epg_error_load_channels_format">Échec du chargement des chaînes : %1$s</string>
     <string name="epg_error_no_channels_in_category">Aucune chaîne trouvée dans cette catégorie</string>
     <string name="epg_error_load_data_format">Échec du chargement des données EPG : %1$s</string>
-    <string name="epg_error_no_data_for_channels">Aucune donnée EPG disponible pour ces chaînes</string>
     <string name="stream_error_initialization_failed">Échec de l\'initialisation</string>
     <string name="stream_error_resolve_failed">Échec de la résolution du flux</string>
     <string name="stream_error_unknown">Erreur inconnue lors du chargement du flux</string>

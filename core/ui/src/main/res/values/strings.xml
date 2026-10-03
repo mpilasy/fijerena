@@ -101,7 +101,6 @@
     <string name="epg_search_placeholder">Search programs</string>
     <string name="epg_search_no_results">No programs found</string>
     <string name="epg_search_close">Close Search</string>
-    <string name="epg_no_program_found">No program found</string>
     <string name="epg_system_status">System Status</string>
     <string name="epg_database_label">Database: %1$s</string>
     <string name="epg_database_empty">Empty</string>
@@ -208,7 +207,6 @@
     <string name="provider_error_m3u_url_required">M3U Playlist URL is required</string>
     <string name="provider_connecting">Connecting…</string>
     <string name="provider_saving">Saving…</string>
-    <string name="provider_update_button">Update Source</string>
     <string name="provider_connection_failed">Connection Failed</string>
     <string name="provider_save_anyway">Save Anyway</string>
     <string name="provider_go_back">Go Back</string>
@@ -436,8 +434,6 @@
     <string name="player_stats">Stats</string>
     <string name="player_info">Info</string>
     <string name="player_remaining_ends_at_format">Remaining: %1$s  •  Ends at %2$s</string>
-    <string name="player_controls_title">🎮 Player Controls</string>
-    <string name="player_hint_dismiss_format">This message will auto-dismiss in %1$d seconds</string>
     <string name="player_resume">Resume</string>
     <string name="player_pause">Pause</string>
     <string name="player_stats_hint">Double-tap OK to hide • BACK to exit stats</string>
@@ -450,26 +446,6 @@
     <string name="player_add_favorite">Add Favorite</string>
     <string name="player_remove_favorite">Remove Favorite</string>
     <string name="player_press_back_exit">Press OK to hide controls • Press BACK to exit</string>
-
-    <!-- Control Hints -->
-    <string name="player_hint_ok_button">OK Button</string>
-    <string name="player_hint_ok_description">Show/hide controls</string>
-    <string name="player_hint_double_ok_button">Double-tap OK</string>
-    <string name="player_hint_double_ok_description">Toggle stats overlay</string>
-    <string name="player_hint_back_button">BACK Button</string>
-    <string name="player_hint_back_description">Exit player</string>
-    <string name="player_hint_dpad_button">D-pad Up/Down</string>
-    <string name="player_hint_dpad_description">Change channel (Live TV)</string>
-    <string name="player_hint_pause_resume_button">Pause/Resume</string>
-    <string name="player_hint_pause_resume_description">Control playback</string>
-    <string name="player_hint_audio_button">Audio Button</string>
-    <string name="player_hint_audio_description">Select audio track</string>
-    <string name="player_hint_subtitle_button">Subtitle Button</string>
-    <string name="player_hint_subtitle_description">Enable/disable subtitles</string>
-    <string name="player_hint_quality_button">Quality Button</string>
-    <string name="player_hint_quality_description">Select video quality</string>
-    <string name="player_hint_favorite_button">Favorite Button</string>
-    <string name="player_hint_favorite_description">Add/remove from favorites</string>
 
     <!-- Stats Labels -->
     <string name="player_stats_video">VIDEO</string>
@@ -621,7 +597,6 @@
     <string name="common_max">Max</string>
     <string name="common_seconds_decimal_format">%1$ss</string>
     <string name="settings_about_section_title">About</string>
-    <string name="settings_about_app_version">Fijerena v1.0.0</string>
     <string name="settings_about_tagline">Premium native media player for Android</string>
     <string name="settings_developer_mode_title">Developer Mode</string>
     <string name="settings_developer_mode_desc">Enable stats for nerds and debug features</string>
@@ -787,11 +762,9 @@
     <string name="category_filtered_of_total_format">%1$d of %2$d categories</string>
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
-    <string name="epg_error_not_supported">EPG is not supported by this source</string>
     <string name="epg_error_load_channels_format">Failed to load channels: %1$s</string>
     <string name="epg_error_no_channels_in_category">No channels found in this category</string>
     <string name="epg_error_load_data_format">Failed to load EPG data: %1$s</string>
-    <string name="epg_error_no_data_for_channels">No EPG data available for these channels</string>
     <string name="stream_error_initialization_failed">Initialization failed</string>
     <string name="stream_error_resolve_failed">Failed to resolve stream</string>
     <string name="stream_error_unknown">Unknown error loading stream</string>

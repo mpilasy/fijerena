@@ -97,7 +97,6 @@
     <string name="epg_search_placeholder">Tadiavo ny fandaharana</string>
     <string name="epg_search_no_results">Tsy mahita fandaharana</string>
     <string name="epg_search_close">Close Search</string>
-    <string name="epg_no_program_found">No program found</string>
     <string name="epg_system_status">System Status</string>
     <string name="epg_database_label">Database: %1$s</string>
     <string name="epg_database_empty">Tsy misy</string>
@@ -204,7 +203,6 @@
     <string name="provider_error_m3u_url_required">M3U Playlist URL is required</string>
     <string name="provider_connecting">Connecting…</string>
     <string name="provider_saving">Saving…</string>
-    <string name="provider_update_button">Havaozina ny loharano</string>
     <string name="provider_connection_failed">Connection Failed</string>
     <string name="provider_save_anyway">Save Anyway</string>
     <string name="provider_go_back">Go Back</string>
@@ -404,8 +402,6 @@
     <string name="player_stats">Stats</string>
     <string name="player_info">Info</string>
     <string name="player_remaining_ends_at_format">Remaining: %1$s  •  Ends at %2$s</string>
-    <string name="player_controls_title">🎮 Player Controls</string>
-    <string name="player_hint_dismiss_format">This message will auto-dismiss in %1$d seconds</string>
     <string name="player_resume">Resume</string>
     <string name="player_pause">Pause</string>
     <string name="player_stats_hint">Double-tap OK to hide • BACK to exit stats</string>
@@ -517,7 +513,6 @@
     <string name="common_max">Farafahabeny</string>
     <string name="common_seconds_decimal_format">%1$ss</string>
     <string name="settings_about_section_title">Momba</string>
-    <string name="settings_about_app_version">Fijerena v1.0.0</string>
     <string name="settings_about_tagline">Fitaovana filalaovana horonantsary avo lenta ho an\'ny Android</string>
     <string name="settings_developer_mode_title">Fomba mpamorona</string>
     <string name="settings_developer_mode_desc">Alefaso ny antontan\'isa ho an\'ny mpamorona sy ny endri-javatra fanadiovana</string>
@@ -669,11 +664,9 @@
     <string name="category_filtered_of_total_format">%1$d amin\'ny %2$d sokajy</string>
 
     <!-- EpgViewModel / StreamLoaderViewModel error states -->
-    <string name="epg_error_not_supported">Tsy raisin\'ity loharano ity ny EPG</string>
     <string name="epg_error_load_channels_format">Tsy nahomby ny fakana ny fandaharana: %1$s</string>
     <string name="epg_error_no_channels_in_category">Tsy nisy fandaharana hita amin\'ity sokajy ity</string>
     <string name="epg_error_load_data_format">Tsy nahomby ny fakana angona EPG: %1$s</string>
-    <string name="epg_error_no_data_for_channels">Tsy misy angona EPG ho an\'ireto fandaharana ireto</string>
     <string name="stream_error_initialization_failed">Tsy nahomby ny fanombohana</string>
     <string name="stream_error_resolve_failed">Tsy nahomby ny fikarohana ny fantsakana</string>
     <string name="stream_error_unknown">Nisy fahadisoana tsy fantatra teo am-pakana ny fantsakana</string>
@@ -845,24 +838,6 @@
     <string name="series_remaining_format">Sisa %1$s</string>
     <string name="player_seek_rewind_format">⟲ %1$ds</string>
     <string name="player_seek_forward_format">%1$ds ⟳</string>
-    <string name="player_hint_ok_button">Bokotra OK</string>
-    <string name="player_hint_ok_description">Asehoy/afeno ny bokotra fanaraha-maso</string>
-    <string name="player_hint_double_ok_button">Tsindrio indroa ny OK</string>
-    <string name="player_hint_double_ok_description">Asehoy/afeno ny antontan\'isa</string>
-    <string name="player_hint_back_button">Bokotra BACK</string>
-    <string name="player_hint_back_description">Hivoaka amin\'ny filalaovana</string>
-    <string name="player_hint_dpad_button">D-pad Ambony/Ambany</string>
-    <string name="player_hint_dpad_description">Hanova fantsona (Mivantana)</string>
-    <string name="player_hint_pause_resume_button">Ajanony/Tohizo</string>
-    <string name="player_hint_pause_resume_description">Fehezo ny filalaovana</string>
-    <string name="player_hint_audio_button">Bokotra feo</string>
-    <string name="player_hint_audio_description">Safidio ny feo</string>
-    <string name="player_hint_subtitle_button">Bokotra dikan-teny</string>
-    <string name="player_hint_subtitle_description">Alefaso/atsaharo ny dikan-teny</string>
-    <string name="player_hint_quality_button">Bokotra kalitao</string>
-    <string name="player_hint_quality_description">Safidio ny kalitaon\'ny sary</string>
-    <string name="player_hint_favorite_button">Bokotra ankafizina</string>
-    <string name="player_hint_favorite_description">Ampidiro/esory amin\'ny ankafizina</string>
     <string name="player_stats_video">SARY</string>
     <string name="player_stats_audio">FEO</string>
     <string name="player_stats_network">TAMBAJOTRA</string>

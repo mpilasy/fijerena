@@ -73,7 +73,6 @@ object TvDimensions {
     // EPG (Electronic Program Guide)
     val epgTimeSlotWidth: Dp = 120.dp
     val epgRowHeight: Dp = 80.dp
-    val epgTimeHeaderHeight: Dp = 60.dp
     val epgChannelColumnWidth: Dp = 200.dp
 
     // Dots / indicators
