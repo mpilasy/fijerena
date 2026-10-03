@@ -1,0 +1,26 @@
+# GD2 — TV Guide (TvEpgGuideScreen + TvGuideGrid), TV emulator, source iptv, a category whose
+# first channel has a programme on air now (so the entry row is the first row).
+# Start: Live TV → the category → TV Guide button. Focus is on the on-air programme of the first
+# channel with a programme on now (G-8, G-T4); its text is the programme's title and time, so it
+# is unasserted.
+# Covers G-T4 / G-T5 as GD2 leaves them: Left/Right move by programme, Up/Down keep the time (the
+# cell containing the focused cell's start, else the nearest), Left from a row's first programme
+# lands on its channel cell and Left on a channel cell stays, the header (labelled buttons) is
+# reached only by Up from the first row, Back leaves the guide.
+# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+@start
+# The next programme on the same row.
+RIGHT
+# The cell in the second row that contains the start of that programme (same time, not the same
+# item index).
+DOWN
+# Towards the channel cell: Left by programme, then the channel cell once the row's first
+# programme in the day is passed (with earlier programmes on that row this stays on programmes).
+LEFT
+LEFT
+# Up keeps moving inside the grid: the first row (its channel cell when we were on a channel cell).
+UP
+# Up from the first row is the only way into the header; it lands on its first button.
+UP	Previous Day
+# Back leaves the guide (back to the category screen, focus on its TV Guide button).
+BACK
