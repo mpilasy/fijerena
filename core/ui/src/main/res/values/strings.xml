@@ -953,4 +953,7 @@
 
     <!-- M2 -->
     <string name="settings_seconds_short_format">%1$d s</string>
+    <!-- T2 -->
+    <string name="settings_watch_delay_row_title">Count as watched after</string>
+    <string name="settings_language_desc">Language for menus and messages</string>
 </resources>

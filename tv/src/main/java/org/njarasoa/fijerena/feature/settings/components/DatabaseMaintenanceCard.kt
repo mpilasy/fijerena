@@ -1,11 +1,14 @@
 package org.njarasoa.fijerena.feature.settings.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -50,16 +53,21 @@ fun DatabaseMaintenanceCard(
                 color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-            Text(
-                text = stringResource(R.string.settings_shrink_database_desc),
-                style =
-                    MaterialTheme.typography.bodySmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodySmall.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.settings_shrink_database_desc),
+                    style =
+                        MaterialTheme.typography.bodySmall.copy(
+                            fontSize =
+                                MaterialTheme.typography.bodySmall.fontSize
+                                    .scaled(scale),
+                        ),
+                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
+                SettingsScopeChip(SettingsScope.DEVICE)
+            }
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             CinemaSecondaryButton(
                 onClick = onShrinkClick,

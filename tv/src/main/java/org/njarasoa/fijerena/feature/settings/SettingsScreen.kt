@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -33,6 +34,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.*
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -154,6 +156,24 @@ fun SettingsScreen(
     val returnFocus = rememberNavReturnFocus()
     NavReturnFocusEffect(returnFocus, listState = listState)
 
+    // Choice settings drill into a picker pane that replaces the list (plan Part I, B). The row
+    // that opened it is recorded like a navigation away, and gets focus back when the pane closes
+    // — that close is not a lifecycle resume, so the hand-back runs here rather than in
+    // NavReturnFocusEffect (which still covers Language's Activity recreate).
+    var picker by rememberSaveable { mutableStateOf<SettingPicker?>(null) }
+    val openPicker: (SettingPicker) -> Unit = { target ->
+        returnFocus.leaveFrom(target.returnKey, listState)
+        picker = target
+    }
+    val closePicker: () -> Unit = {
+        picker = null
+        coroutineScope.launch {
+            returnFocus.restoreScroll(listState)
+            returnFocus.requester.requestFocusWithRetry()
+            returnFocus.clear()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
@@ -179,195 +199,241 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
-            // Settings List
-            LazyColumn(
-                state = listState,
-                contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
-                // Scrolling a focused card out of view and back otherwise loses it: the item is
-                // disposed, focus falls to the root, and the next D-pad press restarts at the top
-                // of the list. focusRestorer remembers the last focused child and hands it back.
-                modifier = Modifier.fillMaxSize().focusRestorer(),
-            ) {
-                // Profiles — first, since it decides whose favourites and history everything below
-                // the provider line is about.
-                item {
-                    ProfilesSettingsCard(
-                        profiles = profiles,
-                        message = profilesMessage,
-                        newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
-                        onAdd = profilesViewModel::addProfile,
-                        onUpdate = profilesViewModel::updateProfile,
-                        onDelete = profilesViewModel::deleteProfile,
-                        onDismissMessage = profilesViewModel::clearMessage,
-                        scale = scale,
-                    )
-                }
-
-                // Provider & Playback
-                item {
-                    SettingsSectionHeader(text = stringResource(R.string.settings_section_provider_playback), scale = scale)
-                }
-                item {
-                    ProviderSettingsCard(
-                        providerName = uiState.providerName,
-                        currentUrl = uiState.currentUrl,
-                        subscriptionExpiry = uiState.subscriptionExpiry,
-                        subscriptionMaxCons = uiState.subscriptionMaxCons,
-                        subscriptionIsTrial = uiState.subscriptionIsTrial,
-                        subscriptionStatus = uiState.subscriptionStatus,
-                        onManageProviders = {
-                            returnFocus.leaveFrom(RETURN_PROVIDERS, listState)
-                            onManageProviders()
-                        },
-                        scale = scale,
-                        manageButtonFocusRequester = returnFocus.requesterFor(RETURN_PROVIDERS),
-                    )
-                }
-
-                // Playback
-                item {
-                    PlaybackSettingsCard(
-                        watchDelaySeconds = uiState.watchDelaySeconds,
-                        onWatchDelayChanged = { seconds ->
-                            viewModel.updateWatchDelay(seconds)
-                        },
-                        autoplayNextEpisode = uiState.autoplayNextEpisode,
-                        onAutoplayNextEpisodeChanged = { enabled ->
-                            viewModel.updateAutoplayNextEpisode(enabled)
-                        },
-                        scale = scale,
-                    )
-                }
-
-                // Appearance
-                item {
-                    SettingsSectionHeader(text = stringResource(R.string.settings_section_appearance), scale = scale)
-                }
-                item {
-                    ThemeSettingsCard(
+            when (picker) {
+                SettingPicker.THEME -> {
+                    ThemePickerPane(
                         selectedThemeId = uiState.themeId,
-                        onThemeSelected = { newThemeId ->
+                        onPick = { newThemeId ->
                             viewModel.updateTheme(newThemeId)
                             onThemeChanged(newThemeId)
                         },
+                        onBack = closePicker,
+                    )
+                }
+
+                SettingPicker.LOOK -> {
+                    UiStylePickerPane(
                         selectedUiStyleId = uiState.uiStyleId,
-                        onUiStyleSelected = { newStyleId ->
+                        onPick = { newStyleId ->
                             viewModel.updateUiStyle(newStyleId)
                             onUiStyleChanged(newStyleId)
                         },
-                        scale = scale,
+                        onBack = closePicker,
                     )
                 }
 
-                // Language Selection
-                item {
-                    LanguageSettingsCard(
-                        selectedLanguage = uiState.language,
-                        onLanguageSelected = { newLang ->
-                            viewModel.updateLanguage(newLang)
-                            (context as? android.app.Activity)?.recreate()
-                        },
-                        scale = scale,
-                    )
-                }
-
-                // UI Scale
-                item {
-                    UiScaleSettingsCard(
+                SettingPicker.TEXT_SIZE -> {
+                    UiScalePickerPane(
                         uiScale = uiState.uiScale,
-                        onScaleSelected = { newScale ->
+                        onPick = { newScale ->
                             viewModel.updateUiScale(newScale)
                             onUiScaleChanged(newScale)
                         },
-                        scale = scale,
+                        onBack = closePicker,
                     )
                 }
 
-                // Data & Sync
-                item {
-                    SettingsSectionHeader(text = stringResource(R.string.settings_section_data_sync), scale = scale)
+                SettingPicker.WATCH_DELAY -> {
+                    WatchDelayPickerPane(
+                        watchDelaySeconds = uiState.watchDelaySeconds,
+                        onPick = { seconds -> viewModel.updateWatchDelay(seconds) },
+                        onBack = closePicker,
+                    )
                 }
-                item {
-                    EpgSettingsCard(
-                        context = context,
-                        epgRefreshTrigger = uiState.epgRefreshTrigger,
-                        activeProviderId = uiState.activeProviderId,
-                        onGuideSources = { id ->
-                            returnFocus.leaveFrom(RETURN_EPG, listState)
-                            onGuideSources(id)
+
+                SettingPicker.LANGUAGE -> {
+                    LanguagePickerPane(
+                        selectedLanguage = uiState.language,
+                        onPick = { newLang ->
+                            viewModel.updateLanguage(newLang)
+                            (context as? android.app.Activity)?.recreate()
                         },
-                        scale = scale,
-                        rowFocusRequester = returnFocus.requesterFor(RETURN_EPG),
+                        onBack = closePicker,
                     )
                 }
 
-                item {
-                    LiveSyncSettingsCard(
-                        onOpen = {
-                            returnFocus.leaveFrom(RETURN_LIVE_SYNC, listState)
-                            onLiveSync()
-                        },
-                        scale = scale,
-                        openButtonFocusRequester = returnFocus.requesterFor(RETURN_LIVE_SYNC),
-                    )
-                }
+                null -> {
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
+                        // Scrolling a focused card out of view and back otherwise loses it: the item is
+                        // disposed, focus falls to the root, and the next D-pad press restarts at the top
+                        // of the list. focusRestorer remembers the last focused child and hands it back.
+                        modifier = Modifier.fillMaxSize().focusRestorer(),
+                    ) {
+                        // Profiles — first, since it decides whose favourites and history everything below
+                        // the provider line is about.
+                        item {
+                            ProfilesSettingsCard(
+                                profiles = profiles,
+                                message = profilesMessage,
+                                newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
+                                onAdd = profilesViewModel::addProfile,
+                                onUpdate = profilesViewModel::updateProfile,
+                                onDelete = profilesViewModel::deleteProfile,
+                                onDismissMessage = profilesViewModel::clearMessage,
+                                scale = scale,
+                            )
+                        }
 
-                // Export / Import Settings
-                item {
-                    ExportImportSettingsCard(
-                        onExport = { exportLauncher.launch("fijerena_settings.json") },
-                        onImport = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
-                        onQuickImport = {
-                            val path = exportManager.getQuickImportPath()
-                            if (path != null) {
-                                pendingImportPath = path
-                            } else {
-                                viewModel.setExportImportMessage(resources.getString(R.string.settings_quick_import_not_found))
-                            }
-                        },
-                        exportImportMessage = uiState.exportImportMessage,
-                        scale = scale,
-                    )
-                }
+                        // Provider & Playback
+                        item {
+                            SettingsSectionHeader(text = stringResource(R.string.settings_section_provider_playback), scale = scale)
+                        }
+                        item {
+                            ProviderSettingsCard(
+                                providerName = uiState.providerName,
+                                currentUrl = uiState.currentUrl,
+                                subscriptionExpiry = uiState.subscriptionExpiry,
+                                subscriptionMaxCons = uiState.subscriptionMaxCons,
+                                subscriptionIsTrial = uiState.subscriptionIsTrial,
+                                subscriptionStatus = uiState.subscriptionStatus,
+                                onManageProviders = {
+                                    returnFocus.leaveFrom(RETURN_PROVIDERS, listState)
+                                    onManageProviders()
+                                },
+                                scale = scale,
+                                manageButtonFocusRequester = returnFocus.requesterFor(RETURN_PROVIDERS),
+                            )
+                        }
 
-                // Database Maintenance
-                item {
-                    DatabaseMaintenanceCard(
-                        isPruning = uiState.isPruningDatabase,
-                        resultMessage = uiState.databaseMaintenanceMessage,
-                        onShrinkClick = { viewModel.pruneDatabase() },
-                        scale = scale,
-                        isDevMode = uiState.isDevMode,
-                        lastShrinkAtMs = uiState.lastShrinkAtMs,
-                        lastShrinkDurationMs = uiState.lastShrinkDurationMs,
-                        lastShrinkRowsRemoved = uiState.lastShrinkRowsRemoved,
-                        lastShrinkBytesReclaimed = uiState.lastShrinkBytesReclaimed,
-                    )
-                }
+                        // Playback
+                        item {
+                            PlaybackSettingsCard(
+                                watchDelaySeconds = uiState.watchDelaySeconds,
+                                onOpenWatchDelayPicker = { openPicker(SettingPicker.WATCH_DELAY) },
+                                autoplayNextEpisode = uiState.autoplayNextEpisode,
+                                onAutoplayNextEpisodeChanged = { enabled ->
+                                    viewModel.updateAutoplayNextEpisode(enabled)
+                                },
+                                scale = scale,
+                                watchDelayRowFocusRequester = returnFocus.requesterFor(SettingPicker.WATCH_DELAY.returnKey),
+                            )
+                        }
 
-                // Advanced
-                item {
-                    SettingsSectionHeader(text = stringResource(R.string.settings_section_advanced), scale = scale)
-                }
-                item {
-                    DeveloperSettingsCard(
-                        isDevMode = uiState.isDevMode,
-                        onDevModeChanged = { enabled ->
-                            viewModel.updateDevMode(enabled)
-                        },
-                        onDiagnostics = {
-                            returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
-                            onDiagnostics()
-                        },
-                        scale = scale,
-                        diagnosticsButtonFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
-                    )
-                }
+                        // Appearance
+                        item {
+                            SettingsSectionHeader(text = stringResource(R.string.settings_section_appearance), scale = scale)
+                        }
+                        item {
+                            ThemeSettingsCard(
+                                selectedThemeId = uiState.themeId,
+                                onOpenThemePicker = { openPicker(SettingPicker.THEME) },
+                                selectedUiStyleId = uiState.uiStyleId,
+                                onOpenUiStylePicker = { openPicker(SettingPicker.LOOK) },
+                                scale = scale,
+                                themeRowFocusRequester = returnFocus.requesterFor(SettingPicker.THEME.returnKey),
+                                uiStyleRowFocusRequester = returnFocus.requesterFor(SettingPicker.LOOK.returnKey),
+                            )
+                        }
 
-                // About this app
-                item {
-                    AboutSettingsCard(scale = scale)
+                        // Language Selection
+                        item {
+                            LanguageSettingsCard(
+                                selectedLanguage = uiState.language,
+                                onOpenPicker = { openPicker(SettingPicker.LANGUAGE) },
+                                scale = scale,
+                                rowFocusRequester = returnFocus.requesterFor(SettingPicker.LANGUAGE.returnKey),
+                            )
+                        }
+
+                        // UI Scale
+                        item {
+                            UiScaleSettingsCard(
+                                uiScale = uiState.uiScale,
+                                onOpenPicker = { openPicker(SettingPicker.TEXT_SIZE) },
+                                scale = scale,
+                                rowFocusRequester = returnFocus.requesterFor(SettingPicker.TEXT_SIZE.returnKey),
+                            )
+                        }
+
+                        // Data & Sync
+                        item {
+                            SettingsSectionHeader(text = stringResource(R.string.settings_section_data_sync), scale = scale)
+                        }
+                        item {
+                            EpgSettingsCard(
+                                context = context,
+                                epgRefreshTrigger = uiState.epgRefreshTrigger,
+                                activeProviderId = uiState.activeProviderId,
+                                onGuideSources = { id ->
+                                    returnFocus.leaveFrom(RETURN_EPG, listState)
+                                    onGuideSources(id)
+                                },
+                                scale = scale,
+                                rowFocusRequester = returnFocus.requesterFor(RETURN_EPG),
+                            )
+                        }
+
+                        item {
+                            LiveSyncSettingsCard(
+                                onOpen = {
+                                    returnFocus.leaveFrom(RETURN_LIVE_SYNC, listState)
+                                    onLiveSync()
+                                },
+                                scale = scale,
+                                openButtonFocusRequester = returnFocus.requesterFor(RETURN_LIVE_SYNC),
+                            )
+                        }
+
+                        // Export / Import Settings
+                        item {
+                            ExportImportSettingsCard(
+                                onExport = { exportLauncher.launch("fijerena_settings.json") },
+                                onImport = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
+                                onQuickImport = {
+                                    val path = exportManager.getQuickImportPath()
+                                    if (path != null) {
+                                        pendingImportPath = path
+                                    } else {
+                                        viewModel.setExportImportMessage(resources.getString(R.string.settings_quick_import_not_found))
+                                    }
+                                },
+                                exportImportMessage = uiState.exportImportMessage,
+                                scale = scale,
+                            )
+                        }
+
+                        // Database Maintenance
+                        item {
+                            DatabaseMaintenanceCard(
+                                isPruning = uiState.isPruningDatabase,
+                                resultMessage = uiState.databaseMaintenanceMessage,
+                                onShrinkClick = { viewModel.pruneDatabase() },
+                                scale = scale,
+                                isDevMode = uiState.isDevMode,
+                                lastShrinkAtMs = uiState.lastShrinkAtMs,
+                                lastShrinkDurationMs = uiState.lastShrinkDurationMs,
+                                lastShrinkRowsRemoved = uiState.lastShrinkRowsRemoved,
+                                lastShrinkBytesReclaimed = uiState.lastShrinkBytesReclaimed,
+                            )
+                        }
+
+                        // Advanced
+                        item {
+                            SettingsSectionHeader(text = stringResource(R.string.settings_section_advanced), scale = scale)
+                        }
+                        item {
+                            DeveloperSettingsCard(
+                                isDevMode = uiState.isDevMode,
+                                onDevModeChanged = { enabled ->
+                                    viewModel.updateDevMode(enabled)
+                                },
+                                onDiagnostics = {
+                                    returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
+                                    onDiagnostics()
+                                },
+                                scale = scale,
+                                diagnosticsButtonFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
+                            )
+                        }
+
+                        // About this app
+                        item {
+                            AboutSettingsCard(scale = scale)
+                        }
+                    }
                 }
             }
         }
@@ -425,6 +491,17 @@ private const val RETURN_PROVIDERS = "providers"
 private const val RETURN_LIVE_SYNC = "liveSync"
 private const val RETURN_DIAGNOSTICS = "diagnostics"
 private const val RETURN_EPG = "epg"
+
+/** The choice settings that drill into a [SettingsPickerPane]; [returnKey] names the row for rememberNavReturnFocus. */
+enum class SettingPicker(
+    val returnKey: String,
+) {
+    THEME("picker:theme"),
+    LOOK("picker:look"),
+    TEXT_SIZE("picker:textSize"),
+    WATCH_DELAY("picker:watchDelay"),
+    LANGUAGE("picker:language"),
+}
 
 /**
  * Groups the settings list into visual waypoints (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,

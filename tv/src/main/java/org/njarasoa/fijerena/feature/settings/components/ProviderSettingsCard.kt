@@ -46,16 +46,20 @@ fun ProviderSettingsCard(
 
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
-            Text(
-                text = stringResource(R.string.settings_provider_section_title),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaAccent,
-            )
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.settings_provider_section_title),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontSize =
+                                MaterialTheme.typography.titleMedium.fontSize
+                                    .scaled(scale),
+                        ),
+                    color = CinemaAccent,
+                    modifier = Modifier.weight(1f),
+                )
+                SettingsScopeChip(SettingsScope.SOURCE)
+            }
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Row(
                 modifier = Modifier.fillMaxWidth(),

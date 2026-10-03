@@ -52,16 +52,21 @@ fun LiveSyncSettingsCard(
                     color = CinemaAccent,
                 )
                 Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-                Text(
-                    text = status.serverUrl ?: stringResource(R.string.live_sync_off),
-                    style =
-                        MaterialTheme.typography.bodySmall.copy(
-                            fontSize =
-                                MaterialTheme.typography.bodySmall.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                )
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = status.serverUrl ?: stringResource(R.string.live_sync_off),
+                        style =
+                            MaterialTheme.typography.bodySmall.copy(
+                                fontSize =
+                                    MaterialTheme.typography.bodySmall.fontSize
+                                        .scaled(scale),
+                            ),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
+                    SettingsScopeChip(SettingsScope.SYNCED)
+                }
             }
             Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
             CinemaSecondaryButton(

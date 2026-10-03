@@ -20,7 +20,6 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
@@ -36,11 +35,12 @@ fun DeveloperSettingsCard(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column {
-            TvSwitchRow(
+            SettingsSwitchRow(
+                title = stringResource(R.string.settings_developer_mode_title),
+                description = stringResource(R.string.settings_developer_mode_desc),
+                scope = SettingsScope.PROFILE,
                 checked = isDevMode,
                 onCheckedChange = onDevModeChanged,
-                label = stringResource(R.string.settings_developer_mode_title),
-                description = stringResource(R.string.settings_developer_mode_desc),
                 modifier = Modifier.padding(Spacing.md.scaled(scale)),
             )
             if (isDevMode) {

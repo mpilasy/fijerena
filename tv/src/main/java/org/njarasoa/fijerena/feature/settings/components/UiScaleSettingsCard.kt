@@ -1,86 +1,65 @@
 package org.njarasoa.fijerena.feature.settings.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
+import kotlin.math.roundToInt
 
-private val SCALE_OPTIONS =
-    listOf(
-        0.4f to "40%",
-        0.6f to "60%",
-        0.8f to "80%",
-        1.0f to "100%",
-    ).chunked(2)
+private val SCALE_OPTIONS = listOf(0.4f, 0.6f, 0.8f, 1.0f)
+
+private fun scaleLabel(value: Float): String = "${(value * 100).roundToInt()}%"
 
 @Composable
 fun UiScaleSettingsCard(
     uiScale: Float,
-    onScaleSelected: (Float) -> Unit,
+    onOpenPicker: () -> Unit,
     scale: Float,
+    rowFocusRequester: FocusRequester? = null,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
-        Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
-            Text(
-                text = stringResource(R.string.settings_ui_scale_section_title),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaAccent,
-            )
-            Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-            Text(
-                text = stringResource(R.string.settings_ui_scale_desc),
-                style =
-                    MaterialTheme.typography.bodySmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodySmall.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-
-            // Scale options as buttons
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-            ) {
-                SCALE_OPTIONS.forEach { rowItems ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                    ) {
-                        rowItems.forEach { (scaleValue, label) ->
-                            TvSelectableButton(
-                                selected = uiScale == scaleValue,
-                                onSelect = { onScaleSelected(scaleValue) },
-                                text = label,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        SettingsRow(
+            title = stringResource(R.string.settings_ui_scale_section_title),
+            description = stringResource(R.string.settings_ui_scale_desc),
+            value = scaleLabel(uiScale),
+            scope = SettingsScope.DEVICE,
+            onClick = onOpenPicker,
+            focusRequester = rowFocusRequester,
+            modifier = Modifier.padding(Spacing.md.scaled(scale)),
+        )
     }
+}
+
+@Composable
+fun UiScalePickerPane(
+    uiScale: Float,
+    onPick: (Float) -> Unit,
+    onBack: () -> Unit,
+) {
+    SettingsPickerPane(
+        title = stringResource(R.string.settings_ui_scale_section_title),
+        options =
+            SCALE_OPTIONS.map { value ->
+                PickerOption(scaleLabel(value), value) {
+                    // "Aa" at that size: a static sample, not a live preview of the app.
+                    Text(
+                        text = "Aa",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontSize =
+                            MaterialTheme.typography.titleLarge.fontSize * value,
+                    )
+                }
+            },
+        selectedValue = uiScale,
+        onPick = onPick,
+        onBack = onBack,
+    )
 }

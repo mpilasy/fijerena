@@ -1,126 +1,97 @@
 package org.njarasoa.fijerena.feature.settings.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.AllPalettes
 import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
+import org.njarasoa.fijerena.core.ui.theme.CinemaThemePalette
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
 @Composable
 fun ThemeSettingsCard(
     selectedThemeId: String,
-    onThemeSelected: (String) -> Unit,
+    onOpenThemePicker: () -> Unit,
     selectedUiStyleId: String,
-    onUiStyleSelected: (String) -> Unit,
+    onOpenUiStylePicker: () -> Unit,
     scale: Float,
+    themeRowFocusRequester: FocusRequester? = null,
+    uiStyleRowFocusRequester: FocusRequester? = null,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
-        Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
-            Text(
-                text = stringResource(R.string.settings_theme_section_title),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaAccent,
+        Column(
+            modifier = Modifier.padding(Spacing.md.scaled(scale)),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+        ) {
+            SettingsRow(
+                title = stringResource(R.string.settings_theme_section_title),
+                description = stringResource(R.string.settings_theme_desc),
+                value = AllPalettes.firstOrNull { it.id == selectedThemeId }?.displayName ?: selectedThemeId,
+                scope = SettingsScope.DEVICE,
+                onClick = onOpenThemePicker,
+                focusRequester = themeRowFocusRequester,
             )
-            Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-            Text(
-                text = stringResource(R.string.settings_theme_desc),
-                style =
-                    MaterialTheme.typography.bodySmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodySmall.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+            SettingsRow(
+                title = stringResource(R.string.settings_ui_style_section_title),
+                description = stringResource(R.string.settings_ui_style_desc_tv),
+                value = AllUiStyles.firstOrNull { it.id == selectedUiStyleId }?.displayName ?: selectedUiStyleId,
+                scope = SettingsScope.DEVICE,
+                onClick = onOpenUiStylePicker,
+                focusRequester = uiStyleRowFocusRequester,
             )
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+        }
+    }
+}
 
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-            ) {
-                AllPalettes.chunked(2).forEachIndexed { rowIndex, rowPalettes ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                    ) {
-                        rowPalettes.forEach { palette ->
-                            TvSelectableButton(
-                                selected = selectedThemeId == palette.id,
-                                onSelect = { onThemeSelected(palette.id) },
-                                text = palette.displayName,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-                }
-            }
+@Composable
+fun ThemePickerPane(
+    selectedThemeId: String,
+    onPick: (String) -> Unit,
+    onBack: () -> Unit,
+) {
+    SettingsPickerPane(
+        title = stringResource(R.string.settings_theme_section_title),
+        options = AllPalettes.map { palette -> PickerOption(palette.displayName, palette.id) { PaletteSwatches(palette) } },
+        selectedValue = selectedThemeId,
+        onPick = onPick,
+        onBack = onBack,
+    )
+}
 
-            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-            Text(
-                text = stringResource(R.string.settings_ui_style_section_title),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaAccent,
-            )
-            Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-            Text(
-                text = stringResource(R.string.settings_ui_style_desc_tv),
-                style =
-                    MaterialTheme.typography.bodySmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodySmall.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+@Composable
+fun UiStylePickerPane(
+    selectedUiStyleId: String,
+    onPick: (String) -> Unit,
+    onBack: () -> Unit,
+) {
+    SettingsPickerPane(
+        title = stringResource(R.string.settings_ui_style_section_title),
+        options = AllUiStyles.map { style -> PickerOption(style.displayName, style.id) },
+        selectedValue = selectedUiStyleId,
+        onPick = onPick,
+        onBack = onBack,
+    )
+}
 
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-            ) {
-                AllUiStyles.chunked(2).forEachIndexed { rowIndex, rowStyles ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-                    ) {
-                        rowStyles.forEach { style ->
-                            TvSelectableButton(
-                                selected = selectedUiStyleId == style.id,
-                                onSelect = { onUiStyleSelected(style.id) },
-                                text = style.displayName,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-                }
-            }
+/** Four dots of the palette's colours — a static sample next to the theme's name. */
+@Composable
+private fun PaletteSwatches(palette: CinemaThemePalette) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+        listOf(palette.accent, palette.accentLight, palette.orange, palette.surfaceLight).forEach { color ->
+            Box(modifier = Modifier.size(Spacing.md).background(color, CircleShape))
         }
     }
 }

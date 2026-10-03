@@ -1,117 +1,56 @@
-@file:OptIn(ExperimentalTvMaterial3Api::class)
-
 package org.njarasoa.fijerena.feature.settings.components
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.tv.material3.*
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
-import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
-import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.Spacing
-import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
+
+@Composable
+private fun languageOptions(): List<PickerOption<String>> =
+    listOf(
+        PickerOption(stringResource(R.string.settings_language_en), "en"),
+        PickerOption(stringResource(R.string.settings_language_mg), "mg"),
+        PickerOption(stringResource(R.string.settings_language_fr), "fr"),
+    )
 
 @Composable
 fun LanguageSettingsCard(
     selectedLanguage: String,
-    onLanguageSelected: (String) -> Unit,
+    onOpenPicker: () -> Unit,
     scale: Float,
+    rowFocusRequester: FocusRequester? = null,
 ) {
-    var showDialog by remember { mutableStateOf(false) }
-
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
-        Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
-            Text(
-                text = stringResource(R.string.settings_language),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.titleMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaAccent,
-            )
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-
-            val label =
-                when (selectedLanguage) {
-                    "en" -> stringResource(R.string.settings_language_en)
-                    "mg" -> stringResource(R.string.settings_language_mg)
-                    "fr" -> stringResource(R.string.settings_language_fr)
-                    else -> selectedLanguage
-                }
-
-            CinemaSecondaryButton(
-                onClick = { showDialog = true },
-                text = label,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-
-    if (showDialog) {
-        val languages =
-            listOf(
-                "en" to stringResource(R.string.settings_language_en),
-                "mg" to stringResource(R.string.settings_language_mg),
-                "fr" to stringResource(R.string.settings_language_fr),
-            )
-
-        // Land focus on the language that is currently active, not on the button row at the
-        // bottom of the dialog. Without this the dialog opened with focus nowhere at all — the
-        // requester was attached to the empty `confirmButton = {}` slot — and D-pad presses fell
-        // through to the screen behind it.
-        val activeLanguageFocusRequester = remember { FocusRequester() }
-
-        CinemaAlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { androidx.compose.material3.Text(stringResource(R.string.settings_language)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
-                    languages.forEach { (code, name) ->
-                        val isSelected = selectedLanguage == code
-                        TvSelectableButton(
-                            selected = isSelected,
-                            onSelect = {
-                                if (!isSelected) {
-                                    onLanguageSelected(code)
-                                }
-                                showDialog = false
-                            },
-                            text = name,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .then(
-                                        if (isSelected) Modifier.focusRequester(activeLanguageFocusRequester) else Modifier,
-                                    ),
-                        )
-                    }
-                }
-            },
-            initialFocus = activeLanguageFocusRequester,
-            confirmButton = {
-                // Picking a language is the action; Cancel is secondary.
-                CinemaDialogActionButton(
-                    onClick = { showDialog = false },
-                    colors =
-                        androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = TvFocusTokens.restingContainer,
-                            contentColor = CinemaAccent,
-                        ),
-                ) {
-                    androidx.compose.material3.Text(stringResource(R.string.common_cancel))
-                }
-            },
+        SettingsRow(
+            title = stringResource(R.string.settings_language),
+            description = stringResource(R.string.settings_language_desc),
+            value = languageOptions().firstOrNull { it.value == selectedLanguage }?.label ?: selectedLanguage,
+            scope = SettingsScope.DEVICE,
+            onClick = onOpenPicker,
+            focusRequester = rowFocusRequester,
+            modifier = Modifier.padding(Spacing.md.scaled(scale)),
         )
     }
+}
+
+/** Picking a language other than the current one recreates the Activity (the caller's [onPick]). */
+@Composable
+fun LanguagePickerPane(
+    selectedLanguage: String,
+    onPick: (String) -> Unit,
+    onBack: () -> Unit,
+) {
+    SettingsPickerPane(
+        title = stringResource(R.string.settings_language),
+        options = languageOptions(),
+        selectedValue = selectedLanguage,
+        onPick = { code -> if (code != selectedLanguage) onPick(code) },
+        onBack = onBack,
+    )
 }

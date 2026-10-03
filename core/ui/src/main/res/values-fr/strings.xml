@@ -915,4 +915,7 @@
 
     <!-- M2 -->
     <string name="settings_seconds_short_format">%1$d s</string>
+    <!-- T2 -->
+    <string name="settings_watch_delay_row_title">Compter comme regardé après</string>
+    <string name="settings_language_desc">Langue des menus et des messages</string>
 </resources>
