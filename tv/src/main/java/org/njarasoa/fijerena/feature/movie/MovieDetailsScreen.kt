@@ -49,7 +49,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -61,7 +60,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
@@ -81,30 +79,28 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
-import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.ScoreChip
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
-import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
+import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
+import org.njarasoa.fijerena.ui.components.LabelledActionButton
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
-import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -1035,113 +1031,4 @@ private fun TechInfoRow(
             color = CinemaTextPrimary,
         )
     }
-}
-
-/**
- * An action-row button with an icon and a word (UX overhaul Part II Phase 6, F-MD-2): the icon
- * shows the state (filled star, check), the label says what the button is, so the row reads
- * without guessing at glyphs. Resting and focused colours match [CinemaSecondaryButton].
- */
-@Composable
-private fun LabelledActionButton(
-    onClick: () -> Unit,
-    icon: ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-    iconTint: Color = CinemaTextPrimary,
-) {
-    val scale = LocalUiScale.current
-    CinemaButton(
-        onClick = onClick,
-        modifier = modifier,
-        colors =
-            ButtonDefaults.colors(
-                containerColor = TvFocusTokens.restingContainer,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor = TvFocusTokens.focusedContainer,
-                focusedContentColor = CinemaAccentLight,
-            ),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-        )
-        Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-        Text(text = label)
-    }
-}
-
-/** What "More" opens: Refresh info, then Cancel. Focus opens on Refresh; Back or Cancel closes. */
-@Composable
-private fun DetailsMoreMenu(
-    title: String,
-    refreshLabel: String,
-    onRefresh: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val firstItemFocusRequester = remember { FocusRequester() }
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = CinemaTextPrimary,
-                maxLines = 2,
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                TvInputListItem(
-                    selected = false,
-                    onClick = {
-                        onRefresh()
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth().focusRequester(firstItemFocusRequester),
-                    leadingContent = {
-                        Icon(
-                            imageVector = CinemaIcons.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = CinemaAccent,
-                        )
-                    },
-                    headlineContent = {
-                        Text(text = refreshLabel, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
-                    },
-                )
-                TvInputListItem(
-                    selected = false,
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingContent = {
-                        Icon(
-                            imageVector = CinemaIcons.Close,
-                            contentDescription = null,
-                            modifier = Modifier.size(TvDimensions.iconSmall),
-                            tint = CinemaTextSecondary,
-                        )
-                    },
-                    headlineContent = {
-                        Text(
-                            text = stringResource(R.string.common_cancel),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CinemaTextSecondary,
-                        )
-                    },
-                )
-            }
-        },
-        initialFocus = firstItemFocusRequester,
-        confirmButton = {},
-        containerColor = CinemaSurface,
-        titleContentColor = CinemaTextPrimary,
-        textContentColor = CinemaTextSecondary,
-    )
 }

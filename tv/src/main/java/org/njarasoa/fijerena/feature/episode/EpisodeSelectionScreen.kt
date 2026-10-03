@@ -143,6 +143,8 @@ import org.njarasoa.fijerena.core.ui.utils.openExternalUrl
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.tvLongPress
+import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
+import org.njarasoa.fijerena.ui.components.LabelledActionButton
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvErrorState
@@ -484,6 +486,28 @@ internal fun EpisodeListContent(
 
     // Focus requester for primary Play / Resume button
     val playButtonFocusRequester = remember { FocusRequester() }
+
+    // "More" menu (Refresh info), as on the movie hero. A Dialog window: closing it hands focus
+    // back to the More button.
+    var showMoreMenu by remember { mutableStateOf(false) }
+    var moreMenuOpened by remember { mutableStateOf(false) }
+    val moreButtonFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(showMoreMenu) {
+        if (showMoreMenu) {
+            moreMenuOpened = true
+        } else if (moreMenuOpened) {
+            moreMenuOpened = false
+            moreButtonFocusRequester.requestFocusWithRetry(fallback = playButtonFocusRequester)
+        }
+    }
+    if (showMoreMenu) {
+        DetailsMoreMenu(
+            title = tmdbTitle ?: seriesDetail.name.ifEmpty { seriesName },
+            refreshLabel = stringResource(R.string.series_refresh_info),
+            onRefresh = onRefresh,
+            onDismiss = { showMoreMenu = false },
+        )
+    }
 
     // Focus requester for the stream name row, so switching to an alternate stream can keep
     // focus there instead of it falling back to the window root (see streamSwitchSignal below).
@@ -1019,21 +1043,6 @@ internal fun EpisodeListContent(
                                 )
                             },
                         )
-                        CinemaIconButton(
-                            onClick = { onRefresh() },
-                            enabled = !isRefreshing,
-                            modifier = downToTabRow.then(upScrollToTop),
-                            icon = {
-                                Icon(
-                                    imageVector = CinemaIcons.Refresh,
-                                    contentDescription = stringResource(R.string.series_refresh_info),
-                                    modifier =
-                                        Modifier
-                                            .size(TvDimensions.iconSmall.scaled(scale))
-                                            .rotate(rotation),
-                                )
-                            },
-                        )
                         seriesDetail.metadata.trailerUrl?.let { trailer ->
                             CinemaIconButton(
                                 onClick = { openExternalUrl(context, trailer) },
@@ -1048,6 +1057,16 @@ internal fun EpisodeListContent(
                                 },
                             )
                         }
+                        // Refresh info is maintenance, not something to watch: it lives behind
+                        // "More" at the end of the row, as on the movie hero (Phase 6). While a
+                        // refresh runs the button shows a spinning Refresh glyph instead.
+                        LabelledActionButton(
+                            onClick = { showMoreMenu = true },
+                            icon = if (isRefreshing) CinemaIcons.Refresh else CinemaIcons.MoreVert,
+                            label = stringResource(R.string.details_action_more),
+                            modifier = downToTabRow.then(upScrollToTop).focusRequester(moreButtonFocusRequester),
+                            iconModifier = if (isRefreshing) Modifier.rotate(rotation) else Modifier,
+                        )
                     }
                 }
 
