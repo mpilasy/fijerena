@@ -983,4 +983,6 @@
     <string name="provider_discard_changes_message">The connection details you changed haven\'t been saved.</string>
     <string name="provider_discard_button">Discard</string>
     <string name="provider_keep_editing_button">Keep editing</string>
+    <!-- T4 -->
+    <string name="provider_guide_button">Guide</string>
 </resources>

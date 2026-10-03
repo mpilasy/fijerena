@@ -59,8 +59,10 @@ import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -97,8 +99,9 @@ fun TvProviderSelectionScreen(
         viewModel.loadProviders()
     }
 
-    // Back from Add, Edit (opened from a row's overflow menu) or a row's EPG sources lands on the
-    // button that led there, once the reloaded list is back on screen.
+    // Back from Add, Edit (OK on a row, or the row's overflow menu) or Guide sources (the row's
+    // Guide slot, or the menu) lands on the control that led there, once the reloaded list is back
+    // on screen (T-9).
     val listState = rememberLazyListState()
     val returnFocus = rememberNavReturnFocus()
     NavReturnFocusEffect(returnFocus, listState = listState) {
@@ -106,6 +109,25 @@ fun TvProviderSelectionScreen(
             snapshotFlow { uiState }.first { it is ProviderUiState.SingleProvider || it is ProviderUiState.MultipleProviders }
         }
     }
+
+    // First open lands on the active source's row, not on "+" (T-8). Once per composition: a
+    // pending hand-back (Back from a child screen) has the last word instead.
+    val entryRowFocusRequester = remember { FocusRequester() }
+    val listLoaded = uiState is ProviderUiState.SingleProvider || uiState is ProviderUiState.MultipleProviders
+    var entryFocusDone by remember { mutableStateOf(false) }
+    LaunchedEffect(listLoaded) {
+        if (listLoaded && !entryFocusDone) {
+            entryFocusDone = true
+            if (!returnFocus.isReturn) entryRowFocusRequester.requestFocusWithRetry()
+        }
+    }
+
+    val allProviders =
+        when (val state = uiState) {
+            is ProviderUiState.SingleProvider -> listOf(state.provider)
+            is ProviderUiState.MultipleProviders -> state.providers
+            else -> emptyList()
+        }
 
     val scale = LocalUiScale.current
 
@@ -203,9 +225,13 @@ fun TvProviderSelectionScreen(
                 )
             }
 
-            is ProviderUiState.SingleProvider -> {
+            is ProviderUiState.SingleProvider, is ProviderUiState.MultipleProviders -> {
                 ProviderList(
-                    providers = listOf(state.provider),
+                    providers = allProviders,
+                    onEdit = { id ->
+                        returnFocus.leaveFrom(RETURN_ROW_PREFIX + id, listState)
+                        onEditProvider(id)
+                    },
                     onSelect = onProviderSelected,
                     onManageEpg = { id ->
                         returnFocus.leaveFrom(RETURN_EPG_PREFIX + id, listState)
@@ -214,20 +240,7 @@ fun TvProviderSelectionScreen(
                     onMoreActions = { actionsMenuProvider = it },
                     listState = listState,
                     returnFocus = returnFocus,
-                )
-            }
-
-            is ProviderUiState.MultipleProviders -> {
-                ProviderList(
-                    providers = state.providers,
-                    onSelect = onProviderSelected,
-                    onManageEpg = { id ->
-                        returnFocus.leaveFrom(RETURN_EPG_PREFIX + id, listState)
-                        onManageEpg(id)
-                    },
-                    onMoreActions = { actionsMenuProvider = it },
-                    listState = listState,
-                    returnFocus = returnFocus,
+                    entryRowFocusRequester = entryRowFocusRequester,
                 )
             }
         }
@@ -280,13 +293,6 @@ fun TvProviderSelectionScreen(
         )
     }
 
-    val allProviders =
-        when (val state = uiState) {
-            is ProviderUiState.SingleProvider -> listOf(state.provider)
-            is ProviderUiState.MultipleProviders -> state.providers
-            else -> emptyList()
-        }
-
     actionsMenuProvider?.let { provider ->
         ProviderActionsMenuDialog(
             provider = provider,
@@ -295,6 +301,15 @@ fun TvProviderSelectionScreen(
                 returnFocus.leaveFrom(RETURN_MORE_PREFIX + provider.id, listState)
                 onEditProvider(provider.id)
             },
+            onManageEpg =
+                if (MediaProviderFactory.hasLiveTv(provider)) {
+                    {
+                        returnFocus.leaveFrom(RETURN_MORE_PREFIX + provider.id, listState)
+                        onManageEpg(provider.id)
+                    }
+                } else {
+                    null
+                },
             onDuplicate = { duplicateProvider = provider },
             onCopyTo = { copyFromProvider = provider },
             onDelete = { deleteConfirmProvider = provider },
@@ -350,13 +365,18 @@ fun TvProviderSelectionScreen(
 @Composable
 private fun ProviderList(
     providers: List<ProviderEntity>,
+    onEdit: (Long) -> Unit,
     onSelect: (ProviderEntity) -> Unit,
     onManageEpg: (Long) -> Unit,
     onMoreActions: (ProviderEntity) -> Unit,
     listState: LazyListState,
     returnFocus: NavReturnFocus,
+    entryRowFocusRequester: FocusRequester,
 ) {
     val scale = LocalUiScale.current
+    // The active source comes first (ProviderDao orders by isActive); fall back to the first row
+    // should none be active.
+    val entryId = providers.firstOrNull { it.isActive }?.id ?: providers.firstOrNull()?.id
     LazyColumn(
         state = listState,
         contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
@@ -364,86 +384,101 @@ private fun ProviderList(
         modifier = Modifier.fillMaxSize().focusRestorer(),
     ) {
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
+            // One focus stop per row, OK = Edit; the trailing actions sit in fixed-width slots that
+            // stay in place when empty (Use on the active row, Guide on a source without live
+            // channels), so Up/Down from a slot lands on the same slot of the next row and Right
+            // from the row walks Use → Guide → ⋮ (TV focus contract, rule 1; A-10).
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = provider.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = if (provider.isActive) CinemaAccent else CinemaTextPrimary,
-                        )
-                        if (provider.isActive) {
-                            Spacer(modifier = Modifier.width(Spacing.sm))
+                TvInputListItem(
+                    selected = provider.isActive,
+                    onClick = { onEdit(provider.id) },
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .then(if (provider.id == entryId) Modifier.focusRequester(entryRowFocusRequester) else Modifier)
+                            .navReturnFocusTarget(returnFocus, RETURN_ROW_PREFIX + provider.id),
+                    headlineContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = stringResource(R.string.provider_active_label),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = CinemaAccent.copy(alpha = CinemaAlpha.textHigh),
+                                text = provider.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (provider.isActive) CinemaAccent else CinemaTextPrimary,
+                            )
+                            if (provider.isActive) {
+                                Spacer(modifier = Modifier.width(Spacing.sm))
+                                Text(
+                                    text = stringResource(R.string.provider_active_label),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = CinemaAccent.copy(alpha = CinemaAlpha.textHigh),
+                                )
+                            }
+                        }
+                    },
+                    supportingContent = {
+                        Column {
+                            Text(
+                                text = provider.url,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                            )
+                            Text(
+                                text = provider.username,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CinemaTextTertiary,
                             )
                         }
-                    }
-                    Text(
-                        text = provider.url,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    )
-                    Text(
-                        text = provider.username,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CinemaTextTertiary,
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    },
+                )
+                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH.scaled(scale))) {
                     if (!provider.isActive) {
-                        CinemaIconButton(
+                        CinemaSecondaryButton(
                             onClick = { onSelect(provider) },
-                            icon = {
-                                Icon(
-                                    CinemaIcons.CheckCircle,
-                                    contentDescription = stringResource(R.string.common_select),
-                                    tint = CinemaAccent,
-                                )
-                            },
+                            text = stringResource(R.string.provider_use_button),
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    // EPG only applies to providers that carry live channels
-                    if (MediaProviderFactory.hasLiveTv(provider)) {
-                        CinemaIconButton(
-                            onClick = { onManageEpg(provider.id) },
-                            modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_EPG_PREFIX + provider.id),
-                            icon = {
-                                Icon(
-                                    CinemaIcons.LiveTv,
-                                    contentDescription = stringResource(R.string.epg_data_manage_button),
-                                    tint = CinemaAccent,
-                                )
-                            },
-                        )
-                    }
-                    // Duplicate/Copy To/Edit/Delete collapse behind one overflow button with real
-                    // text labels — see ProviderActionsMenuDialog.
-                    CinemaIconButton(
-                        onClick = { onMoreActions(provider) },
-                        modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_MORE_PREFIX + provider.id),
-                        icon = {
-                            Icon(
-                                CinemaIcons.MoreVert,
-                                contentDescription = stringResource(R.string.provider_more_actions_for_format, provider.name),
-                                tint = CinemaAccent,
-                            )
-                        },
-                    )
                 }
+                Box(modifier = Modifier.width(ACTION_SLOT_WIDTH.scaled(scale))) {
+                    // Guide sources only apply to sources that carry live channels
+                    if (MediaProviderFactory.hasLiveTv(provider)) {
+                        CinemaSecondaryButton(
+                            onClick = { onManageEpg(provider.id) },
+                            text = stringResource(R.string.provider_guide_button),
+                            modifier = Modifier.fillMaxWidth().navReturnFocusTarget(returnFocus, RETURN_EPG_PREFIX + provider.id),
+                        )
+                    }
+                }
+                // Edit / Guide sources / Duplicate / Copy to… / Delete with real text labels —
+                // see ProviderActionsMenuDialog.
+                CinemaIconButton(
+                    onClick = { onMoreActions(provider) },
+                    modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_MORE_PREFIX + provider.id),
+                    icon = {
+                        Icon(
+                            CinemaIcons.MoreVert,
+                            contentDescription = stringResource(R.string.provider_more_actions_for_format, provider.name),
+                            tint = CinemaAccent,
+                        )
+                    },
+                )
             }
         }
     }
 }
 
-// Keys for the buttons that navigate away — see rememberNavReturnFocus.
+/**
+ * Width of the Use and Guide slots. Fixed so the ⋮ column lines up across rows whatever a row
+ * shows; a Settings input width, since these are the Settings-side controls of a row.
+ */
+private val ACTION_SLOT_WIDTH = TvDimensions.settingsInputWidth
+
+// Keys for the controls that navigate away — see rememberNavReturnFocus.
 private const val RETURN_ADD = "add"
+private const val RETURN_ROW_PREFIX = "row:"
 private const val RETURN_EPG_PREFIX = "epg:"
 private const val RETURN_MORE_PREFIX = "more:"
 
