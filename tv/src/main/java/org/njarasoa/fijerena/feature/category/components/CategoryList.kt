@@ -76,6 +76,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
+import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.paneItem
 import org.njarasoa.fijerena.ui.components.input.tvPane
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -332,14 +333,13 @@ internal fun CategoryList(
  *
  * `CardDefaults.*` are `@Composable` and so cannot be wrapped in `remember`; hoisting the calls out
  * of the item body is what stops a full `CardColors`/`CardScale`/`CardGlow`/`CardShape` set being
- * allocated per visible row per recomposition. Selection is the only thing that varies, so both
- * colour sets are built up front and the row picks one. Same pattern, and same reason, as
- * `StreamList`'s `StreamCardStyle`.
+ * allocated per visible row per recomposition. Same pattern, and same reason, as `StreamList`'s
+ * `StreamCardStyle`. The selected category keeps these colours and gets the P5 "current" bar and
+ * title colour instead of a fill of its own, which looked like focus (F-C-8).
  */
 @Immutable
 private data class CategoryCardStyle(
     val colors: CardColors,
-    val selectedColors: CardColors,
     val cardScale: CardScale,
     val glow: CardGlow,
     val shape: CardShape,
@@ -361,13 +361,6 @@ private fun categoryCardStyle(
             CardDefaults.colors(
                 containerColor = CinemaSurface,
                 contentColor = CinemaTextPrimary,
-                focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        selectedColors =
-            CardDefaults.colors(
-                containerColor = CinemaAccent.copy(alpha = CinemaAlpha.glassBorder),
-                contentColor = CinemaAccent,
                 focusedContainerColor = CinemaAccent.copy(alpha = CinemaAlpha.tint),
                 focusedContentColor = CinemaTextPrimary,
             ),
@@ -428,7 +421,7 @@ private fun CategoryItem(
                     onOpenActions()
                     true
                 },
-        colors = if (isSelected) cardStyle.selectedColors else cardStyle.colors,
+        colors = cardStyle.colors,
         shape = cardStyle.shape,
         scale = cardStyle.cardScale,
         glow = cardStyle.glow,
@@ -437,6 +430,7 @@ private fun CategoryItem(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .currentIndicator(isSelected)
                     .padding(Spacing.md.scaled(scale)),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
@@ -451,7 +445,7 @@ private fun CategoryItem(
             Text(
                 text = category.name,
                 style = scaledTitleMedium,
-                color = CinemaTextPrimary,
+                color = if (isSelected) TvFocusTokens.currentText else CinemaTextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 // weight(1f) keeps the hint below at the row's end.

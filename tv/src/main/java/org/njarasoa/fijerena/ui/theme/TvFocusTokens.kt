@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Glow
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
@@ -21,8 +22,11 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
  *
  * Focus and selection are two independent channels and must stay simultaneously legible: a focused
  * row that happens to be unselected, and a selected row that happens to be unfocused, both have to
- * read from ten feet. [focusedContainer] carries focus, [selectedContainer] carries selection, and
- * they are deliberately different hues rather than two shades of the same grey.
+ * read from ten feet. Focus lifts the element (scale, outline, [focusedContainer]); "selected" or
+ * "current" (the category being browsed, the channel playing, the episode to continue, the active
+ * Settings group or source, a checked option) keeps the resting container and adds a
+ * [currentBarWidth] bar in [currentAccent] on the leading edge plus [currentText] for the title
+ * (UX overhaul plan Part II P5) — never a fill or a full outline, which read as a second focus.
  */
 object TvFocusTokens {
     val focusedScale: Float
@@ -67,20 +71,39 @@ object TvFocusTokens {
         @Composable @ReadOnlyComposable
         get() = CinemaSurfaceLight
 
-    /** Container behind a selected row or button that does not currently hold focus. */
+    /** Container behind a selected tab that does not currently hold focus (`TvSectionTabs`, season tabs). */
     val selectedContainer: Color
         @Composable @ReadOnlyComposable
         get() = CinemaAccent.copy(alpha = CinemaAlpha.tint)
 
-    /**
-     * Container for a row or button that is both selected and focused. Letting [focusedContainer]
-     * win here would drop the only container-level selection cue at exactly the moment the user is
-     * looking at the item, leaving nothing but the bold label to say "this is the current one".
-     * A brighter accent instead reads as selected *and* lifted.
-     */
+    /** Container behind a selected tab that also holds focus: a brighter accent, selected *and* lifted. */
     val focusedSelectedContainer: Color
         @Composable @ReadOnlyComposable
         get() = CinemaAccent.copy(alpha = CinemaAlpha.scrim)
+
+    /** Width of the "current" bar on a selected / current row's leading edge (see `Modifier.currentIndicator`). */
+    val currentBarWidth: Dp = 4.dp
+
+    /** Colour of the "current" bar. The full accent, not [CinemaAccentLight], so it never reads as the focus outline. */
+    val currentAccent: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaAccent
+
+    /**
+     * Title colour on a selected / current row, focused or not. The light accent, so it stays
+     * legible on both [restingContainer] and the focused containers.
+     */
+    val currentText: Color
+        @Composable @ReadOnlyComposable
+        get() = CinemaAccentLight
+
+    /**
+     * Focus ring on a profile avatar (F-PP-1): twice [focusBorderWidth], since a ring the width of
+     * a row's outline vanished against a coloured avatar at ten feet.
+     */
+    val avatarFocusBorderWidth: Dp
+        @Composable @ReadOnlyComposable
+        get() = focusBorderWidth * 2
 
     /**
      * Focus glow, honouring [org.njarasoa.fijerena.core.ui.theme.UiGridTokens.focusUsesShadow]:

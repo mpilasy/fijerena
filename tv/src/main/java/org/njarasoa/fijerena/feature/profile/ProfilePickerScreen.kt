@@ -195,9 +195,16 @@ private fun PickerCard(
                     focusedScale = TvFocusTokens.focusedScale,
                     pressedScale = TvFocusTokens.pressedScale,
                 ),
+            // A ring around the avatar, not on it (F-PP-1): a gap of background between the two
+            // keeps the focus colour from blending into a coloured avatar at ten feet.
             border =
                 ClickableSurfaceDefaults.border(
-                    focusedBorder = Border(BorderStroke(TvFocusTokens.focusBorderWidth.scaled(scale), CinemaAccentLight)),
+                    focusedBorder =
+                        Border(
+                            border = BorderStroke(TvFocusTokens.avatarFocusBorderWidth.scaled(scale), CinemaAccentLight),
+                            inset = (TvFocusTokens.avatarFocusBorderWidth / 2 + Spacing.xxs).scaled(scale),
+                            shape = CircleShape,
+                        ),
                 ),
         ) { avatar() }
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))

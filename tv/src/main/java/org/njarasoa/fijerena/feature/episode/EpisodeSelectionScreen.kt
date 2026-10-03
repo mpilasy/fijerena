@@ -151,6 +151,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -2224,16 +2225,14 @@ private fun EpisodeCard(
         colors = cardStyle.colors,
         shape = cardStyle.shape,
         scale = cardStyle.cardScale,
-        // The continue-watching row is "current", not focused (Phase 6, F-E-3): an accent bar on
-        // its resting container plus the accent "Continue watching" line — no outline, which read
-        // as a second focused row next to the real one.
         border = cardStyle.border,
         glow = cardStyle.glow,
     ) {
         // Box, not a Column with a weighted row: the card is pinned to cardHeight and its content
         // already fills that, so a footer that consumes layout height gets pushed past the card's
         // clip bounds — it lays out (and shows up in semantics) but never paints.
-        Box(modifier = Modifier.fillMaxSize()) {
+        // Continue watching is the P5 "current" mark (bar + title colour), not an outline (F-E-3).
+        Box(modifier = Modifier.fillMaxSize().currentIndicator(isContinueWatching)) {
             Row(
                 modifier =
                     Modifier
@@ -2296,7 +2295,7 @@ private fun EpisodeCard(
                     Text(
                         text = episode.title,
                         style = cardScaledStyles.titleMedium,
-                        color = CinemaTextPrimary,
+                        color = if (isContinueWatching) TvFocusTokens.currentText else CinemaTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -2322,17 +2321,6 @@ private fun EpisodeCard(
                 }
             }
 
-            if (isContinueWatching) {
-                Box(
-                    modifier =
-                        Modifier
-                            .align(Alignment.CenterStart)
-                            .fillMaxHeight()
-                            .width(Spacing.xxs.scaled(scale))
-                            .background(CinemaAccent),
-                )
-            }
-
             // Resume progress, card-width along the bottom edge — same placement as the stream row in
             // StreamList, so a half-watched episode and a half-watched film read the same. Poster-width
             // was too short to be legible.
@@ -2343,7 +2331,7 @@ private fun EpisodeCard(
                         Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            // Sit above the continue-watching border, which is drawn over the card's
+                            // Kept clear of the card's rounded bottom edge, which is drawn over the card's
                             // bottom edge — without this inset a bar of the same thickness as the
                             // stroke is completely hidden underneath it.
                             .padding(bottom = TvDimensions.borderFocused.scaled(scale))

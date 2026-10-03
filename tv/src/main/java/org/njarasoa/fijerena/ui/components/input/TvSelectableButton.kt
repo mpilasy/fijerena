@@ -15,7 +15,6 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import androidx.tv.material3.ToggleableSurfaceDefaults
-import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -38,8 +37,9 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  * Colour comes from the active palette and shape / scale / outline weight / focus shadow /
  * emphasis weight from the active look-and-feel style, via [TvFocusTokens].
  *
- * Selected is never a fill: the accent outline and the emphasis weight carry it on the resting
- * container, so the one filled-looking option in a grid is always the focused one, selected or not.
+ * Selected is never a fill nor an outline: the P5 "current" bar on the leading edge
+ * ([currentIndicator]), [TvFocusTokens.currentText] and the emphasis weight carry it on the resting
+ * container, so the one lifted, outlined option in a grid is always the focused one, selected or not.
  */
 @Composable
 fun TvSelectableButton(
@@ -62,9 +62,9 @@ fun TvSelectableButton(
                 focusedContainerColor = TvFocusTokens.focusedContainer,
                 focusedContentColor = CinemaTextPrimary,
                 selectedContainerColor = TvFocusTokens.restingContainer,
-                selectedContentColor = CinemaTextPrimary,
+                selectedContentColor = TvFocusTokens.currentText,
                 focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
-                focusedSelectedContentColor = CinemaTextPrimary,
+                focusedSelectedContentColor = TvFocusTokens.currentText,
                 disabledContainerColor = TvFocusTokens.restingContainer.copy(alpha = CinemaAlpha.scrim),
                 disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),
             ),
@@ -83,14 +83,11 @@ fun TvSelectableButton(
                         border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccentLight),
                         shape = RoundedCornerShape(CornerRadius.small),
                     ),
-                selectedBorder =
-                    Border(
-                        border = BorderStroke(TvFocusTokens.borderDefault, CinemaAccent),
-                        shape = RoundedCornerShape(CornerRadius.small),
-                    ),
             ),
         glow = ToggleableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
     ) {
+        // Fills the surface's content box, which the surface clips and scales with focus.
+        Box(modifier = Modifier.matchParentSize().currentIndicator(selected))
         Box(
             modifier =
                 Modifier

@@ -89,6 +89,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.PaneFocusState
+import org.njarasoa.fijerena.ui.components.input.currentIndicator
 import org.njarasoa.fijerena.ui.components.input.paneItem
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -428,6 +429,7 @@ internal fun StreamList(
                                 watchProgress = watchProgress[item.id] ?: 0f,
                                 isWatched = item.id in watchedIds,
                                 nowPlayingProgram = nowPlaying[item.id],
+                                isCurrent = item.id == lastPlayedItemId,
                                 onClick = {
                                     if (isWatchable) {
                                         // Already focused: mark handled too, so the effect above
@@ -547,6 +549,8 @@ private fun StreamItem(
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
     nowPlayingProgram: EpgProgram? = null,
+    /** The channel playing / the last played item: the P5 "current" bar and title colour. */
+    isCurrent: Boolean = false,
     onClick: () -> Unit,
     /** Long-press OK or the Menu key: open the row's action menu (P3). */
     onOpenActions: () -> Unit,
@@ -587,7 +591,7 @@ private fun StreamItem(
         scale = cardStyle.cardScale,
         glow = cardStyle.glow,
     ) {
-        Column {
+        Column(modifier = Modifier.currentIndicator(isCurrent)) {
             Row(
                 modifier =
                     Modifier
@@ -641,7 +645,7 @@ private fun StreamItem(
                             // name (e.g. "EN -  (US)" with nothing between the dashes).
                             text = parsedTitle.title.ifBlank { stringResource(R.string.content_untitled) },
                             style = cardStyle.titleMedium,
-                            color = CinemaTextPrimary,
+                            color = if (isCurrent) TvFocusTokens.currentText else CinemaTextPrimary,
                             maxLines = 1,
                             modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
                         )
