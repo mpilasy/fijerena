@@ -12,7 +12,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | Lane | Done | Current | Next |
 |---|---|---|---|
 | 1 Mobile settings | M1, M2, M3 (2026-10-03, phone), M4 (merged 2026-10-03, phone check pending) | — | M5 |
-| 2 TV focus + Live TV | LT1, Phases 1–3 (2026-10-03, TV) | LT2 context list (since 2026-10-03) | LT3 |
+| 2 TV focus + Live TV | LT1, Phases 1–3 (2026-10-03, TV), LT2 (merged 2026-10-03, TV check pending) | — | LT3 |
 | 3 Core + guide | A-W4, A-W6, GD0, GD0b, GD1 (2026-10-03) | GD2 guide grid (since 2026-10-03) | GD3 |
 | 4 TV settings | T1, T2, T3 (2026-10-03, TV), T4 (merged 2026-10-03, TV check pending) | — | T5 → T6 |
 
@@ -679,7 +679,7 @@ FULL SCREEN      video               | Left/Right = same panel, same tabs, same 
 | Phase | Scope | Main files | Effort | Risk | Why |
 |---|---|---|---|---|---|
 | LT1 | **L-1 regression**: second push uses `navigate(...)` (as `onSignInRequired` already does, with the same comment). Re-check the docs' claim holds. **Done 2026-10-03**, verified on the TV emulator: Home → Live TV opens the preview on the last channel; Back → browse → Home. | `TvNavHost.kt` | S | Low | one line; verify Back stack after |
-| LT2 | **Context list**: preview panel shows the list the channel was chosen from, with tabs Category / Recent / Favorites; zap order = the same list; Left/Right on rows no longer toggle lists (tabs do); row actions via P3 (landed). Empty-tab state (9). **In progress (lane 2, since 2026-10-03).** | `LiveTvSplitLayout.kt`, `StreamList.kt`, `TvCategoryGridScreen.kt`, `PlayerScreen.kt` (`channelList` param replaces `categoryStreams`/`recentStreams`) | L | High | 732-line split layout; playback engine coupling; ANR history |
+| LT2 | **Context list**: preview panel shows the list the channel was chosen from, with tabs Category / Recent / Favorites; zap order = the same list; Left/Right on rows no longer toggle lists (tabs do); row actions via P3 (landed). Empty-tab state (9). **Done 2026-10-03** (compile + ktlint + CI checks; TV check pending). New `ChannelContext.kt`, `LiveTvChannelPanel.kt`; `PlayerScreen` takes `channelList` in place of `categoryStreams`. | `LiveTvSplitLayout.kt`, `StreamList.kt`, `TvCategoryGridScreen.kt`, `PlayerScreen.kt` (`channelList` param replaces `categoryStreams`/`recentStreams`) | L | High | 732-line split layout; playback engine coupling; ANR history |
 | LT3 | **One panel**: `LiveChannelPanel` docked + overlay; delete `TvChannelListOverlay` and the two flyouts; Left/Right in full screen open it; Left/Right inside = tabs; Back/outward closes; focus opens on current. | new `LiveChannelPanel.kt`, `PlayerScreen.kt`, `PlayerKeyHandler.kt`, `LiveTvSplitLayout.kt` | L | High | overlay focus in the player (see `02ecc6a5`) |
 | LT4 | **OSD**: labelled buttons, Channels first + entry focus, Guide when EPG, timer reset on key, Up/Down zap with OSD up, banner content, single title, dev-gated codec line; delete the dead `ControlHintsOverlay` + `showControlHints`/`hints_dismissed`. | `TvPlayerControlsOverlay.kt`, `PlayerKeyHandler.kt`, `PlayerEffects.kt`, `PlayerScreenState.kt`, `ControlHintsOverlay.kt` | M | Med |  |
 | LT5 | **Zap/tune feedback** (5) + preview column content (6) + settle 800 ms. | `PlayerScreen.kt`, `LiveTvSplitLayout.kt` | M | Med | keeping the last frame may need surface handling |
