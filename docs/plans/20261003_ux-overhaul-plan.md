@@ -1,6 +1,6 @@
 # UX Overhaul Plan — Settings, TV Focus & Live TV, TV Guide
 
-**Status (2026-10-03):** Parts I, II and III approved. Days 1–2 landed and verified on both emulators; four lanes idle (see Progress).
+**Status (2026-10-03):** Parts I, II and III approved. Days 1–2 landed and verified on both emulators; day 3 in progress on four lanes (see Progress).
 
 ## Progress
 
@@ -11,10 +11,10 @@ in their own `docs:` commit, never amended into a lane's code commit.
 
 | Lane | Done | Current | Next |
 |---|---|---|---|
-| 1 Mobile settings | M1 (2026-10-03, phone), M2 (2026-10-03, phone) | — | M3 |
-| 2 TV focus + Live TV | LT1, Phase 1, Phase 2 (2026-10-03, TV) | — | Phase 3 → LT2 |
-| 3 Core + guide | A-W4, A-W6, GD0 (2026-10-03, both), GD0b (2026-10-03, unit tests; device kill-mid-refresh check folded into the Part III guide round, which needs a source with guide data) | — | GD1 |
-| 4 TV settings | T1, T2 (2026-10-03, TV) | — | T3 (Phase 2 landed) → T4 → T5 → T6 |
+| 1 Mobile settings | M1, M2 (2026-10-03, phone) | M3 (since 2026-10-03) | M4 |
+| 2 TV focus + Live TV | LT1, Phase 1, Phase 2 (2026-10-03, TV) | Phase 3 row menu (since 2026-10-03) | LT2 |
+| 3 Core + guide | A-W4, A-W6, GD0, GD0b (2026-10-03) | GD1 (since 2026-10-03) | GD2 |
+| 4 TV settings | T1, T2 (2026-10-03, TV) | T3 two-pane (since 2026-10-03) | T4 → T5 → T6 |
 
 Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
 release time (`docs/RUN_GUIDE.md`).
@@ -289,7 +289,7 @@ share switch → devices (Remove secondary) → Danger zone (Leave).
 |---|---|---|---|---|---|
 | T1 | Quick wins, no layout change: T-2, T-3 (Part II P5 later extends the same tokens to all lists), T-4, T-13, button hierarchy, EPG row focusable (A-4). **Done 2026-10-03**, verified on the TV emulator (10 s selected ≠ 120 s focused; Guide Sources row opens EPG Management and Back returns to it; switch rows no longer tinted when on). T-13 done via `CinemaDialogActionButton`'s `colors` (resting container + accent text); a `secondary` flag on that core composable can come with T2. | `PlaybackSettingsCard.kt`, `TvSelectableButton.kt`, `TvSwitchRow`, `UiScaleSettingsCard.kt`, `EpgSettingsCard.kt`, `ProfilesSettingsCard.kt`, `LiveSyncSettingsCard.kt`, `ExportImportSettingsCard.kt` | M | Med | `TvSelectableButton`/`TvSwitchRow` are app-wide; visual regression surface |
 | T2 | `SettingsRow` + scope chips + drill-in pickers for theme / look / text size / watch delay / language (T-5, T-6); focus contract applied to the Settings list. **Done 2026-10-03**, verified on the TV emulator (value rows + scope chips; Theme and watch-delay pickers open on the current value, Back returns to the row; Back from Diagnostics returns to its button). Follow-ups: Left should close a picker (only Back does); switch rows append the scope as text (`TvSwitchRow` has no chip slot); autoplay's description now says "for this profile" twice. | new `SettingsRow.kt`, new `SettingsPickerPane.kt`, all cards, `LanguageSettingsCard.kt` | L | Med | new picker pane; Language recreate path |
-| T3 | Two-pane Settings, shared IA, header (T-1, T-7); dev-only gating. | `SettingsScreen.kt`, `TvNavHost.kt` | L | High | nav + focus + saveable state; needs Part II `tvPane` |
+| T3 | Two-pane Settings, shared IA, header (T-1, T-7); dev-only gating. **In progress (lane 4, since 2026-10-03).** | `SettingsScreen.kt`, `TvNavHost.kt` | L | High | nav + focus + saveable state; needs Part II `tvPane` |
 | T4 | Sources list + menu + focus (T-8, T-9, T-10, A-10). | `ProviderSelectionScreen.kt`, `ProviderDialogs.kt` | M | Med | focus return + menu order |
 | T5 | Edit Source two-column + shared grouping (T-11, T-12, A-6, A-7, A-8). | `TvAddProviderScreen.kt`, `ProviderSettingsSection.kt`, `CacheManagementSection.kt` | L | Med | 699-line screen; two save models; Add mode must not change |
 | T6 | EPG Management scoping + Live sync order (A-9, T-14). | `TvEpgManagementScreen.kt`, `SyncSettingsScreen.kt` | M | Med | moves global controls; 1 186-line EPG screen |
@@ -387,7 +387,7 @@ Scan) (M-11).
 | M1 | Quick wins: button hierarchy (M-2), chip colour (M-9 part), profile chevrons (M-5), EPG row tappable (A-4), About build info (M-12). **Done 2026-10-03**, verified on the phone emulator (outlined actions, chevrons, EPG row opens EPG Management, About shows build hash/time). | `ProviderSettingsCard.kt`, `DeveloperSettingsCard.kt`, `LiveSyncSettingsCard.kt`, `ExportImportSettingsCard.kt`, `ProfilesSettingsCard.kt`, `EpgSettingsCard.kt`, `AboutSettingsCard.kt`, `ProviderSettingsSection.kt` | S | Low |  |
 | M2 | `SettingsListRow` + grouped list in shared IA order + value-row pickers (M-1, M-3, M-4, M-6). **Done 2026-10-03**, verified on the phone emulator (7 groups, scope chips, value rows, Theme/Look/Language/Watch-delay pickers incl. Custom, dev-only rows). Notes: watch-delay row still titled "Watch delay (seconds)"; expired-subscription date no longer red in the source row (restore in M3/M4); `settings_profiles_description` dropped. | `SettingsScreen.kt`, all cards | L | Med | new row component + pickers; every card rewritten |
 | M2b | Remove cellular buffer screen and route (M-7, with A-W5). | `MobileCellularBufferSettingsScreen.kt`, `DeveloperSettingsCard.kt`, `MobileNavHost.kt`, `core/navigation/Screen.kt`, strings | S | Low | with A-W5 (Med) |
-| M3 | Sources list + overflow menu (M-8, A-10). | `ProviderSelectionScreen.kt`, `ProviderCopyDialogs.kt` | M | Med | overflow replaces 6 inline actions |
+| M3 | Sources list + overflow menu (M-8, A-10). **In progress (lane 1, since 2026-10-03).** | `ProviderSelectionScreen.kt`, `ProviderCopyDialogs.kt` | M | Med | overflow replaces 6 inline actions |
 | M4 | Edit Source grouping, save/cancel placement, discard dialog (M-9, A-6, A-7, A-8). | `MobileAddProviderScreen.kt`, `ProviderFormSection.kt`, `ProviderSettingsSection.kt`, `DataManagementSection.kt` | L | Med | discard dialog + save placement |
 | M5 | EPG Management order + labels; Live sync buttons (M-10, M-11, A-9). | `MobileEpgManagementScreen.kt`, `MobileSyncSettingsScreen.kt` | M | Med | moves global controls |
 
@@ -740,7 +740,7 @@ See Decisions 3–5 at the end of this plan.
 |---|---|---|---|---|---|
 | 1 | P6 focus-walk script + expected sequences for the screens walked here (records today's behaviour; later phases update the expectations). **Done 2026-10-03** — walks recorded on the TV emulator the same day (today's behaviour: F-H-2, F-C-3/4/5/6 reproduce). | `scripts/tv-focus-walk.sh`, `scripts/focus-walks/*.txt` | M | Low | tooling only |
 | 2 | P1 + P2; apply to category screens (Live TV / Movies / TV Shows). **Done 2026-10-03**, verified on the TV emulator (Left from an item → the selected category; Left from a category stays; Down stops at the list end; Right from a category → the remembered item; walk re-recorded). Deviations: Left/Right pane exits via `onKeyEvent`, not `focusProperties.exit`; no `focusRestorer`; `rememberPaneFocus()` + `bind(...)` per list; F-C-5 ★ left for Phase 3; OK on a category now keeps focus on it (Right enters). | new `TvPane.kt`, `TwoColumnLayout.kt`, `CategoryList.kt`, `StreamList.kt` | L | High | Compose focus APIs are quirky; touches all category screens |
-| 3 | P3 row action menu; remove hidden row buttons in category lists and Live preview. | `StreamList.kt`, `LiveTvSplitLayout.kt`, `FavoriteMenuDialog.kt` | M | Med | behaviour change: hidden buttons removed; long-press on tv-material `Surface` |
+| 3 | P3 row action menu; remove hidden row buttons in category lists and Live preview. **In progress (lane 2, since 2026-10-03).** | `StreamList.kt`, `LiveTvSplitLayout.kt`, `FavoriteMenuDialog.kt` | M | Med | behaviour change: hidden buttons removed; long-press on tv-material `Surface` |
 | 4 | Home entry/header focus; dead Live TV card. | `ContentTypeSelectionScreen.kt` | S | Low |  |
 | 5 | **Live TV flows LT1–LT7** (own table in that section; LT1 is a one-line regression fix and can go first of everything). | see LT table | — | — | see LT table |
 | 6 | Movie details + Episodes. | `MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt` | L | Med | `EpisodeSelectionScreen` is 2 320 lines |
@@ -954,7 +954,7 @@ TV                                                  Mobile
 |---|---|---|---|---|---|
 | GD0 | Investigate G-11 (empty index despite "ingested"). **Done 2026-10-03** — cause found, see III.H. | `EpgIndexer.kt`, `EpgFileManager.kt`, safe-mode clear path | M | Low | investigation |
 | GD0b | **Fix G-11** (III.H): on the staging path write a source's `markIngested` stats and validators only after `swapAndRebuildFts` commits; send `If-None-Match` / `If-Modified-Since` and allow the hash skip only when the index holds rows for that source; call `resetAllIngestionState()` next to both `clearAll()` call sites (check it doesn't queue settings-sync records). **Done 2026-10-03** — 7 unit tests (`EpgFileManagerChangeDetectionTest`), no sync side effect (reset touches only non-synced columns); on-device kill-mid-refresh check pending. | `EpgFileManager.kt`, `SafeModeViewModel.kt`, `EpgSourceDao.kt` | M | Med | ingestion ordering; verify with a kill mid-refresh on the emulator |
-| GD1 | **Data honesty, no layout change**: resolve virtual categories (G-2); skip marker rows (G-7); `NoListings`/`NoGuide` states + "N of M · source · updated" line (G-3, G-5); drop the parsed cache on index swap (G-4); dev stats out of the title (G-10). Existing TV/mobile screens show the states. | `EpgViewModel.kt`, `XmltvEpgService.kt`, `MediaRepository.kt`, both guide screens, strings ×3 | M | Med | cache invalidation + virtual categories + states on both UIs |
+| GD1 | **Data honesty, no layout change**: resolve virtual categories (G-2); skip marker rows (G-7); `NoListings`/`NoGuide` states + "N of M · source · updated" line (G-3, G-5); drop the parsed cache on index swap (G-4); dev stats out of the title (G-10). Existing TV/mobile screens show the states. **In progress (lane 3, since 2026-10-03).** | `EpgViewModel.kt`, `XmltvEpgService.kt`, `MediaRepository.kt`, both guide screens, strings ×3 | M | Med | cache invalidation + virtual categories + states on both UIs |
 | GD2 | **`GuideLayout` + TV grid** rebuilt on it: one scroll state, time-placed cells, now line, dimmed past; TV focus rules (entry on on-air cell, Up/Down keep time, labelled header row, Back closes search not the guide). | new `core/ui/.../guide/GuideLayout.kt`, `EpgGridLayout.kt` → `TvGuideGrid.kt`, `TvEpgGuideScreen.kt` | XL | High | new layout engine; 50×N cells perf; TV focus |
 | GD3 | **Mobile grid** on `GuideLayout`: shared time axis, date tabs, Now, details sheet. | `MobileEpgTimeline.kt` → `MobileGuideGrid.kt`, `MobileEpgGuideScreen.kt` | L | Med |  |
 | GD4 | **Paging / no cap** and performance: windows of ~30 rows, time-window queries, culling; 50-channel categories load < 1 s from the index on the emulator. | `GuideViewModel.kt`, `XmltvEpgService.kt` / DAO | L | High | DAO/time-window queries; paging under focus |
