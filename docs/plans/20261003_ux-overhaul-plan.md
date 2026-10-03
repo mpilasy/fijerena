@@ -1,6 +1,23 @@
 # UX Overhaul Plan — Settings, TV Focus & Live TV, TV Guide
 
-**Status (2026-10-03):** Parts I, II and III approved. Day 1 landed and verified on both emulators: LT1, M1, T1, Part II Phase 1, A-W4, A-W6, GD0 (findings → GD0b).
+**Status (2026-10-03):** Parts I, II and III approved. In progress, four lanes (see Parallel lanes).
+
+## Progress
+
+Updated at every lane start and every merge to `main`. Rows in the phase tables are the source of
+truth: `Todo` (no mark), **In progress (lane N, since date)**, **Done date** with what was
+verified and where. Only the main session edits this file; lane agents never do. Plan edits go
+in their own `docs:` commit, never amended into a lane's code commit.
+
+| Lane | Done | Current | Next |
+|---|---|---|---|
+| 1 Mobile settings | M1 (2026-10-03, phone) | — | M2 |
+| 2 TV focus + Live TV | LT1, Phase 1 (2026-10-03, TV) | — | Phase 2 (`tvPane`) → Phase 3 → LT2 |
+| 3 Core + guide | A-W4, A-W6, GD0 (2026-10-03, both) | — | GD0b → GD1 |
+| 4 TV settings | T1 (2026-10-03, TV) | — | T2 → T4 → T5 → T6; T3 after Phase 2 |
+
+Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
+release time (`docs/RUN_GUIDE.md`).
 
 **Effort / risk** (every work item and phase below carries both):
 
