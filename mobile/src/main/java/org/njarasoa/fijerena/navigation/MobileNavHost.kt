@@ -571,6 +571,9 @@ fun MobileNavHost(
                     onGuideSources = { id ->
                         navController.navigateOnce(Screen.EpgManagement(providerId = id))
                     },
+                    onEditSource = { id ->
+                        navController.navigateOnce(Screen.AddProvider(editId = id))
+                    },
                     onProviderChanged = {
                         coroutineScope.launch {
                             val providerRepo = ProviderRepository(context.applicationContext)

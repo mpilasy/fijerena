@@ -5,12 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,7 +20,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -34,7 +30,6 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
-import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
@@ -43,13 +38,14 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
+import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
- * Settings → Profiles: list, add, edit, delete. See `docs/plans/20260929_live-sync-plan.md` →
- * User profiles.
+ * Settings → Profiles: the profile rows, "Add profile", and the edit / delete dialogs. See
+ * `docs/plans/20260929_live-sync-plan.md` → User profiles.
  */
 @Composable
-fun ProfilesSettingsCard(
+fun ProfilesSettingsRows(
     profiles: List<ProfileUi>,
     message: String?,
     newProfileColorIndex: () -> Int,
@@ -62,56 +58,41 @@ fun ProfilesSettingsCard(
     var editing by remember { mutableStateOf<ProfileUi?>(null) }
     var deleting by remember { mutableStateOf<ProfileUi?>(null) }
 
-    SettingsSection(title = stringResource(R.string.settings_profiles_title)) {
-        Text(
-            text = stringResource(R.string.settings_profiles_description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-        )
-        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-        profiles.forEach { profile ->
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            onDismissMessage()
-                            editing = profile
-                        }.padding(vertical = CinemaSpacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+    profiles.forEach { profile ->
+        SettingsListRow(
+            title = profile.name,
+            summary = if (profile.isActive) stringResource(R.string.settings_profiles_active_marker) else null,
+            leading = {
                 ProfileAvatar(
                     name = profile.name,
                     colorIndex = profile.colorIndex,
                     size = MobileDimensions.iconLarge,
                     fontSize = MaterialTheme.typography.titleSmall.fontSize,
                 )
-                Spacer(modifier = Modifier.width(CinemaSpacing.sm))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = profile.name, style = MaterialTheme.typography.bodyLarge)
-                    if (profile.isActive) {
-                        Text(
-                            text = stringResource(R.string.settings_profiles_active_marker),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CinemaTextSecondary,
-                        )
-                    }
-                }
-                Icon(CinemaIcons.KeyboardArrowRight, contentDescription = null, tint = CinemaTextSecondary)
-            }
-        }
-        if (message != null) {
-            Text(text = message, style = MaterialTheme.typography.bodyMedium, color = CinemaError)
-        }
-        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-        OutlinedButton(
+            },
             onClick = {
                 onDismissMessage()
-                adding = true
+                editing = profile
             },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.settings_profiles_add)) }
+        )
     }
+    if (message != null) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = CinemaError,
+            modifier = Modifier.padding(horizontal = Spacing.md),
+        )
+    }
+    SettingsListRow(
+        title = stringResource(R.string.settings_profiles_add),
+        leading = { Icon(CinemaIcons.Add, contentDescription = null, tint = CinemaTextSecondary) },
+        trailing = {},
+        onClick = {
+            onDismissMessage()
+            adding = true
+        },
+    )
 
     if (adding) {
         ProfileEditDialog(

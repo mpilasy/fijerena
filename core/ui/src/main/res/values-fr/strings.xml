@@ -912,4 +912,7 @@
     <string name="settings_filters_hint">Les filtres de contenu de %1$s se règlent par source</string>
     <string name="common_custom">Personnalisé</string>
     <string name="settings_custom_value_format">%1$s (personnalisé)</string>
+
+    <!-- M2 -->
+    <string name="settings_seconds_short_format">%1$d s</string>
 </resources>

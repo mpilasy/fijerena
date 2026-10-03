@@ -950,4 +950,7 @@
     <string name="settings_filters_hint">Content filters for %1$s are set per source</string>
     <string name="common_custom">Custom</string>
     <string name="settings_custom_value_format">%1$s (custom)</string>
+
+    <!-- M2 -->
+    <string name="settings_seconds_short_format">%1$d s</string>
 </resources>

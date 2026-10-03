@@ -749,4 +749,7 @@
     <string name="settings_filters_hint">Ny sivana votoaty ho an\'i %1$s dia apetraka isaky ny loharano</string>
     <string name="common_custom">Safidy manokana</string>
     <string name="settings_custom_value_format">%1$s (manokana)</string>
+
+    <!-- M2 -->
+    <string name="settings_seconds_short_format">%1$d s</string>
 </resources>
