@@ -987,4 +987,6 @@
     <string name="provider_guide_button">Guide</string>
     <!-- LT2 -->
     <string name="live_panel_no_favorites">No favourites yet — hold OK on a channel to add one</string>
+    <!-- Phase 4 -->
+    <string name="content_type_live_tv_no_channels">No channels</string>
 </resources>

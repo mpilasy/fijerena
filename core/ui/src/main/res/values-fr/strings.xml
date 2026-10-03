@@ -951,4 +951,6 @@
     <string name="provider_more_actions_for_format">Plus d\'actions pour %1$s</string>
     <!-- LT2 -->
     <string name="live_panel_no_favorites">Pas encore de favoris — maintenez OK sur une chaîne pour en ajouter une</string>
+    <!-- Phase 4 -->
+    <string name="content_type_live_tv_no_channels">Aucune chaîne</string>
 </resources>

@@ -1,15 +1,17 @@
 # Home (ContentTypeSelectionScreen), TV emulator, source iptv.
-# Start: Home just opened, focus on the Switch Source chip (F-H-1).
-# Covers F-H-1, F-H-2 (Down from the header lands on the rightmost card; Up from the
-# leftmost card goes to the chip; Down again goes back to the rightmost card — not
-# reversible. R8, R2). Expectations are today's behaviour, not the target.
-# Recorded 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
-@start Switch Source, current source: iptv (REMOTE_M3U) / iptv (REMOTE_M3U)
+# Phase 4: Home opens on the first content card (F-H-1); Down from any header button goes to
+# the card focused last, default the leftmost (F-H-2, R8); Up from a card still goes to the header.
+# Phase 4 expectations written from the plan, not yet recorded — re-record with -r on the emulator.
+# Phase 4: start on the first card, not the Switch Source chip.
+@start Live TV / Watch live channels / 179 categories
+UP	Switch Source, current source: iptv (REMOTE_M3U) / iptv (REMOTE_M3U)
 RIGHT	EPG Search
 RIGHT	Search All
 RIGHT	Switch profile (Kid) / K
-# Today: rightmost card, not the one under the header button.
-DOWN	Movies / Browse on-demand / 39 categories
-LEFT	Live TV / Watch live channels / 179 categories
-UP	Switch Source, current source: iptv (REMOTE_M3U) / iptv (REMOTE_M3U)
+# Phase 4: the card focused last (Live TV), not the rightmost.
+DOWN	Live TV / Watch live channels / 179 categories
+RIGHT	Movies / Browse on-demand / 39 categories
+# Up from Movies: whichever header button is above it (geometric, unchanged) — not checked.
+UP
+# Phase 4: back down to the card focused last (Movies).
 DOWN	Movies / Browse on-demand / 39 categories

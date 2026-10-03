@@ -44,13 +44,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
@@ -121,6 +124,7 @@ import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -313,7 +317,34 @@ fun ContentTypeSelectionScreen(
     // the first hero card.
     val returnFocus = rememberNavReturnFocus()
     val shelfListState = rememberLazyListState()
-    val heroFallbackFocus = remember { FocusRequester() }
+
+    // The hero cards' focus (UX overhaul plan Part II Phase 4). Home opens on the first card with
+    // content, not the "Switch Source" chip (F-H-1). Down from any header button goes back to the
+    // card focused last, default the leftmost: the buttons sit top-right, so the geometric search
+    // picked the rightmost card and Up/Down were not reversible (F-H-2, R8). A Live TV card with
+    // no channels is dimmed and cannot take focus (F-H-3).
+    val heroCardFocus =
+        remember {
+            mapOf(RETURN_LIVE_TV to FocusRequester(), RETURN_MOVIES to FocusRequester(), RETURN_TV_SHOWS to FocusRequester())
+        }
+    var lastHeroCard by rememberSaveable { mutableStateOf<String?>(null) }
+    val liveTvEmpty = liveTvCounts?.first == 0
+    val heroCards = focusableHeroCards(supportedContentTypes, liveTvCounts)
+    val headerDownCard = lastHeroCard?.takeIf { it in heroCards } ?: heroCards.firstOrNull()
+    val heroFallbackFocus = heroCards.firstOrNull()?.let(heroCardFocus::getValue)
+    LaunchedEffect(Unit) {
+        // Back hands focus to the control that was left (NavReturnFocusEffect below).
+        if (returnFocus.isReturn) return@LaunchedEffect
+        // Wait for the Live TV count, so an empty Live TV card is not the one focused.
+        withTimeoutOrNull(ENTRY_FOCUS_WAIT_MS) {
+            snapshotFlow { needsSignIn || ContentType.LIVE_TV !in supportedContentTypes || liveTvCounts != null }
+                .first { it }
+        }
+        if (needsSignIn) return@LaunchedEffect
+        focusableHeroCards(supportedContentTypes, liveTvCounts)
+            .firstOrNull()
+            ?.let { heroCardFocus.getValue(it).requestFocusWithRetry() }
+    }
     NavReturnFocusEffect(returnFocus, fallback = heroFallbackFocus) { key ->
         if (key.startsWith(RETURN_CONTINUE_WATCHING_PREFIX)) {
             val itemId = key.removePrefix(RETURN_CONTINUE_WATCHING_PREFIX)
@@ -367,6 +398,13 @@ fun ContentTypeSelectionScreen(
                         )
                         // Provider name in glass pill badge + settings gear
                         Row(
+                            // Applies to every button in the row (none is a focus group).
+                            modifier =
+                                if (needsSignIn || headerDownCard == null) {
+                                    Modifier
+                                } else {
+                                    Modifier.focusProperties { down = heroCardFocus.getValue(headerDownCard) }
+                                },
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         ) {
@@ -515,6 +553,11 @@ fun ContentTypeSelectionScreen(
                             ) {
                                 val isDevMode = appSettings.isDevMode
                                 var cardIndex = 1
+                                val heroCardModifier: (String) -> Modifier = { key ->
+                                    Modifier
+                                        .focusRequester(heroCardFocus.getValue(key))
+                                        .onFocusChanged { if (it.hasFocus) lastHeroCard = key }
+                                }
                                 if (ContentType.LIVE_TV in supportedContentTypes) {
                                     ContentTypeHeroCard(
                                         title = stringResource(R.string.provider_live_tv_label),
@@ -522,13 +565,14 @@ fun ContentTypeSelectionScreen(
                                         icon = CinemaIcons.LiveTv,
                                         categoryCounts = liveTvCounts,
                                         showTotal = isDevMode,
-                                        showLivePulse = true,
+                                        showLivePulse = !liveTvEmpty,
+                                        emptyLabel = if (liveTvEmpty) stringResource(R.string.content_type_live_tv_no_channels) else null,
                                         gradientColors = listOf(CinemaOrange, CinemaOrangeDark),
                                         onClick = { leaveTo(RETURN_LIVE_TV) { onContentTypeSelected(NavContentType.LIVE_TV) } },
                                         modifier =
                                             Modifier
                                                 .weight(1f)
-                                                .then(if (cardIndex == 1) Modifier.focusRequester(heroFallbackFocus) else Modifier)
+                                                .then(heroCardModifier(RETURN_LIVE_TV))
                                                 .staggeredEntrance(cardIndex++)
                                                 .navReturnFocusTarget(returnFocus, RETURN_LIVE_TV),
                                     )
@@ -546,7 +590,7 @@ fun ContentTypeSelectionScreen(
                                         modifier =
                                             Modifier
                                                 .weight(1f)
-                                                .then(if (cardIndex == 1) Modifier.focusRequester(heroFallbackFocus) else Modifier)
+                                                .then(heroCardModifier(RETURN_MOVIES))
                                                 .staggeredEntrance(cardIndex++)
                                                 .navReturnFocusTarget(returnFocus, RETURN_MOVIES),
                                     )
@@ -564,7 +608,7 @@ fun ContentTypeSelectionScreen(
                                         modifier =
                                             Modifier
                                                 .weight(1f)
-                                                .then(if (cardIndex == 1) Modifier.focusRequester(heroFallbackFocus) else Modifier)
+                                                .then(heroCardModifier(RETURN_TV_SHOWS))
                                                 .staggeredEntrance(cardIndex++)
                                                 .navReturnFocusTarget(returnFocus, RETURN_TV_SHOWS),
                                     )
@@ -673,6 +717,20 @@ private const val RETURN_CONTINUE_WATCHING_PREFIX = "cw:"
 /** How long Back waits for the Continue Watching shelf to reload before giving up on its card. */
 private const val RETURN_SHELF_WAIT_MS = 2_000L
 
+/** How long a fresh open waits for the Live TV count before focusing the first card anyway. */
+private const val ENTRY_FOCUS_WAIT_MS = 2_000L
+
+/** The hero cards that can take focus, left to right: Live TV only when it has channels (or is still loading). */
+private fun focusableHeroCards(
+    supportedContentTypes: Set<String>,
+    liveTvCounts: Pair<Int, Int>?,
+): List<String> =
+    buildList {
+        if (ContentType.LIVE_TV in supportedContentTypes && liveTvCounts?.first != 0) add(RETURN_LIVE_TV)
+        if (ContentType.MOVIES in supportedContentTypes) add(RETURN_MOVIES)
+        if (ContentType.TV_SHOWS in supportedContentTypes) add(RETURN_TV_SHOWS)
+    }
+
 /**
  * Hero card with gradient background, icon, and category count.
  */
@@ -687,11 +745,17 @@ private fun ContentTypeHeroCard(
     gradientColors: List<androidx.compose.ui.graphics.Color>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    // Non-null: nothing to open (Live TV with no channels). The card is dimmed, shows this in
+    // place of the count and cannot take focus.
+    emptyLabel: String? = null,
 ) {
     val scale = LocalUiScale.current
     Card(
         onClick = onClick,
-        modifier = modifier.height(TvDimensions.contentTypeCardHeight.scaled(scale)),
+        modifier =
+            modifier
+                .then(if (emptyLabel != null) Modifier.focusProperties { canFocus = false }.alpha(CinemaAlpha.textFaint) else Modifier)
+                .height(TvDimensions.contentTypeCardHeight.scaled(scale)),
         colors =
             CardDefaults.colors(
                 containerColor = CinemaSurface,
@@ -840,7 +904,7 @@ private fun ContentTypeHeroCard(
                 } else {
                     val (filtered, total) = categoryCounts
                     val countText =
-                        if (showTotal && filtered < total) {
+                        emptyLabel ?: if (showTotal && filtered < total) {
                             stringResource(R.string.category_filtered_of_total_format, filtered, total)
                         } else {
                             stringResource(R.string.category_count_format, filtered)
