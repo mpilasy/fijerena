@@ -75,6 +75,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
+import org.njarasoa.fijerena.core.network.xmltv.GuideChannels
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
 import org.njarasoa.fijerena.core.network.xmltv.filterToStreams
@@ -140,7 +141,7 @@ fun TvEpgBrowserScreen(
         viewModel(
             factory = remember { EpgBrowserViewModelFactory(context.applicationContext, categoryId) },
         )
-    val contextStreamIds by viewModel.contextStreamIds.collectAsStateWithLifecycle()
+    val contextChannels by viewModel.contextChannels.collectAsStateWithLifecycle()
     val contextName = categoryName?.takeIf { categoryId != null }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
@@ -321,7 +322,7 @@ fun TvEpgBrowserScreen(
                         onClearSearch = { viewModel.clearSearch() },
                         onNavigateToPlayer = onNavigateToPlayer,
                         contextName = contextName,
-                        contextStreamIds = contextStreamIds,
+                        contextChannels = contextChannels,
                     )
                 }
             }
@@ -346,7 +347,7 @@ private fun EpgBrowserContent(
     onClearSearch: () -> Unit = {},
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
     contextName: String? = null,
-    contextStreamIds: Set<String>? = null,
+    contextChannels: GuideChannels? = null,
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     val firstItemFocusRequester = remember { FocusRequester() }
@@ -631,7 +632,7 @@ private fun EpgBrowserContent(
                     firstItemFocusRequester = firstItemFocusRequester,
                     returnFocus = returnFocus,
                     contextName = contextName.takeIf { inContextOnly },
-                    contextStreamIds = contextStreamIds,
+                    contextChannels = contextChannels,
                 )
             }
 
@@ -759,12 +760,12 @@ private fun ResultsContent(
     firstItemFocusRequester: FocusRequester? = null,
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
     contextName: String? = null,
-    contextStreamIds: Set<String>? = null,
+    contextChannels: GuideChannels? = null,
 ) {
     val scale = LocalUiScale.current
 
     // Filter date groups when hiding unmatched channels, then to the guide's channels when asked
-    val contextFilter = contextStreamIds?.takeIf { contextName != null }
+    val contextFilter = contextChannels?.takeIf { contextName != null }
     val displayDateGroups =
         remember(results.dateGroups, matchedOnly, contextFilter) {
             val matched = if (matchedOnly) filterMatchedOnly(results.dateGroups) else results.dateGroups

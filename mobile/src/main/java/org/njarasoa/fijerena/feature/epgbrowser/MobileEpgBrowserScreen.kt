@@ -65,6 +65,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
+import org.njarasoa.fijerena.core.network.xmltv.GuideChannels
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
 import org.njarasoa.fijerena.core.network.xmltv.filterToStreams
@@ -115,7 +116,7 @@ fun MobileEpgBrowserScreen(
         viewModel(
             factory = remember { EpgBrowserViewModelFactory(context.applicationContext, categoryId) },
         )
-    val contextStreamIds by viewModel.contextStreamIds.collectAsStateWithLifecycle()
+    val contextChannels by viewModel.contextChannels.collectAsStateWithLifecycle()
     val contextName = categoryName?.takeIf { categoryId != null }
     // Opened from a TV Guide: its channels only, until unticked (GD5).
     var inContextOnly by rememberSaveable { mutableStateOf(true) }
@@ -497,7 +498,7 @@ fun MobileEpgBrowserScreen(
                         onMatchedOnlyChange = { matchedOnly = it },
                         onNavigateToPlayer = onNavigateToPlayer,
                         contextName = contextName.takeIf { inContextOnly },
-                        contextStreamIds = contextStreamIds,
+                        contextChannels = contextChannels,
                     )
                 }
 
@@ -530,10 +531,10 @@ private fun MobileResultsContent(
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
     // The TV Guide list the results are limited to (GD5), and its channels once loaded.
     contextName: String? = null,
-    contextStreamIds: Set<String>? = null,
+    contextChannels: GuideChannels? = null,
 ) {
     // Filter date groups when hiding unmatched channels, then to the guide's channels when asked
-    val contextFilter = contextStreamIds?.takeIf { contextName != null }
+    val contextFilter = contextChannels?.takeIf { contextName != null }
     val displayDateGroups =
         remember(results.dateGroups, matchedOnly, contextFilter) {
             val matched = if (matchedOnly) filterMatchedOnly(results.dateGroups) else results.dateGroups

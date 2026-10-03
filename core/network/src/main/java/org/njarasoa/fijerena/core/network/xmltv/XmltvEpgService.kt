@@ -322,6 +322,16 @@ class XmltvEpgService(
     )
 
     /**
+     * The guide channel (xmltv id) each item's listings come from, by item id — the same matching
+     * the guide grid uses, so a search limited to a guide's channels finds what the grid shows.
+     */
+    suspend fun matchGuideChannels(items: List<MediaItem>): Map<String, String> =
+        withContext(Dispatchers.IO) {
+            val maps = buildChannelMatchMaps() ?: return@withContext emptyMap()
+            matchItems(items, maps)
+        }
+
+    /**
      * Lightweight now-playing query: returns only the currently airing programme per item.
      * Uses the same 6-level channel matching but queries only current programmes.
      */

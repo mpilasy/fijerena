@@ -791,6 +791,16 @@ class MediaRepository(
         xmltvEpgService.clearCache()
     }
 
+    /** Item id → the guide channel (xmltv id) the guide grid shows for it; empty when there is no index. */
+    suspend fun matchGuideChannels(items: List<MediaItem>): Map<String, String> =
+        try {
+            xmltvEpgService.matchGuideChannels(items)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyMap()
+        }
+
     /**
      * Lightweight now-playing query from the EPG index.
      * Returns map of itemId → currently-airing EpgProgram.

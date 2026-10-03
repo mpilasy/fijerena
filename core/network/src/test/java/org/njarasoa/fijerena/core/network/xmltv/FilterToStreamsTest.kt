@@ -38,7 +38,7 @@ class FilterToStreamsTest {
                 group("today", program("news", airing("tf1", 1), airing("fr2", 2), airing("unmatched", null))),
             )
 
-        val filtered = filterToStreams(groups, setOf("1"))
+        val filtered = filterToStreams(groups, GuideChannels(setOf("1")))
 
         assertEquals(
             listOf("tf1"),
@@ -59,7 +59,7 @@ class FilterToStreamsTest {
                 group("tomorrow", program("sport", airing("fr3", 3))),
             )
 
-        val filtered = filterToStreams(groups, setOf("1"))
+        val filtered = filterToStreams(groups, GuideChannels(setOf("1")))
 
         assertEquals(listOf("today"), filtered.map { it.dateLabel })
         assertEquals(listOf("news"), filtered.single().programs.map { it.id })
@@ -69,6 +69,24 @@ class FilterToStreamsTest {
     fun `an empty channel set keeps nothing`() {
         val groups = listOf(group("today", program("news", airing("tf1", 1))))
 
-        assertTrue(filterToStreams(groups, emptySet()).isEmpty())
+        assertTrue(filterToStreams(groups, GuideChannels(emptySet())).isEmpty())
+    }
+
+    @Test
+    fun `an airing matched to another stream on a guide channel plays the guide's stream`() {
+        val fr4k = EpgBrowserMatchedStream(streamId = 7, streamName = "FR: CANAL+ 4K", categoryId = "fr")
+        val groups = listOf(group("today", program("film", airing("CanalPlus.pl", 99), airing("other", 5))))
+
+        val filtered = filterToStreams(groups, GuideChannels(setOf("7"), mapOf("canalplus.pl" to fr4k)))
+
+        assertEquals(
+            listOf(fr4k),
+            filtered
+                .single()
+                .programs
+                .single()
+                .airings
+                .map { it.matchedStream },
+        )
     }
 }

@@ -37,11 +37,13 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserAiring
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserDateGroup
+import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserMatchedStream
 import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgIndexBusyException
 import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
+import org.njarasoa.fijerena.core.network.xmltv.GuideChannels
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -196,8 +198,8 @@ class EpgBrowserViewModel(
      * The stream ids of [categoryId]'s channels, resolved the way the TV Guide resolves them
      * (virtual lists included); null without a [categoryId] or until they are loaded.
      */
-    private val _contextStreamIds = MutableStateFlow<Set<String>?>(null)
-    val contextStreamIds: StateFlow<Set<String>?> = _contextStreamIds.asStateFlow()
+    private val _contextChannels = MutableStateFlow<GuideChannels?>(null)
+    val contextChannels: StateFlow<GuideChannels?> = _contextChannels.asStateFlow()
 
     private val _sourceLabels = MutableStateFlow<Map<Long, String>>(emptyMap())
     val sourceLabels: StateFlow<Map<Long, String>> = _sourceLabels.asStateFlow()
@@ -371,7 +373,20 @@ class EpgBrowserViewModel(
         val items =
             CategoryViewModel.virtualCategoryItems(repository, categoryId, ContentType.LIVE_TV)
                 ?: repository.getItems(categoryId, ContentType.LIVE_TV).getOrThrow()
-        _contextStreamIds.value = items.mapTo(HashSet()) { it.id }
+        val itemsById = items.associateBy { it.id }
+        _contextChannels.value =
+            GuideChannels(
+                streamIds = items.mapTo(HashSet()) { it.id },
+                byEpgChannelId =
+                    repository
+                        .matchGuideChannels(items)
+                        .entries
+                        .mapNotNull { (itemId, xmltvId) ->
+                            val item = itemsById[itemId] ?: return@mapNotNull null
+                            val streamId = item.id.toIntOrNull() ?: return@mapNotNull null
+                            xmltvId.lowercase() to EpgBrowserMatchedStream(streamId, item.name, item.categoryId)
+                        }.toMap(),
+            )
     }
 
     private fun loadActiveProviderName() {

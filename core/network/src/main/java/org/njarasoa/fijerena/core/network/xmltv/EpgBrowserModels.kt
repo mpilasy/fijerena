@@ -47,18 +47,36 @@ fun filterMatchedOnly(dateGroups: List<EpgBrowserDateGroup>): List<EpgBrowserDat
     }
 
 /**
- * Keeps only airings on one of [streamIds] — a TV Guide's channels (GD5, "In <category> only") —
- * dropping programmes and date groups left empty. An airing that matched no stream is not on any
- * of them.
+ * A TV Guide's channels (GD5, "In <category> only"): their stream ids, and the same streams by
+ * the guide channel (xmltv id, lowercased) the grid shows for them. A search result is matched to
+ * one stream only, often another one on the same guide channel (PL: CANAL+ UHD for FR: CANAL+ 4K,
+ * which has no guide id and is matched by name), so the guide channel is what finds the guide's
+ * own stream.
+ */
+data class GuideChannels(
+    val streamIds: Set<String>,
+    val byEpgChannelId: Map<String, EpgBrowserMatchedStream> = emptyMap(),
+)
+
+/**
+ * Keeps only airings on one of [channels] — a TV Guide's channels — dropping programmes and date
+ * groups left empty. An airing matched to another stream on the same guide channel is kept and
+ * pointed at the guide's stream, so it shows and plays the channel the guide shows.
  */
 fun filterToStreams(
     dateGroups: List<EpgBrowserDateGroup>,
-    streamIds: Set<String>,
+    channels: GuideChannels,
 ): List<EpgBrowserDateGroup> =
     dateGroups.mapNotNull { group ->
         val programs =
             group.programs.mapNotNull { program ->
-                val airings = program.airings.filter { it.matchedStream?.streamId?.toString() in streamIds }
+                val airings =
+                    program.airings.mapNotNull { airing ->
+                        when {
+                            airing.matchedStream?.streamId?.toString() in channels.streamIds -> airing
+                            else -> channels.byEpgChannelId[airing.channelId.lowercase()]?.let { airing.copy(matchedStream = it) }
+                        }
+                    }
                 if (airings.isEmpty()) null else program.copy(airings = airings)
             }
         if (programs.isEmpty()) null else group.copy(programs = programs)
