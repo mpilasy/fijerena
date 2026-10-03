@@ -28,10 +28,13 @@ sealed interface Screen {
      * Add/edit provider screen destination.
      *
      * @param editId If > 0, edit the provider with this ID instead of creating new
+     * @param focusFilters Edit mode only: open with focus on the content filters (TV Settings'
+     *   filters hint row). Defaulted, so routes without it stay valid.
      */
     @Serializable
     data class AddProvider(
         val editId: Long = -1L,
+        val focusFilters: Boolean = false,
     ) : Screen
 
     /**

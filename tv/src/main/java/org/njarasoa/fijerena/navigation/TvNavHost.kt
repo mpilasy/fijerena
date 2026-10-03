@@ -708,6 +708,7 @@ fun TvNavHost(
                     val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
                     TvAddProviderScreen(
                         editId = addProviderScreen.editId,
+                        focusFilters = addProviderScreen.focusFilters,
                         onBack = {
                             navController.navigateUp()
                         },
@@ -816,6 +817,9 @@ fun TvNavHost(
                         },
                         onEditSource = { id ->
                             navController.navigateOnce(Screen.AddProvider(editId = id))
+                        },
+                        onEditSourceFilters = { id ->
+                            navController.navigateOnce(Screen.AddProvider(editId = id, focusFilters = true))
                         },
                         onProviderChanged = {
                             coroutineScope.launch {

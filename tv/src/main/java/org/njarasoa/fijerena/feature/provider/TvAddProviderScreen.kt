@@ -116,7 +116,7 @@ private const val KEY_SAVE = "save"
  * the right with Behaviour (applies immediately), Content filters for the active profile,
  * Library data and the Danger zone. Each column is a `tvPane`: Left/Right move between them,
  * Up/Down stay inside. First focus is the Name edit button, or Manage filters when
- * [focusFilters] is set (the Settings filters hint row; its nav argument is not wired yet).
+ * [focusFilters] is set (the Settings filters hint row, via `Screen.AddProvider.focusFilters`).
  */
 @Composable
 fun TvAddProviderScreen(

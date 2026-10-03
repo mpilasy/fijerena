@@ -73,6 +73,7 @@ fun SettingsScreen(
     onDiagnostics: () -> Unit = {},
     onGuideSources: (providerId: Long) -> Unit = {},
     onEditSource: (providerId: Long) -> Unit = {},
+    onEditSourceFilters: (providerId: Long) -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -395,8 +396,8 @@ fun SettingsScreen(
                                                 firstRowModifier = entryModifier,
                                             )
                                         }
-                                        // Content filters live on the source (Edit Source); until T5 the
-                                        // row opens that screen at the top.
+                                        // Content filters live on the source: the row opens Edit Source
+                                        // with focus on its filters.
                                         item {
                                             FiltersHintRow(
                                                 profileName = profiles.firstOrNull { it.isActive }?.name.orEmpty(),
@@ -404,7 +405,7 @@ fun SettingsScreen(
                                                 onClick = {
                                                     uiState.activeProviderId?.let { id ->
                                                         returnFocus.leaveFrom(RETURN_FILTERS, listState)
-                                                        onEditSource(id)
+                                                        onEditSourceFilters(id)
                                                     }
                                                 },
                                                 scale = scale,
@@ -732,7 +733,7 @@ private fun SettingsHeader(
     }
 }
 
-/** "Content filters for <profile> are set per source" — one row, opens Edit Source (T5 lands it on the filters). */
+/** "Content filters for <profile> are set per source" — one row, opens Edit Source on its filters. */
 @Composable
 private fun FiltersHintRow(
     profileName: String,
