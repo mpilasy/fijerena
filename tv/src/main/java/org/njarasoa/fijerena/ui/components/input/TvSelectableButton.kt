@@ -37,6 +37,9 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
  *
  * Colour comes from the active palette and shape / scale / outline weight / focus shadow /
  * emphasis weight from the active look-and-feel style, via [TvFocusTokens].
+ *
+ * Selected is never a fill: the accent outline and the emphasis weight carry it on the resting
+ * container, so the one filled-looking option in a grid is always the focused one, selected or not.
  */
 @Composable
 fun TvSelectableButton(
@@ -58,9 +61,9 @@ fun TvSelectableButton(
                 contentColor = CinemaTextPrimary,
                 focusedContainerColor = TvFocusTokens.focusedContainer,
                 focusedContentColor = CinemaTextPrimary,
-                selectedContainerColor = TvFocusTokens.selectedContainer,
+                selectedContainerColor = TvFocusTokens.restingContainer,
                 selectedContentColor = CinemaTextPrimary,
-                focusedSelectedContainerColor = TvFocusTokens.focusedSelectedContainer,
+                focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
                 focusedSelectedContentColor = CinemaTextPrimary,
                 disabledContainerColor = TvFocusTokens.restingContainer.copy(alpha = CinemaAlpha.scrim),
                 disabledContentColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textFaint),

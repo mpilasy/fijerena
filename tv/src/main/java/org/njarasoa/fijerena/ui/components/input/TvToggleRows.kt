@@ -103,8 +103,10 @@ fun TvSwitchRow(
     description: String? = null,
     enabled: Boolean = true,
 ) {
+    // The switch itself shows the state; tinting the row as well made a checked row look like
+    // the focused one.
     TvStateRow(
-        selected = checked,
+        selected = false,
         onClick = { onCheckedChange(!checked) },
         label = label,
         modifier = modifier.fillMaxWidth(),

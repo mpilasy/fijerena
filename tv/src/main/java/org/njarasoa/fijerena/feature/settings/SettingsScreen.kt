@@ -49,6 +49,7 @@ fun SettingsScreen(
     onManageProviders: () -> Unit = {},
     onLiveSync: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
+    onGuideSources: (providerId: Long) -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -291,7 +292,13 @@ fun SettingsScreen(
                     EpgSettingsCard(
                         context = context,
                         epgRefreshTrigger = uiState.epgRefreshTrigger,
+                        activeProviderId = uiState.activeProviderId,
+                        onGuideSources = { id ->
+                            returnFocus.leaveFrom(RETURN_EPG, listState)
+                            onGuideSources(id)
+                        },
                         scale = scale,
+                        rowFocusRequester = returnFocus.requesterFor(RETURN_EPG),
                     )
                 }
 
@@ -417,6 +424,7 @@ fun SettingsScreen(
 private const val RETURN_PROVIDERS = "providers"
 private const val RETURN_LIVE_SYNC = "liveSync"
 private const val RETURN_DIAGNOSTICS = "diagnostics"
+private const val RETURN_EPG = "epg"
 
 /**
  * Groups the settings list into visual waypoints (docs/plans/20260923_ui-ux-transitions-flow-uplift-plan.md,

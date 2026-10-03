@@ -25,7 +25,7 @@ import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
@@ -64,7 +64,7 @@ fun LiveSyncSettingsCard(
                 )
             }
             Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
-            CinemaPrimaryButton(
+            CinemaSecondaryButton(
                 onClick = onOpen,
                 text = stringResource(if (status.linked) R.string.live_sync_manage else R.string.live_sync_open),
                 modifier = openButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,

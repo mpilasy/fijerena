@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
 import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 @Composable
@@ -99,7 +100,15 @@ fun LanguageSettingsCard(
             },
             initialFocus = activeLanguageFocusRequester,
             confirmButton = {
-                CinemaDialogActionButton(onClick = { showDialog = false }) {
+                // Picking a language is the action; Cancel is secondary.
+                CinemaDialogActionButton(
+                    onClick = { showDialog = false },
+                    colors =
+                        androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = TvFocusTokens.restingContainer,
+                            contentColor = CinemaAccent,
+                        ),
+                ) {
                     androidx.compose.material3.Text(stringResource(R.string.common_cancel))
                 }
             },

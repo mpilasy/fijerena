@@ -269,7 +269,15 @@ internal fun ProfileEditDialog(
             ) { androidx.compose.material3.Text(stringResource(R.string.profile_save_button)) }
         },
         dismissButton = {
-            CinemaDialogActionButton(onClick = onDismiss) {
+            // Cancel is secondary: resting container, accent label. Save keeps the fill.
+            CinemaDialogActionButton(
+                onClick = onDismiss,
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = TvFocusTokens.restingContainer,
+                        contentColor = CinemaAccent,
+                    ),
+            ) {
                 androidx.compose.material3.Text(stringResource(R.string.common_cancel))
             }
         },

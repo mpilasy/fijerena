@@ -13,6 +13,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
@@ -24,14 +26,22 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
+/**
+ * EPG status in Settings, as a row that opens the active source's guide sources. Guide sources
+ * belong to a source, so the row is disabled while there is no active one.
+ */
 @Composable
 fun EpgSettingsCard(
     context: Context,
     epgRefreshTrigger: Int,
+    activeProviderId: Long?,
+    onGuideSources: (providerId: Long) -> Unit,
     scale: Float,
+    rowFocusRequester: FocusRequester? = null,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
@@ -85,17 +95,25 @@ fun EpgSettingsCard(
                         stringResource(R.string.epg_database_error, idx.reason)
                     }
                 }
-            Text(
-                text = summaryText,
-                style =
-                    MaterialTheme.typography.bodySmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodySmall.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+            TvInputListItem(
+                selected = false,
+                onClick = { activeProviderId?.let(onGuideSources) },
+                modifier = rowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+                enabled = activeProviderId != null,
+                supportingContent = {
+                    Text(
+                        text = summaryText,
+                        style =
+                            MaterialTheme.typography.bodySmall.copy(
+                                fontSize =
+                                    MaterialTheme.typography.bodySmall.fontSize
+                                        .scaled(scale),
+                            ),
+                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    )
+                },
+                headlineContent = { Text(stringResource(R.string.epg_sources_header)) },
             )
-            // EPG sources belong to a provider - they're managed per provider, from the provider list.
         }
     }
 }

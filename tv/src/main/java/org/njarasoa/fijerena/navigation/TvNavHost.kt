@@ -815,6 +815,9 @@ fun TvNavHost(
                         onDiagnostics = {
                             navController.navigateOnce(Screen.Diagnostics)
                         },
+                        onGuideSources = { id ->
+                            navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                        },
                         onProviderChanged = {
                             coroutineScope.launch {
                                 val providerRepo = ProviderRepository(context.applicationContext)
