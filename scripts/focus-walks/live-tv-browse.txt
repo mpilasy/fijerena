@@ -6,17 +6,17 @@
 # Up from the first stream reaches the refresh icon above the list (F-C-6).
 UP	Refresh streams
 # Up from there reaches a header button — TV Guide or Search, whichever is nearest; not asserted.
-UP
-DOWN
+UP	TV Guide
+DOWN	Refresh categories
 DOWN	Recent
 # Right from the Recent category enters the item pane: a stream row (text varies).
-RIGHT
+RIGHT	2 / 24 Horas Catalunya (720p)
 # Right from a stream reveals its hidden star button (F-C-5).
 RIGHT	Add to Favorites
 # Down from the star goes to the next row, not the next star (F-C-5).
-DOWN
-LEFT
+DOWN	3 / 3ABN Latino
+LEFT	Recent Categories
 # Left from an item lands on a category level with it, not the selected one (F-C-3).
-LEFT
+LEFT	Search
 # Left from any category lands on Search, top-left (F-C-4).
 LEFT	Search

@@ -51,8 +51,8 @@ UI_XML="$(mktemp)"
 trap 'rm -f "$UI_XML"' EXIT
 
 focused_text() {
-    adb -s "$SERIAL" shell uiautomator dump /sdcard/ui.xml >/dev/null
-    adb -s "$SERIAL" shell cat /sdcard/ui.xml > "$UI_XML"
+    adb -s "$SERIAL" shell uiautomator dump /sdcard/ui.xml >/dev/null </dev/null
+    adb -s "$SERIAL" shell cat /sdcard/ui.xml > "$UI_XML" </dev/null
     python3 - "$UI_XML" <<'PY'
 import sys
 import xml.etree.ElementTree as ET
@@ -95,7 +95,7 @@ for walk in "$@"; do
             @start) ;;
             "WAIT "*) sleep "${key#WAIT }"; step=$((step + 1)) ;;
             *) code="$(keycode "$key")"
-               adb -s "$SERIAL" shell input keyevent "$code"
+               adb -s "$SERIAL" shell input keyevent "$code" </dev/null
                sleep "$DELAY"
                step=$((step + 1)) ;;
         esac
