@@ -11,7 +11,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 
 | Lane | Done | Current | Next |
 |---|---|---|---|
-| 1 Mobile settings | M1–M4 (2026-10-03, phone) | M5 (since 2026-10-03) | — (lane done after M5) |
+| 1 Mobile settings | M1–M4 (2026-10-03, phone), M5 (merged, phone check pending) | — | lane done; free for the fr/mg audit |
 | 2 TV focus + Live TV | LT1, LT2, Phases 1–3 (2026-10-03, TV), Phase 4 (merged, TV walk pending) | LT3 one panel (since 2026-10-03) | LT4 → LT5 → LT6 → LT7 |
 | 3 Core + guide | A-W4, A-W6, GD0, GD0b, GD1, GD2 (2026-10-03) | GD3 mobile grid (since 2026-10-03) | GD4; GD5 after LT4 |
 | 4 TV settings | T1–T4 (2026-10-03, TV) | T5 Edit Source (since 2026-10-03) | T6 |
@@ -25,7 +25,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | GD1 | `NoGuide` is judged on the global index state, not per source. | GD4 |
 | GD0b | Device check with a kill mid-refresh not done (unit tests only). | Part III guide round (GD6) |
 | T4 | Delete in the Sources actions menu is a filled orange `CinemaDangerButton` — loud for a last item; consider outlined. | T5 |
-| T3 / M3 | `settings_profiles_title`, `live_sync_title`, `provider_more_actions*` lacked fr/mg (T4 added the `provider_more_actions*` ones); audit fr/mg for keys used by the new screens. | M5 / T6 |
+| T3 / M3 / M5 | fr/mg gaps are larger than thought: **mg lacks ~191 English keys** (incl. `settings_profiles_title`, `live_sync_*`), **fr lacks ~38** (mostly `settings_shrink_database_*`). Needs its own translation commit. | own commit (lane 1, round 6) |
 | Phase 2 | `TvDimensions.epgTimeHeaderHeight` and a few strings are now unused (`epg_error_not_supported`, `epg_error_no_data_for_channels`, `settings_about_app_version`, `provider_update_button` on mobile). | cleanup commit after T6 |
 
 Deployed: days 1–4 (`main` at `1e413854`) installed in place on both Shields (mdarcy, darcy) on 2026-10-03 16:39, app data backed up first (`backups/*-20261003-163920.tar.gz`).
@@ -403,7 +403,7 @@ Scan) (M-11).
 | M2b | Remove cellular buffer screen and route (M-7, with A-W5). | `MobileCellularBufferSettingsScreen.kt`, `DeveloperSettingsCard.kt`, `MobileNavHost.kt`, `core/navigation/Screen.kt`, strings | S | Low | with A-W5 (Med) |
 | M3 | Sources list + overflow menu (M-8, A-10). **Done 2026-10-03**, verified on the phone (tap = edit, one Use button, ⋮ menu with Delete last in red). Also fixed the M2 follow-ups (expired date red again; watch-delay row title). Note: `provider_more_actions*` strings have no fr/mg (pre-existing). | `ProviderSelectionScreen.kt`, `ProviderCopyDialogs.kt` | M | Med | overflow replaces 6 inline actions |
 | M4 | Edit Source grouping, save/cancel placement, discard dialog (M-9, A-6, A-7, A-8). **Done 2026-10-03**, verified on the phone (Connection with Save/Cancel under the login, Behaviour "applies immediately", filters, library data, outlined Danger zone, Live TV Clear hidden at 0; editing the name then Back shows "Discard changes?" and Discard leaves it unchanged). Section strings are `provider_section_*` — T5 should reuse them. | `MobileAddProviderScreen.kt`, `ProviderFormSection.kt`, `ProviderSettingsSection.kt`, `DataManagementSection.kt` | L | Med | discard dialog + save placement |
-| M5 | EPG Management order + labels; Live sync buttons (M-10, M-11, A-9). **In progress (lane 1, since 2026-10-03).** | `MobileEpgManagementScreen.kt`, `MobileSyncSettingsScreen.kt` | M | Med | moves global controls |
+| M5 | EPG Management order + labels; Live sync buttons (M-10, M-11, A-9). **Done 2026-10-03** (compile + ktlint; phone check pending). Guide auto-refresh → Settings · Source & guide, guide maintenance → Backup & storage (state still `EpgManagementViewModel`); Settings now creates that VM, so it opens a little slower. | `MobileEpgManagementScreen.kt`, `MobileSyncSettingsScreen.kt` | M | Med | moves global controls |
 
 ---
 
