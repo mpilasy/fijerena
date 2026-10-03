@@ -1,6 +1,6 @@
 # UX Overhaul Plan — Settings, TV Focus & Live TV, TV Guide
 
-**Status (2026-10-03):** Parts I, II and III approved. Days 1–2 landed and verified on both emulators; Days 1–3 landed and verified on both emulators; Days 1–4 landed, verified and deployed to both Shields; day 5 in progress (see Progress).
+**Status (2026-10-03):** Parts I, II and III approved. Days 1–2 landed and verified on both emulators; Days 1–3 landed and verified on both emulators; Days 1–4 landed, verified and deployed to both Shields; day 5 merged (TV check running), round 6 started (see Progress).
 
 ## Progress
 
@@ -11,10 +11,10 @@ in their own `docs:` commit, never amended into a lane's code commit.
 
 | Lane | Done | Current | Next |
 |---|---|---|---|
-| 1 Mobile settings | M1–M5 (2026-10-03, phone) | — | fr/mg translation commit |
+| 1 Mobile settings | M1–M5 (2026-10-03, phone) | fr/mg translations (since 2026-10-03) | — |
 | 2 TV focus + Live TV | LT1, LT2, Phases 1–3 (2026-10-03, TV); Phase 4, LT3 (merged, TV check pending) | — | LT4 → LT5 → LT6 → LT7 |
-| 3 Core + guide | A-W4, A-W6, GD0, GD0b, GD1, GD2, GD3 (2026-10-03) | — | GD0c (auto guide sources) → GD4; GD5 after LT4 |
-| 4 TV settings | T1–T4 (2026-10-03, TV); T5 (merged, TV check pending) | — | T6 |
+| 3 Core + guide | A-W4, A-W6, GD0, GD0b, GD1, GD2, GD3 (2026-10-03) | GD0c auto guide sources (since 2026-10-03) | GD4; GD5 after LT4 |
+| 4 TV settings | T1–T4 (2026-10-03, TV); T5 (merged, TV check pending) | T6 (since 2026-10-03) | — (Phase 8 after) |
 
 ### Open follow-ups (small items found while verifying; fold into the named phase)
 
@@ -25,7 +25,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | GD2 | Resting header-button labels in the guide are low contrast (read as disabled). | GD6 |
 | GD1 | `NoGuide` is judged on the global index state, not per source. | GD4 |
 | GD0b | Device check with a kill mid-refresh not done (unit tests only). | Part III guide round (GD6) |
-| GD0c | **Automatic Xtream guide sources** (found 2026-10-03: jellyxtream had 3, should be 0): `XtreamSessionManager.ensureXmltvSourceAdded` de-duplicates by the full URL incl. credentials, so each login with new credentials adds a row and old ones stay; it adds a source even when the account has no live channels; live sync spreads the duplicates. Fix: one automatic source per Xtream source, updated in place on a credential change; added only when the account has live channels; one-time cleanup keeping the row for the current login and removing it for sources with no live channels; hand-added sources untouched; unit tests. Cleanup deletes synced rows, so it applies across the sync group (approved 2026-10-03). | `XtreamSessionManager.kt`, `EpgSourceDao.kt`, a startup cleanup | M | Med | deletes synced rows; must not touch hand-added sources |
+| GD0c | **Automatic Xtream guide sources** (found 2026-10-03: jellyxtream had 3, should be 0): `XtreamSessionManager.ensureXmltvSourceAdded` de-duplicates by the full URL incl. credentials, so each login with new credentials adds a row and old ones stay; it adds a source even when the account has no live channels; live sync spreads the duplicates. Fix: one automatic source per Xtream source, updated in place on a credential change; added only when the account has live channels; one-time cleanup keeping the row for the current login and removing it for sources with no live channels; hand-added sources untouched; unit tests. Cleanup deletes synced rows, so it applies across the sync group (approved 2026-10-03). **In progress (lane 3, since 2026-10-03).** | `XtreamSessionManager.kt`, `EpgSourceDao.kt`, a startup cleanup | M | Med | deletes synced rows; must not touch hand-added sources |
 | T4 | ~~Delete in the Sources actions menu is a filled orange `CinemaDangerButton`~~ — done in T5 (outlined). | T5 ✓ |
 | T3 / M3 / M5 | fr/mg gaps are larger than thought: **mg lacks ~191 English keys** (incl. `settings_profiles_title`, `live_sync_*`), **fr lacks ~38** (mostly `settings_shrink_database_*`). Needs its own translation commit. | own commit (lane 1, round 6) |
 | Phase 2 / GD3 | `TvDimensions.epgTimeHeaderHeight` and a few strings are now unused (`epg_error_not_supported`, `epg_error_no_data_for_channels`, `epg_no_program_found`, `settings_about_app_version`, `provider_update_button` on mobile); `docs/design.md` still names `MobileEpgTimeline.kt`. | cleanup commit after T6 |
@@ -308,7 +308,7 @@ share switch → devices (Remove secondary) → Danger zone (Leave).
 | T3 | Two-pane Settings, shared IA, header (T-1, T-7); dev-only gating. **Done 2026-10-03**, verified on the TV — all 28 steps of the new settings walk land as specified (rail swap, Right enters the first row, Left back, picker on the current value, Left closes it, Back in the pane → rail, Back on the rail → Home). Includes the T2 follow-ups (Left closes a picker; autoplay text). Note: `settings_profiles_title` / `live_sync_title` have no mg translation (pre-existing). | `SettingsScreen.kt`, `TvNavHost.kt` | L | High | nav + focus + saveable state; needs Part II `tvPane` |
 | T4 | Sources list + menu + focus (T-8, T-9, T-10, A-10). **Done 2026-10-03**, verified on the TV (entry on the active source; Use/Guide/⋮ slots aligned, Down keeps the column; menu opens on Edit, Delete last; Back → ⋮, Back from Sources → "Switch source" in Settings; walk recorded). Follow-up: Delete renders filled orange (`CinemaDangerButton`) — loud for a last item; consider outlined. Also added fr/mg for `provider_more_actions*`. | `ProviderSelectionScreen.kt`, `ProviderDialogs.kt` | M | Med | focus return + menu order |
 | T5 | Edit Source two-column + shared grouping (T-11, T-12, A-6, A-7, A-8). **Done 2026-10-03** (compile + CI checks; TV check pending). Delete in the Sources menu now outlined. Follow-ups: the filters deep link needs `focusFilters` on `Screen.AddProvider` + `TvNavHost` + the Settings hint row (screen side done); Edit on "Recent row size" doesn't move focus into the field (pre-existing). | `TvAddProviderScreen.kt`, `ProviderSettingsSection.kt`, `CacheManagementSection.kt` | L | Med | 699-line screen; two save models; Add mode must not change |
-| T6 | EPG Management scoping + Live sync order (A-9, T-14). | `TvEpgManagementScreen.kt`, `SyncSettingsScreen.kt` | M | Med | moves global controls; 1 186-line EPG screen |
+| T6 | EPG Management scoping + Live sync order (A-9, T-14). **In progress (lane 4, since 2026-10-03).** | `TvEpgManagementScreen.kt`, `SyncSettingsScreen.kt` | M | Med | moves global controls; 1 186-line EPG screen |
 
 ---
 
@@ -759,7 +759,7 @@ See Decisions 3–5 at the end of this plan.
 | 3 | P3 row action menu; remove hidden row buttons in category lists and Live preview. **Done 2026-10-03**, verified on the TV (long-press OK and the Menu key open the row menu, Favourite first, Remove from Recent last; Right from a category goes straight to the items; walk re-recorded). | `StreamList.kt`, `LiveTvSplitLayout.kt`, `FavoriteMenuDialog.kt` | M | Med | behaviour change: hidden buttons removed; long-press on tv-material `Surface` |
 | 4 | Home entry/header focus; dead Live TV card. **Done 2026-10-03** (compile; TV walk pending). Entry waits up to 2 s for the live category count; edge case: a 0 count arriving after that leaves focus nowhere. | `ContentTypeSelectionScreen.kt` | S | Low |  |
 | 5 | **Live TV flows LT1–LT7** (own table in that section; LT1 is a one-line regression fix and can go first of everything). | see LT table | — | — | see LT table |
-| 6 | Movie details + Episodes. | `MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt` | L | Med | `EpisodeSelectionScreen` is 2 320 lines |
+| 6 | Movie details + Episodes. **In progress (side lane, since 2026-10-03).** | `MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt` | L | Med | `EpisodeSelectionScreen` is 2 320 lines |
 | 7 | P4 Search field. | new `TvSearchField.kt`, `SearchScreen.kt` | M | Med | IME behaviour on TV |
 | 8 | P5 highlight tokens across lists (lands with or after Part I T1, which changes `TvSelectableButton` / `TvSwitchRow`). | `TvFocusTokens`, `TvInputListItem.kt`, list rows | M | Med | visual regression across all lists |
 | 9 | Guide round: walk TV Guide + EPG Browser with an indexed guide; fix with P1/P2. | `EpgGridLayout.kt`, `TvEpgBrowserScreen.kt` | — | — | became Part III GD6 |
