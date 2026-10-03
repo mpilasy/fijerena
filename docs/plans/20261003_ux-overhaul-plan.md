@@ -935,7 +935,8 @@ TV                                                  Mobile
 
 | Phase | Scope | Main files | Effort | Risk | Why |
 |---|---|---|---|---|---|
-| GD0 | Investigate G-11 (empty index despite "ingested"); fix if found. | `EpgIndexer.kt`, `EpgFileManager.kt`, safe-mode clear path | M | Low | investigation; fix effort unknown until found |
+| GD0 | Investigate G-11 (empty index despite "ingested"). **Done 2026-10-03** — cause found, see III.H. | `EpgIndexer.kt`, `EpgFileManager.kt`, safe-mode clear path | M | Low | investigation |
+| GD0b | **Fix G-11** (III.H): on the staging path write a source's `markIngested` stats and validators only after `swapAndRebuildFts` commits; send `If-None-Match` / `If-Modified-Since` and allow the hash skip only when the index holds rows for that source; call `resetAllIngestionState()` next to both `clearAll()` call sites (check it doesn't queue settings-sync records). | `EpgFileManager.kt`, `SafeModeViewModel.kt`, `EpgSourceDao.kt` | M | Med | ingestion ordering; verify with a kill mid-refresh on the emulator |
 | GD1 | **Data honesty, no layout change**: resolve virtual categories (G-2); skip marker rows (G-7); `NoListings`/`NoGuide` states + "N of M · source · updated" line (G-3, G-5); drop the parsed cache on index swap (G-4); dev stats out of the title (G-10). Existing TV/mobile screens show the states. | `EpgViewModel.kt`, `XmltvEpgService.kt`, `MediaRepository.kt`, both guide screens, strings ×3 | M | Med | cache invalidation + virtual categories + states on both UIs |
 | GD2 | **`GuideLayout` + TV grid** rebuilt on it: one scroll state, time-placed cells, now line, dimmed past; TV focus rules (entry on on-air cell, Up/Down keep time, labelled header row, Back closes search not the guide). | new `core/ui/.../guide/GuideLayout.kt`, `EpgGridLayout.kt` → `TvGuideGrid.kt`, `TvEpgGuideScreen.kt` | XL | High | new layout engine; 50×N cells perf; TV focus |
 | GD3 | **Mobile grid** on `GuideLayout`: shared time axis, date tabs, Now, details sheet. | `MobileEpgTimeline.kt` → `MobileGuideGrid.kt`, `MobileEpgGuideScreen.kt` | L | Med |  |
@@ -943,7 +944,7 @@ TV                                                  Mobile
 | GD5 | **Entry points + naming + one search**: OSD Guide (after Part II LT4), preview row, Home TV Guide, category tooltip; grid search → browser with context; rename strings. | `PlayerScreen.kt`, `LiveTvSplitLayout.kt`, `ContentTypeSelectionScreen.kt`, both nav hosts, browser screens, strings ×3 | M | Med | both nav hosts; OSD part waits for LT4 |
 | GD6 | TV details panel, long-press row actions in the grid (P3), focus-walk expectations for the guide (Part II Phase 9 folds into this). | `TvGuideGrid.kt`, `scripts/focus-walks/guide.txt` | M | Med |  |
 
-Dependencies: GD1 before everything (it defines the states the grids render). GD2 before GD3
+Dependencies: GD0b is independent of the rest and should land early (it is why the guide was empty on the test TV). GD1 before everything else (it defines the states the grids render). GD2 before GD3
 (shared layout lands with its first user). GD5's OSD button needs Part II LT4; the rest of GD5
 doesn't. Part II Phase 9 (guide focus round) becomes GD6.
 
@@ -974,6 +975,47 @@ mobile level; GD4–GD6 are additive. Strings travel with their phase, all three
 2. **Naming:** "TV Guide" = the grid, "Search the guide" = the browser; the grid's search icon
    opens the browser pre-filtered to the grid's context; the grid's own title filter is removed.
 3. **Home entry context = Recent.**
+
+## III.H GD0 findings — why the index was empty while the source said "ingested" (2026-10-03)
+
+**Cause 1 (confirmed).** Source stats are written per source *before* the staging swap commits.
+`EpgFileManager.ingestDownloadedSource` calls `markIngested(...)` right after `ingestFromStream`
+(`EpgFileManager.kt:1483`) — `last_ingested_at_ms`, `last_channels`, `last_programmes`,
+`ingest_method` **and the validators** `etag` / `last_modified_header` / `last_content_sha256`.
+On the staging path the rows live in `epg_channel_staging` / `epg_programme_staging` until
+`swapAndRebuildFts(syncedIds)` runs after *all* sources of the run have finished
+(`EpgFileManager.kt:814`; single-source variant `:1046`); the swap is one transaction and writes
+the `epg_index_metadata` row inside it (`EpgIndexer.kt:515-567`). A process kill, WorkManager
+stop, Doze cancellation or swap exception (caught at `EpgFileManager.kt:846`) between bearstv's
+`markIngested` (08:51) and the swap leaves exactly what was observed: stats + validators in
+`providers.db`, zero rows and no metadata in `epg_index.db`. With five sources the window is
+wide (bearstv ingests in ~20 s; the other four were still downloading).
+
+**Why it never self-heals.** The next run wipes staging (`:617` / `:943`), then `downloadSource`
+sends the stored validators (`:1185-1186`): a `304` → `markUnchanged` (`:1302-1313`), a hash match
+→ the same (`:1317`, `.gz` at `:1420`; the 24 h `STALENESS_FORCE_INGEST_MS` guard applies to the
+hash path only, not to `304`). Every source "unchanged" or failed → `anyIngested` false (`:798`)
+→ no swap → index stays empty, and `getStaleSources` won't pick the source again until it is
+stale. `EpgSyncWorker`'s `force` (`:96`) only widens the source list; it doesn't bypass the
+validators — the forced refresh on 2026-10-03 worked because the upstream file had changed.
+
+**Cause 2 (mechanism confirmed; unknown whether it fired here).** Both clear paths destroy
+`epg_index.db` without touching `epg_source`: `SafeModeViewModel.clearCaches`
+(`SafeModeViewModel.kt:43`) and `EpgFileManager.launchClearAllData` (`:1135`) → `EpgIndexer.clearAll()`
+(`EpgIndexer.kt:699`). `EpgSourceDao.resetAllIngestionState` (`EpgSourceDao.kt:116-123`) exists for
+exactly this and has **no callers**. After a clear, the stale validators hit the same skip.
+
+**Ruled out.** (d) metadata is written inside the swap transaction, so "no metadata row" is only
+the signature of "swap never committed"; `initialize()`'s count fallback is fine. No
+`EpgIndexDatabase` version bump in the window (destructive migration is at v17 since
+`dba6a079`). Shrink Database deletes index rows and source rows together. `git log -S`
+2026-09-28…10-02: nothing touched the ordering; the 304/hash skip dates from `e528a312` (08-27).
+
+**Fix** = GD0b above (effort M): defer `markIngested` to after the swap on the staging path
+(~40 lines in `EpgFileManager.kt`, keep the current order for `useStaging = false`); send
+validators / allow `canSkipIngest` only when `EpgIndexDao.getLatestProgrammeEndTimeForSource(id)
+!= null`; call `resetAllIngestionState()` next to both `clearAll()` calls (check settings-sync
+side effects first — `epg_source` rows are synced since live sync phase 4b).
 
 ## III.G Side effects of this walk on the emulators
 
