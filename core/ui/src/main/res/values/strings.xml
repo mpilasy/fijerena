@@ -999,4 +999,10 @@
     <string name="epg_tab_today">Today</string>
     <string name="epg_tab_tomorrow">Tomorrow</string>
     <string name="epg_details_watch_channel">Watch channel</string>
+    <!-- Phase 6 -->
+    <string name="details_action_favorite">Favorite</string>
+    <string name="details_action_watched">Watched</string>
+    <string name="details_action_more">More</string>
+    <string name="series_play_next_format">▶ Play: %1$s</string>
+    <string name="series_resume_next_format">▶ Resume: %1$s (%2$s)</string>
 </resources>

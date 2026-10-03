@@ -1,0 +1,36 @@
+# Phase 6 — Movie details and Episodes (MovieDetailsScreen, EpisodeSelectionScreen), TV
+# emulator, source jellyxtream. Two walks in one file, joined by a pause.
+# Walk 1 start: Movies → a movie never played (no Resume, no trailer) → OK. Focus is on Play.
+# Walk 2 start: during the WAIT, open a TV show with several seasons and a continue-watching
+# episode past the first few (Home → TV Shows → the show → OK). Focus is on that episode.
+# Written 2026-10-03 from the plan, not yet recorded — re-record with -r on the emulator.
+# Lines marked (-r) depend on the title's data (which tabs it has, the episode's place in the
+# list) and are left unchecked or checked loosely until recorded.
+#
+# Walk 1 — Movie details: labelled actions, Up from the tabs → Play (F-MD-2, F-MD-3).
+@start Play
+RIGHT	Favorite
+RIGHT	Watched
+# Refresh info is no longer in the row: More is the last button (a trailer icon would sit before it).
+RIGHT	More
+LEFT	Watched
+# Down from any action → the selected tab (Cast when the movie has cast, else Details) (-r).
+DOWN
+# Up from a tab → Play, not the button above the tab.
+UP	Play
+DOWN
+# The next tab, then Up again → Play (-r for the tab name).
+RIGHT
+UP	Play
+# Leave the movie for walk 2.
+BACK
+WAIT 15
+#
+# Walk 2 — Episodes: focus on the continue-watching episode; Left → the season tabs (F-E-1, F-E-2).
+@start Continue Watching
+LEFT	Season
+# Up from the season tabs → Play next in the compact header ("▶ Play: <title>", or "▶ Resume:")
+# when the hero is scrolled away; the section tab "Episodes" when the hero is on screen (-r).
+UP	▶
+# Up from Play next → the section tab row, scrolled back into view.
+UP	Episodes

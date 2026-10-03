@@ -992,4 +992,10 @@
     <string name="sync_error_revoked">Nesorina tao amin\'ny vondrona fampifanarahana ity fitaovana ity.</string>
     <string name="sync_error_code_expired">Lany daty na efa nampiasaina ny kaody. Mampisehoa kaody vaovao.</string>
     <string name="sync_error_not_a_code">Tsy kaody fampifandraisana Fijerena io.</string>
+    <!-- Phase 6 -->
+    <string name="details_action_favorite">Ankafizina</string>
+    <string name="details_action_watched">Hita</string>
+    <string name="details_action_more">Hafa</string>
+    <string name="series_play_next_format">▶ Alefa: %1$s</string>
+    <string name="series_resume_next_format">▶ Tohizo: %1$s (%2$s)</string>
 </resources>

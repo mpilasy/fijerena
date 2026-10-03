@@ -1002,4 +1002,10 @@
     <string name="settings_shrink_database_dev_stats_time">Dernier compactage : Fini à %1$s • Durée %2$s</string>
     <string name="settings_shrink_database_dev_stats_delta">%1$d enregistrements supprimés • %2$s récupérés</string>
     <string name="live_sync_server_hint">https://sync.exemple.com</string>
+    <!-- Phase 6 -->
+    <string name="details_action_favorite">Favori</string>
+    <string name="details_action_watched">Vu</string>
+    <string name="details_action_more">Plus</string>
+    <string name="series_play_next_format">▶ Lire : %1$s</string>
+    <string name="series_resume_next_format">▶ Reprendre : %1$s (%2$s)</string>
 </resources>

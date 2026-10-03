@@ -3,9 +3,6 @@
 package org.njarasoa.fijerena.feature.movie
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -46,12 +44,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -63,6 +61,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
@@ -82,13 +81,14 @@ import org.njarasoa.fijerena.core.player.model.formatTime
 import org.njarasoa.fijerena.core.player.model.hasMeaningfulDuration
 import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.ScoreChip
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
@@ -99,10 +99,12 @@ import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
+import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
@@ -353,23 +355,25 @@ private fun MovieDetailsContent(
 
     val refreshScope = rememberCoroutineScope()
 
-    // Track refresh state for animation
-    var isRefreshing by remember { mutableStateOf(false) }
-    var targetRotation by remember { mutableStateOf(0f) }
-
-    val rotation by animateFloatAsState(
-        targetValue = targetRotation,
-        animationSpec = tween(durationMillis = CinemaAnimation.fadeInDurationMs, easing = LinearEasing),
-        label = "refresh_rotation",
-    )
-
-    LaunchedEffect(isRefreshing) {
-        if (isRefreshing) {
-            while (isRefreshing) {
-                targetRotation = (targetRotation + 360f) % 3600f
-                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
-            }
+    // "More" menu (Refresh info). A Dialog window: closing it hands focus back to the More button.
+    var showMoreMenu by remember { mutableStateOf(false) }
+    var moreMenuOpened by remember { mutableStateOf(false) }
+    val moreButtonFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(showMoreMenu) {
+        if (showMoreMenu) {
+            moreMenuOpened = true
+        } else if (moreMenuOpened) {
+            moreMenuOpened = false
+            moreButtonFocusRequester.requestFocusWithRetry(fallback = playButtonFocusRequester)
         }
+    }
+    if (showMoreMenu) {
+        DetailsMoreMenu(
+            title = tmdbTitle ?: movieDetail.name.ifEmpty { movieName },
+            refreshLabel = stringResource(R.string.movie_refresh_info),
+            onRefresh = onRefresh,
+            onDismiss = { showMoreMenu = false },
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -507,66 +511,22 @@ private fun MovieDetailsContent(
                             modifier = Modifier.focusRequester(playButtonFocusRequester).then(downToTabRow).then(upScrollToTop),
                         )
                     }
-                    CinemaIconButton(
+                    // Labelled, not bare icons (UX overhaul Part II Phase 6, F-MD-2): the icon carries
+                    // the state (filled star, check), the word says what the button is.
+                    LabelledActionButton(
                         onClick = onToggleFavorite,
+                        icon = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
+                        iconTint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
+                        label = stringResource(R.string.details_action_favorite),
                         modifier = downToTabRow.then(upScrollToTop),
-                        icon = {
-                            Icon(
-                                imageVector = if (isFavorite) CinemaIcons.Star else CinemaIcons.StarBorder,
-                                contentDescription =
-                                    if (isFavorite) {
-                                        stringResource(
-                                            R.string.favorite_remove,
-                                        )
-                                    } else {
-                                        stringResource(R.string.favorite_add)
-                                    },
-                                tint = if (isFavorite) CinemaAccent else CinemaTextPrimary,
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        },
                     )
                     // Watched button (Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md)
-                    CinemaIconButton(
+                    LabelledActionButton(
                         onClick = onToggleWatched,
+                        icon = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
+                        iconTint = if (isWatched) CinemaAccent else CinemaTextPrimary,
+                        label = stringResource(R.string.details_action_watched),
                         modifier = downToTabRow.then(upScrollToTop),
-                        icon = {
-                            Icon(
-                                imageVector = if (isWatched) CinemaIcons.CheckCircle else CinemaIcons.RadioButtonUnchecked,
-                                contentDescription =
-                                    if (isWatched) {
-                                        stringResource(
-                                            R.string.watched_unmark,
-                                        )
-                                    } else {
-                                        stringResource(R.string.watched_mark)
-                                    },
-                                tint = if (isWatched) CinemaAccent else CinemaTextPrimary,
-                                modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
-                            )
-                        },
-                    )
-                    CinemaIconButton(
-                        onClick = {
-                            refreshScope.launch {
-                                isRefreshing = true
-                                onRefresh()
-                                kotlinx.coroutines.delay(CinemaAnimation.loadingDebounceMs)
-                                isRefreshing = false
-                            }
-                        },
-                        enabled = !isRefreshing,
-                        modifier = downToTabRow.then(upScrollToTop),
-                        icon = {
-                            Icon(
-                                imageVector = CinemaIcons.Refresh,
-                                contentDescription = stringResource(R.string.movie_refresh_info),
-                                modifier =
-                                    Modifier
-                                        .size(TvDimensions.iconSmall.scaled(scale))
-                                        .rotate(rotation),
-                            )
-                        },
                     )
                     movieDetail.metadata.trailerUrl?.let { trailer ->
                         val trailerContext = LocalContext.current
@@ -583,6 +543,14 @@ private fun MovieDetailsContent(
                             },
                         )
                     }
+                    // Refresh info is maintenance, not something to watch: it lives behind "More" at
+                    // the end of the row, out of the path between Play and the tabs (F-MD-2, R5).
+                    LabelledActionButton(
+                        onClick = { showMoreMenu = true },
+                        icon = CinemaIcons.MoreVert,
+                        label = stringResource(R.string.details_action_more),
+                        modifier = downToTabRow.then(upScrollToTop).focusRequester(moreButtonFocusRequester),
+                    )
                 }
             }
 
@@ -601,7 +569,23 @@ private fun MovieDetailsContent(
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = Spacing.tvSafeMarginHorizontal.scaled(scale))
-                            .padding(top = Spacing.xl.scaled(scale)),
+                            .padding(top = Spacing.xl.scaled(scale))
+                            // Up from any tab → Play (F-MD-3), not whichever action button sits
+                            // above the tab by geometry (it was Mark as watched). A key intercept,
+                            // like downToTabRow above: focusProperties on this modifier stops at
+                            // TvSectionTabs' own focusGroup and never reaches the tabs. The hero is
+                            // scrolled back to its top first, so Play lands with the title in view.
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp) {
+                                    refreshScope.launch {
+                                        movieListState.scrollToItem(0)
+                                        playButtonFocusRequester.requestFocusWithRetry()
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            },
                     entryFocusRequester = tabRowFocusRequester,
                 )
             }
@@ -1051,4 +1035,113 @@ private fun TechInfoRow(
             color = CinemaTextPrimary,
         )
     }
+}
+
+/**
+ * An action-row button with an icon and a word (UX overhaul Part II Phase 6, F-MD-2): the icon
+ * shows the state (filled star, check), the label says what the button is, so the row reads
+ * without guessing at glyphs. Resting and focused colours match [CinemaSecondaryButton].
+ */
+@Composable
+private fun LabelledActionButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+    iconTint: Color = CinemaTextPrimary,
+) {
+    val scale = LocalUiScale.current
+    CinemaButton(
+        onClick = onClick,
+        modifier = modifier,
+        colors =
+            ButtonDefaults.colors(
+                containerColor = TvFocusTokens.restingContainer,
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = TvFocusTokens.focusedContainer,
+                focusedContentColor = CinemaAccentLight,
+            ),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(TvDimensions.iconSmall.scaled(scale)),
+        )
+        Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
+        Text(text = label)
+    }
+}
+
+/** What "More" opens: Refresh info, then Cancel. Focus opens on Refresh; Back or Cancel closes. */
+@Composable
+private fun DetailsMoreMenu(
+    title: String,
+    refreshLabel: String,
+    onRefresh: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val firstItemFocusRequester = remember { FocusRequester() }
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = CinemaTextPrimary,
+                maxLines = 2,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                TvInputListItem(
+                    selected = false,
+                    onClick = {
+                        onRefresh()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth().focusRequester(firstItemFocusRequester),
+                    leadingContent = {
+                        Icon(
+                            imageVector = CinemaIcons.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                            tint = CinemaAccent,
+                        )
+                    },
+                    headlineContent = {
+                        Text(text = refreshLabel, style = MaterialTheme.typography.bodyMedium, color = CinemaTextPrimary)
+                    },
+                )
+                TvInputListItem(
+                    selected = false,
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingContent = {
+                        Icon(
+                            imageVector = CinemaIcons.Close,
+                            contentDescription = null,
+                            modifier = Modifier.size(TvDimensions.iconSmall),
+                            tint = CinemaTextSecondary,
+                        )
+                    },
+                    headlineContent = {
+                        Text(
+                            text = stringResource(R.string.common_cancel),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CinemaTextSecondary,
+                        )
+                    },
+                )
+            }
+        },
+        initialFocus = firstItemFocusRequester,
+        confirmButton = {},
+        containerColor = CinemaSurface,
+        titleContentColor = CinemaTextPrimary,
+        textContentColor = CinemaTextSecondary,
+    )
 }
