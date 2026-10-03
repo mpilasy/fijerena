@@ -1,5 +1,17 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: UX overhaul, day 2
+**Release Date:** 2026-10-03
+
+- **TV: columns keep the remote where you are:** on Live TV, Movies and TV Shows, Left from a channel or title lands on the category you are in (not whichever one was level with it), Left from a category stays put instead of jumping to Search, Up/Down stop at the ends of a list instead of hopping into the other column, and Right returns to the item you were on. → Part II Phase 2 (`tvPane`).
+- **TV Settings:** every setting is one row showing its current value and who it applies to (this device / this profile / this source / synced); Theme, Look & feel, Text & grid size, Language and the watch delay open a one-column picker in place that starts on the current value — no more 2×2 button grids, and a stray OK can only open a picker, never change a value. → Part I T2.
+- **Mobile Settings:** rebuilt as a grouped list (Profiles, Source & guide, Playback, Display, Live sync, Backup & storage, About & advanced) with the same scope labels; Theme, Look & feel, Language and the watch delay (presets plus Custom) open pickers; developer tools sit at the bottom and developer-only rows are hidden otherwise; the active profile shows in the bar. → Part I M2.
+- **Guide data can no longer claim to be loaded while empty:** a source's "last refreshed" record is written only after its listings are committed, a refresh skips re-downloading only when the index really holds that source's listings, and clearing the guide (safe mode, "Clear all data") resets the sources' refresh state so the next refresh is a real one. → Part III GD0b.
+
+Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
+
+---
+
 ## Version: UX overhaul, day 1
 **Release Date:** 2026-10-03
 

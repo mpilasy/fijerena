@@ -380,6 +380,8 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 | Language | English, French or Malagasy |
 | Guide Sources (EPG row) | Opens the active source's guide sources: add/edit/delete XMLTV sources, trigger refresh |
 | Watch delay | 5 / 10 / 15 / 30 / 60 / 120 s before a live channel counts as watched (10 s default) |
+| Scope labels | Each setting says whether it applies to this device, this profile, this source or the synced group |
+| Pickers | Theme, Look & feel, Text & grid size (TV), Language and watch delay open a one-column picker that starts on the current value (TV: in place; mobile: dialog, watch delay also takes a custom 5–120 s) |
 | Export Settings | Save sources + guide sources + global config to JSON |
 | Import Settings | Load JSON; conflict dialog for name clashes |
 | Cache Management | View size breakdown; clear per content type or all |

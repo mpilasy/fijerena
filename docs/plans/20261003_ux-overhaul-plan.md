@@ -1,6 +1,6 @@
 # UX Overhaul Plan — Settings, TV Focus & Live TV, TV Guide
 
-**Status (2026-10-03):** Parts I, II and III approved. In progress, four lanes (see Parallel lanes).
+**Status (2026-10-03):** Parts I, II and III approved. Days 1–2 landed and verified on both emulators; four lanes idle (see Progress).
 
 ## Progress
 
@@ -12,9 +12,9 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | Lane | Done | Current | Next |
 |---|---|---|---|
 | 1 Mobile settings | M1 (2026-10-03, phone), M2 (2026-10-03, phone) | — | M3 |
-| 2 TV focus + Live TV | LT1, Phase 1 (2026-10-03, TV), Phase 2 (merged 2026-10-03, TV walk pending) | — | Phase 3 → LT2 |
+| 2 TV focus + Live TV | LT1, Phase 1, Phase 2 (2026-10-03, TV) | — | Phase 3 → LT2 |
 | 3 Core + guide | A-W4, A-W6, GD0 (2026-10-03, both), GD0b (2026-10-03, unit tests; device kill-mid-refresh check folded into the Part III guide round, which needs a source with guide data) | — | GD1 |
-| 4 TV settings | T1 (2026-10-03, TV), T2 (merged 2026-10-03, emulator check pending) | — | T4 → T5 → T6; T3 after Phase 2 |
+| 4 TV settings | T1, T2 (2026-10-03, TV) | — | T3 (Phase 2 landed) → T4 → T5 → T6 |
 
 Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
 release time (`docs/RUN_GUIDE.md`).
@@ -288,7 +288,7 @@ share switch → devices (Remove secondary) → Danger zone (Leave).
 | Phase | Scope | Files | Effort | Risk | Why |
 |---|---|---|---|---|---|
 | T1 | Quick wins, no layout change: T-2, T-3 (Part II P5 later extends the same tokens to all lists), T-4, T-13, button hierarchy, EPG row focusable (A-4). **Done 2026-10-03**, verified on the TV emulator (10 s selected ≠ 120 s focused; Guide Sources row opens EPG Management and Back returns to it; switch rows no longer tinted when on). T-13 done via `CinemaDialogActionButton`'s `colors` (resting container + accent text); a `secondary` flag on that core composable can come with T2. | `PlaybackSettingsCard.kt`, `TvSelectableButton.kt`, `TvSwitchRow`, `UiScaleSettingsCard.kt`, `EpgSettingsCard.kt`, `ProfilesSettingsCard.kt`, `LiveSyncSettingsCard.kt`, `ExportImportSettingsCard.kt` | M | Med | `TvSelectableButton`/`TvSwitchRow` are app-wide; visual regression surface |
-| T2 | `SettingsRow` + scope chips + drill-in pickers for theme / look / text size / watch delay / language (T-5, T-6); focus contract applied to the Settings list. **Done 2026-10-03** (compile + ktlint; emulator check pending). Follow-ups: Left should close a picker (only Back does); switch rows append the scope as text (`TvSwitchRow` has no chip slot); autoplay's description now says "for this profile" twice. | new `SettingsRow.kt`, new `SettingsPickerPane.kt`, all cards, `LanguageSettingsCard.kt` | L | Med | new picker pane; Language recreate path |
+| T2 | `SettingsRow` + scope chips + drill-in pickers for theme / look / text size / watch delay / language (T-5, T-6); focus contract applied to the Settings list. **Done 2026-10-03**, verified on the TV emulator (value rows + scope chips; Theme and watch-delay pickers open on the current value, Back returns to the row; Back from Diagnostics returns to its button). Follow-ups: Left should close a picker (only Back does); switch rows append the scope as text (`TvSwitchRow` has no chip slot); autoplay's description now says "for this profile" twice. | new `SettingsRow.kt`, new `SettingsPickerPane.kt`, all cards, `LanguageSettingsCard.kt` | L | Med | new picker pane; Language recreate path |
 | T3 | Two-pane Settings, shared IA, header (T-1, T-7); dev-only gating. | `SettingsScreen.kt`, `TvNavHost.kt` | L | High | nav + focus + saveable state; needs Part II `tvPane` |
 | T4 | Sources list + menu + focus (T-8, T-9, T-10, A-10). | `ProviderSelectionScreen.kt`, `ProviderDialogs.kt` | M | Med | focus return + menu order |
 | T5 | Edit Source two-column + shared grouping (T-11, T-12, A-6, A-7, A-8). | `TvAddProviderScreen.kt`, `ProviderSettingsSection.kt`, `CacheManagementSection.kt` | L | Med | 699-line screen; two save models; Add mode must not change |
@@ -739,7 +739,7 @@ See Decisions 3–5 at the end of this plan.
 | Phase | Scope | Main files | Effort | Risk | Why |
 |---|---|---|---|---|---|
 | 1 | P6 focus-walk script + expected sequences for the screens walked here (records today's behaviour; later phases update the expectations). **Done 2026-10-03** — walks recorded on the TV emulator the same day (today's behaviour: F-H-2, F-C-3/4/5/6 reproduce). | `scripts/tv-focus-walk.sh`, `scripts/focus-walks/*.txt` | M | Low | tooling only |
-| 2 | P1 + P2; apply to category screens (Live TV / Movies / TV Shows). **Done 2026-10-03** (compile; TV walk pending). Deviations: Left/Right pane exits via `onKeyEvent`, not `focusProperties.exit`; no `focusRestorer`; `rememberPaneFocus()` + `bind(...)` per list; F-C-5 ★ left for Phase 3; OK on a category now keeps focus on it (Right enters). | new `TvPane.kt`, `TwoColumnLayout.kt`, `CategoryList.kt`, `StreamList.kt` | L | High | Compose focus APIs are quirky; touches all category screens |
+| 2 | P1 + P2; apply to category screens (Live TV / Movies / TV Shows). **Done 2026-10-03**, verified on the TV emulator (Left from an item → the selected category; Left from a category stays; Down stops at the list end; Right from a category → the remembered item; walk re-recorded). Deviations: Left/Right pane exits via `onKeyEvent`, not `focusProperties.exit`; no `focusRestorer`; `rememberPaneFocus()` + `bind(...)` per list; F-C-5 ★ left for Phase 3; OK on a category now keeps focus on it (Right enters). | new `TvPane.kt`, `TwoColumnLayout.kt`, `CategoryList.kt`, `StreamList.kt` | L | High | Compose focus APIs are quirky; touches all category screens |
 | 3 | P3 row action menu; remove hidden row buttons in category lists and Live preview. | `StreamList.kt`, `LiveTvSplitLayout.kt`, `FavoriteMenuDialog.kt` | M | Med | behaviour change: hidden buttons removed; long-press on tv-material `Surface` |
 | 4 | Home entry/header focus; dead Live TV card. | `ContentTypeSelectionScreen.kt` | S | Low |  |
 | 5 | **Live TV flows LT1–LT7** (own table in that section; LT1 is a one-line regression fix and can go first of everything). | see LT table | — | — | see LT table |
