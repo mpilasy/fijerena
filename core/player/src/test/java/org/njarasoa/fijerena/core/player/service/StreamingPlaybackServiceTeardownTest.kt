@@ -95,6 +95,25 @@ class StreamingPlaybackServiceTeardownTest {
     }
 
     @Test
+    fun `saves from a recreated service reach the collector that started on the old one`() {
+        // TV Home → return: the screen keeps collecting while its service is destroyed and a new
+        // instance starts playing. A save tied to the first instance stopped after that (R-04).
+        service.publishInstance()
+        val saves =
+            savesDuring {
+                service.stopAndRelease()
+                val recreated = StreamingPlaybackService()
+                recreated.mediaSession = session
+                recreated.mainHandler = mockk<Handler>(relaxed = true)
+                recreated.publishInstance()
+                recreated.disableSubtitles()
+                recreated.stopAndRelease()
+            }
+
+        assertEquals(listOf(null, -1, null), saves.map { it.subtitleTrackIndex })
+    }
+
+    @Test
     fun `a save with no collector is dropped, not replayed to the next one`() {
         service.disableSubtitles()
 

@@ -26,6 +26,12 @@ object CrashLog {
 
     @Volatile private var file: File? = null
 
+    /**
+     * Formats a throwable for an entry. A seam for unit tests, where `Log.getStackTraceString`
+     * returns null and an entry would hold no exception text to redact.
+     */
+    internal var stackTraceOf: (Throwable) -> String? = { Log.getStackTraceString(it) }
+
     /** Call first thing in `Application.onCreate()`. Chains the existing handler, so the process still dies normally. */
     fun install(context: Context) {
         file = File(context.filesDir, "crashlog/crashes.log")
@@ -47,7 +53,7 @@ object CrashLog {
         val target = file
         if (target != null) {
             try {
-                val entry = Redact.text("${System.currentTimeMillis()} $source\n${Log.getStackTraceString(throwable)}")
+                val entry = Redact.text("${System.currentTimeMillis()} $source\n${stackTraceOf(throwable)}")
                 synchronized(lock) {
                     target.parentFile?.mkdirs()
                     trimIfNeeded(target)

@@ -561,7 +561,7 @@ class EpgManagementViewModel(
     }
 
     companion object {
-        private fun calculateNextRefreshTime(
+        internal fun calculateNextRefreshTime(
             anchorTime: String,
             intervalHours: Int,
         ): Long {

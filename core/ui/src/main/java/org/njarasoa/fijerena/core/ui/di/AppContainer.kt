@@ -34,9 +34,9 @@ class AppContainer(
     }
 
     /**
-     * Cache for MediaRepository instances per provider ID.
+     * Cache for MediaRepository instances per provider ID. Internal for AppContainerProviderChangeTest.
      */
-    private val mediaRepositories = mutableMapOf<Long, MediaRepository>()
+    internal val mediaRepositories = mutableMapOf<Long, MediaRepository>()
     private val mutex = Mutex()
 
     // Runs the evictions MediaProviderFactory.providerChanged asks for, which can't wait on [mutex].

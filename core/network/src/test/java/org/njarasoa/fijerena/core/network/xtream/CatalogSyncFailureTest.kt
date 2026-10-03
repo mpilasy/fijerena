@@ -23,11 +23,20 @@ import org.junit.Before
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamMediaProvider
+import org.njarasoa.fijerena.core.network.XtreamRepository
+import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.queue.RefreshPriority
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.queue.RefreshTask
+import org.njarasoa.fijerena.core.network.tmdb.TmdbApiService
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamCategoryEntity
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
+import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.network.xtream.manager.XtreamContentManager
+import org.njarasoa.fijerena.core.network.xtream.manager.XtreamSessionManager
+import org.njarasoa.fijerena.core.player.api.XtreamApiService
 import java.io.IOException
 
 /**
@@ -103,6 +112,51 @@ class CatalogSyncFailureTest {
 
             assertEquals(1, failures.size)
             assertTrue(failures.single() is IOException)
+        }
+
+    @Test
+    fun aCategoryDownloadCutMidwayFailsItsTask() =
+        runBlocking {
+            val api = mockk<XtreamApiService>()
+            coEvery { api.getCategories() } throws IOException("connection reset")
+            val session = mockk<XtreamSessionManager>()
+            every { session.apiService } returns api
+            val manager =
+                XtreamContentManager(
+                    session,
+                    mockk(relaxed = true),
+                    FakeSharedPreferences(),
+                    ProviderSettings(),
+                    mockk(relaxed = true),
+                    provider.id,
+                )
+
+            val failures = withTimeout(5_000) { awaitCatalogTasks(listOf(manager.syncCategories(XtreamCategoryEntity.TYPE_LIVE))) }
+
+            assertEquals(1, failures.size)
+            assertTrue(failures.single() is IOException)
+        }
+
+    @Test
+    fun syncAllThrowsWhenAnyTaskFailed() =
+        runTest {
+            val repository = mockk<XtreamRepository>(relaxed = true)
+            coEvery { repository.syncCategories(any()) } returns CompletableDeferred(Unit)
+            coEvery { repository.syncStreams(any()) } returns CompletableDeferred(Unit)
+            coEvery { repository.syncStreams(XtreamStreamEntity.TYPE_VOD) } returns
+                CompletableDeferred<Unit>().apply { completeExceptionally(IOException("cut mid get_vod_streams")) }
+            coEvery { repository.syncSeries() } returns CompletableDeferred(Unit)
+            every { repository.consumeSyncDelta() } returns SyncDelta(inserted = 3)
+
+            try {
+                val delta = XtreamMediaProvider(provider.id, repository, mockk<TmdbApiService>()).syncAll()
+                fail("expected CatalogSyncException but got $delta")
+            } catch (e: CatalogSyncException) {
+                assertEquals(1, e.failures.size)
+                assertTrue(e.failures.single() is IOException)
+            }
+            // What did arrive is still filtered by the exclusion pass.
+            coVerify { repository.recomputeExclusions() }
         }
 
     @Test

@@ -17,3 +17,10 @@ local.properties
 
 /backups
 /fijerena_settings.json
+
+# Scratch files once tracked by mistake (R-23); kept on disk, not in the repo.
+/patch.diff
+/run_test.sh
+/test_plan.sh
+/guides.json
+/epg_browser.png
