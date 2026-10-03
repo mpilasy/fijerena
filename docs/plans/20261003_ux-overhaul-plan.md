@@ -1,6 +1,6 @@
 # UX Overhaul Plan — Settings, TV Focus & Live TV, TV Guide
 
-**Status (2026-10-03):** Parts I, II and III approved, not started.
+**Status (2026-10-03):** Parts I, II and III approved. Day 1 landed and verified on both emulators: LT1, M1, T1, Part II Phase 1, A-W4, A-W6, GD0 (findings → GD0b).
 
 **Effort / risk** (every work item and phase below carries both):
 
@@ -124,7 +124,7 @@ then **Delete** last and separated.
 | A-W3 | Optional: a `SettingsScope` enum + a `settingScope(key)` lookup so the chip text isn't hard-coded per card twice. Only if both platforms end up duplicating the mapping. | `core/ui/.../model/` | S | Low | optional |
 | A-W4 | Decision D3 (approved): delete dead `Screen.EditProvider` + `EditProviderScreen.kt`. **Done 2026-10-03.** | `core/navigation/Screen.kt`, `tv/.../TvNavHost.kt`, `tv/.../EditProviderScreen.kt` | S | Low | delete only |
 | A-W5 | **Remove the cellular buffer setting** (D4). Player stops reading `cellular_live_multiplier` / `cellular_vod_multiplier` and always uses the default 1.0× — otherwise anyone who set 2.0× keeps it forever with no way to see or undo it. `AppSettings` properties and the `cellularLiveMultiplier` / `cellularVodMultiplier` fields in the export JSON **stay** (import of older export files must keep parsing; values are simply ignored). **Must land in the same commit as M2b** — on its own, the mobile sliders would stay on screen and do nothing. | `core/player/.../StreamingPlaybackService.kt` | S | Med | playback buffer config; check `AdaptiveLoadControl` defaults on cellular |
-| A-W6 | **Lock Source Type in edit mode** (D2): type shown read-only on both platforms; `addSourceTypes(isDevMode, editedType)` only used in Add mode. **Done 2026-10-03**, TV verified (type field disabled, first focus on the Name edit button); mobile check with M1. | `core/ui/.../model/` (if `addSourceTypes` needs a flag), both Add/Edit screens | S | Low |  |
+| A-W6 | **Lock Source Type in edit mode** (D2): type shown read-only on both platforms; `addSourceTypes(isDevMode, editedType)` only used in Add mode. **Done 2026-10-03**, TV verified (type field disabled, first focus on the Name edit button); mobile verified (type field disabled, dropdown gone). | `core/ui/.../model/` (if `addSourceTypes` needs a flag), both Add/Edit screens | S | Low |  |
 
 No `AppSettings` key, default, scope or sync payload changes.
 
@@ -367,7 +367,7 @@ Scan) (M-11).
 
 | Phase | Scope | Files | Effort | Risk | Why |
 |---|---|---|---|---|---|
-| M1 | Quick wins: button hierarchy (M-2), chip colour (M-9 part), profile chevrons (M-5), EPG row tappable (A-4), About build info (M-12). **Done 2026-10-03** — emulator check pending. | `ProviderSettingsCard.kt`, `DeveloperSettingsCard.kt`, `LiveSyncSettingsCard.kt`, `ExportImportSettingsCard.kt`, `ProfilesSettingsCard.kt`, `EpgSettingsCard.kt`, `AboutSettingsCard.kt`, `ProviderSettingsSection.kt` | S | Low |  |
+| M1 | Quick wins: button hierarchy (M-2), chip colour (M-9 part), profile chevrons (M-5), EPG row tappable (A-4), About build info (M-12). **Done 2026-10-03**, verified on the phone emulator (outlined actions, chevrons, EPG row opens EPG Management, About shows build hash/time). | `ProviderSettingsCard.kt`, `DeveloperSettingsCard.kt`, `LiveSyncSettingsCard.kt`, `ExportImportSettingsCard.kt`, `ProfilesSettingsCard.kt`, `EpgSettingsCard.kt`, `AboutSettingsCard.kt`, `ProviderSettingsSection.kt` | S | Low |  |
 | M2 | `SettingsListRow` + grouped list in shared IA order + value-row pickers (M-1, M-3, M-4, M-6). | `SettingsScreen.kt`, all cards | L | Med | new row component + pickers; every card rewritten |
 | M2b | Remove cellular buffer screen and route (M-7, with A-W5). | `MobileCellularBufferSettingsScreen.kt`, `DeveloperSettingsCard.kt`, `MobileNavHost.kt`, `core/navigation/Screen.kt`, strings | S | Low | with A-W5 (Med) |
 | M3 | Sources list + overflow menu (M-8, A-10). | `ProviderSelectionScreen.kt`, `ProviderCopyDialogs.kt` | M | Med | overflow replaces 6 inline actions |
