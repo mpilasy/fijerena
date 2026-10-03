@@ -1,0 +1,170 @@
+package org.njarasoa.fijerena.feature.category.components
+
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.res.stringResource
+import androidx.tv.material3.Icon
+import org.njarasoa.fijerena.core.player.domain.BrowseTarget
+import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
+import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
+import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
+import org.njarasoa.fijerena.ui.components.TvSectionTabs
+import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.theme.LocalUiScale
+import org.njarasoa.fijerena.ui.theme.Spacing
+import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.scaled
+
+/**
+ * The Live TV preview's channel panel (LT2): a tab row — the picked category when there is one ·
+ * Recent · Favourites, with Refresh at its end — over the rows of the selected [ChannelContext].
+ *
+ * Keys: Up from the first row lands on the selected tab, whichever node above it Compose's
+ * geometric search picked; Left/Right on the tabs switch the list (focus follows selection, as
+ * [TvSectionTabs] does everywhere); Left/Right on a row do nothing — the rows are a `tvPane`
+ * with no neighbours; Down from the tabs enters the rows on the current channel when the list
+ * has it, else the first row; OK on a row promotes it to full screen. An empty list is a line of
+ * text, not a Refresh button, so focus stays on the tabs (L-10). Refresh is at the end of the
+ * tab row, no longer a stop between the tabs and the first row (L-13).
+ */
+@Composable
+internal fun LiveTvChannelPanel(
+    tabs: List<ChannelContext>,
+    context: ChannelContext,
+    onContextSelected: (ChannelContext) -> Unit,
+    streams: ImmutableMediaList?,
+    streamsLoading: Boolean,
+    lastPlayedItemId: String?,
+    nowPlaying: ImmutableNowPlaying,
+    contentType: String,
+    categoryViewModel: CategoryViewModel,
+    isDevMode: Boolean,
+    favoriteIds: ImmutableStringSet,
+    watchProgress: ImmutableWatchProgress,
+    watchedIds: ImmutableStringSet,
+    onCategorySelected: (String) -> Unit,
+    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
+    onStreamPromote: (MediaItem) -> Unit,
+    onStreamFocused: (MediaItem) -> Unit,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scale = LocalUiScale.current
+    val tabsEntry = remember { FocusRequester() }
+    val rowsPane = rememberPaneFocus()
+    val selectedIndex = tabs.indexOfFirst { it.id == context.id }.coerceAtLeast(0)
+    val labels = tabs.map { it.label() }
+
+    // An empty tab has nothing focusable below the tabs, so focus goes (or stays) there — also
+    // when the last favourite is removed from its row and the row disappears under focus.
+    val isEmpty = !streamsLoading && streams != null && streams.isEmpty()
+    LaunchedEffect(context, isEmpty) {
+        if (isEmpty) tabsEntry.requestFocusWithRetry()
+    }
+
+    Column(modifier = modifier) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = Spacing.sm.scaled(scale))
+                    // Entering this row from the list lands on the selected tab, not on
+                    // whichever tab or the Refresh icon geometry preferred. focusProperties
+                    // directly before focusGroup, as Modifier.tvPane does.
+                    .focusProperties { onEnter = { tabsEntry.requestFocus() } }
+                    .focusGroup(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TvSectionTabs(
+                tabs = labels,
+                selectedIndex = selectedIndex,
+                onTabSelected = { index -> tabs.getOrNull(index)?.let(onContextSelected) },
+                entryFocusRequester = tabsEntry,
+                modifier = Modifier.weight(1f),
+            )
+            CinemaIconButton(
+                onClick = onRefresh,
+                enabled = !streamsLoading,
+                size = TvDimensions.iconLarge,
+                icon = {
+                    Icon(
+                        imageVector = CinemaIcons.Refresh,
+                        contentDescription = stringResource(R.string.category_refresh_streams_description),
+                        tint = CinemaTextPrimary,
+                        modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                    )
+                },
+            )
+        }
+
+        StreamList(
+            streams = streams,
+            streamsLoading = streamsLoading,
+            selectedCategoryId = context.id,
+            selectedCategoryName = null,
+            lastPlayedItemId = lastPlayedItemId,
+            nowPlaying = nowPlaying,
+            contentType = contentType,
+            categoryViewModel = categoryViewModel,
+            isDevMode = isDevMode,
+            favoriteIds = favoriteIds,
+            watchProgress = watchProgress,
+            watchedIds = watchedIds,
+            onStreamSelected = { streamId, streamName, categoryId, target ->
+                if (target is BrowseTarget.CategoryRef) {
+                    onCategorySelected(target.categoryId)
+                } else {
+                    val item = streams?.firstOrNull { it.id == streamId }
+                    if (item != null) {
+                        onStreamPromote(item)
+                    } else {
+                        // Not resolvable from the current list (shouldn't normally happen) — fall
+                        // back to the caller's own handling.
+                        onStreamSelected(streamId, streamName, categoryId, target)
+                    }
+                }
+            },
+            onStreamFocused = onStreamFocused,
+            onRefreshStreams = { onRefresh() },
+            modifier = Modifier.fillMaxSize(),
+            thumbnailScale = 0.5f,
+            paneFocus = rowsPane,
+            showHeader = false,
+            emptyMessage =
+                if (context is ChannelContext.Favorites) {
+                    stringResource(R.string.live_panel_no_favorites)
+                } else {
+                    stringResource(R.string.category_no_channels)
+                },
+        )
+    }
+}
+
+/** The tab (and full-screen flyout) title of a [ChannelContext]: the category's name, or the virtual list's label. */
+@Composable
+internal fun ChannelContext.label(): String =
+    when (this) {
+        is ChannelContext.Category -> name
+        ChannelContext.Recent -> stringResource(R.string.category_recent_label)
+        ChannelContext.Favorites -> stringResource(R.string.settings_import_favorites_label)
+    }

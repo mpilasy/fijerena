@@ -1,0 +1,28 @@
+# Live TV preview (LiveTvSplitLayout + LiveTvChannelPanel), TV emulator, source iptv with at
+# least one favourite channel.
+# Start: Home → Live TV, which opens the preview on the last played channel with context
+# Recent (LT1 + LT2); focus is on the current channel row — the first row of Recent, since
+# Recent is newest-first. Its text varies, so there is no @start.
+# Covers L-2, L-4, L-10, L-13 as LT2 leaves them: a tab row (Category when the channel was
+# picked from one · Recent · Favorites, Refresh at its end) above the rows; Left/Right on the
+# tabs switch the list; Left/Right on a row do nothing; an empty tab keeps focus on the tab.
+# OK on a row promotes to full screen and is deliberately not walked.
+# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# Up from the first row lands on the selected tab, not on the Refresh icon.
+UP	Recent
+# Right on a tab moves to the next tab and switches the list to it.
+RIGHT	Favorites
+# Right past the last tab reaches Refresh, the only other stop in the row.
+RIGHT	Refresh streams
+LEFT	Favorites
+# Down enters the rows: the current channel when Favorites has it, else the first row (text
+# varies, not asserted). With no favourites nothing below is focusable and focus stays here.
+DOWN
+# Left on a row does nothing — no list toggle any more. Up from the first row proves it: it
+# lands back on the selected tab.
+LEFT
+UP	Favorites
+# Left on a tab moves to the previous tab and switches the list back.
+LEFT	Recent
+# Down lands on the current channel row again (text varies).
+DOWN

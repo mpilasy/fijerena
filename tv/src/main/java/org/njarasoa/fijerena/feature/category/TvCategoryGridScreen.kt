@@ -259,7 +259,14 @@ private fun CategoryGridContent(
                                     catViewModel.loadStreams(categoryId)
                                 },
                                 onStreamSelected = { streamId, streamName, categoryId, target ->
-                                    onStreamSelected(streamId, streamName, categoryId, target)
+                                    // A channel carries the list it was picked from — Recent,
+                                    // Favourites or the browsed category — not its real category,
+                                    // so the preview pushed for it opens on that list
+                                    // (LiveTvSplitLayout's ChannelContext, LT2). Movies and
+                                    // series keep the item's category: details screens want it.
+                                    val pickedFrom =
+                                        if (target is BrowseTarget.Channel) state.selectedCategoryId ?: categoryId else categoryId
+                                    onStreamSelected(streamId, streamName, pickedFrom, target)
                                 },
                                 onRefreshCategories = {
                                     catViewModel.refreshCategories()

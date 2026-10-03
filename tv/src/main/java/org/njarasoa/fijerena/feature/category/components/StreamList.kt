@@ -182,11 +182,18 @@ internal fun StreamList(
     thumbnailScale: Float = 1f,
     /**
      * This column's pane in a two-pane screen (see `Modifier.tvPane`): Left leaves it for
-     * [categoriesPane], and the list takes entry focus once loaded (F-C-1). Null (the Live TV
-     * preview's list) keeps the list a plain column that only follows [lastPlayedItemId].
+     * [categoriesPane], and the list takes entry focus once loaded (F-C-1). Null keeps the list
+     * a plain column that only follows [lastPlayedItemId].
      */
     paneFocus: PaneFocusState? = null,
     categoriesPane: PaneFocusState? = null,
+    /** The title / Refresh / count header above the rows. The Live TV preview panel draws its tab row instead (LT2). */
+    showHeader: Boolean = true,
+    /**
+     * An empty list shows this text alone — no Refresh button, nothing focusable — so focus
+     * stays where it was (the preview panel's tab row, L-10). Null keeps the focusable Refresh.
+     */
+    emptyMessage: String? = null,
 ) {
     // Animate rotation when refreshing
     var targetRotation by remember { mutableStateOf(0f) }
@@ -240,13 +247,13 @@ internal fun StreamList(
 
     // Auto-scroll and focus on the opened or last played item (on initial load and when returning
     // from details/player).
-    // In the preview's list, keyed to selectedCategoryId so switching list context (the Live TV
-    // preview panel's Last Watched <-> Favorites toggle) resets it — otherwise, since
-    // lastPlayedItemId (the current channel) stays the same across that toggle, the guard below
-    // would treat a *second* visit to an already-visited list as already handled and skip
-    // re-focusing, leaving focus wherever it landed after the previously-focused Card was
-    // disposed by the switch away. In a pane, not keyed: OK on a category keeps focus on the
-    // category, and Right enters the list on its remembered row (F-C-5).
+    // Without a pane, keyed to selectedCategoryId so a list switch resets it — otherwise, when
+    // lastPlayedItemId stays the same across the switch, the guard below would treat a *second*
+    // visit to an already-visited list as already handled and skip re-focusing, leaving focus
+    // wherever it landed after the previously-focused Card was disposed by the switch away. In a
+    // pane, not keyed: OK on a category keeps focus on the category, and Right enters the list on
+    // its remembered row (F-C-5); the Live TV preview panel's tabs switch its list without
+    // taking focus off the tab row (LT2).
     var lastFocusedItemId by remember(if (paneFocus == null) selectedCategoryId else null) { mutableStateOf<String?>(null) }
 
     // Movie/series row last opened from this list. Opening details doesn't play anything, so
@@ -303,67 +310,17 @@ internal fun StreamList(
     }
 
     Column(modifier = modifier) {
-        Column(modifier = Modifier.padding(bottom = Spacing.md.scaled(scale))) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-            ) {
-                Text(
-                    text = selectedCategoryName ?: stringResource(R.string.category_select_category),
-                    style =
-                        MaterialTheme.typography.titleLarge.copy(
-                            fontSize =
-                                MaterialTheme.typography.titleLarge.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                // Always show refresh button when a category is selected
-                selectedCategoryId?.let { categoryId ->
-                    CinemaIconButton(
-                        onClick = { onRefreshStreams(categoryId) },
-                        enabled = !streamsLoading,
-                        size = TvDimensions.iconLarge,
-                        icon = {
-                            Icon(
-                                imageVector = CinemaIcons.Refresh,
-                                contentDescription = stringResource(R.string.category_refresh_streams_description),
-                                tint = CinemaTextPrimary,
-                                modifier =
-                                    Modifier
-                                        .size(TvDimensions.iconMedium.scaled(scale))
-                                        .rotate(rotation),
-                            )
-                        },
-                    )
-                }
-            }
-            // Show stream count
-            if (streams != null) {
-                val streamsLabel = stringResource(R.string.stream_count_format, streams.size)
-                val streamCountText =
-                    buildString {
-                        append(streamsLabel)
-                        if (isDevMode && selectedCategoryId != null) {
-                            categoryViewModel.getPayloadSize(selectedCategoryId)?.let {
-                                append(" | $it")
-                            }
-                            categoryViewModel.getFetchTime(selectedCategoryId)?.let {
-                                append(" in $it")
-                            }
-                        }
-                    }
-                Text(
-                    text = streamCountText,
-                    style =
-                        MaterialTheme.typography.labelSmall.copy(
-                            fontSize =
-                                MaterialTheme.typography.labelSmall.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaTextSecondary,
-                )
-            }
+        if (showHeader) {
+            StreamListHeader(
+                streams = streams,
+                streamsLoading = streamsLoading,
+                selectedCategoryId = selectedCategoryId,
+                selectedCategoryName = selectedCategoryName,
+                categoryViewModel = categoryViewModel,
+                isDevMode = isDevMode,
+                rotation = rotation,
+                onRefreshStreams = onRefreshStreams,
+            )
         }
 
         Box(
@@ -392,6 +349,19 @@ internal fun StreamList(
                             verticalSpacing =
                                 LocalUiStyle.current.grid.spacing
                                     .scaled(scale),
+                        )
+                    }
+                }
+
+                streams.isNullOrEmpty() && emptyMessage != null -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(Spacing.md.scaled(scale)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = emptyMessage,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = CinemaTextSecondary,
                         )
                     }
                 }
@@ -487,6 +457,84 @@ internal fun StreamList(
                     }
                 }
             }
+        }
+    }
+}
+
+/** The title, Refresh icon and row count above a [StreamList]'s rows. */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun StreamListHeader(
+    streams: ImmutableMediaList?,
+    streamsLoading: Boolean,
+    selectedCategoryId: String?,
+    selectedCategoryName: String?,
+    categoryViewModel: CategoryViewModel,
+    isDevMode: Boolean,
+    rotation: Float,
+    onRefreshStreams: (String) -> Unit,
+) {
+    val scale = LocalUiScale.current
+    Column(modifier = Modifier.padding(bottom = Spacing.md.scaled(scale))) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
+        ) {
+            Text(
+                text = selectedCategoryName ?: stringResource(R.string.category_select_category),
+                style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontSize =
+                            MaterialTheme.typography.titleLarge.fontSize
+                                .scaled(scale),
+                    ),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            // Always show refresh button when a category is selected
+            selectedCategoryId?.let { categoryId ->
+                CinemaIconButton(
+                    onClick = { onRefreshStreams(categoryId) },
+                    enabled = !streamsLoading,
+                    size = TvDimensions.iconLarge,
+                    icon = {
+                        Icon(
+                            imageVector = CinemaIcons.Refresh,
+                            contentDescription = stringResource(R.string.category_refresh_streams_description),
+                            tint = CinemaTextPrimary,
+                            modifier =
+                                Modifier
+                                    .size(TvDimensions.iconMedium.scaled(scale))
+                                    .rotate(rotation),
+                        )
+                    },
+                )
+            }
+        }
+        // Show stream count
+        if (streams != null) {
+            val streamsLabel = stringResource(R.string.stream_count_format, streams.size)
+            val streamCountText =
+                buildString {
+                    append(streamsLabel)
+                    if (isDevMode && selectedCategoryId != null) {
+                        categoryViewModel.getPayloadSize(selectedCategoryId)?.let {
+                            append(" | $it")
+                        }
+                        categoryViewModel.getFetchTime(selectedCategoryId)?.let {
+                            append(" in $it")
+                        }
+                    }
+                }
+            Text(
+                text = streamCountText,
+                style =
+                    MaterialTheme.typography.labelSmall.copy(
+                        fontSize =
+                            MaterialTheme.typography.labelSmall.fontSize
+                                .scaled(scale),
+                    ),
+                color = CinemaTextSecondary,
+            )
         }
     }
 }

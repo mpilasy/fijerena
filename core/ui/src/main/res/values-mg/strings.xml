@@ -786,4 +786,6 @@
     <string name="provider_guide_button">Fitarihana</string>
     <string name="provider_more_actions">Asa hafa</string>
     <string name="provider_more_actions_for_format">Asa hafa ho an\'ny %1$s</string>
+    <!-- LT2 -->
+    <string name="live_panel_no_favorites">Mbola tsy misy ankafizina — tazony ny OK amin\'ny fantsona iray hanampiana azy</string>
 </resources>

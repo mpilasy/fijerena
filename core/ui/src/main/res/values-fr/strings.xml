@@ -949,4 +949,6 @@
     <string name="provider_guide_button">Guide</string>
     <string name="provider_more_actions">Plus d\'actions</string>
     <string name="provider_more_actions_for_format">Plus d\'actions pour %1$s</string>
+    <!-- LT2 -->
+    <string name="live_panel_no_favorites">Pas encore de favoris — maintenez OK sur une chaîne pour en ajouter une</string>
 </resources>

@@ -88,7 +88,14 @@ fun PlayerScreen(
     currentEpgProgram: EpgProgram? = null,
     nextEpgProgram: EpgProgram? = null,
     currentStreamId: String? = null,
-    categoryStreams: ImmutableMediaList = ImmutableMediaList(),
+    /**
+     * The list Up/Down zap through (the caller's `onNextChannel`/`onPreviousChannel` walk it) and
+     * the Left flyout shows: the channel's context list from the Live TV preview (LT2), the
+     * category's channels from the standalone route.
+     */
+    channelList: ImmutableMediaList = ImmutableMediaList(),
+    channelListTitle: String = stringResource(R.string.player_category_channels),
+    // The Right flyout. Still a separate list until LT3 folds both flyouts into the one panel.
     recentStreams: ImmutableMediaList = ImmutableMediaList(),
     onStreamSelected: ((MediaItem) -> Unit)? = null,
     nextEpisode: EpisodeItem? = null,
@@ -514,8 +521,8 @@ fun PlayerScreen(
             exit = slideOutHorizontally { -it },
         ) {
             TvChannelListOverlay(
-                title = stringResource(R.string.player_category_channels),
-                streams = categoryStreams,
+                title = channelListTitle,
+                streams = channelList,
                 panelAlignment = Alignment.CenterStart,
                 currentStreamId = currentStreamId,
                 onSelect = { item ->
@@ -536,6 +543,8 @@ fun PlayerScreen(
                 title = stringResource(R.string.category_recent_label),
                 streams = recentStreams,
                 panelAlignment = Alignment.CenterEnd,
+                // The preview's Recent keeps the current channel (LT2): open on it, not row 0.
+                currentStreamId = currentStreamId,
                 emptyMessage = stringResource(R.string.player_no_last_watched),
                 onSelect = { item ->
                     state.showLastWatchedOverlay = false

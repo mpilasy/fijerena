@@ -985,4 +985,6 @@
     <string name="provider_keep_editing_button">Keep editing</string>
     <!-- T4 -->
     <string name="provider_guide_button">Guide</string>
+    <!-- LT2 -->
+    <string name="live_panel_no_favorites">No favourites yet — hold OK on a channel to add one</string>
 </resources>

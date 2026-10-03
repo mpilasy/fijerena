@@ -354,7 +354,7 @@ private fun PlayerContent(
         isFavorite = data.isFavorite,
         currentEpgProgram = data.currentEpgProgram,
         nextEpgProgram = data.nextEpgProgram,
-        categoryStreams = ImmutableMediaList(data.categoryStreams),
+        channelList = ImmutableMediaList(data.categoryStreams),
         recentStreams =
             remember(recentStreams, data.streamId) {
                 ImmutableMediaList(recentStreams.filter { it.id != data.streamId })

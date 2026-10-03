@@ -23,15 +23,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -194,50 +190,32 @@ internal fun LiveTvSplitLayout(
     val previewRadius = CornerRadius.medium
     val previewPaneShape = remember(previewRadius) { RoundedCornerShape(previewRadius) }
 
-    val target = previewTarget
-    if (target == null) {
-        // Nothing focused/settled yet (e.g. streams still loading) — show the list only.
-        AmbientBackdrop(modifier = Modifier.fillMaxSize())
-        Row(modifier = safeMarginModifier, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
-            Box(modifier = Modifier.weight(0.66f).fillMaxHeight())
-            LiveTvChannelList(
-                streams = streams,
-                streamsLoading = streamsLoading,
-                selectedCategoryId = selectedCategoryId,
-                categoryMap = categoryMap,
-                lastPlayedItemId = lastPlayedItemId,
-                nowPlaying = nowPlaying,
-                contentType = contentType,
-                categoryViewModel = categoryViewModel,
-                isDevMode = isDevMode,
-                favoriteIds = favoriteIds,
-                watchProgress = watchProgress,
-                watchedIds = watchedIds,
-                onCategorySelected = onCategorySelected,
-                onStreamSelected = onStreamSelected,
-                onStreamPromote = { },
-                onStreamFocused = { item -> focusedItemFlow.value = item },
-                onRefreshStreams = onRefreshStreams,
-                modifier = Modifier.weight(0.34f).fillMaxHeight(),
+    // The context list (ChannelContext, LT2). The channel was chosen from one list — the browsed
+    // category, Recent or Favourites: TvCategoryGridScreen passes that list's id as this entry's
+    // category, so categoryViewModel's selectedCategoryId/streams *are* that list when it is a
+    // real category; Home → Live TV lands on Recent. That one list is what the panel shows, what
+    // Up/Down zap through in full screen and what the Left flyout lists, until a tab switches it.
+    // Saveable so the tab choice survives an activity recreate; keyed on the entry's category
+    // because the first Success state arrives before it is resolved.
+    val pickedCategory =
+        remember(selectedCategoryId, categoryMap) {
+            selectedCategoryId
+                ?.takeUnless { it in CategoryViewModel.VIRTUAL_CATEGORY_IDS }
+                ?.let { ChannelContext.Category(id = it, name = categoryMap[it]?.name ?: it) }
+        }
+    var channelContext by
+        rememberSaveable(selectedCategoryId, stateSaver = ChannelContext.Saver) {
+            mutableStateOf(
+                if (selectedCategoryId == CategoryViewModel.FAVORITES_CATEGORY_ID) {
+                    ChannelContext.Favorites
+                } else {
+                    pickedCategory ?: ChannelContext.Recent
+                },
             )
         }
-        return
-    }
+    val contextTabs =
+        remember(pickedCategory) { listOfNotNull(pickedCategory, ChannelContext.Recent, ChannelContext.Favorites) }
 
-    // Single playback connection for this screen, shared by the small preview AND the promoted
-    // full-screen player — never a second one. Created once (per screen visit) and re-pointed via
-    // loadStream(Light) as the target channel changes; never recreated when `target` changes.
-    val playback: PlaybackViewModel = viewModel()
-    val previewPlaybackState by playback.playbackState.collectAsStateWithLifecycle()
-
-    // The preview pane's channel list defaults to the shared Recent list — regardless of which
-    // category (if any) was actually browsed/searched/EPG'd into to get here — with the
-    // currently previewed channel included and highlighted (see lastPlayedItemId = target.id
-    // below), not filtered out like the full-screen flyout does. Independent of
-    // categoryViewModel's own selectedCategoryId/streams so browsing a real category still works
-    // normally everywhere else (the full-screen Category flyout, EPG/search entry, etc.).
-    // D-pad Left/Right (see the onKeyEvent below) toggles it over to Favorites instead.
-    var listSource by remember { mutableStateOf(PreviewListSource.RECENT) }
     // Bumped by the panel's own refresh action — the viewer asking for current truth, and so the
     // one place the frozen order below is allowed to re-sort.
     var recentOrderResetTick by remember { mutableStateOf(0) }
@@ -254,6 +232,90 @@ internal fun LiveTvSplitLayout(
         favoriteStreams = categoryViewModel.getFavoritesSnapshot()
         favoriteStreamsLoading = false
     }
+
+    val target = previewTarget
+    // INCLUDE keeps the current channel reachable even before the delayed history write lands,
+    // so there's always a row to OK-press for promote, and a zap neighbour. Not done for
+    // Favorites — there it's expected the current channel may simply not be one, same as any
+    // other list the user browses to. Remembered, not built inline: an unremembered wrapper
+    // hands StreamList a new `streams` identity on every recomposition of this screen, which
+    // re-runs its `remember(streams)` blocks — re-arming the entrance animation for every
+    // visible row and, with it, a per-frame invalidateMeasurement loop.
+    val recentWithCurrent =
+        remember(recentStreams, target?.id) {
+            ImmutableMediaList(recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE))
+        }
+    val favoriteList = remember(favoriteStreams) { ImmutableMediaList(favoriteStreams) }
+    val contextStreams: ImmutableMediaList? =
+        when (channelContext) {
+            is ChannelContext.Category -> streams
+            ChannelContext.Recent -> recentWithCurrent
+            ChannelContext.Favorites -> favoriteList
+        }
+    val contextLoading =
+        when (channelContext) {
+            is ChannelContext.Category -> streamsLoading
+            ChannelContext.Recent -> publishedRecentStreams == null
+            ChannelContext.Favorites -> favoriteStreamsLoading
+        }
+    val refreshContext: () -> Unit = {
+        when (val current = channelContext) {
+            is ChannelContext.Category -> {
+                onRefreshStreams(current.id)
+            }
+
+            ChannelContext.Recent -> {
+                composableScope.launch {
+                    categoryViewModel.refreshRecentItems()
+                    recentOrderResetTick++
+                }
+            }
+
+            ChannelContext.Favorites -> {
+                composableScope.launch {
+                    favoriteStreamsLoading = true
+                    favoriteStreams = categoryViewModel.getFavoritesSnapshot()
+                    favoriteStreamsLoading = false
+                }
+            }
+        }
+    }
+
+    if (target == null) {
+        // Nothing focused/settled yet (e.g. streams still loading) — show the list only.
+        AmbientBackdrop(modifier = Modifier.fillMaxSize())
+        Row(modifier = safeMarginModifier, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
+            Box(modifier = Modifier.weight(0.66f).fillMaxHeight())
+            LiveTvChannelPanel(
+                tabs = contextTabs,
+                context = channelContext,
+                onContextSelected = { channelContext = it },
+                streams = contextStreams,
+                streamsLoading = contextLoading,
+                lastPlayedItemId = lastPlayedItemId,
+                nowPlaying = nowPlaying,
+                contentType = contentType,
+                categoryViewModel = categoryViewModel,
+                isDevMode = isDevMode,
+                favoriteIds = favoriteIds,
+                watchProgress = watchProgress,
+                watchedIds = watchedIds,
+                onCategorySelected = onCategorySelected,
+                onStreamSelected = onStreamSelected,
+                onStreamPromote = { },
+                onStreamFocused = { item -> focusedItemFlow.value = item },
+                onRefresh = refreshContext,
+                modifier = Modifier.weight(0.34f).fillMaxHeight(),
+            )
+        }
+        return
+    }
+
+    // Single playback connection for this screen, shared by the small preview AND the promoted
+    // full-screen player — never a second one. Created once (per screen visit) and re-pointed via
+    // loadStream(Light) as the target channel changes; never recreated when `target` changes.
+    val playback: PlaybackViewModel = viewModel()
+    val previewPlaybackState by playback.playbackState.collectAsStateWithLifecycle()
 
     val loader: StreamLoaderViewModel =
         viewModel(
@@ -399,11 +461,11 @@ internal fun LiveTvSplitLayout(
                 currentEpgProgram = success?.currentEpgProgram,
                 nextEpgProgram = success?.nextEpgProgram,
                 currentStreamId = success?.streamId,
-                categoryStreams = streams ?: ImmutableMediaList(),
-                recentStreams =
-                    remember(recentStreams, target.id) {
-                        ImmutableMediaList(recentStreams.withCurrentChannel(target, CurrentChannelPolicy.EXCLUDE))
-                    },
+                // Zap order and the Left flyout = the panel's list; the Right flyout keeps the
+                // Recent list (with the current channel) until LT3 folds both into the panel.
+                channelList = contextStreams ?: ImmutableMediaList(),
+                channelListTitle = channelContext.label(),
+                recentStreams = recentWithCurrent,
                 onStreamSelected = { newItem ->
                     // Switching channels while already full-screen is a real "commit to watching" —
                     // use the full loadStream (with side effects), still on the SAME loader/engine.
@@ -412,14 +474,14 @@ internal fun LiveTvSplitLayout(
                     loader.loadStream(newItem)
                 },
                 onNextChannel = {
-                    neighborChannel(streams, target.id, +1)?.let { newItem ->
+                    neighborChannel(contextStreams, target.id, +1)?.let { newItem ->
                         focusedItemFlow.value = newItem
                         previewTarget = newItem
                         loader.loadStream(newItem)
                     }
                 },
                 onPreviousChannel = {
-                    neighborChannel(streams, target.id, -1)?.let { newItem ->
+                    neighborChannel(contextStreams, target.id, -1)?.let { newItem ->
                         focusedItemFlow.value = newItem
                         previewTarget = newItem
                         loader.loadStream(newItem)
@@ -507,48 +569,12 @@ internal fun LiveTvSplitLayout(
                 }
             }
 
-            // INCLUDE keeps the current channel reachable even before the delayed history
-            // write lands, so there's always a row to OK-press for promote. Not done for
-            // Favorites — there it's expected the current channel may simply not be one, same as
-            // any other list the user browses to.
-            val displayedStreams =
-                remember(listSource, recentStreams, favoriteStreams, target.id) {
-                    when (listSource) {
-                        PreviewListSource.RECENT -> {
-                            recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE)
-                        }
-
-                        PreviewListSource.FAVORITES -> {
-                            favoriteStreams
-                        }
-                    }
-                }
-            // Remembered, not built inline: an unremembered wrapper hands StreamList a new
-            // `streams` identity on every recomposition of this screen, which re-runs its
-            // `remember(streams)` blocks — re-arming the entrance animation for every visible row
-            // and, with it, a per-frame invalidateMeasurement loop. The list inside is already
-            // remembered above; only the wrapper was missing one.
-            val displayedStreamsList = remember(displayedStreams) { ImmutableMediaList(displayedStreams) }
-            LiveTvChannelList(
-                streams = displayedStreamsList,
-                streamsLoading =
-                    if (listSource == PreviewListSource.FAVORITES) {
-                        favoriteStreamsLoading
-                    } else {
-                        publishedRecentStreams == null
-                    },
-                // Hardcoded, not the real browsed/searched/EPG'd-into selection — the panel's
-                // list and title always reflect Recent/Favorites here, regardless of entry path
-                // (see listSource above). categoryMap always has both ids (virtual categories
-                // added by rebuildVirtualCategories), so the title still resolves to
-                // "Recent"/"Favorites" correctly.
-                selectedCategoryId =
-                    if (listSource == PreviewListSource.FAVORITES) {
-                        CategoryViewModel.FAVORITES_CATEGORY_ID
-                    } else {
-                        CategoryViewModel.RECENT_CATEGORY_ID
-                    },
-                categoryMap = categoryMap,
+            LiveTvChannelPanel(
+                tabs = contextTabs,
+                context = channelContext,
+                onContextSelected = { channelContext = it },
+                streams = contextStreams,
+                streamsLoading = contextLoading,
                 // Highlight whatever's actually previewing, if present in the current list.
                 lastPlayedItemId = target.id,
                 nowPlaying = nowPlaying,
@@ -560,22 +586,7 @@ internal fun LiveTvSplitLayout(
                 watchedIds = watchedIds,
                 onCategorySelected = onCategorySelected,
                 onStreamSelected = onStreamSelected,
-                onRefreshStreams = {
-                    composableScope.launch {
-                        when (listSource) {
-                            PreviewListSource.RECENT -> {
-                                categoryViewModel.refreshRecentItems()
-                                recentOrderResetTick++
-                            }
-
-                            PreviewListSource.FAVORITES -> {
-                                favoriteStreamsLoading = true
-                                favoriteStreams = categoryViewModel.getFavoritesSnapshot()
-                                favoriteStreamsLoading = false
-                            }
-                        }
-                    }
-                },
+                onRefresh = refreshContext,
                 onStreamPromote = { item ->
                     // Selecting a different channel (e.g. OK pressed before the debounce settled):
                     // commit to it on the SAME loader/engine before promoting — still only one
@@ -595,41 +606,11 @@ internal fun LiveTvSplitLayout(
                     fullScreen = true
                 },
                 onStreamFocused = { item -> focusedItemFlow.value = item },
-                modifier =
-                    Modifier
-                        .weight(0.34f)
-                        .fillMaxHeight()
-                        // Left/Right toggles Recent <-> Favorites regardless of which row
-                        // in the list is focused. Row actions are on long-press OK / Menu
-                        // (StreamList, P3), so neither key is taken by a row any more.
-                        .onKeyEvent { event ->
-                            if (event.type != KeyEventType.KeyDown) {
-                                false
-                            } else {
-                                when (event.key) {
-                                    Key.DirectionLeft -> {
-                                        listSource = PreviewListSource.RECENT
-                                        true
-                                    }
-
-                                    Key.DirectionRight -> {
-                                        listSource = PreviewListSource.FAVORITES
-                                        true
-                                    }
-
-                                    else -> {
-                                        false
-                                    }
-                                }
-                            }
-                        },
+                modifier = Modifier.weight(0.34f).fillMaxHeight(),
             )
         }
     }
 }
-
-/** Which list the Live TV preview pane's channel panel is showing, toggled via D-pad Left/Right. */
-private enum class PreviewListSource { RECENT, FAVORITES }
 
 /**
  * Computes the channel next to [currentId] in [streams], wrapping around. Used for full-screen
@@ -649,62 +630,6 @@ private fun neighborChannel(
             it[(currentIndex + direction).mod(it.size)]
         }
     return neighbor
-}
-
-/** The channel list pane, shared between the "no preview yet" and "split" render paths. */
-@Composable
-private fun LiveTvChannelList(
-    streams: ImmutableMediaList?,
-    streamsLoading: Boolean,
-    selectedCategoryId: String?,
-    categoryMap: Map<String, org.njarasoa.fijerena.core.player.domain.MediaCategory>,
-    lastPlayedItemId: String?,
-    nowPlaying: ImmutableNowPlaying,
-    contentType: String,
-    categoryViewModel: CategoryViewModel,
-    isDevMode: Boolean,
-    favoriteIds: ImmutableStringSet,
-    watchProgress: ImmutableWatchProgress,
-    watchedIds: ImmutableStringSet,
-    onCategorySelected: (String) -> Unit,
-    onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
-    onStreamPromote: (MediaItem) -> Unit,
-    onStreamFocused: (MediaItem) -> Unit,
-    onRefreshStreams: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    StreamList(
-        streams = streams,
-        streamsLoading = streamsLoading,
-        selectedCategoryId = selectedCategoryId,
-        selectedCategoryName = selectedCategoryId?.let { categoryMap[it]?.name },
-        lastPlayedItemId = lastPlayedItemId,
-        nowPlaying = nowPlaying,
-        contentType = contentType,
-        categoryViewModel = categoryViewModel,
-        isDevMode = isDevMode,
-        favoriteIds = favoriteIds,
-        watchProgress = watchProgress,
-        watchedIds = watchedIds,
-        onStreamSelected = { streamId, streamName, categoryId, target ->
-            if (target is BrowseTarget.CategoryRef) {
-                onCategorySelected(target.categoryId)
-            } else {
-                val item = streams?.firstOrNull { it.id == streamId }
-                if (item != null) {
-                    onStreamPromote(item)
-                } else {
-                    // Not resolvable from the current list (shouldn't normally happen) — fall back to
-                    // the caller's own handling.
-                    onStreamSelected(streamId, streamName, categoryId, target)
-                }
-            }
-        },
-        onStreamFocused = onStreamFocused,
-        onRefreshStreams = onRefreshStreams,
-        modifier = modifier,
-        thumbnailScale = 0.5f,
-    )
 }
 
 /** What the preview pane plays for a resolved channel. */
