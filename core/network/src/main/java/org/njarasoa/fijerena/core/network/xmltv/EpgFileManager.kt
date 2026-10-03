@@ -108,6 +108,78 @@ class EpgFileManager private constructor(
                 instance ?: EpgFileManager(context.applicationContext).also { instance = it }
             }
 
+        /**
+         * The request for [source]. Validators (`If-None-Match` / `If-Modified-Since`) go out only
+         * while the live index holds the source's rows: a `304` is only a valid answer when there
+         * is a guide to keep. After a clear, or a staging run whose swap never committed, sending
+         * them would let the server confirm "unchanged" against rows we no longer have, and the
+         * guide would stay empty until the upstream file happened to change (G-11).
+         */
+        internal fun buildDownloadRequest(
+            source: EpgSourceEntity,
+            indexHasRows: Boolean,
+        ): Request {
+            val requestBuilder = Request.Builder().url(source.url)
+            if (indexHasRows) {
+                source.etag?.let { requestBuilder.header("If-None-Match", it) }
+                source.lastModifiedHeader?.let { requestBuilder.header("If-Modified-Since", it) }
+            }
+            return requestBuilder.build()
+        }
+
+        /**
+         * Whether a matching content hash is trustworthy enough to skip re-ingesting. A hash match
+         * alone isn't sufficient: [EpgIndexer] drops programmes against wall-clock time on ingest
+         * (see its `cutoffEpoch`), so re-ingesting a byte-identical static file days later still
+         * clears out programmes that have long ended — skipping that ingest forever would let them
+         * pile up while the source keeps reporting healthy refreshes. Forcing a real ingest once a
+         * day bounds how stale the guide can get. And a skip only makes sense while the live index
+         * actually holds the source's rows ([indexHasRows]) — see [buildDownloadRequest].
+         */
+        internal fun canSkipIngest(
+            source: EpgSourceEntity,
+            newHash: String?,
+            indexHasRows: Boolean,
+        ): Boolean {
+            var skip = false
+            if (indexHasRows && newHash != null && newHash == source.lastContentSha256) {
+                val age = System.currentTimeMillis() - source.lastIngestedAtMs
+                skip = age < STALENESS_FORCE_INGEST_MS
+            }
+            return skip
+        }
+
+        /**
+         * Staging path: commit the swap, then write the stats and validators [ingestDownloadedSource]
+         * held back for the sources the swap carried over. Strictly in this order — until the swap
+         * commits, the rows exist only in staging, and a source marked ingested (validators
+         * included) with nothing in the live guide is exactly the empty index of G-11. If the swap
+         * throws or the run is cancelled, nothing is marked and the next run downloads again.
+         */
+        internal suspend fun swapThenMarkIngested(
+            indexer: EpgIndexer,
+            sourceDao: EpgSourceDao,
+            syncedIds: List<Long>,
+            pending: Map<Long, IngestRecord>,
+        ) {
+            indexer.swapAndRebuildFts(syncedIds)
+            syncedIds.mapNotNull { pending[it] }.forEach { record ->
+                sourceDao.markIngested(
+                    id = record.sourceId,
+                    timestamp = record.timestamp,
+                    channels = record.channels,
+                    programmes = record.programmes,
+                    downloadBytes = record.downloadBytes,
+                    ingestMethod = record.ingestMethod,
+                    ingestionDurationMs = record.ingestionDurationMs,
+                    downloadDurationMs = record.downloadDurationMs,
+                    contentSha256 = record.contentSha256,
+                    etag = record.etag,
+                    lastModifiedHeader = record.lastModifiedHeader,
+                )
+            }
+        }
+
         fun extractLabel(url: String): String =
             try {
                 val path = URL(url).path.trimEnd('/')
@@ -146,6 +218,24 @@ class EpgFileManager private constructor(
          * hash) and skipped parsing/ingest entirely. [channelsIngested]/[programmesIngested] are
          * the counts carried forward from the last real ingest, not new work done this run. */
         val unchanged: Boolean = false,
+    )
+
+    /**
+     * Everything [EpgSourceDao.markIngested] writes for one source. On the staging path this is
+     * held back until the swap commits — see [swapThenMarkIngested].
+     */
+    internal data class IngestRecord(
+        val sourceId: Long,
+        val timestamp: Long,
+        val channels: Int,
+        val programmes: Int,
+        val downloadBytes: Long,
+        val ingestMethod: String = "DOWNLOADED",
+        val ingestionDurationMs: Long = 0,
+        val downloadDurationMs: Long = 0,
+        val contentSha256: String? = null,
+        val etag: String? = null,
+        val lastModifiedHeader: String? = null,
     )
 
     data class ActiveSourceProgress(
@@ -580,6 +670,15 @@ class EpgFileManager private constructor(
         val contentSha256: String? = null,
         val etag: String? = null,
         val lastModifiedHeader: String? = null,
+        /** Whether the live index held this source's rows when the download started — the
+         * precondition for any "unchanged" skip, see [buildDownloadRequest]. */
+        val indexHasRows: Boolean = false,
+    )
+
+    /** [ingestDownloadedSource]'s result: the stats, plus the [IngestRecord] it held back on the staging path. */
+    private data class IngestOutcome(
+        val stats: SourceStats,
+        val pending: IngestRecord? = null,
     )
 
     private suspend fun processAllSourcesInternal(sources: List<EpgSourceEntity>) =
@@ -607,6 +706,8 @@ class EpgFileManager private constructor(
                 val completedStats = CopyOnWriteArrayList<SourceStats>()
                 val activeLabels = CopyOnWriteArrayList<String>()
                 val activeProgress = ConcurrentHashMap<Long, ActiveSourceProgress>()
+                // Staging path: per-source markIngested writes held back until the swap commits.
+                val pendingIngests = ConcurrentHashMap<Long, IngestRecord>()
 
                 // Channel: downloads produce, ingestion consumes
                 val ingestionQueue = Channel<DownloadedSource>(Channel.UNLIMITED)
@@ -648,7 +749,7 @@ class EpgFileManager private constructor(
                                                 )
                                             updateAggregateProgress(completedStats, activeLabels, activeProgress, sources.size)
 
-                                            val stats =
+                                            val outcome =
                                                 ingestDownloadedSource(
                                                     downloaded,
                                                     sourceDao,
@@ -662,8 +763,9 @@ class EpgFileManager private constructor(
                                                 }
 
                                             val sourceId = downloaded.source.id
+                                            outcome.pending?.let { pendingIngests[sourceId] = it }
                                             val sourceDuration = sourceStartTimeMap[sourceId]?.let { System.currentTimeMillis() - it } ?: 0
-                                            val finalStats = stats.copy(durationMs = sourceDuration)
+                                            val finalStats = outcome.stats.copy(durationMs = sourceDuration)
 
                                             activeLabels.remove(downloaded.label)
                                             activeProgress.remove(sourceId)
@@ -811,7 +913,7 @@ class EpgFileManager private constructor(
                     // that source's primary rows before transferring staging, and staging has nothing
                     // for it \u2014 including it would wipe its guide instead of leaving it alone.
                     val syncedIds = allStats.filter { it.error == null && !it.unchanged }.map { it.sourceId }
-                    indexer.swapAndRebuildFts(syncedIds)
+                    swapThenMarkIngested(indexer, sourceDao, syncedIds, pendingIngests)
                 }
 
                 if (anyIngested) {
@@ -974,6 +1076,8 @@ class EpgFileManager private constructor(
 
                 bulkReady.await() // Ensure indexes are dropped before ingesting
 
+                // Staging path: the markIngested write held back until the swap commits.
+                var pendingIngest: IngestRecord? = null
                 val stats =
                     if (downloaded != null && downloaded.unchanged) {
                         // Confirmed unchanged (304 or matching content hash) — downloadSource already
@@ -1009,15 +1113,18 @@ class EpgFileManager private constructor(
                             )
                         updateSingleProgress()
 
-                        ingestDownloadedSource(
-                            downloaded,
-                            sourceDao,
-                            indexer,
-                            activeProgress,
-                            batchSize = batchSize,
-                            useStaging = useStaging,
-                            isPlaybackActive = ::isPlaybackActive,
-                        ) { updateSingleProgress() }
+                        val outcome =
+                            ingestDownloadedSource(
+                                downloaded,
+                                sourceDao,
+                                indexer,
+                                activeProgress,
+                                batchSize = batchSize,
+                                useStaging = useStaging,
+                                isPlaybackActive = ::isPlaybackActive,
+                            ) { updateSingleProgress() }
+                        pendingIngest = outcome.pending
+                        outcome.stats
                     } else {
                         // Download failed — error already logged
                         SourceStats(source.id, label, error = context.getString(R.string.sync_error_download_failed))
@@ -1043,7 +1150,7 @@ class EpgFileManager private constructor(
                             totalProgrammes = stats.programmesIngested,
                             totalDownloadBytes = stats.downloadBytes,
                         )
-                    indexer.swapAndRebuildFts(listOf(sourceId))
+                    swapThenMarkIngested(indexer, sourceDao, listOf(sourceId), listOfNotNull(pendingIngest).associateBy { it.sourceId })
                 }
 
                 if (stats.error == null && !stats.unchanged && (stats.channelsIngested > 0 || stats.programmesIngested > 0)) {
@@ -1133,6 +1240,10 @@ class EpgFileManager private constructor(
                 // clearAll() run concurrently with it.
                 ingestMutex.withLock {
                     EpgIndexer.getInstance(context).clearAll()
+                    // The sources' stats and validators describe rows that no longer exist; left in
+                    // place they let the next refresh skip on a 304 / hash match against an empty
+                    // guide (G-11). Bookkeeping columns only — the settings-sync trigger ignores them.
+                    SettingsDatabase.getInstance(context).epgSourceDao().resetAllIngestionState()
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -1157,6 +1268,9 @@ class EpgFileManager private constructor(
      * sources can't be hashed meaningfully here (gzip's mtime header taints the raw bytes even
      * when the decompressed content is identical) — that check happens in
      * [ingestDownloadedSource] instead, after decompression.
+     *
+     * Both skips need the live index to hold the source's rows ([buildDownloadRequest]); with an
+     * empty index the validators stay home and the source is treated as changed.
      */
     private suspend fun downloadSource(
         source: EpgSourceEntity,
@@ -1179,12 +1293,13 @@ class EpgFileManager private constructor(
         val downloadStartMs = System.currentTimeMillis()
 
         try {
+            val indexHasRows = EpgIndexer.getInstance(context).hasProgrammesForSource(source.id)
+            if (!indexHasRows && (source.etag != null || source.lastModifiedHeader != null || source.lastContentSha256 != null)) {
+                Log.i(TAG, "EPG source $label has validators but no rows in the index — treating as changed")
+            }
             for (attempt in 1..5) {
                 try {
-                    val requestBuilder = Request.Builder().url(source.url)
-                    source.etag?.let { requestBuilder.header("If-None-Match", it) }
-                    source.lastModifiedHeader?.let { requestBuilder.header("If-Modified-Since", it) }
-                    val request = requestBuilder.build()
+                    val request = buildDownloadRequest(source, indexHasRows)
                     withContext(Dispatchers.IO) {
                         okHttpClient.newCall(request).await().use { response ->
                             if (response.code == 304) {
@@ -1314,7 +1429,7 @@ class EpgFileManager private constructor(
                 )
             }
 
-            if (!isGzip && canSkipIngest(source, computedSha256)) {
+            if (!isGzip && canSkipIngest(source, computedSha256, indexHasRows)) {
                 Log.i(TAG, "EPG source $label unchanged (content hash ${computedSha256?.take(12)} matches) — skipping ingest")
                 sourceDao.markUnchanged(source.id, System.currentTimeMillis())
                 tmpFile.delete()
@@ -1328,6 +1443,7 @@ class EpgFileManager private constructor(
                     contentSha256 = computedSha256,
                     etag = responseEtag,
                     lastModifiedHeader = responseLastModified,
+                    indexHasRows = indexHasRows,
                 )
             }
 
@@ -1340,6 +1456,7 @@ class EpgFileManager private constructor(
                 contentSha256 = computedSha256,
                 etag = responseEtag,
                 lastModifiedHeader = responseLastModified,
+                indexHasRows = indexHasRows,
             )
         } catch (e: CancellationException) {
             tmpFile.delete() // a cancelled download leaves no partial file behind
@@ -1350,24 +1467,6 @@ class EpgFileManager private constructor(
             tmpFile.delete()
             return null
         }
-    }
-
-    /**
-     * Whether a matching content hash is trustworthy enough to skip re-ingesting. A hash match
-     * alone isn't sufficient: [org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer]
-     * drops programmes against wall-clock time on ingest (see its `cutoffEpoch`), so re-ingesting
-     * a byte-identical static file days later still clears out programmes that have long ended —
-     * skipping that ingest forever would let them pile up while the source keeps reporting
-     * healthy refreshes. Forcing a real ingest once a day bounds how stale the guide can get.
-     */
-    private fun canSkipIngest(
-        source: EpgSourceEntity,
-        newHash: String?,
-    ): Boolean {
-        if (newHash == null || source.lastContentSha256 == null) return false
-        if (newHash != source.lastContentSha256) return false
-        val age = System.currentTimeMillis() - source.lastIngestedAtMs
-        return age < STALENESS_FORCE_INGEST_MS
     }
 
     /**
@@ -1395,6 +1494,10 @@ class EpgFileManager private constructor(
     /**
      * Ingest a previously downloaded source file into the index.
      * Deletes the temp file when done.
+     *
+     * Off the staging path the source is marked ingested here, as soon as its rows are live. On
+     * the staging path the rows only reach the live guide at the swap, so the [IngestRecord] is
+     * returned instead and the caller writes it after the swap commits ([swapThenMarkIngested]).
      */
     private suspend fun ingestDownloadedSource(
         downloaded: DownloadedSource,
@@ -1405,7 +1508,7 @@ class EpgFileManager private constructor(
         useStaging: Boolean = false,
         isPlaybackActive: () -> Boolean = { false },
         onProgressUpdate: () -> Unit,
-    ): SourceStats {
+    ): IngestOutcome {
         val source = downloaded.source
         val label = downloaded.label
         val isGzip = source.url.endsWith(".gz", ignoreCase = true)
@@ -1417,16 +1520,18 @@ class EpgFileManager private constructor(
             var contentSha256 = downloaded.contentSha256
             if (isGzip) {
                 contentSha256 = withContext(Dispatchers.IO) { hashDecompressedGzip(downloaded.tmpFile) }
-                if (canSkipIngest(source, contentSha256)) {
+                if (canSkipIngest(source, contentSha256, downloaded.indexHasRows)) {
                     Log.i(TAG, "EPG source $label unchanged (decompressed hash ${contentSha256?.take(12)} matches) — skipping ingest")
                     sourceDao.markUnchanged(source.id, System.currentTimeMillis())
-                    return SourceStats(
-                        sourceId = source.id,
-                        label = label,
-                        downloadBytes = downloaded.downloadedBytes,
-                        channelsIngested = source.lastChannels,
-                        programmesIngested = source.lastProgrammes,
-                        unchanged = true,
+                    return IngestOutcome(
+                        SourceStats(
+                            sourceId = source.id,
+                            label = label,
+                            downloadBytes = downloaded.downloadedBytes,
+                            channelsIngested = source.lastChannels,
+                            programmesIngested = source.lastProgrammes,
+                            unchanged = true,
+                        ),
                     )
                 }
             }
@@ -1480,33 +1585,52 @@ class EpgFileManager private constructor(
                 }
 
             Log.i(TAG, "EPG source $label fully ingested, content hash ${contentSha256?.take(12)}")
-            sourceDao.markIngested(
-                id = source.id,
-                timestamp = System.currentTimeMillis(),
-                channels = ingestionStats.channelsIngested,
-                programmes = ingestionStats.programmesIngested,
-                downloadBytes = downloaded.downloadedBytes,
-                ingestMethod = "DOWNLOADED",
-                ingestionDurationMs = System.currentTimeMillis() - ingestStartMs,
-                downloadDurationMs = downloaded.downloadDurationMs,
-                contentSha256 = contentSha256,
-                etag = downloaded.etag,
-                lastModifiedHeader = downloaded.lastModifiedHeader,
-            )
+            val record =
+                IngestRecord(
+                    sourceId = source.id,
+                    timestamp = System.currentTimeMillis(),
+                    channels = ingestionStats.channelsIngested,
+                    programmes = ingestionStats.programmesIngested,
+                    downloadBytes = downloaded.downloadedBytes,
+                    ingestMethod = "DOWNLOADED",
+                    ingestionDurationMs = System.currentTimeMillis() - ingestStartMs,
+                    downloadDurationMs = downloaded.downloadDurationMs,
+                    contentSha256 = contentSha256,
+                    etag = downloaded.etag,
+                    lastModifiedHeader = downloaded.lastModifiedHeader,
+                )
+            if (!useStaging) {
+                sourceDao.markIngested(
+                    id = record.sourceId,
+                    timestamp = record.timestamp,
+                    channels = record.channels,
+                    programmes = record.programmes,
+                    downloadBytes = record.downloadBytes,
+                    ingestMethod = record.ingestMethod,
+                    ingestionDurationMs = record.ingestionDurationMs,
+                    downloadDurationMs = record.downloadDurationMs,
+                    contentSha256 = record.contentSha256,
+                    etag = record.etag,
+                    lastModifiedHeader = record.lastModifiedHeader,
+                )
+            }
 
-            return SourceStats(
-                sourceId = source.id,
-                label = label,
-                downloadBytes = downloaded.downloadedBytes,
-                channelsIngested = ingestionStats.channelsIngested,
-                programmesIngested = ingestionStats.programmesIngested,
+            return IngestOutcome(
+                SourceStats(
+                    sourceId = source.id,
+                    label = label,
+                    downloadBytes = downloaded.downloadedBytes,
+                    channelsIngested = ingestionStats.channelsIngested,
+                    programmesIngested = ingestionStats.programmesIngested,
+                ),
+                pending = if (useStaging) record else null,
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Error ingesting source: $label", e)
             val display = friendlyErrorMessage(e, context, appSettings.isDevMode)
             sourceDao.markError(source.id, display)
-            return SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = display)
+            return IngestOutcome(SourceStats(source.id, label, downloadBytes = downloaded.downloadedBytes, error = display))
         } finally {
             downloaded.tmpFile.delete()
         }

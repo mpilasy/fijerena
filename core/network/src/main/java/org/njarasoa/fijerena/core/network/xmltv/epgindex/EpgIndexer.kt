@@ -717,6 +717,22 @@ class EpgIndexer private constructor(
         }
 
     /**
+     * Whether the live guide (primary tables, never staging) holds any programme of [sourceId].
+     * False on any failure too — the caller treats "unknown" as "empty" and re-ingests.
+     */
+    suspend fun hasProgrammesForSource(sourceId: Long): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                EpgIndexDatabase.getInstance(context).epgIndexDao().getLatestProgrammeEndTimeForSource(sourceId) != null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "hasProgrammesForSource($sourceId) failed, assuming empty", e)
+                false
+            }
+        }
+
+    /**
      * Delete programmes older than the given epoch and rebuild FTS.
      */
     suspend fun countStaleProgrammes(cutoffEpoch: Long): Int =

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 
@@ -40,7 +41,13 @@ class SafeModeViewModel(
                 val results =
                     withContext(Dispatchers.IO) {
                         listOf(
-                            step("EPG index") { EpgIndexer.getInstance(context).clearAll() },
+                            step("EPG index") {
+                                EpgIndexer.getInstance(context).clearAll()
+                                // Stats and validators of the rows just destroyed; kept, they let
+                                // the next refresh skip on a 304 / hash match against an empty
+                                // guide (G-11). Bookkeeping columns only — not a synced change.
+                                SettingsDatabase.getInstance(context).epgSourceDao().resetAllIngestionState()
+                            },
                             step("catalogue") {
                                 val providerRepo = ProviderRepository(context)
                                 // Catalogue rows only (XtreamStatsManager.clearCache): favourites
