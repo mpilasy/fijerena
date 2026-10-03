@@ -972,6 +972,9 @@
     <string name="live_tuning_format">Syntonisation · %1$s</string>
     <string name="live_preview_next_format">Ensuite : %1$s</string>
     <string name="live_preview_hint">OK  Plein écran   ·   OK maintenu  Options</string>
+    <!-- GD4 -->
+    <string name="epg_guide_status_partial_format">%1$d chaînes chargées sur %2$d ont un programme · %3$d en tout · %4$s · mis à jour %5$s</string>
+    <string name="epg_guide_listings_end_format">Le programme s\'arrête à %1$s</string>
     <!-- Translations backfill 2026-10-03 -->
     <string name="settings_section_provider_playback">Source et lecture</string>
     <string name="settings_section_appearance">Apparence</string>

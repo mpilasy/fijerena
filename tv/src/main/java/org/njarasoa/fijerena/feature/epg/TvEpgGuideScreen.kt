@@ -90,6 +90,7 @@ fun TvEpgGuideScreen(
                         onSearchQueryChanged = { viewModel.searchPrograms(it) },
                         onClearSearch = { viewModel.clearSearch() },
                         onBack = onBack,
+                        onRowsVisible = viewModel::onRowsVisible,
                     )
                 }
             }

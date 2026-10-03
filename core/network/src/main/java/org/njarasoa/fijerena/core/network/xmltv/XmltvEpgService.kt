@@ -13,6 +13,7 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSearchResultRow
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgWindowRow
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
@@ -248,6 +249,77 @@ class XmltvEpgService(
                 emptyMap()
             }
         }
+
+    /**
+     * The index's answer for one page of the TV Guide (GD4): [channels]' programmes overlapping
+     * [windowStartSec]..[windowEndSec), keyed by item id, each list sorted by start. One query per
+     * page, no parsed cache (the guide caches pages itself, per day). Null when the index cannot
+     * answer for these channels — not built, nothing matched, or the matched channels have no
+     * programme at all — which is what sends the guide to the source's own EPG. An answer with
+     * empty [IndexWindow.epg] means the index knows these channels but has nothing in the window;
+     * [IndexWindow.latestEndSec] then says where their listings stop.
+     */
+    suspend fun getEpgForChannelsInWindow(
+        channels: List<MediaItem>,
+        windowStartSec: Long,
+        windowEndSec: Long,
+    ): IndexWindow? =
+        withContext(Dispatchers.IO) {
+            if (EpgIndexer.getInstance(context).state.value !is EpgIndexState.Indexed) return@withContext null
+            val maps = buildChannelMatchMaps() ?: return@withContext null
+            val matchedIds = matchItems(channels, maps)
+            if (matchedIds.isEmpty()) return@withContext null
+
+            val dao = EpgIndexDatabase.getInstance(context).epgIndexDao()
+            val uniqueXmltvIds = matchedIds.values.distinct()
+            // One row per channel and start time: a channel indexed from several sources yields the
+            // same programme once per source, and listing ids (channel + start) must stay unique.
+            val byChannel = HashMap<String, LinkedHashMap<Long, EpgWindowRow>>()
+            for (chunk in uniqueXmltvIds.chunked(500)) {
+                for (row in dao.getProgrammesInWindow(chunk, maps.sourceIds, windowStartSec, windowEndSec)) {
+                    byChannel.getOrPut(row.channelId) { LinkedHashMap() }.putIfAbsent(row.startEpoch, row)
+                }
+            }
+
+            val epg = HashMap<String, EpgResponse>()
+            var latestEnd: Long? = null
+            for ((itemId, xmltvId) in matchedIds) {
+                val rows = byChannel[xmltvId]?.values ?: continue
+                epg[itemId] =
+                    EpgResponse(
+                        listings =
+                            rows.map { row ->
+                                EpgProgram(
+                                    id = "${row.channelId}_${row.startEpoch}",
+                                    epgId = row.channelId,
+                                    title = row.title,
+                                    start = row.startEpoch.toString(),
+                                    end = row.endEpoch.toString(),
+                                    description = row.description,
+                                    channelId = row.channelId,
+                                )
+                            },
+                    )
+                val last = rows.maxOf { it.endEpoch }
+                if (latestEnd == null || last > latestEnd) latestEnd = last
+            }
+            if (epg.isEmpty()) {
+                // Nothing in the window: does the index hold these channels at all? Only then is it
+                // the guide's answer ("stops before this day"); otherwise the source's EPG is asked.
+                for (chunk in uniqueXmltvIds.chunked(500)) {
+                    val last = dao.getLatestEndForChannels(chunk, maps.sourceIds) ?: continue
+                    if (latestEnd == null || last > latestEnd) latestEnd = last
+                }
+                if (latestEnd == null) return@withContext null
+            }
+            IndexWindow(epg, latestEnd)
+        }
+
+    /** [getEpgForChannelsInWindow]'s answer. [latestEndSec] is the last listing end among these channels. */
+    data class IndexWindow(
+        val epg: Map<String, EpgResponse>,
+        val latestEndSec: Long?,
+    )
 
     /**
      * Lightweight now-playing query: returns only the currently airing programme per item.

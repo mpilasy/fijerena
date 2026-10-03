@@ -2,6 +2,7 @@ package org.njarasoa.fijerena.core.network
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.core.content.edit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ import kotlinx.serialization.json.Json
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -189,7 +191,34 @@ data class GuideData(
     val epg: Map<String, EpgResponse>,
     val source: GuideSource,
     val updatedAtMs: Long?,
+    /**
+     * Windowed answers only ([MediaRepository.getGuideForItemsInWindow]): the last listing end these
+     * channels have anywhere, in or out of the window — what tells "the data stops before this day"
+     * from "no data". Null when they have none, or when nothing says.
+     */
+    val latestEndSec: Long? = null,
 )
+
+/**
+ * [listings] that overlap [windowStartSec]..[windowEndSec): a programme straddling either edge is
+ * kept, one ending exactly at the start or starting exactly at the end is not — the predicate of
+ * [org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDao.getProgrammesInWindow], applied to
+ * the source's own EPG, which comes back whole.
+ */
+internal fun windowListings(
+    listings: List<EpgProgram>,
+    windowStartSec: Long,
+    windowEndSec: Long,
+): List<EpgProgram> = listings.filter { it.endTime > windowStartSec && it.startTime < windowEndSec }
+
+/**
+ * Whether a source can have a guide: its own EPG ([supportsNativeEpg]; null while the source is not
+ * loaded, which never claims "no guide"), or at least one enabled guide source attached to it.
+ */
+internal fun hasGuide(
+    supportsNativeEpg: Boolean?,
+    enabledGuideSources: Int,
+): Boolean = supportsNativeEpg != false || enabledGuideSources > 0
 
 class MediaRepository(
     private val context: Context,
@@ -293,6 +322,8 @@ class MediaRepository(
     }
 
     companion object {
+        private const val GUIDE_TAG = "GuidePage"
+
         /** How long Continue Watching waits for one show's episode list from the provider. */
         private const val UP_NEXT_FETCH_TIMEOUT_MS = 5_000L
 
@@ -672,6 +703,75 @@ class MediaRepository(
         return native.map { epg ->
             GuideData(epg, GuideSource.NATIVE, if (epg.isEmpty()) null else nativeEpgUpdatedAtMs(streamIds))
         }
+    }
+
+    /**
+     * One page of the TV Guide (GD4): [items]' listings overlapping [windowStartSec]..[windowEndSec)
+     * — one index query for the page ([XmltvEpgService.getEpgForChannelsInWindow]) when the index
+     * knows these channels, else the source's own EPG (fetched whole, as before, and cut to the
+     * window here). Debug builds log the page's time and which path answered.
+     */
+    suspend fun getGuideForItemsInWindow(
+        items: List<MediaItem>,
+        windowStartSec: Long,
+        windowEndSec: Long,
+    ): kotlin.Result<GuideData> {
+        val startNs = System.nanoTime()
+
+        fun logPage(path: String) {
+            if (BuildConfig.DEBUG) {
+                Log.d(GUIDE_TAG, "guide page: ${items.size} channels from $path in ${(System.nanoTime() - startNs) / 1_000_000} ms")
+            }
+        }
+        try {
+            val window = xmltvEpgService.getEpgForChannelsInWindow(items, windowStartSec, windowEndSec)
+            if (window != null) {
+                val indexedAtMs = (EpgIndexer.getInstance(context).state.value as? EpgIndexState.Indexed)?.indexedAtMs
+                logPage("the index")
+                return kotlin.Result.success(GuideData(window.epg, GuideSource.XMLTV, indexedAtMs, window.latestEndSec))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(GUIDE_TAG, "Index query for a guide page failed; asking the source", e)
+        }
+        val streamIds = items.map { it.id }
+        val native =
+            provider?.getEpgBulk(streamIds)
+                ?: return kotlin.Result.success(GuideData(emptyMap(), GuideSource.NATIVE, null)).also { logPage("nowhere (no source EPG)") }
+        return native
+            .map { epg ->
+                val latestEnd = epg.values.maxOfOrNull { response -> response.listings.maxOfOrNull { it.endTime } ?: Long.MIN_VALUE }
+                GuideData(
+                    epg = epg.mapValues { (_, response) -> EpgResponse(windowListings(response.listings, windowStartSec, windowEndSec)) },
+                    source = GuideSource.NATIVE,
+                    updatedAtMs = if (epg.isEmpty()) null else nativeEpgUpdatedAtMs(streamIds),
+                    latestEndSec = latestEnd?.takeIf { it != Long.MIN_VALUE },
+                )
+            }.also { logPage("the source EPG") }
+    }
+
+    /**
+     * Whether this source can have a guide at all — its own EPG, or an enabled guide source attached
+     * to it — decided per source, not from the shared index's state (another source's guide being
+     * indexed says nothing about this one).
+     */
+    suspend fun hasGuideForSource(): Boolean {
+        val supportsNativeEpg = provider?.capabilities?.supportsEpg
+        if (hasGuide(supportsNativeEpg, enabledGuideSources = 0)) return true
+        val enabledGuideSources =
+            if (providerId <= 0L) {
+                0
+            } else {
+                withContext(Dispatchers.IO) {
+                    SettingsDatabase
+                        .getInstance(context)
+                        .epgSourceDao()
+                        .getEnabledSourcesForProvider(providerId)
+                        .size
+                }
+            }
+        return hasGuide(supportsNativeEpg, enabledGuideSources)
     }
 
     /** Newest `xtream_epg_cache` row behind a native answer — the fetch time the guide shows as "updated". */

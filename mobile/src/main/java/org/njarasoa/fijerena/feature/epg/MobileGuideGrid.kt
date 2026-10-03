@@ -28,7 +28,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -44,6 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
@@ -93,6 +97,7 @@ fun MobileGuideGrid(
     onNowScrolled: () -> Unit,
     onProgramClick: (EpgProgram, MediaItem) -> Unit,
     onChannelClick: (MediaItem) -> Unit,
+    onRowsVisible: (first: Int, last: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
@@ -127,6 +132,18 @@ fun MobileGuideGrid(
         val target = (layout.xFor(now) - viewportPx * NOW_REVEAL_FRACTION).coerceIn(0f, maxScroll).roundToInt()
         if (request == NowScroll.ANIMATE) scrollState.animateScrollTo(target) else scrollState.scrollTo(target)
         onNowScrolled()
+    }
+
+    // Paging (GD4): the rows on screen go to the ViewModel, which loads their page and the next one
+    // when they come near it; rows of pages not loaded yet are their channel cell and an empty track.
+    val currentOnRowsVisible by rememberUpdatedState(onRowsVisible)
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val visible = listState.layoutInfo.visibleItemsInfo
+            if (visible.isEmpty()) null else visible.first().index to visible.last().index
+        }.filterNotNull()
+            .distinctUntilChanged()
+            .collect { (first, last) -> currentOnRowsVisible(first, last) }
     }
 
     Column(

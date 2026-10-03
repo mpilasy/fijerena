@@ -57,12 +57,14 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
+import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
+import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -259,22 +261,26 @@ fun MobileEpgGuideScreen(
                                 onProgramSelected = onProgramSelected,
                             )
                         } else {
-                            PullToRefreshBox(
-                                isRefreshing = isRefreshing,
-                                onRefresh = { viewModel.forceRefresh() },
-                            ) {
-                                MobileGuideGrid(
-                                    channelRows = state.channelRows,
-                                    selectedDate = state.selectedDate,
-                                    scrollState = scrollState,
-                                    listState = listState,
-                                    nowScroll = nowScroll,
-                                    onNowScrolled = { nowScroll = null },
-                                    onProgramClick = { program, channel -> selection = GuideSelection(program, channel) },
-                                    onChannelClick = { channel ->
-                                        onChannelSelected(channel.id, channel.name, channel.categoryId)
-                                    },
-                                )
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                ListingsEndNote(state)
+                                PullToRefreshBox(
+                                    isRefreshing = isRefreshing,
+                                    onRefresh = { viewModel.forceRefresh() },
+                                ) {
+                                    MobileGuideGrid(
+                                        channelRows = state.channelRows,
+                                        selectedDate = state.selectedDate,
+                                        scrollState = scrollState,
+                                        listState = listState,
+                                        nowScroll = nowScroll,
+                                        onNowScrolled = { nowScroll = null },
+                                        onProgramClick = { program, channel -> selection = GuideSelection(program, channel) },
+                                        onChannelClick = { channel ->
+                                            onChannelSelected(channel.id, channel.name, channel.categoryId)
+                                        },
+                                        onRowsVisible = viewModel::onRowsVisible,
+                                    )
+                                }
                             }
                         }
                     }
@@ -345,16 +351,59 @@ fun MobileEpgGuideScreen(
     }
 }
 
-/** "N of M channels have listings · source · updated …" (GD1), shown under the title. */
+/**
+ * "N of M channels have listings · source · updated …" (GD1), shown under the title. While pages are
+ * still to load (GD4) it counts only the loaded rows and says so: "N of K loaded channels have
+ * listings · M in all".
+ */
 @Composable
 private fun statusLine(state: EpgViewModel.UiState.Ready): String =
-    stringResource(
-        R.string.epg_guide_status_format,
-        state.listedCount,
-        state.totalCount,
-        sourceLabel(state.source),
-        updatedLabel(state.updatedAtMs),
+    if (state.loadedCount < state.totalCount) {
+        stringResource(
+            R.string.epg_guide_status_partial_format,
+            state.listedCount,
+            state.loadedCount,
+            state.totalCount,
+            sourceLabel(state.source),
+            updatedLabel(state.updatedAtMs),
+        )
+    } else {
+        stringResource(
+            R.string.epg_guide_status_format,
+            state.listedCount,
+            state.totalCount,
+            sourceLabel(state.source),
+            updatedLabel(state.updatedAtMs),
+        )
+    }
+
+/**
+ * "Listings end at …" above the grid when now is on the day shown and past its last listing (GD4),
+ * instead of rows that go silently empty (data a day old ends in the early morning).
+ */
+@Composable
+private fun ListingsEndNote(state: EpgViewModel.UiState.Ready) {
+    val lastEnd = state.lastListingEndSec ?: return
+    val nowEpochSeconds by rememberNowEpochSecondsState()
+    val zone = remember { ZoneId.systemDefault() }
+    val dayStart = remember(state.selectedDate) { state.selectedDate.atStartOfDay(zone).toEpochSecond() }
+    val dayEnd =
+        remember(state.selectedDate) {
+            state.selectedDate
+                .plusDays(1)
+                .atStartOfDay(zone)
+                .toEpochSecond()
+        }
+    if (!guideListingsEnded(lastEnd, nowEpochSeconds, dayStart, dayEnd)) return
+    Text(
+        text = stringResource(R.string.epg_guide_listings_end_format, TimeFormat.formatTime(lastEnd)),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.primary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xxs),
     )
+}
 
 /** Today / Tomorrow / weekday tabs, scrollable, with the "Now" chip pinned at the end (G-M3, G-8). */
 @Composable

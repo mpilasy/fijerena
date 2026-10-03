@@ -1,8 +1,10 @@
 package org.njarasoa.fijerena.core.ui.viewmodels
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -21,7 +23,6 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
-import org.njarasoa.fijerena.core.player.model.EpgResponse
 import org.njarasoa.fijerena.core.player.model.TimeSlot
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
@@ -37,8 +38,11 @@ class EpgViewModel(
         data object Loading : UiState()
 
         /**
-         * The grid. [listedCount] of [totalCount] rows have at least one programme on
-         * [selectedDate] — a channel that answered with nothing is not listed.
+         * The grid: every channel of the list, in [channelRows]; listings are loaded a page of
+         * [PAGE_SIZE] rows at a time (GD4), so the rows of a page not loaded yet have no programmes.
+         * [listedCount] of the [loadedCount] loaded rows have at least one programme on
+         * [selectedDate] — a channel that answered with nothing is not listed; [totalCount] is
+         * every channel. [lastListingEndSec] is the latest end among the loaded day's listings.
          */
         data class Ready(
             val channelRows: List<EpgChannelRow>,
@@ -49,8 +53,10 @@ class EpgViewModel(
             val totalCount: Int,
             val source: GuideSource,
             val updatedAtMs: Long?,
-            /** Dev mode only: channels that answered and load time. */
+            /** Dev mode only: channels that answered, pages loaded, first page's load time. */
             val devStats: String,
+            val loadedCount: Int = totalCount,
+            val lastListingEndSec: Long? = null,
         ) : UiState()
 
         /** Channels found, but not one of them has a programme on [selectedDate]. */
@@ -62,7 +68,7 @@ class EpgViewModel(
             val updatedAtMs: Long?,
         ) : UiState()
 
-        /** The source has no guide source and no native EPG: Settings → Source & guide. */
+        /** This source has no guide source and no native EPG: Settings → Source & guide. */
         data object NoGuide : UiState()
 
         data class Error(
@@ -105,11 +111,24 @@ class EpgViewModel(
     private var currentDate = LocalDate.now()
     private var searchJob: Job? = null
 
+    // The whole channel list (ids, names, logos), resolved once and kept across day changes;
+    // Refresh resolves it again. Listings come per page, cached per (day, page) by the pager.
+    private var channels: List<MediaItem>? = null
+    private val pager = GuidePager(PAGE_SIZE) { date, items -> loadPage(date, items) }
+
+    // The rows the grid last showed, so a day change loads the pages the user is looking at.
+    private var visibleFirst = 0
+    private var visibleLast = 0
+    private var loadJob: Job? = null
+    private val pageJobs = HashMap<Pair<LocalDate, Int>, Job>()
+    private var firstPageMs = 0L
+
     init {
-        viewModelScope.launchGuarded("EpgViewModel.init", onError = ::showError) {
-            repository = AppContainer.getInstance(context).getMediaRepository()
-            loadEpgDataInternal(currentDate)
-        }
+        loadJob =
+            viewModelScope.launchGuarded("EpgViewModel.init", onError = ::showError) {
+                repository = AppContainer.getInstance(context).getMediaRepository()
+                loadEpgDataInternal(currentDate)
+            }
     }
 
     private fun showError(e: Throwable) {
@@ -117,79 +136,156 @@ class EpgViewModel(
     }
 
     fun loadEpgData(date: LocalDate = currentDate) {
-        viewModelScope.launchGuarded("EpgViewModel.loadEpgData", onError = ::showError) {
-            if (!::repository.isInitialized) {
-                repository = AppContainer.getInstance(context).getMediaRepository()
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launchGuarded("EpgViewModel.loadEpgData", onError = ::showError) {
+                if (!::repository.isInitialized) {
+                    repository = AppContainer.getInstance(context).getMediaRepository()
+                }
+                loadEpgDataInternal(date)
             }
-            loadEpgDataInternal(date)
-        }
     }
 
     private suspend fun loadEpgDataInternal(date: LocalDate) {
         _uiState.value = UiState.Loading
         currentDate = date
+        cancelPageLoads()
         val startTime = System.currentTimeMillis()
 
-        val capabilities = repository.getCapabilities()
-        val indexHasData = repository.hasIndexedEpgData()
-        if (capabilities != null && !capabilities.supportsEpg && !indexHasData) {
+        // Per source (GD4): this source's own EPG or its guide sources, not whether some other
+        // source's guide happens to be indexed.
+        if (!repository.hasGuideForSource()) {
             _uiState.value = UiState.NoGuide
             return
         }
 
-        val itemsResult = loadChannels()
-        val items = itemsResult.getOrNull()
-        if (items == null) {
-            val reason = itemsResult.exceptionOrNull()?.message
-            _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_channels_format, reason))
-            return
-        }
+        val items =
+            channels ?: run {
+                val itemsResult = loadChannels()
+                val loaded = itemsResult.getOrNull()
+                if (loaded == null) {
+                    val reason = itemsResult.exceptionOrNull()?.message
+                    _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_channels_format, reason))
+                    return
+                }
+                loaded.also {
+                    channels = it
+                    pager.channels = it
+                }
+            }
         if (items.isEmpty()) {
             _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_channels_in_category))
             return
         }
 
-        val guideResult = repository.getGuideForItems(items)
-        val guide = guideResult.getOrNull()
-        if (guide == null) {
-            val reason = guideResult.exceptionOrNull()?.message
-            _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_data_format, reason))
+        try {
+            for (page in pagesToLoad(visibleFirst, visibleLast, items.size, PAGE_SIZE)) pager.page(date, page)
+            // Nothing listed on the pages in view: look a few pages further before deciding the day
+            // is empty — a long list can start with channels that have no guide.
+            while (!pager.hasListings(date) && pager.loadedPages(date) < PROBE_PAGES) {
+                val next = pager.firstUnloaded(date) ?: break
+                pager.page(date, next)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_data_format, e.message))
             return
         }
+        firstPageMs = System.currentTimeMillis() - startTime
 
-        // Pre-sort listings once so buildChannelRows can use binary search
-        val sortedEpgData =
-            guide.epg.mapValues { (_, response) ->
-                EpgResponse(response.listings.sortedBy { it.startTime })
-            }
-        val channelRows = buildChannelRows(items, sortedEpgData, date)
-        val listedCount = channelRows.count { it.programs.isNotEmpty() }
-        if (listedCount == 0) {
-            val answered = sortedEpgData.values.any { it.listings.isNotEmpty() }
+        val guide = assembleGuide(items, PAGE_SIZE, pager.pages(date))
+        if (guide.listedCount == 0 && guide.loadedCount == items.size) {
             _uiState.value =
                 UiState.NoListings(
-                    reason = noListingsReason(hasAnyListing = answered, indexHasData = indexHasData),
+                    reason = noListingsReason(hasAnyListing = guide.hasAnyListing, indexHasData = repository.hasIndexedEpgData()),
                     selectedDate = date,
-                    source = guide.source.takeIf { answered },
-                    updatedAtMs = guide.updatedAtMs.takeIf { answered },
+                    source = guide.source.takeIf { guide.hasAnyListing },
+                    updatedAtMs = guide.updatedAtMs.takeIf { guide.hasAnyListing },
                 )
             return
         }
+        _uiState.value = readyState(date, guide)
+    }
 
+    /** One page's listings for [date], from the index or the source (whichever answers), sorted. */
+    private suspend fun loadPage(
+        date: LocalDate,
+        items: List<MediaItem>,
+    ): GuidePage {
+        val zone = ZoneId.systemDefault()
+        val dayStart = date.atStartOfDay(zone).toEpochSecond()
+        val dayEnd = date.plusDays(1).atStartOfDay(zone).toEpochSecond()
+        val guide = repository.getGuideForItemsInWindow(items, dayStart, dayEnd).getOrThrow()
+        return GuidePage(
+            listings = guide.epg.mapValues { (_, response) -> response.listings.sortedBy { it.startTime } },
+            source = guide.source,
+            updatedAtMs = guide.updatedAtMs,
+            latestEndSec = guide.latestEndSec,
+        )
+    }
+
+    private fun readyState(
+        date: LocalDate,
+        guide: AssembledGuide,
+    ): UiState.Ready {
         val timeSlots = generateTimeSlots(date)
-        val elapsed = System.currentTimeMillis() - startTime
-        _uiState.value =
-            UiState.Ready(
-                channelRows = channelRows,
-                timeSlots = timeSlots,
-                currentTimeSlot = calculateCurrentTimeSlot(timeSlots),
-                selectedDate = date,
-                listedCount = listedCount,
-                totalCount = channelRows.size,
-                source = guide.source,
-                updatedAtMs = guide.updatedAtMs,
-                devStats = "${guide.epg.size}/${items.size} channels answered · ${elapsed}ms",
-            )
+        return UiState.Ready(
+            channelRows = guide.rows,
+            timeSlots = timeSlots,
+            currentTimeSlot = calculateCurrentTimeSlot(timeSlots),
+            selectedDate = date,
+            listedCount = guide.listedCount,
+            totalCount = guide.rows.size,
+            source = guide.source ?: GuideSource.XMLTV,
+            updatedAtMs = guide.updatedAtMs,
+            devStats =
+                "${guide.answered}/${guide.loadedCount} channels answered · " +
+                    "${pager.loadedPages(date)}/${pager.pageCount} pages · first ${firstPageMs}ms",
+            loadedCount = guide.loadedCount,
+            lastListingEndSec = guide.lastListingEndSec,
+        )
+    }
+
+    /**
+     * The grid shows rows [first]..[last] (or focus is there): load the pages they fall on, and the
+     * next page once they come within [PREFETCH_ROWS] of it. Loaded pages come from the cache;
+     * each page that arrives updates the grid. A failed page stays empty and is asked for again the
+     * next time its rows come into view.
+     */
+    fun onRowsVisible(
+        first: Int,
+        last: Int,
+    ) {
+        visibleFirst = first
+        visibleLast = last
+        val state = _uiState.value as? UiState.Ready ?: return
+        val date = state.selectedDate
+        val items = channels ?: return
+        for (page in pagesToLoad(first, last, items.size, PAGE_SIZE)) {
+            val key = date to page
+            if (pager.isLoaded(date, page) || pageJobs[key]?.isActive == true) continue
+            pageJobs[key] =
+                viewModelScope.launchGuarded("EpgViewModel.loadPage") {
+                    try {
+                        pager.page(date, page)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // Not an error screen: the rows stay placeholders and are asked for again.
+                        Log.w(TAG, "Guide page $page for $date failed: ${e.message}")
+                        return@launchGuarded
+                    }
+                    if (date == currentDate && _uiState.value is UiState.Ready) {
+                        _uiState.value = readyState(date, assembleGuide(items, PAGE_SIZE, pager.pages(date)))
+                    }
+                }
+        }
+    }
+
+    private fun cancelPageLoads() {
+        pageJobs.values.forEach { it.cancel() }
+        pageJobs.clear()
     }
 
     /** Recent and Favourites resolved the way the category screen does; anything else from the source. */
@@ -201,19 +297,27 @@ class EpgViewModel(
     }
 
     fun forceRefresh() {
-        viewModelScope.launch {
-            _isRefreshing.value = true
-            if (!::repository.isInitialized) {
-                repository = AppContainer.getInstance(context).getMediaRepository()
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launch {
+                _isRefreshing.value = true
+                try {
+                    if (!::repository.isInitialized) {
+                        repository = AppContainer.getInstance(context).getMediaRepository()
+                    }
+                    repository.clearEpgCache()
+                    repository.clearXmltvCache()
+                    cancelPageLoads()
+                    channels = null
+                    pager.clear()
+                    // Call the suspending internal loader directly (not the fire-and-forget
+                    // loadEpgData() wrapper), so isRefreshing only flips back once the reload
+                    // actually finishes instead of immediately after merely scheduling it.
+                    loadEpgDataInternal(currentDate)
+                } finally {
+                    _isRefreshing.value = false
+                }
             }
-            repository.clearEpgCache()
-            repository.clearXmltvCache()
-            // Call the suspending internal loader directly (not the fire-and-forget
-            // loadEpgData() wrapper), so isRefreshing only flips back once the reload
-            // actually finishes instead of immediately after merely scheduling it.
-            loadEpgDataInternal(currentDate)
-            _isRefreshing.value = false
-        }
     }
 
     fun selectPreviousDay() = loadEpgData(currentDate.minusDays(1))
@@ -276,35 +380,6 @@ class EpgViewModel(
         _searchResults.value = emptyList()
     }
 
-    private fun buildChannelRows(
-        items: List<MediaItem>,
-        epgData: Map<String, EpgResponse>,
-        date: LocalDate,
-    ): List<EpgChannelRow> {
-        val dayStart = date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
-        val dayEnd = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
-
-        return items.map { item ->
-            val listings = epgData[item.id]?.listings ?: emptyList()
-            // Listings are pre-sorted by startTime — use binary search to find day range
-            // Find first program that could overlap with the day (endTime > dayStart)
-            var lo = 0
-            var hi = listings.size
-            while (lo < hi) {
-                val mid = (lo + hi) / 2
-                if (listings[mid].endTime <= dayStart) lo = mid + 1 else hi = mid
-            }
-            val start = lo
-            // Find first program that starts after dayEnd (no overlap possible)
-            hi = listings.size
-            while (lo < hi) {
-                val mid = (lo + hi) / 2
-                if (listings[mid].startTime <= dayEnd) lo = mid + 1 else hi = mid
-            }
-            EpgChannelRow(item, listings.subList(start, lo))
-        }
-    }
-
     private fun generateTimeSlots(date: LocalDate): List<TimeSlot> {
         val slots = mutableListOf<TimeSlot>()
         val dayStart = date.atStartOfDay(ZoneId.systemDefault())
@@ -331,14 +406,21 @@ class EpgViewModel(
     }
 
     companion object {
-        /** Rows the guide loads per category; paging comes with the rebuilt grid (GD2). */
-        const val MAX_CHANNELS = 50
+        private const val TAG = "EpgViewModel"
+
+        /** Rows whose listings load together: one index query (or one native batch) per page. */
+        const val PAGE_SIZE = 30
+
+        /** The next page is asked for once the rows in view come this close to it. */
+        const val PREFETCH_ROWS = 5
+
+        /** Pages read on open, at most, looking for a listing before the empty grid is shown. */
+        const val PROBE_PAGES = 4
     }
 }
 
-/** The guide's channel set for a list: category markers (`##### 4K #####`) dropped, then capped. */
-internal fun guideChannels(items: List<MediaItem>): List<MediaItem> =
-    items.filterNot { it.isCategoryMarker }.take(EpgViewModel.MAX_CHANNELS)
+/** The guide's channel set for a list: every channel, category markers (`##### 4K #####`) dropped. */
+internal fun guideChannels(items: List<MediaItem>): List<MediaItem> = items.filterNot { it.isCategoryMarker }
 
 /**
  * Why a guide has nothing to show: data that stops before the day ([hasAnyListing]) beats an
@@ -353,3 +435,148 @@ internal fun noListingsReason(
         indexHasData -> EpgViewModel.NoListingsReason.INDEX_EMPTY
         else -> EpgViewModel.NoListingsReason.NONE
     }
+
+/**
+ * The pages holding rows [first]..[last] of [rowCount], plus the next page when [last] is within
+ * [prefetchRows] of it — the guide's paging trigger, for the TV's focus and both platforms' scroll.
+ */
+internal fun pagesToLoad(
+    first: Int,
+    last: Int,
+    rowCount: Int,
+    pageSize: Int,
+    prefetchRows: Int = EpgViewModel.PREFETCH_ROWS,
+): List<Int> {
+    if (rowCount <= 0) return emptyList()
+    val from = first.coerceIn(0, rowCount - 1)
+    val to = (maxOf(first, last) + prefetchRows).coerceIn(from, rowCount - 1)
+    return (from / pageSize..to / pageSize).toList()
+}
+
+/**
+ * Whether "now" ([nowSec]) is on the day shown and past its last listing ([lastListingEndSec]) —
+ * when the grid should say "Listings end at …" instead of showing empty rows without a word.
+ */
+fun guideListingsEnded(
+    lastListingEndSec: Long?,
+    nowSec: Long,
+    dayStartSec: Long,
+    dayEndSec: Long,
+): Boolean = lastListingEndSec != null && nowSec >= dayStartSec && nowSec < dayEndSec && nowSec >= lastListingEndSec
+
+/** One page of the guide for one day: item id → the day's programmes, sorted by start. */
+internal data class GuidePage(
+    val listings: Map<String, List<EpgProgram>>,
+    val source: GuideSource,
+    val updatedAtMs: Long?,
+    /** The last listing end these channels have anywhere (not only on this day). */
+    val latestEndSec: Long?,
+) {
+    val hasListings: Boolean get() = listings.values.any { it.isNotEmpty() }
+}
+
+/**
+ * Pages of [pageSize] rows of [channels], loaded by [load] and cached per (day, page). Confined to
+ * one thread (the ViewModel's main thread): no locking.
+ */
+internal class GuidePager(
+    private val pageSize: Int,
+    private val load: suspend (date: LocalDate, items: List<MediaItem>) -> GuidePage,
+) {
+    private val cache = HashMap<Pair<LocalDate, Int>, GuidePage>()
+
+    /** Setting a new list drops every cached page: page n is a different set of channels. */
+    var channels: List<MediaItem> = emptyList()
+        set(value) {
+            field = value
+            cache.clear()
+        }
+
+    val pageCount: Int get() = (channels.size + pageSize - 1) / pageSize
+
+    fun isLoaded(
+        date: LocalDate,
+        page: Int,
+    ): Boolean = cache.containsKey(date to page)
+
+    fun loadedPages(date: LocalDate): Int = cache.keys.count { it.first == date }
+
+    fun hasListings(date: LocalDate): Boolean = cache.any { (key, page) -> key.first == date && page.hasListings }
+
+    fun firstUnloaded(date: LocalDate): Int? = (0 until pageCount).firstOrNull { !isLoaded(date, it) }
+
+    /** [date]'s loaded pages by page index. */
+    fun pages(date: LocalDate): Map<Int, GuidePage> {
+        val pages = HashMap<Int, GuidePage>()
+        for ((key, page) in cache) if (key.first == date) pages[key.second] = page
+        return pages
+    }
+
+    /** The page from the cache, else loaded (and cached once it arrives). */
+    suspend fun page(
+        date: LocalDate,
+        page: Int,
+    ): GuidePage {
+        cache[date to page]?.let { return it }
+        val from = page * pageSize
+        val items = channels.subList(from.coerceAtMost(channels.size), (from + pageSize).coerceAtMost(channels.size))
+        return load(date, items).also { cache[date to page] = it }
+    }
+
+    fun clear() = cache.clear()
+}
+
+/** The grid's rows and counts for a day, built from whichever pages are loaded. */
+internal data class AssembledGuide(
+    val rows: List<EpgChannelRow>,
+    /** Rows with at least one programme on the day. */
+    val listedCount: Int,
+    /** Rows on loaded pages. */
+    val loadedCount: Int,
+    /** Rows the answering layer returned anything for (possibly nothing on the day). */
+    val answered: Int,
+    /** The layer behind the first page with listings (else the first loaded page); null when none is loaded. */
+    val source: GuideSource?,
+    val updatedAtMs: Long?,
+    /** Some loaded channel has a listing somewhere, even if not on this day. */
+    val hasAnyListing: Boolean,
+    /** The latest end among the day's loaded listings. */
+    val lastListingEndSec: Long?,
+)
+
+/** Every channel as a row; rows of a page not loaded yet are empty (the grid's placeholder rows). */
+internal fun assembleGuide(
+    channels: List<MediaItem>,
+    pageSize: Int,
+    pages: Map<Int, GuidePage>,
+): AssembledGuide {
+    var listed = 0
+    var loaded = 0
+    var answered = 0
+    var lastEnd: Long? = null
+    val rows =
+        channels.mapIndexed { index, channel ->
+            val page = pages[index / pageSize]
+            if (page != null) loaded++
+            val programs = page?.listings?.get(channel.id).orEmpty()
+            if (page != null && page.listings.containsKey(channel.id)) answered++
+            if (programs.isNotEmpty()) {
+                listed++
+                val end = programs.maxOf { it.endTime }
+                lastEnd = maxOf(lastEnd ?: end, end)
+            }
+            EpgChannelRow(channel, programs)
+        }
+    val ordered = pages.toSortedMap().values
+    val lead = ordered.firstOrNull { it.hasListings } ?: ordered.firstOrNull { it.latestEndSec != null } ?: ordered.firstOrNull()
+    return AssembledGuide(
+        rows = rows,
+        listedCount = listed,
+        loadedCount = loaded,
+        answered = answered,
+        source = lead?.source,
+        updatedAtMs = lead?.updatedAtMs,
+        hasAnyListing = ordered.any { it.hasListings || it.latestEndSec != null },
+        lastListingEndSec = lastEnd,
+    )
+}

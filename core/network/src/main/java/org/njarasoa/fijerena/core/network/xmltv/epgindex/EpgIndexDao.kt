@@ -224,6 +224,37 @@ interface EpgIndexDao {
         windowEnd: Long,
     ): List<EpgSearchResultRow>
 
+    /**
+     * The TV Guide's page query (GD4): the programmes of [channelIds] that overlap
+     * [windowStart]..[windowEnd) — a programme straddling either edge is in, one ending exactly at
+     * the start or starting exactly at the end is out. No join, only the columns the grid draws.
+     * Plan: `SEARCH epg_programme USING INDEX idx_programme_dedup (channel_id=? AND source_id=? AND
+     * start_epoch<?)`, so no new index.
+     */
+    @Query(
+        """
+        SELECT channel_id AS channelId, title, description, start_epoch AS startEpoch, end_epoch AS endEpoch
+        FROM epg_programme
+        WHERE channel_id IN (:channelIds)
+          AND source_id IN (:sourceIds)
+          AND end_epoch > :windowStart AND start_epoch < :windowEnd
+        ORDER BY channel_id, start_epoch
+        """,
+    )
+    suspend fun getProgrammesInWindow(
+        channelIds: List<String>,
+        sourceIds: List<Long>,
+        windowStart: Long,
+        windowEnd: Long,
+    ): List<EpgWindowRow>
+
+    /** The last end time [channelIds] have in the index at all; null when they have no programme. */
+    @Query("SELECT MAX(end_epoch) FROM epg_programme WHERE channel_id IN (:channelIds) AND source_id IN (:sourceIds)")
+    suspend fun getLatestEndForChannels(
+        channelIds: List<String>,
+        sourceIds: List<Long>,
+    ): Long?
+
     // --------------- Now Playing for specific channels ---------------
 
     @Query(
@@ -282,3 +313,12 @@ interface EpgIndexDao {
     @Query("SELECT MAX(end_epoch) FROM epg_programme WHERE source_id = :sourceId")
     suspend fun getLatestProgrammeEndTimeForSource(sourceId: Long): Long?
 }
+
+/** One programme of [EpgIndexDao.getProgrammesInWindow]: what a guide cell draws. */
+data class EpgWindowRow(
+    val channelId: String,
+    val title: String,
+    val description: String?,
+    val startEpoch: Long,
+    val endEpoch: Long,
+)

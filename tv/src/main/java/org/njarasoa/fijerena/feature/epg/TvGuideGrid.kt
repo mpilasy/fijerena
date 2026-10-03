@@ -45,8 +45,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,6 +90,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.Icon
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.player.domain.MediaItem
@@ -107,6 +111,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
+import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
@@ -149,6 +154,11 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
  * a channel cell stays; Up leaves the grid only from the first row, into the header's labelled
  * buttons; "Now" scrolls to now and focuses the on-air cell. Back in search mode closes the
  * search and returns to the cell the user was on (G-T5); Back on the grid leaves the guide.
+ *
+ * Paging (GD4): every channel is a row, but listings arrive a page of rows at a time; the rows on
+ * screen are reported to the ViewModel, which loads their page (and the next one when they come
+ * near it). A row whose page has not arrived is a channel cell with an empty track — moves treat it
+ * like a row without listings, and when its page lands focus goes on to the cell at the kept time.
  */
 
 private val EPG_DATE_FORMATTER = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
@@ -213,6 +223,7 @@ fun TvGuideGrid(
     onSearchQueryChanged: (String) -> Unit,
     onClearSearch: () -> Unit,
     onBack: () -> Unit,
+    onRowsVisible: (first: Int, last: Int) -> Unit,
 ) {
     val scale = LocalUiScale.current
     val scope = rememberCoroutineScope()
@@ -283,6 +294,7 @@ fun TvGuideGrid(
             state = state,
             selectedDate = lastDate,
             showDevStats = showDevStats,
+            focus = focus,
             headerPane = headerPane,
             isSearchActive = isSearchActive,
             isRefreshing = isRefreshing,
@@ -337,6 +349,7 @@ fun TvGuideGrid(
                     returnFocus = returnFocus,
                     onProgramSelected = onProgramSelected,
                     onChannelSelected = onChannelSelected,
+                    onRowsVisible = onRowsVisible,
                 )
                 LaunchedEffect(state) {
                     // Back from a preview: NavReturnFocus hands focus to the cell that opened it.
@@ -382,6 +395,7 @@ private fun GuideHeader(
     state: EpgViewModel.UiState,
     selectedDate: LocalDate,
     showDevStats: Boolean,
+    focus: GuideFocus,
     headerPane: org.njarasoa.fijerena.ui.components.input.PaneFocusState,
     isSearchActive: Boolean,
     isRefreshing: Boolean,
@@ -486,13 +500,7 @@ private fun GuideHeader(
         val statusLine =
             when (state) {
                 is EpgViewModel.UiState.Ready -> {
-                    stringResource(
-                        R.string.epg_guide_status_format,
-                        state.listedCount,
-                        state.totalCount,
-                        sourceLabel(state.source),
-                        updatedLabel(state.updatedAtMs),
-                    )
+                    statusLine(state)
                 }
 
                 is EpgViewModel.UiState.Loading -> {
@@ -516,6 +524,86 @@ private fun GuideHeader(
                 style = lineStyle,
                 color = CinemaTextTertiary,
                 maxLines = 1,
+            )
+        }
+        if (state is EpgViewModel.UiState.Ready) {
+            GuideFocusLine(focus = focus, state = state, style = lineStyle)
+        }
+    }
+}
+
+/**
+ * "N of M channels have listings · source · updated …" (GD1). While pages are still to load
+ * (GD4) it counts only the loaded rows and says so: "N of K loaded channels have listings · M in all".
+ */
+@Composable
+private fun statusLine(state: EpgViewModel.UiState.Ready): String =
+    if (state.loadedCount < state.totalCount) {
+        stringResource(
+            R.string.epg_guide_status_partial_format,
+            state.listedCount,
+            state.loadedCount,
+            state.totalCount,
+            sourceLabel(state.source),
+            updatedLabel(state.updatedAtMs),
+        )
+    } else {
+        stringResource(
+            R.string.epg_guide_status_format,
+            state.listedCount,
+            state.totalCount,
+            sourceLabel(state.source),
+            updatedLabel(state.updatedAtMs),
+        )
+    }
+
+/**
+ * The header's last line (GD4): the focused programme's title and time — a short cell drops its
+ * label, so this is where it can always be read — and, when now is past the day's last listing,
+ * "Listings end at …" instead of rows that go silently empty. Its own composable, so focus moves
+ * recompose this line only.
+ */
+@Composable
+private fun GuideFocusLine(
+    focus: GuideFocus,
+    state: EpgViewModel.UiState.Ready,
+    style: TextStyle,
+) {
+    val scale = LocalUiScale.current
+    val nowEpochSeconds by rememberNowEpochSecondsState()
+    val zone = remember { ZoneId.systemDefault() }
+    val dayStart = remember(state.selectedDate) { state.selectedDate.atStartOfDay(zone).toEpochSecond() }
+    val dayEnd =
+        remember(state.selectedDate) {
+            state.selectedDate
+                .plusDays(1)
+                .atStartOfDay(zone)
+                .toEpochSecond()
+        }
+    // The last cell focused, while it belongs to the day shown (after a day change focus is on the header).
+    val program = focus.shownProgram?.takeIf { it.endTime > dayStart && it.startTime < dayEnd }
+    val endedAt = state.lastListingEndSec?.takeIf { guideListingsEnded(it, nowEpochSeconds, dayStart, dayEnd) }
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text =
+                if (program == null) {
+                    ""
+                } else {
+                    program.title + " · " + TimeFormat.formatTimeRange(program.startTime, program.endTime)
+                },
+            style = style,
+            color = CinemaTextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        if (endedAt != null) {
+            Text(
+                text = stringResource(R.string.epg_guide_listings_end_format, TimeFormat.formatTime(endedAt)),
+                style = style,
+                color = CinemaAccentLight,
+                maxLines = 1,
+                modifier = Modifier.padding(start = Spacing.md.scaled(scale)),
             )
         }
     }
@@ -664,6 +752,10 @@ private class GuideFocus {
     var rememberedKey: String? = null
         private set
 
+    /** The programme of the focused cell (null on a channel cell), for the header line; observable. */
+    var shownProgram by mutableStateOf<EpgProgram?>(null)
+        private set
+
     /**
      * The time Up/Down keep: set on the first vertical move from a cell's visible start, kept while
      * the cells landed on contain it, dropped by a horizontal move (G-T4).
@@ -698,6 +790,7 @@ private class GuideFocus {
         focusedRow = rowIndex
         focusedProgram = program
         rememberedKey = key
+        shownProgram = program
     }
 
     /** A move is on its way to [program] in [rowIndex] (null: the channel cell). */
@@ -794,6 +887,12 @@ private interface GuideMovers {
     suspend fun focusRemembered(): Boolean
 
     suspend fun focusNow(animate: Boolean): Boolean
+
+    /**
+     * Focus sits on a channel cell with a time kept (a row whose page had not loaded): now that the
+     * rows changed, land on the cell at that time if the row has one.
+     */
+    suspend fun focusAnchorInLoadedRow()
 }
 
 @Composable
@@ -805,6 +904,7 @@ private fun GuideBody(
     returnFocus: NavReturnFocus,
     onProgramSelected: (EpgProgram, MediaItem) -> Unit,
     onChannelSelected: (String, String, String) -> Unit,
+    onRowsVisible: (first: Int, last: Int) -> Unit,
 ) {
     val scale = LocalUiScale.current
     val density = LocalDensity.current
@@ -1029,11 +1129,39 @@ private fun GuideBody(
                     val program = GuideLayout.programAt(channelRows[row].programs, at)?.takeIf(::inWindow)
                     return if (program != null) focusCell(row, program, revealStart = false) else focusChannel(row)
                 }
+
+                override suspend fun focusAnchorInLoadedRow() {
+                    if (focus.focusedProgram != null) return
+                    val anchor = focus.anchorSec ?: return
+                    val row = focus.focusedRow
+                    val programs = channelRows.getOrNull(row)?.programs ?: return
+                    val target = GuideLayout.programAt(programs, anchor)?.takeIf(::inWindow) ?: return
+                    focusCell(row, target, revealStart = false)
+                }
             }
         }
     DisposableEffect(focus, movers) {
         focus.bindMovers(movers)
         onDispose { focus.bindMovers(null) }
+    }
+
+    // Paging (GD4): the rows on screen — where scrolling and every focus move end up, since a move
+    // composes its row first — go to the ViewModel, which loads their page and the next one when
+    // they come near it. Rows of pages not loaded yet are channel cells over an empty track, so
+    // Up/Down and Channel Up/Down walk them like rows without listings and keep the time.
+    val currentOnRowsVisible by rememberUpdatedState(onRowsVisible)
+    LaunchedEffect(verticalListState) {
+        snapshotFlow {
+            val visible = verticalListState.layoutInfo.visibleItemsInfo
+            if (visible.isEmpty()) null else visible.first().index to visible.last().index
+        }.filterNotNull()
+            .distinctUntilChanged()
+            .collect { (first, last) -> currentOnRowsVisible(first, last) }
+    }
+    // A page arrived while focus waited on a channel cell of its rows: move to the cell at the kept time.
+    var gridHasFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(channelRows) {
+        if (gridHasFocus) movers.focusAnchorInLoadedRow()
     }
 
     // A programme that is gone on return (the day reloaded) falls back to its channel cell.
@@ -1087,6 +1215,7 @@ private fun GuideBody(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .onFocusChanged { gridHasFocus = it.hasFocus }
                     .onPreviewKeyEvent(focus::onKey)
                     .focusProperties {
                         onEnter = {

@@ -22,12 +22,13 @@ class EpgGuideStateTest {
         )
 
     @Test
-    fun guideChannelsDropsMarkerRowsBeforeCapping() {
+    fun guideChannelsDropsMarkerRowsAndKeepsEveryChannel() {
         val items = listOf(channel("##### 4K #####"), channel("TF1")) + (1..60).map { channel("ch$it") }
 
         val channels = guideChannels(items)
 
-        assertEquals(EpgViewModel.MAX_CHANNELS, channels.size)
+        // GD4: no 50-channel cap (G-1); listings are paged instead.
+        assertEquals(61, channels.size)
         assertEquals("TF1", channels.first().name)
         assertEquals(emptyList<String>(), channels.filter { it.name.startsWith("#") }.map { it.name })
     }

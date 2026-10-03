@@ -809,6 +809,9 @@
     <string name="live_tuning_format">Mampifandray · %1$s</string>
     <string name="live_preview_next_format">Manaraka: %1$s</string>
     <string name="live_preview_hint">OK  Efijery feno   ·   Tazony ny OK  Safidy</string>
+    <!-- GD4 -->
+    <string name="epg_guide_status_partial_format">%1$d amin\'ny %2$d fantsona voavaky no manana fandaharana · %3$d raha atambatra · %4$s · nohavaozina %5$s</string>
+    <string name="epg_guide_listings_end_format">Mifarana amin\'ny %1$s ny fandaharana</string>
     <!-- Translations backfill 2026-10-03 -->
     <string name="settings_section_provider_playback">Loharano sy filalaovana</string>
     <string name="settings_section_appearance">Endrika</string>
