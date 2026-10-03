@@ -1,8 +1,10 @@
 package org.njarasoa.fijerena.feature.epg
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,21 +17,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.tv.material3.Border
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.tv.material3.ToggleableSurfaceDefaults
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
+import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -38,6 +46,7 @@ import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
+import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
@@ -230,28 +239,37 @@ fun TvEpgManagementScreen(
                                     onCheckedChange = { viewModel.toggleSelection(source.id) },
                                     modifier =
                                         if (source.id == firstSourceId) Modifier.focusRequester(firstRowFocus) else Modifier,
+                                    // P5: checked keeps the resting container and shows the
+                                    // check glyph in the current colour; only focus lifts it.
                                     colors =
-                                        androidx.tv.material3.ToggleableSurfaceDefaults.colors(
-                                            containerColor =
-                                                org.njarasoa.fijerena.core.ui.theme.CinemaSurface.copy(
-                                                    alpha = org.njarasoa.fijerena.core.ui.theme.CinemaAlpha.glass,
-                                                ),
-                                            contentColor = org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary,
-                                            focusedContainerColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
-                                            focusedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaBackground,
-                                            selectedContainerColor =
-                                                org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-                                                    .copy(alpha = 0.2f),
-                                            selectedContentColor = org.njarasoa.fijerena.core.ui.theme.CinemaAccent,
+                                        ToggleableSurfaceDefaults.colors(
+                                            containerColor = TvFocusTokens.restingContainer,
+                                            contentColor = CinemaTextSecondary,
+                                            focusedContainerColor = TvFocusTokens.focusedContainer,
+                                            focusedContentColor = CinemaTextPrimary,
+                                            selectedContainerColor = TvFocusTokens.restingContainer,
+                                            selectedContentColor = TvFocusTokens.currentText,
+                                            focusedSelectedContainerColor = TvFocusTokens.focusedContainer,
+                                            focusedSelectedContentColor = TvFocusTokens.currentText,
                                         ),
                                     scale =
-                                        androidx.tv.material3.ToggleableSurfaceDefaults.scale(
-                                            focusedScale = 1.15f,
+                                        ToggleableSurfaceDefaults.scale(
+                                            scale = TvFocusTokens.defaultScale,
+                                            focusedScale = TvFocusTokens.focusedScale,
+                                            selectedScale = TvFocusTokens.defaultScale,
+                                            pressedScale = TvFocusTokens.pressedScale,
                                         ),
-                                    shape =
-                                        androidx.tv.material3.ToggleableSurfaceDefaults.shape(
-                                            shape = androidx.compose.foundation.shape.CircleShape,
+                                    border =
+                                        ToggleableSurfaceDefaults.border(
+                                            border = Border.None,
+                                            focusedBorder =
+                                                Border(
+                                                    border = BorderStroke(TvFocusTokens.focusBorderWidth, CinemaAccentLight),
+                                                    shape = CircleShape,
+                                                ),
                                         ),
+                                    glow = ToggleableSurfaceDefaults.glow(focusedGlow = TvFocusTokens.focusedGlow),
+                                    shape = ToggleableSurfaceDefaults.shape(shape = CircleShape),
                                 ) {
                                     Box(
                                         modifier = Modifier.size(TvDimensions.iconLarge.scaled(scale)),
@@ -300,7 +318,7 @@ fun TvEpgManagementScreen(
                                     onClick = { editingSource = source },
                                     text = stringResource(R.string.provider_edit_button),
                                 )
-                                CinemaDangerButton(
+                                ProviderDangerButton(
                                     onClick = { deletingSource = source },
                                     text = stringResource(R.string.provider_delete_button),
                                 )
