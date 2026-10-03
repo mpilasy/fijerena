@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.ui.player
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -89,7 +90,11 @@ class PlayerScreenState(
     val focusRequester = FocusRequester()
     val appSettings = AppSettings(context.applicationContext)
     val isDeveloperMode = appSettings.isDevMode
-    val prefs = context.getSharedPreferences("player_prefs", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+
+    // Lazy: loading the file was a main-thread disk read every time the player opened, and only
+    // markHintsDismissed() uses it — see docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-28.
+    val prefs: SharedPreferences by lazy { appContext.getSharedPreferences("player_prefs", Context.MODE_PRIVATE) }
 
     init {
         // Initialize showControlHints based on preferences

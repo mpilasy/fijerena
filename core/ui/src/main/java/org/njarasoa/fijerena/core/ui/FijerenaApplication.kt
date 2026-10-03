@@ -76,6 +76,7 @@ class FijerenaApplication :
         if (!SafeMode.isActive && !ProvidersDbGuard.isBlocked) startBackgroundWork()
     }
 
+    @OptIn(UnstableApi::class)
     private fun startBackgroundWork() {
         // Initialize EPG management
         EpgFileManager.getInstance(this).initialize()
@@ -125,6 +126,12 @@ class FijerenaApplication :
         // unguarded — see docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-03.
         startupScope.launch {
             ProviderRepository(this@FijerenaApplication).sweepOrphanedCatalogData(onlyIfPending = true)
+        }
+        // Its own coroutine, so it is done before the first film starts: the player service checks
+        // FFmpeg on the main thread, and the first check loads the native library from disk. See
+        // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-28.
+        startupScope.launch {
+            startupStep("StreamingPlaybackService.warmUp") { StreamingPlaybackService.warmUp() }
         }
     }
 

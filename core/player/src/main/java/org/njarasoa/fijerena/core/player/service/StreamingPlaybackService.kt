@@ -412,7 +412,9 @@ class StreamingPlaybackService : MediaSessionService() {
             DefaultRenderersFactory(this)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
 
-        val prefs = getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
+        // The application context, as AppSettings uses: the app has loaded this file by now, and
+        // this service's own context would look up the prefs folder on disk again (R-28).
+        val prefs = applicationContext.getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
         val cellularLiveMultiplier = prefs.getFloat("cellular_live_multiplier", 1.0f)
         val cellularVodMultiplier = prefs.getFloat("cellular_vod_multiplier", 1.0f)
 
@@ -1682,6 +1684,16 @@ class StreamingPlaybackService : MediaSessionService() {
                 .AtomicBoolean(false)
 
         fun getInstance(): StreamingPlaybackService? = instance
+
+        /**
+         * Loads the FFmpeg native library, which [initializePlayer] checks on the main thread from
+         * onCreate. Call it off the main thread at app start: loading it reads disk, and once loaded
+         * the check is a cached answer. See
+         * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-28.
+         */
+        fun warmUp() {
+            Log.i(TAG, "FFmpeg library warmed up: ${FfmpegLibrary.isAvailable()}")
+        }
 
         private val _nowPlaying = MutableStateFlow<NowPlayingSnapshot?>(null)
 
