@@ -29,6 +29,11 @@ class XmltvEpgService(
         // programmes, which crashes the lazy lists keyed on listing id.
         private const val KEY_CACHED_EPG = "xmltv_epg_data_v2"
         private const val KEY_CACHE_TIMESTAMP = "xmltv_cache_timestamp_v2"
+
+        // The index build the entry was parsed from (EpgIndexState.Indexed.indexedAtMs). A rebuilt
+        // index makes the entry stale however recent it is: the user refreshed the guide precisely
+        // to see the new listings, and the TTL alone kept showing the old ones for up to 12 hours.
+        private const val KEY_CACHE_INDEX_GENERATION = "xmltv_cache_index_generation_v2"
         private const val MISS_CACHE_MS = 60_000L
     }
 
@@ -166,12 +171,11 @@ class XmltvEpgService(
      */
     suspend fun getEpgForChannels(channels: List<MediaItem>): Map<String, EpgResponse> =
         withContext(Dispatchers.IO) {
-            val indexer = EpgIndexer.getInstance(context)
-            if (indexer.state.value !is EpgIndexState.Indexed) {
-                return@withContext emptyMap()
-            }
+            val indexState =
+                EpgIndexer.getInstance(context).state.value as? EpgIndexState.Indexed
+                    ?: return@withContext emptyMap()
 
-            val cachedResult = getCachedEpg()
+            val cachedResult = getCachedEpg(indexState.indexedAtMs)
             if (cachedResult != null) {
                 // Only use cache if ALL requested channels are present in it.
                 // The player calls this with a single channel; a stale cache from a
@@ -235,7 +239,7 @@ class XmltvEpgService(
 
                 // Merge fresh results into existing cache so previous channels aren't lost
                 val merged = (cachedResult ?: emptyMap()) + result
-                cacheEpg(merged)
+                cacheEpg(merged, indexState.indexedAtMs)
                 merged
             } catch (e: CancellationException) {
                 throw e
@@ -309,9 +313,12 @@ class XmltvEpgService(
         missCachedUntilMs = 0L
     }
 
-    private fun getCachedEpg(): Map<String, EpgResponse>? {
+    /** The parsed entry, if it came from the index build [indexGeneration] and is within the TTL. */
+    internal fun getCachedEpg(indexGeneration: Long): Map<String, EpgResponse>? {
         val timestamp = cache.getLong(KEY_CACHE_TIMESTAMP, 0L)
-        if (System.currentTimeMillis() - timestamp > PARSED_CACHE_TTL_MS) {
+        if (cache.getLong(KEY_CACHE_INDEX_GENERATION, -1L) != indexGeneration ||
+            System.currentTimeMillis() - timestamp > PARSED_CACHE_TTL_MS
+        ) {
             parsedEpgCache = null
             return null
         }
@@ -332,13 +339,17 @@ class XmltvEpgService(
         }
     }
 
-    private fun cacheEpg(data: Map<String, EpgResponse>) {
+    internal fun cacheEpg(
+        data: Map<String, EpgResponse>,
+        indexGeneration: Long,
+    ) {
         try {
             val now = System.currentTimeMillis()
             val serialized = json.encodeToString(data)
             cache.edit {
                 putString(KEY_CACHED_EPG, serialized)
                     .putLong(KEY_CACHE_TIMESTAMP, now)
+                    .putLong(KEY_CACHE_INDEX_GENERATION, indexGeneration)
             }
             parsedEpgCache = data
             parsedEpgTimestamp = now

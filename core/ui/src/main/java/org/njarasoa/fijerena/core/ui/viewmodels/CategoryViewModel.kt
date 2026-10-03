@@ -59,6 +59,22 @@ class CategoryViewModel(
                 "continue_watching", "last_watched" -> RECENT_CATEGORY_ID
                 else -> categoryId
             }
+
+        /**
+         * The rows of Recent or Favourites for [contentType], or null when [categoryId] is a real
+         * category the source knows. Shared with the TV Guide, which otherwise sends the virtual
+         * id to the source and gets the catalogue's first page back.
+         */
+        suspend fun virtualCategoryItems(
+            repo: MediaRepository,
+            categoryId: String,
+            contentType: String,
+        ): List<MediaItem>? =
+            when (categoryId) {
+                RECENT_CATEGORY_ID -> repo.refreshRecentItems(contentType)
+                FAVORITES_CATEGORY_ID -> repo.getFavoritesForContentTypeSuspend(contentType)
+                else -> null
+            }
     }
 
     sealed class UiState {
@@ -400,14 +416,8 @@ class CategoryViewModel(
         // Handle virtual categories
         val handledVirtual =
             when (categoryId) {
-                RECENT_CATEGORY_ID -> {
-                    emitStreams(repo.refreshRecentItems(contentType))
-                    loadNowPlaying(currentStreams)
-                    true
-                }
-
-                FAVORITES_CATEGORY_ID -> {
-                    emitStreams(repo.getFavoritesForContentTypeSuspend(contentType))
+                RECENT_CATEGORY_ID, FAVORITES_CATEGORY_ID -> {
+                    emitStreams(checkNotNull(virtualCategoryItems(repo, categoryId, contentType)))
                     loadNowPlaying(currentStreams)
                     true
                 }

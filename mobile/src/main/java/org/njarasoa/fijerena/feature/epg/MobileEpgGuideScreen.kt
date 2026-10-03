@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.epg
 
+import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
@@ -88,19 +90,11 @@ fun MobileEpgGuideScreen(
     var isSearchActive by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
-    val epgDevStats =
-        (uiState as? EpgViewModel.UiState.Success)?.let { state ->
-            if (appSettings.isDevMode && state.epgLoadTime != null) {
-                " | ${state.epgMatchInfo} | ${state.epgLoadTime}"
-            } else {
-                ""
-            }
-        } ?: ""
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.epg_guide_title_format, categoryName) + epgDevStats) },
+                title = { Text(stringResource(R.string.epg_guide_title_format, categoryName)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
@@ -159,9 +153,9 @@ fun MobileEpgGuideScreen(
                     }
                 }
 
-                is EpgViewModel.UiState.Success -> {
+                is EpgViewModel.UiState.Ready -> {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // Date navigation row
+                        GuideStatusLines(state = state, showDevStats = appSettings.isDevMode)
                         DateNavigationRow(
                             selectedDate = state.selectedDate.format(EPG_SHORT_DATE_FORMATTER),
                             onPreviousDay = { viewModel.selectPreviousDay() },
@@ -177,17 +171,6 @@ fun MobileEpgGuideScreen(
                                 onSearchQueryChanged = { viewModel.searchPrograms(it) },
                                 onProgramSelected = onProgramSelected,
                             )
-                        } else if (state.channelRows.isEmpty()) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.epg_no_data),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
                         } else {
                             MobileEpgTimeline(
                                 channelRows = state.channelRows,
@@ -199,6 +182,33 @@ fun MobileEpgGuideScreen(
                             )
                         }
                     }
+                }
+
+                is EpgViewModel.UiState.NoListings -> {
+                    // Day navigation stays: the next or previous day may well have listings.
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        DateNavigationRow(
+                            selectedDate = state.selectedDate.format(EPG_SHORT_DATE_FORMATTER),
+                            onPreviousDay = { viewModel.selectPreviousDay() },
+                            onNextDay = { viewModel.selectNextDay() },
+                            onJumpToNow = { viewModel.jumpToNow() },
+                        )
+                        CentredMessage(
+                            title = stringResource(R.string.epg_guide_no_listings_title),
+                            message = noListingsMessage(state),
+                            actionLabel = stringResource(R.string.common_refresh),
+                            onAction = { viewModel.forceRefresh() },
+                        )
+                    }
+                }
+
+                is EpgViewModel.UiState.NoGuide -> {
+                    CentredMessage(
+                        title = stringResource(R.string.epg_guide_no_guide_title),
+                        message = stringResource(R.string.epg_guide_no_guide_message),
+                        actionLabel = stringResource(R.string.common_retry),
+                        onAction = { viewModel.loadEpgData() },
+                    )
                 }
 
                 is EpgViewModel.UiState.Error -> {
@@ -235,6 +245,106 @@ fun MobileEpgGuideScreen(
         }
     }
 }
+
+/** "N of M channels have listings · source · updated …", and the dev stats dimmed beneath it. */
+@Composable
+private fun GuideStatusLines(
+    state: EpgViewModel.UiState.Ready,
+    showDevStats: Boolean,
+) {
+    Column(modifier = Modifier.padding(horizontal = CinemaSpacing.md, vertical = CinemaSpacing.xs)) {
+        Text(
+            text =
+                stringResource(
+                    R.string.epg_guide_status_format,
+                    state.listedCount,
+                    state.totalCount,
+                    sourceLabel(state.source),
+                    updatedLabel(state.updatedAtMs),
+                ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (showDevStats) {
+            Text(
+                text = state.devStats,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CentredMessage(
+    title: String,
+    message: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(CinemaSpacing.xl),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(CinemaSpacing.md))
+            CinemaButton(onClick = onAction) {
+                Text(actionLabel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun noListingsMessage(state: EpgViewModel.UiState.NoListings): String =
+    when (state.reason) {
+        EpgViewModel.NoListingsReason.INDEX_EMPTY -> {
+            stringResource(R.string.epg_guide_no_listings_index_empty)
+        }
+
+        EpgViewModel.NoListingsReason.NONE -> {
+            stringResource(R.string.epg_guide_no_listings_none)
+        }
+
+        EpgViewModel.NoListingsReason.STALE -> {
+            stringResource(
+                R.string.epg_guide_no_listings_stale_format,
+                sourceLabel(state.source ?: GuideSource.XMLTV),
+                updatedLabel(state.updatedAtMs),
+            )
+        }
+    }
+
+@Composable
+private fun sourceLabel(source: GuideSource): String =
+    when (source) {
+        GuideSource.XMLTV -> stringResource(R.string.epg_guide_source_xmltv)
+        GuideSource.NATIVE -> stringResource(R.string.epg_guide_source_native)
+    }
+
+@Composable
+private fun updatedLabel(updatedAtMs: Long?): String =
+    if (updatedAtMs == null) {
+        stringResource(R.string.epg_guide_updated_unknown)
+    } else {
+        DateUtils
+            .getRelativeTimeSpanString(updatedAtMs, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+            .toString()
+    }
 
 @Composable
 private fun DateNavigationRow(

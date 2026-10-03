@@ -21,6 +21,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.xmltv.XmltvEpgService
+import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateDao
@@ -169,6 +170,25 @@ data class RecentCategory(
     val categoryName: String,
     val contentType: String,
     val timestamp: Long = System.currentTimeMillis(),
+)
+
+/** Which layer answered [MediaRepository.getGuideForItems]. */
+enum class GuideSource {
+    /** The XMLTV index built from the guide sources. */
+    XMLTV,
+
+    /** The source's own EPG (Xtream `get_simple_data_table`). */
+    NATIVE,
+}
+
+/**
+ * A guide answer with its provenance. [updatedAtMs] is when the index was built or when the
+ * newest native payload behind it was fetched; null when nothing says.
+ */
+data class GuideData(
+    val epg: Map<String, EpgResponse>,
+    val source: GuideSource,
+    val updatedAtMs: Long?,
 )
 
 class MediaRepository(
@@ -628,23 +648,43 @@ class MediaRepository(
         provider?.clearEpgCache()
     }
 
-    suspend fun getEpgBulkForItems(items: List<MediaItem>): kotlin.Result<Map<String, EpgResponse>> {
-        // Try XMLTV EPG from SQLite index
+    suspend fun getEpgBulkForItems(items: List<MediaItem>): kotlin.Result<Map<String, EpgResponse>> = getGuideForItems(items).map { it.epg }
+
+    /**
+     * [getEpgBulkForItems] with its provenance: the XMLTV index answers when it holds listings for
+     * at least one requested item (not just cached leftovers), the source's native EPG otherwise.
+     */
+    suspend fun getGuideForItems(items: List<MediaItem>): kotlin.Result<GuideData> {
         try {
             val xmltvResult = xmltvEpgService.getEpgForChannels(items)
-            // Check that at least one REQUESTED item has EPG data, not just cached leftovers
             if (items.any { xmltvResult.containsKey(it.id) }) {
-                return kotlin.Result.success(xmltvResult)
+                val indexedAtMs =
+                    (EpgIndexer.getInstance(context).state.value as? EpgIndexState.Indexed)?.indexedAtMs
+                return kotlin.Result.success(GuideData(xmltvResult, GuideSource.XMLTV, indexedAtMs))
             }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
             // Fall through to provider EPG
         }
-        // Fallback to provider's native EPG
         val streamIds = items.map { it.id }
-        return provider?.getEpgBulk(streamIds)
-            ?: kotlin.Result.success(emptyMap())
+        val native = provider?.getEpgBulk(streamIds) ?: return kotlin.Result.success(GuideData(emptyMap(), GuideSource.NATIVE, null))
+        return native.map { epg ->
+            GuideData(epg, GuideSource.NATIVE, if (epg.isEmpty()) null else nativeEpgUpdatedAtMs(streamIds))
+        }
+    }
+
+    /** Newest `xtream_epg_cache` row behind a native answer — the fetch time the guide shows as "updated". */
+    private suspend fun nativeEpgUpdatedAtMs(streamIds: List<String>): Long? {
+        val intIds = streamIds.mapNotNull { it.toIntOrNull() }
+        if (intIds.isEmpty()) return null
+        return withContext(Dispatchers.IO) {
+            XtreamDatabase
+                .getInstance(context)
+                .epgCacheDao()
+                .getFresh(providerId, intIds, 0L)
+                .maxOfOrNull { it.updatedAt }
+        }
     }
 
     fun clearXmltvCache() {

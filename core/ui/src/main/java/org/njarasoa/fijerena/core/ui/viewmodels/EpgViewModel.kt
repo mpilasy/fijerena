@@ -13,10 +13,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.network.MediaRepository
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
+import org.njarasoa.fijerena.core.player.domain.isCategoryMarker
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.EpgResponse
@@ -34,18 +36,49 @@ class EpgViewModel(
     sealed class UiState {
         data object Loading : UiState()
 
-        data class Success(
+        /**
+         * The grid. [listedCount] of [totalCount] rows have at least one programme on
+         * [selectedDate] — a channel that answered with nothing is not listed.
+         */
+        data class Ready(
             val channelRows: List<EpgChannelRow>,
             val timeSlots: List<TimeSlot>,
             val currentTimeSlot: Int,
             val selectedDate: LocalDate,
-            val epgLoadTime: String? = null,
-            val epgMatchInfo: String? = null,
+            val listedCount: Int,
+            val totalCount: Int,
+            val source: GuideSource,
+            val updatedAtMs: Long?,
+            /** Dev mode only: channels that answered and load time. */
+            val devStats: String,
         ) : UiState()
+
+        /** Channels found, but not one of them has a programme on [selectedDate]. */
+        data class NoListings(
+            val reason: NoListingsReason,
+            val selectedDate: LocalDate,
+            /** The layer that answered, when one did; null when neither had anything. */
+            val source: GuideSource?,
+            val updatedAtMs: Long?,
+        ) : UiState()
+
+        /** The source has no guide source and no native EPG: Settings → Source & guide. */
+        data object NoGuide : UiState()
 
         data class Error(
             val message: String,
         ) : UiState()
+    }
+
+    enum class NoListingsReason {
+        /** The index is built but holds nothing for these channels. */
+        INDEX_EMPTY,
+
+        /** Listings exist but none fall on the selected day — the data stops before it. */
+        STALE,
+
+        /** Neither the index nor the source's own EPG has anything for these channels. */
+        NONE,
     }
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
@@ -97,54 +130,74 @@ class EpgViewModel(
         currentDate = date
         val startTime = System.currentTimeMillis()
 
-        // Check if provider supports EPG (allow if external XMLTV URL is configured)
         val capabilities = repository.getCapabilities()
-        val hasExternalEpg = repository.hasIndexedEpgData()
-        if (capabilities != null && !capabilities.supportsEpg && !hasExternalEpg) {
-            _uiState.value = UiState.Error(context.getString(R.string.epg_error_not_supported))
-        } else {
-            // Get items for category
-            val itemsResult = repository.getItems(categoryId, ContentType.LIVE_TV)
-            val items = itemsResult.getOrNull()?.take(50)
-
-            if (items == null) {
-                val reason = itemsResult.exceptionOrNull()?.message
-                _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_channels_format, reason))
-            } else if (items.isEmpty()) {
-                _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_channels_in_category))
-            } else {
-                // Get EPG for all items (uses XMLTV if configured, falls back to provider EPG)
-                val epgResult = repository.getEpgBulkForItems(items)
-                val epgData = epgResult.getOrNull()
-
-                if (epgData == null) {
-                    val reason = epgResult.exceptionOrNull()?.message
-                    _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_data_format, reason))
-                } else if (epgData.isEmpty()) {
-                    _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_data_for_channels))
-                } else {
-                    // Pre-sort listings once so buildChannelRows can use binary search
-                    val sortedEpgData =
-                        epgData.mapValues { (_, response) ->
-                            EpgResponse(response.listings.sortedBy { it.startTime })
-                        }
-                    val channelRows = buildChannelRows(items, sortedEpgData, date)
-                    val timeSlots = generateTimeSlots(date)
-                    val currentSlot = calculateCurrentTimeSlot(timeSlots)
-                    val elapsed = System.currentTimeMillis() - startTime
-
-                    _uiState.value =
-                        UiState.Success(
-                            channelRows = channelRows,
-                            timeSlots = timeSlots,
-                            currentTimeSlot = currentSlot,
-                            selectedDate = date,
-                            epgLoadTime = "${elapsed}ms",
-                            epgMatchInfo = "${epgData.size}/${items.size} channels matched",
-                        )
-                }
-            }
+        val indexHasData = repository.hasIndexedEpgData()
+        if (capabilities != null && !capabilities.supportsEpg && !indexHasData) {
+            _uiState.value = UiState.NoGuide
+            return
         }
+
+        val itemsResult = loadChannels()
+        val items = itemsResult.getOrNull()
+        if (items == null) {
+            val reason = itemsResult.exceptionOrNull()?.message
+            _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_channels_format, reason))
+            return
+        }
+        if (items.isEmpty()) {
+            _uiState.value = UiState.Error(context.getString(R.string.epg_error_no_channels_in_category))
+            return
+        }
+
+        val guideResult = repository.getGuideForItems(items)
+        val guide = guideResult.getOrNull()
+        if (guide == null) {
+            val reason = guideResult.exceptionOrNull()?.message
+            _uiState.value = UiState.Error(context.getString(R.string.epg_error_load_data_format, reason))
+            return
+        }
+
+        // Pre-sort listings once so buildChannelRows can use binary search
+        val sortedEpgData =
+            guide.epg.mapValues { (_, response) ->
+                EpgResponse(response.listings.sortedBy { it.startTime })
+            }
+        val channelRows = buildChannelRows(items, sortedEpgData, date)
+        val listedCount = channelRows.count { it.programs.isNotEmpty() }
+        if (listedCount == 0) {
+            val answered = sortedEpgData.values.any { it.listings.isNotEmpty() }
+            _uiState.value =
+                UiState.NoListings(
+                    reason = noListingsReason(hasAnyListing = answered, indexHasData = indexHasData),
+                    selectedDate = date,
+                    source = guide.source.takeIf { answered },
+                    updatedAtMs = guide.updatedAtMs.takeIf { answered },
+                )
+            return
+        }
+
+        val timeSlots = generateTimeSlots(date)
+        val elapsed = System.currentTimeMillis() - startTime
+        _uiState.value =
+            UiState.Ready(
+                channelRows = channelRows,
+                timeSlots = timeSlots,
+                currentTimeSlot = calculateCurrentTimeSlot(timeSlots),
+                selectedDate = date,
+                listedCount = listedCount,
+                totalCount = channelRows.size,
+                source = guide.source,
+                updatedAtMs = guide.updatedAtMs,
+                devStats = "${guide.epg.size}/${items.size} channels answered · ${elapsed}ms",
+            )
+    }
+
+    /** Recent and Favourites resolved the way the category screen does; anything else from the source. */
+    private suspend fun loadChannels(): kotlin.Result<List<MediaItem>> {
+        val items =
+            CategoryViewModel.virtualCategoryItems(repository, categoryId, ContentType.LIVE_TV)
+                ?: repository.getItems(categoryId, ContentType.LIVE_TV).getOrElse { return kotlin.Result.failure(it) }
+        return kotlin.Result.success(guideChannels(items))
     }
 
     fun forceRefresh() {
@@ -182,7 +235,7 @@ class EpgViewModel(
             viewModelScope.launch(Dispatchers.Default) {
                 delay(200)
                 val state = _uiState.value
-                if (state !is UiState.Success) return@launch
+                if (state !is UiState.Ready) return@launch
                 val now = System.currentTimeMillis() / 1000
 
                 val processors = Runtime.getRuntime().availableProcessors()
@@ -276,4 +329,27 @@ class EpgViewModel(
         // non-today date — so callers don't mistake "no match" for "slot 0 is current".
         return timeSlots.indexOfFirst { now in it.startTime..it.endTime }
     }
+
+    companion object {
+        /** Rows the guide loads per category; paging comes with the rebuilt grid (GD2). */
+        const val MAX_CHANNELS = 50
+    }
 }
+
+/** The guide's channel set for a list: category markers (`##### 4K #####`) dropped, then capped. */
+internal fun guideChannels(items: List<MediaItem>): List<MediaItem> =
+    items.filterNot { it.isCategoryMarker }.take(EpgViewModel.MAX_CHANNELS)
+
+/**
+ * Why a guide has nothing to show: data that stops before the day ([hasAnyListing]) beats an
+ * index that has nothing for these channels, which beats having no guide data at all.
+ */
+internal fun noListingsReason(
+    hasAnyListing: Boolean,
+    indexHasData: Boolean,
+): EpgViewModel.NoListingsReason =
+    when {
+        hasAnyListing -> EpgViewModel.NoListingsReason.STALE
+        indexHasData -> EpgViewModel.NoListingsReason.INDEX_EMPTY
+        else -> EpgViewModel.NoListingsReason.NONE
+    }

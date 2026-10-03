@@ -759,4 +759,15 @@
     <string name="provider_use_button">Ampiasaina</string>
     <!-- Phase 3 -->
     <string name="row_actions_hint">Tazony ny OK na tsindrio Menu hahitana ny asa</string>
+    <!-- GD1 -->
+    <string name="epg_guide_status_format">%1$d amin\'ny %2$d fantsona no manana fandaharana · %3$s · nohavaozina %4$s</string>
+    <string name="epg_guide_source_xmltv">fitarihana XMLTV</string>
+    <string name="epg_guide_source_native">EPG an\'ny loharano</string>
+    <string name="epg_guide_updated_unknown">tsy fantatra</string>
+    <string name="epg_guide_no_listings_title">Tsy misy fandaharana</string>
+    <string name="epg_guide_no_listings_index_empty">Tsy misy na inona na inona ho an\'ireto fantsona ireto ao amin\'ny fitarihana. Havaozy ny fitarihana ao amin\'ny Settings → Loharano sy fitarihana.</string>
+    <string name="epg_guide_no_listings_stale_format">Tsy misy ho an\'ity andro ity: %1$s, nohavaozina %2$s, tsy mahatratra azy.</string>
+    <string name="epg_guide_no_listings_none">Tsy misy fandaharana ho an\'ireto fantsona ireto, na avy amin\'ny fitarihana na avy amin\'ny loharano.</string>
+    <string name="epg_guide_no_guide_title">Tsy misy fitarihana</string>
+    <string name="epg_guide_no_guide_message">Tsy manana fitarihana ity loharano ity. Ampio loharanon\'ny fitarihana ao amin\'ny Settings → Loharano sy fitarihana.</string>
 </resources>

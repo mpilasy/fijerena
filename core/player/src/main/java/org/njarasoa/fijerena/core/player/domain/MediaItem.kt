@@ -76,3 +76,16 @@ data class MediaItem(
             (target as? BrowseTarget.Series)?.seriesId?.raw
                 ?: (target as? BrowseTarget.Episode)?.seriesId?.raw
 }
+
+/**
+ * A heading dressed as a row: IPTV catalogues separate their channel lists with fake channels
+ * named `##### 4K #####`, `#### GÉNÉRAL HD/4K ####` or `## NOW TV SPORT ##` — a run of `#` at
+ * both ends. They carry no stream worth a guide row.
+ */
+val MediaItem.isCategoryMarker: Boolean
+    get() = isCategoryMarkerName(name)
+
+fun isCategoryMarkerName(name: String): Boolean {
+    val trimmed = name.trim()
+    return trimmed.length >= 2 && trimmed.first() == '#' && trimmed.last() == '#'
+}

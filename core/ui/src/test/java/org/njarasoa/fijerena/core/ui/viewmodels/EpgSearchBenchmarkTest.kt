@@ -6,6 +6,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.domain.MediaType
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
@@ -31,11 +32,16 @@ class EpgSearchBenchmarkTest {
                 }
 
             val state =
-                EpgViewModel.UiState.Success(
+                EpgViewModel.UiState.Ready(
                     channelRows = rows,
                     timeSlots = emptyList(),
                     currentTimeSlot = 0,
                     selectedDate = LocalDate.now(),
+                    listedCount = rows.size,
+                    totalCount = rows.size,
+                    source = GuideSource.XMLTV,
+                    updatedAtMs = null,
+                    devStats = "",
                 )
 
             val query = "Program 50 "

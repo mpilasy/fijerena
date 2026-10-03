@@ -960,4 +960,15 @@
     <string name="provider_use_button">Use</string>
     <!-- Phase 3 -->
     <string name="row_actions_hint">Hold OK or press Menu for actions</string>
+    <!-- GD1 -->
+    <string name="epg_guide_status_format">%1$d of %2$d channels have listings · %3$s · updated %4$s</string>
+    <string name="epg_guide_source_xmltv">XMLTV guide</string>
+    <string name="epg_guide_source_native">source EPG</string>
+    <string name="epg_guide_updated_unknown">unknown</string>
+    <string name="epg_guide_no_listings_title">No listings</string>
+    <string name="epg_guide_no_listings_index_empty">The guide index has nothing for these channels. Refresh the guide in Settings → Source &amp; guide.</string>
+    <string name="epg_guide_no_listings_stale_format">Nothing for this day: the %1$s was updated %2$s and stops before it.</string>
+    <string name="epg_guide_no_listings_none">No listings for these channels, from the guide or from the source.</string>
+    <string name="epg_guide_no_guide_title">No guide</string>
+    <string name="epg_guide_no_guide_message">This source has no programme guide. Add a guide source in Settings → Source &amp; guide.</string>
 </resources>

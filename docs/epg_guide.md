@@ -290,9 +290,9 @@ The EPG Grid is a 24-hour channel schedule view accessible from the Category Gri
 **Class** (`core/network/.../xmltv/XmltvEpgService.kt`) bridging XMLTV data into `EpgResponse` format.
 
 **Three-layer data resolution:**
-1. **Parsed results cache** (SharedPreferences, 12h TTL) — instant return
+1. **Parsed results cache** (SharedPreferences, 12h TTL, keyed by the index build it was parsed from — `EpgIndexState.Indexed.indexedAtMs`; a rebuilt index makes it a miss, so a refreshed guide shows without pressing Refresh) — instant return
 2. **SQLite index** — `epg_index.db` queried for the requested channels (needs `EpgIndexState.Indexed`); no XMLTV file is kept or parsed here
-3. **Provider-native EPG** — fallback to Xtream `get_simple_data_table` API (via `MediaRepository.getEpgBulkForItems`)
+3. **Provider-native EPG** — fallback to Xtream `get_simple_data_table` API (via `MediaRepository.getGuideForItems`, which also reports which layer answered — `GuideData(epg, source: GuideSource, updatedAtMs)`: the index build time for XMLTV, the newest `xtream_epg_cache` row for native; `getEpgBulkForItems` is the same call without the provenance)
 
 **Channel matching** (4-tier fallback): exact `epgChannelId` -> case-insensitive `epgChannelId` -> exact display name -> normalized name match.
 
@@ -300,12 +300,17 @@ The EPG Grid is a 24-hour channel schedule view accessible from the Category Gri
 
 **ViewModel** (`core/ui/.../viewmodels/EpgViewModel.kt`) driving the grid UI.
 
-**State:** `Loading` -> `Success(channelRows, timeSlots, currentTimeSlot, selectedDate)` | `Error`
+**State (GD1):**
+- `Loading`
+- `Ready(channelRows, timeSlots, currentTimeSlot, selectedDate, listedCount, totalCount, source, updatedAtMs, devStats)` — `listedCount` counts rows with at least one programme on the day (a channel that answered `[]` is not listed); both screens show "N of M channels have listings · <XMLTV guide|source EPG> · updated <relative>" under the title, and `devStats` ("x/y channels answered · Nms") as a dimmed line beneath it in dev mode only — never in the title.
+- `NoListings(reason, selectedDate, source?, updatedAtMs?)` — every row empty for the day; replaces the blank grid with a centred message. `reason`: `STALE` (listings exist but stop before the day), `INDEX_EMPTY` (index built, nothing for these channels), `NONE` (no index, no native data).
+- `NoGuide` — the source has no native EPG and the index is `NotIndexed`; the message points at Settings → Source & guide.
+- `Error(message)` — channels or guide failed to load.
 
 **Flow:**
-1. Loads items for category (max 50 channels)
-2. Calls `repository.getEpgBulkForItems()` (tries XMLTV first, falls back to provider)
-3. Builds `EpgChannelRow` list filtered by selected date
+1. Loads the channel set: `recent` / `favorites` resolve through `CategoryViewModel.virtualCategoryItems` (the repository's Recent list / favourites snapshot), any other id through `repository.getItems`; category-marker rows (`##### 4K #####`, `MediaItem.isCategoryMarker`) are dropped, then the first 50 kept
+2. Calls `repository.getGuideForItems()` (tries XMLTV first, falls back to provider; says which answered and when its data was built)
+3. Builds `EpgChannelRow` list filtered by selected date; zero listed rows → `NoListings`
 4. Generates 48 x 30-minute `TimeSlot` objects covering the full day
 
 **Features:** Date navigation, force refresh, in-grid search, dev mode load metrics.
@@ -401,7 +406,7 @@ EPG is configured via **Settings -> Manage EPG Data** (`Screen.EpgManagement(pro
 |-------|----------|-----|---------|
 | XMLTV temp file (mobile) | `cacheDir/xmltv_source_<id>_tmp` | Deleted after ingest | Download staging |
 | SQLite index | `databases/epg_index.db` | Until next refresh | FTS4 search index |
-| Parsed EPG results | SharedPreferences per-provider | 12h | XmltvEpgService grid cache |
+| Parsed EPG results | SharedPreferences per-provider | 12h, and only for the index build it was parsed from (`indexedAtMs`) | XmltvEpgService grid cache |
 | Channel matcher maps | In-memory (`EpgChannelMatcher`), process lifetime | Until next sync | `epgChannelId`/normalized-name -> `streamId` lookup maps, used by EPG Browser channel matching |
 
 No persistent XMLTV file. Mobile downloads to a temp file first, then ingests from file, then deletes the temp file.

@@ -922,4 +922,15 @@
     <string name="provider_use_button">Utiliser</string>
     <!-- Phase 3 -->
     <string name="row_actions_hint">Maintenez OK ou appuyez sur Menu pour les actions</string>
+    <!-- GD1 -->
+    <string name="epg_guide_status_format">%1$d chaînes sur %2$d ont un programme · %3$s · mis à jour %4$s</string>
+    <string name="epg_guide_source_xmltv">guide XMLTV</string>
+    <string name="epg_guide_source_native">EPG de la source</string>
+    <string name="epg_guide_updated_unknown">inconnu</string>
+    <string name="epg_guide_no_listings_title">Aucun programme</string>
+    <string name="epg_guide_no_listings_index_empty">L\'index du guide n\'a rien pour ces chaînes. Actualisez le guide dans Paramètres → Source et guide.</string>
+    <string name="epg_guide_no_listings_stale_format">Rien pour ce jour : %1$s, mis à jour %2$s, s\'arrête avant.</string>
+    <string name="epg_guide_no_listings_none">Aucun programme pour ces chaînes, ni dans le guide ni chez la source.</string>
+    <string name="epg_guide_no_guide_title">Pas de guide</string>
+    <string name="epg_guide_no_guide_message">Cette source n\'a pas de guide des programmes. Ajoutez une source de guide dans Paramètres → Source et guide.</string>
 </resources>
