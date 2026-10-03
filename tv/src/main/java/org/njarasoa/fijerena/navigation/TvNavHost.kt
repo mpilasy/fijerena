@@ -269,7 +269,14 @@ fun TvNavHost(
                                     popUpTo(Screen.ContentTypeSelection) { inclusive = false }
                                 }
                                 if (hasChannelToPreview) {
-                                    navController.navigateOnce(
+                                    // Plain navigate, not navigateOnce: the browse entry just
+                                    // pushed above is the current destination and is not RESUMED
+                                    // yet, so navigateOnce's double-tap guard dropped this push
+                                    // every time and Live TV always opened on the bare list
+                                    // (docs/plans/20261003_ux-overhaul-plan.md → Part II, L-1).
+                                    // The guard is still on the first push, which is what a
+                                    // double OK on the card would repeat.
+                                    navController.navigate(
                                         Screen.CategoryList(contentType.name, showPreviewPane = true),
                                     )
                                 }
