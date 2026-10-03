@@ -46,6 +46,24 @@ fun filterMatchedOnly(dateGroups: List<EpgBrowserDateGroup>): List<EpgBrowserDat
         if (filteredPrograms.isEmpty()) null else group.copy(programs = filteredPrograms)
     }
 
+/**
+ * Keeps only airings on one of [streamIds] — a TV Guide's channels (GD5, "In <category> only") —
+ * dropping programmes and date groups left empty. An airing that matched no stream is not on any
+ * of them.
+ */
+fun filterToStreams(
+    dateGroups: List<EpgBrowserDateGroup>,
+    streamIds: Set<String>,
+): List<EpgBrowserDateGroup> =
+    dateGroups.mapNotNull { group ->
+        val programs =
+            group.programs.mapNotNull { program ->
+                val airings = program.airings.filter { it.matchedStream?.streamId?.toString() in streamIds }
+                if (airings.isEmpty()) null else program.copy(airings = airings)
+            }
+        if (programs.isEmpty()) null else group.copy(programs = programs)
+    }
+
 fun formatAiringTime(
     context: Context,
     startEpoch: Long,

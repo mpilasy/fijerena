@@ -3,6 +3,7 @@
 ## Version: UX overhaul, day 5
 **Release Date:** 2026-10-03
 
+- **TV Guide from where you watch, and one guide search:** TV full screen has a Guide button after Channels that opens the guide for the list you are zapping through, on the channel you are watching; Home has a TV Guide button (Recent channels); the guide's Search now opens "Search the guide" (formerly "EPG Search") limited to the guide's channels, with an "In <category> only" switch — the guide's own title filter is gone. On the phone, the category's guide button names the category it opens (long-press). → Part III GD5.
 - **TV: one channel list in Live TV:** the list beside the preview and the list over the video in full screen are now the same panel — tabs for the category, Recent and Favourites, focus on the playing channel. In full screen, Left or Right opens it, OK switches channel, Back closes it. → Part II LT3.
 - **TV Home opens on your content:** focus starts on the first card, Down from the top bar returns to the card you were on, and the Live TV card is dimmed and skipped when the source has no channels. → Part II Phase 4.
 - **TV Edit Source in two columns:** login details on the left with Cancel / Save connection; settings, content filters, library data and a red-outlined Danger zone on the right; leaving with unsaved login changes asks first. → Part I T5.

@@ -142,21 +142,32 @@ sealed interface Screen {
      * EPG (Electronic Program Guide) screen destination.
      * Shows TV guide with time grid for Live TV channels.
      *
-     * @param categoryId The category ID to show EPG for
+     * @param categoryId The category ID to show EPG for (a real category, or the virtual
+     *   `recent` / `favorites` lists)
      * @param categoryName The display name of the category
+     * @param focusChannelId The channel whose row the guide opens on (the one playing when opened
+     *   from the player); null opens on the first channel with a programme on now
      */
     @Serializable
     data class EpgGuide(
         val categoryId: String,
         val categoryName: String,
+        val focusChannelId: String? = null,
     ) : Screen
 
     /**
-     * EPG Browser screen destination.
+     * EPG Browser ("Search the guide") screen destination.
      * Allows searching programme titles in the locally-cached XMLTV file.
+     *
+     * @param categoryId When opened from a TV Guide: the guide's channel set, which the browser
+     *   offers as an "In <category> only" filter (on by default). Null searches every channel.
+     * @param categoryName The display name of [categoryId]
      */
     @Serializable
-    data object EpgBrowser : Screen
+    data class EpgBrowser(
+        val categoryId: String? = null,
+        val categoryName: String? = null,
+    ) : Screen
 
     /**
      * EPG Management screen destination.

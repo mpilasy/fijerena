@@ -113,6 +113,8 @@ fun TvPlayerControlsOverlay(
     // Live TV in full screen: opens the channel panel (LT4). Null (VOD, the standalone route)
     // leaves the Channels button out.
     onShowChannels: (() -> Unit)? = null,
+    // Live TV with a guide: opens the TV Guide on the playing channel (GD5). Null leaves Guide out.
+    onShowGuide: (() -> Unit)? = null,
     onShowAudioTrackSelector: () -> Unit,
     onShowSubtitleSelector: () -> Unit,
     onShowQualitySelector: () -> Unit,
@@ -636,7 +638,7 @@ fun TvPlayerControlsOverlay(
                 }
 
                 // Button row (only when full controls are visible). Every button carries its label
-                // (LT4). Live: Channels, ★, Subtitles, Audio, Quality, ⋮ More (Stats); VOD the same
+                // (LT4). Live: Channels, Guide, ★, Subtitles, Audio, Quality, ⋮ More (Stats); VOD the same
                 // without Channels, with Chapters first and Next episode before More. Left/Right
                 // move along it and stop at its ends; Up/Down zap on live (PlayerKeyHandler).
                 if (showFullControls) {
@@ -668,8 +670,14 @@ fun TvPlayerControlsOverlay(
                             )
                         }
 
-                        // TODO(GD5): the Guide button goes here, after Channels and only when the
-                        // channel has guide data, once a callback to open the guide reaches the player.
+                        // Guide (GD5): after Channels, only when the source has a guide.
+                        if (onShowGuide != null) {
+                            OsdButton(
+                                icon = CinemaIcons.DateRange,
+                                label = stringResource(R.string.player_osd_guide),
+                                onClick = onShowGuide,
+                            )
+                        }
 
                         val chapters = remember(metadata) { viewModel.getChapters() }
                         if (chapters.isNotEmpty()) {

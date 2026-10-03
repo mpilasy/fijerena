@@ -385,7 +385,7 @@ Updates every ~500ms via polling loop.
 | Add Provider | `provider/TvAddProviderScreen.kt` | New provider form |
 | EPG Guide | `epg/TvEpgGuideScreen.kt` + `epg/TvGuideGrid.kt` | TV guide time grid |
 | EPG Management | `epg/TvEpgManagementScreen.kt` | Multi-source EPG configuration |
-| EPG Search | `epgbrowser/TvEpgBrowserScreen.kt` | Programme search |
+| Search the guide | `epgbrowser/TvEpgBrowserScreen.kt` | Programme search |
 | Profile Picker | `profile/ProfilePickerScreen.kt` | "Who's watching?" |
 | Live Sync | `settings/SyncSettingsScreen.kt` | Sync group setup, pairing, devices |
 | Diagnostics | `settings/DiagnosticsScreen.kt` | Crash log and exit history (dev mode) |

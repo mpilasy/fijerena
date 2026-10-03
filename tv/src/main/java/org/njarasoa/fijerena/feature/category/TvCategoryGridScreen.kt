@@ -74,7 +74,8 @@ fun TvCategoryGridScreen(
     onLiveChannelPlaying: (streamId: String) -> Unit = {},
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onSearchClick: () -> Unit = {},
-    onEpgClick: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
+    /** The TV Guide for a list; with a channel when opened from the player (its row gets entry focus). */
+    onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?) -> Unit = { _, _, _ -> },
     onBack: () -> Unit = {},
     /** Leaves for Home — after a remote Stop of the Live TV preview (see LiveTvSplitLayout). */
     onHome: () -> Unit = {},
@@ -166,7 +167,7 @@ private fun CategoryGridContent(
     catViewModel: CategoryViewModel,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onSearchClick: () -> Unit,
-    onEpgClick: (categoryId: String, categoryName: String) -> Unit,
+    onEpgClick: (categoryId: String, categoryName: String, focusChannelId: String?) -> Unit,
     onBack: () -> Unit,
     onHome: () -> Unit,
     contentType: String,
@@ -247,6 +248,8 @@ private fun CategoryGridContent(
                             onHome = onHome,
                             initialStreamId = initialStreamId,
                             onPlayingChannel = onLiveChannelPlaying,
+                            // The player's Guide button (GD5), only when the source has a guide.
+                            onOpenGuide = onEpgClick.takeIf { supportsNativeEpg || epgIndexState is EpgIndexState.Indexed },
                         )
                     } else {
                         AmbientBackdrop(modifier = Modifier.fillMaxSize())
@@ -288,7 +291,7 @@ private fun CategoryGridContent(
                                     catViewModel.refreshStreams(categoryId)
                                 },
                                 onSearchClick = onSearchClick,
-                                onEpgClick = onEpgClick,
+                                onEpgClick = { categoryId, categoryName -> onEpgClick(categoryId, categoryName, null) },
                                 onBack = onBack,
                             )
                         }

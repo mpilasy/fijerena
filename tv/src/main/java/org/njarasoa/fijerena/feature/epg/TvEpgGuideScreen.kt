@@ -25,6 +25,9 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
  * The TV Guide. Loading, the grid and "No listings" share one chrome ([TvGuideGrid]: title, date
  * and status line, labelled header buttons), so day navigation and Refresh stay reachable when a
  * day has nothing (GD2). No guide at all and load errors are full-screen [TvErrorState]s.
+ *
+ * [focusChannelId] (opened from the player, GD5) is the row entry focus lands on; [onSearch] opens
+ * "Search the guide" on this guide's channels — the grid has no search of its own (G-9).
  */
 @Composable
 fun TvEpgGuideScreen(
@@ -32,7 +35,9 @@ fun TvEpgGuideScreen(
     categoryName: String,
     onProgramSelected: (program: EpgProgram, channel: MediaItem) -> Unit,
     onChannelSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onSearch: () -> Unit,
     onBack: () -> Unit,
+    focusChannelId: String? = null,
     viewModel: EpgViewModel =
         viewModel(
             factory =
@@ -44,8 +49,6 @@ fun TvEpgGuideScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val uiScale by remember { mutableStateOf(appSettings.uiScale) }
@@ -85,12 +88,10 @@ fun TvEpgGuideScreen(
                         onJumpToNow = { viewModel.jumpToNow() },
                         onRefresh = { viewModel.forceRefresh() },
                         isRefreshing = isRefreshing,
-                        searchQuery = searchQuery,
-                        searchResults = searchResults,
-                        onSearchQueryChanged = { viewModel.searchPrograms(it) },
-                        onClearSearch = { viewModel.clearSearch() },
+                        onSearch = onSearch,
                         onBack = onBack,
                         onRowsVisible = viewModel::onRowsVisible,
+                        focusChannelId = focusChannelId,
                     )
                 }
             }

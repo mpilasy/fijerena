@@ -102,6 +102,11 @@ fun PlayerScreen(
      * spinner. Null = nothing being tuned.
      */
     tuningChannelName: String? = null,
+    /**
+     * Live TV's Guide button on the OSD (GD5): opens the TV Guide on the playing channel. Null (no
+     * guide for this source, VOD) leaves the button out.
+     */
+    onShowGuide: (() -> Unit)? = null,
     nextEpisode: EpisodeItem? = null,
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
     // Whether the provider lets episodes roll on to [nextEpisode] — Xtream, not Jellyfin.
@@ -503,6 +508,7 @@ fun PlayerScreen(
                             state.showChannelPanel = true
                         }
                     },
+                onShowGuide = onShowGuide,
                 onShowAudioTrackSelector = { state.showAudioTrackSelector = true },
                 onShowSubtitleSelector = { state.showSubtitleSelector = true },
                 onShowQualitySelector = { state.showQualitySelector = true },

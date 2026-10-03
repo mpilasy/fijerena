@@ -58,11 +58,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -546,16 +551,26 @@ fun MobileCategoryListScreen(
                                         supportsNativeEpg ||
                                             epgIndexState is EpgIndexState.Indexed
                                     if (selectedCatId != null && selectedCatName != null && hasEpgData) {
-                                        CinemaIconButton(
-                                            onClick = { stopDockThen { onEpgClick(selectedCatId, selectedCatName) } },
-                                            icon = {
-                                                Icon(
-                                                    CinemaIcons.DateRange,
-                                                    stringResource(R.string.common_tv_guide),
-                                                    tint = CinemaTextPrimary,
-                                                )
-                                            },
-                                        )
+                                        // Names the category it opens (G-M4): the selected chip may
+                                        // sit under the dock, out of sight. Long-press shows it.
+                                        val guideLabel = stringResource(R.string.epg_guide_header_title_format, selectedCatName)
+                                        TooltipBox(
+                                            positionProvider =
+                                                TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+                                            tooltip = { PlainTooltip { Text(guideLabel) } },
+                                            state = rememberTooltipState(),
+                                        ) {
+                                            CinemaIconButton(
+                                                onClick = { stopDockThen { onEpgClick(selectedCatId, selectedCatName) } },
+                                                icon = {
+                                                    Icon(
+                                                        CinemaIcons.DateRange,
+                                                        guideLabel,
+                                                        tint = CinemaTextPrimary,
+                                                    )
+                                                },
+                                            )
+                                        }
                                     }
                                 }
                             }

@@ -45,7 +45,7 @@ Season accordion with episode list. Auto-expands the next unwatched season. Epis
 - **Mark Watched:** TV — long-press an episode card (the existing D-pad long-press convention). Mobile — tap the watched badge itself, shown filled or outline.
 
 ### EPG Guide (TV Guide)
-Live TV only. The header says how many channels have listings, whether they came from the XMLTV guide or the source's own EPG, and when the guide was updated; a guide with nothing for the chosen channels shows "No listings" with the reason. Recent / Favourites guides list those channels; category separators (`#### … ####`) are not channels. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute slots. Auto-scrolls to "now". Date navigation (prev/next day, jump to today). Click channel or programme to start playback. Backed by `XmltvEpgService`'s 12-hour SharedPreferences cache (`PARSED_CACHE_TTL_MS`).
+Live TV only. The header says how many channels have listings, whether they came from the XMLTV guide or the source's own EPG, and when the guide was updated; a guide with nothing for the chosen channels shows "No listings" with the reason. Recent / Favourites guides list those channels; category separators (`#### … ####`) are not channels. Opened from the category header (that category), Home's TV Guide (Recent) or, on TV, the player's Guide button (the list being watched, on the playing channel's row). Search opens "Search the guide" limited to the guide's channels. Full grid: channel list (20%) + time slots (80%), 48 × 30-minute slots. Auto-scrolls to "now". Date navigation (prev/next day, jump to today). Click channel or programme to start playback. Backed by `XmltvEpgService`'s 12-hour SharedPreferences cache (`PARSED_CACHE_TTL_MS`).
 
 ---
 
@@ -73,11 +73,11 @@ No provider-level search; falls back to `SearchViewModel`'s client-side cache sc
 
 ---
 
-## EPG Search (EPG Browser)
+## Search the guide (EPG Browser)
 
 Standalone programme title search across all indexed XMLTV data.
 
-- Access: Home screen → calendar / date range icon (visible when EPG index is ready)
+- Access: Home screen → book icon (visible when EPG index is ready), or a TV Guide's Search — then with an "In <category> only" toggle (on by default) that keeps the results on that guide's channels
 - **Freshness Tracking:** Displays last index update time in the header.
 - **Customizable Refresh:** Configurable refresh interval (4h, 8h, 12h, 24h, 48h) or "Never".
 - **Smart Refresh:** Shows a "Refresh Data" button when indexed programmes are stale according to the selected interval.

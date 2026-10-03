@@ -114,6 +114,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.TvContinueWatchingShelf
@@ -142,6 +143,8 @@ fun ContentTypeSelectionScreen(
     onSettings: () -> Unit,
     onSearch: () -> Unit = {},
     onEpgBrowser: () -> Unit = {},
+    /** Home's TV Guide (GD5): the guide for the Recent channels (Part III, decision 3). */
+    onTvGuide: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onProviderChanged: () -> Unit = {},
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
     onContinueWatchingSelected: (ContinueWatchingItem) -> Unit = {},
@@ -189,6 +192,11 @@ fun ContentTypeSelectionScreen(
             .state
     }.collectAsStateWithLifecycle()
     val hasEpgData = epgIndexState is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
+    // TV Guide (GD5): Live TV with a guide — the index, or the source's own EPG.
+    val hasTvGuide =
+        ContentType.LIVE_TV in supportedContentTypes &&
+            (hasEpgData || mediaProviderRef?.capabilities?.supportsEpg == true)
+    val recentLabel = stringResource(R.string.category_recent_label)
 
     LaunchedEffect(refreshTrigger) {
         // Reset counts so stale values don't linger during provider switch
@@ -467,13 +475,30 @@ fun ContentTypeSelectionScreen(
                                     }
                                 }
                             }
+                            if (hasTvGuide) {
+                                CinemaIconButton(
+                                    onClick = {
+                                        leaveTo(RETURN_TV_GUIDE) {
+                                            onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel)
+                                        }
+                                    },
+                                    modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_TV_GUIDE),
+                                    icon = {
+                                        Icon(
+                                            imageVector = CinemaIcons.DateRange,
+                                            contentDescription = stringResource(R.string.common_tv_guide),
+                                            tint = CinemaTextPrimary,
+                                        )
+                                    },
+                                )
+                            }
                             if (hasEpgData) {
                                 CinemaIconButton(
                                     onClick = { leaveTo(RETURN_EPG_BROWSER, onEpgBrowser) },
                                     modifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_EPG_BROWSER),
                                     icon = {
                                         Icon(
-                                            imageVector = CinemaIcons.DateRange,
+                                            imageVector = CinemaIcons.MenuBook,
                                             contentDescription = stringResource(R.string.epg_browser_title),
                                             tint = CinemaTextPrimary,
                                         )
@@ -708,6 +733,7 @@ private const val RETURN_LIVE_TV = "liveTv"
 private const val RETURN_MOVIES = "movies"
 private const val RETURN_TV_SHOWS = "tvShows"
 private const val RETURN_EPG_BROWSER = "epgBrowser"
+private const val RETURN_TV_GUIDE = "tvGuide"
 private const val RETURN_SEARCH = "search"
 private const val RETURN_PROFILE = "profile"
 private const val RETURN_SETTINGS = "settings"

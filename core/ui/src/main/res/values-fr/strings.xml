@@ -83,8 +83,6 @@
     <string name="epg_indexing_failed">L\'indexation EPG a échoué</string>
     <string name="epg_indexing_progress">Indexation EPG %1$d%%…</string>
     <string name="epg_now_prefix">Actuel : %1$s</string>
-    <string name="epg_now_label">MAINTENANT</string>
-    <string name="epg_no_programs_found_matching">Aucun programme trouvé pour \"%1$s\"</string>
 
     <!-- EPG Guide UI -->
     <string name="epg_guide_title_format">Guide TV - %1$s</string>
@@ -94,9 +92,7 @@
     <string name="epg_prev_day">Jour précédent</string>
     <string name="epg_next_day">Jour suivant</string>
     <string name="epg_jump_to_now">Maintenant</string>
-    <string name="epg_search_placeholder">Rechercher des programmes</string>
-    <string name="epg_search_no_results">Aucun programme trouvé</string>
-    <string name="epg_search_close">Fermer la recherche</string>
+    <string name="epg_no_program_found">Aucun programme trouvé</string>
     <string name="epg_system_status">État du système</string>
     <string name="epg_database_label">Base de données : %1$s</string>
     <string name="epg_database_empty">Vide</string>
@@ -504,8 +500,8 @@
     <string name="epg_current_status_error">Erreur de statut actuel : %1$s</string>
 
     <!-- EPG Browser -->
-    <string name="epg_browser_title">Navigateur EPG</string>
-    <string name="epg_browser_title_with_provider">Navigateur EPG — %1$s</string>
+    <string name="epg_browser_title">Rechercher dans le guide</string>
+    <string name="epg_browser_title_with_provider">Rechercher dans le guide — %1$s</string>
     <string name="epg_browser_refresh_stale_description">Actualiser les sources de guide obsolètes</string>
     <string name="epg_browser_mode_programme">Prog.</string>
     <string name="epg_browser_mode_channel">Chaîne</string>
@@ -993,4 +989,8 @@
     <string name="details_action_more">Plus</string>
     <string name="series_play_next_format">▶ Lire : %1$s</string>
     <string name="series_resume_next_format">▶ Reprendre : %1$s (%2$s)</string>
+    <!-- GD5 -->
+    <string name="player_osd_guide">Guide</string>
+    <string name="epg_browser_in_category_only_format">Dans %1$s uniquement</string>
+    <string name="epg_browser_no_results_in_category_format">Aucun résultat pour \'%1$s\' dans %2$s</string>
 </resources>

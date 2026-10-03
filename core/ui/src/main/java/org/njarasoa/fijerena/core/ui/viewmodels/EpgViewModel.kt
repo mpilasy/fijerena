@@ -5,11 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -90,26 +86,13 @@ class EpgViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Loading)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    data class EpgSearchResult(
-        val program: EpgProgram,
-        val channel: MediaItem,
-        val isCurrent: Boolean,
-    )
-
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
-
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    private val _searchResults = MutableStateFlow<List<EpgSearchResult>>(emptyList())
-    val searchResults: StateFlow<List<EpgSearchResult>> = _searchResults.asStateFlow()
 
     // Lazily initialized in init coroutine to avoid blocking the UI thread
     private lateinit var repository: MediaRepository
 
     private var currentDate = LocalDate.now()
-    private var searchJob: Job? = null
 
     // The whole channel list (ids, names, logos), resolved once and kept across day changes;
     // Refresh resolves it again. Listings come per page, cached per (day, page) by the pager.
@@ -325,60 +308,6 @@ class EpgViewModel(
     fun selectNextDay() = loadEpgData(currentDate.plusDays(1))
 
     fun jumpToNow() = loadEpgData(LocalDate.now())
-
-    fun searchPrograms(query: String) {
-        _searchQuery.value = query
-        if (query.isBlank()) {
-            searchJob?.cancel()
-            _searchResults.value = emptyList()
-            return
-        }
-        // Debounce: cancel previous search, wait 200ms before scanning all programs
-        searchJob?.cancel()
-        searchJob =
-            viewModelScope.launch(Dispatchers.Default) {
-                delay(200)
-                val state = _uiState.value
-                if (state !is UiState.Ready) return@launch
-                val now = System.currentTimeMillis() / 1000
-
-                val processors = Runtime.getRuntime().availableProcessors()
-                val chunkSize = maxOf(1, state.channelRows.size / processors)
-
-                val deferredResults =
-                    state.channelRows.chunked(chunkSize).map { chunk ->
-                        async(Dispatchers.Default) {
-                            val current = mutableListOf<EpgSearchResult>()
-                            val others = mutableListOf<EpgSearchResult>()
-                            for (row in chunk) {
-                                val channel = row.channel
-                                for (program in row.programs) {
-                                    if (program.title.indexOf(query, ignoreCase = true) >= 0) {
-                                        val isCurrent = now in program.startTime..program.endTime
-                                        val result = EpgSearchResult(program, channel, isCurrent)
-                                        if (isCurrent) current.add(result) else others.add(result)
-                                    }
-                                }
-                            }
-                            Pair(current, others)
-                        }
-                    }
-
-                val finalCurrent = mutableListOf<EpgSearchResult>()
-                val finalOthers = mutableListOf<EpgSearchResult>()
-                deferredResults.awaitAll().forEach { (current, others) ->
-                    finalCurrent.addAll(current)
-                    finalOthers.addAll(others)
-                }
-
-                _searchResults.value = finalCurrent + finalOthers
-            }
-    }
-
-    fun clearSearch() {
-        _searchQuery.value = ""
-        _searchResults.value = emptyList()
-    }
 
     private fun generateTimeSlots(date: LocalDate): List<TimeSlot> {
         val slots = mutableListOf<TimeSlot>()

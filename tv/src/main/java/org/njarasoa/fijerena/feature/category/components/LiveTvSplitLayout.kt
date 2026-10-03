@@ -117,6 +117,11 @@ internal fun LiveTvSplitLayout(
     initialStreamId: String? = null,
     /** Called with the channel this screen plays each time that changes, for Back (LT6). */
     onPlayingChannel: (streamId: String) -> Unit = {},
+    /**
+     * Opens the TV Guide for a list on a channel's row — the full-screen OSD's Guide button (GD5).
+     * Null (the source has no guide) leaves the button out.
+     */
+    onOpenGuide: ((categoryId: String, categoryName: String, focusChannelId: String?) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
@@ -154,12 +159,16 @@ internal fun LiveTvSplitLayout(
     //   screen underneath this one on the back stack for this case, since Back here always just
     //   pops rather than clearing back to a bare list in place.
     var hasSeeded by remember { mutableStateOf(false) }
+    // The channel full screen was showing when the OSD's Guide button left this screen (GD5): Back
+    // from the guide rebuilds this screen, and it comes back to that channel, not the entry one.
+    var guideReturnStreamId by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(streams) {
         if (hasSeeded || previewTarget != null) return@LaunchedEffect
         val list = streams ?: return@LaunchedEffect
         hasSeeded = true
         val seed =
-            initialStreamId?.let { id -> list.firstOrNull { it.id == id } }
+            guideReturnStreamId?.let { id -> list.firstOrNull { it.id == id } }
+                ?: initialStreamId?.let { id -> list.firstOrNull { it.id == id } }
                 ?: lastPlayedItemId?.let { id -> list.firstOrNull { it.id == id } }
         if (seed != null) {
             previewTarget = seed
@@ -172,7 +181,8 @@ internal fun LiveTvSplitLayout(
     // on the live profile. (The effect that used to do it could crash the app with an uncaught
     // ServiceDestroyedException — see docs/plans/20261001_rock-solid-stability-resilience-plan.md F-03.)
 
-    var fullScreen by remember { mutableStateOf(false) }
+    // Saveable: Back from the TV Guide opened by the OSD's Guide button returns to full screen.
+    var fullScreen by rememberSaveable { mutableStateOf(false) }
 
     // Back: while full-screen, demote to the split (same behavior as the plan's "Back from
     // full-screen returns to split, preview keeps playing"). Otherwise leave this screen — where
@@ -500,6 +510,17 @@ internal fun LiveTvSplitLayout(
                 nextEpgProgram = success?.nextEpgProgram,
                 currentStreamId = success?.streamId,
                 tuningChannelName = tuningName,
+                // Guide (GD5): the TV Guide of the list being zapped through, on this channel's row.
+                onShowGuide =
+                    onOpenGuide?.let { open ->
+                        val contextId = channelContext.id
+                        val contextName = channelContext.label()
+                        val showGuide: () -> Unit = {
+                            guideReturnStreamId = target.id
+                            open(contextId, contextName, target.id)
+                        }
+                        showGuide
+                    },
                 // The same panel as the split's, over the video (LT3): same tabs, rows and row
                 // actions, and its tabs switch channelContext — so the zap order below follows.
                 channelPanel = { close ->

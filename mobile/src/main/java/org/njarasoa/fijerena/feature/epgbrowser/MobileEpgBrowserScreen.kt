@@ -48,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +67,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.filterMatchedOnly
+import org.njarasoa.fijerena.core.network.xmltv.filterToStreams
 import org.njarasoa.fijerena.core.network.xmltv.formatAiringTime
 import org.njarasoa.fijerena.core.network.xmltv.formatCount
 import org.njarasoa.fijerena.core.network.xmltv.formatFileSize
@@ -96,17 +98,27 @@ import org.njarasoa.fijerena.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
 
+/**
+ * "Search the guide". Opened from a TV Guide ([categoryId] set, GD5), an "In <category> only"
+ * checkbox — on by default — keeps the results on that guide's channels.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileEpgBrowserScreen(
     onBack: () -> Unit,
     onNavigateToPlayer: (streamId: String, streamName: String, categoryId: String) -> Unit = { _, _, _ -> },
+    categoryId: String? = null,
+    categoryName: String? = null,
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
         viewModel(
-            factory = remember { EpgBrowserViewModelFactory(context.applicationContext) },
+            factory = remember { EpgBrowserViewModelFactory(context.applicationContext, categoryId) },
         )
+    val contextStreamIds by viewModel.contextStreamIds.collectAsStateWithLifecycle()
+    val contextName = categoryName?.takeIf { categoryId != null }
+    // Opened from a TV Guide: its channels only, until unticked (GD5).
+    var inContextOnly by rememberSaveable { mutableStateOf(true) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
@@ -270,6 +282,29 @@ fun MobileEpgBrowserScreen(
                     Text(
                         text = stringResource(R.string.epg_browser_matched_label),
                         style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+            }
+
+            // "In <category> only" (GD5): its own row — the filters row has no room left on a phone.
+            if (contextName != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .padding(horizontal = Spacing.md)
+                            .clickable { inContextOnly = !inContextOnly },
+                ) {
+                    Checkbox(
+                        checked = inContextOnly,
+                        onCheckedChange = { inContextOnly = it },
+                        modifier = Modifier.size(MobileDimensions.iconLarge),
+                    )
+                    Text(
+                        text = stringResource(R.string.epg_browser_in_category_only_format, contextName),
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -461,6 +496,8 @@ fun MobileEpgBrowserScreen(
                         matchedOnly = matchedOnly,
                         onMatchedOnlyChange = { matchedOnly = it },
                         onNavigateToPlayer = onNavigateToPlayer,
+                        contextName = contextName.takeIf { inContextOnly },
+                        contextStreamIds = contextStreamIds,
                     )
                 }
 
@@ -491,11 +528,16 @@ private fun MobileResultsContent(
     matchedOnly: Boolean = true,
     onMatchedOnlyChange: (Boolean) -> Unit = {},
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
+    // The TV Guide list the results are limited to (GD5), and its channels once loaded.
+    contextName: String? = null,
+    contextStreamIds: Set<String>? = null,
 ) {
-    // Filter date groups when hiding unmatched channels
+    // Filter date groups when hiding unmatched channels, then to the guide's channels when asked
+    val contextFilter = contextStreamIds?.takeIf { contextName != null }
     val displayDateGroups =
-        remember(results.dateGroups, matchedOnly) {
-            if (matchedOnly) filterMatchedOnly(results.dateGroups) else results.dateGroups
+        remember(results.dateGroups, matchedOnly, contextFilter) {
+            val matched = if (matchedOnly) filterMatchedOnly(results.dateGroups) else results.dateGroups
+            contextFilter?.let { filterToStreams(matched, it) } ?: matched
         }
 
     Column {
@@ -525,7 +567,7 @@ private fun MobileResultsContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = results.noResultsMessage(matchedOnly),
+                    text = results.noResultsMessage(matchedOnly, contextName.takeIf { contextFilter != null }),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

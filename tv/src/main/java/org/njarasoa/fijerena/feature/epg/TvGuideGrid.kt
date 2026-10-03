@@ -152,8 +152,11 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
  * target row's cell under the focused cell's visible start (an anchor that sticks across rows);
  * Channel Up/Down page rows; Left from the first programme lands on the channel cell, Left from
  * a channel cell stays; Up leaves the grid only from the first row, into the header's labelled
- * buttons; "Now" scrolls to now and focuses the on-air cell. Back in search mode closes the
- * search and returns to the cell the user was on (G-T5); Back on the grid leaves the guide.
+ * buttons; "Now" scrolls to now and focuses the on-air cell. Back leaves the guide. Opened from
+ * the player (GD5), entry focus goes to the playing channel's row instead of the first one on air.
+ *
+ * Search (GD5, G-9): the header's Search opens the EPG Browser ("Search the guide") filtered to
+ * this guide's channels; Back from it lands on the Search button. There is no in-grid search.
  *
  * Paging (GD4): every channel is a row, but listings arrive a page of rows at a time; the rows on
  * screen are reported to the ViewModel, which loads their page (and the next one when they come
@@ -176,7 +179,6 @@ private val HEADER_KEYS = listOf(HEADER_PREV, HEADER_NOW, HEADER_NEXT, HEADER_SE
 private const val KEY_CHANNEL_PREFIX = "channel:"
 private const val KEY_PROGRAM_PREFIX = "program:"
 private const val KEY_SEPARATOR = "\n"
-private const val RETURN_SEARCH_PREFIX = "search:"
 
 private fun channelKey(channelId: String) = KEY_CHANNEL_PREFIX + channelId
 
@@ -218,22 +220,18 @@ fun TvGuideGrid(
     onJumpToNow: () -> Unit,
     onRefresh: () -> Unit,
     isRefreshing: Boolean,
-    searchQuery: String,
-    searchResults: List<EpgViewModel.EpgSearchResult>,
-    onSearchQueryChanged: (String) -> Unit,
-    onClearSearch: () -> Unit,
+    onSearch: () -> Unit,
     onBack: () -> Unit,
     onRowsVisible: (first: Int, last: Int) -> Unit,
+    focusChannelId: String? = null,
 ) {
     val scale = LocalUiScale.current
     val scope = rememberCoroutineScope()
-    // Saveable: Back from a search result's preview comes back to the search, not the grid.
-    var isSearchActive by rememberSaveable { mutableStateOf(false) }
-    // Back from a channel's preview lands on the programme or channel cell that opened it (or the
-    // search result), not on the guide's first-open target.
+    // Back from a channel's preview lands on the programme or channel cell that opened it, and
+    // Back from the EPG Browser on the Search button — not on the guide's first-open target.
     val returnFocus = rememberNavReturnFocus()
     val headerPane = rememberPaneFocus()
-    val focus = remember { GuideFocus() }
+    val focus = remember { GuideFocus().apply { entryChannelId = focusChannelId } }
     // Shared by the ruler and every row: the one time axis (G-T1). Saveable, so Back from a
     // preview keeps the hours the user was looking at.
     val scrollState = rememberScrollState()
@@ -242,7 +240,6 @@ fun TvGuideGrid(
     var entryFocusDone by rememberSaveable { mutableStateOf(false) }
     // "Now" on another day reloads today; this makes the reload's Ready scroll and focus like "Now".
     var jumpToNowPending by remember { mutableStateOf(false) }
-    val searchFieldRequester = remember { FocusRequester() }
     val noListingsRefreshRequester = remember { FocusRequester() }
     val today = remember { LocalDate.now() }
 
@@ -256,18 +253,6 @@ fun TvGuideGrid(
     var lastDate by remember { mutableStateOf(selectedDate ?: today) }
     if (selectedDate != null) lastDate = selectedDate
 
-    fun closeSearch(returnToGrid: Boolean) {
-        isSearchActive = false
-        onClearSearch()
-        // No grid to return to (no listings, loading): the header keeps focus.
-        if (returnToGrid) scope.launch { focus.focusRemembered() || headerPane.focusEntry() }
-    }
-
-    LaunchedEffect(isSearchActive) {
-        // Not on the way back from a result's preview: NavReturnFocus hands focus to that result.
-        if (isSearchActive && returnFocus.key == null) searchFieldRequester.requestFocusWithRetry()
-    }
-
     headerPane.bind(selectedKey = null, firstKey = HEADER_PREV, listState = null, indexOf = { HEADER_KEYS.indexOf(it) })
     focus.onExitUp = { scope.launch { headerPane.focusEntry() } }
 
@@ -280,12 +265,10 @@ fun TvGuideGrid(
                     vertical = Spacing.tvSafeMarginVertical,
                 ).onPreviewKeyEvent { event ->
                     // Back is taken here, before any focused button can swallow it (NAVIGATION_GUIDE
-                    // → "TV Back on Detail Screens"): search mode closes, the grid leaves the guide.
-                    // Both edges are consumed; the action runs on the release.
+                    // → "TV Back on Detail Screens"): it leaves the guide. Both edges are consumed;
+                    // the action runs on the release.
                     val isBack = event.key == Key.Back
-                    if (isBack && event.type == KeyEventType.KeyUp) {
-                        if (isSearchActive) closeSearch(returnToGrid = true) else onBack()
-                    }
+                    if (isBack && event.type == KeyEventType.KeyUp) onBack()
                     isBack
                 },
     ) {
@@ -296,7 +279,7 @@ fun TvGuideGrid(
             showDevStats = showDevStats,
             focus = focus,
             headerPane = headerPane,
-            isSearchActive = isSearchActive,
+            returnFocus = returnFocus,
             isRefreshing = isRefreshing,
             onPreviousDay = onPreviousDay,
             onNextDay = onNextDay,
@@ -309,15 +292,15 @@ fun TvGuideGrid(
                 }
             },
             onRefresh = onRefresh,
-            onSearchToggle = {
-                if (isSearchActive) closeSearch(returnToGrid = false) else isSearchActive = true
+            onSearch = {
+                returnFocus.leaveFrom(HEADER_SEARCH, verticalListState)
+                onSearch()
             },
-            // Down from the header lands on what is under it: the search field, the grid's last
-            // cell, or the "No listings" Refresh; while loading it stays.
+            // Down from the header lands on what is under it: the grid's last cell, or the
+            // "No listings" Refresh; while loading it stays.
             onDownIntoGrid = {
                 scope.launch {
                     when {
-                        isSearchActive -> searchFieldRequester.requestFocusWithRetry()
                         state is EpgViewModel.UiState.Ready -> focus.focusRemembered()
                         state is EpgViewModel.UiState.NoListings -> noListingsRefreshRequester.requestFocusWithRetry()
                     }
@@ -329,17 +312,6 @@ fun TvGuideGrid(
         Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
         when {
-            isSearchActive -> {
-                EpgSearchContent(
-                    searchQuery = searchQuery,
-                    searchResults = searchResults,
-                    onSearchQueryChanged = onSearchQueryChanged,
-                    onProgramSelected = onProgramSelected,
-                    returnFocus = returnFocus,
-                    fieldRequester = searchFieldRequester,
-                )
-            }
-
             state is EpgViewModel.UiState.Ready -> {
                 GuideBody(
                     state = state,
@@ -352,7 +324,8 @@ fun TvGuideGrid(
                     onRowsVisible = onRowsVisible,
                 )
                 LaunchedEffect(state) {
-                    // Back from a preview: NavReturnFocus hands focus to the cell that opened it.
+                    // Back from a preview or the browser: NavReturnFocus hands focus to the cell
+                    // or the Search button that opened it.
                     if (returnFocus.key != null) return@LaunchedEffect
                     if (!entryFocusDone) {
                         entryFocusDone = true
@@ -365,6 +338,8 @@ fun TvGuideGrid(
             }
 
             state is EpgViewModel.UiState.NoListings -> {
+                // GuideBody's hand-back is not composed here: Back from the browser lands on Search.
+                NavReturnFocusEffect(returnFocus)
                 NoListingsBody(
                     state = state,
                     refreshRequester = noListingsRefreshRequester,
@@ -397,13 +372,13 @@ private fun GuideHeader(
     showDevStats: Boolean,
     focus: GuideFocus,
     headerPane: org.njarasoa.fijerena.ui.components.input.PaneFocusState,
-    isSearchActive: Boolean,
+    returnFocus: NavReturnFocus,
     isRefreshing: Boolean,
     onPreviousDay: () -> Unit,
     onNextDay: () -> Unit,
     onJumpToNow: () -> Unit,
     onRefresh: () -> Unit,
-    onSearchToggle: () -> Unit,
+    onSearch: () -> Unit,
     onDownIntoGrid: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -467,10 +442,15 @@ private fun GuideHeader(
                     Text(stringResource(R.string.epg_next_day))
                     Icon(imageVector = CinemaIcons.KeyboardArrowRight, contentDescription = null)
                 }
-                CinemaButton(onClick = onSearchToggle, colors = buttonColors, modifier = Modifier.paneItem(headerPane, HEADER_SEARCH)) {
-                    Icon(imageVector = if (isSearchActive) CinemaIcons.Close else CinemaIcons.Search, contentDescription = null)
+                // Opens "Search the guide" (the EPG Browser) on this guide's channels (GD5).
+                CinemaButton(
+                    onClick = onSearch,
+                    colors = buttonColors,
+                    modifier = Modifier.paneItem(headerPane, HEADER_SEARCH).navReturnFocusTarget(returnFocus, HEADER_SEARCH),
+                ) {
+                    Icon(imageVector = CinemaIcons.Search, contentDescription = null)
                     Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
-                    Text(stringResource(if (isSearchActive) R.string.epg_search_close else R.string.common_search))
+                    Text(stringResource(R.string.common_search))
                 }
                 // Never disabled: a disabled button drops the focus it holds. A press while
                 // refreshing does nothing.
@@ -748,7 +728,7 @@ private class GuideFocus {
     var focusedProgram: EpgProgram? = null
         private set
 
-    /** The cell focus was last on; where Down from the header and closing search land. */
+    /** The cell focus was last on; where Down from the header lands. */
     var rememberedKey: String? = null
         private set
 
@@ -761,6 +741,9 @@ private class GuideFocus {
      * the cells landed on contain it, dropped by a horizontal move (G-T4).
      */
     var anchorSec: Long? = null
+
+    /** The channel whose row the first "now" focus lands on (the playing one, GD5); null: the first on air. */
+    var entryChannelId: String? = null
 
     private var movers: GuideMovers? = null
 
@@ -818,7 +801,7 @@ private class GuideFocus {
 
     suspend fun focusNow(animate: Boolean): Boolean = awaitMovers()?.focusNow(animate) ?: false
 
-    /** The grid's movers, waiting a few frames for a grid that is about to compose (search just closed). */
+    /** The grid's movers, waiting a few frames for a grid that is about to compose. */
     private suspend fun awaitMovers(): GuideMovers? {
         var frames = 0
         while (movers == null && frames < FOCUS_WAIT_FRAMES) {
@@ -1115,11 +1098,14 @@ private fun GuideBody(
                     val now = nowEpochSeconds.value
                     val inDay = now >= layout.windowStartSec && now < layout.windowEndSec
                     val at = if (inDay) now else layout.windowStartSec
-                    // The focused row when there is one, else the first channel with a programme on
-                    // at that time, else the first channel with listings (G-8: never a channel
-                    // without listings, never yesterday's programme).
+                    // The focused row when there is one, else the entry channel's (the one playing,
+                    // GD5), else the first channel with a programme on at that time, else the first
+                    // channel with listings (G-8: never a channel without listings, never
+                    // yesterday's programme). An entry row whose page has not loaded lands on its
+                    // channel cell and moves on to the on-air cell when the page arrives.
                     val row =
                         focus.focusedRow.takeIf { it in channelRows.indices }
+                            ?: focus.entryChannelId?.let { rowIndexById[it] }
                             ?: channelRows
                                 .indexOfFirst { r -> r.programs.any { at >= it.startTime && at < it.endTime } }
                                 .takeIf { it >= 0 }
@@ -1578,186 +1564,6 @@ private fun ProgramCell(
                         overflow = TextOverflow.Clip,
                     )
                 }
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------------------------
-// Search mode (the in-grid title filter; GD5 replaces it with the EPG Browser)
-// ---------------------------------------------------------------------------------------------
-
-@Composable
-private fun EpgSearchContent(
-    searchQuery: String,
-    searchResults: List<EpgViewModel.EpgSearchResult>,
-    onSearchQueryChanged: (String) -> Unit,
-    onProgramSelected: (EpgProgram, MediaItem) -> Unit,
-    returnFocus: NavReturnFocus,
-    fieldRequester: FocusRequester,
-) {
-    val scale = LocalUiScale.current
-    val listState = rememberLazyListState()
-    NavReturnFocusEffect(returnFocus, listState = listState)
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChanged,
-            label = { Text(stringResource(R.string.epg_search_placeholder)) },
-            singleLine = true,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = Spacing.sm.scaled(scale))
-                    .focusRequester(fieldRequester)
-                    .tvDpadEscape(),
-        )
-
-        if (searchQuery.isNotBlank() && searchResults.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.epg_no_programs_found_matching, searchQuery),
-                    style =
-                        MaterialTheme.typography.bodyLarge.copy(
-                            fontSize =
-                                MaterialTheme.typography.bodyLarge.fontSize
-                                    .scaled(scale),
-                        ),
-                    color = CinemaTextSecondary,
-                )
-            }
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale)),
-            ) {
-                items(
-                    count = searchResults.size,
-                    key = {
-                        "search_${searchResults[it].channel.id}_${searchResults[it].program.id}_${searchResults[it].program.startTime}"
-                    },
-                    contentType = { "epg_search_result" },
-                ) { index ->
-                    val result = searchResults[index]
-                    val returnKey = RETURN_SEARCH_PREFIX + result.channel.id + KEY_SEPARATOR + result.program.id
-                    SearchResultItem(
-                        result = result,
-                        onClick = {
-                            returnFocus.leaveFrom(returnKey, listState)
-                            onProgramSelected(result.program, result.channel)
-                        },
-                        modifier = Modifier.navReturnFocusTarget(returnFocus, returnKey),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SearchResultItem(
-    result: EpgViewModel.EpgSearchResult,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val scale = LocalUiScale.current
-    val typography = MaterialTheme.typography
-    val scaledStyles =
-        remember(scale, typography) {
-            object {
-                val titleMedium = typography.titleMedium.copy(fontSize = typography.titleMedium.fontSize.scaled(scale))
-                val bodySmall = typography.bodySmall.copy(fontSize = typography.bodySmall.fontSize.scaled(scale))
-                val labelSmall = typography.labelSmall.copy(fontSize = typography.labelSmall.fontSize.scaled(scale))
-                val labelMedium = typography.labelMedium.copy(fontSize = typography.labelMedium.fontSize.scaled(scale))
-            }
-        }
-
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.colors(
-                containerColor = org.njarasoa.fijerena.ui.theme.CinemaSurface,
-                contentColor = CinemaTextPrimary,
-                focusedContainerColor =
-                    org.njarasoa.fijerena.ui.theme.CinemaAccent
-                        .copy(alpha = CinemaAlpha.tint),
-                focusedContentColor = CinemaTextPrimary,
-            ),
-        scale =
-            CardDefaults.scale(
-                scale = TvFocusTokens.defaultScale,
-                focusedScale = TvFocusTokens.focusedScaleContent,
-                pressedScale = TvFocusTokens.pressedScaleSubtle,
-            ),
-        glow =
-            CardDefaults.glow(
-                focusedGlow =
-                    Glow(
-                        elevationColor =
-                            org.njarasoa.fijerena.ui.theme.CinemaAccent
-                                .copy(alpha = CinemaAlpha.cardElevationShadow),
-                        elevation = TvFocusTokens.focusShadowElevation,
-                    ),
-            ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(CinemaCornerRadius.medium)),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(Spacing.sm.scaled(scale)),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = result.program.title,
-                    style = scaledStyles.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = CinemaTextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = result.channel.name,
-                    style = scaledStyles.bodySmall,
-                    color = CinemaTextSecondary,
-                    maxLines = 1,
-                )
-                Text(
-                    text =
-                        TimeFormat.formatTimeRange(
-                            result.program.startTime,
-                            result.program.endTime,
-                        ),
-                    style = scaledStyles.labelSmall,
-                    color = CinemaTextSecondary,
-                )
-                result.program.description?.let { desc ->
-                    if (desc.isNotBlank()) {
-                        Text(
-                            text = desc,
-                            style = scaledStyles.bodySmall,
-                            color = CinemaTextSecondary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-            if (result.isCurrent) {
-                Text(
-                    text = stringResource(R.string.epg_now_label),
-                    style = scaledStyles.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = org.njarasoa.fijerena.ui.theme.CinemaOrangeLight,
-                )
             }
         }
     }

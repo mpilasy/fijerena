@@ -277,7 +277,11 @@ fun MobileNavHost(
                         navController.navigateOnce(Screen.Search("ALL"))
                     },
                     onEpgBrowser = {
-                        navController.navigateOnce(Screen.EpgBrowser)
+                        navController.navigateOnce(Screen.EpgBrowser())
+                    },
+                    // Home's TV Guide opens on Recent (UX overhaul plan Part III, decision 3).
+                    onTvGuide = { categoryId, categoryName ->
+                        navController.navigateOnce(Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName))
                     },
                     onContinueWatchingSelected = { item ->
                         // Same dispatch as Screen.CategoryList's onStreamSelected below — a shelf
@@ -328,8 +332,11 @@ fun MobileNavHost(
             }
 
             // EPG Browser Screen
-            composable<Screen.EpgBrowser> {
+            composable<Screen.EpgBrowser> { backStackEntry ->
+                val browserScreen = backStackEntry.toRoute<Screen.EpgBrowser>()
                 MobileEpgBrowserScreen(
+                    categoryId = browserScreen.categoryId,
+                    categoryName = browserScreen.categoryName,
                     onBack = { navController.navigateUp() },
                     onNavigateToPlayer = { streamId, _, categoryId ->
                         // Land on the docked mini-player, not full-screen — same parity as every
@@ -787,6 +794,7 @@ fun MobileNavHost(
                 MobileEpgGuideScreen(
                     categoryId = epgScreen.categoryId,
                     categoryName = epgScreen.categoryName,
+                    focusChannelId = epgScreen.focusChannelId,
                     onProgramSelected = { _, channel ->
                         // Land on the docked mini-player, not full-screen.
                         navController.navigateOnce(
@@ -804,6 +812,12 @@ fun MobileNavHost(
                                 initialCategoryId = categoryId,
                                 initialStreamId = streamId,
                             ),
+                        )
+                    },
+                    // One search (G-9): "Search the guide", filtered to this guide's channels.
+                    onSearch = {
+                        navController.navigateOnce(
+                            Screen.EpgBrowser(categoryId = epgScreen.categoryId, categoryName = epgScreen.categoryName),
                         )
                     },
                     onBack = {

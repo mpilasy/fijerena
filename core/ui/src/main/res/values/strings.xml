@@ -87,8 +87,6 @@
     <string name="epg_indexing_failed">EPG indexing failed</string>
     <string name="epg_indexing_progress">EPG indexing %1$d%%…</string>
     <string name="epg_now_prefix">Now: %1$s</string>
-    <string name="epg_now_label">NOW</string>
-    <string name="epg_no_programs_found_matching">No programs found matching \"%1$s\"</string>
 
     <!-- EPG Guide UI -->
     <string name="epg_guide_title_format">TV Guide - %1$s</string>
@@ -98,9 +96,7 @@
     <string name="epg_prev_day">Previous Day</string>
     <string name="epg_next_day">Next Day</string>
     <string name="epg_jump_to_now">Now</string>
-    <string name="epg_search_placeholder">Search programs</string>
-    <string name="epg_search_no_results">No programs found</string>
-    <string name="epg_search_close">Close Search</string>
+    <string name="epg_no_program_found">No program found</string>
     <string name="epg_system_status">System Status</string>
     <string name="epg_database_label">Database: %1$s</string>
     <string name="epg_database_empty">Empty</string>
@@ -511,8 +507,8 @@
     <string name="epg_current_status_error">Current Status Error: %1$s</string>
 
     <!-- EPG Browser -->
-    <string name="epg_browser_title">EPG Search</string>
-    <string name="epg_browser_title_with_provider">EPG Search — %1$s</string>
+    <string name="epg_browser_title">Search the guide</string>
+    <string name="epg_browser_title_with_provider">Search the guide — %1$s</string>
     <string name="epg_browser_refresh_stale_description">Refresh stale guide sources</string>
     <string name="epg_browser_mode_programme">Prog.</string>
     <string name="epg_browser_mode_channel">Chan.</string>
@@ -990,4 +986,8 @@
     <!-- GD4 -->
     <string name="epg_guide_status_partial_format">%1$d of %2$d loaded channels have listings · %3$d in all · %4$s · updated %5$s</string>
     <string name="epg_guide_listings_end_format">Listings end at %1$s</string>
+    <!-- GD5 -->
+    <string name="player_osd_guide">Guide</string>
+    <string name="epg_browser_in_category_only_format">In %1$s only</string>
+    <string name="epg_browser_no_results_in_category_format">No results for \'%1$s\' in %2$s</string>
 </resources>

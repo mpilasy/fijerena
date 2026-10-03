@@ -83,8 +83,6 @@
     <string name="epg_indexing_failed">EPG indexing failed</string>
     <string name="epg_indexing_progress">EPG indexing %1$d%%…</string>
     <string name="epg_now_prefix">Izao: %1$s</string>
-    <string name="epg_now_label">IZAO</string>
-    <string name="epg_no_programs_found_matching">Tsy nahita fandaharana hoe \"%1$s\"</string>
 
     <!-- EPG Guide UI -->
     <string name="epg_guide_title_format">Fandaharana - %1$s</string>
@@ -94,9 +92,7 @@
     <string name="epg_prev_day">Iray andro mialoha</string>
     <string name="epg_next_day">Iray andro manaraka</string>
     <string name="epg_jump_to_now">Izao</string>
-    <string name="epg_search_placeholder">Tadiavo ny fandaharana</string>
-    <string name="epg_search_no_results">Tsy mahita fandaharana</string>
-    <string name="epg_search_close">Close Search</string>
+    <string name="epg_no_program_found">No program found</string>
     <string name="epg_system_status">System Status</string>
     <string name="epg_database_label">Database: %1$s</string>
     <string name="epg_database_empty">Tsy misy</string>
@@ -434,8 +430,8 @@
     <string name="epg_current_status_error">Current Status Error: %1$s</string>
 
     <!-- EPG Browser -->
-    <string name="epg_browser_title">Mpitety EPG</string>
-    <string name="epg_browser_title_with_provider">Mpitety EPG — %1$s</string>
+    <string name="epg_browser_title">Hikaroka ao amin\'ny fandaharana</string>
+    <string name="epg_browser_title_with_provider">Hikaroka ao amin\'ny fandaharana — %1$s</string>
     <string name="epg_browser_refresh_stale_description">Havaozina ireo loharanon\'ny fitarihana lany andro</string>
     <string name="epg_browser_mode_programme">Prog.</string>
     <string name="epg_browser_mode_channel">Chan.</string>
@@ -985,4 +981,8 @@
     <string name="details_action_more">Hafa</string>
     <string name="series_play_next_format">▶ Alefa: %1$s</string>
     <string name="series_resume_next_format">▶ Tohizo: %1$s (%2$s)</string>
+    <!-- GD5 -->
+    <string name="player_osd_guide">Fandaharana</string>
+    <string name="epg_browser_in_category_only_format">Ao amin\'ny %1$s ihany</string>
+    <string name="epg_browser_no_results_in_category_format">Tsy nahitana valiny ho an\'ny \'%1$s\' ao amin\'ny %2$s</string>
 </resources>

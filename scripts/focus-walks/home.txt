@@ -5,13 +5,16 @@
 # Phase 4: start on the first card, not the Switch Source chip.
 @start Live TV / Watch live channels / 179 categories
 UP	Switch Source, current source: iptv (REMOTE_M3U) / iptv (REMOTE_M3U)
-RIGHT	EPG Search
+# GD5: TV Guide (Recent) before Search the guide (renamed from EPG Search); both need iptv's guide.
+RIGHT	TV Guide
+RIGHT	Search the guide
 RIGHT	Search All
 RIGHT	Switch profile (Kid) / K
 # Phase 4: the card focused last (Live TV), not the rightmost.
 DOWN	Live TV / Watch live channels / 179 categories
 RIGHT	Movies / Browse on-demand / 39 categories
-# Up from Movies: whichever header button is above it (geometric, unchanged) — not checked.
-UP	EPG Search
+# Up from Movies: whichever header button is above it (geometric, unchanged) — not checked
+# (GD5 added TV Guide to the header, so it may no longer be Search the guide).
+UP
 # Phase 4: back down to the card focused last (Movies).
 DOWN	Movies / Browse on-demand / 39 categories

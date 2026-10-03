@@ -2,7 +2,6 @@ package org.njarasoa.fijerena.feature.epg
 
 import android.text.format.DateFormat
 import android.text.format.DateUtils
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,27 +13,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CardColors
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,7 +63,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
-import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaFilterChip
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import java.time.Instant
@@ -89,7 +84,9 @@ private data class GuideSelection(
  * The phone's TV Guide (UX overhaul plan Part III, GD3): "TV Guide · <category>" with the GD1
  * status line beneath it, date tabs (Today / Tomorrow / weekdays) and a "Now" chip, then the
  * [MobileGuideGrid] time grid. Tapping a programme opens its details sheet ("Watch channel" docks the
- * channel); tapping a channel tunes it. Back in search mode closes the search, not the guide (G-9).
+ * channel); tapping a channel tunes it. Search opens "Search the guide" (the EPG Browser) on this
+ * guide's channels — the grid has no search of its own (G-9, GD5). [focusChannelId] scrolls the
+ * grid to that channel's row on first open.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,7 +95,9 @@ fun MobileEpgGuideScreen(
     categoryName: String,
     onProgramSelected: (program: EpgProgram, channel: MediaItem) -> Unit,
     onChannelSelected: (streamId: String, streamName: String, categoryId: String) -> Unit,
+    onSearch: () -> Unit,
     onBack: () -> Unit,
+    focusChannelId: String? = null,
     viewModel: EpgViewModel =
         viewModel(
             factory =
@@ -110,9 +109,6 @@ fun MobileEpgGuideScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
-    var isSearchActive by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     // Hoisted here so a day change (the grid leaves composition while it loads) keeps the time of
@@ -124,12 +120,8 @@ fun MobileEpgGuideScreen(
     var requestedDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     var selection by remember { mutableStateOf<GuideSelection?>(null) }
     val today = remember { LocalDate.now() }
-
-    val closeSearch = {
-        isSearchActive = false
-        viewModel.clearSearch()
-    }
-    BackHandler(enabled = isSearchActive) { closeSearch() }
+    // First open on a given channel (GD5): its row is scrolled into view once, when the grid is ready.
+    var entryRowPending by rememberSaveable { mutableStateOf(focusChannelId != null) }
 
     val state = uiState
     val shownDate =
@@ -139,12 +131,10 @@ fun MobileEpgGuideScreen(
             else -> requestedDate
         }
     val onSelectDate = { date: LocalDate ->
-        if (isSearchActive) closeSearch()
         requestedDate = date
         if (date != shownDate) viewModel.loadEpgData(date)
     }
     val onNow = {
-        if (isSearchActive) closeSearch()
         val now = LocalDate.now()
         nowScroll = if (shownDate == now && state is EpgViewModel.UiState.Ready) NowScroll.ANIMATE else NowScroll.JUMP
         if (shownDate != now) {
@@ -175,20 +165,13 @@ fun MobileEpgGuideScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (isSearchActive) closeSearch() else onBack() }) {
+                    IconButton(onClick = onBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            if (isSearchActive) closeSearch() else isSearchActive = true
-                        },
-                    ) {
-                        Icon(
-                            if (isSearchActive) CinemaIcons.Close else CinemaIcons.Search,
-                            if (isSearchActive) stringResource(R.string.epg_search_close) else stringResource(R.string.common_search),
-                        )
+                    IconButton(onClick = onSearch) {
+                        Icon(CinemaIcons.Search, stringResource(R.string.common_search))
                     }
                     IconButton(
                         onClick = { viewModel.forceRefresh() },
@@ -253,34 +236,32 @@ fun MobileEpgGuideScreen(
                     }
 
                     is EpgViewModel.UiState.Ready -> {
-                        if (isSearchActive) {
-                            MobileEpgSearchContent(
-                                searchQuery = searchQuery,
-                                searchResults = searchResults,
-                                onSearchQueryChanged = { viewModel.searchPrograms(it) },
-                                onProgramSelected = onProgramSelected,
-                            )
-                        } else {
-                            Column(modifier = Modifier.fillMaxSize()) {
-                                ListingsEndNote(state)
-                                PullToRefreshBox(
-                                    isRefreshing = isRefreshing,
-                                    onRefresh = { viewModel.forceRefresh() },
-                                ) {
-                                    MobileGuideGrid(
-                                        channelRows = state.channelRows,
-                                        selectedDate = state.selectedDate,
-                                        scrollState = scrollState,
-                                        listState = listState,
-                                        nowScroll = nowScroll,
-                                        onNowScrolled = { nowScroll = null },
-                                        onProgramClick = { program, channel -> selection = GuideSelection(program, channel) },
-                                        onChannelClick = { channel ->
-                                            onChannelSelected(channel.id, channel.name, channel.categoryId)
-                                        },
-                                        onRowsVisible = viewModel::onRowsVisible,
-                                    )
-                                }
+                        if (entryRowPending) {
+                            LaunchedEffect(Unit) {
+                                val row = state.channelRows.indexOfFirst { it.channel.id == focusChannelId }
+                                if (row >= 0) listState.scrollToItem(row)
+                                entryRowPending = false
+                            }
+                        }
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            ListingsEndNote(state)
+                            PullToRefreshBox(
+                                isRefreshing = isRefreshing,
+                                onRefresh = { viewModel.forceRefresh() },
+                            ) {
+                                MobileGuideGrid(
+                                    channelRows = state.channelRows,
+                                    selectedDate = state.selectedDate,
+                                    scrollState = scrollState,
+                                    listState = listState,
+                                    nowScroll = nowScroll,
+                                    onNowScrolled = { nowScroll = null },
+                                    onProgramClick = { program, channel -> selection = GuideSelection(program, channel) },
+                                    onChannelClick = { channel ->
+                                        onChannelSelected(channel.id, channel.name, channel.categoryId)
+                                    },
+                                    onRowsVisible = viewModel::onRowsVisible,
+                                )
                             }
                         }
                     }
@@ -609,127 +590,3 @@ private fun updatedLabel(updatedAtMs: Long?): String =
             .getRelativeTimeSpanString(updatedAtMs, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
             .toString()
     }
-
-@Composable
-private fun MobileEpgSearchContent(
-    searchQuery: String,
-    searchResults: List<EpgViewModel.EpgSearchResult>,
-    onSearchQueryChanged: (String) -> Unit,
-    onProgramSelected: (EpgProgram, MediaItem) -> Unit,
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = CinemaSpacing.sm),
-    ) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChanged,
-            label = { Text(stringResource(R.string.epg_search_placeholder)) },
-            singleLine = true,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = CinemaSpacing.sm),
-        )
-
-        if (searchQuery.isNotBlank() && searchResults.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.epg_search_no_results),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            // Built once for the list rather than once per row — CardDefaults.cardColors is
-            // @Composable, so it can't be remembered inside the item body.
-            val cardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = CinemaSpacing.xs),
-                verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
-            ) {
-                items(searchResults, key = {
-                    "search_${it.channel.id}_${it.program.id}_${it.program.startTime}"
-                }, contentType = { "epg_search_result" }) { result ->
-                    MobileSearchResultCard(
-                        result = result,
-                        cardColors = cardColors,
-                        onClick = { onProgramSelected(result.program, result.channel) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MobileSearchResultCard(
-    result: EpgViewModel.EpgSearchResult,
-    cardColors: CardColors,
-    onClick: () -> Unit,
-) {
-    CinemaCard(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = cardColors,
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(CinemaSpacing.sm),
-            horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = result.program.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = result.channel.name,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-                Text(
-                    text =
-                        TimeFormat.formatTimeRange(
-                            result.program.startTime,
-                            result.program.endTime,
-                        ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                result.program.description?.let { desc ->
-                    if (desc.isNotBlank()) {
-                        Text(
-                            text = desc,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-            if (result.isCurrent) {
-                Text(
-                    text = stringResource(R.string.epg_now_label),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.tertiary,
-                )
-            }
-        }
-    }
-}

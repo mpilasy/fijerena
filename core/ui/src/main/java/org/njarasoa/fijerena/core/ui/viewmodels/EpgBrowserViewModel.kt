@@ -49,7 +49,9 @@ import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgSearchResultRow
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamStreamEntity
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.di.AppContainer
 import org.njarasoa.fijerena.core.ui.utils.UiText
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 import java.util.Date
@@ -59,6 +61,12 @@ import java.util.Locale
 class EpgBrowserViewModel(
     private val context: Context,
     private val providerRepository: ProviderRepository,
+    /**
+     * Opened from a TV Guide (GD5): that guide's list — a category, or the virtual `recent` /
+     * `favorites` — whose channels the screen offers as an "In <category> only" filter. Null: the
+     * whole guide, no such filter.
+     */
+    private val categoryId: String? = null,
 ) : ViewModel() {
     /**
      * Internal key for grouping programs without allocating new lowercase strings.
@@ -183,6 +191,13 @@ class EpgBrowserViewModel(
             ),
         )
     val epgSettings: StateFlow<EpgManagementViewModel.EpgSettings> = _epgSettings.asStateFlow()
+
+    /**
+     * The stream ids of [categoryId]'s channels, resolved the way the TV Guide resolves them
+     * (virtual lists included); null without a [categoryId] or until they are loaded.
+     */
+    private val _contextStreamIds = MutableStateFlow<Set<String>?>(null)
+    val contextStreamIds: StateFlow<Set<String>?> = _contextStreamIds.asStateFlow()
 
     private val _sourceLabels = MutableStateFlow<Map<Long, String>>(emptyMap())
     val sourceLabels: StateFlow<Map<Long, String>> = _sourceLabels.asStateFlow()
@@ -346,6 +361,17 @@ class EpgBrowserViewModel(
         loadSourceLabels()
         viewModelScope.launchGuarded("EpgBrowserViewModel.channelMatcher") { ensureChannelMatcherCurrent() }
         loadActiveProviderName()
+        categoryId?.let { id ->
+            viewModelScope.launchGuarded("EpgBrowserViewModel.contextStreams") { loadContextStreamIds(id) }
+        }
+    }
+
+    private suspend fun loadContextStreamIds(categoryId: String) {
+        val repository = AppContainer.getInstance(context).getMediaRepository()
+        val items =
+            CategoryViewModel.virtualCategoryItems(repository, categoryId, ContentType.LIVE_TV)
+                ?: repository.getItems(categoryId, ContentType.LIVE_TV).getOrThrow()
+        _contextStreamIds.value = items.mapTo(HashSet()) { it.id }
     }
 
     private fun loadActiveProviderName() {
@@ -833,10 +859,19 @@ fun EpgBrowserViewModel.UiState.IndexBusy.message(): String =
             .stringResource(R.string.epg_browser_busy_rebuilding_format, query)
     }
 
-/** Empty-state message when there are no (matched) results for the query. */
+/**
+ * Empty-state message when there are no (matched) results for the query — or none on the channels
+ * of [contextName], when the results are limited to a TV Guide's list (GD5).
+ */
 @androidx.compose.runtime.Composable
-fun EpgBrowserViewModel.UiState.Results.noResultsMessage(matchedOnly: Boolean): String =
-    if (matchedOnly) {
+fun EpgBrowserViewModel.UiState.Results.noResultsMessage(
+    matchedOnly: Boolean,
+    contextName: String? = null,
+): String =
+    if (contextName != null) {
+        androidx.compose.ui.res
+            .stringResource(R.string.epg_browser_no_results_in_category_format, query, contextName)
+    } else if (matchedOnly) {
         androidx.compose.ui.res
             .stringResource(R.string.epg_browser_no_matched_results_format, query)
     } else {

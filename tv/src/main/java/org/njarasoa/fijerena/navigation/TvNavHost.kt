@@ -320,7 +320,11 @@ fun TvNavHost(
                             navController.navigateOnce(Screen.Search("ALL"))
                         },
                         onEpgBrowser = {
-                            navController.navigateOnce(Screen.EpgBrowser)
+                            navController.navigateOnce(Screen.EpgBrowser())
+                        },
+                        // Home's TV Guide opens on Recent (UX overhaul plan Part III, decision 3).
+                        onTvGuide = { categoryId, categoryName ->
+                            navController.navigateOnce(Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName))
                         },
                         onContinueWatchingSelected = { item ->
                             // Same dispatch as CategoryList's Recent row (below) — a shelf card is
@@ -387,8 +391,11 @@ fun TvNavHost(
                         .DiagnosticsScreen()
                 }
 
-                composable<Screen.EpgBrowser> {
+                composable<Screen.EpgBrowser> { backStackEntry ->
+                    val browserScreen = backStackEntry.toRoute<Screen.EpgBrowser>()
                     TvEpgBrowserScreen(
+                        categoryId = browserScreen.categoryId,
+                        categoryName = browserScreen.categoryName,
                         onBack = { navController.navigateUp() },
                         onNavigateToPlayer = { streamId, _, categoryId ->
                             // Land on the preview pane, not full-screen — see LiveTvSplitLayout.
@@ -489,12 +496,14 @@ fun TvNavHost(
                         onSearchClick = {
                             navController.navigateOnce(Screen.Search(categoryListScreen.contentType))
                         },
-                        onEpgClick = { categoryId, categoryName ->
-                            // Navigate to EPG Guide for the selected category
+                        onEpgClick = { categoryId, categoryName, focusChannelId ->
+                            // The TV Guide for a category (the header button), or for the playing
+                            // channel's list from the player's Guide button, on that channel's row.
                             navController.navigateOnce(
                                 Screen.EpgGuide(
                                     categoryId = categoryId,
                                     categoryName = categoryName,
+                                    focusChannelId = focusChannelId,
                                 ),
                             )
                         },
@@ -657,6 +666,7 @@ fun TvNavHost(
                     TvEpgGuideScreen(
                         categoryId = epgScreen.categoryId,
                         categoryName = epgScreen.categoryName,
+                        focusChannelId = epgScreen.focusChannelId,
                         onProgramSelected = { _, channel ->
                             // Land on the preview pane, not full-screen. Pushing (not popUpTo)
                             // means Back from the preview pops back to the EPG guide for free.
@@ -675,6 +685,12 @@ fun TvNavHost(
                                     initialCategoryId = categoryId,
                                     initialStreamId = streamId,
                                 ),
+                            )
+                        },
+                        // One search (G-9): "Search the guide", filtered to this guide's channels.
+                        onSearch = {
+                            navController.navigateOnce(
+                                Screen.EpgBrowser(categoryId = epgScreen.categoryId, categoryName = epgScreen.categoryName),
                             )
                         },
                         onBack = {
