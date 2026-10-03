@@ -933,4 +933,16 @@
     <string name="epg_guide_no_listings_none">Aucun programme pour ces chaînes, ni dans le guide ni chez la source.</string>
     <string name="epg_guide_no_guide_title">Pas de guide</string>
     <string name="epg_guide_no_guide_message">Cette source n\'a pas de guide des programmes. Ajoutez une source de guide dans Paramètres → Source et guide.</string>
+    <!-- M4 -->
+    <string name="provider_section_connection">Connexion</string>
+    <string name="provider_save_connection_button">Enregistrer la connexion</string>
+    <string name="provider_section_behaviour">Comportement</string>
+    <string name="provider_section_content_filters_format">Filtres de contenu · %1$s</string>
+    <string name="provider_section_library_data">Données de la bibliothèque</string>
+    <string name="provider_section_danger_zone">Zone de danger</string>
+    <string name="provider_clear_cached_library_button">Vider toute la bibliothèque en cache</string>
+    <string name="provider_discard_changes_title">Abandonner les modifications ?</string>
+    <string name="provider_discard_changes_message">Les informations de connexion modifiées n\'ont pas été enregistrées.</string>
+    <string name="provider_discard_button">Abandonner</string>
+    <string name="provider_keep_editing_button">Continuer la modification</string>
 </resources>

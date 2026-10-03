@@ -971,4 +971,16 @@
     <string name="epg_guide_no_listings_none">No listings for these channels, from the guide or from the source.</string>
     <string name="epg_guide_no_guide_title">No guide</string>
     <string name="epg_guide_no_guide_message">This source has no programme guide. Add a guide source in Settings → Source &amp; guide.</string>
+    <!-- M4 -->
+    <string name="provider_section_connection">Connection</string>
+    <string name="provider_save_connection_button">Save connection</string>
+    <string name="provider_section_behaviour">Behaviour</string>
+    <string name="provider_section_content_filters_format">Content filters · %1$s</string>
+    <string name="provider_section_library_data">Library data</string>
+    <string name="provider_section_danger_zone">Danger zone</string>
+    <string name="provider_clear_cached_library_button">Clear all cached library</string>
+    <string name="provider_discard_changes_title">Discard changes?</string>
+    <string name="provider_discard_changes_message">The connection details you changed haven\'t been saved.</string>
+    <string name="provider_discard_button">Discard</string>
+    <string name="provider_keep_editing_button">Keep editing</string>
 </resources>

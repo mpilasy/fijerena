@@ -770,4 +770,16 @@
     <string name="epg_guide_no_listings_none">Tsy misy fandaharana ho an\'ireto fantsona ireto, na avy amin\'ny fitarihana na avy amin\'ny loharano.</string>
     <string name="epg_guide_no_guide_title">Tsy misy fitarihana</string>
     <string name="epg_guide_no_guide_message">Tsy manana fitarihana ity loharano ity. Ampio loharanon\'ny fitarihana ao amin\'ny Settings → Loharano sy fitarihana.</string>
+    <!-- M4 -->
+    <string name="provider_section_connection">Fifandraisana</string>
+    <string name="provider_save_connection_button">Tehirizo ny fifandraisana</string>
+    <string name="provider_section_behaviour">Fomba fiasa</string>
+    <string name="provider_section_content_filters_format">Sivana votoaty · %1$s</string>
+    <string name="provider_section_library_data">Angon\'ny tahiry</string>
+    <string name="provider_section_danger_zone">Faritra mampidi-doza</string>
+    <string name="provider_clear_cached_library_button">Fafao ny tahiry voatahiry rehetra</string>
+    <string name="provider_discard_changes_title">Hariana ve ny fanovana?</string>
+    <string name="provider_discard_changes_message">Tsy voatahiry ny fanovana nataonao tamin\'ny fifandraisana.</string>
+    <string name="provider_discard_button">Ario</string>
+    <string name="provider_keep_editing_button">Hanohy hanitsy</string>
 </resources>

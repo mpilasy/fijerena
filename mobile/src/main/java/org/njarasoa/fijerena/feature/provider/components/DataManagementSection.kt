@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.network.XtreamRepository
@@ -31,6 +32,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.CinemaError
 
+/** Library data: sync, last sync, totals and per-type counts. Clearing lives in [ProviderDangerZoneSection]. */
 @Composable
 fun ColumnScope.DataManagementSection(
     isEditMode: Boolean,
@@ -41,26 +43,15 @@ fun ColumnScope.DataManagementSection(
     isBusy: Boolean,
     syncState: SyncState,
     currentProvider: ProviderEntity?,
-    onShowClearCacheDialogChange: (Boolean) -> Unit,
-    onShowClearLiveTvCacheDialogChange: (Boolean) -> Unit,
-    onShowClearMoviesCacheDialogChange: (Boolean) -> Unit,
-    onShowClearTvShowsCacheDialogChange: (Boolean) -> Unit,
 ) {
     if (isEditMode) {
         Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
         GlassPanel(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(CinemaSpacing.md)) {
-                Text(
-                    text = stringResource(R.string.provider_data_management_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
-                Text(
-                    text = stringResource(R.string.provider_data_management_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                ProviderSectionTitle(
+                    title = stringResource(R.string.provider_section_library_data),
+                    subtitle = stringResource(R.string.provider_data_management_desc),
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
@@ -136,31 +127,17 @@ fun ColumnScope.DataManagementSection(
                     }
 
                     // Total Items
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column {
-                            Text(
-                                text = stringResource(R.string.provider_total_db_items_label),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            val totalItems =
-                                stats.liveTv.itemsCount + stats.movies.itemsCount + stats.tvShows.itemsCount
-                            Text(
-                                text = stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(totalItems)),
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        CinemaButton(
-                            onClick = { onShowClearCacheDialogChange(true) },
-                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
-                        ) {
-                            Text(stringResource(R.string.provider_clear_all_button))
-                        }
-                    }
+                    Text(
+                        text = stringResource(R.string.provider_total_db_items_label),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    val totalItems =
+                        stats.liveTv.itemsCount + stats.movies.itemsCount + stats.tvShows.itemsCount
+                    Text(
+                        text = stringResource(R.string.provider_total_items_value, NumberUtils.formatCount(totalItems)),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     HorizontalDivider(
@@ -169,86 +146,188 @@ fun ColumnScope.DataManagementSection(
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     // Live TV
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = stringResource(R.string.provider_live_tv_label), style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.provider_live_tv_stats,
-                                        NumberUtils.formatCount(stats.liveTv.categoryCount),
-                                        NumberUtils.formatCount(stats.liveTv.itemsCount),
-                                    ),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        CinemaOutlinedButton(
-                            onClick = { onShowClearLiveTvCacheDialogChange(true) },
-                            enabled = stats.liveTv.itemsCount > 0,
-                        ) { Text(stringResource(R.string.provider_clear_button)) }
-                    }
+                    Text(text = stringResource(R.string.provider_live_tv_label), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.provider_live_tv_stats,
+                                NumberUtils.formatCount(stats.liveTv.categoryCount),
+                                NumberUtils.formatCount(stats.liveTv.itemsCount),
+                            ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     // Movies
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = stringResource(R.string.provider_movies_label), style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.provider_movies_stats,
-                                        NumberUtils.formatCount(stats.movies.categoryCount),
-                                        NumberUtils.formatCount(stats.movies.itemsCount),
-                                    ),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        CinemaOutlinedButton(
-                            onClick = { onShowClearMoviesCacheDialogChange(true) },
-                            enabled = stats.movies.itemsCount > 0,
-                        ) { Text(stringResource(R.string.provider_clear_button)) }
-                    }
+                    Text(text = stringResource(R.string.provider_movies_label), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.provider_movies_stats,
+                                NumberUtils.formatCount(stats.movies.categoryCount),
+                                NumberUtils.formatCount(stats.movies.itemsCount),
+                            ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
                     // TV Shows
-                    Row(
+                    Text(text = stringResource(R.string.provider_tv_shows_label), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.provider_tv_shows_stats,
+                                NumberUtils.formatCount(stats.tvShows.categoryCount),
+                                NumberUtils.formatCount(stats.tvShows.itemsCount),
+                                NumberUtils.formatCount(stats.tvShows.episodesCount),
+                            ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            } // Column
+        } // GlassPanel
+    }
+}
+
+/**
+ * Danger zone: every destructive action of this source, as outlined error-coloured buttons.
+ * Each caller-provided callback opens that action's existing confirm dialog; per-type clears
+ * are hidden while that type has nothing cached.
+ */
+@Composable
+fun ColumnScope.ProviderDangerZoneSection(
+    isEditMode: Boolean,
+    cacheStats: XtreamRepository.CacheStats?,
+    onClearFavorites: () -> Unit,
+    onClearProgress: () -> Unit,
+    onClearAllCache: () -> Unit,
+    onClearLiveTvCache: () -> Unit,
+    onClearMoviesCache: () -> Unit,
+    onClearTvShowsCache: () -> Unit,
+) {
+    if (isEditMode) {
+        Spacer(modifier = Modifier.height(CinemaSpacing.lg))
+
+        GlassPanel(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(CinemaSpacing.md)) {
+                ProviderSectionTitle(
+                    title = stringResource(R.string.provider_section_danger_zone),
+                    titleColor = MaterialTheme.colorScheme.error,
+                )
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+
+                // Clear Favorites
+                Text(
+                    text = stringResource(R.string.provider_clear_favorites_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                )
+                Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                DangerButton(
+                    onClick = onClearFavorites,
+                    text = stringResource(R.string.provider_clear_favorites_button),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(modifier = Modifier.height(CinemaSpacing.md))
+
+                // Clear Progress
+                Text(
+                    text = stringResource(R.string.provider_clear_progress_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                )
+                Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                DangerButton(
+                    onClick = onClearProgress,
+                    text = stringResource(R.string.provider_clear_progress_button),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                cacheStats?.let { stats ->
+                    Spacer(modifier = Modifier.height(CinemaSpacing.md))
+
+                    // Clear all cached library
+                    Text(
+                        text = stringResource(R.string.provider_data_management_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                    )
+                    Spacer(modifier = Modifier.height(CinemaSpacing.xs))
+                    DangerButton(
+                        onClick = onClearAllCache,
+                        text = stringResource(R.string.provider_clear_cached_library_button),
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = stringResource(R.string.provider_tv_shows_label), style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.provider_tv_shows_stats,
-                                        NumberUtils.formatCount(stats.tvShows.categoryCount),
-                                        NumberUtils.formatCount(stats.tvShows.itemsCount),
-                                        NumberUtils.formatCount(stats.tvShows.episodesCount),
-                                    ),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        CinemaOutlinedButton(
-                            onClick = { onShowClearTvShowsCacheDialogChange(true) },
-                            enabled = stats.tvShows.itemsCount > 0,
-                        ) { Text(stringResource(R.string.provider_clear_button)) }
+                    )
+
+                    // Per-type clears: only for types that have something to clear
+                    if (stats.liveTv.itemsCount > 0) {
+                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                        DangerRow(
+                            label = stringResource(R.string.provider_live_tv_label),
+                            onClear = onClearLiveTvCache,
+                        )
+                    }
+                    if (stats.movies.itemsCount > 0) {
+                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                        DangerRow(
+                            label = stringResource(R.string.provider_movies_label),
+                            onClear = onClearMoviesCache,
+                        )
+                    }
+                    if (stats.tvShows.itemsCount > 0) {
+                        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+                        DangerRow(
+                            label = stringResource(R.string.provider_tv_shows_label),
+                            onClear = onClearTvShowsCache,
+                        )
                     }
                 }
             } // Column
         } // GlassPanel
     }
+}
+
+@Composable
+private fun DangerRow(
+    label: String,
+    onClear: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.weight(1f),
+        )
+        DangerButton(onClick = onClear, text = stringResource(R.string.provider_clear_button))
+    }
+}
+
+/** Outlined button with error-coloured text and border: destructive, but not the loudest thing on screen. */
+@Composable
+private fun DangerButton(
+    onClick: () -> Unit,
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    val error = MaterialTheme.colorScheme.error
+    CinemaOutlinedButton(
+        onClick = onClick,
+        modifier = modifier,
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = error,
+                containerColor = error.copy(alpha = CinemaAlpha.ghost),
+            ),
+        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(brush = SolidColor(error.copy(alpha = CinemaAlpha.textFaint))),
+    ) { Text(text) }
 }

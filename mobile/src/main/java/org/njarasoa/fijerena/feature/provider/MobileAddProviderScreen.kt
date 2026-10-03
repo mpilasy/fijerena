@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.provider
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -94,7 +95,10 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SaveState
 import org.njarasoa.fijerena.core.ui.viewmodels.SyncState
 import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 import org.njarasoa.fijerena.feature.provider.components.DataManagementSection
+import org.njarasoa.fijerena.feature.provider.components.ProviderDangerZoneSection
+import org.njarasoa.fijerena.feature.provider.components.ProviderFiltersSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderFormSection
+import org.njarasoa.fijerena.feature.provider.components.ProviderSectionTitle
 import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
 import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
@@ -130,6 +134,11 @@ fun MobileAddProviderScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var host by remember { mutableStateOf("") }
     var shareName by remember { mutableStateOf("") }
+    // The connection as loaded (edit mode): Back with anything different asks before dropping it.
+    // Behaviour settings save as they change, so they never count as unsaved.
+    var loadedConnection by remember { mutableStateOf(listOf("", "", "", "", "", "")) }
+    val hasUnsavedConnectionEdits = isEditMode && listOf(name, url, username, password, host, shareName) != loadedConnection
+    var showDiscardDialog by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
@@ -237,9 +246,110 @@ fun MobileAddProviderScreen(
                         android.util.Log.e("MobileAddProviderScreen", "Failed to parse SMB provider config", e)
                     }
                 }
+                loadedConnection = listOf(name, url, username, password, host, shareName)
             }
         }
     }
+
+    val requestBack: () -> Unit = {
+        if (hasUnsavedConnectionEdits) showDiscardDialog = true else onBack()
+    }
+    BackHandler(enabled = hasUnsavedConnectionEdits) { showDiscardDialog = true }
+
+    // Validate the connection fields for the selected type, then save through the ViewModel.
+    val submitConnection: () -> Unit = {
+        val validationError =
+            when (selectedType) {
+                ProviderType.XTREAM -> {
+                    when {
+                        name.isBlank() -> resources.getString(R.string.provider_error_name_required)
+                        url.isBlank() -> resources.getString(R.string.provider_error_url_required)
+                        username.isBlank() -> resources.getString(R.string.provider_error_username_required)
+                        password.isBlank() -> resources.getString(R.string.provider_error_password_required)
+                        else -> null
+                    }
+                }
+
+                ProviderType.JELLYFIN -> {
+                    when {
+                        name.isBlank() -> resources.getString(R.string.provider_error_name_required)
+                        url.isBlank() -> resources.getString(R.string.provider_error_url_required)
+                        username.isBlank() -> resources.getString(R.string.provider_error_username_required)
+                        password.isBlank() -> resources.getString(R.string.provider_error_password_required)
+                        else -> null
+                    }
+                }
+
+                ProviderType.SMB -> {
+                    when {
+                        name.isBlank() -> resources.getString(R.string.provider_error_name_required)
+                        host.isBlank() -> resources.getString(R.string.provider_error_host_required)
+                        shareName.isBlank() -> resources.getString(R.string.provider_error_share_required)
+                        else -> null
+                    }
+                }
+
+                ProviderType.LOCAL -> {
+                    when {
+                        name.isBlank() -> resources.getString(R.string.provider_error_name_required)
+                        else -> null
+                    }
+                }
+
+                ProviderType.REMOTE_M3U -> {
+                    when {
+                        name.isBlank() -> resources.getString(R.string.provider_error_name_required)
+                        url.isBlank() -> resources.getString(R.string.provider_error_m3u_url_required)
+                        else -> null
+                    }
+                }
+            }
+
+        if (validationError != null) {
+            error = validationError
+        } else {
+            val saveUrl =
+                when (selectedType) {
+                    ProviderType.SMB -> "smb://${host.trim()}/${shareName.trim()}"
+                    else -> url.trim()
+                }
+            val saveConfig =
+                when (selectedType) {
+                    ProviderType.SMB -> smbSourceConfig(host.trim(), shareName.trim())
+                    else -> ""
+                }
+
+            viewModel.validateAndSave(
+                id = if (isEditMode) editId else null,
+                name = name.trim(),
+                url = saveUrl,
+                username = username.trim(),
+                password = password.trim(),
+                type = selectedType.name,
+                config = saveConfig,
+                onComplete = onSuccess,
+                initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat, playlistType = playlistType),
+            )
+        }
+    }
+    val submitLabel =
+        when (saveState) {
+            is SaveState.Validating -> {
+                stringResource(R.string.provider_connecting)
+            }
+
+            is SaveState.Saving -> {
+                stringResource(R.string.provider_saving)
+            }
+
+            else -> {
+                if (isEditMode) {
+                    stringResource(R.string.provider_save_connection_button)
+                } else {
+                    stringResource(R.string.provider_add_title)
+                }
+            }
+        }
 
     Scaffold(
         topBar = {
@@ -248,7 +358,7 @@ fun MobileAddProviderScreen(
                     Text(if (isEditMode) stringResource(R.string.provider_edit_title) else stringResource(R.string.provider_add_title))
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = requestBack) {
                         Icon(CinemaIcons.ArrowBack, stringResource(R.string.player_back))
                     }
                 },
@@ -266,6 +376,8 @@ fun MobileAddProviderScreen(
             // Provider type: a dropdown when adding, a disabled field when editing (the type of
             // an existing source cannot change).
             if (isEditMode) {
+                ProviderSectionTitle(title = stringResource(R.string.provider_section_connection))
+                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
                 OutlinedTextField(
                     value = selectedType.displayName,
                     onValueChange = {},
@@ -361,6 +473,28 @@ fun MobileAddProviderScreen(
                 onQcSecretChange = { qcSecret = it },
                 onQcErrorChange = { qcError = it },
             )
+
+            if (isEditMode) {
+                // Save sits right under the login it saves; the rest of the screen applies on its own.
+                FormErrorText(error)
+                Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+                ) {
+                    CinemaOutlinedButton(
+                        onClick = onBack,
+                        enabled = !isBusy,
+                        modifier = Modifier.weight(1f),
+                    ) { Text(stringResource(R.string.common_cancel)) }
+                    CinemaButton(
+                        onClick = submitConnection,
+                        enabled = !isBusy,
+                        modifier = Modifier.weight(1f),
+                    ) { Text(submitLabel) }
+                }
+            }
+
             ProviderSettingsSection(
                 isEditMode = isEditMode,
                 editId = editId,
@@ -371,7 +505,6 @@ fun MobileAddProviderScreen(
                 newWatchHistorySize = newWatchHistorySize,
                 isEditingQueueSize = isEditingQueueSize,
                 cachingEnabled = cachingEnabled,
-                categoryFilters = categoryFilters,
                 streamOutputFormat = streamOutputFormat,
                 playlistType = playlistType,
                 coroutineScope = coroutineScope,
@@ -384,9 +517,12 @@ fun MobileAddProviderScreen(
                 onCachingEnabledChange = { cachingEnabled = it },
                 onStreamOutputFormatChange = { streamOutputFormat = it },
                 onPlaylistTypeChange = { playlistType = it },
-                onShowClearFavoritesDialogChange = { showClearFavoritesDialog = it },
-                onShowClearProgressDialogChange = { showClearProgressDialog = it },
-                onShowCategoryFilterDialogChange = { showCategoryFilterDialog = it },
+            )
+            ProviderFiltersSection(
+                isEditMode = isEditMode,
+                selectedType = selectedType,
+                categoryFilters = categoryFilters,
+                onManageFilters = { showCategoryFilterDialog = true },
             )
             DataManagementSection(
                 isEditMode = isEditMode,
@@ -397,122 +533,48 @@ fun MobileAddProviderScreen(
                 isBusy = isBusy,
                 syncState = syncState,
                 currentProvider = currentProvider,
-                onShowClearCacheDialogChange = { showClearCacheDialog = it },
-                onShowClearLiveTvCacheDialogChange = { showClearLiveTvCacheDialog = it },
-                onShowClearMoviesCacheDialogChange = { showClearMoviesCacheDialog = it },
-                onShowClearTvShowsCacheDialogChange = { showClearTvShowsCacheDialog = it },
+            )
+            ProviderDangerZoneSection(
+                isEditMode = isEditMode,
+                cacheStats = cacheStats,
+                onClearFavorites = { showClearFavoritesDialog = true },
+                onClearProgress = { showClearProgressDialog = true },
+                onClearAllCache = { showClearCacheDialog = true },
+                onClearLiveTvCache = { showClearLiveTvCacheDialog = true },
+                onClearMoviesCache = { showClearMoviesCacheDialog = true },
+                onClearTvShowsCache = { showClearTvShowsCacheDialog = true },
             )
 
-            error?.let { errorMsg ->
-                Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                Text(
-                    text = errorMsg,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CinemaError,
-                )
+            if (!isEditMode) {
+                FormErrorText(error)
+
+                Spacer(modifier = Modifier.height(CinemaSpacing.lg))
+
+                CinemaButton(
+                    onClick = submitConnection,
+                    enabled = !isBusy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(submitLabel) }
             }
 
-            Spacer(modifier = Modifier.height(CinemaSpacing.lg))
-
-            CinemaButton(
-                onClick = {
-                    // Validation based on selected type
-                    val validationError =
-                        when (selectedType) {
-                            ProviderType.XTREAM -> {
-                                when {
-                                    name.isBlank() -> resources.getString(R.string.provider_error_name_required)
-                                    url.isBlank() -> resources.getString(R.string.provider_error_url_required)
-                                    username.isBlank() -> resources.getString(R.string.provider_error_username_required)
-                                    password.isBlank() -> resources.getString(R.string.provider_error_password_required)
-                                    else -> null
-                                }
-                            }
-
-                            ProviderType.JELLYFIN -> {
-                                when {
-                                    name.isBlank() -> resources.getString(R.string.provider_error_name_required)
-                                    url.isBlank() -> resources.getString(R.string.provider_error_url_required)
-                                    username.isBlank() -> resources.getString(R.string.provider_error_username_required)
-                                    password.isBlank() -> resources.getString(R.string.provider_error_password_required)
-                                    else -> null
-                                }
-                            }
-
-                            ProviderType.SMB -> {
-                                when {
-                                    name.isBlank() -> resources.getString(R.string.provider_error_name_required)
-                                    host.isBlank() -> resources.getString(R.string.provider_error_host_required)
-                                    shareName.isBlank() -> resources.getString(R.string.provider_error_share_required)
-                                    else -> null
-                                }
-                            }
-
-                            ProviderType.LOCAL -> {
-                                when {
-                                    name.isBlank() -> resources.getString(R.string.provider_error_name_required)
-                                    else -> null
-                                }
-                            }
-
-                            ProviderType.REMOTE_M3U -> {
-                                when {
-                                    name.isBlank() -> resources.getString(R.string.provider_error_name_required)
-                                    url.isBlank() -> resources.getString(R.string.provider_error_m3u_url_required)
-                                    else -> null
-                                }
-                            }
-                        }
-
-                    if (validationError != null) {
-                        error = validationError
-                    } else {
-                        val saveUrl =
-                            when (selectedType) {
-                                ProviderType.SMB -> "smb://${host.trim()}/${shareName.trim()}"
-                                else -> url.trim()
-                            }
-                        val saveConfig =
-                            when (selectedType) {
-                                ProviderType.SMB -> smbSourceConfig(host.trim(), shareName.trim())
-                                else -> ""
-                            }
-
-                        viewModel.validateAndSave(
-                            id = if (isEditMode) editId else null,
-                            name = name.trim(),
-                            url = saveUrl,
-                            username = username.trim(),
-                            password = password.trim(),
-                            type = selectedType.name,
-                            config = saveConfig,
-                            onComplete = onSuccess,
-                            initialSettings = ProviderSettings(streamOutputFormat = streamOutputFormat, playlistType = playlistType),
-                        )
-                    }
-                },
-                enabled = !isBusy,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    when (saveState) {
-                        is SaveState.Validating -> {
-                            stringResource(R.string.provider_connecting)
-                        }
-
-                        is SaveState.Saving -> {
-                            stringResource(R.string.provider_saving)
-                        }
-
-                        else -> {
-                            if (isEditMode) {
-                                stringResource(
-                                    R.string.provider_update_button,
-                                )
-                            } else {
-                                stringResource(R.string.provider_add_title)
-                            }
-                        }
+            if (showDiscardDialog) {
+                CinemaAlertDialog(
+                    onDismissRequest = { showDiscardDialog = false },
+                    title = { Text(stringResource(R.string.provider_discard_changes_title)) },
+                    text = { Text(stringResource(R.string.provider_discard_changes_message)) },
+                    confirmButton = {
+                        CinemaDialogActionButton(
+                            onClick = {
+                                showDiscardDialog = false
+                                onBack()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
+                        ) { Text(stringResource(R.string.provider_discard_button)) }
+                    },
+                    dismissButton = {
+                        CinemaDialogTextButton(
+                            onClick = { showDiscardDialog = false },
+                        ) { Text(stringResource(R.string.provider_keep_editing_button)) }
                     },
                 )
             }
@@ -1007,6 +1069,18 @@ fun MobileAddProviderScreen(
                 onSuccess = onSuccess,
             )
         }
+    }
+}
+
+@Composable
+private fun FormErrorText(message: String?) {
+    message?.let {
+        Spacer(modifier = Modifier.height(CinemaSpacing.sm))
+        Text(
+            text = it,
+            style = MaterialTheme.typography.bodyMedium,
+            color = CinemaError,
+        )
     }
 }
 
