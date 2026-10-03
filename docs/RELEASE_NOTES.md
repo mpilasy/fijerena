@@ -12,6 +12,16 @@
 - **Translations:** every English text now has a French and a Malagasy version. → follow-up.
 - **TV Guide programme details and actions on TV:** OK on a programme shows its details — channel, day and time, description — with Watch channel; holding OK or pressing Menu on a channel or programme adds or removes the channel from favourites (or from Recent, in the Recent guide); the header buttons' labels are no longer dim. → Part III GD6.
 - **TV: a channel opens at once from the Live TV list:** OK on a channel shows its preview straight away, without reloading the categories first, and Back from the preview returns to the list as you left it, on the channel you were watching. → Part II LT7.
+- **TV full-screen controls you can read:** the buttons are labelled (Channels, Guide, Favourite, Subtitles, Audio, Quality, More), focus starts on Channels, any key keeps them up, Up/Down still change channel with them showing, and the banner shows the channel with what is on now and next. The codec line is for developer mode only. → Part II LT4.
+- **TV: you can see a channel tuning:** "Tuning · <channel>" shows while a channel starts; the preview column shows the channel's category, now and next, and one line saying what OK does. The preview waits for focus to settle (0.8 s) before it changes channel. → Part II LT5.
+- **TV: Back from Live TV lands on what you were watching:** after changing channel in the preview or full screen, Back puts focus on the channel that was playing, not the one you opened. → Part II LT6.
+- **One automatic guide per Xtream source:** a source gets one guide from its own server, updated in place when its login changes and only when it has live channels; extra copies from earlier logins are removed once. Guides you added by hand are not touched. → Part III GD0c.
+- **TV Guide for big categories:** every channel is listed (no 50-channel limit), loaded 30 at a time as you scroll, with the focused programme's title and time above the grid and a note when listings end. → Part III GD4.
+- **TV Settings guide controls:** guide auto-refresh is in Settings → Source & guide and guide maintenance in Backup & storage; EPG Management lists one source's guides only; Live sync's controls are in a clearer order with a Danger zone. → Part I T6.
+- **TV movie and episode screens:** labelled Favourite and Watched, Refresh info under More, Up from the tabs reaches Play; the episode list keeps a compact header with "Play: <title>" once the poster scrolls away, and the episode you are watching is marked with a bar. → Part II Phase 6.
+- **TV search fields don't trap the remote:** the keyboard opens only when you press OK on the field; Back closes it and keeps your place. → Part II Phase 7.
+- **TV: one "current" style:** the selected category and the playing or last-played row show an accent bar and accent text everywhere, not a filled background that looks focused. → Part II Phase 8.
+- **"Search the guide" from a TV Guide finds what the guide shows:** limited to the guide's channels, it now also finds programmes on channels the guide matches by name (several channels often share one guide), and OK plays the guide's channel. → Part III GD5.
 
 Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 
