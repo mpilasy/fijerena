@@ -66,6 +66,8 @@ fun ProfilesSettingsCard(
     onDelete: (id: String) -> Unit,
     onDismissMessage: () -> Unit,
     scale: Float,
+    /** Goes on the card's first focusable (the first profile row, else Add profile) — the pane's entry row. */
+    firstRowModifier: Modifier = Modifier,
 ) {
     var adding by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<ProfileUi?>(null) }
@@ -95,13 +97,14 @@ fun ProfilesSettingsCard(
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
-                profiles.forEach { profile ->
+                profiles.forEachIndexed { index, profile ->
                     TvInputListItem(
                         selected = false,
                         onClick = {
                             onDismissMessage()
                             editing = profile
                         },
+                        modifier = if (index == 0) firstRowModifier else Modifier,
                         leadingContent = {
                             ProfileAvatar(
                                 name = profile.name,
@@ -142,7 +145,7 @@ fun ProfilesSettingsCard(
                     adding = true
                 },
                 text = stringResource(R.string.settings_profiles_add),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = (if (profiles.isEmpty()) firstRowModifier else Modifier).fillMaxWidth(),
             )
         }
     }

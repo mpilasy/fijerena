@@ -1,14 +1,45 @@
-# Settings (SettingsScreen), TV emulator, profile Kid, two profiles.
-# Start: Settings just opened, focus on the first profile row (Profiles card at the top);
-# its text is the profile's name, so there is no @start.
-# Covers Part I T-2 (watch delay: default 10 s but chips are 5/15/30/60, nothing selected)
-# and T-5 (2x2 chip grid). Expectations are today's behaviour.
-# Recorded 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
-DOWN	K / Kid / Using on this device
-DOWN	Add profile
-DOWN	Manage Sources
-# First watch-delay chip. Becomes 10s after Part I T1 (presets 5/10/15/30/60/120).
-DOWN	15s
-RIGHT	15s
-# The chips are a 2x2 grid (5s 15s / 30s 60s); Down from 15s may land on 60s instead — re-record.
-DOWN	120s
+# T3 — Settings (SettingsScreen) as two panes, TV emulator, profile Kid, source iptv.
+# Start: Settings just opened, focus on the rail row "Profiles" (the first of the seven groups).
+# Rail: Up/Down swap the pane live and never leave the rail; Right (or OK) enters the pane on
+# the group's first row; Left (or Back) from anywhere in the pane returns to the rail row of
+# the group; Back on the rail leaves Settings. A picker opens in the pane on the current value;
+# Left or Back closes it with focus back on its row. Expectations are Part I T3 behaviour.
+# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+@start Profiles
+DOWN	Source & guide
+DOWN	Playback
+DOWN	Display
+DOWN	Live sync
+DOWN	Backup & storage
+DOWN	About & advanced
+# Down at the end of the rail stays put.
+DOWN	About & advanced
+UP	Backup & storage
+UP	Live sync
+UP	Display
+UP	Playback
+# Right enters the pane on the group's first row.
+RIGHT	Count as watched after
+DOWN	Play next episode automatically
+# Down at the end of the pane stays put.
+DOWN	Play next episode automatically
+# Left from anywhere in the pane returns to the rail row of the group.
+LEFT	Playback
+RIGHT	Count as watched after
+# OK opens the picker in the pane, focus on the current value (10 s by default).
+CENTER	10 s
+# Left closes the picker, focus back on the row (T2 follow-up).
+LEFT	Count as watched after
+LEFT	Playback
+UP	Source & guide
+RIGHT	Switch source
+DOWN	Edit this source
+DOWN	Guide Sources
+LEFT	Source & guide
+UP	Profiles
+# Up at the top of the rail stays put (the header has nothing to focus).
+UP	Profiles
+# Right lands on the first profile row; its text is the profile's name.
+RIGHT	Kid
+# Back in the pane returns to the rail row, not out of Settings.
+BACK	Profiles

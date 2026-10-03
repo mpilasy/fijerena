@@ -706,7 +706,7 @@
     <string name="provider_error_save_failed">Tsy nahomby ny fitehirizana ny loharano</string>
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Alefaso ho azy ny fizarana manaraka</string>
-    <string name="settings_autoplay_next_episode_desc">Rehefa ho tapitra ny fizarana iray, aroso ny manaraka ary manomboka ho azy rehefa vita izy. Ho an\'ity mombamomba ity.</string>
+    <string name="settings_autoplay_next_episode_desc">Rehefa ho tapitra ny fizarana iray, aroso ny manaraka ary manomboka ho azy rehefa vita izy.</string>
     <string name="player_up_next_title">Manaraka</string>
     <string name="player_up_next_countdown_format">Manomboka afaka %1$d s</string>
     <string name="player_up_next_play_now">Alefaso izao</string>

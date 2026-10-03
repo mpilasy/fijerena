@@ -22,6 +22,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
@@ -34,8 +35,13 @@ fun ProviderSettingsCard(
     subscriptionIsTrial: Boolean = false,
     subscriptionStatus: String? = null,
     onManageProviders: () -> Unit,
+    onEditSource: () -> Unit,
     scale: Float,
+    editEnabled: Boolean = true,
     manageButtonFocusRequester: FocusRequester? = null,
+    editRowFocusRequester: FocusRequester? = null,
+    /** Goes on the Switch source button, the card's first focusable — the pane's entry row. */
+    manageButtonModifier: Modifier = Modifier,
 ) {
     val bodySmallStyle =
         MaterialTheme.typography.bodySmall.copy(
@@ -123,10 +129,19 @@ fun ProviderSettingsCard(
                 }
                 CinemaSecondaryButton(
                     onClick = onManageProviders,
-                    text = stringResource(R.string.settings_provider_manage_button),
-                    modifier = manageButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+                    text = stringResource(R.string.settings_switch_source),
+                    modifier = manageButtonModifier.then(manageButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
                 )
             }
+            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
+            TvInputListItem(
+                selected = false,
+                onClick = onEditSource,
+                modifier = editRowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+                enabled = editEnabled,
+                trailingContent = { Text(text = "›", style = MaterialTheme.typography.bodyMedium) },
+                headlineContent = { Text(stringResource(R.string.settings_edit_this_source)) },
+            )
         }
     }
 }

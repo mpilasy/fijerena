@@ -42,6 +42,8 @@ fun PlaybackSettingsCard(
     onAutoplayNextEpisodeChanged: (Boolean) -> Unit,
     scale: Float,
     watchDelayRowFocusRequester: FocusRequester? = null,
+    /** Goes on the watch-delay row, the card's first focusable — the pane's entry row. */
+    watchDelayRowModifier: Modifier = Modifier,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
@@ -74,6 +76,7 @@ fun PlaybackSettingsCard(
                 scope = SettingsScope.DEVICE,
                 onClick = onOpenWatchDelayPicker,
                 focusRequester = watchDelayRowFocusRequester,
+                modifier = watchDelayRowModifier,
             )
             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
             SettingsSwitchRow(

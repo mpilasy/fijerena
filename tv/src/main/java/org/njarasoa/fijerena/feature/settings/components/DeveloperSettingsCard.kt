@@ -30,6 +30,8 @@ fun DeveloperSettingsCard(
     onDiagnostics: () -> Unit,
     scale: Float,
     diagnosticsButtonFocusRequester: FocusRequester? = null,
+    /** Goes on the Developer mode switch, the card's first focusable — the pane's entry row. */
+    devModeRowModifier: Modifier = Modifier,
 ) {
     GlassPanel(
         modifier = Modifier.fillMaxWidth(),
@@ -41,7 +43,7 @@ fun DeveloperSettingsCard(
                 scope = SettingsScope.PROFILE,
                 checked = isDevMode,
                 onCheckedChange = onDevModeChanged,
-                modifier = Modifier.padding(Spacing.md.scaled(scale)),
+                modifier = devModeRowModifier.padding(Spacing.md.scaled(scale)),
             )
             if (isDevMode) {
                 Row(

@@ -45,10 +45,11 @@ data class PickerOption<T>(
 
 /**
  * Drill-in picker for a choice setting (plan Part I, B, "value row + drill-in picker"): a
- * `‹ Title` header and a one-column list of radio rows in place of the settings list. Focus opens
- * on the selected option; OK applies and leaves, Back leaves unchanged. Back is taken in
- * `onPreviewKeyEvent` on the pane root (docs/NAVIGATION_GUIDE.md, "TV Back on Detail Screens"),
- * with [BackHandler] as the fallback.
+ * `‹ Title` header and a one-column list of radio rows in place of the group's rows. Focus opens
+ * on the selected option; OK applies and leaves, Back and Left leave unchanged (Left = back one
+ * level, the TV focus contract). Back is taken in `onPreviewKeyEvent` on the pane root
+ * (docs/NAVIGATION_GUIDE.md, "TV Back on Detail Screens"), with [BackHandler] as the fallback;
+ * Left is taken there too, before the enclosing `tvPane` could hand it to the rail.
  */
 @Composable
 fun <T> SettingsPickerPane(
@@ -70,11 +71,20 @@ fun <T> SettingsPickerPane(
     Column(
         modifier =
             modifier.fillMaxSize().onPreviewKeyEvent { event ->
-                if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
-                    onBack()
-                    true
-                } else {
-                    false
+                when (event.key) {
+                    Key.Back -> {
+                        if (event.type == KeyEventType.KeyUp) onBack()
+                        true
+                    }
+
+                    Key.DirectionLeft -> {
+                        if (event.type == KeyEventType.KeyDown) onBack()
+                        true
+                    }
+
+                    else -> {
+                        false
+                    }
                 }
             },
     ) {

@@ -30,6 +30,8 @@ fun ThemeSettingsCard(
     scale: Float,
     themeRowFocusRequester: FocusRequester? = null,
     uiStyleRowFocusRequester: FocusRequester? = null,
+    /** Goes on the Theme row, the card's first focusable — the pane's entry row. */
+    themeRowModifier: Modifier = Modifier,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(
@@ -43,6 +45,7 @@ fun ThemeSettingsCard(
                 scope = SettingsScope.DEVICE,
                 onClick = onOpenThemePicker,
                 focusRequester = themeRowFocusRequester,
+                modifier = themeRowModifier,
             )
             SettingsRow(
                 title = stringResource(R.string.settings_ui_style_section_title),

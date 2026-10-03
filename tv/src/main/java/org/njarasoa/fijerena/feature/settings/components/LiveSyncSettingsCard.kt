@@ -35,6 +35,8 @@ fun LiveSyncSettingsCard(
     onOpen: () -> Unit,
     scale: Float,
     openButtonFocusRequester: FocusRequester? = null,
+    /** Goes on the Open button, the card's only focusable — the pane's entry row. */
+    openButtonModifier: Modifier = Modifier,
 ) {
     val app = LocalContext.current.applicationContext as Application
     val status by SyncManager.getInstance(app).status.collectAsStateWithLifecycle()
@@ -72,7 +74,7 @@ fun LiveSyncSettingsCard(
             CinemaSecondaryButton(
                 onClick = onOpen,
                 text = stringResource(if (status.linked) R.string.live_sync_manage else R.string.live_sync_open),
-                modifier = openButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+                modifier = openButtonModifier.then(openButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
             )
         }
     }

@@ -869,7 +869,7 @@
     <string name="sync_error_not_a_code">Ce n\'est pas un code d\'appairage Fijerena.</string>
     <!-- Autoplay next episode (per profile) -->
     <string name="settings_autoplay_next_episode_title">Lire l\'épisode suivant automatiquement</string>
-    <string name="settings_autoplay_next_episode_desc">Vers la fin d\'un épisode, le suivant est proposé et démarre quand il se termine. Pour ce profil.</string>
+    <string name="settings_autoplay_next_episode_desc">Vers la fin d\'un épisode, le suivant est proposé et démarre quand il se termine.</string>
     <string name="player_up_next_title">À suivre</string>
     <string name="player_up_next_countdown_format">Démarre dans %1$d s</string>
     <string name="player_up_next_play_now">Lire maintenant</string>

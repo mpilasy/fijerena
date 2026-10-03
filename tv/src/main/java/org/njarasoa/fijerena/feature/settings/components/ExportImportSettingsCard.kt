@@ -30,6 +30,10 @@ fun ExportImportSettingsCard(
     onQuickImport: () -> Unit,
     exportImportMessage: String?,
     scale: Float,
+    /** Quick Import from Downloads is a developer convenience; hidden otherwise (plan Part I, A, group 6). */
+    isDevMode: Boolean = false,
+    /** Goes on the Export button, the card's first focusable — the pane's entry row. */
+    exportButtonModifier: Modifier = Modifier,
 ) {
     GlassPanel(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs.scaled(scale))) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
@@ -67,7 +71,7 @@ fun ExportImportSettingsCard(
                 CinemaSecondaryButton(
                     onClick = onExport,
                     text = stringResource(R.string.settings_export_button),
-                    modifier = Modifier.weight(1f),
+                    modifier = exportButtonModifier.weight(1f),
                 )
                 CinemaSecondaryButton(
                     onClick = onImport,
@@ -75,12 +79,14 @@ fun ExportImportSettingsCard(
                     modifier = Modifier.weight(1f),
                 )
             }
-            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-            CinemaSecondaryButton(
-                onClick = onQuickImport,
-                text = stringResource(R.string.settings_quick_import_button),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (isDevMode) {
+                Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                CinemaSecondaryButton(
+                    onClick = onQuickImport,
+                    text = stringResource(R.string.settings_quick_import_button),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             if (exportImportMessage != null) {
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 Text(
