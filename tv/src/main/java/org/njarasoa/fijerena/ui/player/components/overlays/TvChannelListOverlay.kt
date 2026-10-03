@@ -36,6 +36,7 @@ import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -50,6 +51,7 @@ fun TvChannelListOverlay(
     currentStreamId: String? = null,
 ) {
     val targetFocusRequester = remember { FocusRequester() }
+    val listFocusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
 
     LaunchedEffect(streams, currentStreamId) {
@@ -63,16 +65,9 @@ fun TvChannelListOverlay(
             if (targetIndex > 0) listState.scrollToItem(targetIndex)
             // Small delay to ensure the target item is composed and FocusRequester is attached
             androidx.compose.runtime.withFrameMillis {}
-            try {
-                targetFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-                // Retry after another frame
-                try {
-                    androidx.compose.runtime.withFrameMillis {}
-                    targetFocusRequester.requestFocus()
-                } catch (_: IllegalStateException) {
-                }
-            }
+            // Falls back to the list (its first visible row) when no row carries the target,
+            // e.g. currentStreamId isn't in this list.
+            targetFocusRequester.requestFocusWithRetry(fallback = listFocusRequester)
         }
     }
 
@@ -120,7 +115,7 @@ fun TvChannelListOverlay(
                 } else {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).focusRequester(listFocusRequester),
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
                         itemsIndexed(

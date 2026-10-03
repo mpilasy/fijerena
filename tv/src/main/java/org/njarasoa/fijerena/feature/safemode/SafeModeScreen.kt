@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -73,7 +74,7 @@ fun SafeModeScreen(onShowDiagnostics: () -> Unit) {
                     FOCUS_DIAGNOSTICS -> diagnosticsFocus
                     else -> continueFocus
                 }
-            runCatching { target.requestFocus() }
+            target.requestFocusWithRetry()
         }
     }
 

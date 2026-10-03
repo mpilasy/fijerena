@@ -54,6 +54,7 @@ import org.njarasoa.fijerena.feature.provider.components.DuplicateProviderDialog
 import org.njarasoa.fijerena.feature.provider.components.ProviderActionsMenuDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.*
 
 @Composable
@@ -141,11 +142,7 @@ fun TvProviderSelectionScreen(
             is ProviderUiState.NoProviders -> {
                 val emptyStateFocusRequester = remember { FocusRequester() }
                 LaunchedEffect(Unit) {
-                    try {
-                        emptyStateFocusRequester.requestFocus()
-                    } catch (_: IllegalStateException) {
-                        // Not yet composed/attached — first-run screen only shows this branch once.
-                    }
+                    emptyStateFocusRequester.requestFocusWithRetry()
                 }
                 Box(
                     modifier = Modifier.fillMaxSize(),

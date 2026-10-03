@@ -31,13 +31,10 @@ fun rememberFocusReturn(active: Boolean): FocusRequester {
     var wasActive by remember { mutableStateOf(active) }
     LaunchedEffect(active) {
         if (wasActive && !active) {
-            // The target may not be attached — a read-only row scrolled out of a lazy list, or a
-            // parent that unmounted along with the editor. Losing the hand-off is survivable;
-            // crashing is not.
-            try {
-                requester.requestFocus()
-            } catch (_: IllegalStateException) {
-            }
+            // The target may not be attached yet (the read-only row composes in the same pass that
+            // removes the editor), or ever — a row scrolled out of a lazy list, or a parent that
+            // unmounted along with the editor. Losing the hand-off then is survivable.
+            requester.requestFocusWithRetry()
         }
         wasActive = active
     }

@@ -40,6 +40,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvOptionRow
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -84,10 +85,7 @@ fun TvSelectorDialog(
     LaunchedEffect(Unit) {
         // Open on the active choice, so a viewer who only wants to confirm what is playing does
         // not have to hunt for it. Falls back to the Cancel button when nothing is selected.
-        try {
-            initialFocusRequester.requestFocus()
-        } catch (_: IllegalStateException) {
-        }
+        initialFocusRequester.requestFocusWithRetry()
     }
 
     BackHandler { onDismiss() }

@@ -44,6 +44,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.rememberFocusReturn
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
@@ -145,10 +146,7 @@ fun ReadOnlyFieldWithEdit(
         )
 
         LaunchedEffect(Unit) {
-            try {
-                editFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-            }
+            editFocusRequester.requestFocusWithRetry()
         }
     } else {
         Row(

@@ -1,5 +1,15 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Focus that lands, errors that recover
+**Release Date:** 2026-10-02
+
+- **TV focus lands reliably after slow screens:** opening a details page, coming back from the player or a details page, closing an editor or dialog, or opening the channel list on a slow TV could leave nothing focused, so the remote seemed dead for a few presses. The app now keeps trying for about half a second until the intended button or row is on screen, falling back to a nearby control (Play, the season tabs, the first channel) when it isn't there. → R-05.
+- **TV error screens take focus and recover on their own:** category, guide, player, movie and series errors are now one screen with Retry focused, so OK retries at once and Back leaves on the first press; movie and series errors gained a Retry button. On TV and mobile, an error shown while offline retries once when the network comes back — a TV started before its Wi-Fi is up recovers without a key press. → R-15.
+- **No more double-click crashes:** a double tap or remote auto-repeat on the import dialogs (Settings → Import) or the EPG "Watch now" confirmation can no longer crash, import twice or open two players. → R-20.
+- **SMB and Local only in developer mode:** these source types can't play or list anything yet, so Add Source offers them only in developer mode; existing ones stay editable. SMB settings are now saved as valid JSON even when the host or share contains quotes or backslashes. → R-22.
+
+---
+
 ## Version: Progress that sticks, sources that follow
 **Release Date:** 2026-10-02
 

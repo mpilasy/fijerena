@@ -348,19 +348,12 @@ private suspend fun requestInitialFocus(
     var attempt = 0
     while (!focused && attempt < INITIAL_FOCUS_ATTEMPTS) {
         withFrameNanos { }
-        focused = tryRequestFocus(programRequester) || tryRequestFocus(channelRequester)
+        focused = programRequester.requestFocus(FocusDirection.Enter) || channelRequester.requestFocus(FocusDirection.Enter)
         attempt++
     }
     if (!focused) focused = focusManager.moveFocus(FocusDirection.Down)
     return focused
 }
-
-private fun tryRequestFocus(requester: FocusRequester): Boolean =
-    try {
-        requester.requestFocus()
-    } catch (_: IllegalStateException) {
-        false
-    }
 
 private const val INITIAL_FOCUS_ATTEMPTS = 20
 

@@ -106,59 +106,54 @@ fun MobileSettingsScreen(
             }
         }
 
-    // Import options dialog
-    if (showImportOptionsDialog && pendingParsedImport != null) {
+    // Imports what was parsed with [resolution], once: a second tap after the first cleared the
+    // pending import does nothing rather than crash or import twice (R-20).
+    val resolveImport: (SettingsExportManager.ConflictResolution) -> Unit = { resolution ->
+        showConflictDialog = false
+        pendingParsedImport?.let { parsed ->
+            pendingParsedImport = null
+            viewModel.doImport(parsed, resolution, pendingImportOptions)
+        }
+    }
+
+    // Import options dialog. The dialog shows what was parsed when it composed; its buttons read
+    // the live state.
+    val parsedImport = pendingParsedImport
+    if (showImportOptionsDialog && parsedImport != null) {
         ImportOptionsDialog(
-            parsed = pendingParsedImport!!,
+            parsed = parsedImport,
             initialOptions = pendingImportOptions,
             onDismiss = {
                 showImportOptionsDialog = false
                 if (!showConflictDialog) pendingParsedImport = null
             },
             onConfirm = { options ->
-                pendingImportOptions = options
-                val p = pendingParsedImport!!
-                if (options.importProviders && p.hasConflicts) {
-                    showConflictDialog = true
-                    showImportOptionsDialog = false
-                } else {
-                    pendingParsedImport = null
-                    showImportOptionsDialog = false
-                    viewModel.doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
+                pendingParsedImport?.let { p ->
+                    pendingImportOptions = options
+                    if (options.importProviders && p.hasConflicts) {
+                        showConflictDialog = true
+                        showImportOptionsDialog = false
+                    } else {
+                        pendingParsedImport = null
+                        showImportOptionsDialog = false
+                        viewModel.doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
+                    }
                 }
             },
         )
     }
 
     // Conflict resolution dialog
-    if (showConflictDialog && pendingParsedImport != null) {
+    if (showConflictDialog && parsedImport != null) {
         ImportConflictDialog(
-            conflicts = pendingParsedImport!!.conflictingProviders,
+            conflicts = parsedImport.conflictingProviders,
             onDismiss = {
                 showConflictDialog = false
                 pendingParsedImport = null
             },
-            onOverwrite = {
-                showConflictDialog = false
-                val parsed = pendingParsedImport!!
-                val options = pendingImportOptions
-                pendingParsedImport = null
-                viewModel.doImport(parsed, SettingsExportManager.ConflictResolution.OVERWRITE, options)
-            },
-            onDuplicate = {
-                showConflictDialog = false
-                val parsed = pendingParsedImport!!
-                val options = pendingImportOptions
-                pendingParsedImport = null
-                viewModel.doImport(parsed, SettingsExportManager.ConflictResolution.DUPLICATE, options)
-            },
-            onSkip = {
-                showConflictDialog = false
-                val parsed = pendingParsedImport!!
-                val options = pendingImportOptions
-                pendingParsedImport = null
-                viewModel.doImport(parsed, SettingsExportManager.ConflictResolution.SKIP, options)
-            },
+            onOverwrite = { resolveImport(SettingsExportManager.ConflictResolution.OVERWRITE) },
+            onDuplicate = { resolveImport(SettingsExportManager.ConflictResolution.DUPLICATE) },
+            onSkip = { resolveImport(SettingsExportManager.ConflictResolution.SKIP) },
         )
     }
 

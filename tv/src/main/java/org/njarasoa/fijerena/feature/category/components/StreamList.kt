@@ -89,6 +89,7 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -245,13 +246,11 @@ internal fun StreamList(
                 // attached before requesting focus — mirrors TvChannelListOverlay.kt's identical
                 // race.
                 kotlinx.coroutines.delay(100)
-                try {
-                    lastPlayedFocusRequester.requestFocus()
-                    // Only mark handled on success, so a failed attempt (e.g. still racing
-                    // composition) gets retried on the next recomposition instead of being
-                    // silently given up on forever.
+                // Only mark handled on success, so a failed attempt (e.g. still racing
+                // composition) gets another go when the effect's keys change instead of being
+                // silently given up on forever.
+                if (lastPlayedFocusRequester.requestFocusWithRetry()) {
                     lastFocusedItemId = focusTargetId
-                } catch (_: IllegalStateException) {
                 }
             }
         }
@@ -357,11 +356,7 @@ internal fun StreamList(
                     val emptyStateFocusRequester = remember { FocusRequester() }
                     if (selectedCategoryId != null) {
                         LaunchedEffect(streams, selectedCategoryId) {
-                            try {
-                                emptyStateFocusRequester.requestFocus()
-                            } catch (_: IllegalStateException) {
-                                // Not yet composed/attached — next recomposition retries via the key above.
-                            }
+                            emptyStateFocusRequester.requestFocusWithRetry()
                         }
                     }
                     Box(
@@ -537,10 +532,7 @@ private fun StreamItem(
     }
     LaunchedEffect(focusFirstAction) {
         if (focusFirstAction) {
-            try {
-                actionFocusRequesters[0].requestFocus()
-            } catch (_: IllegalStateException) {
-            }
+            actionFocusRequesters[0].requestFocusWithRetry()
             focusFirstAction = false
         }
     }

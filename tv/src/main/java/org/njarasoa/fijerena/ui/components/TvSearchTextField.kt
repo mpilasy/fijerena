@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.modifiers.tvDpadEscape
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -199,9 +200,6 @@ fun TvSearchTextField(
 
     // Auto-focus on screen open
     LaunchedEffect(Unit) {
-        try {
-            focusRequester.requestFocus()
-        } catch (_: IllegalStateException) {
-        }
+        focusRequester.requestFocusWithRetry()
     }
 }

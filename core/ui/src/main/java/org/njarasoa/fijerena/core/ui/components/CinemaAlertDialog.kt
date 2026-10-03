@@ -26,8 +26,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -92,12 +94,16 @@ fun CinemaAlertDialog(
             { Box(Modifier.focusRequester(buttonFocusRequester).focusGroup()) { confirmButton() } }
         }
     LaunchedEffect(Unit) {
-        // An empty confirm/dismiss slot leaves the requester attached to a Box with nothing
-        // focusable inside it, and a caller-supplied target may not be composed yet. Neither is
-        // worth crashing the dialog over.
-        try {
-            (initialFocus ?: buttonFocusRequester).requestFocus()
-        } catch (_: IllegalStateException) {
+        // The dialog window composes after this screen, and a caller-supplied target may come later
+        // still, so retry each frame until the request takes (an unattached requester returns
+        // false, it doesn't throw). An empty confirm/dismiss slot leaves the requester on a Box
+        // with nothing focusable inside it; that never takes, and the loop just gives up. Same
+        // shape as the TV app's requestFocusWithRetry, which core:ui can't depend on.
+        val target = initialFocus ?: buttonFocusRequester
+        var frames = 0
+        while (!target.requestFocus(FocusDirection.Enter) && frames < FOCUS_RETRY_MAX_FRAMES) {
+            withFrameNanos { }
+            frames++
         }
     }
 
@@ -243,6 +249,9 @@ fun CinemaAlertDialog(
         }
     }
 }
+
+/** About half a second at 60 Hz for the dialog window to compose and attach its focus target. */
+private const val FOCUS_RETRY_MAX_FRAMES = 30
 
 /**
  * Sets the underlying dialog window's dim amount to [alpha] — [Dialog] has no

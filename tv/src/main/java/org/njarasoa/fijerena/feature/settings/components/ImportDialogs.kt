@@ -52,6 +52,7 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -72,10 +73,7 @@ fun ImportOptionsDialog(
     val firstOptionFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-        try {
-            firstOptionFocusRequester.requestFocus()
-        } catch (_: IllegalStateException) {
-        }
+        firstOptionFocusRequester.requestFocusWithRetry()
     }
 
     Dialog(
@@ -253,10 +251,7 @@ fun ConflictResolutionDialog(
     val conflictDialogFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-        try {
-            conflictDialogFocusRequester.requestFocus()
-        } catch (_: IllegalStateException) {
-        }
+        conflictDialogFocusRequester.requestFocusWithRetry()
     }
 
     Dialog(

@@ -74,6 +74,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -464,6 +465,7 @@ fun MobileEpgBrowserScreen(
                 }
 
                 is EpgBrowserViewModel.UiState.Error -> {
+                    RetryWhenOnline { viewModel.performSearch(searchQuery) }
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
@@ -649,8 +651,8 @@ private fun MobileProgramCard(
 
             // Confirmation dialog for non-ON-AIR matched airings
             val pending = pendingConfirmAiring
-            if (pending != null) {
-                val matched = pending.matchedStream!!
+            val matched = pending?.matchedStream
+            if (pending != null && matched != null) {
                 val airingContext = LocalContext.current
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
@@ -667,8 +669,11 @@ private fun MobileProgramCard(
                     confirmButton = {
                         Column(verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs)) {
                             CinemaDialogTextButton(onClick = {
-                                pendingConfirmAiring = null
-                                onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                                // A second click before the dialog leaves doesn't open the player twice (R-20).
+                                if (pendingConfirmAiring != null) {
+                                    pendingConfirmAiring = null
+                                    onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                                }
                             }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
 
                             if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {
@@ -744,15 +749,15 @@ private fun MobileAiringRow(
 ) {
     val isOnAir = nowEpoch >= airing.startEpoch && nowEpoch < airing.endEpoch
     val isSoon = !isOnAir && airing.startEpoch > nowEpoch && (airing.startEpoch - nowEpoch) <= 7200L
-    val isMatched = airing.matchedStream != null
+    val matched = airing.matchedStream
+    val isMatched = matched != null
 
     val onClick =
-        remember(isMatched, isOnAir, airing, onNavigateToPlayer, onRequestConfirmation) {
-            if (!isMatched) {
+        remember(matched, isOnAir, airing, onNavigateToPlayer, onRequestConfirmation) {
+            if (matched == null) {
                 null
             } else {
                 {
-                    val matched = airing.matchedStream!!
                     if (isOnAir) {
                         onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
                     } else {

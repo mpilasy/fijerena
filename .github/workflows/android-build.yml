@@ -58,6 +58,10 @@ jobs:
       - name: ViewModel coroutines have an exception boundary
         run: scripts/check-viewmodel-launch.sh
 
+      # docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-05.
+      - name: TV focus requests retry on the result, not an exception
+        run: scripts/check-focus-retry.sh
+
       - name: Room schemas are committed and current
         run: |
           if [ -n "$(git status --porcelain -- core/network/schemas)" ]; then

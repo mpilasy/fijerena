@@ -10,9 +10,11 @@ A native Android media player supporting Xtream IPTV, Jellyfin, SMB shares, Loca
 |----------|---------|--------|----------|--------|---------------|------|
 | **Xtream** | Yes | Yes | Yes | Client-side | No | Username/password |
 | **Jellyfin** | No | Yes | Yes | Server-side | Yes | Username/password or Quick Connect |
-| **SMB** | No | Yes | No | Filename | No | Optional |
-| **Local** | M3U only | Yes | No | Filename | No | No |
+| **SMB** (developer mode) | No | Yes | No | Filename | No | Optional |
+| **Local** (developer mode) | M3U only | Yes | No | Filename | No | No |
 | **Remote M3U** | Yes | No | No | Title match | No | No |
+
+SMB and Local are offered in Add Source only in developer mode: SMB can't play yet (no SMB data source) and Local has no folder picker, so neither works for a viewer. An existing SMB or Local source stays editable.
 
 Multiple sources can be configured simultaneously. Switch active source from Settings → Manage Sources.
 
@@ -358,6 +360,7 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 - **Source labels:** guide source name shown on each airing in EPG Browser
 - **Cellular Buffer Settings:** multiplier sliders (0.5×–3.0×) for Live and VOD profiles (mobile)
 - **Diagnostics:** the on-device crash log and Android's record of why the app last closed (ANR, crash, low-memory kill), newest first; Share on mobile. See `docs/RUN_GUIDE.md` → Crash log and Diagnostics
+- **Error screens recover on their own:** a TV or mobile error shown while the device was offline (default network without `INTERNET` + `VALIDATED`, or lost) retries once when the network comes back, so a TV that starts before its Wi-Fi is up after wake recovers without a key press. An error shown while online is never retried by itself. TV error states land focus on Retry
 - **Crash-loop safe mode** (always on, not a developer setting): when three launches within 10 minutes each end within 30 s of starting, the next launch opens a safe-mode screen instead of Home and skips the startup work that could be the cause — EPG initialisation and auto-refresh, catalogue sync, live sync, the now-playing publisher, the startup migrations, and the nav host's source lookups and orphan sweep. **Continue** restarts the app normally; **Clear caches** (confirmed) removes the EPG index, every source's downloaded catalogue and the poster cache, keeping sources, profiles, favourites and watch history; **Show diagnostics** opens Diagnostics. See `docs/RUN_GUIDE.md` → Crash-loop safe mode
 - **Data from a newer version:** if this device's sources were saved by a newer version of Fijerena (an older build installed over a newer one, or a newer backup restored), the app opens a screen saying so instead of crashing on every start. **Close** leaves everything as it is (install the newer version to keep using it); **Reset sources** (confirmed) sets the sources database aside as a backup and restarts with no sources, keeping favourites and watch history on the device
 

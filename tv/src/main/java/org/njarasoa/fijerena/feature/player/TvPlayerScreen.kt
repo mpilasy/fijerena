@@ -3,10 +3,7 @@
 package org.njarasoa.fijerena.feature.player
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -30,7 +27,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -48,7 +44,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.StreamLoaderViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSession
 import org.njarasoa.fijerena.core.ui.viewmodels.finalizeSessionAndAwait
 import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.player.ImmutableMediaList
 import org.njarasoa.fijerena.ui.player.PlayerScreen
 import org.njarasoa.fijerena.ui.player.UpNextState
@@ -308,10 +304,13 @@ fun TvPlayerScreen(
         }
 
         is StreamLoaderViewModel.StreamState.Error -> {
-            ErrorScreen(
+            TvErrorState(
                 message = state.message,
                 onRetry = { loaderViewModel.retryLastLoad() },
+                title = stringResource(R.string.player_error),
+                retryLabel = stringResource(R.string.player_retry),
                 onBack = onBack,
+                backLabel = stringResource(R.string.player_back_to_categories),
             )
         }
 
@@ -392,44 +391,5 @@ private fun LoadingScreen() {
             style = MaterialTheme.typography.headlineMedium,
             color = CinemaAccent,
         )
-    }
-}
-
-@Composable
-private fun ErrorScreen(
-    message: String,
-    onRetry: () -> Unit,
-    onBack: () -> Unit,
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(Spacing.xl),
-        ) {
-            Text(
-                text = stringResource(R.string.player_error),
-                style = MaterialTheme.typography.displayMedium,
-                color = CinemaError,
-            )
-            Spacer(modifier = Modifier.padding(Spacing.md))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = CinemaTextSecondary,
-            )
-            Spacer(modifier = Modifier.padding(Spacing.lg))
-            CinemaSecondaryButton(
-                onClick = onRetry,
-                text = stringResource(R.string.player_retry),
-            )
-            Spacer(modifier = Modifier.padding(Spacing.sm))
-            CinemaSecondaryButton(
-                onClick = onBack,
-                text = stringResource(R.string.player_back_to_categories),
-            )
-        }
     }
 }

@@ -40,12 +40,14 @@ import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.smb.smbSourceConfig
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.model.addSourceTypes
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -100,6 +102,9 @@ fun TvAddProviderScreen(
     var host by remember { mutableStateOf("") }
     var shareName by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
+    // The type of the source being edited: kept on the type list even when it's dev-mode only (R-22).
+    var editedType by remember { mutableStateOf<ProviderType?>(null) }
+    val isDevMode = remember { appSettings.isDevMode }
     var error by remember { mutableStateOf<String?>(null) }
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
@@ -185,6 +190,7 @@ fun TvAddProviderScreen(
                         // cancellation-ok: no suspension point in the try
                         ProviderType.XTREAM
                     }
+                editedType = selectedType
                 if (provider.type == "SMB" && provider.config.isNotBlank()) {
                     try {
                         val json = org.json.JSONObject(provider.config)
@@ -247,6 +253,7 @@ fun TvAddProviderScreen(
 
                         // Provider type dropdown (D-pad friendly)
                         ProviderTypeDropdown(
+                            types = addSourceTypes(isDevMode, editedType),
                             selectedType = selectedType,
                             onTypeSelected = { selectedType = it },
                         )
@@ -444,7 +451,7 @@ fun TvAddProviderScreen(
                                         val savePassword = password.trim()
                                         val saveConfig =
                                             if (selectedType == ProviderType.SMB) {
-                                                """{"host":"${host.trim()}","share":"${shareName.trim()}"}"""
+                                                smbSourceConfig(host.trim(), shareName.trim())
                                             } else {
                                                 ""
                                             }
@@ -496,7 +503,7 @@ fun TvAddProviderScreen(
                             val saveUrl = if (selectedType == ProviderType.SMB) "" else url.trim()
                             val saveConfig =
                                 if (selectedType == ProviderType.SMB) {
-                                    """{"host":"${host.trim()}","share":"${shareName.trim()}"}"""
+                                    smbSourceConfig(host.trim(), shareName.trim())
                                 } else {
                                     ""
                                 }

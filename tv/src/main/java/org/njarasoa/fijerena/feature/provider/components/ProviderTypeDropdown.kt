@@ -33,6 +33,7 @@ import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 
 @Composable
 fun ProviderTypeDropdown(
+    types: List<ProviderType>,
     selectedType: ProviderType,
     onTypeSelected: (ProviderType) -> Unit,
 ) {
@@ -85,7 +86,7 @@ fun ProviderTypeDropdown(
             // The menu is a Popup, so it gets its own window and loses the scaled density.
             ProvideUiScaledDensity {
                 Column {
-                    ProviderType.entries.forEach { type ->
+                    types.forEach { type ->
                         DropdownMenuItem(
                             text = {
                                 Text(

@@ -99,6 +99,7 @@ import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -592,11 +593,7 @@ private fun SearchResultsList(
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
     LaunchedEffect(categoryResults, results, isSearching) {
         if (!isSearching && (categoryResults.isNotEmpty() || results.isNotEmpty())) {
-            try {
-                firstItemFocusRequester.requestFocus()
-            } catch (_: Exception) {
-                // cancellation-ok: no suspension point in the try
-            }
+            firstItemFocusRequester.requestFocusWithRetry()
         }
     }
 

@@ -209,7 +209,8 @@ Focus must land somewhere visible when a screen or panel appears, and return to 
 - **Closing the episode detail panel** focuses that episode's card (the tab row if Next/Previous crossed into another season).
 - **TV Guide** opens on the current programme of the first channel that has programmes (separator rows without programmes are skipped), retrying for a few frames until the row is composed.
 - **End of a row:** the last Continue Watching card cancels Right (`focusProperties { right = FocusRequester.Cancel }`) so focus doesn't escape to the top bar.
-- Request focus only once the target is composed; guard `requestFocus()` (it threw on an unattached node before Compose 1.9 and only logs since).
+- Land focus from a `LaunchedEffect` with `requestFocusWithRetry` (`tv/ui/components/input/FocusRetry.kt`): it retries each frame (about 0.5 s) on the Boolean result of `requestFocus(FocusDirection.Enter)`, then an optional `fallback`. Never `try { requestFocus() } catch (IllegalStateException)` or `runCatching`: since Compose 1.10 an unattached target logs and returns `false` instead of throwing, so those catches retried nothing (R-05). Act on the result — e.g. `StreamList` marks a Back-restore handled only when it returned true. `scripts/check-focus-retry.sh` (CI) rejects the old pattern.
+- **Error states** use `TvErrorState` (`tv/ui/components/TvErrorState.kt`): focus lands on Retry on entry, Back is taken in `onPreviewKeyEvent` when the screen has one, and `RetryWhenOnline` retries once when the network comes back (R-15).
 
 ## Adding New Screens
 

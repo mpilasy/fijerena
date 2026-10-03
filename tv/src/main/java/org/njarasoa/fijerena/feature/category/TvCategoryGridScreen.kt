@@ -39,11 +39,11 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
-import org.njarasoa.fijerena.feature.category.components.ErrorScreen
 import org.njarasoa.fijerena.feature.category.components.LiveTvSplitLayout
 import org.njarasoa.fijerena.feature.category.components.LoadingScreen
 import org.njarasoa.fijerena.feature.category.components.TwoColumnLayout
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -278,9 +278,10 @@ private fun CategoryGridContent(
                 is CategoryViewModel.UiState.Error -> {
                     AmbientBackdrop(modifier = Modifier.fillMaxSize())
                     Box(modifier = safeMarginModifier) {
-                        ErrorScreen(
+                        TvErrorState(
                             message = state.message,
                             onRetry = { catViewModel.retry() },
+                            onBack = onBack,
                         )
                     }
                 }

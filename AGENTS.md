@@ -95,6 +95,8 @@ Every interactive `@Composable` must be D-pad navigable.
 - **Lists are plain `LazyColumn`/`LazyRow`.** Never `TvLazyColumn`/`TvLazyRow`: `tv-foundation` 1.0.0-alpha10 calls a prefetch API removed in Compose 1.9 and crashes on scroll.
 - **Back on TV:** where a focused `Button`/`Surface` exists, intercept Back in `onPreviewKeyEvent` on the root — `BackHandler` misses the first press. See `docs/NAVIGATION_GUIDE.md` → "TV Back on Detail Screens".
 - **Every screen/panel lands focus somewhere visible on open and returns it to where the user was on Back** — see `docs/NAVIGATION_GUIDE.md` → "D-Pad Focus Handling".
+- **Land focus with `requestFocusWithRetry`** (`ui/components/input/FocusRetry.kt`) from a `LaunchedEffect`, never `try { requestFocus() } catch (IllegalStateException)` or `runCatching`: since Compose 1.10 an unattached requester returns `false` instead of throwing, so those catches retry nothing. Act on its Boolean result and pass a `fallback` when there is an obvious second target. `scripts/check-focus-retry.sh` (CI) enforces it.
+- **Error states:** TV uses `TvErrorState` (focus on Retry, auto-retry when back online); mobile error branches call `RetryWhenOnline` (`core:ui`).
 
 ### 3. Safe Margins (TV Overscan)
 
@@ -350,7 +352,7 @@ Each plan states its own status at the top - trust that over any summary here.
 | [docs/plans/20261002_epg-search-during-refresh-plan.md](docs/plans/20261002_epg-search-during-refresh-plan.md) | **Complete** - all three phases landed (2026-10-02); emulator verification outstanding |
 | [docs/plans/20261002_catalog-sync-cache-churn-plan.md](docs/plans/20261002_catalog-sync-cache-churn-plan.md) | **Complete** - all four phases landed (2026-10-02); Phase 1 verified on bears, Phase 4 on jellyxtream |
 | [docs/plans/20261002_provider-to-source-rename-plan.md](docs/plans/20261002_provider-to-source-rename-plan.md) | **Complete** - both phases landed (2026-10-02); French and Malagasy reviewed as text only |
-| [docs/plans/20261002_next-level-rock-solid-resilience-plan.md](docs/plans/20261002_next-level-rock-solid-resilience-plan.md) | In progress - Phase 0 done (2026-10-02: R-07, R-19, R-10; safe mode verified on the TV emulator, mobile unverified); Phase 1 done (R-02, R-03, R-17, R-01; newer-data screen verified on the TV emulator); Phase 2 done (R-09, R-25, R-08, R-11; malformed refresh time verified on the TV emulator); Phase 3 done (R-13, R-12, R-04, R-06 steps 1-3; verified on the TV and two linked emulators); R-23's history removal of `fijerena_settings.json` done |
+| [docs/plans/20261002_next-level-rock-solid-resilience-plan.md](docs/plans/20261002_next-level-rock-solid-resilience-plan.md) | In progress - Phase 0 done (2026-10-02: R-07, R-19, R-10; safe mode verified on the TV emulator, mobile unverified); Phase 1 done (R-02, R-03, R-17, R-01; newer-data screen verified on the TV emulator); Phase 2 done (R-09, R-25, R-08, R-11; malformed refresh time verified on the TV emulator); Phase 3 done (R-13, R-12, R-04, R-06 steps 1-3; verified on the TV and two linked emulators); Phase 4 code done (R-05, R-15, R-20, R-22), not yet run on a device; R-23's history removal of `fijerena_settings.json` done |
 
 Source comments cite plans by path and phase (`// Phase 6, docs/plans/20260828_watch-state-durable-storage-plan.md`), so **moving or renaming a plan means updating every reference** - the watch-state plan is cited from 24 source files, tv-ui-performance from 2, secret-store-migration from 3.
 

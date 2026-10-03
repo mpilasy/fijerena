@@ -48,6 +48,7 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.settings.components.ProfileEditDialog
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -75,7 +76,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
         val activeIndex = profiles.indexOfFirst { it.isActive }
         if (activeIndex >= 0) {
             listState.scrollToItem(activeIndex)
-            runCatching { activeFocusRequester.requestFocus() }
+            activeFocusRequester.requestFocusWithRetry()
         }
     }
 

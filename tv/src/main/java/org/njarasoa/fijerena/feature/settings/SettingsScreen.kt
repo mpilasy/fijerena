@@ -340,21 +340,25 @@ fun SettingsScreen(
             }
         }
 
-        // Import options dialog
-        if (showImportOptionsDialog && pendingParsedImport != null) {
+        // Import options dialog. The dialog shows what was parsed when it composed; its buttons read
+        // the live state, so a second click (OK auto-repeat) after the first cleared it does
+        // nothing rather than crash or import twice (R-20).
+        val parsedImport = pendingParsedImport
+        if (showImportOptionsDialog && parsedImport != null) {
             ImportOptionsDialog(
-                parsed = pendingParsedImport!!,
+                parsed = parsedImport,
                 initialOptions = pendingImportOptions,
                 onConfirm = { options ->
-                    pendingImportOptions = options
-                    val p = pendingParsedImport!!
-                    if (options.importProviders && p.hasConflicts) {
-                        showConflictDialog = true
-                        showImportOptionsDialog = false
-                    } else {
-                        pendingParsedImport = null
-                        showImportOptionsDialog = false
-                        viewModel.doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
+                    pendingParsedImport?.let { p ->
+                        pendingImportOptions = options
+                        if (options.importProviders && p.hasConflicts) {
+                            showConflictDialog = true
+                            showImportOptionsDialog = false
+                        } else {
+                            pendingParsedImport = null
+                            showImportOptionsDialog = false
+                            viewModel.doImport(p, SettingsExportManager.ConflictResolution.SKIP, options)
+                        }
                     }
                 },
                 onCancel = {
@@ -365,16 +369,15 @@ fun SettingsScreen(
         }
 
         // Conflict resolution dialog
-        if (showConflictDialog && pendingParsedImport != null) {
-            val conflicts = pendingParsedImport!!.conflictingProviders
+        if (showConflictDialog && parsedImport != null) {
             ConflictResolutionDialog(
-                conflicts = conflicts,
+                conflicts = parsedImport.conflictingProviders,
                 onResolve = { resolution ->
                     showConflictDialog = false
-                    val parsed = pendingParsedImport!!
-                    val options = pendingImportOptions
-                    pendingParsedImport = null
-                    viewModel.doImport(parsed, resolution, options)
+                    pendingParsedImport?.let { parsed ->
+                        pendingParsedImport = null
+                        viewModel.doImport(parsed, resolution, pendingImportOptions)
+                    }
                 },
                 onCancel = {
                     showConflictDialog = false

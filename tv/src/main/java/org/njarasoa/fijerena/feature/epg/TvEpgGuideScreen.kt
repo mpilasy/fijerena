@@ -2,12 +2,10 @@ package org.njarasoa.fijerena.feature.epg
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,12 +25,10 @@ import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
-import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -98,7 +94,13 @@ fun TvEpgGuideScreen(
                 }
 
                 is EpgViewModel.UiState.Error -> {
-                    ErrorScreen(message = state.message, onRetry = { viewModel.loadEpgData() }, onBack = onBack)
+                    TvErrorState(
+                        message = state.message,
+                        onRetry = { viewModel.loadEpgData() },
+                        title = stringResource(R.string.epg_error_loading),
+                        onBack = onBack,
+                        backLabel = stringResource(R.string.common_back),
+                    )
                 }
             }
         }
@@ -129,56 +131,6 @@ private fun LoadingScreen() {
                     ),
                 color = CinemaTextSecondary,
             )
-        }
-    }
-}
-
-@Composable
-private fun ErrorScreen(
-    message: String,
-    onRetry: () -> Unit,
-    onBack: () -> Unit,
-) {
-    val scale = LocalUiScale.current
-
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(R.string.epg_error_loading),
-                style =
-                    MaterialTheme.typography.displayMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.displayMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaError,
-            )
-            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-            Text(
-                text = message,
-                style =
-                    MaterialTheme.typography.bodyLarge.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodyLarge.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary,
-            )
-            Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-            Row {
-                CinemaSecondaryButton(
-                    onClick = onBack,
-                    text = stringResource(R.string.common_back),
-                )
-                Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
-                CinemaPrimaryButton(
-                    onClick = onRetry,
-                    text = stringResource(R.string.common_retry),
-                )
-            }
         }
     }
 }

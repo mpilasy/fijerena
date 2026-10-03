@@ -88,7 +88,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -98,10 +97,12 @@ import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.TvDetailHero
+import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.modifiers.tvFocusableNoScale
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -154,9 +155,12 @@ fun MovieDetailsScreen(
             }
 
             is MovieDetailsViewModel.UiState.Error -> {
-                ErrorScreen(
+                TvErrorState(
                     message = state.message,
+                    onRetry = { viewModel.loadMovieInfo() },
+                    title = stringResource(R.string.movie_error_loading),
                     onBack = onBack,
+                    backLabel = stringResource(R.string.movie_back_to_movies),
                 )
             }
 
@@ -311,10 +315,7 @@ private fun MovieDetailsContent(
     // stays on the stream name row so the D-pad doesn't silently land on Play.
     LaunchedEffect(resumePositionMs) {
         if (streamSwitchSignal == 0) {
-            try {
-                playButtonFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-            }
+            playButtonFocusRequester.requestFocusWithRetry()
         }
     }
 
@@ -326,10 +327,7 @@ private fun MovieDetailsContent(
         // in testing) — poll instead, and stop the instant the row actually reports focused.
         var attempts = 0
         while (!streamRowFocused && attempts < 90) {
-            try {
-                streamNameFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-            }
+            streamNameFocusRequester.requestFocus()
             withFrameNanos { }
             attempts++
         }
@@ -683,50 +681,6 @@ private fun LoadingScreen() {
                                 .scaled(scale),
                     ),
                 color = CinemaTextSecondary,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ErrorScreen(
-    message: String,
-    onBack: () -> Unit,
-) {
-    val scale = LocalUiScale.current
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(Spacing.xl.scaled(scale)),
-        ) {
-            Text(
-                text = stringResource(R.string.movie_error_loading),
-                style =
-                    MaterialTheme.typography.displayMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.displayMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaError,
-            )
-            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-            Text(
-                text = message,
-                style =
-                    MaterialTheme.typography.bodyLarge.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodyLarge.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary,
-            )
-            Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-            CinemaSecondaryButton(
-                onClick = onBack,
-                text = stringResource(R.string.movie_back_to_movies),
             )
         }
     }

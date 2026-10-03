@@ -60,6 +60,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
+import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.TitleLogoOrText
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -188,6 +189,7 @@ fun MobileEpisodeSelectionScreen(
                 }
 
                 errorState != null -> {
+                    RetryWhenOnline { viewModel.loadSeriesInfo() }
                     ErrorScreen(
                         message = errorState.message,
                         onBack = onBack,

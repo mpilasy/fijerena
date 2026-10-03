@@ -30,6 +30,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
@@ -52,7 +53,7 @@ fun NewerDataScreen() {
 
     // On entry, and back on Reset sources once its confirmation closes.
     LaunchedEffect(confirmingReset) {
-        if (!confirmingReset) runCatching { (if (resetChosen) resetFocus else closeFocus).requestFocus() }
+        if (!confirmingReset) (if (resetChosen) resetFocus else closeFocus).requestFocusWithRetry()
     }
 
     Box(

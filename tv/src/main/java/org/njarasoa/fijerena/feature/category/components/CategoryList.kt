@@ -77,6 +77,7 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -112,20 +113,12 @@ internal fun CategoryList(
         if (selectedCategoryId != null) {
             if (selectedCategoryId in CategoryViewModel.VIRTUAL_CATEGORY_IDS) {
                 // Focus virtual category in sidebar
-                try {
-                    focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus()
-                } catch (_: IllegalStateException) {
-                }
+                focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocusWithRetry()
             } else if (regularCategories.isNotEmpty()) {
                 val selectedIndex = regularCategories.indexOfFirst { it.id == selectedCategoryId }
                 if (selectedIndex != -1) {
                     listState.animateScrollToItem(selectedIndex)
-                    try {
-                        focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocus()
-                    } catch (
-                        _: IllegalStateException,
-                    ) {
-                    }
+                    focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocusWithRetry()
                 }
             }
         }

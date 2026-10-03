@@ -41,6 +41,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.CinemaThumbnail
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
+import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
@@ -272,6 +273,7 @@ fun MobileSearchScreen(
                     }
 
                     is SearchViewModel.UiState.Error -> {
+                        RetryWhenOnline { viewModel.performSearch(searchQuery) }
                         ErrorView(message = state.message)
                     }
 

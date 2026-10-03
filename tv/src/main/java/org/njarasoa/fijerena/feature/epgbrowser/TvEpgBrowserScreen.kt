@@ -110,6 +110,7 @@ import org.njarasoa.fijerena.ui.components.TvSearchTextField
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.TvSelectableButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -349,11 +350,7 @@ private fun EpgBrowserContent(
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
     LaunchedEffect(uiState) {
         if (uiState is EpgBrowserViewModel.UiState.Results) {
-            try {
-                firstItemFocusRequester.requestFocus()
-            } catch (_: Exception) {
-                // cancellation-ok: no suspension point in the try
-            }
+            firstItemFocusRequester.requestFocusWithRetry()
         }
     }
 
@@ -424,10 +421,7 @@ private fun EpgBrowserContent(
 
         // Auto-focus on screen open
         LaunchedEffect(Unit) {
-            try {
-                searchFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-            }
+            searchFocusRequester.requestFocusWithRetry()
         }
 
         // Dev mode: show EPG DB stats
@@ -964,8 +958,8 @@ private fun ProgramCard(
 
             // Confirmation dialog for non-ON-AIR matched airings
             val pending = pendingConfirmAiring
-            if (pending != null) {
-                val matched = pending.matchedStream!!
+            val matched = pending?.matchedStream
+            if (pending != null && matched != null) {
                 val airingContext = LocalContext.current
                 CinemaAlertDialog(
                     onDismissRequest = { pendingConfirmAiring = null },
@@ -983,8 +977,11 @@ private fun ProgramCard(
                     confirmButton = {
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs.scaled(scale))) {
                             CinemaButton(onClick = {
-                                pendingConfirmAiring = null
-                                onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                                // A second click before the dialog leaves doesn't open the player twice (R-20).
+                                if (pendingConfirmAiring != null) {
+                                    pendingConfirmAiring = null
+                                    onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
+                                }
                             }) { Text(stringResource(R.string.epg_browser_watch_now_btn)) }
 
                             if (pending.startEpoch > nowEpoch && canOpenCalendar(airingContext)) {
@@ -1120,8 +1117,7 @@ private fun AiringRow(
 
     Surface(
         onClick = {
-            if (isMatched) {
-                val matched = airing.matchedStream!!
+            airing.matchedStream?.let { matched ->
                 if (isOnAir) {
                     onNavigateToPlayer(matched.streamId.toString(), matched.streamName, matched.categoryId)
                 } else {

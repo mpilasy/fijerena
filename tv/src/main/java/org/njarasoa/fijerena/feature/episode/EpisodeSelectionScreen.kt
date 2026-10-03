@@ -131,7 +131,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
-import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -143,11 +142,13 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SeriesDetailsViewModelFactory
 import org.njarasoa.fijerena.feature.category.components.tvLongPress
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
 import org.njarasoa.fijerena.ui.components.TvDetailHero
+import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -209,9 +210,12 @@ fun EpisodeSelectionScreen(
         val shown = lastSuccess
         when {
             state is SeriesDetailsViewModel.UiState.Error -> {
-                ErrorScreen(
+                TvErrorState(
                     message = state.message,
+                    onRetry = { viewModel.loadSeriesInfo() },
+                    title = stringResource(R.string.series_error_loading),
                     onBack = onBack,
+                    backLabel = stringResource(R.string.series_back_to_list),
                 )
             }
 
@@ -343,11 +347,7 @@ internal fun EpisodeListContent(
         backScope.launch {
             listState.scrollToItem(TABS_ITEM_INDEX)
             withFrameNanos { }
-            try {
-                tabRowFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-                onBack()
-            }
+            if (!tabRowFocusRequester.requestFocusWithRetry()) onBack()
         }
     }
 
@@ -710,13 +710,10 @@ internal fun EpisodeListContent(
                     withTimeoutOrNull(RESUME_CARD_WAIT_MS) {
                         snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.key == target } }.first { it }
                     } != null
-            try {
-                if (cardShown) {
-                    resumeCardFocusRequester.requestFocus()
-                } else {
-                    playButtonFocusRequester.requestFocus()
-                }
-            } catch (_: IllegalStateException) {
+            if (cardShown) {
+                resumeCardFocusRequester.requestFocusWithRetry(fallback = playButtonFocusRequester)
+            } else {
+                playButtonFocusRequester.requestFocusWithRetry()
             }
             awaitingFirstFocus = false
         }
@@ -730,10 +727,7 @@ internal fun EpisodeListContent(
         // in testing) — poll instead, and stop the instant the row actually reports focused.
         var attempts = 0
         while (!streamRowFocused && attempts < 90) {
-            try {
-                streamNameFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-            }
+            streamNameFocusRequester.requestFocus()
             withFrameNanos { }
             attempts++
         }
@@ -752,10 +746,10 @@ internal fun EpisodeListContent(
                 listState.scrollToItem(headerItemCount + index)
                 withFrameNanos { }
             }
-            try {
-                if (index >= 0) reopenedEpisodeFocusRequester.requestFocus() else tabRowFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-                // Row or tab row not composed; leave focus to the system rather than crash.
+            if (index >= 0) {
+                reopenedEpisodeFocusRequester.requestFocusWithRetry(fallback = tabRowFocusRequester)
+            } else {
+                tabRowFocusRequester.requestFocusWithRetry()
             }
             reopenedEpisodeId = null
         }
@@ -1639,10 +1633,7 @@ private fun EpisodeDetailPanel(
                 arrivedVia == EpisodeStep.NEXT && nextEpisode != null -> nextButtonFocusRequester
                 else -> playButtonFocusRequester
             }
-        try {
-            target.requestFocus()
-        } catch (_: IllegalStateException) {
-        }
+        target.requestFocusWithRetry(fallback = playButtonFocusRequester)
     }
 
     val hasResume = resumePositionMs > 0L
@@ -2285,50 +2276,6 @@ private fun LoadingScreen() {
                                 .scaled(scale),
                     ),
                 color = CinemaTextSecondary,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ErrorScreen(
-    message: String,
-    onBack: () -> Unit,
-) {
-    val scale = LocalUiScale.current
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(Spacing.xl.scaled(scale)),
-        ) {
-            Text(
-                text = stringResource(R.string.series_error_loading),
-                style =
-                    MaterialTheme.typography.displayMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.displayMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaError,
-            )
-            Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
-            Text(
-                text = message,
-                style =
-                    MaterialTheme.typography.bodyLarge.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodyLarge.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary,
-            )
-            Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
-            CinemaSecondaryButton(
-                onClick = onBack,
-                text = stringResource(R.string.series_back_to_list),
             )
         }
     }

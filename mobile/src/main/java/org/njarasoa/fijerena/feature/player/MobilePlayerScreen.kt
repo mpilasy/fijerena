@@ -61,6 +61,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.EmbeddedPlayerSurface
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
+import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.awaitStarted
 import org.njarasoa.fijerena.core.ui.components.showUpNext
 import org.njarasoa.fijerena.core.ui.components.upNextOnEnd
@@ -593,6 +594,7 @@ fun MobilePlayerContent(
         }
 
         is StreamLoaderViewModel.StreamState.Error -> {
+            RetryWhenOnline { loaderViewModel.retryLastLoad() }
             ErrorScreen(
                 message = state.message,
                 onRetry = { loaderViewModel.retryLastLoad() },

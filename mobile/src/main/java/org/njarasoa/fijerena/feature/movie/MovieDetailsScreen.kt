@@ -37,6 +37,7 @@ import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.RatingBadge
+import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -116,6 +117,7 @@ fun MobileMovieDetailsScreen(
             val shown = lastSuccess
             when {
                 state is MovieDetailsViewModel.UiState.Error -> {
+                    RetryWhenOnline { viewModel.loadMovieInfo() }
                     ErrorScreen(
                         message = state.message,
                         onBack = onBack,

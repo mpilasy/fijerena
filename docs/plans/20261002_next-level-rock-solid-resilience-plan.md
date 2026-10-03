@@ -1,6 +1,6 @@
 # Next-Level Rock-Solid Resilience & Professionalism Plan
 
-**Status:** In progress. Phase 0 done 2026-10-02 (R-07, R-19, R-10); R-10 verified on the TV emulator. Phase 1 done 2026-10-02 (R-02, R-03, R-17, R-01); R-01 verified on the TV emulator. Phase 0's GitHub Actions run passed (JDK 21, Lint). Phase 2 done 2026-10-02 (R-09, R-25, R-08, R-11). Phase 3 done 2026-10-02 (R-13, R-12, R-04, R-06 steps 1-3; step 4 deferred); 473 unit tests; R-04 and R-06 verified on emulators. Every finding was traced in source at `33ffd673`; none of Phases 1-6 has been reproduced on a device yet.
+**Status:** In progress. Phase 0 done 2026-10-02 (R-07, R-19, R-10); R-10 verified on the TV emulator. Phase 1 done 2026-10-02 (R-02, R-03, R-17, R-01); R-01 verified on the TV emulator. Phase 0's GitHub Actions run passed (JDK 21, Lint). Phase 2 done 2026-10-02 (R-09, R-25, R-08, R-11). Phase 3 done 2026-10-02 (R-13, R-12, R-04, R-06 steps 1-3; step 4 deferred); 473 unit tests; R-04 and R-06 verified on emulators. Phase 4 code done 2026-10-02 (R-05, R-15, R-20, R-22); 481 unit tests. Every finding was traced in source at `33ffd673`; none of Phases 1-6 has been reproduced on a device yet.
 **Date:** 2026-10-02
 **Scope:** `core:player`, `core:network`, `core:ui`, `tv`, `mobile`, manifests, CI. The sync server only where the client depends on it.
 **Goal:** Close the remaining crash loops, silent data loss and silent failures; make focus and error recovery on TV dependable; and add the guardrails (exception boundaries, crash-loop safe mode, CI gates) that keep it that way.
@@ -208,6 +208,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 - **Mechanism:** in the resolved Compose UI (1.10.x; checked in the `ui-android` 1.10.0 sources, `FocusRequester.findFocusTarget`), a requester with no attached node prints a warning and returns `false`. The no-argument `requestFocus()` returns `Unit`, so nothing throws. The retry branches never run. `StreamList.kt:248-255` goes further: it marks the restore as done (`lastFocusedItemId = focusTargetId`) on what its own comment calls "success", so a failed restore is never retried.
 - **Impact:** when layout is slow (Bravia, or a long list after Back), focus doesn't land. Remote presses go to the background player or the window root, focus restore after Back is lost, and editors give focus back to the top of the form. This is the AGENTS.md "focus lands somewhere visible and returns on Back" rule, failing intermittently.
 - **Fix:** one helper in `tv/ui/components/input`: `suspend fun FocusRequester.requestFocusWithRetry(frames: Int = 30): Boolean`, which loops `requestFocus(FocusDirection.Enter)` (the overload that returns `Boolean`) across `withFrameNanos` until it returns true, with an optional fallback requester. Replace all 24 sites, and add a ktlint or grep gate against `catch (_: IllegalStateException)` next to `requestFocus`. Verify with the D-pad smoke pass from the prior plan's F-32 on the TV emulator (with animations off so it is fast, then with `adb shell setprop debug.hwui.overdraw` load to make layout slow).
+- **Done 2026-10-02 (Phase 4):** `requestFocusWithRetry(maxFrames = 30, fallback)` in `tv/ui/components/input/FocusRetry.kt`; all 24 sites plus 6 more that hid the same thing behind `runCatching`/`catch (Exception)` (safe mode, newer data, profile picker, search, player controls) converted; `StreamList` marks a restore handled only when it succeeded; fallbacks where obvious (channel overlay → the list, resume card → Play, episode row → tab row). `CinemaAlertDialog` (core:ui, can't see the tv helper) loops inline. Gate: `scripts/check-focus-retry.sh` in CI (flags all 24 originals when run on the old sources). **Correction:** the no-argument `requestFocus()` is `@Deprecated(HIDDEN)` in 1.10 and source calls already compiled to `requestFocus(Enter): Boolean`, so the result was there and ignored — same defect. Side effects to check: Back from deep in the episode list now really leaves when the tab row can't take focus within ~30 frames (the old give-up branch was dead); CategoryList retries for ~0.5 s and could in theory land after StreamList's Back-restore. Not yet run on a device.
 
 #### 🆕 R-15: TV error screens land no focus and are implemented five times [P2, PLAUSIBLE]
 - **Complexity:** Medium · **Risk:** Low — new shared component replacing five; auto-retry needs a connectivity signal.
@@ -219,6 +220,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
   - `movie/MovieDetailsScreen.kt:692`
 - **Impact:** the most common TV failure is starting while the network is still coming up after wake. It lands on an error with no visible focus. The first D-pad press only moves focus onto Retry, and nothing retries by itself once the network is back.
 - **Fix:** add one shared `TvErrorState(message, onRetry, onBack)` that focuses Retry on entry (via R-05's helper). Have it retry once automatically when `NetworkMonitor` reports connectivity regained. Mobile gets the same auto-retry.
+- **Done 2026-10-02 (Phase 4):** `TvErrorState(message, onRetry, modifier, title, retryLabel, onBack, backLabel)` replaces the five (each keeps its texts; movie and series errors gained Retry; the player's buttons are now a row with Retry primary); focus lands on Retry via `requestFocusWithRetry`; Back in `onPreviewKeyEvent` when given. `RetryWhenOnline(onRetry)` (core:ui) watches the default network with its own callback (not `NetworkMonitor`, which only the playback service starts): online = `INTERNET` + `VALIDATED`, `onLost` = offline; retries once per offline→online change while the error is shown, never for an error shown while online; a network that never validates (captive portal) never auto-retries. Mobile: one `RetryWhenOnline` line in each of 7 error branches, layouts unchanged. TV search and EPG browser errors weren't among the five and are unchanged. `ACCESS_NETWORK_STATE` declared in core:ui's manifest (lint). Tests: `RetryWhenOnlineTest`. Not yet run on a device.
 
 #### 🆕 R-20: A double click on a dialog crashes with `!!` on state the first click cleared [P2, PLAUSIBLE]
 - **Complexity:** Low · **Risk:** Low — local captures in click lambdas.
@@ -227,6 +229,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
   - `TvEpgBrowserScreen.kt:967, 1123` and `MobileEpgBrowserScreen.kt:653, 755` (`matchedStream!!`)
 - **Mechanism:** the first click sets the state to `null`. A second click (a double tap, or OK auto-repeat on a remote) is dispatched before recomposition removes the dialog, and its lambda hits `!!`.
 - **Fix:** capture the value when composing (`val parsed = pendingParsedImport ?: return`) and pass it into the dialog. Grep the rest of the 50 `!!` sites in Compose lambdas for the same shape.
+- **Done 2026-10-02 (Phase 4):** import dialogs (TV and mobile `SettingsScreen`) capture their data at composition but the buttons read the live state with `pendingParsedImport?.let { }`, so a second click does nothing rather than importing twice (better than a captured copy, which would have stopped the crash but imported twice); mobile's three conflict lambdas share `resolveImport`. EPG "Watch now" (TV and mobile): `matchedStream` is an immutable `val`, so its `!!` could never fail — the real double-click defect was opening two players; the button now navigates only while `pendingConfirmAiring` is still set. The other `!!` sites are null-checked composition reads, none in click lambdas. Not yet run on a device.
 
 #### R-22: SMB and Local are offered in Add Source but can't work [P2, CONFIRMED] (draft F-11 + F-12)
 - **Complexity:** Low · **Risk:** Low — UI gating behind dev mode plus JSON builder.
@@ -237,6 +240,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 - **UX verdict:** shipping a source type that can't play is worse than not offering it.
 - **Fix (now):** show SMB and Local in Add Source only in developer mode. Build the config with `buildJsonObject`.
 - **Fix (later, own plan):** an SMB `DataSource` and a SAF folder picker with `takePersistableUriPermission`.
+- **Done 2026-10-02 (Phase 4, "now" part):** `addSourceTypes(isDevMode, editedType)` (core:ui) drives both Add Source pickers: Xtream, Jellyfin, Remote M3U, plus SMB and Local in developer mode; an existing SMB/Local source keeps its type when edited. `smbSourceConfig(host, share)` (core:network, `buildJsonObject`) replaces the four string-built configs (tests with `"` and `\`). Not yet run on a device.
 
 ### E. Performance & network (performance)
 
@@ -343,7 +347,7 @@ Order: first stop data loss and launch crashes, then make failures visible and r
 6. **R-06 step 4** deferred (optional cleanup; see R-06).
 - **Acceptance:** TV emulator: play VOD → HOME → return → 30 s → `watch_state` updated; plus each R-06 step's check above, on two emulators linked through the local sync server.
 
-### Phase 4: TV focus & error UX
+### Phase 4: TV focus & error UX — ✅ code done 2026-10-02 (not yet run on a device)
 **Complexity:** Medium · **Risk:** Medium — focus changes on every TV screen; gated by the full D-pad smoke pass.
 1. **R-05** `requestFocusWithRetry` helper, 24 sites, gate.
 2. **R-15** shared `TvErrorState` with focused Retry and auto-retry on reconnect (TV and mobile).

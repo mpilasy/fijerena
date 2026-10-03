@@ -62,6 +62,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AccountManager
+import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.CategoryFilters
@@ -72,6 +73,7 @@ import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.ScriptType
 import org.njarasoa.fijerena.core.network.provider.withAddedRules
+import org.njarasoa.fijerena.core.network.smb.smbSourceConfig
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.ProviderType
 import org.njarasoa.fijerena.core.ui.R
@@ -80,6 +82,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.model.addSourceTypes
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -115,6 +118,9 @@ fun MobileAddProviderScreen(
     val isEditMode = editId > 0L
 
     var selectedType by remember { mutableStateOf(ProviderType.XTREAM) }
+    // The type of the source being edited: kept on the type list even when it's dev-mode only (R-22).
+    var editedType by remember { mutableStateOf<ProviderType?>(null) }
+    val isDevMode = remember { AppSettings(context.applicationContext).isDevMode }
     var name by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
@@ -220,6 +226,7 @@ fun MobileAddProviderScreen(
                         // cancellation-ok: no suspension point in the try
                         ProviderType.XTREAM
                     }
+                editedType = selectedType
                 if (provider.type == "SMB" && provider.config.isNotBlank()) {
                     try {
                         val json = org.json.JSONObject(provider.config)
@@ -280,7 +287,7 @@ fun MobileAddProviderScreen(
                     expanded = typeDropdownExpanded,
                     onDismissRequest = { typeDropdownExpanded = false },
                 ) {
-                    ProviderType.entries.forEach { type ->
+                    addSourceTypes(isDevMode, editedType).forEach { type ->
                         DropdownMenuItem(
                             text = { Text(type.displayName) },
                             onClick = {
@@ -455,7 +462,7 @@ fun MobileAddProviderScreen(
                             }
                         val saveConfig =
                             when (selectedType) {
-                                ProviderType.SMB -> """{"host":"${host.trim()}","share":"${shareName.trim()}"}"""
+                                ProviderType.SMB -> smbSourceConfig(host.trim(), shareName.trim())
                                 else -> ""
                             }
 
@@ -508,7 +515,7 @@ fun MobileAddProviderScreen(
                     }
                 val saveConfig =
                     when (selectedType) {
-                        ProviderType.SMB -> """{"host":"${host.trim()}","share":"${shareName.trim()}"}"""
+                        ProviderType.SMB -> smbSourceConfig(host.trim(), shareName.trim())
                         else -> ""
                     }
 

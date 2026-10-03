@@ -80,6 +80,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.ui.components.TvGlassPanel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.ui.theme.CornerRadius
@@ -201,28 +202,19 @@ fun TvPlayerControlsOverlay(
     LaunchedEffect(showFullControls, isLive, canFocusPlayPause) {
         if (showFullControls && !reachedPlayPauseFocus) {
             val requester = if (isLive || !canFocusPlayPause) safeIconFocusRequester else controlsFocusRequester
-            // requestFocus() throws if its target isn't composed/laid out yet — the play/pause
-            // button only composes in this same frame canFocusPlayPause flips true (see its
-            // guard below), so on a slower recompose one frame's delay wasn't always enough. A
-            // single fixed retry silently gave up when it still wasn't ready, leaving focus
-            // wherever it was before the OSD opened — a subsequent OK press then hit whatever
-            // that was instead of pausing, which is exactly the "center button sometimes
-            // pauses, sometimes doesn't" symptom. Loop across frames instead of one fixed
-            // retry; the attempt cap just guards against a target that never composes at all.
-            var attempt = 0
-            while (attempt < FOCUS_REQUEST_MAX_ATTEMPTS) {
-                androidx.compose.runtime.withFrameMillis {}
-                try {
-                    requester.requestFocus()
-                    if (canFocusPlayPause) reachedPlayPauseFocus = true
-                    break
-                } catch (e: Exception) {
-                    // cancellation-ok: no suspension point in the try (withFrameMillis is outside it)
-                    attempt++
-                    if (attempt >= FOCUS_REQUEST_MAX_ATTEMPTS) {
-                        android.util.Log.e("TvPlayerControlsOverlay", "Failed to request focus for controls after $attempt attempts", e)
-                    }
-                }
+            // requestFocus() fails (returns false) if its target isn't composed/laid out yet — the
+            // play/pause button only composes in this same frame canFocusPlayPause flips true
+            // (see its guard below), so on a slower recompose one frame's delay wasn't always
+            // enough. A single fixed retry silently gave up when it still wasn't ready, leaving
+            // focus wherever it was before the OSD opened — a subsequent OK press then hit
+            // whatever that was instead of pausing, which is exactly the "center button sometimes
+            // pauses, sometimes doesn't" symptom. Retry across frames instead of one fixed
+            // retry; the frame cap just guards against a target that never composes at all.
+            androidx.compose.runtime.withFrameMillis {}
+            if (requester.requestFocusWithRetry(maxFrames = FOCUS_REQUEST_MAX_ATTEMPTS)) {
+                if (canFocusPlayPause) reachedPlayPauseFocus = true
+            } else {
+                android.util.Log.e("TvPlayerControlsOverlay", "Failed to focus the controls after $FOCUS_REQUEST_MAX_ATTEMPTS frames")
             }
         }
     }
