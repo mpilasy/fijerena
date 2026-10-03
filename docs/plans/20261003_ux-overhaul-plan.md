@@ -14,7 +14,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | 1 Mobile settings | M1–M5 (2026-10-03, phone); fr/mg backfill (2026-10-03) | — | mg: ~200 keys still hold English text |
 | 2 TV focus + Live TV | LT1–LT3, Phases 1–4 (2026-10-03, TV) | LT4 player controls (since 2026-10-03) | LT5 → LT6 → LT7 |
 | 3 Core + guide | A-W4, A-W6, GD0, GD0b, GD1, GD2, GD3 (2026-10-03) | GD0c auto guide sources (since 2026-10-03) | GD4; GD5 after LT4 |
-| 4 TV settings | T1–T5 (2026-10-03, TV) | T6 (since 2026-10-03) | — (Phase 8 after) |
+| 4 TV settings | T1–T5 (2026-10-03, TV), T6 (merged, TV check pending) | — | Phase 8 (highlight tokens) |
 
 ### Open follow-ups (small items found while verifying; fold into the named phase)
 
@@ -308,7 +308,7 @@ share switch → devices (Remove secondary) → Danger zone (Leave).
 | T3 | Two-pane Settings, shared IA, header (T-1, T-7); dev-only gating. **Done 2026-10-03**, verified on the TV — all 28 steps of the new settings walk land as specified (rail swap, Right enters the first row, Left back, picker on the current value, Left closes it, Back in the pane → rail, Back on the rail → Home). Includes the T2 follow-ups (Left closes a picker; autoplay text). Note: `settings_profiles_title` / `live_sync_title` have no mg translation (pre-existing). | `SettingsScreen.kt`, `TvNavHost.kt` | L | High | nav + focus + saveable state; needs Part II `tvPane` |
 | T4 | Sources list + menu + focus (T-8, T-9, T-10, A-10). **Done 2026-10-03**, verified on the TV (entry on the active source; Use/Guide/⋮ slots aligned, Down keeps the column; menu opens on Edit, Delete last; Back → ⋮, Back from Sources → "Switch source" in Settings; walk recorded). Follow-up: Delete renders filled orange (`CinemaDangerButton`) — loud for a last item; consider outlined. Also added fr/mg for `provider_more_actions*`. | `ProviderSelectionScreen.kt`, `ProviderDialogs.kt` | M | Med | focus return + menu order |
 | T5 | Edit Source two-column + shared grouping (T-11, T-12, A-6, A-7, A-8). **Done 2026-10-03**, verified on the TV (two columns, Right/Left between them, outlined Danger zone; editing the name then Back shows "Discard changes?" with Keep editing focused, Discard leaves unsaved). Delete in the Sources menu now outlined. Follow-ups: the filters deep link needs `focusFilters` on `Screen.AddProvider` + `TvNavHost` + the Settings hint row (screen side done); Edit on "Recent row size" doesn't move focus into the field (pre-existing). | `TvAddProviderScreen.kt`, `ProviderSettingsSection.kt`, `CacheManagementSection.kt` | L | Med | 699-line screen; two save models; Add mode must not change |
-| T6 | EPG Management scoping + Live sync order (A-9, T-14). **In progress (lane 4, since 2026-10-03).** | `TvEpgManagementScreen.kt`, `SyncSettingsScreen.kt` | M | Med | moves global controls; 1 186-line EPG screen |
+| T6 | EPG Management scoping + Live sync order (A-9, T-14). **Done 2026-10-03** (compile + CI checks; TV check pending). Guide auto-refresh → Settings · Source & guide sub-pane; maintenance → Backup & storage sub-pane; Live sync reordered with a Danger zone. Follow-ups: guide-source row Delete still orange; sub-pane titles use the old "EPG Refresh Interval" / "Set Refresh Time" wording. | `TvEpgManagementScreen.kt`, `SyncSettingsScreen.kt` | M | Med | moves global controls; 1 186-line EPG screen |
 
 ---
 
