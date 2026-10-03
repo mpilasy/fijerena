@@ -14,7 +14,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | 1 Mobile settings | M1–M4 (2026-10-03, phone), M5 (merged, phone check pending) | — | lane done; free for the fr/mg audit |
 | 2 TV focus + Live TV | LT1, LT2, Phases 1–3 (2026-10-03, TV); Phase 4, LT3 (merged, TV check pending) | — | LT4 → LT5 → LT6 → LT7 |
 | 3 Core + guide | A-W4, A-W6, GD0, GD0b, GD1, GD2 (2026-10-03), GD3 (merged, phone check pending) | — | GD4; GD5 after LT4 |
-| 4 TV settings | T1–T4 (2026-10-03, TV) | T5 Edit Source (since 2026-10-03) | T6 |
+| 4 TV settings | T1–T4 (2026-10-03, TV); T5 (merged, TV check pending) | — | T6 |
 
 ### Open follow-ups (small items found while verifying; fold into the named phase)
 
@@ -24,7 +24,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | GD2 | Resting header-button labels in the guide are low contrast (read as disabled). | GD6 |
 | GD1 | `NoGuide` is judged on the global index state, not per source. | GD4 |
 | GD0b | Device check with a kill mid-refresh not done (unit tests only). | Part III guide round (GD6) |
-| T4 | Delete in the Sources actions menu is a filled orange `CinemaDangerButton` — loud for a last item; consider outlined. | T5 |
+| T4 | ~~Delete in the Sources actions menu is a filled orange `CinemaDangerButton`~~ — done in T5 (outlined). | T5 ✓ |
 | T3 / M3 / M5 | fr/mg gaps are larger than thought: **mg lacks ~191 English keys** (incl. `settings_profiles_title`, `live_sync_*`), **fr lacks ~38** (mostly `settings_shrink_database_*`). Needs its own translation commit. | own commit (lane 1, round 6) |
 | Phase 2 / GD3 | `TvDimensions.epgTimeHeaderHeight` and a few strings are now unused (`epg_error_not_supported`, `epg_error_no_data_for_channels`, `epg_no_program_found`, `settings_about_app_version`, `provider_update_button` on mobile); `docs/design.md` still names `MobileEpgTimeline.kt`. | cleanup commit after T6 |
 
@@ -305,7 +305,7 @@ share switch → devices (Remove secondary) → Danger zone (Leave).
 | T2 | `SettingsRow` + scope chips + drill-in pickers for theme / look / text size / watch delay / language (T-5, T-6); focus contract applied to the Settings list. **Done 2026-10-03**, verified on the TV emulator (value rows + scope chips; Theme and watch-delay pickers open on the current value, Back returns to the row; Back from Diagnostics returns to its button). Follow-ups: Left should close a picker (only Back does); switch rows append the scope as text (`TvSwitchRow` has no chip slot); autoplay's description now says "for this profile" twice. | new `SettingsRow.kt`, new `SettingsPickerPane.kt`, all cards, `LanguageSettingsCard.kt` | L | Med | new picker pane; Language recreate path |
 | T3 | Two-pane Settings, shared IA, header (T-1, T-7); dev-only gating. **Done 2026-10-03**, verified on the TV — all 28 steps of the new settings walk land as specified (rail swap, Right enters the first row, Left back, picker on the current value, Left closes it, Back in the pane → rail, Back on the rail → Home). Includes the T2 follow-ups (Left closes a picker; autoplay text). Note: `settings_profiles_title` / `live_sync_title` have no mg translation (pre-existing). | `SettingsScreen.kt`, `TvNavHost.kt` | L | High | nav + focus + saveable state; needs Part II `tvPane` |
 | T4 | Sources list + menu + focus (T-8, T-9, T-10, A-10). **Done 2026-10-03**, verified on the TV (entry on the active source; Use/Guide/⋮ slots aligned, Down keeps the column; menu opens on Edit, Delete last; Back → ⋮, Back from Sources → "Switch source" in Settings; walk recorded). Follow-up: Delete renders filled orange (`CinemaDangerButton`) — loud for a last item; consider outlined. Also added fr/mg for `provider_more_actions*`. | `ProviderSelectionScreen.kt`, `ProviderDialogs.kt` | M | Med | focus return + menu order |
-| T5 | Edit Source two-column + shared grouping (T-11, T-12, A-6, A-7, A-8). **In progress (lane 4, since 2026-10-03).** | `TvAddProviderScreen.kt`, `ProviderSettingsSection.kt`, `CacheManagementSection.kt` | L | Med | 699-line screen; two save models; Add mode must not change |
+| T5 | Edit Source two-column + shared grouping (T-11, T-12, A-6, A-7, A-8). **Done 2026-10-03** (compile + CI checks; TV check pending). Delete in the Sources menu now outlined. Follow-ups: the filters deep link needs `focusFilters` on `Screen.AddProvider` + `TvNavHost` + the Settings hint row (screen side done); Edit on "Recent row size" doesn't move focus into the field (pre-existing). | `TvAddProviderScreen.kt`, `ProviderSettingsSection.kt`, `CacheManagementSection.kt` | L | Med | 699-line screen; two save models; Add mode must not change |
 | T6 | EPG Management scoping + Live sync order (A-9, T-14). | `TvEpgManagementScreen.kt`, `SyncSettingsScreen.kt` | M | Med | moves global controls; 1 186-line EPG screen |
 
 ---
