@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.network.tmdb
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.compression.ContentEncoding
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
@@ -56,6 +57,9 @@ class TmdbApiService(
                 }
             }
             install(ContentNegotiation) { json(json) }
+            // An overall deadline per call, not only per read: see
+            // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+            install(HttpTimeout) { requestTimeoutMillis = REQUEST_TIMEOUT_MS }
             install(ContentEncoding) {
                 gzip()
                 deflate()
@@ -171,6 +175,9 @@ class TmdbApiService(
     fun hasApiKey(): Boolean = apiKey.isNotBlank()
 
     companion object {
+        /** TMDB is a fast CDN-fronted API answering small JSON: a call slower than this is stuck. */
+        private const val REQUEST_TIMEOUT_MS = 30_000L
+
         @Volatile
         private var instance: TmdbApiService? = null
 

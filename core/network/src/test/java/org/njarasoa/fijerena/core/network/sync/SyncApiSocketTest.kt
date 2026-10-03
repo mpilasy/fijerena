@@ -21,4 +21,13 @@ class SyncApiSocketTest {
         // Only the socket client: plain HTTP calls on the shared client are left as they were.
         assertEquals(0, base.pingIntervalMillis)
     }
+
+    @Test
+    fun `HTTP calls have an overall deadline and the socket has none`() {
+        val api = SyncApi(OkHttpClient())
+
+        assertEquals(60_000, api.httpClient.callTimeoutMillis)
+        // A call timeout on the socket would close it a minute after it opened.
+        assertEquals(0, api.socketClient.callTimeoutMillis)
+    }
 }

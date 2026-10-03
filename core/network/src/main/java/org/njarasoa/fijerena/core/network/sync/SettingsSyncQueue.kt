@@ -3,11 +3,10 @@ package org.njarasoa.fijerena.core.network.sync
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 
 /**
  * Queues changes to values kept outside `providers.db` — passwords and Jellyfin logins, category
@@ -17,7 +16,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
  * setters on the main thread. See `docs/plans/20260929_live-sync-plan.md` → Flow.
  */
 object SettingsSyncQueue {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = AppScopes.create("SettingsSyncQueue", Dispatchers.IO)
 
     /** The provider record — its password lives in the encrypted prefs, not the row. */
     fun provider(

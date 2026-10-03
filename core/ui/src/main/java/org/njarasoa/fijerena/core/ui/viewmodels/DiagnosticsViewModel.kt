@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
 import org.njarasoa.fijerena.core.player.diagnostics.ProcessExits
+import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 /**
@@ -49,12 +50,12 @@ class DiagnosticsViewModel(
         }
     }
 
-    /** Everything, as one plain-text block for sharing. */
-    fun asText(entries: List<Entry>): String = entries.joinToString("\n\n") { "${it.title}\n${it.detail}" }
+    /** Everything, as one plain-text block for sharing, login secrets masked ([Redact]). */
+    fun asText(entries: List<Entry>): String = Redact.text(entries.joinToString("\n\n") { "${it.title}\n${it.detail}" })
 
     private fun load(): List<Entry> {
         val recorded =
-            CrashLog.read().map { raw ->
+            CrashLog.read().map(Redact::text).map { raw ->
                 val header = raw.substringBefore('\n')
                 val timestampMs = header.substringBefore(' ').toLongOrNull() ?: 0L
                 Entry(
@@ -68,7 +69,7 @@ class DiagnosticsViewModel(
                 Entry(
                     timestampMs = exit.timestampMs,
                     title = "${formatTime(exit.timestampMs)} · exit ${exit.reason} (${exit.processName})",
-                    detail = listOfNotNull(exit.description, exit.trace).joinToString("\n"),
+                    detail = Redact.text(listOfNotNull(exit.description, exit.trace).joinToString("\n")),
                 )
             }
         return (recorded + exits).sortedByDescending { it.timestampMs }

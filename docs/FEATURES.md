@@ -298,6 +298,8 @@ Settings → Live sync. Keeps profiles, sources, guide sources, favourites, watc
 filters and selected settings the same on every device of a group, through a sync server the user
 runs (Cloudflare Worker or self-hosted Docker image, `server/`). Everything is encrypted on the
 device; the server sees only keys and ciphertext. Off on a device until it is set up there.
+While something plays, its watch progress is sent at most once a minute (and at once on pause, stop
+or finish); every other change goes within a few seconds.
 
 - **Start a sync group:** enter the server address (checked first; a setup secret if the server
   asks for one).
@@ -359,7 +361,7 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 - **EPG DB stats:** programme and channel counts in EPG Browser header
 - **Source labels:** guide source name shown on each airing in EPG Browser
 - **Cellular Buffer Settings:** multiplier sliders (0.5×–3.0×) for Live and VOD profiles (mobile)
-- **Diagnostics:** the on-device crash log and Android's record of why the app last closed (ANR, crash, low-memory kill), newest first; Share on mobile. See `docs/RUN_GUIDE.md` → Crash log and Diagnostics
+- **Diagnostics:** the on-device crash log and Android's record of why the app last closed (ANR, crash, low-memory kill), newest first; Share on mobile. Logins are masked (`***`) in the crash log, the system log and the shared text: Xtream user/password in stream paths, `password`/`token`-style parameters, `user:password@` in addresses. See `docs/RUN_GUIDE.md` → Crash log and Diagnostics
 - **Error screens recover on their own:** a TV or mobile error shown while the device was offline (default network without `INTERNET` + `VALIDATED`, or lost) retries once when the network comes back, so a TV that starts before its Wi-Fi is up after wake recovers without a key press. An error shown while online is never retried by itself. TV error states land focus on Retry
 - **Crash-loop safe mode** (always on, not a developer setting): when three launches within 10 minutes each end within 30 s of starting, the next launch opens a safe-mode screen instead of Home and skips the startup work that could be the cause — EPG initialisation and auto-refresh, catalogue sync, live sync, the now-playing publisher, the startup migrations, and the nav host's source lookups and orphan sweep. **Continue** restarts the app normally; **Clear caches** (confirmed) removes the EPG index, every source's downloaded catalogue and the poster cache, keeping sources, profiles, favourites and watch history; **Show diagnostics** opens Diagnostics. See `docs/RUN_GUIDE.md` → Crash-loop safe mode
 - **Data from a newer version:** if this device's sources were saved by a newer version of Fijerena (an older build installed over a newer one, or a newer backup restored), the app opens a screen saying so instead of crashing on every start. **Close** leaves everything as it is (install the newer version to keep using it); **Reset sources** (confirmed) sets the sources database aside as a backup and restarts with no sources, keeping favourites and watch history on the device

@@ -36,7 +36,10 @@ object CrashLog {
         }
     }
 
-    /** Appends one entry. Never throws — a failing crash log must not cause a crash of its own. */
+    /**
+     * Appends one entry, with login secrets masked ([Redact]) in the source, the messages and every
+     * cause. Never throws — a failing crash log must not cause a crash of its own.
+     */
     fun record(
         source: String,
         throwable: Throwable,
@@ -44,10 +47,11 @@ object CrashLog {
         val target = file
         if (target != null) {
             try {
+                val entry = Redact.text("${System.currentTimeMillis()} $source\n${Log.getStackTraceString(throwable)}")
                 synchronized(lock) {
                     target.parentFile?.mkdirs()
                     trimIfNeeded(target)
-                    target.appendText("${System.currentTimeMillis()} $source\n${Log.getStackTraceString(throwable)}$ENTRY_SEPARATOR")
+                    target.appendText("$entry$ENTRY_SEPARATOR")
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Couldn't write crash log", e)

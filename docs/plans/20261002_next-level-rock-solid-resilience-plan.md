@@ -1,6 +1,6 @@
 # Next-Level Rock-Solid Resilience & Professionalism Plan
 
-**Status:** In progress. Phase 0 done 2026-10-02 (R-07, R-19, R-10); R-10 verified on the TV emulator. Phase 1 done 2026-10-02 (R-02, R-03, R-17, R-01); R-01 verified on the TV emulator. Phase 0's GitHub Actions run passed (JDK 21, Lint). Phase 2 done 2026-10-02 (R-09, R-25, R-08, R-11). Phase 3 done 2026-10-02 (R-13, R-12, R-04, R-06 steps 1-3; step 4 deferred); 473 unit tests; R-04 and R-06 verified on emulators. Phase 4 code done 2026-10-02 (R-05, R-15, R-20, R-22); 481 unit tests. Every finding was traced in source at `33ffd673`; none of Phases 1-6 has been reproduced on a device yet.
+**Status:** In progress. Phase 0 done 2026-10-02 (R-07, R-19, R-10); R-10 verified on the TV emulator. Phase 1 done 2026-10-02 (R-02, R-03, R-17, R-01); R-01 verified on the TV emulator. Phase 0's GitHub Actions run passed (JDK 21, Lint). Phase 2 done 2026-10-02 (R-09, R-25, R-08, R-11). Phase 3 done 2026-10-02 (R-13, R-12, R-04, R-06 steps 1-3; step 4 deferred); 473 unit tests; R-04 and R-06 verified on emulators. Phase 4 done 2026-10-02 (R-05, R-15, R-20, R-22; D-pad smoke pass on the TV emulator; log-flood hotfix on the TVs). Phase 5 code done 2026-10-02 (R-14, R-18, R-16, R-21, R-24); 500 unit tests. Every finding was traced in source at `33ffd673`; none of Phases 1-6 has been reproduced on a device yet.
 **Date:** 2026-10-02
 **Scope:** `core:player`, `core:network`, `core:ui`, `tv`, `mobile`, manifests, CI. The sync server only where the client depends on it.
 **Goal:** Close the remaining crash loops, silent data loss and silent failures; make focus and error recovery on TV dependable; and add the guardrails (exception boundaries, crash-loop safe mode, CI gates) that keep it that way.
@@ -174,6 +174,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 - **Where:** every position save (`StreamingPlaybackService` every 10 s → `recordHistory` → `savePlaybackPosition`) fires the `watch_state` trigger (`XtreamSyncTriggers.kt:55-68`). `SyncManager.onLocalChange` → `requestSync(3 s)` (`SyncManager.kt:263-269`) then runs a full pull and push.
 - **Impact:** about 280 passes an hour per playing device. Every other linked device that's in the foreground gets a `head`, pulls, and runs `reloadAfterRemoteChange`, which refills the Recent rows mid-browse on, for example, the TV while someone watches on the phone. That is battery on mobile, Durable Object writes, and needless recomposition.
 - **Fix:** coalesce `WATCH` pushes. Push immediately on pause, stop or completion, and otherwise at most once every 60 s. Keep pushing other kinds as they are now.
+- **Done 2026-10-02 (Phase 5):** `SyncManager.onLocalChange` asks what is pending (new `SyncVersionDao.hasPendingBeyondWatch()`, query only): anything other than watch progress (`watch_clear` included) → the usual 3 s debounce; watch-only while something plays (`StreamingPlaybackService.nowPlaying` non-null and not paused) → one pass 60 s out that later saves ride along with (the old `requestSync` restarted its timer on every call, so 10 s saves would never have pushed); watch-only with nothing playing → 3 s. Pause, stop or end (collected from `nowPlaying`) pushes held-back progress within 3 s; going to the background still flushes at once. No wire or server change. Tests: `SyncManagerWatchPushTest` (5, virtual clock: 10 s saves over 130 s push at 60 s and 120 s only). Another device resumes from a position up to 60 s old during playback. Not yet run on two devices.
 
 #### 🆕 R-09: ViewModels and composition coroutines have no exception boundary [P1, CONFIRMED pattern]
 - **Complexity:** Medium · **Risk:** Low — wide but mechanical sweep; each site is low risk, and init-error states need UI to show them.
@@ -255,6 +256,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
   - Add `callTimeout` (or a Ktor `HttpTimeout` with a request timeout) to the request/response API clients (Xtream metadata, Jellyfin, TMDB, sync), around 30-60 s. Bulk catalogue and EPG downloads keep only their per-read timeouts.
   - Change `Call.await` to `continuation.resume(response) { response.close() }`.
   - Add `coroutineContext.ensureActive()` to the EPG download loop every buffer.
+- **Done 2026-10-02 (Phase 5):** overall deadlines on the request/response clients only: Xtream metadata 60 s (Ktor `HttpTimeout`; the six catalogue calls opt out with `INFINITE_TIMEOUT_MS`; `metadataTimeoutMs` constructor parameter for the test), Jellyfin 60 s (the two recursive library listings opt out), TMDB 30 s, sync HTTP 60 s (OkHttp `callTimeout` on a derived client; the WebSocket's client has none — tested). `NetworkModule.okHttpClient` itself is unchanged, so the player's streaming clients, EPG downloads and Coil get no deadline. `HttpRequestTimeoutException` now maps to the timeout message (it showed "network error"). `Call.await` closes a response delivered after cancellation. `EpgFileManager.downloadSource` checks `ensureActive()` every buffer and deletes the temp file on cancellation (it didn't before). Tests: `XtreamApiServiceDeadlineTest` (trickle server: metadata times out at 1 s, catalogue call completes), `OkHttpExtTest` (fails with the old `resume`), `FriendlyErrorTest`, `SyncApiSocketTest`. Not run: the EPG cancellation loop (no unit harness for `EpgFileManager`); `SyncApi` still uses blocking `execute()`, now bounded by the 60 s call timeout. Not yet run on a device.
 
 #### 🆕 R-17: Every cold start scans the whole catalogue for orphans [P2, CONFIRMED]
 - **Complexity:** Low · **Risk:** Low — a persisted flag around an existing call.
@@ -274,12 +276,14 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
   - `XtreamSessionManager.kt:106, 113` log the panel URL.
   - ExoPlayer, OkHttp and Ktor exception messages embed the full URL, including the query `password=…`. `CrashLog.record` stores them, and `MobileDiagnosticsScreen.kt:85` shares the log through a chooser.
 - **Fix:** add one `Redact.url()` (masking path segments and query values that match the stored username and password, plus `password`, `token` and `api_key` parameters). Apply it in `CrashLog.record` (the message and every cause) and at the logging sites. Remove the "DIAGNOSTIC (temporary)" `StartupTiming` logs or redact them.
+- **Done 2026-10-02 (Phase 5):** `Redact.text` (`core:player/diagnostics`) masks by shape, since core:player can't read the stored credentials: `scheme://user:pass@`, Xtream `/(live|movie|series|timeshift)/<user>/<pass>/…`, and the values of `username`, `password`, `token`, `api_key`, `api-key`, `x-emby-token`, `access_token` query parameters. Applied to every `CrashLog.record` entry (the whole text, every cause), the two `StreamingPlaybackService` StartupTiming lines, `XtreamSessionManager`'s auth logs, and `DiagnosticsViewModel` (crash entries — old ones too — process-exit descriptions/traces, and the shared text). Tests: `RedactTest` (7), `AppScopesCrashLogTest` +1 (file on disk has no secret). A masked value runs to the next `&`, `#` or whitespace, so a trailing `)` can be masked too. Other logs that might carry URLs (`EpgFileManager`, the network services) not swept.
 
 #### 🆕 R-21: Both apps ask to be installed on external storage [P2, CONFIRMED]
 - **Complexity:** Low · **Risk:** Medium — one attribute, but an install already moved to external storage may need a manual move back; test an update over an existing install.
 - **Where:** `android:installLocation="preferExternal"` in `tv/src/main/AndroidManifest.xml:4` and `mobile/src/main/AndroidManifest.xml:4`.
 - **Impact:** on a Shield with adopted USB storage, or a phone with an adoptable SD card, the app can be placed on removable media. Unplugging that media kills the app, and WorkManager jobs and the media session lose their component. Google's guidance is that apps with services, sync or widgets should not use external install.
 - **Fix:** use `internalOnly` (or remove the attribute). This is a manifest change only, but an already-moved install needs a manual move back.
+- **Done 2026-10-02 (Phase 5):** both manifests `internalOnly` (not removed: the default `auto` still lets the system move the app). Not verified: an install already moved to adoptable storage may stay there until moved back once (Settings → Apps → Fijerena → Storage) or reinstalled.
 
 #### R-19: CI gaps [P2, PLAUSIBLE / CONFIRMED] (draft F-10 widened)
 - **Complexity:** Low · **Risk:** Low — CI only; Android Lint needs a baseline so existing warnings do not block.
@@ -306,6 +310,7 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 - `EpgIndexer.kt:445, 526, 640`: `PRAGMA synchronous = OFF` during the swap and rebuild transactions. A power cut mid-swap (common on TV boxes) can corrupt `epg_index.db`. Requery's default handler then deletes it, so the guide is rebuilt rather than bricked. Use `NORMAL` unless measurements show OFF matters.
 - `RemoteM3uMediaProvider` uses one temp-file name per provider, so two concurrent `connect()`s overwrite each other's download. Use `File.createTempFile`.
 - `FijerenaApplication.onCreate` runs the startup steps in one coroutine, so an early failure (for example `pruneSyncTombstones`) skips every later step, credential warm-up included. Run each step in its own guarded block.
+- **Done 2026-10-02 (Phase 5), all six:** `SettingsSyncQueue` on `AppScopes`; `QrScanner` guards the CameraX listener, unbinds in `onDispose` only when the future is done, and a `disposed` flag stops a late camera start binding after the scanner closed; `MobileCategoryListScreen` stops the dock through its own `dockPlayback` instance (declaration moved up, same activity-scoped `viewModel`), never a fresh `ViewModelProvider` lookup; `EpgIndexer` uses `synchronous = NORMAL` (the comments cited no measurement for OFF); `RemoteM3uMediaProvider` uses `File.createTempFile`; `FijerenaApplication`'s startup steps each run in `startupStep(name)` (logs + `CrashLog`, cancellation rethrown), in the original order — none depends on another. Not run on a device.
 
 #### 🆕 R-26: The ViewModel layer has no unit tests [P3, CONFIRMED]
 - **Complexity:** Medium · **Risk:** Low — test harness for core:ui ViewModels (fake repository, main dispatcher rule); written alongside each fix.
@@ -357,7 +362,7 @@ Order: first stop data loss and launch crashes, then make failures visible and r
 4. **R-22** SMB and Local behind developer mode; JSON config built properly.
 - **Acceptance:** the prior plan's D-pad smoke pass, plus starting with the emulator's network off → Retry focused → network on → screen recovers on its own.
 
-### Phase 5: Performance, network & privacy
+### Phase 5: Performance, network & privacy — ✅ code done 2026-10-02 (not yet run on a device)
 **Complexity:** Medium · **Risk:** Medium — timeouts and sync coalescing change runtime behaviour; the rest is low risk.
 1. **R-14** call deadlines, the `Call.await` close-on-cancel, cancellable EPG download.
 2. **R-18** coalesced `WATCH` pushes.

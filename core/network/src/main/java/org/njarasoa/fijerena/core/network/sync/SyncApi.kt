@@ -15,6 +15,9 @@ import java.util.concurrent.TimeUnit
 
 private const val SOCKET_PING_SECONDS = 30L
 
+/** Overall deadline of one HTTP call; never the socket's, which stays open for as long as the app is in use. */
+private const val CALL_TIMEOUT_SECONDS = 60L
+
 /** The sync server failed a request; [status] is the HTTP status, 0 when it was never reached. */
 class SyncApiException(
     val status: Int,
@@ -148,6 +151,14 @@ class SyncApi(
     // internal, not private: SyncApiSocketTest checks the ping interval it is built with.
     internal val socketClient: OkHttpClient by lazy { client.newBuilder().pingInterval(SOCKET_PING_SECONDS, TimeUnit.SECONDS).build() }
 
+    /**
+     * The HTTP calls' client: an overall deadline on top of the per-read timeouts, so a server
+     * that trickles bytes fails the pass (and is retried) instead of holding it forever. See
+     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+     */
+    // internal, not private: SyncApiSocketTest checks the socket client doesn't get it.
+    internal val httpClient: OkHttpClient by lazy { client.newBuilder().callTimeout(CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS).build() }
+
     private suspend inline fun <reified T> call(
         serverUrl: String,
         method: String,
@@ -169,7 +180,7 @@ class SyncApi(
                     }.build()
             val response =
                 try {
-                    client.newCall(request).execute()
+                    httpClient.newCall(request).execute()
                 } catch (e: java.io.IOException) {
                     throw SyncApiException(0, "Sync server unreachable: ${e.message}", e)
                 }

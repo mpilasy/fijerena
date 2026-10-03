@@ -89,6 +89,10 @@ interface SyncVersionDao {
     @Query("SELECT EXISTS(SELECT 1 FROM sync_version WHERE pending = 1)")
     suspend fun hasPending(): Boolean
 
+    /** Pending changes other than watch progress, which is pushed at most once a minute while playing. */
+    @Query("SELECT EXISTS(SELECT 1 FROM sync_version WHERE pending = 1 AND kind != 'watch')")
+    suspend fun hasPendingBeyondWatch(): Boolean
+
     /** Linking to a server: it has seen nothing from here yet. */
     @Query("UPDATE sync_version SET pending = 1")
     suspend fun markAllPending()

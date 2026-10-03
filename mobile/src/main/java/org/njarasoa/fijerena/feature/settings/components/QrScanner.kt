@@ -117,16 +117,24 @@ private fun CameraPreview(onScanned: (String) -> Unit) {
                         }.addOnCompleteListener { proxy.close() }
                 }
             }
+        // Both the listener and onDispose run on Main, so a plain flag is enough.
+        var disposed = false
         providerFuture.addListener({
-            val provider = providerFuture.get()
-            val preview = Preview.Builder().build().apply { surfaceProvider = previewView.surfaceProvider }
-            provider.unbindAll()
-            // No back camera (some tablets): the screen stays black with its hint and Cancel.
-            runCatching { provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis) }
-                .onFailure { android.util.Log.w("QrScanner", "Camera unavailable", it) }
+            // CameraX failed to start, or no back camera (some tablets): the screen stays black
+            // with its hint and Cancel. Skipped when the scanner closed before the camera was ready.
+            if (!disposed) {
+                runCatching {
+                    val provider = providerFuture.get()
+                    val preview = Preview.Builder().build().apply { surfaceProvider = previewView.surfaceProvider }
+                    provider.unbindAll()
+                    provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+                }.onFailure { android.util.Log.w("QrScanner", "Camera unavailable", it) }
+            }
         }, ContextCompat.getMainExecutor(context))
         onDispose {
-            runCatching { providerFuture.get().unbindAll() }
+            disposed = true
+            // Never block Main on a camera that is still starting; nothing is bound until it's done.
+            if (providerFuture.isDone) runCatching { providerFuture.get().unbindAll() }
             scanner.close()
             executor.shutdown()
         }

@@ -106,7 +106,9 @@ class RemoteM3uMediaProvider(
                     break
                 }
 
-                val tmpFile = File(context.cacheDir, "remote_m3u_${providerId}_tmp")
+                // A unique name per download: two connect()s at once would otherwise write into
+                // the same file and publish each other's half-written playlist.
+                val tmpFile = File.createTempFile("remote_m3u_${providerId}_", ".tmp", context.cacheDir)
                 try {
                     // Stream to temp file
                     connection.inputStream.buffered(BUFFER_SIZE).use { input ->

@@ -14,6 +14,7 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.AccountManager
@@ -90,29 +91,55 @@ class FijerenaApplication :
         // AppScopes, not a bare CoroutineScope(Dispatchers.IO): an uncaught exception there would
         // reach the thread's uncaught-exception handler and crash the process on cold boot.
         val startupScope = AppScopes.create("FijerenaApplication.startup", Dispatchers.IO)
+        // In order, each step guarded on its own: none needs an earlier one, and a failing step
+        // (say pruneSyncTombstones) must not skip the rest, credential warm-up included. See
+        // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-24.
         startupScope.launch {
-            ProviderRepository(this@FijerenaApplication).migrateCategoryFiltersToProfiles()
-            ProfileRepository(this@FijerenaApplication).migrateLegacyProfileSettings()
+            startupStep("migrateCategoryFiltersToProfiles") {
+                ProviderRepository(this@FijerenaApplication).migrateCategoryFiltersToProfiles()
+            }
+            startupStep("migrateLegacyProfileSettings") {
+                ProfileRepository(this@FijerenaApplication).migrateLegacyProfileSettings()
+            }
             // Live sync keeps deletions for 90 days — see SyncKind.TOMBSTONE_RETENTION_MS.
-            pruneSyncTombstones(this@FijerenaApplication)
+            startupStep("pruneSyncTombstones") { pruneSyncTombstones(this@FijerenaApplication) }
             // Build the encrypted credential store off the main thread, before the nav host's
             // session-restore effect asks for it from the main dispatcher.
-            AccountManager(this@FijerenaApplication).warmUp()
+            startupStep("warmUpCredentials") { AccountManager(this@FijerenaApplication).warmUp() }
             // Drop the EPG sources the app used to create for itself — see
             // EpgIndexer.purgeXtreamApiSources().
-            EpgIndexer.getInstance(this@FijerenaApplication).purgeXtreamApiSources()
+            startupStep("purgeXtreamApiSources") {
+                EpgIndexer.getInstance(this@FijerenaApplication).purgeXtreamApiSources()
+            }
             // Once per install: drop the bogus stream favourites the Favourite categories list
-            // used to save — see FavoriteCategoryRowCleanup. Last, so a failure here skips nothing.
-            FavoriteCategoryRowCleanup.runOnce(
-                AppSettings(this@FijerenaApplication),
-                XtreamDatabase.getInstance(this@FijerenaApplication).favoriteStateDao(),
-            ) { AppContainer.getInstance(this@FijerenaApplication).reloadAfterRemoteChange(it) }
+            // used to save — see FavoriteCategoryRowCleanup.
+            startupStep("FavoriteCategoryRowCleanup") {
+                FavoriteCategoryRowCleanup.runOnce(
+                    AppSettings(this@FijerenaApplication),
+                    XtreamDatabase.getInstance(this@FijerenaApplication).favoriteStateDao(),
+                ) { AppContainer.getInstance(this@FijerenaApplication).reloadAfterRemoteChange(it) }
+            }
         }
         // Its own coroutine, so nothing above can skip it: finishes a provider deletion the app was
         // killed in the middle of. Used to run from the nav hosts' composition on every start,
         // unguarded — see docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-03.
         startupScope.launch {
             ProviderRepository(this@FijerenaApplication).sweepOrphanedCatalogData(onlyIfPending = true)
+        }
+    }
+
+    /** One startup step: a failure is logged and recorded in [CrashLog], and the next step still runs. */
+    private suspend fun startupStep(
+        name: String,
+        block: suspend () -> Unit,
+    ) {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("FijerenaApplication", "Startup step $name failed", e)
+            CrashLog.record("FijerenaApplication.startup $name", e)
         }
     }
 

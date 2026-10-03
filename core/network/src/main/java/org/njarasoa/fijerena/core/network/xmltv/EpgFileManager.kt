@@ -20,6 +20,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -1213,6 +1214,10 @@ class EpgFileManager private constructor(
                                 var lastReportedBytes = 0L
                                 var read: Int
                                 while (input.read(buffer).also { read = it } != -1) {
+                                    // Cancel and Clear all data must stop a 100+ MB download, not
+                                    // wait for its end. See R-14 of
+                                    // docs/plans/20261002_next-level-rock-solid-resilience-plan.md.
+                                    ensureActive()
                                     output.write(buffer, 0, read)
                                     digest?.update(buffer, 0, read)
                                     totalRead += read
@@ -1336,8 +1341,10 @@ class EpgFileManager private constructor(
                 etag = responseEtag,
                 lastModifiedHeader = responseLastModified,
             )
+        } catch (e: CancellationException) {
+            tmpFile.delete() // a cancelled download leaves no partial file behind
+            throw e
         } catch (e: Exception) {
-            if (e is CancellationException) throw e
             Log.e(TAG, "Error downloading source: $label", e)
             sourceDao.markError(source.id, friendlyErrorMessage(e, context, appSettings.isDevMode))
             tmpFile.delete()

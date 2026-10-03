@@ -3,8 +3,11 @@ package org.njarasoa.fijerena.core.player.api
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.HttpTimeoutConfig
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -36,12 +39,14 @@ import java.util.concurrent.TimeUnit
  * @param username The Xtream account username
  * @param password The Xtream account password
  * @param streamOutputFormat The output format for live stream URLs: "m3u8" (HLS) or "ts" (MPEG-TS)
+ * @param metadataTimeoutMs Overall deadline of a metadata call; the catalogue downloads have none
  */
 class XtreamApiService(
     private val baseUrl: String,
     private val username: String,
     private val password: String,
     private val streamOutputFormat: String = "m3u8",
+    private val metadataTimeoutMs: Long = METADATA_REQUEST_TIMEOUT_MS,
 ) {
     private val json =
         Json {
@@ -72,6 +77,14 @@ class XtreamApiService(
             expectSuccess = true
             install(ContentNegotiation) {
                 json(json)
+            }
+            // An overall deadline per call, on top of OkHttp's per-read timeouts: a panel that
+            // trickles a byte every few seconds never trips a read timeout and held Login, a
+            // category load or a detail screen on a spinner indefinitely. The catalogue downloads
+            // opt out ([noDeadline]): a big list on a slow panel legitimately takes minutes. See
+            // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+            install(HttpTimeout) {
+                requestTimeoutMillis = metadataTimeoutMs
             }
 
             // No ContentEncoding plugin here deliberately: advertising gzip/deflate via Ktor's
@@ -181,6 +194,7 @@ class XtreamApiService(
                 parameter("password", password)
                 parameter("action", "get_live_streams")
                 if (categoryId != null) parameter("category_id", categoryId)
+                noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
                     json.decodeFromStream<List<XtreamStream>>(stream)
@@ -201,6 +215,7 @@ class XtreamApiService(
                 parameter("password", password)
                 parameter("action", "get_live_streams")
                 if (categoryId != null) parameter("category_id", categoryId)
+                noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
                     // TRUE streaming parse using decodeToSequence
@@ -223,6 +238,7 @@ class XtreamApiService(
                 parameter("password", password)
                 parameter("action", "get_vod_streams")
                 if (categoryId != null) parameter("category_id", categoryId)
+                noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
                     json.decodeFromStream<List<XtreamStream>>(stream)
@@ -243,6 +259,7 @@ class XtreamApiService(
                 parameter("password", password)
                 parameter("action", "get_vod_streams")
                 if (categoryId != null) parameter("category_id", categoryId)
+                noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
                     // TRUE streaming parse
@@ -265,6 +282,7 @@ class XtreamApiService(
                 parameter("password", password)
                 parameter("action", "get_series")
                 if (categoryId != null) parameter("category_id", categoryId)
+                noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
                     json.decodeFromStream<List<XtreamSeries>>(stream)
@@ -285,6 +303,7 @@ class XtreamApiService(
                 parameter("password", password)
                 parameter("action", "get_series")
                 if (categoryId != null) parameter("category_id", categoryId)
+                noDeadline()
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
                     // TRUE streaming parse
@@ -415,6 +434,9 @@ class XtreamApiService(
 
     private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8")
 
+    /** A catalogue download: only OkHttp's per-read timeouts apply, not the overall deadline. */
+    private fun HttpRequestBuilder.noDeadline() = timeout { requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS }
+
     /**
      * Fetches EPG data for a specific stream.
      * Endpoint: player_api.php?action=get_simple_data_table&stream_id=X
@@ -487,5 +509,10 @@ class XtreamApiService(
         // client.close() alone doesn't touch these — see okhttpDispatcher's kdoc.
         okhttpDispatcher.executorService.shutdown()
         okhttpConnectionPool.evictAll()
+    }
+
+    companion object {
+        /** Overall deadline of a metadata call (login, categories, details, short EPG). */
+        const val METADATA_REQUEST_TIMEOUT_MS = 60_000L
     }
 }

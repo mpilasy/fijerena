@@ -15,6 +15,7 @@ class FriendlyErrorTest {
         mockk {
             every { getString(R.string.error_generic) } returns "generic"
             every { getString(R.string.error_network) } returns "network"
+            every { getString(R.string.error_timeout) } returns "timeout"
             every { getString(R.string.error_unauthorized) } returns "unauthorized"
             every { getString(R.string.error_saved_login_lost) } returns "lost"
             every { applicationContext } returns this
@@ -37,6 +38,16 @@ class FriendlyErrorTest {
         val e = IOException("connection reset")
 
         assertEquals("network", friendlyErrorMessage(e, context))
+    }
+
+    // docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14
+    @Test
+    fun requestDeadlineExceeded_mapsToTimeout_notNetwork() {
+        val e =
+            io.ktor.client.plugins
+                .HttpRequestTimeoutException("http://panel.test/player_api.php", 60_000L)
+
+        assertEquals("timeout", friendlyErrorMessage(e, context))
     }
 
     // docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-28

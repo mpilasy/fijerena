@@ -1,5 +1,17 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Deadlines, quieter sync, private logs
+**Release Date:** 2026-10-02
+
+- **Network calls can no longer hang forever:** logging in, loading categories and details, Jellyfin, TMDB and sync requests give up after 60 s (TMDB 30 s) with a "timed out" message, even when a server sends data too slowly for a read timeout to fire; catalogue and guide downloads and video streams keep only their per-read timeouts. Cancelling a guide refresh, or clearing guide data, now stops a large download at once and deletes the partial file, and a request cancelled just as its answer arrived no longer holds a connection open. → R-14.
+- **Playback no longer floods sync:** while something plays, watch progress goes to your other devices at most once a minute instead of every ~13 s (which also made every other open device reload its rows); it goes promptly when you pause or stop, and other changes still sync within seconds. → R-18.
+- **Logs and diagnostics don't contain your logins:** Xtream usernames and passwords in stream addresses, password and token parameters, and `user:password@` in server addresses are masked in the crash log, the system log and the text shared from Diagnostics. → R-16.
+- **Installs stay on internal storage:** both apps no longer ask to be installed on removable storage, so unplugging a USB drive or SD card can't break the app or its background updates; an install the system already moved may need moving back once (Settings → Apps → Fijerena → Storage). → R-21.
+- **Smaller fixes:** a failing start-up step no longer skips the ones after it; the QR scanner no longer crashes when the camera fails to start or freezes when closed; leaving Live TV on mobile no longer starts the player just to stop it; the guide database is safer against power cuts; two simultaneous refreshes of a remote M3U playlist no longer overwrite each other. → R-24.
+- **TV focus no longer floods the log (hotfix):** a focus retry that couldn't succeed (behind the full-screen Live TV player with a guide source) re-ran every time the channel list refreshed, printing a warning ~35 times a second until Android dropped the app's other logs. It now re-runs only when its target changes, and any failing retry backs off. → R-05 hotfix.
+
+---
+
 ## Version: Focus that lands, errors that recover
 **Release Date:** 2026-10-02
 

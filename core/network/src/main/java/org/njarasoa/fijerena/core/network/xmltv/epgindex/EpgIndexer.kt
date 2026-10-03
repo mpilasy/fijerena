@@ -441,8 +441,10 @@ class EpgIndexer private constructor(
                     // Optimize rebuild speed. cache_size capped at 16MB (not the 64MB this used to
                     // request) — XMLTV files with millions of programmes were pushing native RSS
                     // over 150MB during rebuild, risking the Low Memory Killer on 1-2GB Android TV
-                    // devices.
-                    sdb.execSQL("PRAGMA synchronous = OFF")
+                    // devices. synchronous stays NORMAL, never OFF: a power cut mid-write (TV boxes
+                    // get unplugged) could corrupt epg_index.db with OFF; NORMAL under WAL only
+                    // syncs at checkpoints, and no measurement showed OFF to be faster here.
+                    sdb.execSQL("PRAGMA synchronous = NORMAL")
                     sdb.execSQL("PRAGMA cache_size = -16000")
 
                     try {
@@ -521,9 +523,9 @@ class EpgIndexer private constructor(
                 _state.value = EpgIndexState.Optimizing(dao.getChannelCount(), dao.getProgrammeCount())
 
                 // Same pragmas as rebuildFtsAndUpdateState(), set outside the transaction: SQLite
-                // refuses to change `synchronous` inside one.
+                // refuses to change `synchronous` inside one. NORMAL, not OFF — see there.
                 sdb.execPragma("PRAGMA wal_checkpoint(PASSIVE)")
-                sdb.execSQL("PRAGMA synchronous = OFF")
+                sdb.execSQL("PRAGMA synchronous = NORMAL")
                 sdb.execSQL("PRAGMA cache_size = -16000")
                 val now = System.currentTimeMillis()
                 var channelCount = 0
@@ -594,8 +596,8 @@ class EpgIndexer private constructor(
      *  - Drop Room's per-row FTS sync triggers so that millions of inserts don't
      *    each update the FTS shadow table. A single rebuild() at the end is far
      *    cheaper than incremental maintenance.
-     *  - Set synchronous=OFF to skip WAL fsync overhead during ingestion.
-     *    Safe because EPG data is re-downloadable on crash.
+     *  - Keep synchronous=NORMAL (not OFF): under WAL it only syncs at checkpoints, and OFF
+     *    risks a corrupt epg_index.db on a power cut (TV boxes get unplugged).
      *  - Drop the query-only indexes on `epg_programme` — but only when [useStaging] is false.
      *    On the staging path, ingestion writes go to `epg_programme_staging`, not
      *    `epg_programme` — the live guide keeps querying the untouched primary table through
@@ -637,7 +639,7 @@ class EpgIndexer private constructor(
                             sdb.execSQL("DROP INDEX IF EXISTS `$name`")
                         }
                     }
-                    sdb.execSQL("PRAGMA synchronous = OFF")
+                    sdb.execSQL("PRAGMA synchronous = NORMAL")
                     sdb.execSQL("PRAGMA cache_size = -32000") // 32 MB during bulk
                 }
                 Log.i(TAG, "beginBulkIngestion: setup complete in ${System.currentTimeMillis() - startMs}ms")

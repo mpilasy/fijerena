@@ -15,6 +15,7 @@ import org.njarasoa.fijerena.core.network.resultOf
 import org.njarasoa.fijerena.core.network.suspendResultOf
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
+import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.XtreamAuthResponse
 
 class XtreamSessionManager(
@@ -103,14 +104,14 @@ class XtreamSessionManager(
                     var serviceAssigned = false
                     val service = XtreamApiService(credentials.url, credentials.username, password, streamOutputFormat)
                     try {
-                        Log.d(TAG, "Attempting to authenticate with ${credentials.url}")
+                        Log.d(TAG, "Attempting to authenticate with ${Redact.text(credentials.url)}")
                         val authResponse =
                             try {
                                 service.authenticate()
                             } catch (e: CancellationException) {
                                 throw e
                             } catch (e: Exception) {
-                                Log.e(TAG, "Authentication failed for ${credentials.url}", e)
+                                Log.e(TAG, Redact.text("Authentication failed for ${credentials.url}\n${Log.getStackTraceString(e)}"))
                                 throw e
                             }
 

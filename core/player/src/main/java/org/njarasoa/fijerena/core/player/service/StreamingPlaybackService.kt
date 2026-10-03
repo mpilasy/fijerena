@@ -35,6 +35,7 @@ import org.njarasoa.fijerena.core.player.config.NetworkType
 import org.njarasoa.fijerena.core.player.config.PlayerConfigFactory
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+import org.njarasoa.fijerena.core.player.diagnostics.Redact
 import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -676,7 +677,8 @@ class StreamingPlaybackService : MediaSessionService() {
         ) {
             if (!loggedInit) {
                 loggedInit = true
-                Log.i(TAG, "StartupTiming: request initiated at +${SystemClock.elapsedRealtime() - startTimeMs}ms (${dataSpec.uri})")
+                val uri = Redact.text(dataSpec.uri.toString())
+                Log.i(TAG, "StartupTiming: request initiated at +${SystemClock.elapsedRealtime() - startTimeMs}ms ($uri)")
             }
             delegate?.onTransferInitializing(source, dataSpec, isNetwork)
         }
@@ -688,7 +690,8 @@ class StreamingPlaybackService : MediaSessionService() {
         ) {
             if (!loggedFirstByte) {
                 loggedFirstByte = true
-                Log.i(TAG, "StartupTiming: first byte at +${SystemClock.elapsedRealtime() - startTimeMs}ms (${dataSpec.uri})")
+                val uri = Redact.text(dataSpec.uri.toString())
+                Log.i(TAG, "StartupTiming: first byte at +${SystemClock.elapsedRealtime() - startTimeMs}ms ($uri)")
             }
             delegate?.onTransferStart(source, dataSpec, isNetwork)
         }

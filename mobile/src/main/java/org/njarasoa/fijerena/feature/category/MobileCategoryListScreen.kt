@@ -86,7 +86,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -232,6 +231,14 @@ fun MobileCategoryListScreen(
     // a bare entry (no passive "focus" state to preview from on touch).
     val isLiveTv = contentType == ContentType.LIVE_TV
     var dockTarget by remember { mutableStateOf<MediaItem?>(null) }
+    // Activity-scoped, not the default nav-scoped viewModel(): MainActivity's
+    // onPictureInPictureModeChanged()/onUserLeaveHint() resolve PlaybackViewModel via
+    // ViewModelProvider(this) (Activity-scoped) to decide whether to auto-enter PiP. A
+    // default-scoped viewModel() here resolved to a *different* instance tied to this
+    // destination's back-stack entry, so MainActivity was always checking a viewmodel that
+    // never actually played anything — PiP could never trigger.
+    val dockPlayback: PlaybackViewModel? =
+        if (isLiveTv && dockTarget != null && activity != null) viewModel(viewModelStoreOwner = activity) else null
     var fullScreen by remember { mutableStateOf(false) }
     var hasSeededDock by remember { mutableStateOf(false) }
     // Orientation-driven, not a width threshold — a screenWidthDp cutoff happens to catch most
@@ -248,9 +255,10 @@ fun MobileCategoryListScreen(
     BackHandler(enabled = isLiveTv && !fullScreen && dockTarget != null) {
         // Stop first, same as the dock's close button: clearing dockTarget alone unmounts the
         // dock (and its lifecycle observer with it) but left the stream playing, with nothing
-        // left to ever stop it — even after leaving the app. Resolved directly since
-        // dockPlayback is declared further down; it's the same Activity-scoped instance.
-        activity?.let { ViewModelProvider(it)[PlaybackViewModel::class.java].stop() }
+        // left to ever stop it — even after leaving the app. dockPlayback, never a fresh
+        // ViewModelProvider lookup: that would create a PlaybackViewModel (and start the
+        // playback service) just to stop it.
+        dockPlayback?.stop()
         dockTarget = null
     }
     // The toolbar's Back, Search and TV Guide leave this screen without going through the
@@ -261,7 +269,7 @@ fun MobileCategoryListScreen(
     // See docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-17.
     val stopDockThen: (() -> Unit) -> Unit = { leave ->
         if (isLiveTv && dockTarget != null) {
-            activity?.let { ViewModelProvider(it)[PlaybackViewModel::class.java].stop() }
+            dockPlayback?.stop()
         }
         leave()
     }
@@ -284,14 +292,6 @@ fun MobileCategoryListScreen(
     }
 
     val target = dockTarget
-    // Activity-scoped, not the default nav-scoped viewModel(): MainActivity's
-    // onPictureInPictureModeChanged()/onUserLeaveHint() resolve PlaybackViewModel via
-    // ViewModelProvider(this) (Activity-scoped) to decide whether to auto-enter PiP. A
-    // default-scoped viewModel() here resolved to a *different* instance tied to this
-    // destination's back-stack entry, so MainActivity was always checking a viewmodel that
-    // never actually played anything — PiP could never trigger.
-    val dockPlayback: PlaybackViewModel? =
-        if (isLiveTv && target != null && activity != null) viewModel(viewModelStoreOwner = activity) else null
 
     // Auto-enter PiP (Android 12+) was hardcoded off at Activity creation and never turned back
     // on — MainActivity.onUserLeaveHint()'s manual fallback only runs below SDK 31, so without

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import android.util.Log
+import androidx.media3.common.util.UnstableApi
 import androidx.room.InvalidationTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +13,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okhttp3.Response
@@ -27,6 +31,8 @@ import org.njarasoa.fijerena.core.network.sync.SyncWire
 import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 import org.njarasoa.fijerena.core.player.diagnostics.CrashLog
+import org.njarasoa.fijerena.core.player.model.NowPlayingSnapshot
+import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.ui.di.AppContainer
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -39,7 +45,9 @@ import kotlin.coroutines.cancellation.CancellationException
  *   `ping` every 30 s keeps reverse proxies from dropping the idle connection (the server answers
  *   without waking up).
  * - **Local changes**: any write to either `sync_version` table schedules a push a few seconds
- *   later, so a burst (playback progress, a batch of favourites) goes in one request.
+ *   later, so a burst (a batch of favourites) goes in one request. Watch progress saved while
+ *   something plays (every 10 s) is pushed at most once a minute instead, and promptly once
+ *   playback pauses or stops.
  * - **Start and stop**: a full pass when the app comes to the foreground (catch-up) and when it
  *   leaves it (flush what is pending). No background work: a closed app catches up when opened.
  * - Failures retry with backoff while in the foreground. A refused token (revoked) stops retrying.
@@ -52,7 +60,12 @@ class SyncManager internal constructor(
     private val store: SyncAccountStore = SyncAccountStore(app),
     private val engine: SyncEngine = SyncEngine(app, store = store),
     private val api: SyncApi = SyncApi(),
+    private val nowPlaying: StateFlow<NowPlayingSnapshot?> = playerNowPlaying(),
+    private val pendingPush: suspend () -> PendingPush = { pendingPushIn(app) },
 ) {
+    /** What a push would send: nothing, only watch progress, or anything else (perhaps with progress). */
+    internal enum class PendingPush { NONE, WATCH_ONLY, OTHER }
+
     private val startedActivities = AtomicInteger(0)
 
     /** What the sync settings screen shows. */
@@ -159,6 +172,21 @@ class SyncManager internal constructor(
                 }
             SettingsDatabase.getInstance(app).invalidationTracker.addObserver(observer)
             XtreamDatabase.getInstance(app).invalidationTracker.addObserver(observer)
+        }
+        watchPlayback()
+    }
+
+    /**
+     * Playback paused, stopped or ended: progress held back while it played goes now. The last
+     * position save can land before or after this; either way it is pushed within the debounce.
+     */
+    internal fun watchPlayback() {
+        scope.launch {
+            nowPlaying
+                .map { it.isPlaying() }
+                .distinctUntilChanged()
+                .filter { playing -> !playing }
+                .collect { onLocalChange() }
         }
     }
 
@@ -272,15 +300,35 @@ class SyncManager internal constructor(
         requestSync(0) // flush what is pending while the process is still alive
     }
 
-    private fun onLocalChange() {
+    /**
+     * Watch progress written while something plays is held for up to a minute — a save every 10 s
+     * used to push every ~13 s, and every other linked device then pulled and reloaded its Recent
+     * rows. Anything else goes after the usual debounce. See
+     * docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-18.
+     */
+    internal fun onLocalChange() {
         if (!foreground || !engine.isLinked) return
         scope.launch {
-            val pending =
-                SettingsDatabase.getInstance(app).settingsSyncDao().hasPending() ||
-                    XtreamDatabase.getInstance(app).syncVersionDao().hasPending()
-            if (pending) requestSync(PUSH_DEBOUNCE_MS)
+            val pending = pendingPush()
+            if (pending == PendingPush.WATCH_ONLY && nowPlaying.value.isPlaying()) {
+                requestSyncUnlessScheduled(WATCH_PUSH_INTERVAL_MS)
+            } else if (pending != PendingPush.NONE) {
+                requestSync(PUSH_DEBOUNCE_MS)
+            }
         }
     }
+
+    /**
+     * A pass after [delayMs] unless one is already waiting, which carries this change too.
+     * [requestSync] would put a waiting pass back each time, so saves every 10 s would never push.
+     */
+    private fun requestSyncUnlessScheduled(delayMs: Long) {
+        synchronized(this) {
+            if (scheduled?.isActive != true) requestSync(delayMs)
+        }
+    }
+
+    private fun NowPlayingSnapshot?.isPlaying(): Boolean = this?.paused == false
 
     /**
      * Socket lifecycle runs on several threads (main for foreground/background, OkHttp's for its
@@ -390,6 +438,7 @@ class SyncManager internal constructor(
     companion object {
         private const val TAG = "SyncManager"
         private const val PUSH_DEBOUNCE_MS = 3_000L
+        private const val WATCH_PUSH_INTERVAL_MS = 60_000L
         private const val PING_INTERVAL_MS = 30_000L
         private const val INITIAL_RETRY_MS = 5_000L
         private const val MAX_RETRY_MS = 5 * 60_000L
@@ -397,9 +446,23 @@ class SyncManager internal constructor(
 
         @Volatile private var instance: SyncManager? = null
 
+        private suspend fun pendingPushIn(app: Application): PendingPush {
+            val versions = XtreamDatabase.getInstance(app).syncVersionDao()
+            val beyondWatch = SettingsDatabase.getInstance(app).settingsSyncDao().hasPending() || versions.hasPendingBeyondWatch()
+            return when {
+                beyondWatch -> PendingPush.OTHER
+                versions.hasPending() -> PendingPush.WATCH_ONLY
+                else -> PendingPush.NONE
+            }
+        }
+
         fun getInstance(app: Application): SyncManager =
             instance ?: synchronized(this) {
                 instance ?: SyncManager(app).also { instance = it }
             }
     }
 }
+
+/** What this device plays, from the player service (a Media3 class: hence the opt-in). */
+@androidx.annotation.OptIn(UnstableApi::class)
+private fun playerNowPlaying(): StateFlow<NowPlayingSnapshot?> = StreamingPlaybackService.nowPlaying

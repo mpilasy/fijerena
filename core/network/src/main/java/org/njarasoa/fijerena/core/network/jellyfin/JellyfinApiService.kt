@@ -5,8 +5,11 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpSend
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.HttpTimeoutConfig
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.plugin
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -73,6 +76,12 @@ class JellyfinApiService(
             }
             install(ContentNegotiation) {
                 json(json)
+            }
+            // An overall deadline per call: a server that trickles bytes never trips the per-read
+            // timeout. The library listings opt out — a big recursive library legitimately takes
+            // long. See docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-14.
+            install(HttpTimeout) {
+                requestTimeoutMillis = REQUEST_TIMEOUT_MS
             }
         }.also { httpClient ->
             // Inject Authorization and X-Emby-Token on every request.
@@ -266,6 +275,7 @@ class JellyfinApiService(
                     parameter("SortOrder", sortOrder)
                     parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData,ParentId")
                     parameter("Recursive", true)
+                    timeout { requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS }
                 }.execute { response ->
                     response.bodyAsChannel().toInputStream().use { stream ->
                         val result = json.decodeFromStream<JellyfinItemsResponse>(stream)
@@ -298,6 +308,7 @@ class JellyfinApiService(
                 parameter("SortOrder", sortOrder)
                 parameter("Fields", "Overview,People,Genres,Studios,MediaSources,UserData,ParentId")
                 parameter("Recursive", true)
+                timeout { requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS }
             }.execute { response ->
                 response.bodyAsChannel().toInputStream().use { stream ->
                     // For Jellyfin, we'll decode the whole object but pass items individually
@@ -804,5 +815,8 @@ class JellyfinApiService(
 
     companion object {
         private const val TAG = "JellyfinApi"
+
+        /** Overall deadline of every call but the library listings. */
+        private const val REQUEST_TIMEOUT_MS = 60_000L
     }
 }

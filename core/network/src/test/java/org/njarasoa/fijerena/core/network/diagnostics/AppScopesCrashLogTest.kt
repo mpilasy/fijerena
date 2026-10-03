@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -70,6 +71,15 @@ class AppScopesCrashLogTest {
         assertEquals(listOf("second", "first"), CrashLog.read().map { it.substringBefore('\n').substringAfter(' ') })
         CrashLog.clear()
         assertTrue(CrashLog.read().isEmpty())
+    }
+
+    @Test
+    fun `login secrets are masked before they are written`() {
+        CrashLog.record("load http://p.example/live/alice/s3cret/1.ts?password=s3cret", RuntimeException())
+
+        val text = File(tmp.root, "crashlog/crashes.log").readText()
+        assertTrue(text.contains("/live/***/***/1.ts?password=***"))
+        assertFalse(text.contains("s3cret"))
     }
 
     @Test

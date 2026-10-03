@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network
 
 import android.content.Context
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -33,7 +34,9 @@ fun friendlyErrorMessage(
             context.getString(R.string.error_no_internet)
         }
 
-        e is SocketTimeoutException -> {
+        // HttpRequestTimeoutException: a call that outran its overall deadline (R-14), e.g. a
+        // server trickling bytes. It's an IOException, so it would otherwise read as "network error".
+        e is SocketTimeoutException || e is HttpRequestTimeoutException -> {
             context.getString(R.string.error_timeout)
         }
 
