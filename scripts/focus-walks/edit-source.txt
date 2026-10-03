@@ -1,0 +1,31 @@
+# T5 — Edit Source (TvAddProviderScreen, edit mode), TV emulator, an Xtream source
+# (jellyxtream). Start: Settings → Source & guide → Switch source → OK on the source's row (or ⋮
+# → Edit). Focus is on the Name edit button (T-12).
+# Two panes: the Connection column (Name, Server URL, Username, Password, then Cancel / Save
+# connection) and the settings column (Behaviour, Content filters, Library data, Danger zone).
+# Up/Down stay in a column (Up at the top and Down at the end stay put); Right from the
+# Connection column enters the settings column on its remembered row, else Auto-Resume; Left
+# returns to the Connection column on the row it left. Cancel ⇄ Save connection move with
+# Left/Right inside their row, as do the stream format / playlist type options.
+# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# Steps marked "re-record" depend on Compose's geometric Down from the Recent row size's Edit
+# button onto the option rows (m3u8 or ts, m3u_plus or simple) and are asserted loosely.
+@start Edit Source Name
+DOWN	Edit Server URL
+DOWN	Edit Username
+DOWN	Edit Password
+# Down from the last field lands on Cancel, not on whichever button sits under the edit icon.
+DOWN	Cancel
+RIGHT	Save connection
+# Right from Save connection enters the settings column on its first control.
+RIGHT	Auto-Resume
+# Recent row size ("Last Watched Queue Size"): its Edit button.
+DOWN	Edit
+# Stream format: m3u8 (re-record: may land on ts).
+DOWN	m3u8
+# Playlist type: m3u_plus (re-record: may land on simple).
+DOWN	m3u_plus
+# Left goes back to the Connection column, on the row it left.
+LEFT	Save connection
+# Right comes back to the settings row it left.
+RIGHT	m3u_plus

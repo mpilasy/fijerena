@@ -65,7 +65,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
-import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.TvCheckRow
@@ -693,7 +692,9 @@ fun ProviderActionsMenuDialog(
                     )
                 }
                 HorizontalDivider(color = CinemaTextSecondary.copy(alpha = CinemaAlpha.focusedTint))
-                CinemaDangerButton(
+                // Outlined in the error colour, filled only while focused: the delete confirm
+                // that follows carries the filled error button (T5, follow-up from T4).
+                ProviderDangerButton(
                     onClick = {
                         onDelete()
                         onDismiss()
