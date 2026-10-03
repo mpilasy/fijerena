@@ -987,15 +987,53 @@ mobile level; GD4–GD6 are additive. Strings travel with their phase, all three
 
 ---
 
+# Parallel lanes
+
+Four lanes can run at once; within a lane the order is fixed. Each lane is its own branch /
+worktree (symlink the gitignored `local.properties` into a worktree before building); every
+phase still lands as one commit on `main` (rebase, don't merge-commit).
+
+| Lane | Items, in order | Files it owns | Verifies on |
+|---|---|---|---|
+| **1 Mobile settings** | M1 → M2 → M3 → M4 → M5; M2b together with A-W5 | `mobile/**` only | phone |
+| **2 TV focus + Live TV** | Part II Phase 1 → 2 (`tvPane`) → 3 (row menu) → LT1 → LT2 → LT3 → LT4 → LT5 → LT6 → LT7; then GD5 (its OSD button) and GD6 | `TwoColumnLayout`, `CategoryList`, `StreamList`, `LiveTvSplitLayout`, `PlayerScreen`, `PlayerKeyHandler`, overlays, `TvNavHost` | TV |
+| **3 Core + guide** | A-W4, A-W6, GD0 → GD1 → GD2 → GD3 → GD4 | `core/**`, `feature/epg/**` on both platforms, `core/ui` guide layout | TV, then phone |
+| **4 TV settings** | T1 → T2 → T4 → T5 → T6; **T3 only after lane 2's Phase 2 has landed** | `tv/feature/settings/**`, `tv/feature/provider/**`, `TvSelectableButton`, `TvSwitchRow` | TV |
+
+Singletons with no dependency, for any lane with slack: Part II Phase 4 (Home), Phase 6 (Movie
+details + Episodes), Phase 7 (Search field).
+
+## Where lanes touch — serialize
+
+- **T1 before Part II Phase 8** (highlight tokens): both edit `TvSelectableButton` /
+  `TvSwitchRow`. Phase 8 stays in lane 4 after T1.
+- **T3 after Phase 2** (`tvPane`).
+- **GD5 after LT4** (OSD Guide button) — GD5 edits `PlayerScreen`, `LiveTvSplitLayout` and both
+  nav hosts, so it runs in lane 2, not lane 3. **GD6 after GD2 and Phase 3.**
+- **GD1 before GD2/GD3** (GD2/GD3 rewrite the screens GD1 patches).
+- `TvNavHost` is edited by T3, LT1, LT7, GD5; `MobileNavHost` by M2b, GD5 — small hunks; rebase
+  in that order.
+- `strings.xml` ×3: every phase appends. Each phase keeps its strings in its own block at the
+  end of each file so conflicts stay trivial.
+
+## The real limit: emulators, not code
+
+One TV AVD, one phone AVD, and the phone stays off when not needed (RAM). Lanes 2, 3 and 4 all
+verify on the TV, so their **verification** serializes even when the coding doesn't; lane 1 is
+fully parallel on the phone. Expect three lanes coding, one verifying on the TV at a time.
+Never two lanes driving the same emulator — the walk script asserts focus by text and a second
+driver would corrupt its run.
+
 # Order of attack (all parts)
 
-1. Part I A-W4 (dead `EditProvider` route) and Part II LT1 (preview-on-entry regression) — two
-   one-line commits, LT1 is user-visible at once.
-2. Part III GD0 (why the index was empty) and GD1 (guide honesty) — small, make the current
-   guide stop lying before anything is rebuilt.
-3. Part I A-W6 and T1; Part II Phases 1–3 (walk script, `tvPane`, row action menu).
-4. Part I T2–T6 on `tvPane`; Part II LT2–LT7; Part III GD2–GD4.
-5. Part II Phases 4, 6, 7, 8; Part III GD5–GD6 (GD5's OSD button after LT4); Part I M1–M5.
+With the lanes above, "order" means *within a lane*; across lanes everything starts at once:
+
+1. **Day 1, all lanes start:** lane 1 M1; lane 2 Phase 1 then LT1 (one line, user-visible);
+   lane 3 A-W4, A-W6, GD0; lane 4 T1.
+2. Lane 2: Phase 2 → 3 → LT2…; lane 3: GD1 → GD2…; lane 4: T2, T4, T5, T6, then T3 once
+   Phase 2 is on `main`; lane 1 straight through M2–M5.
+3. Lane 2 picks up GD5 (after LT4) and GD6 (after GD2); singletons (Phases 4, 6, 7) go to
+   whichever lane frees up first; Phase 8 to lane 4 after T1.
 
 Each commit updates this plan (Done note per phase, Status at the top) and the affected docs
 (`docs/FEATURES.md`, `docs/NAVIGATION_GUIDE.md`, `docs/RELEASE_NOTES.md`, `docs/epg_guide.md`
