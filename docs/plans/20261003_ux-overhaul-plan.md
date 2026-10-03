@@ -12,7 +12,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | Lane | Done | Current | Next |
 |---|---|---|---|
 | 1 Mobile settings | M1–M4 (2026-10-03, phone) | M5 (since 2026-10-03) | — (lane done after M5) |
-| 2 TV focus + Live TV | LT1, LT2, Phases 1–3 (2026-10-03, TV) | LT3 one panel (since 2026-10-03); Phase 4 Home (side task) | LT4 → LT5 → LT6 → LT7 |
+| 2 TV focus + Live TV | LT1, LT2, Phases 1–3 (2026-10-03, TV), Phase 4 (merged, TV walk pending) | LT3 one panel (since 2026-10-03) | LT4 → LT5 → LT6 → LT7 |
 | 3 Core + guide | A-W4, A-W6, GD0, GD0b, GD1, GD2 (2026-10-03) | GD3 mobile grid (since 2026-10-03) | GD4; GD5 after LT4 |
 | 4 TV settings | T1–T4 (2026-10-03, TV) | T5 Edit Source (since 2026-10-03) | T6 |
 
@@ -755,7 +755,7 @@ See Decisions 3–5 at the end of this plan.
 | 1 | P6 focus-walk script + expected sequences for the screens walked here (records today's behaviour; later phases update the expectations). **Done 2026-10-03** — walks recorded on the TV emulator the same day (today's behaviour: F-H-2, F-C-3/4/5/6 reproduce). | `scripts/tv-focus-walk.sh`, `scripts/focus-walks/*.txt` | M | Low | tooling only |
 | 2 | P1 + P2; apply to category screens (Live TV / Movies / TV Shows). **Done 2026-10-03**, verified on the TV emulator (Left from an item → the selected category; Left from a category stays; Down stops at the list end; Right from a category → the remembered item; walk re-recorded). Deviations: Left/Right pane exits via `onKeyEvent`, not `focusProperties.exit`; no `focusRestorer`; `rememberPaneFocus()` + `bind(...)` per list; F-C-5 ★ left for Phase 3; OK on a category now keeps focus on it (Right enters). | new `TvPane.kt`, `TwoColumnLayout.kt`, `CategoryList.kt`, `StreamList.kt` | L | High | Compose focus APIs are quirky; touches all category screens |
 | 3 | P3 row action menu; remove hidden row buttons in category lists and Live preview. **Done 2026-10-03**, verified on the TV (long-press OK and the Menu key open the row menu, Favourite first, Remove from Recent last; Right from a category goes straight to the items; walk re-recorded). | `StreamList.kt`, `LiveTvSplitLayout.kt`, `FavoriteMenuDialog.kt` | M | Med | behaviour change: hidden buttons removed; long-press on tv-material `Surface` |
-| 4 | Home entry/header focus; dead Live TV card. **In progress (lane 2, since 2026-10-03).** | `ContentTypeSelectionScreen.kt` | S | Low |  |
+| 4 | Home entry/header focus; dead Live TV card. **Done 2026-10-03** (compile; TV walk pending). Entry waits up to 2 s for the live category count; edge case: a 0 count arriving after that leaves focus nowhere. | `ContentTypeSelectionScreen.kt` | S | Low |  |
 | 5 | **Live TV flows LT1–LT7** (own table in that section; LT1 is a one-line regression fix and can go first of everything). | see LT table | — | — | see LT table |
 | 6 | Movie details + Episodes. | `MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt` | L | Med | `EpisodeSelectionScreen` is 2 320 lines |
 | 7 | P4 Search field. | new `TvSearchField.kt`, `SearchScreen.kt` | M | Med | IME behaviour on TV |
