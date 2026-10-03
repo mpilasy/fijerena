@@ -968,6 +968,10 @@
     <string name="player_osd_more">Plus</string>
     <string name="player_osd_next_episode">Épisode suivant</string>
     <string name="player_osd_next_format">Ensuite : %1$s (%2$s)</string>
+    <!-- LT5 -->
+    <string name="live_tuning_format">Syntonisation · %1$s</string>
+    <string name="live_preview_next_format">Ensuite : %1$s</string>
+    <string name="live_preview_hint">OK  Plein écran   ·   OK maintenu  Options</string>
     <!-- Translations backfill 2026-10-03 -->
     <string name="settings_section_provider_playback">Source et lecture</string>
     <string name="settings_section_appearance">Apparence</string>

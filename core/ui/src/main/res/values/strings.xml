@@ -1010,4 +1010,8 @@
     <string name="player_osd_more">More</string>
     <string name="player_osd_next_episode">Next episode</string>
     <string name="player_osd_next_format">Next: %1$s (%2$s)</string>
+    <!-- LT5 -->
+    <string name="live_tuning_format">Tuning · %1$s</string>
+    <string name="live_preview_next_format">Next: %1$s</string>
+    <string name="live_preview_hint">OK  Full screen   ·   Hold OK  Options</string>
 </resources>

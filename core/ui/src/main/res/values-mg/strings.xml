@@ -805,6 +805,10 @@
     <string name="player_osd_more">Hafa</string>
     <string name="player_osd_next_episode">Fizarana manaraka</string>
     <string name="player_osd_next_format">Manaraka: %1$s (%2$s)</string>
+    <!-- LT5 -->
+    <string name="live_tuning_format">Mampifandray · %1$s</string>
+    <string name="live_preview_next_format">Manaraka: %1$s</string>
+    <string name="live_preview_hint">OK  Efijery feno   ·   Tazony ny OK  Safidy</string>
     <!-- Translations backfill 2026-10-03 -->
     <string name="settings_section_provider_playback">Loharano sy filalaovana</string>
     <string name="settings_section_appearance">Endrika</string>

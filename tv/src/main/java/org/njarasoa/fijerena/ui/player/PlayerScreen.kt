@@ -73,6 +73,7 @@ import org.njarasoa.fijerena.ui.player.components.dialogs.QualitySelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.SubtitleSelectorDialog
 import org.njarasoa.fijerena.ui.player.components.overlays.TvPlayerControlsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvStatsOverlay
+import org.njarasoa.fijerena.ui.player.components.overlays.TvTuningOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvUpNextOverlay
 import org.njarasoa.fijerena.ui.theme.Spacing
 import java.util.Date
@@ -95,6 +96,12 @@ fun PlayerScreen(
      * standalone route, VOD only on TV) leaves Left/Right to the scrub cursor.
      */
     channelPanel: (@Composable (close: () -> Unit) -> Unit)? = null,
+    /**
+     * Live TV zap feedback (LT5): the channel being tuned, from the zap until it plays — the
+     * caller clears it on Playing or Error. Shown as [TvTuningOverlay] in place of the loading
+     * spinner. Null = nothing being tuned.
+     */
+    tuningChannelName: String? = null,
     nextEpisode: EpisodeItem? = null,
     onPlayNextEpisode: ((EpisodeItem) -> Unit)? = null,
     // Whether the provider lets episodes roll on to [nextEpisode] — Xtream, not Jellyfin.
@@ -359,7 +366,8 @@ fun PlayerScreen(
                 PlaybackState.Idle -> { /* Silent */ }
 
                 PlaybackState.Buffering -> {
-                    if (!isActuallyMoving) {
+                    // While tuning, the overlay below carries its own spinner.
+                    if (!isActuallyMoving && tuningChannelName == null) {
                         BufferingContent()
                     }
                 }
@@ -379,6 +387,9 @@ fun PlayerScreen(
                 else -> { /* Show controls overlay below */ }
             }
         }
+
+        // Zap feedback (LT5): under the banner and the panel, over the picture.
+        tuningChannelName?.let { TvTuningOverlay(channelName = it) }
 
         // Stats overlay (double-click to show)
         // Visible whenever showStats is true, regardless of playbackState (survives channel switches)

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -71,6 +73,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
 import org.njarasoa.fijerena.ui.player.PlayerScreen
+import org.njarasoa.fijerena.ui.player.components.overlays.TvTuningOverlay
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -78,7 +81,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * Live-TV-only split layout: a small preview player + now/next EPG card on the left, the channel
  * list on the right. See docs/live-tv-preview-pane-plan.md.
  *
- * The preview is focus-driven and debounced (~600ms) — nothing plays until the user's focus settles
+ * The preview is focus-driven and debounced (800 ms) — nothing plays until the user's focus settles
  * on a row, so scrolling never leaves a stream churning in the background. A watchdog also stops a
  * channel that fails to start within 8s rather than let it buffer indefinitely.
  *
@@ -117,14 +120,14 @@ internal fun LiveTvSplitLayout(
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
 
     // Focus-driven, debounced preview: the highlighted channel becomes the preview target only
-    // after focus settles (~600ms), so scrolling the list doesn't machine-gun the tuner or leave a
+    // after focus settles (800 ms, LT5), so scrolling the list doesn't machine-gun the tuner or leave a
     // stream churning in the background. Nothing auto-plays on entry until the user lands on a row —
     // unless this screen was entered with a specific stream already in mind (see the seeding effect
     // below), in which case it plays immediately.
     // Focus is held in a StateFlow, not snapshot state, deliberately: as snapshot state it had to
     // be read in composition to key the debouncing LaunchedEffect, so every single D-pad move
     // invalidated this whole composable — video pane, EPG texts and the channel list all recomposed
-    // per keypress, at 600ms before anything even wanted to change. Writing to a flow notifies the
+    // per keypress, at 800 ms before anything even wanted to change. Writing to a flow notifies the
     // collector without touching the snapshot system, so focus moves now cost no recomposition at
     // all and only previewTarget (which changes once, after the debounce) drives the UI.
     val focusedItemFlow = remember { MutableStateFlow<MediaItem?>(null) }
@@ -134,7 +137,7 @@ internal fun LiveTvSplitLayout(
         // same semantics, without opting into the FlowPreview API.
         focusedItemFlow.collectLatest { item ->
             if (item == null) return@collectLatest
-            delay(600)
+            delay(PREVIEW_SETTLE_MS)
             previewTarget = item
         }
     }
@@ -332,6 +335,32 @@ internal fun LiveTvSplitLayout(
     val streamState by loader.state.collectAsStateWithLifecycle()
     val success = streamState as? StreamLoaderViewModel.StreamState.Success
 
+    // Zap feedback (LT5): "Tuning · <channel>" from the moment the target changes — a preview
+    // retune after the settle, an OK on another row, Up/Down or a panel pick in full screen —
+    // until the engine plays *that* channel. Only display state: derived from what the loader and
+    // engine already publish, it changes nothing about how a channel is loaded or played. The
+    // engine keeps the old channel (or its state) until the loader resolves the new one, so
+    // "playing" means the engine's stream is the target's resolved URL and it reached Playing.
+    // tunedId remembers that, so a later rebuffer of the same channel is not shown as a tune.
+    // Hidden on a loader or playback error, which have their own UI.
+    val playingMetadata by playback.currentMetadata.collectAsStateWithLifecycle()
+    val targetPlaying =
+        success != null &&
+            success.streamId == target.id &&
+            playingMetadata.streamUrl == success.streamUrl &&
+            previewPlaybackState is PlaybackState.Playing
+    var tunedId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(targetPlaying, target.id) {
+        if (targetPlaying) tunedId = target.id
+    }
+    val tuningName =
+        target.name.takeIf {
+            target.id != tunedId &&
+                !targetPlaying &&
+                streamState !is StreamLoaderViewModel.StreamState.Error &&
+                previewPlaybackState !is PlaybackState.Error
+        }
+
     // Re-point the loader whenever the previewed channel changes, via the lean resolution path
     // (skips the channel-switcher list refetch that a real "commit to watching" does — a preview
     // doesn't render that list). Watch history is still recorded on the usual delay.
@@ -462,6 +491,7 @@ internal fun LiveTvSplitLayout(
                 currentEpgProgram = success?.currentEpgProgram,
                 nextEpgProgram = success?.nextEpgProgram,
                 currentStreamId = success?.streamId,
+                tuningChannelName = tuningName,
                 // The same panel as the split's, over the video (LT3): same tabs, rows and row
                 // actions, and its tabs switch channelContext — so the zap order below follows.
                 channelPanel = { close ->
@@ -540,8 +570,11 @@ internal fun LiveTvSplitLayout(
                     EmbeddedPlayerSurface(modifier = Modifier.fillMaxSize(), useTextureView = true)
                     // The preview surface has no controls/error UI of its own, so a stalled or
                     // watchdog-killed stream would otherwise look identical to a live frozen
-                    // frame. Surface the state so it reads as "still loading", not "broken".
-                    if (previewPlaybackState !is PlaybackState.Playing) {
+                    // frame. Surface the state so it reads as "still loading", not "broken" —
+                    // naming the channel while it is being tuned (LT5).
+                    if (tuningName != null) {
+                        TvTuningOverlay(channelName = tuningName, compact = true)
+                    } else if (previewPlaybackState !is PlaybackState.Playing) {
                         CircularProgressIndicator(
                             modifier = Modifier.align(Alignment.Center),
                             color = CinemaAccent,
@@ -549,29 +582,43 @@ internal fun LiveTvSplitLayout(
                     }
                 }
 
-                // Marks this as the nested "preview" layer of Live TV, distinct from the bare
-                // browse screen underneath (TwoColumnLayout, no video) — so backing out one level
-                // (video disappears, this label goes with it) reads as a real state change
-                // instead of "Back did nothing". See docs/UX_FLOW_AUDIT.md, "Live TV back-stopover".
+                // Below the video (LT5): name · category, Now with its progress and Next when the
+                // guide has them, and the one key hint. The guide lines are the target's only —
+                // while a retune resolves, the loader still holds the previous channel's.
+                // No "LIVE PREVIEW" badge any more: it marked this as the preview layer, distinct
+                // from the bare browse list behind it, and the video with the hint line under it
+                // already does (docs/UX_FLOW_AUDIT.md, "Live TV back-stopover").
+                // TODO: the channel number goes before the name once metadata carries one.
+                val resolved = success?.takeIf { it.streamId == target.id }
                 Text(
-                    text = stringResource(R.string.category_live_preview_badge),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CinemaAccent,
-                )
-                Text(
-                    text = success?.streamName ?: target.name,
+                    text = resolved?.streamName ?: target.name,
                     style = MaterialTheme.typography.titleLarge,
                     color = CinemaTextPrimary,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                val categoryName =
+                    target.categoryId
+                        .takeUnless { it in CategoryViewModel.VIRTUAL_CATEGORY_IDS }
+                        ?.let { categoryMap[it]?.name }
+                if (categoryName != null) {
+                    Text(
+                        text = categoryName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CinemaTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
 
-                val nowProg = success?.currentEpgProgram
+                val nowProg = resolved?.currentEpgProgram
                 if (nowProg != null) {
                     Text(
                         text = stringResource(R.string.epg_now_prefix, nowProg.title),
                         style = MaterialTheme.typography.titleMedium,
                         color = CinemaTextPrimary,
                         maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     val fraction = nowProg.elapsedFraction()
                     LinearProgressIndicator(
@@ -582,15 +629,24 @@ internal fun LiveTvSplitLayout(
                     )
                 }
 
-                val nextProg = success?.nextEpgProgram
+                val nextProg = resolved?.nextEpgProgram
                 if (nextProg != null) {
                     Text(
-                        text = stringResource(R.string.category_up_next_format, nextProg.title),
+                        text = stringResource(R.string.live_preview_next_format, nextProg.title),
                         style = MaterialTheme.typography.bodyMedium,
                         color = CinemaTextSecondary,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = stringResource(R.string.live_preview_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CinemaTextSecondary,
+                    maxLines = 1,
+                )
             }
 
             LiveTvChannelPanel(
@@ -655,6 +711,13 @@ private fun neighborChannel(
         }
     return neighbor
 }
+
+/**
+ * How long focus must rest on a row before the preview tunes it (LT5, decision 3 of
+ * docs/plans/20261003_ux-overhaul-plan.md): long enough that moving through a list does not start
+ * a stream at every pause.
+ */
+private const val PREVIEW_SETTLE_MS = 800L
 
 /** What the preview pane plays for a resolved channel. */
 private fun previewMetadata(s: StreamLoaderViewModel.StreamState.Success) =
