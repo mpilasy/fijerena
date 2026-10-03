@@ -989,4 +989,9 @@
     <string name="live_panel_no_favorites">No favourites yet — hold OK on a channel to add one</string>
     <!-- Phase 4 -->
     <string name="content_type_live_tv_no_channels">No channels</string>
+    <!-- M5 -->
+    <string name="epg_management_title_format">Guide sources · %1$s</string>
+    <string name="settings_guide_auto_refresh_title">Guide auto-refresh</string>
+    <string name="settings_guide_auto_refresh_summary_format">%1$s · %2$s</string>
+    <string name="settings_guide_maintenance_title">Guide data maintenance</string>
 </resources>

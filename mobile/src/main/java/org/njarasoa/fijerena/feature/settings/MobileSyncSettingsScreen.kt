@@ -309,7 +309,10 @@ private fun LinkedPanel(
                     Text(stringResource(R.string.live_sync_scan_code))
                 }
             }
-            TextButton(onClick = onSyncNow, enabled = !status.syncing) { Text(stringResource(R.string.live_sync_now)) }
+            // Same weight as Scan a code: one primary (Add a device) per card (M-11).
+            CinemaOutlinedButton(onClick = onSyncNow, enabled = !status.syncing, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.live_sync_now))
+            }
         }
     }
 }

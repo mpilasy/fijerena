@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.feature.settings
 
 import android.app.Application
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -17,7 +18,10 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.BuildConfig
@@ -34,10 +38,13 @@ import org.njarasoa.fijerena.core.ui.theme.AllUiStyles
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
+import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.feature.settings.components.GuideAutoRefreshRow
+import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
 import org.njarasoa.fijerena.feature.settings.components.ImportConflictDialog
 import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
 import org.njarasoa.fijerena.feature.settings.components.ProfilesSettingsRows
@@ -76,6 +83,16 @@ fun MobileSettingsScreen(
     val profiles by profilesViewModel.profiles.collectAsStateWithLifecycle()
     val profilesMessage by profilesViewModel.message.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // Guide auto-refresh and maintenance are device-wide, so no provider id (A-9).
+    val epgViewModel: EpgManagementViewModel = viewModel(factory = SettingsViewModelFactory(context))
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            epgViewModel.toastMessage.collect { message ->
+                Toast.makeText(context, message.asString(context), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
@@ -305,6 +322,7 @@ fun MobileSettingsScreen(
                     uiState = uiState,
                     onGuideSources = onGuideSources,
                 )
+                GuideAutoRefreshRow(viewModel = epgViewModel)
             }
 
             // === 3. Playback ===
@@ -451,6 +469,7 @@ fun MobileSettingsScreen(
                         stringResource(R.string.settings_shrink_database_dev_stats_delta, uiState.lastShrinkRowsRemoved, bytesStr),
                     )
                 }
+                GuideMaintenanceRow(viewModel = epgViewModel)
             }
 
             // === 7. About & advanced ===
