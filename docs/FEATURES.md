@@ -390,6 +390,8 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 
 ### Per-Source Settings (in Edit Source)
 
+The source type is fixed once a source is saved: Edit Source shows it read-only on both platforms.
+
 | Setting | Default | Range |
 |---------|---------|-------|
 | Auto-Resume | On | — |

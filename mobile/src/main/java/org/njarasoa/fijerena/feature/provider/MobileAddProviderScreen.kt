@@ -263,39 +263,51 @@ fun MobileAddProviderScreen(
                     .padding(CinemaSpacing.md)
                     .verticalScroll(rememberScrollState()),
         ) {
-            // Provider type dropdown
-            var typeDropdownExpanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = typeDropdownExpanded,
-                onExpandedChange = { typeDropdownExpanded = it },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
+            // Provider type: a dropdown when adding, a disabled field when editing (the type of
+            // an existing source cannot change).
+            if (isEditMode) {
                 OutlinedTextField(
                     value = selectedType.displayName,
                     onValueChange = {},
                     readOnly = true,
+                    enabled = false,
                     label = { Text(stringResource(R.string.provider_type_label)) },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeDropdownExpanded)
-                    },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                ExposedDropdownMenu(
+            } else {
+                var typeDropdownExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
                     expanded = typeDropdownExpanded,
-                    onDismissRequest = { typeDropdownExpanded = false },
+                    onExpandedChange = { typeDropdownExpanded = it },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    addSourceTypes(isDevMode, editedType).forEach { type ->
-                        DropdownMenuItem(
-                            text = { Text(type.displayName) },
-                            onClick = {
-                                selectedType = type
-                                error = null
-                                typeDropdownExpanded = false
-                            },
-                        )
+                    OutlinedTextField(
+                        value = selectedType.displayName,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.provider_type_label)) },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeDropdownExpanded)
+                        },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    )
+                    ExposedDropdownMenu(
+                        expanded = typeDropdownExpanded,
+                        onDismissRequest = { typeDropdownExpanded = false },
+                    ) {
+                        addSourceTypes(isDevMode, editedType).forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type.displayName) },
+                                onClick = {
+                                    selectedType = type
+                                    error = null
+                                    typeDropdownExpanded = false
+                                },
+                            )
+                        }
                     }
                 }
             }

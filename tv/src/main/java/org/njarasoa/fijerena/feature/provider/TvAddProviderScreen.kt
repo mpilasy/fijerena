@@ -251,11 +251,14 @@ fun TvAddProviderScreen(
 
                         Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
-                        // Provider type dropdown (D-pad friendly)
+                        // Provider type dropdown (D-pad friendly). Read-only and skipped by focus
+                        // when editing: the type of an existing source cannot change, so the first
+                        // D-pad stop is the Name field's edit button.
                         ProviderTypeDropdown(
                             types = addSourceTypes(isDevMode, editedType),
                             selectedType = selectedType,
                             onTypeSelected = { selectedType = it },
+                            enabled = !isEditMode,
                         )
 
                         Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))

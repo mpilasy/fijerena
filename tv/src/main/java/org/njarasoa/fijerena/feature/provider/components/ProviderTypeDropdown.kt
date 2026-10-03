@@ -31,11 +31,16 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.ProvideUiScaledDensity
 
+/**
+ * The source-type picker. With [enabled] false (editing an existing source) it is the same field
+ * showing the current type, but not focusable and without a menu: the type of a source is fixed.
+ */
 @Composable
 fun ProviderTypeDropdown(
     types: List<ProviderType>,
     selectedType: ProviderType,
     onTypeSelected: (ProviderType) -> Unit,
+    enabled: Boolean = true,
 ) {
     var typeDropdownExpanded by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -43,62 +48,77 @@ fun ProviderTypeDropdown(
             value = selectedType.displayName,
             onValueChange = {},
             readOnly = true,
+            enabled = enabled,
             label = { Text(stringResource(R.string.provider_type_label)) },
-            trailingIcon = {
-                Text(
-                    text = if (typeDropdownExpanded) "▲" else "▼",
-                    color = CinemaAccent,
-                )
-            },
+            trailingIcon =
+                if (enabled) {
+                    {
+                        Text(
+                            text = if (typeDropdownExpanded) "▲" else "▼",
+                            color = CinemaAccent,
+                        )
+                    }
+                } else {
+                    null
+                },
             modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { typeDropdownExpanded = true }
-                    .onKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown &&
-                            (event.key == Key.DirectionCenter || event.key == Key.Enter)
-                        ) {
-                            typeDropdownExpanded = true
-                            true
-                        } else {
-                            false
+                if (enabled) {
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { typeDropdownExpanded = true }
+                        .onKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown &&
+                                (event.key == Key.DirectionCenter || event.key == Key.Enter)
+                            ) {
+                                typeDropdownExpanded = true
+                                true
+                            } else {
+                                false
+                            }
                         }
-                    },
+                } else {
+                    Modifier.fillMaxWidth()
+                },
             colors =
                 OutlinedTextFieldDefaults.colors(
                     focusedTextColor = CinemaTextPrimary,
                     unfocusedTextColor = CinemaTextPrimary,
+                    disabledTextColor = CinemaTextPrimary.copy(alpha = CinemaAlpha.textHigh),
                     cursorColor = CinemaAccent,
                     focusedBorderColor = CinemaAccent,
                     unfocusedBorderColor = CinemaTextSecondary,
+                    disabledBorderColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textDisabled),
                     focusedLabelColor = CinemaAccent,
                     unfocusedLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                    disabledLabelColor = CinemaTextSecondary.copy(alpha = CinemaAlpha.textMedium),
                     focusedContainerColor = CinemaSurfaceVariant,
                     focusedTrailingIconColor = CinemaAccent,
                     unfocusedTrailingIconColor = CinemaTextSecondary,
                 ),
         )
-        DropdownMenu(
-            expanded = typeDropdownExpanded,
-            onDismissRequest = { typeDropdownExpanded = false },
-            containerColor = CinemaSurface,
-        ) {
-            // The menu is a Popup, so it gets its own window and loses the scaled density.
-            ProvideUiScaledDensity {
-                Column {
-                    types.forEach { type ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = type.displayName,
-                                    color = if (type == selectedType) CinemaAccent else CinemaTextPrimary,
-                                )
-                            },
-                            onClick = {
-                                onTypeSelected(type)
-                                typeDropdownExpanded = false
-                            },
-                        )
+        if (enabled) {
+            DropdownMenu(
+                expanded = typeDropdownExpanded,
+                onDismissRequest = { typeDropdownExpanded = false },
+                containerColor = CinemaSurface,
+            ) {
+                // The menu is a Popup, so it gets its own window and loses the scaled density.
+                ProvideUiScaledDensity {
+                    Column {
+                        types.forEach { type ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = type.displayName,
+                                        color = if (type == selectedType) CinemaAccent else CinemaTextPrimary,
+                                    )
+                                },
+                                onClick = {
+                                    onTypeSelected(type)
+                                    typeDropdownExpanded = false
+                                },
+                            )
+                        }
                     }
                 }
             }
