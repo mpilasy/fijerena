@@ -562,6 +562,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `theme_id` | TEXT | Current dark theme variant (default `deep_night`) |
 | `ui_style_id` | TEXT | Look-and-feel preset, independent of color (default `material`) |
 | `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0) |
+| `auto_xmltv_sources_cleaned_v1` | BOOLEAN | One-time cleanup of duplicate / stale automatic Xtream guide sources has run (set only after it succeeds) |
 | `app_language` | TEXT | ISO 639-1 code (`en`, `mg`) |
 | `provider_name` | TEXT | Display name shown for the provider |
 | `has_provider_cache` | BOOLEAN | Cached "at least one provider exists" flag for fast cold start |
