@@ -28,6 +28,8 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | T3 / M3 | `settings_profiles_title`, `live_sync_title`, `provider_more_actions*` lacked fr/mg (T4 added the `provider_more_actions*` ones); audit fr/mg for keys used by the new screens. | M5 / T6 |
 | Phase 2 | `TvDimensions.epgTimeHeaderHeight` and a few strings are now unused (`epg_error_not_supported`, `epg_error_no_data_for_channels`, `settings_about_app_version`, `provider_update_button` on mobile). | cleanup commit after T6 |
 
+Deployed: days 1–4 (`main` at `1e413854`) installed in place on both Shields (mdarcy, darcy) on 2026-10-03 16:39, app data backed up first (`backups/*-20261003-163920.tar.gz`).
+
 Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
 release time (`docs/RUN_GUIDE.md`).
 
