@@ -12,7 +12,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | Lane | Done | Current | Next |
 |---|---|---|---|
 | 1 Mobile settings | M1, M2 (2026-10-03, phone), M3 (merged 2026-10-03, phone check pending) | — | M4 |
-| 2 TV focus + Live TV | LT1, Phase 1, Phase 2 (2026-10-03, TV) | Phase 3 row menu (since 2026-10-03) | LT2 |
+| 2 TV focus + Live TV | LT1, Phase 1, Phase 2 (2026-10-03, TV), Phase 3 (merged 2026-10-03, TV check pending) | — | LT2 |
 | 3 Core + guide | A-W4, A-W6, GD0, GD0b (2026-10-03) | GD1 (since 2026-10-03) | GD2 |
 | 4 TV settings | T1, T2 (2026-10-03, TV) | T3 two-pane (since 2026-10-03) | T4 → T5 → T6 |
 
@@ -740,7 +740,7 @@ See Decisions 3–5 at the end of this plan.
 |---|---|---|---|---|---|
 | 1 | P6 focus-walk script + expected sequences for the screens walked here (records today's behaviour; later phases update the expectations). **Done 2026-10-03** — walks recorded on the TV emulator the same day (today's behaviour: F-H-2, F-C-3/4/5/6 reproduce). | `scripts/tv-focus-walk.sh`, `scripts/focus-walks/*.txt` | M | Low | tooling only |
 | 2 | P1 + P2; apply to category screens (Live TV / Movies / TV Shows). **Done 2026-10-03**, verified on the TV emulator (Left from an item → the selected category; Left from a category stays; Down stops at the list end; Right from a category → the remembered item; walk re-recorded). Deviations: Left/Right pane exits via `onKeyEvent`, not `focusProperties.exit`; no `focusRestorer`; `rememberPaneFocus()` + `bind(...)` per list; F-C-5 ★ left for Phase 3; OK on a category now keeps focus on it (Right enters). | new `TvPane.kt`, `TwoColumnLayout.kt`, `CategoryList.kt`, `StreamList.kt` | L | High | Compose focus APIs are quirky; touches all category screens |
-| 3 | P3 row action menu; remove hidden row buttons in category lists and Live preview. **In progress (lane 2, since 2026-10-03).** | `StreamList.kt`, `LiveTvSplitLayout.kt`, `FavoriteMenuDialog.kt` | M | Med | behaviour change: hidden buttons removed; long-press on tv-material `Surface` |
+| 3 | P3 row action menu; remove hidden row buttons in category lists and Live preview. **Done 2026-10-03** (compile; TV check pending: does tv-material `Card.onLongClick` fire on a D-pad OK long-press — Search's `tvLongPress` key handler is the fallback). | `StreamList.kt`, `LiveTvSplitLayout.kt`, `FavoriteMenuDialog.kt` | M | Med | behaviour change: hidden buttons removed; long-press on tv-material `Surface` |
 | 4 | Home entry/header focus; dead Live TV card. | `ContentTypeSelectionScreen.kt` | S | Low |  |
 | 5 | **Live TV flows LT1–LT7** (own table in that section; LT1 is a one-line regression fix and can go first of everything). | see LT table | — | — | see LT table |
 | 6 | Movie details + Episodes. | `MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt` | L | Med | `EpisodeSelectionScreen` is 2 320 lines |
