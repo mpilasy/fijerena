@@ -212,6 +212,16 @@ Focus must land somewhere visible when a screen or panel appears, and return to 
 - Land focus from a `LaunchedEffect` with `requestFocusWithRetry` (`tv/ui/components/input/FocusRetry.kt`): it retries each frame (about 0.5 s) on the Boolean result of `requestFocus(FocusDirection.Enter)`, then an optional `fallback`. Never `try { requestFocus() } catch (IllegalStateException)` or `runCatching`: since Compose 1.10 an unattached target logs and returns `false` instead of throwing, so those catches retried nothing (R-05). Act on the result — e.g. `StreamList` marks a Back-restore handled only when it returned true. `scripts/check-focus-retry.sh` (CI) rejects the old pattern.
 - **Error states** use `TvErrorState` (`tv/ui/components/TvErrorState.kt`): focus lands on Retry on entry, Back is taken in `onPreviewKeyEvent` when the screen has one, and `RetryWhenOnline` retries once when the network comes back (R-15).
 
+### Panes (`tvPane`)
+
+Two-column TV screens (Live TV browse, Movies, TV Shows: `TwoColumnLayout`) are built from two panes, `tv/ui/components/input/TvPane.kt` (UX overhaul plan, Part II P1/P2). Without them the columns were plain siblings and Compose's geometric search decided every move: Down at the end of the items jumped into a category, Left from an item landed on the category level with it, Left from a category landed on Search.
+
+- `val pane = rememberPaneFocus()` per column in the screen; the list calls `pane.bind(selectedKey, firstKey, listState, indexOf)` every composition; each row's card takes `Modifier.paneItem(pane, key)`; the list's container takes `Modifier.tvPane(pane, exitLeft = …, exitRight = …)`.
+- **Left/Right are taken by the pane, not by geometry:** they go to the neighbour pane named in `exitLeft` / `exitRight`, or nowhere. A row's own key handling (the hidden ★/✓ buttons) runs first and keeps its Left/Right inside the row. **Down at the end of a pane stays put; Up at the top leaves** to whatever is above — the Refresh icon and the Search / TV Guide header buttons stay reachable from the first row.
+- **Entering a pane lands on its remembered row** (the last one focused — `rememberSaveable`, so it survives Back), else the selected row, else the first; a categories pane binds with `preferSelected = true`, so Left from an item always lands on the category being browsed. A new selection (the row opened, the channel playing) becomes the memory, which is how Back from details / the player lands on the right row. A remembered row that is scrolled out of composition is scrolled to, then focused with `requestFocusWithRetry`.
+- Entry focus on open: the selected category while the items load, then the items' entry row once they are there (the last played / opened item when it is in the list, else the first); an empty category keeps the category. OK on a category keeps focus on the category; Right enters its items.
+- Programmatic focus (`requestFocusWithRetry`, `NavReturnFocus`) passes through a pane untouched; only D-pad moves are redirected (`focusProperties { onEnter }` on the group, `onKeyEvent` for Left/Right, `onExit` + `cancelFocusChange()` for Down). `focusRestorer` is not used: it defines the same `onEnter` and the outer definition wins, and it cannot express the selected-row fallback.
+
 ## Adding New Screens
 
 ### 1. Define Screen in :core:navigation

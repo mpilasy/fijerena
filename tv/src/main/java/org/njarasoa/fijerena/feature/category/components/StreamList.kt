@@ -89,7 +89,11 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.PaneFocusState
+import org.njarasoa.fijerena.ui.components.input.paneItem
+import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.input.tvPane
 import org.njarasoa.fijerena.ui.theme.CinemaOrangeLight
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
@@ -178,6 +182,13 @@ internal fun StreamList(
     modifier: Modifier = Modifier,
     thumbnailScale: Float = 1f,
     rowActionsMode: RowActionsMode = RowActionsMode.ON_FOCUS_RIGHT,
+    /**
+     * This column's pane in a two-pane screen (see `Modifier.tvPane`): Left leaves it for
+     * [categoriesPane], and the list takes entry focus once loaded (F-C-1). Null (the Live TV
+     * preview's list) keeps the list a plain column that only follows [lastPlayedItemId].
+     */
+    paneFocus: PaneFocusState? = null,
+    categoriesPane: PaneFocusState? = null,
 ) {
     // Animate rotation when refreshing
     var targetRotation by remember { mutableStateOf(0f) }
@@ -197,8 +208,6 @@ internal fun StreamList(
         label = "refresh_rotation",
     )
     val listState = rememberLazyListState()
-    // FocusRequester for auto-scroll target — cleared on each category switch to avoid unbounded growth
-    val lastPlayedFocusRequester = remember { FocusRequester() }
 
     val scale = LocalUiScale.current
     val cardStyle = streamCardStyle(scale)
@@ -207,12 +216,14 @@ internal fun StreamList(
 
     // Auto-scroll and focus on the opened or last played item (on initial load and when returning
     // from details/player).
-    // Keyed to selectedCategoryId so switching list context (e.g. the Live TV preview panel's
-    // Last Watched <-> Favorites toggle) resets it — otherwise, since lastPlayedItemId (the
-    // current channel) stays the same across that toggle, the guard below would treat a
-    // *second* visit to an already-visited list as already handled and skip re-focusing, leaving
-    // focus wherever it landed after the previously-focused Card was disposed by the switch away.
-    var lastFocusedItemId by remember(selectedCategoryId) { mutableStateOf<String?>(null) }
+    // In the preview's list, keyed to selectedCategoryId so switching list context (the Live TV
+    // preview panel's Last Watched <-> Favorites toggle) resets it — otherwise, since
+    // lastPlayedItemId (the current channel) stays the same across that toggle, the guard below
+    // would treat a *second* visit to an already-visited list as already handled and skip
+    // re-focusing, leaving focus wherever it landed after the previously-focused Card was
+    // disposed by the switch away. In a pane, not keyed: OK on a category keeps focus on the
+    // category, and Right enters the list on its remembered row (F-C-5).
+    var lastFocusedItemId by remember(if (paneFocus == null) selectedCategoryId else null) { mutableStateOf<String?>(null) }
 
     // Movie/series row last opened from this list. Opening details doesn't play anything, so
     // lastPlayedItemId never points at it, and on Back the whole destination recomposes from
@@ -236,28 +247,34 @@ internal fun StreamList(
     // effect. When the target can't take focus (a hidden list behind the full-screen player, a row
     // never composed) every relaunch failed again — a log flood that never stopped while watching.
     val focusTargetIndex = remember(streams, focusTargetId) { streams?.indexOfFirst { it.id == focusTargetId } ?: -1 }
-    LaunchedEffect(selectedCategoryId, streamsLoading, focusTargetId, focusTargetIndex) {
+    val pane = paneFocus ?: rememberPaneFocus()
+    pane.bind(
+        selectedKey = focusTargetId,
+        firstKey = streams?.firstOrNull()?.id,
+        listState = listState,
+        indexOf = { key -> streams?.indexOfFirst { it.id == key } ?: -1 },
+    )
+    // Entry focus (F-C-1): a pane's list takes focus once per composition when it first has rows,
+    // even with no target — on the remembered row (a Back return), else the first.
+    var entryPending by remember { mutableStateOf(paneFocus != null) }
+    LaunchedEffect(selectedCategoryId, streamsLoading, focusTargetId, focusTargetIndex, streams.isNullOrEmpty()) {
         // Skip entirely while streamsLoading: that branch renders a spinner, not the list, so no
         // Card exists yet for the FocusRequester to attach to. Previously this ran anyway, always
         // failed, and — critically — still marked lastFocusedItemId as handled, so once the list
         // actually finished loading a moment later the guard below was already tripped and this
         // never got a second chance. Focus was left stuck on the header's refresh button (the
         // first focusable in the composed tree) for good.
-        if (!streamsLoading && !streams.isNullOrEmpty() && focusTargetId != null && focusTargetId != lastFocusedItemId) {
-            val lastPlayedIndex = streams.indexOfFirst { it.id == focusTargetId }
-            if (lastPlayedIndex != -1) {
-                listState.animateScrollToItem(lastPlayedIndex)
-                // Small delay so the target item is actually composed and its FocusRequester
-                // attached before requesting focus — mirrors TvChannelListOverlay.kt's identical
-                // race.
-                kotlinx.coroutines.delay(100)
-                // Only mark handled on success, so a failed attempt (e.g. still racing
-                // composition) gets another go when the effect's keys change instead of being
-                // silently given up on forever.
-                if (lastPlayedFocusRequester.requestFocusWithRetry()) {
-                    lastFocusedItemId = focusTargetId
-                }
+        if (streamsLoading || streams.isNullOrEmpty()) return@LaunchedEffect
+        if (focusTargetId != null && focusTargetId != lastFocusedItemId && focusTargetIndex != -1) {
+            // Only mark handled on success, so a failed attempt (e.g. still racing
+            // composition) gets another go when the effect's keys change instead of being
+            // silently given up on forever.
+            if (pane.focusKey(focusTargetId)) {
+                lastFocusedItemId = focusTargetId
+                entryPending = false
             }
+        } else if (entryPending) {
+            if (pane.focusEntry()) entryPending = false
         }
     }
 
@@ -332,6 +349,10 @@ internal fun StreamList(
                     .background(
                         color = CinemaSurfaceVariant.copy(alpha = CinemaAlpha.tint),
                         shape = RoundedCornerShape(CornerRadius.small),
+                    ).then(
+                        // The header above (title, Refresh) stays outside the pane: Up from the
+                        // first row reaches it. Right goes nowhere (R1).
+                        if (paneFocus != null) Modifier.tvPane(paneFocus, exitLeft = categoriesPane) else Modifier,
                     ),
         ) {
             when {
@@ -435,8 +456,7 @@ internal fun StreamList(
                                         null
                                     },
                                 onFocused = { onStreamFocused(item) },
-                                // Only the focus-return target gets a focus requester for auto-scroll
-                                focusRequester = if (item.id == focusTargetId) lastPlayedFocusRequester else null,
+                                cardModifier = Modifier.paneItem(pane, item.id),
                                 thumbnailScale = thumbnailScale,
                                 rowActionsMode = rowActionsMode,
                                 cardStyle = cardStyle,
@@ -492,7 +512,8 @@ private fun StreamItem(
     onToggleWatched: () -> Unit = {},
     onRemoveFromRecent: (() -> Unit)? = null,
     onFocused: () -> Unit = {},
-    focusRequester: FocusRequester? = null,
+    /** Applied to the card itself (the focusable), not the row. */
+    cardModifier: Modifier = Modifier,
     thumbnailScale: Float = 1f,
     rowActionsMode: RowActionsMode = RowActionsMode.ON_FOCUS_RIGHT,
     cardStyle: StreamCardStyle,
@@ -506,8 +527,7 @@ private fun StreamItem(
     // focus is on one of its action buttons, since it would otherwise vanish the instant focus
     // leaves the card.
     var rowHasFocus by remember { mutableStateOf(false) }
-    val internalCardFocusRequester = remember { FocusRequester() }
-    val cardFocusRequester = focusRequester ?: internalCardFocusRequester
+    val cardFocusRequester = remember { FocusRequester() }
     // In the REVEAL_* modes the actions stay hidden even while the row has focus, until the
     // outward D-pad key asks for them (the Live TV preview pane, where the other horizontal key
     // switches between Recent and Favorites).
@@ -664,6 +684,7 @@ private fun StreamItem(
             modifier =
                 Modifier
                     .weight(1f)
+                    .then(cardModifier)
                     .onFocusChanged {
                         isFocused = it.isFocused
                         if (it.isFocused) onFocused()

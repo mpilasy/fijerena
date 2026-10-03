@@ -45,6 +45,7 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
 import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
+import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
@@ -113,6 +114,12 @@ internal fun TwoColumnLayout(
     // last word. Rows opened from the stream list are StreamList's own business (openedItemId).
     val returnFocus = rememberNavReturnFocus()
     NavReturnFocusEffect(returnFocus)
+
+    // The two columns are panes (Modifier.tvPane): Left/Right move between them and land on the
+    // selected category / the remembered item; Up/Down stay in their column. Both remember their
+    // row across the Back round trip.
+    val categoriesPane = rememberPaneFocus()
+    val itemsPane = rememberPaneFocus()
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
@@ -228,6 +235,12 @@ internal fun TwoColumnLayout(
                 favoriteCategoryIds = favoriteCategoryIds,
                 onCategorySelected = onCategorySelected,
                 onRefreshCategories = onRefreshCategories,
+                paneFocus = categoriesPane,
+                itemsPane = itemsPane,
+                // Entry focus (F-C-1): the selected category only while the item pane has nothing
+                // to land on; once the category's rows are there (or on Back, when they already
+                // are) StreamList lands on its entry row.
+                focusSelectedOnOpen = streams.isNullOrEmpty(),
                 modifier =
                     Modifier
                         .weight(0.3f)
@@ -257,6 +270,8 @@ internal fun TwoColumnLayout(
                     }
                 },
                 onRefreshStreams = onRefreshStreams,
+                paneFocus = itemsPane,
+                categoriesPane = categoriesPane,
                 modifier =
                     Modifier
                         .weight(0.7f)

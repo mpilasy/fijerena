@@ -77,7 +77,9 @@ import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.partitionVirtual
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
-import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
+import org.njarasoa.fijerena.ui.components.input.PaneFocusState
+import org.njarasoa.fijerena.ui.components.input.paneItem
+import org.njarasoa.fijerena.ui.components.input.tvPane
 import org.njarasoa.fijerena.ui.theme.CornerRadius
 import org.njarasoa.fijerena.ui.theme.LocalUiScale
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -96,6 +98,14 @@ internal fun CategoryList(
     favoriteCategoryIds: ImmutableStringSet = ImmutableStringSet(),
     onCategorySelected: (String) -> Unit,
     onRefreshCategories: () -> Unit,
+    /** This column's pane; Right leaves it for [itemsPane] (see `Modifier.tvPane`). */
+    paneFocus: PaneFocusState,
+    itemsPane: PaneFocusState?,
+    /**
+     * Whether the selected category takes focus when this list first composes. False when the
+     * item pane already has rows to land on (a Back return): its own hand-back has the last word.
+     */
+    focusSelectedOnOpen: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val (virtualCategories, regularCategories) =
@@ -104,26 +114,29 @@ internal fun CategoryList(
         }
 
     val listState = rememberLazyListState()
-    // Keyed to categories so switching category lists (refresh, content-type switch) drops
-    // stale FocusRequesters instead of accumulating one per category id ever seen this session.
-    val focusRequesters = remember(categories) { mutableMapOf<String, FocusRequester>() }
+    paneFocus.bind(
+        selectedKey = selectedCategoryId,
+        firstKey = virtualCategories.firstOrNull()?.id ?: regularCategories.firstOrNull()?.id,
+        listState = listState,
+        indexOf = { key -> regularCategories.indexOfFirst { it.id == key } },
+        // Left from an item lands on the category being browsed, not the one last scrolled past.
+        preferSelected = true,
+    )
 
-    // Auto-scroll and focus on selected category. Keyed on the selection's position, not the list
-    // itself, so a re-emitted category list doesn't relaunch a focus attempt that can keep failing
-    // (and flooding logcat) while the list is hidden — see StreamList's identical effect.
+    // Focus follows the selection: on open, and when it changes under the list (a "Recent
+    // Categories" row, a deep link). Keyed on the selection's position, not the list itself, so a
+    // re-emitted category list doesn't relaunch a focus attempt that can keep failing (and
+    // flooding logcat) while the list is hidden — see StreamList's identical effect. The pane
+    // scrolls only when the row isn't composed, so OK on a visible category no longer jumps it
+    // to the top.
     val selectedIndex = remember(regularCategories, selectedCategoryId) { regularCategories.indexOfFirst { it.id == selectedCategoryId } }
+    var skipFirstSelection by remember { mutableStateOf(!focusSelectedOnOpen) }
     LaunchedEffect(selectedCategoryId, selectedIndex) {
-        if (selectedCategoryId != null) {
-            if (selectedCategoryId in CategoryViewModel.VIRTUAL_CATEGORY_IDS) {
-                // Focus virtual category in sidebar
-                focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocusWithRetry()
-            } else if (regularCategories.isNotEmpty()) {
-                if (selectedIndex != -1) {
-                    listState.animateScrollToItem(selectedIndex)
-                    focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocusWithRetry()
-                }
-            }
+        if (skipFirstSelection) {
+            skipFirstSelection = false
+            return@LaunchedEffect
         }
+        if (selectedCategoryId != null) paneFocus.focusKey(selectedCategoryId)
     }
 
     // Animate rotation when refreshing
@@ -218,7 +231,10 @@ internal fun CategoryList(
                         width = TvDimensions.borderDefault,
                         brush = borderBrush,
                         shape = panelShape,
-                    ),
+                    )
+                    // The header row above (title, Refresh) stays outside the pane: Up from the
+                    // first category reaches it. Left goes nowhere (F-C-4).
+                    .tvPane(paneFocus, exitRight = itemsPane),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Sticky virtual categories section
@@ -238,7 +254,7 @@ internal fun CategoryList(
                                 cardStyle = cardStyle,
                                 isFavorite = false,
                                 onClick = { onCategorySelected(category.id) },
-                                focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() },
+                                cardModifier = Modifier.paneItem(paneFocus, category.id),
                             )
                         }
                     }
@@ -281,7 +297,7 @@ internal fun CategoryList(
                             onToggleFavorite = {
                                 categoryViewModel.toggleFavoriteCategory(category.id, category.name, contentType)
                             },
-                            focusRequester = focusRequesters.getOrPut(category.id) { FocusRequester() },
+                            cardModifier = Modifier.paneItem(paneFocus, category.id),
                             modifier =
                                 // See StreamList: remember-scoped so recomposition of a visible row
                                 // doesn't drop the modifier and cancel the animation mid-flight.
@@ -370,7 +386,8 @@ private fun CategoryItem(
     isFavorite: Boolean = false,
     onClick: () -> Unit,
     onToggleFavorite: (() -> Unit)? = null,
-    focusRequester: FocusRequester? = null,
+    /** Applied to the card itself (the focusable), not the row. */
+    cardModifier: Modifier = Modifier,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
@@ -386,8 +403,7 @@ private fun CategoryItem(
     // reaches the favorite toggle, DPAD Left returns; no long-press, no dialog. Virtual
     // categories pass onToggleFavorite = null, so no icon is ever composed/reachable for them.
     var rowHasFocus by remember { mutableStateOf(false) }
-    val internalCardFocusRequester = remember { FocusRequester() }
-    val cardFocusRequester = focusRequester ?: internalCardFocusRequester
+    val cardFocusRequester = remember { FocusRequester() }
     val actionsFocusRequester = remember { FocusRequester() }
 
     Row(
@@ -405,6 +421,7 @@ private fun CategoryItem(
             modifier =
                 Modifier
                     .weight(1f)
+                    .then(cardModifier)
                     .onFocusChanged { isFocused = it.isFocused }
                     .focusRequester(cardFocusRequester)
                     .then(

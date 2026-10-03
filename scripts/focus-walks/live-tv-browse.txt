@@ -1,22 +1,31 @@
 # Live TV browse (TwoColumnLayout + StreamList), TV emulator, source iptv, no guide indexed.
 # Start: Home → Live TV. Today this lands on the bare browse list (L-1) with focus on a
-# stream row (F-C-1); the row's text is whichever stream is first, so there is no @start.
-# Covers F-C-3, F-C-4, F-C-5, F-C-6 (R1, R2, R3, R5). Expectations are today's behaviour.
-# Recorded 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
-# Up from the first stream reaches the refresh icon above the list (F-C-6).
+# stream row: the last played channel when it is in the list, else the first (F-C-1, P2); the
+# row's text varies, so there is no @start.
+# Covers F-C-2..F-C-6 (R1, R2, R3, R5). Expectations are Part II Phase 2 behaviour (tvPane):
+# the two columns are panes, Left/Right move between them, Up/Down stay in a column.
+# Updated 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# Up from the first stream reaches the refresh icon above the list (F-C-6, unchanged in Phase 2).
 UP	Refresh streams
 # Up from there reaches a header button — TV Guide or Search, whichever is nearest; not asserted.
 UP	TV Guide
 DOWN	Refresh categories
+# Changed (F-C-1, R2): Down from the header enters the categories pane on the *selected*
+# category, not the top one — "Recent" is the selected category when the screen opened on it.
 DOWN	Recent
-# Right from the Recent category enters the item pane: a stream row (text varies).
-RIGHT	2 / 24 Horas Catalunya (720p)
-# Right from a stream reveals its hidden star button (F-C-5).
+# Changed (F-C-5, R2): Right from a category enters the item pane on the remembered row — the
+# row focus started on, not the row level with the category. Text varies, so not asserted.
+# ("Recent" has no ★; Right from a regular category still reaches its ★ first — Phase 3.)
+RIGHT
+# Right from a stream still reveals its hidden star button (F-C-5, R3 — removed in Phase 3).
 RIGHT	Add to Favorites
-# Down from the star goes to the next row, not the next star (F-C-5).
-DOWN	3 / 3ABN Latino
-LEFT	Recent Categories
-# Left from an item lands on a category level with it, not the selected one (F-C-3).
-LEFT	Search
-# Left from any category lands on Search, top-left (F-C-4).
-LEFT	Search
+# Down from the star goes to the next row, not the next star (unchanged).
+DOWN
+# Changed (F-C-3, R1/R2): Left from an item lands on the selected category, not the one level
+# with it ("Recent Categories" before).
+LEFT	Recent
+# Changed (F-C-4, R1): Left from a category goes nowhere; focus stays on it ("Search" before).
+LEFT	Recent
+LEFT	Recent
+# F-C-2 (Down at the end of the item list stays on the last row) is not walked: the list
+# length varies per source.
