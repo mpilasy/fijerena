@@ -14,7 +14,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | 1 Mobile settings | M1 (2026-10-03, phone), M2 (merged 2026-10-03, emulator check pending) | — | M3 |
 | 2 TV focus + Live TV | LT1, Phase 1 (2026-10-03, TV) | Phase 2 `tvPane` (since 2026-10-03) | Phase 3 → LT2 |
 | 3 Core + guide | A-W4, A-W6, GD0 (2026-10-03, both) | GD0b (since 2026-10-03) | GD1 |
-| 4 TV settings | T1 (2026-10-03, TV) | T2 (since 2026-10-03) | T4 → T5 → T6; T3 after Phase 2 |
+| 4 TV settings | T1 (2026-10-03, TV), T2 (merged 2026-10-03, emulator check pending) | — | T4 → T5 → T6; T3 after Phase 2 |
 
 Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
 release time (`docs/RUN_GUIDE.md`).
@@ -288,7 +288,7 @@ share switch → devices (Remove secondary) → Danger zone (Leave).
 | Phase | Scope | Files | Effort | Risk | Why |
 |---|---|---|---|---|---|
 | T1 | Quick wins, no layout change: T-2, T-3 (Part II P5 later extends the same tokens to all lists), T-4, T-13, button hierarchy, EPG row focusable (A-4). **Done 2026-10-03**, verified on the TV emulator (10 s selected ≠ 120 s focused; Guide Sources row opens EPG Management and Back returns to it; switch rows no longer tinted when on). T-13 done via `CinemaDialogActionButton`'s `colors` (resting container + accent text); a `secondary` flag on that core composable can come with T2. | `PlaybackSettingsCard.kt`, `TvSelectableButton.kt`, `TvSwitchRow`, `UiScaleSettingsCard.kt`, `EpgSettingsCard.kt`, `ProfilesSettingsCard.kt`, `LiveSyncSettingsCard.kt`, `ExportImportSettingsCard.kt` | M | Med | `TvSelectableButton`/`TvSwitchRow` are app-wide; visual regression surface |
-| T2 | `SettingsRow` + scope chips + drill-in pickers for theme / look / text size / watch delay / language (T-5, T-6); focus contract applied to the Settings list. **In progress (lane 4, since 2026-10-03).** | new `SettingsRow.kt`, new `SettingsPickerPane.kt`, all cards, `LanguageSettingsCard.kt` | L | Med | new picker pane; Language recreate path |
+| T2 | `SettingsRow` + scope chips + drill-in pickers for theme / look / text size / watch delay / language (T-5, T-6); focus contract applied to the Settings list. **Done 2026-10-03** (compile + ktlint; emulator check pending). Follow-ups: Left should close a picker (only Back does); switch rows append the scope as text (`TvSwitchRow` has no chip slot); autoplay's description now says "for this profile" twice. | new `SettingsRow.kt`, new `SettingsPickerPane.kt`, all cards, `LanguageSettingsCard.kt` | L | Med | new picker pane; Language recreate path |
 | T3 | Two-pane Settings, shared IA, header (T-1, T-7); dev-only gating. | `SettingsScreen.kt`, `TvNavHost.kt` | L | High | nav + focus + saveable state; needs Part II `tvPane` |
 | T4 | Sources list + menu + focus (T-8, T-9, T-10, A-10). | `ProviderSelectionScreen.kt`, `ProviderDialogs.kt` | M | Med | focus return + menu order |
 | T5 | Edit Source two-column + shared grouping (T-11, T-12, A-6, A-7, A-8). | `TvAddProviderScreen.kt`, `ProviderSettingsSection.kt`, `CacheManagementSection.kt` | L | Med | 699-line screen; two save models; Add mode must not change |
