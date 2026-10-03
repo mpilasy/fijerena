@@ -14,7 +14,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | 1 Mobile settings | M1–M5 (2026-10-03, phone); fr/mg backfill (2026-10-03) | — | mg: ~200 keys still hold English text |
 | 2 TV focus + Live TV | LT1–LT3, Phases 1–4 (2026-10-03, TV) | LT4 player controls (since 2026-10-03) | LT5 → LT6 → LT7 |
 | 3 Core + guide | A-W4, A-W6, GD0, GD0b, GD1, GD2, GD3 (2026-10-03) | GD0c auto guide sources (since 2026-10-03) | GD4; GD5 after LT4 |
-| 4 TV settings | T1–T5 (2026-10-03, TV), T6 (merged, TV check pending) | — | Phase 8 (highlight tokens) |
+| 4 TV settings | T1–T5 (2026-10-03, TV), T6 (merged, TV check pending) | Phase 8 highlight tokens (since 2026-10-03) | — |
 
 ### Open follow-ups (small items found while verifying; fold into the named phase)
 
@@ -761,7 +761,7 @@ See Decisions 3–5 at the end of this plan.
 | 5 | **Live TV flows LT1–LT7** (own table in that section; LT1 is a one-line regression fix and can go first of everything). | see LT table | — | — | see LT table |
 | 6 | Movie details + Episodes. **In progress (side lane, since 2026-10-03).** | `MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt` | L | Med | `EpisodeSelectionScreen` is 2 320 lines |
 | 7 | P4 Search field. | new `TvSearchField.kt`, `SearchScreen.kt` | M | Med | IME behaviour on TV |
-| 8 | P5 highlight tokens across lists (lands with or after Part I T1, which changes `TvSelectableButton` / `TvSwitchRow`). | `TvFocusTokens`, `TvInputListItem.kt`, list rows | M | Med | visual regression across all lists |
+| 8 | P5 highlight tokens across lists (lands with or after Part I T1, which changes `TvSelectableButton` / `TvSwitchRow`). **In progress (lane 4, since 2026-10-03).** | `TvFocusTokens`, `TvInputListItem.kt`, list rows | M | Med | visual regression across all lists |
 | 9 | Guide round: walk TV Guide + EPG Browser with an indexed guide; fix with P1/P2. | `EpgGridLayout.kt`, `TvEpgBrowserScreen.kt` | — | — | became Part III GD6 |
 
 Each phase leaves the app shippable: primitives land with their first user, every screen keeps
