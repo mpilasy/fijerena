@@ -141,7 +141,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
   - **VOD:** Use `PlaybackViewModel.seekRelative(offsetMs)` for relative position changes (FF/Rewind).
   - **TV:** with controls hidden, D-pad Left/Right and REW/FF move a scrub cursor (`stepScrubCursor`, `scrubStepMs`); OK commits, Back cancels.
   - **TV Shows:** ⏮ Previous / Next ⏭ buttons in the player controls (TV and mobile) skip between episodes.
-- **Channel Overlays (Live TV):** D-pad Left/Right (TV) or Swipe (Mobile) open channel overlays. TV: `TvChannelListOverlay(panelAlignment=…)` with `slideInHorizontally` and `GlassPanel(backgroundAlpha=0.5f)`. Mobile: `MobileChannelListSheet`.
+- **Channel panel (Live TV):** TV: one `LiveTvChannelPanel` — docked in the preview, and over the video in full screen where D-pad Left or Right opens it (tabs Category · Recent · Favorites, focus on the playing channel, Back closes it); the panel's list is the zap order (`ChannelContext`). Mobile: swipe opens `MobileChannelListSheet`.
 - **Preview Pane / Dock (Live TV browse):** Channel plays alongside the list while browsing — TV: focus-driven split (`LiveTvSplitLayout`); Mobile: tap-driven docked mini-player (`MobileCategoryListScreen`). Both promote to full-screen on the same engine connection (no restart). Each platform guarantees Back always has a real stopover before exiting Live TV — see `docs/NAVIGATION_GUIDE.md` → "Live TV Preview / Dock Back-Stack".
 - **Mobile Gestures:** `detectTapGestures` (tap=controls; double-tap=10s relative seek, VOD only — left 40% of the width rewinds, right 40% seeks forward, center 20% does nothing). Merged `detectDragGestures` (vertical=channel switch, horizontal=overlays).
 
