@@ -20,7 +20,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 /** Live sync's line in Settings: whether it's on, and the way into its own screen. */
 @Composable
@@ -41,7 +41,7 @@ fun LiveSyncSettingsCard(onOpen: () -> Unit) {
                 )
             }
             Spacer(modifier = Modifier.width(CinemaSpacing.md))
-            CinemaButton(onClick = onOpen) {
+            CinemaOutlinedButton(onClick = onOpen) {
                 Text(stringResource(if (status.linked) R.string.live_sync_manage else R.string.live_sync_open))
             }
         }

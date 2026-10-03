@@ -19,7 +19,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 
 @Composable
 fun DeveloperSettingsCard(
@@ -52,14 +52,14 @@ fun DeveloperSettingsCard(
 
         if (uiState.isDevMode) {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            CinemaButton(
+            CinemaOutlinedButton(
                 onClick = onCellularBuffers,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.settings_configure_cellular_buffers_button))
             }
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-            CinemaButton(
+            CinemaOutlinedButton(
                 onClick = onDiagnostics,
                 modifier = Modifier.fillMaxWidth(),
             ) {

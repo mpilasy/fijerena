@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -210,6 +211,12 @@ fun ColumnScope.ProviderSettingsSection(
                 // Xtream-only settings
                 if (selectedType == ProviderType.XTREAM) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
+                    // Selected = app accent, not the theme's orange secondaryContainer (M3's chip default).
+                    val chipColors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        )
 
                     // Stream Output Format
                     Text(text = stringResource(R.string.provider_stream_format_label), style = MaterialTheme.typography.titleSmall)
@@ -234,6 +241,7 @@ fun ColumnScope.ProviderSettingsSection(
                                     }
                                 },
                                 label = { Text(format) },
+                                colors = chipColors,
                             )
                         }
                     }
@@ -263,6 +271,7 @@ fun ColumnScope.ProviderSettingsSection(
                                     }
                                 },
                                 label = { Text(type) },
+                                colors = chipColors,
                             )
                         }
                     }

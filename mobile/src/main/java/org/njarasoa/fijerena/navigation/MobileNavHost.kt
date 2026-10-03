@@ -568,6 +568,9 @@ fun MobileNavHost(
                     onLiveSync = {
                         navController.navigateOnce(Screen.SyncSettings)
                     },
+                    onGuideSources = { id ->
+                        navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                    },
                     onProviderChanged = {
                         coroutineScope.launch {
                             val providerRepo = ProviderRepository(context.applicationContext)

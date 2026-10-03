@@ -13,7 +13,7 @@ import androidx.compose.ui.res.stringResource
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
+import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 @Composable
@@ -71,7 +71,7 @@ fun ProviderSettingsCard(
             }
         }
         Spacer(modifier = Modifier.height(Spacing.xs))
-        CinemaButton(
+        CinemaOutlinedButton(
             onClick = onManageProviders,
             modifier = Modifier.fillMaxWidth(),
         ) {

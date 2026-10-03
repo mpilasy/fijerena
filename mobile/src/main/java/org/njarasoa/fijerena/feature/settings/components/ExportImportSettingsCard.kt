@@ -16,7 +16,6 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
-import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
@@ -40,7 +39,7 @@ fun ExportImportSettingsCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            CinemaButton(
+            CinemaOutlinedButton(
                 onClick = { exportLauncher.launch("fijerena_settings.json") },
                 modifier = Modifier.weight(1f),
             ) {

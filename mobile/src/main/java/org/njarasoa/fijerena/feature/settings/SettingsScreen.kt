@@ -48,6 +48,7 @@ fun MobileSettingsScreen(
     onCellularBuffers: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
     onLiveSync: () -> Unit = {},
+    onGuideSources: (providerId: Long) -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -219,6 +220,7 @@ fun MobileSettingsScreen(
             EpgSettingsCard(
                 context = context,
                 uiState = uiState,
+                onGuideSources = onGuideSources,
             )
 
             // === Developer Mode ===

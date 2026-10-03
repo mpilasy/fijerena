@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.settings.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -17,12 +18,19 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 @Composable
 fun SettingsSection(
     title: String,
+    onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     GlassPanel(
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Box(modifier = Modifier.padding(CinemaSpacing.md)) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                    .padding(CinemaSpacing.md),
+        ) {
             Column {
                 Text(
                     text = title,

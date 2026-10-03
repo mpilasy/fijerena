@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -35,6 +36,7 @@ import org.njarasoa.fijerena.core.ui.components.CinemaDialogTextButton
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
+import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
@@ -85,7 +87,7 @@ fun ProfilesSettingsCard(
                     fontSize = MaterialTheme.typography.titleSmall.fontSize,
                 )
                 Spacer(modifier = Modifier.width(CinemaSpacing.sm))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(text = profile.name, style = MaterialTheme.typography.bodyLarge)
                     if (profile.isActive) {
                         Text(
@@ -95,6 +97,7 @@ fun ProfilesSettingsCard(
                         )
                     }
                 }
+                Icon(CinemaIcons.KeyboardArrowRight, contentDescription = null, tint = CinemaTextSecondary)
             }
         }
         if (message != null) {
