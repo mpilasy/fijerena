@@ -1,5 +1,15 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Back where you were
+**Release Date:** 2026-10-02
+
+- **TV: Back returns to where you came from:** pressing Back now focuses the card, button or row you opened, at the same scroll position, on Home, Settings, Search, the category screen, movie and series details, the TV Guide, the EPG Browser and Manage Sources. It used to land on "Switch Source" or the top of the list. → R-30.
+- **TV: the player's pickers keep focus:** the audio, subtitle, quality and chapter pickers keep the remote inside the picker — scrolling past either end no longer jumps to the controls behind it — and Back or choosing a track returns focus to the button that opened the picker. → R-29.
+- **Smoother film start:** starting a film no longer reads storage on the main thread — logo shading is worked out in the background and remembered, the FFmpeg decoder loads at app start, and the player stops opening settings files as it starts — removing a few hundred milliseconds of stutter on the Shield. → R-28.
+- **Developers:** every resilience fix now has a regression test that fails if the fix is removed (517 unit tests), and five scratch files are no longer tracked in git. → Phase 6, R-23.
+
+---
+
 ## Version: Deadlines, quieter sync, private logs
 **Release Date:** 2026-10-02
 
