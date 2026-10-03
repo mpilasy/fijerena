@@ -363,6 +363,7 @@ Order: first stop data loss and launch crashes, then make failures visible and r
 - **Acceptance:** the prior plan's D-pad smoke pass, plus starting with the emulator's network off → Retry focused → network on → screen recovers on its own.
 
 ### Phase 5: Performance, network & privacy — ✅ code done 2026-10-02 (not yet run on a device)
+- **Deployed 2026-10-02 22:09** to both Shields and the Bravia with `scripts/deploy-tv-ip.sh` (backed up first): updates in place, data kept, all three still installed under `/data/app` after the `internalOnly` change. No emulator or device checks of Phase 5 behaviour yet.
 **Complexity:** Medium · **Risk:** Medium — timeouts and sync coalescing change runtime behaviour; the rest is low risk.
 1. **R-14** call deadlines, the `Call.await` close-on-cancel, cancellable EPG download.
 2. **R-18** coalesced `WATCH` pushes.
