@@ -14,7 +14,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | 1 Mobile settings | M1–M5 (2026-10-03, phone); fr/mg backfill (2026-10-03) | — | mg: ~200 keys still hold English text |
 | 2 TV focus + Live TV | LT1–LT6, Phases 1–4, 6 (2026-10-03, TV) | — | LT7 (after GD5 merges — both touch TvNavHost / LiveTvSplitLayout) |
 | 3 Core + guide | A-W4, A-W6, GD0–GD4, GD0c (2026-10-03) | GD5 entry points + one search (since 2026-10-03) | GD6 |
-| 4 TV settings | T1–T6, Phases 7–8, follow-ups sweep (2026-10-03; sweep TV check pending) | — | — |
+| 4 TV settings | T1–T6, Phases 7–8, follow-ups sweep (2026-10-03, TV; filters deep link verified on bearstv) | — | — |
 
 ### Open follow-ups (small items found while verifying; fold into the named phase)
 
@@ -27,7 +27,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | GD0b | Device check with a kill mid-refresh not done (unit tests only). | Part III guide round (GD6) |
 | T4 | ~~Delete in the Sources actions menu is a filled orange `CinemaDangerButton`~~ — done in T5 (outlined). | T5 ✓ |
 | T3 / M3 / M5 | ~~Missing fr/mg keys~~ — backfilled 2026-10-03 (fr +38, mg +191, network mg +1; 0 missing). Still open: ~200 existing mg keys hold English text (`settings_title`, most `provider_*`, `movie_*`, `series_*`, many `epg_*`); mg wording for a few terms (season, episode, bitrate…) to review. | own translation pass |
-| Phase 2 / GD3 / LT4 | ~~Unused dimension, `TvSearchTextField`, 25 strings, stale `docs/design.md` names~~ — removed 2026-10-03 (follow-ups sweep). Also in the sweep: Search category results on the surface colour, section/season tabs with a bottom accent bar (`currentIndicator(edge = Bottom)`), guide-source Delete outlined, series Refresh under More, Settings filters row deep-links to Edit Source's filters (`Screen.AddProvider.focusFilters`). Left: EPG Management's bulk "Delete N selected" still filled. | sweep ✓ |
+| Phase 2 / GD3 / LT4 | ~~Unused dimension, `TvSearchTextField`, 25 strings, stale `docs/design.md` names~~ — removed 2026-10-03 (follow-ups sweep). Also in the sweep: Search category results on the surface colour, section/season tabs with a bottom accent bar (`currentIndicator(edge = Bottom)`), guide-source Delete outlined, series Refresh under More, Settings filters row deep-links to Edit Source's filters (`Screen.AddProvider.focusFilters`) — verified on the TV with bearstv (focus lands on Manage Filters; non-Xtream sources fall back to Name). Left: EPG Management's bulk "Delete N selected" still filled. | sweep ✓ |
 
 Deployed: days 1–4 (`main` at `1e413854`) installed in place on both Shields (mdarcy, darcy) on 2026-10-03 16:39, app data backed up first (`backups/*-20261003-163920.tar.gz`).
 
