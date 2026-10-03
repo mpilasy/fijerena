@@ -368,7 +368,7 @@ Enable in Settings. Each profile has its own switch (off for a new profile). Fea
 | Setting | Description |
 |---------|-------------|
 | Active Source | Shows current source name, URL, and subscription info (Xtream: expiry, max connections, trial status) |
-| Last Sync | Timestamp plus what the sync actually changed — "No changes since last sync", or "N added • N updated • N removed". Xtream only, and hidden when the last sync errored (the counts belong to the last *successful* run and would read as a partial success) |
+| Last Sync | Timestamp plus what the sync actually changed — "No changes since last sync", or "N added • N updated • N removed". Xtream only, and hidden when the last sync errored (the counts belong to the last *successful* run and would read as a partial success). A catalogue download that fails partway (network, timeout, refused login) shows "Catalog sync failed" with the reason; a network failure is retried, a refused login isn't, and nothing is deleted on a failed run |
 | Manage Sources | CRUD for all sources; set active |
 | Theme | Select from 4 dark color themes |
 | Look and Feel | Material, Cupertino, Roku or BRAVIA |

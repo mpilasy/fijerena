@@ -40,7 +40,9 @@ sealed interface Screen {
     @Serializable data class EpgManagement(val providerId: Long) : Screen
     @Serializable data object CellularBufferSettings : Screen  // Dev mode only
     @Serializable data object SyncSettings : Screen  // Settings → Live sync
-    @Serializable data object Diagnostics : Screen  // Dev mode only: recorded crashes, process exits
+    @Serializable data object Diagnostics : Screen  // Dev mode: recorded crashes, process exits; also from SafeMode
+    @Serializable data object SafeMode : Screen  // Start destination after a crash loop (SafeMode.isActive)
+    @Serializable data object NewerData : Screen  // Start destination when providers.db is from a newer build (ProvidersDbGuard.isBlocked)
     @Serializable data class Player(
         val streamId: String, val streamName: String, val categoryId: String, val contentType: String,
         val episodeId: String? = null, val episodeExtension: String? = null,
@@ -73,6 +75,8 @@ navController.navigate(Screen.AddProvider(editId = 5L))  // Edit provider with I
 
 ```
 App Startup
+├─ providers.db written by a newer build → NewerData (Close / Reset sources; nothing else runs)
+├─ Last 3 launches died within 30 s, inside 10 min → SafeMode (Continue / Clear caches / Show diagnostics)
 ├─ No provider configured → Settings
 ├─ Provider configured, TV with more than one profile → ProfilePicker → ContentTypeSelection
 └─ Provider configured otherwise (mobile always) → ContentTypeSelection
@@ -117,6 +121,7 @@ The `SearchViewModel` manages categories and individual stream results across al
 
 1. **Startup → ContentTypeSelection**: Lands on the home screen (`ContentTypeSelection`) if a provider is configured, on TV through `ProfilePicker` first when there is more than one profile (mobile goes straight home).
 2. **Startup → Settings**: If no provider configured.
+2a. **Startup → NewerData / SafeMode**: checked before the rules above, in that order. Both replace the start destination and skip the nav host's `initializeStartup()` (provider lookups, legacy-credential migration, profile count) — `NewerData` because nothing may open `providers.db`, `SafeMode` because that work may be what keeps crashing. Back on either leaves the app, as from Home; `SafeMode`'s Show diagnostics pushes `Diagnostics` and Back returns to it. Continue / Reset sources restart the process. See `docs/plans/20261002_next-level-rock-solid-resilience-plan.md` → R-10, R-01.
 3. **ContentTypeSelection → CategoryList**: Standard push.
 4. **CategoryList → Player**: Standard push (content-type aware routing).
 5. **Settings → ProviderSelection → AddProvider**: Standard push chain.

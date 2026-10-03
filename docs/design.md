@@ -181,7 +181,7 @@ FFmpeg extension (from Jellyfin pre-built) provides software decoding for AC3, E
 
 ## Navigation
 
-Type-safe navigation using `kotlinx.serialization` with Navigation Compose; routes are defined once in `core:navigation/Screen.kt` and shared by both `tv/navigation/TvNavHost.kt` (D-pad, no on-screen back buttons except error screens) and `mobile/navigation/MobileNavHost.kt` (touch, portrait-locked except player). Startup lands on `ContentTypeSelection` (Home) if a provider is configured — on TV through `ProfilePicker` when there is more than one profile — otherwise `Settings`.
+Type-safe navigation using `kotlinx.serialization` with Navigation Compose; routes are defined once in `core:navigation/Screen.kt` and shared by both `tv/navigation/TvNavHost.kt` (D-pad, no on-screen back buttons except error screens) and `mobile/navigation/MobileNavHost.kt` (touch, portrait-locked except player). Startup lands on `ContentTypeSelection` (Home) if a provider is configured — on TV through `ProfilePicker` when there is more than one profile — otherwise `Settings`; ahead of that, `NewerData` when `providers.db` is from a newer build and `SafeMode` after a crash loop (see `docs/NAVIGATION_GUIDE.md` → Navigation Rules).
 
 **See [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) for the full `Screen` definition list and navigation flow diagram** — kept in one place to avoid the two copies drifting out of sync.
 
@@ -325,6 +325,7 @@ ViewModels live in `core:ui` so both TV and mobile share identical business logi
 | `ProfilesViewModel` | Profiles and the "Who's watching?" picker |
 | `SyncSettingsViewModel` | Live sync setup, pairing, devices |
 | `DiagnosticsViewModel` | Dev-mode crash log and process-exit history |
+| `SafeModeViewModel` | Safe mode's Clear caches (EPG index, catalogues, posters; never user data) |
 | `PlaybackViewModel` (`core:player`) | Playback control (delegates to `StreamingPlaybackService`) |
 
 ---
@@ -389,6 +390,8 @@ Updates every ~500ms via polling loop.
 | Profile Picker | `profile/ProfilePickerScreen.kt` | "Who's watching?" |
 | Live Sync | `settings/SyncSettingsScreen.kt` | Sync group setup, pairing, devices |
 | Diagnostics | `settings/DiagnosticsScreen.kt` | Crash log and exit history (dev mode) |
+| Safe Mode | `safemode/SafeModeScreen.kt` | Start screen after a crash loop: Continue, Clear caches, Show diagnostics |
+| Newer Data | `safemode/NewerDataScreen.kt` | Start screen when `providers.db` is from a newer build: Close, Reset sources |
 
 The stats overlay is `ui/player/components/overlays/TvStatsOverlay.kt` (mobile: `MobileStatsOverlay`). `Screen.Login` is defined but not in either nav graph; its screens were deleted.
 
@@ -412,6 +415,8 @@ The stats overlay is `ui/player/components/overlays/TvStatsOverlay.kt` (mobile: 
 | Profile Picker | `profile/ProfilePickerScreen.kt` | "Who's watching?" |
 | Live Sync | `settings/MobileSyncSettingsScreen.kt` | Sync group setup, pairing, devices |
 | Diagnostics | `settings/MobileDiagnosticsScreen.kt` | Crash log and exit history (dev mode), Share |
+| Safe Mode | `safemode/MobileSafeModeScreen.kt` | Start screen after a crash loop: Continue, Clear caches, Show diagnostics |
+| Newer Data | `safemode/MobileNewerDataScreen.kt` | Start screen when `providers.db` is from a newer build: Close, Reset sources |
 
 ---
 
