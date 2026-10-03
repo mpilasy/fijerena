@@ -918,4 +918,6 @@
     <!-- T2 -->
     <string name="settings_watch_delay_row_title">Compter comme regardé après</string>
     <string name="settings_language_desc">Langue des menus et des messages</string>
+    <!-- M3 -->
+    <string name="provider_use_button">Utiliser</string>
 </resources>

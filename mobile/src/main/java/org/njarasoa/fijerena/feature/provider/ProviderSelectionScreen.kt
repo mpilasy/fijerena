@@ -1,5 +1,6 @@
 package org.njarasoa.fijerena.feature.provider
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -242,95 +243,148 @@ private fun MobileProviderList(
         modifier = Modifier.fillMaxSize(),
     ) {
         items(providers, key = { it.id }, contentType = { "provider" }) { provider ->
-            GlassPanel(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(CinemaSpacing.md)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+            MobileProviderRow(
+                provider = provider,
+                canCopyTo = providers.size > 1,
+                onSelect = onSelect,
+                onEdit = onEdit,
+                onManageEpg = onManageEpg,
+                onDelete = onDelete,
+                onDuplicate = onDuplicate,
+                onCopyTo = onCopyTo,
+            )
+        }
+    }
+}
+
+/**
+ * One source: tapping the card edits it (chevron); "Use" switches to it (hidden on the active
+ * one); everything else sits in the overflow menu, Delete last and separated.
+ */
+@Composable
+private fun MobileProviderRow(
+    provider: ProviderEntity,
+    canCopyTo: Boolean,
+    onSelect: (ProviderEntity) -> Unit,
+    onEdit: (Long) -> Unit,
+    onManageEpg: (Long) -> Unit,
+    onDelete: (ProviderEntity) -> Unit,
+    onDuplicate: (ProviderEntity) -> Unit,
+    onCopyTo: (ProviderEntity) -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val dimmed = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow)
+    GlassPanel(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onEdit(provider.id) },
+    ) {
+        Row(
+            modifier =
+                Modifier.padding(
+                    start = CinemaSpacing.md,
+                    top = CinemaSpacing.md,
+                    bottom = CinemaSpacing.md,
+                    end = CinemaSpacing.xs,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = provider.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (provider.isActive) {
                         Text(
-                            text = provider.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            text = stringResource(R.string.provider_active_label),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
                         )
-                        if (provider.isActive) {
-                            Text(
-                                text = stringResource(R.string.provider_active_label),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-                    Text(
-                        text = provider.url,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = provider.username,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = Modifier.height(CinemaSpacing.sm))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs, Alignment.End),
-                    ) {
-                        if (!provider.isActive) {
-                            IconButton(onClick = { onSelect(provider) }) {
-                                Icon(
-                                    CinemaIcons.CheckCircle,
-                                    contentDescription = stringResource(R.string.common_select),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                        }
-                        // EPG only applies to providers that carry live channels
-                        if (MediaProviderFactory.hasLiveTv(provider)) {
-                            IconButton(onClick = { onManageEpg(provider.id) }) {
-                                Icon(
-                                    CinemaIcons.LiveTv,
-                                    contentDescription = stringResource(R.string.epg_data_manage_button),
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        }
-                        IconButton(onClick = { onDuplicate(provider) }) {
-                            Icon(
-                                CinemaIcons.ContentCopy,
-                                contentDescription = stringResource(R.string.provider_duplicate_button),
-                                tint = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                        if (providers.size > 1) {
-                            IconButton(onClick = { onCopyTo(provider) }) {
-                                Icon(
-                                    CinemaIcons.SwapHoriz,
-                                    contentDescription = stringResource(R.string.provider_copy_to_button),
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        }
-                        IconButton(onClick = { onEdit(provider.id) }) {
-                            Icon(
-                                CinemaIcons.Edit,
-                                contentDescription = stringResource(R.string.provider_edit_button),
-                                tint = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                        IconButton(onClick = { onDelete(provider) }) {
-                            Icon(
-                                CinemaIcons.Delete,
-                                contentDescription = stringResource(R.string.provider_delete_button),
-                                tint = CinemaError,
-                            )
-                        }
                     }
                 }
+                Text(
+                    text = provider.url,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = dimmed,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = provider.username,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = dimmed,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
+            if (!provider.isActive) {
+                TextButton(onClick = { onSelect(provider) }) {
+                    Text(stringResource(R.string.provider_use_button))
+                }
+            }
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(
+                        CinemaIcons.MoreVert,
+                        contentDescription = stringResource(R.string.provider_more_actions_for_format, provider.name),
+                    )
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    // Guide sources only apply to sources that carry live channels
+                    if (MediaProviderFactory.hasLiveTv(provider)) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.epg_sources_header)) },
+                            leadingIcon = { Icon(CinemaIcons.LiveTv, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                onManageEpg(provider.id)
+                            },
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.provider_duplicate_button)) },
+                        leadingIcon = { Icon(CinemaIcons.ContentCopy, contentDescription = null) },
+                        onClick = {
+                            menuOpen = false
+                            onDuplicate(provider)
+                        },
+                    )
+                    if (canCopyTo) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.provider_copy_to_button)) },
+                            leadingIcon = { Icon(CinemaIcons.SwapHoriz, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                onCopyTo(provider)
+                            },
+                        )
+                    }
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.provider_delete_button)) },
+                        leadingIcon = { Icon(CinemaIcons.Delete, contentDescription = null) },
+                        colors =
+                            MenuDefaults.itemColors(
+                                textColor = MaterialTheme.colorScheme.error,
+                                leadingIconColor = MaterialTheme.colorScheme.error,
+                            ),
+                        onClick = {
+                            menuOpen = false
+                            onDelete(provider)
+                        },
+                    )
+                }
+            }
+            Icon(
+                CinemaIcons.KeyboardArrowRight,
+                contentDescription = null,
+                tint = dimmed,
+            )
         }
     }
 }

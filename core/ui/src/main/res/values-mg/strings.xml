@@ -755,4 +755,6 @@
     <!-- T2 -->
     <string name="settings_watch_delay_row_title">Isaina ho nojerena aorian\'ny</string>
     <string name="settings_language_desc">Fiteny ho an\'ny menio sy ny hafatra</string>
+    <!-- M3 -->
+    <string name="provider_use_button">Ampiasaina</string>
 </resources>

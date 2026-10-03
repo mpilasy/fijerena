@@ -956,4 +956,6 @@
     <!-- T2 -->
     <string name="settings_watch_delay_row_title">Count as watched after</string>
     <string name="settings_language_desc">Language for menus and messages</string>
+    <!-- M3 -->
+    <string name="provider_use_button">Use</string>
 </resources>

@@ -12,7 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
@@ -307,7 +311,7 @@ fun MobileSettingsScreen(
             item {
                 SettingsGroupHeader(stringResource(R.string.settings_playback_section_title))
                 SettingsListRow(
-                    title = stringResource(R.string.settings_watch_delay_label),
+                    title = stringResource(R.string.settings_watch_delay_row_title),
                     summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
                     scope = SettingsScope.DEVICE,
                     onClick = { showWatchDelayPicker = true },
@@ -500,15 +504,35 @@ fun MobileSettingsScreen(
     }
 }
 
-/** Active source summary: URL, then subscription facts when the source reports them. */
+/**
+ * Active source summary: URL, then subscription facts when the source reports them; an expired
+ * subscription date stands out in the error colour.
+ */
 @Composable
-private fun activeSourceSummary(uiState: SettingsUiState): String? =
-    listOfNotNull(
-        uiState.currentUrl.ifEmpty { null },
-        uiState.subscriptionExpiry?.let { "${stringResource(R.string.settings_provider_expires_label)} $it" },
-        uiState.subscriptionMaxCons?.let { "${stringResource(R.string.settings_provider_max_connections_label)} $it" },
-        if (uiState.subscriptionIsTrial) stringResource(R.string.settings_provider_trial_account_label) else null,
-    ).joinToString("\n").ifEmpty { null }
+private fun activeSourceSummary(uiState: SettingsUiState): AnnotatedString? {
+    val expiresLabel = stringResource(R.string.settings_provider_expires_label)
+    val isExpired = uiState.subscriptionStatus?.equals("Expired", ignoreCase = true) == true
+    val errorColor = MaterialTheme.colorScheme.error
+    val trailingLines =
+        listOfNotNull(
+            uiState.subscriptionMaxCons?.let { "${stringResource(R.string.settings_provider_max_connections_label)} $it" },
+            if (uiState.subscriptionIsTrial) stringResource(R.string.settings_provider_trial_account_label) else null,
+        )
+    val summary =
+        buildAnnotatedString {
+            uiState.currentUrl.ifEmpty { null }?.let { append(it) }
+            uiState.subscriptionExpiry?.let { expiry ->
+                if (length > 0) append("\n")
+                append("$expiresLabel ")
+                if (isExpired) withStyle(SpanStyle(color = errorColor)) { append(expiry) } else append(expiry)
+            }
+            trailingLines.forEach { line ->
+                if (length > 0) append("\n")
+                append(line)
+            }
+        }
+    return summary.takeIf { it.isNotEmpty() }
+}
 
 /** Guide sources row: index status as the summary; opens EPG Management for the active source. */
 @Composable

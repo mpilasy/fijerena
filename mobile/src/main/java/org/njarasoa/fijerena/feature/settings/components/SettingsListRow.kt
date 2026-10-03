@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
@@ -46,14 +47,14 @@ fun SettingsGroupHeader(title: String) {
 }
 
 /**
- * One preference row: title, current value as [summary], optional [scope] chip, optional [leading]
- * content, and [trailing] content — a chevron when the row navigates ([onClick]) and nothing
- * explicit is given.
+ * One preference row: title, current value as [summary] (a String or an [AnnotatedString]),
+ * optional [scope] chip, optional [leading] content, and [trailing] content — a chevron when the
+ * row navigates ([onClick]) and nothing explicit is given.
  */
 @Composable
 fun SettingsListRow(
     title: String,
-    summary: String? = null,
+    summary: CharSequence? = null,
     scope: SettingsScope? = null,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
@@ -80,11 +81,12 @@ fun SettingsListRow(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
             )
             if (summary != null) {
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow * contentAlpha),
-                )
+                val summaryColor = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow * contentAlpha)
+                if (summary is AnnotatedString) {
+                    Text(text = summary, style = MaterialTheme.typography.bodyMedium, color = summaryColor)
+                } else {
+                    Text(text = summary.toString(), style = MaterialTheme.typography.bodyMedium, color = summaryColor)
+                }
             }
             if (scope != null) {
                 SettingsScopeChip(scope = scope)
