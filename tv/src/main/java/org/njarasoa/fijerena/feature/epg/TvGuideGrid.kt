@@ -31,7 +31,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -65,6 +64,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.Layout
@@ -89,22 +89,28 @@ import androidx.tv.material3.CardShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
 import androidx.tv.material3.Icon
+import androidx.tv.material3.Text
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.njarasoa.fijerena.core.network.GuideSource
+import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgChannelRow
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
+import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.guide.GuideCell
 import org.njarasoa.fijerena.core.ui.guide.GuideLayout
+import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
+import org.njarasoa.fijerena.core.ui.theme.CinemaSurface
 import org.njarasoa.fijerena.core.ui.theme.CinemaSurfaceVariant
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
@@ -112,6 +118,8 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextTertiary
 import org.njarasoa.fijerena.core.ui.theme.TimeFormat
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
+import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
+import org.njarasoa.fijerena.feature.category.components.RowActionsHint
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
@@ -128,6 +136,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -154,6 +163,11 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
  * a channel cell stays; Up leaves the grid only from the first row, into the header's labelled
  * buttons; "Now" scrolls to now and focuses the on-air cell. Back leaves the guide. Opened from
  * the player (GD5), entry focus goes to the playing channel's row instead of the first one on air.
+ *
+ * OK on a programme opens its details panel, whose Watch channel opens the channel's preview (what
+ * OK on a programme did before), as OK on a channel does. Long-press OK or the Menu key on either
+ * kind of cell opens the channel's row actions (P3). Both are Dialog windows: Back closes them and
+ * focus goes back to the cell (GD6).
  *
  * Search (GD5, G-9): the header's Search opens the EPG Browser ("Search the guide") filtered to
  * this guide's channels; Back from it lands on the Search button. There is no in-grid search.
@@ -223,6 +237,10 @@ fun TvGuideGrid(
     onSearch: () -> Unit,
     onBack: () -> Unit,
     onRowsVisible: (first: Int, last: Int) -> Unit,
+    isFavoriteChannel: suspend (channelId: String) -> Boolean,
+    onToggleFavorite: (MediaItem) -> Unit,
+    /** Null where Remove from Recent is not offered (not the Recent guide, or the source keeps the history). */
+    onRemoveFromRecent: ((MediaItem) -> Unit)?,
     focusChannelId: String? = null,
 ) {
     val scale = LocalUiScale.current
@@ -322,6 +340,17 @@ fun TvGuideGrid(
                     onProgramSelected = onProgramSelected,
                     onChannelSelected = onChannelSelected,
                     onRowsVisible = onRowsVisible,
+                    isFavoriteChannel = isFavoriteChannel,
+                    onToggleFavorite = onToggleFavorite,
+                    // The rows reload without the channel, so its cell goes: focus lands again,
+                    // as on first open, on the row that took its place.
+                    onRemoveFromRecent =
+                        onRemoveFromRecent?.let { remove ->
+                            { channel ->
+                                entryFocusDone = false
+                                remove(channel)
+                            }
+                        },
                 )
                 LaunchedEffect(state) {
                     // Back from a preview or the browser: NavReturnFocus hands focus to the cell
@@ -592,7 +621,8 @@ private fun GuideFocusLine(
 /**
  * Resting container, lifted container on focus, accent text on focus — the secondary-button look.
  * The glyphs take `LocalContentColor`, so they follow the text and never vanish into the container
- * the way the white-on-white icon buttons did (G-T4).
+ * the way the white-on-white icon buttons did (G-T4). So do the labels, being tv-material `Text`: the
+ * material3 one ignores the button's content colour, which left them dim, reading as disabled (GD6).
  */
 @Composable
 private fun guideButtonColors(): ButtonColors =
@@ -888,6 +918,9 @@ private fun GuideBody(
     onProgramSelected: (EpgProgram, MediaItem) -> Unit,
     onChannelSelected: (String, String, String) -> Unit,
     onRowsVisible: (first: Int, last: Int) -> Unit,
+    isFavoriteChannel: suspend (channelId: String) -> Boolean,
+    onToggleFavorite: (MediaItem) -> Unit,
+    onRemoveFromRecent: ((MediaItem) -> Unit)?,
 ) {
     val scale = LocalUiScale.current
     val density = LocalDensity.current
@@ -1160,6 +1193,41 @@ private fun GuideBody(
             ?.substringBefore(KEY_SEPARATOR)
     NavReturnFocusEffect(returnFocus, listState = verticalListState, fallback = returnChannelRequester)
 
+    // OK on a programme: its details panel (GD6).
+    var details by remember { mutableStateOf<Pair<EpgProgram, MediaItem>?>(null) }
+    details?.let { (program, channel) ->
+        ProgramDetailsDialog(
+            program = program,
+            channel = channel,
+            onWatchChannel = {
+                details = null
+                returnFocus.leaveFrom(programKey(channel.id, program.id), verticalListState)
+                onProgramSelected(program, channel)
+            },
+            onDismiss = { details = null },
+        )
+    }
+    // Long-press OK or Menu on a cell: its channel's row actions, as in the channel lists (P3).
+    // The channel and whether it is a favourite, read when the menu opens.
+    var actions by remember { mutableStateOf<Pair<MediaItem, Boolean>?>(null) }
+    actions?.let { (channel, isFavorite) ->
+        FavoriteContextMenuDialog(
+            target =
+                FavoriteMenuTarget.Stream(
+                    itemId = channel.id,
+                    itemName = channel.name,
+                    categoryId = channel.categoryId,
+                    contentType = ContentType.LIVE_TV,
+                    isFavorite = isFavorite,
+                    isInRecent = onRemoveFromRecent != null,
+                ),
+            onConfirm = { onToggleFavorite(channel) },
+            onDismiss = { actions = null },
+            onRemoveFromRecent = onRemoveFromRecent?.let { remove -> { remove(channel) } },
+        )
+    }
+    val openActions: (MediaItem) -> Unit = { channel -> scope.launch { actions = channel to isFavoriteChannel(channel.id) } }
+
     Column(
         modifier =
             Modifier
@@ -1239,10 +1307,8 @@ private fun GuideBody(
                         returnFocus.leaveFrom(channelKey(row.channel.id), verticalListState)
                         onChannelSelected(row.channel.id, row.channel.name, row.channel.categoryId)
                     },
-                    onProgramClick = { program ->
-                        returnFocus.leaveFrom(programKey(row.channel.id, program.id), verticalListState)
-                        onProgramSelected(program, row.channel)
-                    },
+                    onProgramClick = { program -> details = program to row.channel },
+                    onRowActions = { openActions(row.channel) },
                 )
             }
         }
@@ -1329,6 +1395,7 @@ private fun GuideRow(
     columnGap: androidx.compose.ui.unit.Dp,
     onChannelClick: () -> Unit,
     onProgramClick: (EpgProgram) -> Unit,
+    onRowActions: () -> Unit,
 ) {
     val scale = LocalUiScale.current
     val rowHeight = TvDimensions.epgRowHeight.scaled(scale)
@@ -1342,6 +1409,7 @@ private fun GuideRow(
             channel = row.channel,
             cardStyle = cardStyle,
             onClick = onChannelClick,
+            onLongClick = onRowActions,
             modifier =
                 Modifier
                     .width(channelColumnWidth)
@@ -1361,6 +1429,7 @@ private fun GuideRow(
                                 nowEpochSeconds = nowEpochSeconds,
                                 cardStyle = cardStyle,
                                 onClick = { onProgramClick(cell.program) },
+                                onLongClick = onRowActions,
                                 modifier =
                                     Modifier
                                         .guideCell(focus, key, rowIndex, cell.program)
@@ -1399,6 +1468,99 @@ private fun Modifier.guideCell(
     return this
         .focusRequester(requester)
         .onFocusChanged { if (it.isFocused) focus.onFocused(key, rowIndex, program) }
+}
+
+/** The Menu key does what long-press OK does: the row actions (P3). */
+private fun Modifier.onMenuKey(onMenu: () -> Unit): Modifier =
+    onKeyEvent { event ->
+        val isMenu = event.type == KeyEventType.KeyDown && event.key == Key.Menu
+        if (isMenu) onMenu()
+        isMenu
+    }
+
+// ---------------------------------------------------------------------------------------------
+// Programme details (GD6)
+// ---------------------------------------------------------------------------------------------
+
+/** Lines of description shown; the panel never scrolls, so a long one is cut. */
+private const val DETAILS_DESCRIPTION_MAX_LINES = 8
+
+/**
+ * What a programme is, on which channel, when, and its description, with Watch channel (opens the
+ * channel's preview) and Close. Opens on Watch channel; Back or Close returns focus to the cell.
+ */
+@Composable
+private fun ProgramDetailsDialog(
+    program: EpgProgram,
+    channel: MediaItem,
+    onWatchChannel: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val watchRequester = remember { FocusRequester() }
+    val today = remember { LocalDate.now() }
+    val day = remember(program.startTime) { Instant.ofEpochSecond(program.startTime).atZone(ZoneId.systemDefault()).toLocalDate() }
+    val dayLabel =
+        when (day) {
+            today -> stringResource(R.string.epg_tab_today)
+            today.plusDays(1) -> stringResource(R.string.epg_tab_tomorrow)
+            else -> day.format(EPG_DATE_FORMATTER)
+        }
+    val description = program.description?.takeIf { it.isNotBlank() }
+    val typography = MaterialTheme.typography
+    CinemaAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = program.title,
+                style = typography.headlineSmall,
+                color = CinemaTextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(text = channel.name, style = typography.bodyLarge, color = CinemaAccentLight, maxLines = 1)
+                Text(
+                    text = dayLabel + " · " + TimeFormat.formatTimeRange(program.startTime, program.endTime),
+                    style = typography.bodyLarge,
+                    color = CinemaTextSecondary,
+                )
+                if (description != null) {
+                    Text(
+                        text = description,
+                        style = typography.bodyLarge,
+                        color = CinemaTextPrimary,
+                        maxLines = DETAILS_DESCRIPTION_MAX_LINES,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        },
+        initialFocus = watchRequester,
+        confirmButton = {
+            CinemaDialogActionButton(
+                onClick = onWatchChannel,
+                modifier = Modifier.focusRequester(watchRequester),
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaAccent,
+                        contentColor = CinemaTextPrimary,
+                    ),
+            ) { Text(stringResource(R.string.epg_details_watch_channel), color = CinemaTextPrimary) }
+        },
+        dismissButton = {
+            CinemaDialogActionButton(
+                onClick = onDismiss,
+                colors =
+                    androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = CinemaSurfaceVariant,
+                        contentColor = CinemaTextPrimary,
+                    ),
+            ) { Text(stringResource(R.string.common_close), color = CinemaTextPrimary) }
+        },
+        containerColor = CinemaSurface,
+    )
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1468,21 +1630,29 @@ private fun ChannelCell(
     channel: MediaItem,
     cardStyle: GuideCardStyle,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         onClick = onClick,
-        modifier = modifier.fillMaxHeight().padding(vertical = Spacing.xxs.scaled(scale)),
+        onLongClick = onLongClick,
+        modifier =
+            modifier
+                .fillMaxHeight()
+                .padding(vertical = Spacing.xxs.scaled(scale))
+                .onFocusChanged { isFocused = it.isFocused }
+                .onMenuKey(onLongClick),
         colors = cardStyle.colors,
         scale = cardStyle.cardScale,
         glow = cardStyle.glow,
         border = cardStyle.border,
         shape = cardStyle.shape,
     ) {
-        Box(
+        Row(
             modifier = Modifier.fillMaxSize().padding(Spacing.sm.scaled(scale)),
-            contentAlignment = Alignment.CenterStart,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = channel.name,
@@ -1490,7 +1660,10 @@ private fun ChannelCell(
                 color = CinemaTextPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
+            // The row-actions hint, as on the channel lists' rows; programme cells are too narrow for it.
+            if (isFocused) RowActionsHint()
         }
     }
 }
@@ -1503,6 +1676,7 @@ private fun ProgramCell(
     nowEpochSeconds: State<Long>,
     cardStyle: GuideCardStyle,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scale = LocalUiScale.current
@@ -1522,7 +1696,11 @@ private fun ProgramCell(
 
     Card(
         onClick = onClick,
-        modifier = modifier.padding(horizontal = TvDimensions.borderDefault, vertical = Spacing.xxs.scaled(scale)),
+        onLongClick = onLongClick,
+        modifier =
+            modifier
+                .padding(horizontal = TvDimensions.borderDefault, vertical = Spacing.xxs.scaled(scale))
+                .onMenuKey(onLongClick),
         colors = cardStyle.colors,
         scale = cardStyle.cardScale,
         glow = cardStyle.glow,

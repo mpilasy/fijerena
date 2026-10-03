@@ -1,26 +1,36 @@
-# GD2 — TV Guide (TvEpgGuideScreen + TvGuideGrid), TV emulator, source iptv, a category whose
-# first channel has a programme on air now (so the entry row is the first row).
+# TV Guide (TvEpgGuideScreen + TvGuideGrid), TV emulator, a source with guide data, a category
+# whose first channel has a programme on air now (so the entry row is the first row) and a next one.
 # Start: Live TV → the category → TV Guide button. Focus is on the on-air programme of the first
-# channel with a programme on now (G-8, G-T4); its text is the programme's title and time, so it
-# is unasserted.
-# Covers G-T4 / G-T5 as GD2 leaves them: Left/Right move by programme, Up/Down keep the time (the
-# cell containing the focused cell's start, else the nearest), Left from a row's first programme
-# lands on its channel cell and Left on a channel cell stays, the header (labelled buttons) is
-# reached only by Up from the first row, Back leaves the guide.
-# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# channel with a programme on now (G-8, G-T4); a cell's text is its programme's title and time (none
+# on a cell too short for its label), so cells are unasserted.
+# Covers G-T4 / G-T5 and GD6: Left/Right move by programme, Down keeps the time (the cell under the
+# focused cell's start, else the channel cell), the header (labelled buttons) is reached only by Up
+# from the first row and Down from it returns to the cell left, OK on a programme opens its details
+# panel on Watch channel, the Menu key opens the channel's row actions on the favourite toggle, Back
+# closes either onto the cell, Back from the grid leaves the guide.
+# Written 2026-10-03 from the plan (GD6); re-record with -r on the emulator before relying on it.
 @start
-# The next programme on the same row.
+# The next programme on the same row, then back to the on-air one.
 RIGHT
-# The cell in the second row that contains the start of that programme (same time, not the same
-# item index).
+LEFT
+# The second row's cell that contains the on-air programme's start (same time, not the same item
+# index); the channel cell, with "Hold OK or press Menu for actions", when that row has nothing then.
 DOWN
-# Towards the channel cell: Left by programme, then the channel cell once the row's first
-# programme in the day is passed (with earlier programmes on that row this stays on programmes).
-LEFT
-LEFT
-# Up keeps moving inside the grid: the first row (its channel cell when we were on a channel cell).
+# Back to the first row's on-air cell.
 UP
 # Up from the first row is the only way into the header; it lands on its first button.
 UP	Previous Day
+# Down from the header returns to the cell it was left from (the on-air programme).
+DOWN
+# OK on a programme opens its details panel (title, channel, day and time, description), focus on
+# Watch channel. Never press OK here: it opens the channel's preview.
+CENTER	Watch channel
+# Back closes the panel; focus is back on the programme cell.
+BACK
+# The Menu key opens the channel's row actions, focus on Add to / Remove from Favorites. Never
+# press OK here: it changes the favourites.
+MENU	Favorites
+# Back closes the menu; focus is back on the programme cell.
+BACK
 # Back leaves the guide (back to the category screen, focus on its TV Guide button).
 BACK

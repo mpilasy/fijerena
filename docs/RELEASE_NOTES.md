@@ -10,6 +10,7 @@
 - **Mobile guide sources and settings:** the guide sources screen is titled with the source, lists its guides first and tells same-named guides apart; guide auto-refresh is in Settings → Source & guide and guide maintenance in Backup & storage; Live sync's Scan and Sync now buttons match. → Part I M5.
 - **Mobile TV Guide on a real time grid:** one time ruler that scrolls with every channel row, a line at now, past programmes dimmed, day tabs, and a details sheet with "Watch channel" when you tap a programme. → Part III GD3.
 - **Translations:** every English text now has a French and a Malagasy version. → follow-up.
+- **TV Guide programme details and actions on TV:** OK on a programme shows its details — channel, day and time, description — with Watch channel; holding OK or pressing Menu on a channel or programme adds or removes the channel from favourites (or from Recent, in the Recent guide); the header buttons' labels are no longer dim. → Part III GD6.
 
 Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 

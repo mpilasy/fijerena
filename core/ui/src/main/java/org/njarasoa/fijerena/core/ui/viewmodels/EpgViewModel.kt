@@ -5,11 +5,13 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.GuideSource
 import org.njarasoa.fijerena.core.network.MediaRepository
@@ -300,6 +302,35 @@ class EpgViewModel(
                 } finally {
                     _isRefreshing.value = false
                 }
+            }
+    }
+
+    // Row actions on a guide channel (GD6, plan Part II P3): the channel lists' menu, same calls.
+
+    /** Whether [channelId] is a favourite; off the main thread, as the first read loads the favourites table. */
+    suspend fun isFavoriteChannel(channelId: String): Boolean =
+        withContext(Dispatchers.Default) { repository.isFavorite(channelId, ContentType.LIVE_TV) }
+
+    fun toggleFavoriteChannel(channel: MediaItem) {
+        if (repository.isFavorite(channel.id, ContentType.LIVE_TV)) {
+            repository.removeFavorite(channel.id, ContentType.LIVE_TV)
+        } else {
+            repository.addFavorite(channel.id, channel.name, channel.categoryId, ContentType.LIVE_TV)
+        }
+    }
+
+    /** Remove from Recent: on the Recent guide, for a source that keeps its own history. */
+    val canRemoveFromRecent: Boolean
+        get() = categoryId == CategoryViewModel.RECENT_CATEGORY_ID && ::repository.isInitialized && repository.supportsRemoveFromRecent
+
+    /** Removes [channel] from Recent and reloads the rows without it, on the same day. */
+    fun removeFromRecent(channel: MediaItem) {
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launchGuarded("EpgViewModel.removeFromRecent", onError = ::showError) {
+                repository.removeFromRecent(channel.id, ContentType.LIVE_TV)
+                channels = null
+                loadEpgDataInternal(currentDate)
             }
     }
 

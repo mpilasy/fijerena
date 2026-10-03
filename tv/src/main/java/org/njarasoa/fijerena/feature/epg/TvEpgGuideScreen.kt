@@ -28,6 +28,7 @@ import org.njarasoa.fijerena.ui.theme.LocalUiScale
  *
  * [focusChannelId] (opened from the player, GD5) is the row entry focus lands on; [onSearch] opens
  * "Search the guide" on this guide's channels — the grid has no search of its own (G-9).
+ * [onProgramSelected] is the details panel's Watch channel (GD6); OK on a programme opens the panel.
  */
 @Composable
 fun TvEpgGuideScreen(
@@ -91,6 +92,9 @@ fun TvEpgGuideScreen(
                         onSearch = onSearch,
                         onBack = onBack,
                         onRowsVisible = viewModel::onRowsVisible,
+                        isFavoriteChannel = viewModel::isFavoriteChannel,
+                        onToggleFavorite = viewModel::toggleFavoriteChannel,
+                        onRemoveFromRecent = if (viewModel.canRemoveFromRecent) viewModel::removeFromRecent else null,
                         focusChannelId = focusChannelId,
                     )
                 }
