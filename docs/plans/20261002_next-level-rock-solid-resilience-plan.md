@@ -267,6 +267,12 @@ These carry over from the 2026-10-01 plan, plus one new rule (rule 7).
 #### Deferred, unchanged
 - Prior F-13, the `runBlocking` favourite snapshot. Still deferred: revisit only if Diagnostics shows main-thread stalls. **Next level:** route StrictMode violations (debug) into `CrashLog`, so main-thread disk regressions show up in Diagnostics rather than only in logcat.
 
+#### 🆕 R-27: 4K VOD starves its own buffer [P1, CONFIRMED on a Shield] (found 2026-10-02 after Phase 5)
+- **Complexity:** Low · **Risk:** Medium — buffer tuning on every VOD; more heap during playback.
+- **Where:** `NetworkBufferProfile` (VOD: 64 MB byte cap, 10 s back buffer retained from keyframe) and `AdaptiveLoadControl` (VOD prioritizes the byte cap over the 30-60 s time target).
+- **Mechanism:** ExoPlayer counts the retained back buffer against the target byte cap. On a ~100 Mbps 4K remux (F1, bears, on mdarcy) 10 s of back buffer is ~125 MB, more than the whole 64 MB cap, so loading stopped with less than 500 ms buffered ahead: mdarcy logged `DefaultLoadControl: Target buffer size reached with less than 500ms of buffered media data` every 15-25 s, and the session showed ~5 s ahead at best. Each one is a near-stall; a network blip in one becomes a stall, and a long stall exhausts the retries — the likely cause of the earlier F1 "timed out". 1080p streams never reach the cap.
+- **Done 2026-10-02:** VOD keeps no back buffer (Wi-Fi and cellular; a seek back re-downloads), and the VOD cap scales with the device: `NetworkBufferProfile.vodTargetBufferBytes(largeMemoryClass)` = a quarter of the large heap, between 64 MB and 160 MB (128 MB on the 512 MB Shields/Bravia), passed into `AdaptiveLoadControl` by `StreamingPlaybackService`. Expected at ~100 Mbps: <0.5 s ahead → ~10 s; at 25 Mbps ~40 s. Live TV unchanged. Tests: `VodBufferBytesTest` (4). Not yet run on a device; watch the Bravia's memory during a 4K film.
+
 ### F. Security, privacy & release hygiene (senior dev lead)
 
 #### 🆕 R-16: Credentials leak into logcat, CrashLog and shared diagnostics [P2, CONFIRMED]

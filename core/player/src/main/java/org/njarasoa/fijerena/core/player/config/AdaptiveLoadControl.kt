@@ -22,6 +22,8 @@ class AdaptiveLoadControl(
     private var contentType: PlayerConfigFactory.ContentType,
     private val cellularLiveMultiplier: Float = 1.0f,
     private val cellularVodMultiplier: Float = 1.0f,
+    // From NetworkBufferProfile.vodTargetBufferBytes(largeMemoryClass) — the device-scaled cap.
+    private val vodTargetBufferBytes: Int = NetworkBufferProfile.VOD_TARGET_BUFFER_BYTES,
 ) : LoadControl {
     private val sharedAllocator = DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE)
 
@@ -145,7 +147,7 @@ class AdaptiveLoadControl(
         val targetBufferBytes =
             when (contentType) {
                 PlayerConfigFactory.ContentType.LIVE_TV -> NetworkBufferProfile.LIVE_TARGET_BUFFER_BYTES
-                PlayerConfigFactory.ContentType.VOD -> NetworkBufferProfile.VOD_TARGET_BUFFER_BYTES
+                PlayerConfigFactory.ContentType.VOD -> vodTargetBufferBytes
             }
 
         // VOD deliberately prioritizes the size cap over the time target (see

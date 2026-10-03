@@ -421,6 +421,10 @@ class StreamingPlaybackService : MediaSessionService() {
                 contentType = contentType,
                 cellularLiveMultiplier = cellularLiveMultiplier,
                 cellularVodMultiplier = cellularVodMultiplier,
+                vodTargetBufferBytes =
+                    org.njarasoa.fijerena.core.player.config.NetworkBufferProfile.vodTargetBufferBytes(
+                        (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).largeMemoryClass,
+                    ),
             )
         adaptiveLoadControl = loadControl
 

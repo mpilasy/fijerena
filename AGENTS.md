@@ -125,7 +125,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 
 - **Source Creation:** Always use `StreamingMediaSourceFactory.createMediaSource()`.
 - **Formats:** HLS (`.m3u8`), DASH (`.mpd`), MPEG-TS (`.ts`, `.mpeg`).
-- **Buffer Strategy:** `AdaptiveLoadControl` dynamically swaps buffer profiles (Live TV vs VOD, WiFi vs Cellular) at runtime.
+- **Buffer Strategy:** `AdaptiveLoadControl` dynamically swaps buffer profiles (Live TV vs VOD, WiFi vs Cellular) at runtime. VOD keeps no back buffer (ExoPlayer counts it against the byte cap; on 4K it starved the forward buffer) and its byte cap scales with the heap (`NetworkBufferProfile.vodTargetBufferBytes`, 64-160 MB).
 - **Codec Priority:** Optimized per device (`DeviceCapabilities`: Shield and Chromecast with Google TV: AV1 -> HEVC -> AVC; Sony: HEVC -> AVC; others: AVC).
 
 ### Controls & Navigation
