@@ -11,9 +11,9 @@ in their own `docs:` commit, never amended into a lane's code commit.
 
 | Lane | Done | Current | Next |
 |---|---|---|---|
-| 1 Mobile settings | M1 (2026-10-03, phone), M2 (merged 2026-10-03, emulator check pending) | — | M3 |
+| 1 Mobile settings | M1 (2026-10-03, phone), M2 (2026-10-03, phone) | — | M3 |
 | 2 TV focus + Live TV | LT1, Phase 1 (2026-10-03, TV) | Phase 2 `tvPane` (since 2026-10-03) | Phase 3 → LT2 |
-| 3 Core + guide | A-W4, A-W6, GD0 (2026-10-03, both), GD0b (merged 2026-10-03, device check pending) | — | GD1 |
+| 3 Core + guide | A-W4, A-W6, GD0 (2026-10-03, both), GD0b (2026-10-03, unit tests; device kill-mid-refresh check folded into the Part III guide round, which needs a source with guide data) | — | GD1 |
 | 4 TV settings | T1 (2026-10-03, TV), T2 (merged 2026-10-03, emulator check pending) | — | T4 → T5 → T6; T3 after Phase 2 |
 
 Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
@@ -385,7 +385,7 @@ Scan) (M-11).
 | Phase | Scope | Files | Effort | Risk | Why |
 |---|---|---|---|---|---|
 | M1 | Quick wins: button hierarchy (M-2), chip colour (M-9 part), profile chevrons (M-5), EPG row tappable (A-4), About build info (M-12). **Done 2026-10-03**, verified on the phone emulator (outlined actions, chevrons, EPG row opens EPG Management, About shows build hash/time). | `ProviderSettingsCard.kt`, `DeveloperSettingsCard.kt`, `LiveSyncSettingsCard.kt`, `ExportImportSettingsCard.kt`, `ProfilesSettingsCard.kt`, `EpgSettingsCard.kt`, `AboutSettingsCard.kt`, `ProviderSettingsSection.kt` | S | Low |  |
-| M2 | `SettingsListRow` + grouped list in shared IA order + value-row pickers (M-1, M-3, M-4, M-6). **Done 2026-10-03** (compile + ktlint; emulator check pending). Notes: watch-delay row still titled "Watch delay (seconds)"; expired-subscription date no longer red in the source row (restore in M3/M4); `settings_profiles_description` dropped. | `SettingsScreen.kt`, all cards | L | Med | new row component + pickers; every card rewritten |
+| M2 | `SettingsListRow` + grouped list in shared IA order + value-row pickers (M-1, M-3, M-4, M-6). **Done 2026-10-03**, verified on the phone emulator (7 groups, scope chips, value rows, Theme/Look/Language/Watch-delay pickers incl. Custom, dev-only rows). Notes: watch-delay row still titled "Watch delay (seconds)"; expired-subscription date no longer red in the source row (restore in M3/M4); `settings_profiles_description` dropped. | `SettingsScreen.kt`, all cards | L | Med | new row component + pickers; every card rewritten |
 | M2b | Remove cellular buffer screen and route (M-7, with A-W5). | `MobileCellularBufferSettingsScreen.kt`, `DeveloperSettingsCard.kt`, `MobileNavHost.kt`, `core/navigation/Screen.kt`, strings | S | Low | with A-W5 (Med) |
 | M3 | Sources list + overflow menu (M-8, A-10). | `ProviderSelectionScreen.kt`, `ProviderCopyDialogs.kt` | M | Med | overflow replaces 6 inline actions |
 | M4 | Edit Source grouping, save/cancel placement, discard dialog (M-9, A-6, A-7, A-8). | `MobileAddProviderScreen.kt`, `ProviderFormSection.kt`, `ProviderSettingsSection.kt`, `DataManagementSection.kt` | L | Med | discard dialog + save placement |
