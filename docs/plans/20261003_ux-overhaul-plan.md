@@ -12,7 +12,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | Lane | Done | Current | Next |
 |---|---|---|---|
 | 1 Mobile settings | M1–M5 (2026-10-03, phone); fr/mg backfill (2026-10-03) | — | mg: ~200 keys still hold English text |
-| 2 TV focus + Live TV | LT1–LT3, Phases 1–4 (2026-10-03, TV) | LT4 player controls (since 2026-10-03) | LT5 → LT6 → LT7 |
+| 2 TV focus + Live TV | LT1–LT3, Phases 1–4 (2026-10-03, TV); Phase 6 (merged, TV check pending) | LT4 player controls (since 2026-10-03) | LT5 → LT6 → LT7; Phase 7 |
 | 3 Core + guide | A-W4, A-W6, GD0–GD3, GD0c (2026-10-03; GD0c device check pending) | GD4 paging (since 2026-10-03) | GD5 after LT4 → GD6 |
 | 4 TV settings | T1–T5 (2026-10-03, TV), T6 (merged, TV check pending) | Phase 8 highlight tokens (since 2026-10-03) | — |
 
@@ -759,7 +759,7 @@ See Decisions 3–5 at the end of this plan.
 | 3 | P3 row action menu; remove hidden row buttons in category lists and Live preview. **Done 2026-10-03**, verified on the TV (long-press OK and the Menu key open the row menu, Favourite first, Remove from Recent last; Right from a category goes straight to the items; walk re-recorded). | `StreamList.kt`, `LiveTvSplitLayout.kt`, `FavoriteMenuDialog.kt` | M | Med | behaviour change: hidden buttons removed; long-press on tv-material `Surface` |
 | 4 | Home entry/header focus; dead Live TV card. **Done 2026-10-03**, verified on the TV (opens on Live TV; Down from the header returns to the last card; walk recorded). Entry waits up to 2 s for the live category count; edge case: a 0 count arriving after that leaves focus nowhere. | `ContentTypeSelectionScreen.kt` | S | Low |  |
 | 5 | **Live TV flows LT1–LT7** (own table in that section; LT1 is a one-line regression fix and can go first of everything). | see LT table | — | — | see LT table |
-| 6 | Movie details + Episodes. **In progress (side lane, since 2026-10-03).** | `MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt` | L | Med | `EpisodeSelectionScreen` is 2 320 lines |
+| 6 | Movie details + Episodes. **Done 2026-10-03** (compile + CI checks; TV check pending). Movie: labelled Favourite/Watched, Refresh info under More, Up from tabs → Play. Episodes: sticky compact header (title · season · Play next) once the hero scrolls away; Left from an episode → season tab; continue-watching row has an accent bar, no outline; 4-digit episode numbers; "Play: <title>"; Next Up is plain text. Follow-ups: Left no longer changes season but Right still does (asymmetric); series hero still has its Refresh icon; androidTest `EpisodeSelectionScreenTest` not run. | `MovieDetailsScreen.kt`, `EpisodeSelectionScreen.kt` | L | Med | `EpisodeSelectionScreen` is 2 320 lines |
 | 7 | P4 Search field. | new `TvSearchField.kt`, `SearchScreen.kt` | M | Med | IME behaviour on TV |
 | 8 | P5 highlight tokens across lists (lands with or after Part I T1, which changes `TvSelectableButton` / `TvSwitchRow`). **In progress (lane 4, since 2026-10-03).** | `TvFocusTokens`, `TvInputListItem.kt`, list rows | M | Med | visual regression across all lists |
 | 9 | Guide round: walk TV Guide + EPG Browser with an indexed guide; fix with P1/P2. | `EpgGridLayout.kt`, `TvEpgBrowserScreen.kt` | — | — | became Part III GD6 |
