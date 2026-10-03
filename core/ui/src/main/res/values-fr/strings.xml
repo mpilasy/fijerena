@@ -963,6 +963,11 @@
     <string name="epg_tab_today">Aujourd\'hui</string>
     <string name="epg_tab_tomorrow">Demain</string>
     <string name="epg_details_watch_channel">Regarder la chaîne</string>
+    <!-- LT4 -->
+    <string name="player_osd_channels">Chaînes</string>
+    <string name="player_osd_more">Plus</string>
+    <string name="player_osd_next_episode">Épisode suivant</string>
+    <string name="player_osd_next_format">Ensuite : %1$s (%2$s)</string>
     <!-- Translations backfill 2026-10-03 -->
     <string name="settings_section_provider_playback">Source et lecture</string>
     <string name="settings_section_appearance">Apparence</string>

@@ -1,0 +1,22 @@
+# Live TV full screen: the OSD (TvPlayerControlsOverlay, LT4), TV emulator, source iptv.
+# Start: in full screen, panel closed, OSD hidden — Home → Live TV (the preview opens on the
+# last played channel with context Recent), OK on the current row, then wait for the stream-info
+# banner to hide. Focus is on the player root, which has no text, so there is no @start.
+# The OSD is one row of labelled buttons: Channels, Favorite (Favorited when it is one),
+# Subtitles / Audio / Quality when the stream has them, More (Stats behind it). Up/Down with it up
+# zap, deliberately not walked (they change the channel).
+# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# OK opens the OSD with focus on Channels (not on Favorite: a stray second OK must not favourite).
+CENTER	Channels
+RIGHT	Favorite
+# Next: Subtitles, Audio, Quality or More, depending on the stream's tracks — not asserted.
+RIGHT
+LEFT	Favorite
+LEFT	Channels
+# Left at the start of the row stays on it (the row is a focus group that keeps Left/Right).
+LEFT	Channels
+# OK on Channels hides the OSD and opens the channel panel on the playing channel's row (text
+# varies, not asserted).
+CENTER
+# Back closes the panel; focus goes back to the player root (no text, not asserted).
+BACK

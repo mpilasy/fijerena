@@ -1005,4 +1005,9 @@
     <string name="details_action_more">More</string>
     <string name="series_play_next_format">▶ Play: %1$s</string>
     <string name="series_resume_next_format">▶ Resume: %1$s (%2$s)</string>
+    <!-- LT4 -->
+    <string name="player_osd_channels">Channels</string>
+    <string name="player_osd_more">More</string>
+    <string name="player_osd_next_episode">Next episode</string>
+    <string name="player_osd_next_format">Next: %1$s (%2$s)</string>
 </resources>

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
@@ -40,11 +41,14 @@ import androidx.compose.ui.Alignment.Companion.BottomCenter
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -104,6 +108,11 @@ fun TvPlayerControlsOverlay(
     onToggleFavorite: (() -> Unit)?,
     showFullControls: Boolean,
     hideTopBars: Boolean = false,
+    // The resolution/codec line is for developers only (AppSettings.isDevMode, via PlayerScreenState).
+    isDeveloperMode: Boolean = false,
+    // Live TV in full screen: opens the channel panel (LT4). Null (VOD, the standalone route)
+    // leaves the Channels button out.
+    onShowChannels: (() -> Unit)? = null,
     onShowAudioTrackSelector: () -> Unit,
     onShowSubtitleSelector: () -> Unit,
     onShowQualitySelector: () -> Unit,
@@ -132,9 +141,9 @@ fun TvPlayerControlsOverlay(
     var videoCodec by remember { mutableStateOf<String?>(null) }
     var videoResolution by remember { mutableStateOf<String?>(null) }
 
-    // Extract resolution and codec periodically
-    LaunchedEffect(playbackState, metadata.streamUrl) {
-        if (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering) {
+    // Extract resolution and codec periodically — developer mode only, the only time it is shown.
+    LaunchedEffect(playbackState, metadata.streamUrl, isDeveloperMode) {
+        if (isDeveloperMode && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)) {
             // Keep checking every second as tracks might take time to load
             while (true) {
                 StreamingPlaybackService.getInstance()?.getPlayer()?.let { p ->
@@ -170,9 +179,9 @@ fun TvPlayerControlsOverlay(
     // live (there is nothing to pause) AND for VOD while playbackState is anything but
     // Playing/Paused (see the button's own composition guard below). Aiming at it before that
     // button exists targets a node that was never composed, so the request fails into a log
-    // line and the icon row below — subtitles, favourite, stats — could not be reached by
-    // D-pad at all. [canFocusPlayPause] tracks whether that button currently exists; while it
-    // doesn't, focus falls to [safeIconFocusRequester] instead (see below). Keying the effect
+    // line and the button row below could not be reached by D-pad at all. [canFocusPlayPause]
+    // tracks whether that button currently exists; while it doesn't, focus falls to
+    // [safeIconFocusRequester] instead (see below). Keying the effect
     // on [canFocusPlayPause] means that once playback moves into Playing/Paused — e.g.
     // buffering finishes right as OSD is opened — focus is re-requested onto the play/pause
     // button, so a subsequent centre press pauses instead of activating an icon row button.
@@ -181,16 +190,20 @@ fun TvPlayerControlsOverlay(
     var isProgressBarFocused by remember { mutableStateOf(false) }
     val canFocusPlayPause = !isLive && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)
 
-    // Default focus when landing on the icon row (live, or VOD before canFocusPlayPause) must
-    // not go to [iconRowFocusRequester]'s implicit first child — that's whichever of
-    // chapters/audio/subtitle/quality is first for this stream's track counts, so on a typical
-    // single-audio-track live channel with subtitles, OK opens the OSD with focus already ON
-    // the subtitle button, and a second OK press opens that dialog instead of doing nothing.
-    // Favourite/stats are plain toggles, not dialogs, so landing there first is safe regardless
-    // of which selector buttons happen to be present.
-    val favoriteFocusRequester = remember { FocusRequester() }
+    // Default focus when landing on the button row must not go to [iconRowFocusRequester]'s
+    // implicit first child — whichever button happens to be first for this stream. Live opens on
+    // Channels (LT4): a stray second OK opens the channel panel, never favourites the channel.
+    // Otherwise (VOD before canFocusPlayPause, live without the panel) it opens on More, which
+    // only shows Stats — never on Favourite or a track picker.
+    val channelsFocusRequester = remember { FocusRequester() }
+    val moreFocusRequester = remember { FocusRequester() }
     val statsFocusRequester = remember { FocusRequester() }
-    val safeIconFocusRequester = if (onToggleFavorite != null) favoriteFocusRequester else statsFocusRequester
+    val safeIconFocusRequester = if (onShowChannels != null) channelsFocusRequester else moreFocusRequester
+    // ⋮ More: Stats (rarely used) sits behind it, shown in the row after More while open.
+    var moreOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(moreOpen) {
+        if (moreOpen) statsFocusRequester.requestFocusWithRetry()
+    }
 
     // When a track picker closes (Back or a choice), focus goes back to the button that opened it,
     // instead of being left on nothing once the picker's rows leave composition.
@@ -212,10 +225,15 @@ fun TvPlayerControlsOverlay(
     // user has since navigated.
     var reachedPlayPauseFocus by remember { mutableStateOf(false) }
     LaunchedEffect(showFullControls) {
-        if (showFullControls) reachedPlayPauseFocus = false
+        if (showFullControls) {
+            reachedPlayPauseFocus = false
+            moreOpen = false
+        }
     }
 
-    LaunchedEffect(showFullControls, isLive, canFocusPlayPause) {
+    // Live: re-keyed on the stream too — Up/Down zap with the OSD up (LT4), and the new channel's
+    // track buttons can come and go under focus, so focus goes back to Channels on each zap.
+    LaunchedEffect(showFullControls, isLive, canFocusPlayPause, metadata.streamUrl.takeIf { isLive }) {
         if (showFullControls && !reachedPlayPauseFocus) {
             val requester = if (isLive || !canFocusPlayPause) safeIconFocusRequester else controlsFocusRequester
             // requestFocus() fails (returns false) if its target isn't composed/laid out yet — the
@@ -253,9 +271,8 @@ fun TvPlayerControlsOverlay(
             )
         }
 
-        // Top bar with channel name and title. Hidden while a side panel is open since it
-        // would collide with the category panel's own title — the bottom program-info bar
-        // already covers channel/program context in that case.
+        // Top bar: VOD's title, and the developer-mode resolution/codec line. Hidden while a side
+        // panel is open since it would collide with the panel's own tab row.
         if (!hideTopBars) {
             Column(
                 modifier =
@@ -265,21 +282,11 @@ fun TvPlayerControlsOverlay(
                         .padding(horizontal = Spacing.xxl, vertical = Spacing.xl),
             ) {
                 // Big title treatment for VOD (movies get the show's own title big; episodes get
-                // the series title big with the episode demoted to a subtitle line). Live TV
-                // keeps the plain channel-name + title pair below — it has no TMDB entry of its
-                // own, and for VOD that channel name is set to the same string as the title, so
-                // showing it here too would just repeat the title a third time.
-                val bigTitle = metadata.showTitle ?: metadata.title.takeIf { !metadata.isLive }
-                if (bigTitle == null) {
-                    Text(
-                        text = metadata.channelName,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        modifier = Modifier.bounceMarquee(),
-                    )
-                }
-                if (bigTitle != null) {
+                // the series title big with the episode demoted to a subtitle line). Live TV's one
+                // title is the channel name in the banner at the bottom (LT4) — for live, title and
+                // channel name are the same string, which used to show here twice.
+                if (!isLive) {
+                    val bigTitle = metadata.showTitle ?: metadata.title
                     val logoUrl = metadata.logoUrl
                     if (logoUrl != null) {
                         AdaptiveLogoImage(
@@ -319,19 +326,10 @@ fun TvPlayerControlsOverlay(
                             )
                         }
                     }
-                } else {
-                    Text(
-                        text = metadata.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = CinemaTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.bounceMarquee(),
-                    )
                 }
 
-                // Resolution and Codec Info
-                if (videoResolution != null || videoCodec != null) {
+                // Resolution and codec — developer mode only (the polling above is gated too).
+                if (isDeveloperMode && (videoResolution != null || videoCodec != null)) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically,
@@ -547,22 +545,15 @@ fun TvPlayerControlsOverlay(
                         Spacer(modifier = Modifier.height(Spacing.sm))
                     }
                 } else {
-                    // Live indicator with channel + EPG info. Channel name lives here (rather
-                    // than only in the top bar) so it's still visible when hideTopBars is set —
-                    // this bottom section is the only thing shown while a side panel is open.
+                    // The live banner (LT4): LIVE · channel name — the one title — then Now with
+                    // the programme's progress and Next, when the guide has them. It lives here,
+                    // not in the top bar, so it is still there when hideTopBars is set — this
+                    // bottom section is the only thing shown while a side panel is open.
+                    // TODO: the channel number goes before the name once one reaches the player.
                     Column(modifier = Modifier.padding(bottom = Spacing.sm)) {
-                        Text(
-                            text = metadata.channelName,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.bounceMarquee(),
-                        )
                         Row(
                             verticalAlignment = CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                            modifier = Modifier.padding(top = Spacing.xxs),
                         ) {
                             Box(
                                 modifier =
@@ -580,6 +571,14 @@ fun TvPlayerControlsOverlay(
                                 text = stringResource(R.string.player_live),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = CinemaTextPrimary,
+                            )
+                            Text(
+                                text = metadata.channelName,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = CinemaTextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = Spacing.xs).bounceMarquee(),
                             )
                         }
                         if (currentEpgProgram != null) {
@@ -623,12 +622,12 @@ fun TvPlayerControlsOverlay(
                                 Text(
                                     text =
                                         stringResource(
-                                            R.string.player_up_next_format,
+                                            R.string.player_osd_next_format,
                                             nextEpgProgram.title,
                                             formatEpochTime(epgContext, nextEpgProgram.startTime),
                                         ),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.tint),
+                                    color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium),
                                     modifier = Modifier.padding(top = Spacing.xxs),
                                 )
                             }
@@ -636,174 +635,165 @@ fun TvPlayerControlsOverlay(
                     }
                 }
 
-                // Icon controls row (only when full controls are visible)
+                // Button row (only when full controls are visible). Every button carries its label
+                // (LT4). Live: Channels, ★, Subtitles, Audio, Quality, ⋮ More (Stats); VOD the same
+                // without Channels, with Chapters first and Next episode before More. Left/Right
+                // move along it and stop at its ends; Up/Down zap on live (PlayerKeyHandler).
                 if (showFullControls) {
                     Row(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .focusRequester(iconRowFocusRequester)
-                                .focusGroup(),
+                                // Left/Right past either end stay on the row instead of dropping
+                                // focus (L-6). Directly before focusGroup, so the exit is the group's.
+                                .focusProperties {
+                                    onExit = {
+                                        if (requestedFocusDirection == FocusDirection.Left ||
+                                            requestedFocusDirection == FocusDirection.Right
+                                        ) {
+                                            cancelFocusChange()
+                                        }
+                                    }
+                                }.focusGroup(),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         verticalAlignment = CenterVertically,
                     ) {
-                        // Chapter selector
+                        if (onShowChannels != null) {
+                            OsdButton(
+                                icon = CinemaIcons.LiveTv,
+                                label = stringResource(R.string.player_osd_channels),
+                                onClick = onShowChannels,
+                                modifier = Modifier.focusRequester(channelsFocusRequester),
+                            )
+                        }
+
+                        // TODO(GD5): the Guide button goes here, after Channels and only when the
+                        // channel has guide data, once a callback to open the guide reaches the player.
+
                         val chapters = remember(metadata) { viewModel.getChapters() }
                         if (chapters.isNotEmpty()) {
-                            CinemaButton(
+                            OsdButton(
+                                icon = CinemaIcons.List,
+                                label = stringResource(R.string.player_chapters),
                                 onClick = {
                                     pickerOpener = chapterFocusRequester
                                     onShowChapterSelector()
                                 },
                                 modifier = Modifier.focusRequester(chapterFocusRequester),
-                                colors =
-                                    ButtonDefaults.colors(
-                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
-                                        contentColor = CinemaTextPrimary,
-                                        focusedContainerColor = CinemaTextPrimary,
-                                        focusedContentColor = CinemaBackground,
-                                    ),
-                            ) {
-                                Icon(CinemaIcons.List, stringResource(R.string.player_chapters))
-                            }
+                            )
                         }
 
-                        // Audio track selector
-                        if (audioTrackCount > 1) {
-                            CinemaButton(
-                                onClick = {
-                                    pickerOpener = audioFocusRequester
-                                    onShowAudioTrackSelector()
-                                },
-                                modifier = Modifier.focusRequester(audioFocusRequester),
-                                colors =
-                                    ButtonDefaults.colors(
-                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
-                                        contentColor = CinemaTextPrimary,
-                                        focusedContainerColor = CinemaTextPrimary,
-                                        focusedContentColor = CinemaBackground,
-                                    ),
-                            ) {
-                                Icon(CinemaIcons.VolumeUp, stringResource(R.string.player_audio))
-                            }
+                        if (onToggleFavorite != null) {
+                            OsdButton(
+                                icon = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
+                                label = stringResource(if (isFavorite) R.string.player_favorited else R.string.player_favorite),
+                                onClick = onToggleFavorite,
+                                active = isFavorite,
+                                iconTint = if (isFavorite) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                            )
                         }
 
-                        // Subtitle selector
                         if (subtitleTrackCount > 0) {
-                            CinemaButton(
+                            OsdButton(
+                                icon = CinemaIcons.Subtitles,
+                                label = stringResource(R.string.player_subtitles),
                                 onClick = {
                                     pickerOpener = subtitleFocusRequester
                                     onShowSubtitleSelector()
                                 },
                                 modifier = Modifier.focusRequester(subtitleFocusRequester),
-                                colors =
-                                    ButtonDefaults.colors(
-                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
-                                        contentColor = CinemaTextPrimary,
-                                        focusedContainerColor = CinemaTextPrimary,
-                                        focusedContentColor = CinemaBackground,
-                                    ),
-                            ) {
-                                Icon(CinemaIcons.Subtitles, stringResource(R.string.player_subtitles))
-                            }
+                            )
                         }
 
-                        // Quality selector
+                        if (audioTrackCount > 1) {
+                            OsdButton(
+                                icon = CinemaIcons.VolumeUp,
+                                label = stringResource(R.string.player_audio),
+                                onClick = {
+                                    pickerOpener = audioFocusRequester
+                                    onShowAudioTrackSelector()
+                                },
+                                modifier = Modifier.focusRequester(audioFocusRequester),
+                            )
+                        }
+
                         if (qualityCount > 1) {
-                            CinemaButton(
+                            OsdButton(
+                                icon = CinemaIcons.Tune,
+                                label = stringResource(R.string.player_quality),
                                 onClick = {
                                     pickerOpener = qualityFocusRequester
                                     onShowQualitySelector()
                                 },
                                 modifier = Modifier.focusRequester(qualityFocusRequester),
-                                colors =
-                                    ButtonDefaults.colors(
-                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
-                                        contentColor = CinemaTextPrimary,
-                                        focusedContainerColor = CinemaTextPrimary,
-                                        focusedContentColor = CinemaBackground,
-                                    ),
-                            ) {
-                                Icon(CinemaIcons.Tune, stringResource(R.string.player_quality))
-                            }
-                        }
-
-                        // Favorite toggle
-                        if (onToggleFavorite != null) {
-                            CinemaButton(
-                                onClick = { onToggleFavorite() },
-                                modifier = Modifier.focusRequester(favoriteFocusRequester),
-                                colors =
-                                    ButtonDefaults.colors(
-                                        containerColor =
-                                            if (isFavorite) {
-                                                CinemaAccent.copy(alpha = CinemaAlpha.scrim)
-                                            } else {
-                                                CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
-                                            },
-                                        contentColor = CinemaTextPrimary,
-                                        focusedContainerColor = CinemaTextPrimary,
-                                        focusedContentColor = CinemaBackground,
-                                    ),
-                            ) {
-                                Icon(
-                                    imageVector = if (isFavorite) CinemaIcons.Favorite else CinemaIcons.FavoriteBorder,
-                                    contentDescription =
-                                        if (isFavorite) {
-                                            stringResource(
-                                                R.string.player_remove_favorite,
-                                            )
-                                        } else {
-                                            stringResource(R.string.player_add_favorite)
-                                        },
-                                    tint =
-                                        if (isFavorite &&
-                                            !isProgressBarFocused
-                                        ) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            Color.Unspecified
-                                        },
-                                )
-                            }
-                        }
-
-                        // Stats for nerds (always visible)
-                        CinemaButton(
-                            onClick = onShowStats,
-                            modifier = Modifier.focusRequester(statsFocusRequester),
-                            colors =
-                                ButtonDefaults.colors(
-                                    containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
-                                    contentColor = CinemaTextPrimary,
-                                    focusedContainerColor = CinemaTextPrimary,
-                                    focusedContentColor = CinemaBackground,
-                                ),
-                        ) {
-                            Icon(CinemaIcons.BarChart, stringResource(R.string.player_stats))
+                            )
                         }
 
                         // Next episode button (only for TV show episodes when progress >= 80% and a next episode exists)
                         val progressRatio = if (liveDuration > 0) livePosition.toFloat() / liveDuration.toFloat() else 0f
                         val isOver80Percent = progressRatio >= 0.80f
                         if (isOver80Percent && nextEpisode != null && onPlayNextEpisode != null) {
-                            CinemaButton(
+                            OsdButton(
+                                icon = CinemaIcons.SkipNext,
+                                label = stringResource(R.string.player_osd_next_episode),
                                 onClick = { onPlayNextEpisode(nextEpisode) },
-                                colors =
-                                    ButtonDefaults.colors(
-                                        containerColor = CinemaSurface.copy(alpha = CinemaAlpha.textMedium),
-                                        contentColor = CinemaTextPrimary,
-                                        focusedContainerColor = CinemaTextPrimary,
-                                        focusedContentColor = CinemaBackground,
-                                    ),
-                            ) {
-                                Icon(CinemaIcons.SkipNext, stringResource(R.string.player_next_episode))
-                            }
+                            )
+                        }
+
+                        OsdButton(
+                            icon = CinemaIcons.MoreVert,
+                            label = stringResource(R.string.player_osd_more),
+                            onClick = { moreOpen = !moreOpen },
+                            modifier = Modifier.focusRequester(moreFocusRequester),
+                            active = moreOpen,
+                        )
+
+                        if (moreOpen) {
+                            OsdButton(
+                                icon = CinemaIcons.BarChart,
+                                label = stringResource(R.string.player_stats),
+                                onClick = onShowStats,
+                                modifier = Modifier.focusRequester(statsFocusRequester),
+                            )
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/** One OSD button: icon and its label, always shown (LT4). */
+@Composable
+private fun OsdButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    active: Boolean = false,
+    iconTint: Color = Color.Unspecified,
+) {
+    CinemaButton(
+        onClick = onClick,
+        modifier = modifier,
+        colors =
+            ButtonDefaults.colors(
+                containerColor =
+                    if (active) {
+                        CinemaAccent.copy(alpha = CinemaAlpha.scrim)
+                    } else {
+                        CinemaSurface.copy(alpha = CinemaAlpha.textMedium)
+                    },
+                contentColor = CinemaTextPrimary,
+                focusedContainerColor = CinemaTextPrimary,
+                focusedContentColor = CinemaBackground,
+            ),
+    ) {
+        // The label says what the button is; the icon needs no description of its own.
+        Icon(imageVector = icon, contentDescription = null, tint = iconTint)
+        Spacer(modifier = Modifier.width(Spacing.xs))
+        Text(text = label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
 }
 

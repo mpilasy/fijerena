@@ -71,7 +71,6 @@ import org.njarasoa.fijerena.ui.player.components.dialogs.AudioTrackSelectorDial
 import org.njarasoa.fijerena.ui.player.components.dialogs.ChapterSelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.QualitySelectorDialog
 import org.njarasoa.fijerena.ui.player.components.dialogs.SubtitleSelectorDialog
-import org.njarasoa.fijerena.ui.player.components.overlays.ControlHintsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvPlayerControlsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvStatsOverlay
 import org.njarasoa.fijerena.ui.player.components.overlays.TvUpNextOverlay
@@ -246,6 +245,8 @@ fun PlayerScreen(
                         "PlayerScreen",
                         "onPreviewKeyEvent: action=${keyEvent.nativeKeyEvent.action}, code=${keyEvent.nativeKeyEvent.keyCode}",
                     )
+                    // Any key while the OSD is up restarts its auto-hide (LT4).
+                    if (state.showControls && keyEvent.type == KeyEventType.KeyDown) state.controlsKeyTick++
                     when {
                         // Channel panel open: Back closes it (on KeyUp, so the release does not
                         // land on the player). Taken here, top-down, because a focused row
@@ -459,18 +460,6 @@ fun PlayerScreen(
             }
         }
 
-        // Control hints for first-time users
-        if (state.showControlHints && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)) {
-            ControlHintsOverlay(
-                onDismiss = {
-                    state.dismissControlHints()
-                },
-                onDontShowAgain = {
-                    state.markHintsDismissed()
-                },
-            )
-        }
-
         // Modern unified controls overlay (mobile-style). Declared before the channel panel below
         // so that on the rare overlap (a channel-zap's showStreamInfo hasn't auto-hidden yet when
         // the panel opens) it renders underneath it, never on top — opening the panel is never
@@ -493,6 +482,16 @@ fun PlayerScreen(
                 onToggleFavorite = onToggleFavorite,
                 showFullControls = state.showControls,
                 hideTopBars = state.showChannelPanel,
+                isDeveloperMode = state.isDeveloperMode,
+                // Channels (LT4): the same panel Left/Right open; the OSD makes way for it.
+                onShowChannels =
+                    channelPanel?.let {
+                        {
+                            state.showControls = false
+                            state.showStreamInfo = false
+                            state.showChannelPanel = true
+                        }
+                    },
                 onShowAudioTrackSelector = { state.showAudioTrackSelector = true },
                 onShowSubtitleSelector = { state.showSubtitleSelector = true },
                 onShowQualitySelector = { state.showQualitySelector = true },

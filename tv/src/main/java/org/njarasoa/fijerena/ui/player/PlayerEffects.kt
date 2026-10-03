@@ -50,24 +50,17 @@ fun PlayerEffects(
         }
     }
 
-    // Auto-dismiss hints after 7 seconds
-    LaunchedEffect(state.showControlHints) {
-        if (state.showControlHints) {
-            delay(CinemaAnimation.hintsDismissMs)
-            state.showControlHints = false
-        }
-    }
-
     // Auto-hide overlays. Re-keyed on scrubPositionMs so each scrub step resets the timer
-    // and the cursor stays visible while the user is still moving it.
-    LaunchedEffect(state.showControls, state.showStreamInfo, state.scrubPositionMs, state.showStreamInfoTick) {
+    // and the cursor stays visible while the user is still moving it, and on controlsKeyTick so
+    // any key pressed while the OSD is up restarts its 15 s.
+    LaunchedEffect(state.showControls, state.showStreamInfo, state.scrubPositionMs, state.showStreamInfoTick, state.controlsKeyTick) {
         if (state.scrubPositionMs != null) {
             // Hold the OSD open while scrubbing; longer timeout so user can keep stepping
             delay(CinemaAnimation.controlsAutoHideTvMs)
             state.scrubPositionMs = null
             state.showStreamInfo = false
         } else if (state.showControls && state.showStreamInfo) {
-            // Both visible (OK press) - hide after 15 seconds
+            // Both visible (OK press) - hide 15 seconds after the last key
             delay(CinemaAnimation.controlsAutoHideTvMs)
             state.showControls = false
             state.showStreamInfo = false

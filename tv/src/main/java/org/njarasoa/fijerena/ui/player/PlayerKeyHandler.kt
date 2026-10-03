@@ -121,7 +121,9 @@ private fun handleKeyDown(
                 // Let D-pad navigate inside anything modal that is open
                 if (state.isModalOpen) {
                     false
-                } else if (!state.showControls && currentMetadata.isLive) {
+                } else if (currentMetadata.isLive) {
+                    // Live: Up/Down zap whether or not the OSD is up (LT4) — its buttons are one
+                    // row, moved through with Left/Right. A zap with the OSD up keeps it up.
                     // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
                     if (keyEvent.nativeKeyEvent.repeatCount == 0) {
                         onPreviousChannel()
@@ -130,7 +132,7 @@ private fun handleKeyDown(
                     }
                     state.showStreamInfo = true
                     true
-                } else if (!state.showControls && !currentMetadata.isLive) {
+                } else if (!state.showControls) {
                     state.showControls = true
                     state.showStreamInfo = true
                     true
@@ -143,21 +145,20 @@ private fun handleKeyDown(
                 // Let D-pad navigate inside anything modal that is open
                 if (state.isModalOpen) {
                     false
-                } else if (!state.showControls) {
-                    if (currentMetadata.isLive) {
-                        // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
-                        if (keyEvent.nativeKeyEvent.repeatCount == 0) {
-                            onNextChannel()
-                        } else {
-                            state.pendingChannelDelta += 1
-                        }
-                        state.showStreamInfo = true
-                        true
+                } else if (currentMetadata.isLive) {
+                    // Live: zap, OSD up or not (see Up).
+                    // First tap fires immediately; auto-repeat ticks are coalesced (see PlayerEffects).
+                    if (keyEvent.nativeKeyEvent.repeatCount == 0) {
+                        onNextChannel()
                     } else {
-                        state.showControls = true
-                        state.showStreamInfo = true
-                        true
+                        state.pendingChannelDelta += 1
                     }
+                    state.showStreamInfo = true
+                    true
+                } else if (!state.showControls) {
+                    state.showControls = true
+                    state.showStreamInfo = true
+                    true
                 } else {
                     false
                 }
