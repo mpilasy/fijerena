@@ -17,12 +17,12 @@ RIGHT	Refresh streams
 LEFT	Favorites
 # Down enters the rows: the current channel when Favorites has it, else the first row (text
 # varies, not asserted). With no favourites nothing below is focusable and focus stays here.
-DOWN
+DOWN	Favorites
 # Left on a row does nothing — no list toggle any more. Up from the first row proves it: it
 # lands back on the selected tab.
-LEFT
-UP	Favorites
+LEFT	Recent
+UP	Recent
 # Left on a tab moves to the previous tab and switches the list back.
 LEFT	Recent
 # Down lands on the current channel row again (text varies).
-DOWN
+DOWN	2 / 24 Horas Catalunya (720p) / Hold OK or press Menu for actions

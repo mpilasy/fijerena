@@ -8,7 +8,7 @@
 # on the header "+" (Add Source). Expectations assume the active source is iptv (M3U, so it has
 # a Guide slot) and the next row is bears (Xtream: Use, Guide, ⋮) — the TV AVD on 2026-10-03.
 # Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
-@start
+@start iptv / Active / https://iptv-org.github.io/iptv/index.m3u
 # Use is empty on the active row, so Right lands on Guide (on a source without live channels it
 # would land on ⋮).
 RIGHT	Guide
@@ -17,7 +17,7 @@ RIGHT	More actions for iptv
 DOWN	More actions for bears
 LEFT	Guide
 LEFT	Use
-LEFT	bears
-UP	iptv
+LEFT	bears / http://cf.bearsp.xyz / 1fb5318f4d
+UP	iptv / Active / https://iptv-org.github.io/iptv/index.m3u
 # Up from the first row lands on the header "+".
 UP	Add Source
