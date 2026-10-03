@@ -108,14 +108,16 @@ internal fun CategoryList(
     // stale FocusRequesters instead of accumulating one per category id ever seen this session.
     val focusRequesters = remember(categories) { mutableMapOf<String, FocusRequester>() }
 
-    // Auto-scroll and focus on selected category
-    LaunchedEffect(regularCategories, selectedCategoryId) {
+    // Auto-scroll and focus on selected category. Keyed on the selection's position, not the list
+    // itself, so a re-emitted category list doesn't relaunch a focus attempt that can keep failing
+    // (and flooding logcat) while the list is hidden — see StreamList's identical effect.
+    val selectedIndex = remember(regularCategories, selectedCategoryId) { regularCategories.indexOfFirst { it.id == selectedCategoryId } }
+    LaunchedEffect(selectedCategoryId, selectedIndex) {
         if (selectedCategoryId != null) {
             if (selectedCategoryId in CategoryViewModel.VIRTUAL_CATEGORY_IDS) {
                 // Focus virtual category in sidebar
                 focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocusWithRetry()
             } else if (regularCategories.isNotEmpty()) {
-                val selectedIndex = regularCategories.indexOfFirst { it.id == selectedCategoryId }
                 if (selectedIndex != -1) {
                     listState.animateScrollToItem(selectedIndex)
                     focusRequesters.getOrPut(selectedCategoryId) { FocusRequester() }.requestFocusWithRetry()

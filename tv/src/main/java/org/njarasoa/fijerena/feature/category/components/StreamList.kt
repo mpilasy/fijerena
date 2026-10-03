@@ -231,7 +231,12 @@ internal fun StreamList(
     // across every stream id seen this session.
     val enteredStreamIds = remember(streams) { mutableSetOf<String>() }
 
-    LaunchedEffect(streams, streamsLoading, focusTargetId) {
+    // Keyed on the target's position, not on `streams` itself: with a guide source the list is
+    // re-emitted again and again as programme info arrives, and each emission relaunched this
+    // effect. When the target can't take focus (a hidden list behind the full-screen player, a row
+    // never composed) every relaunch failed again — a log flood that never stopped while watching.
+    val focusTargetIndex = remember(streams, focusTargetId) { streams?.indexOfFirst { it.id == focusTargetId } ?: -1 }
+    LaunchedEffect(selectedCategoryId, streamsLoading, focusTargetId, focusTargetIndex) {
         // Skip entirely while streamsLoading: that branch renders a spinner, not the list, so no
         // Card exists yet for the FocusRequester to attach to. Previously this ran anyway, always
         // failed, and — critically — still marked lastFocusedItemId as handled, so once the list
@@ -355,7 +360,8 @@ internal fun StreamList(
                     // fixes that and gives an actionable retry for a genuinely empty category.
                     val emptyStateFocusRequester = remember { FocusRequester() }
                     if (selectedCategoryId != null) {
-                        LaunchedEffect(streams, selectedCategoryId) {
+                        // Not keyed on `streams`: an empty list re-emitted would relaunch it.
+                        LaunchedEffect(selectedCategoryId) {
                             emptyStateFocusRequester.requestFocusWithRetry()
                         }
                     }
