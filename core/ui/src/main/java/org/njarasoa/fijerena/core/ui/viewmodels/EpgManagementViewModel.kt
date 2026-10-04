@@ -46,15 +46,14 @@ class EpgManagementViewModel(
     private val indexer = EpgIndexer.getInstance(context)
     private val appSettings = AppSettings(context)
 
-    // Accessors for separated databases
     private fun indexDb() = EpgIndexDatabase.getInstance(context)
 
     private fun settingsDb() = SettingsDatabase.getInstance(context)
 
-    // Generation counter for index DB — sources Flow now persistent
+    // Generation counter for index DB
     private val _dbGeneration = MutableStateFlow(0)
 
-    // Sources are now in the persistent SettingsDatabase, scoped to this provider
+    // Sources are in the persistent SettingsDatabase, scoped to this provider
     val sources: Flow<List<EpgSourceEntity>> =
         settingsDb().epgSourceDao().getSourcesForProvider(providerId).distinctUntilChanged()
 
@@ -312,7 +311,6 @@ class EpgManagementViewModel(
     fun deleteSource(id: Long) {
         viewModelScope.launchGuarded("EpgManagementViewModel.deleteSource") {
             withContext(Dispatchers.IO) {
-                // Delete from persistent settings
                 settingsDb().epgSourceDao().deleteSource(id)
                 // Also delete its transient data from the index (manual cascade)
                 indexDb().epgIndexDao().deleteBySourceId(id)
@@ -523,7 +521,6 @@ class EpgManagementViewModel(
         epgFileManager.launchClearAllData {
             // DB was destroyed and recreated
             _dbGeneration.value++
-            // Re-query from fresh index DB
             val dao = indexDb().epgIndexDao()
             _dbStats.value =
                 DbStats(

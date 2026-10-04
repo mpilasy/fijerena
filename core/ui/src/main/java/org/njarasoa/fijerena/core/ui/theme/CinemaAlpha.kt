@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.ui.theme
 
 /**
- * Opacity / Alpha Constants
  * Centralizes all alpha values used across the app for consistent transparency.
  */
 object CinemaAlpha {
@@ -14,13 +13,13 @@ object CinemaAlpha {
 
     // Surfaces & Overlays
     const val overlayHeavy = 0.85f // Stats overlay, dialogs
-    const val overlayMedium = 0.8f // Medium overlay background
+    const val overlayMedium = 0.8f
     const val glass = 0.75f // Glassmorphism background
     const val scrim = 0.5f // Standard scrim
     const val tint = 0.3f // Progress track, selected items
     const val focusedTint = 0.2f // Focused container background
-    const val glassBorder = 0.15f // Glass border
-    const val divider = 0.1f // Divider opacity
+    const val glassBorder = 0.15f
+    const val divider = 0.1f
     const val cardHairline = 0.12f // Faint top-highlight border on list-row cards
     const val ghost = 0.05f // Barely visible tints
 

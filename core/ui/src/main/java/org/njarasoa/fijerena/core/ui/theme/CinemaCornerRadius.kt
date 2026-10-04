@@ -6,7 +6,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Corner Radius System
  * Provides consistent corner radii for UI elements throughout the app, driven by the active
  * [UiStyle] ([LocalUiStyle]) so a look-and-feel switch retheme every call site for free.
  */

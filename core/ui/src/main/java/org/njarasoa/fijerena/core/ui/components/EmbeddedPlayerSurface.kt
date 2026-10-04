@@ -22,9 +22,9 @@ import org.njarasoa.fijerena.core.ui.R
  * no overlays — safe to embed as a small preview pane (TV Live TV split / mobile docked
  * mini-player) or as the full-screen surface.
  *
- * Extracted from the TV `PlayerScreen` so the full-screen player and the embedded preview share
- * one surface implementation. The surface always shows whatever the shared engine is currently
- * playing; the caller decides what that is.
+ * The full-screen player and the embedded preview share this one surface implementation. The
+ * surface always shows whatever the shared engine is currently playing; the caller decides what
+ * that is.
  */
 @OptIn(UnstableApi::class)
 @Composable

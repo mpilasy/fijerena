@@ -194,7 +194,6 @@ class ProviderViewModel(
             val name = appSettings.providerName
             providerRepository.addProvider(name, url, username, password)
 
-            // Reload state after migration
             loadProviders()
         }
     }
@@ -359,7 +358,7 @@ class ProviderViewModel(
      * Stores the access token directly so no password-based re-auth is ever needed.
      *
      * With [id], this signs this device's profile in to that existing provider instead of adding a
-     * new one — before, Quick Connect from the edit screen silently added a duplicate provider.
+     * new one, so Quick Connect from the edit screen doesn't add a duplicate provider.
      */
     fun quickConnectSave(
         id: Long? = null,

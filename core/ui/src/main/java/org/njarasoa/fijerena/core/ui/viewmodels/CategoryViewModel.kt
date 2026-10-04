@@ -174,13 +174,11 @@ class CategoryViewModel(
     private val _watchedIds = MutableStateFlow<Set<String>>(emptySet())
     val watchedIds: StateFlow<Set<String>> = _watchedIds.asStateFlow()
 
-    // Resolved in the init coroutine to avoid blocking the UI thread — completed once, from
-    // there on every suspend call site awaits this instead of racing a lateinit var that used to
-    // silently drop whatever called in before it was set (loadStreams(), favorite/watched
-    // toggles, removeFromRecent() — see its own comment on why that race was real, not
-    // theoretical). The handful of synchronous call sites Compose reads directly during
-    // composition (which cannot suspend) go through [repositoryOrNull] instead, keeping their
-    // existing graceful-degrade-to-default behavior.
+    // Resolved in the init coroutine to avoid blocking the UI thread. Every suspend call site
+    // awaits this, so a call made before it is set (loadStreams(), favorite/watched toggles,
+    // removeFromRecent() — see its own comment on why that race is real) waits instead of being
+    // dropped. The handful of synchronous call sites Compose reads directly during composition
+    // (which cannot suspend) go through [repositoryOrNull] instead and degrade to defaults.
     private val repositoryDeferred = CompletableDeferred<MediaRepository>()
 
     // Mirrors repositoryDeferred's result once completed — set in the same init coroutine, right
@@ -276,10 +274,9 @@ class CategoryViewModel(
             } else {
                 val connectResult = repo.connect()
                 if (connectResult.isFailure) {
-                    // Raw text here used to be a Room/HTTP/serialization exception's own message
-                    // (e.g. a JSON parse error dumped straight from an EOF response body) shown to
-                    // every user verbatim — friendlyErrorMessage maps it to something a viewer can
-                    // act on, with the raw text appended only in dev mode.
+                    // Never a Room/HTTP/serialization exception's own message verbatim (e.g. a JSON
+                    // parse error from an EOF response body): friendlyErrorMessage maps it to
+                    // something a viewer can act on, with the raw text appended only in dev mode.
                     val reason =
                         connectResult.exceptionOrNull()?.let { friendlyErrorMessage(it, context, appSettings.isDevMode) }
                             ?: context.getString(R.string.error_generic_unknown)
@@ -367,7 +364,7 @@ class CategoryViewModel(
 
     /**
      * Shared implementation for loading streams by category. Handles both initial load
-     * and refresh paths, eliminating ~130 lines of duplicated code.
+     * and refresh paths.
      * @param isRetryEnabled when true, retries once on empty/failed initial load (loadStreams path)
      */
     private suspend fun loadStreamsInternal(
@@ -390,7 +387,6 @@ class CategoryViewModel(
                 streamsPayloadSize = null,
             )
 
-        // Helper to emit a success state with the given streams
         fun emitStreams(
             streams: List<MediaItem>,
             payloadSize: String? = null,
@@ -413,7 +409,6 @@ class CategoryViewModel(
             }
         }
 
-        // Handle virtual categories
         val handledVirtual =
             when (categoryId) {
                 RECENT_CATEGORY_ID, FAVORITES_CATEGORY_ID -> {
@@ -449,7 +444,6 @@ class CategoryViewModel(
             }
 
         if (!handledVirtual) {
-            // Track non-virtual category views
             val categoryName = categories.firstOrNull { it.id == categoryId }?.name
             if (categoryName != null) {
                 repo.addToCategoryHistory(categoryId, categoryName, contentType)
@@ -519,9 +513,9 @@ class CategoryViewModel(
                     _nowPlaying.value = _nowPlaying.value + collected
                 }
 
-                // The catalogue-wide EPG ingest used to be fired off here. It is EpgSyncWorker's job
-                // now — running it from a list load meant a whole-catalogue fetch competing with
-                // video decode in the same process, which stuttered playback and eventually ANR'd.
+                // No catalogue-wide EPG ingest from here: that is EpgSyncWorker's job. Run from a
+                // list load, a whole-catalogue fetch competed with video decode in the same
+                // process, which stuttered playback and eventually ANR'd.
             }
     }
 
@@ -555,13 +549,11 @@ class CategoryViewModel(
                     .filter { it.id in favItemIds || (it.target as? BrowseTarget.CategoryRef)?.categoryId in favCatIds }
                     .mapTo(HashSet()) { it.id }
 
-            // Build favorite category IDs set
             _favoriteCategoryIds.value =
                 cats
                     .filter { it.id in favCatIds }
                     .mapTo(HashSet()) { it.id }
 
-            // Build watch progress map (optimized bulk lookup)
             val itemIds = streams.map { it.id }
             val positions = repo.getPlaybackPositions(itemIds, ct)
 
@@ -673,8 +665,8 @@ class CategoryViewModel(
         viewModelScope.launchGuarded("CategoryViewModel.removeFromRecent") {
             // The Recent row (unlike category streams) can be visible before loadCategories()
             // has run — e.g. the Live TV preview panel shows it regardless of what was browsed
-            // into — so this used to silently drop the removal if it raced ahead of
-            // repository's assignment. awaitRepository() below waits instead.
+            // into — so this can race ahead of the repository's assignment.
+            // awaitRepository() below waits for it rather than dropping the removal.
             val repo = awaitRepository()
             repo.removeFromRecent(itemId, contentType, seriesId)
             val currentState = _uiState.value

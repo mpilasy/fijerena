@@ -78,9 +78,7 @@ class FijerenaApplication :
 
     @OptIn(UnstableApi::class)
     private fun startBackgroundWork() {
-        // Initialize EPG management
         EpgFileManager.getInstance(this).initialize()
-        // Initialize Provider Content sync
         ProviderSyncManager.getInstance(this).initialize()
         // Live sync between devices, while the app is in use — a no-op until this device is linked.
         SyncManager.getInstance(this).start()
@@ -122,8 +120,7 @@ class FijerenaApplication :
             }
         }
         // Its own coroutine, so nothing above can skip it: finishes a provider deletion the app was
-        // killed in the middle of. Used to run from the nav hosts' composition on every start,
-        // unguarded — see docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-03.
+        // killed in the middle of. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-03.
         startupScope.launch {
             ProviderRepository(this@FijerenaApplication).sweepOrphanedCatalogData(onlyIfPending = true)
         }
@@ -203,7 +200,7 @@ class FijerenaApplication :
                 DiskCache
                     .Builder()
                     .directory(cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(512L * 1024 * 1024) // 512 MB
+                    .maxSizeBytes(512L * 1024 * 1024)
                     .cleanupCoroutineContext(Dispatchers.IO)
                     .build()
             }.build()

@@ -317,8 +317,6 @@ class EpgBrowserViewModel(
         }
     }
 
-    // --------------- Paging flows ---------------
-
     private val _pagedNowPlaying = MutableStateFlow<Flow<PagingData<EpgSearchResultRow>>>(emptyFlow())
     val pagedNowPlaying: StateFlow<Flow<PagingData<EpgSearchResultRow>>> = _pagedNowPlaying.asStateFlow()
 
@@ -328,7 +326,6 @@ class EpgBrowserViewModel(
     init {
         val indexer = EpgIndexer.getInstance(context)
         when (indexer.state.value) {
-            // Set up paged "Now Playing" flow when index is available
             is EpgIndexState.Indexed -> {
                 initPagedNowPlaying()
             }
@@ -527,7 +524,6 @@ class EpgBrowserViewModel(
                         return@launch
                     }
 
-                    // Convert all programmes to airings with programme info
                     val allAirings =
                         result.programmes.map { prog ->
                             val channel = result.channels[prog.channelId]
@@ -547,7 +543,6 @@ class EpgBrowserViewModel(
                             )
                         }
 
-                    // Group by date, then by programme within each date
                     val dateGroups =
                         applyChannelMatching(
                             if (mode == SearchMode.PROGRAMME) {
@@ -704,20 +699,18 @@ class EpgBrowserViewModel(
                         programs =
                             group.programs
                                 .map { program ->
-                                    // ⚡ Bolt: Performance Optimization
-                                    // Replaced O(N log N) `sortedWith` with an O(N) stable bucketing approach.
                                     // `program.airings` is already sorted by `startEpoch`. By accumulating
                                     // matches and non-matches separately and concatenating, we preserve
-                                    // the initial chronological ordering natively without redundant allocations.
+                                    // that order in O(N), with no re-sort.
                                     val matchedList = ArrayList<EpgBrowserAiring>()
                                     val unmatchedList = ArrayList<EpgBrowserAiring>()
 
                                     for (airing in program.airings) {
                                         val matched = matcher.match(airing.channelId, airing.channelName)
                                         when {
+                                            // excluded channel: drop from search results
                                             matched != null && matched.excluded -> Unit
 
-                                            // excluded channel: drop from search results
                                             matched != null -> matchedList.add(airing.copy(matchedStream = matched))
 
                                             else -> unmatchedList.add(airing) // no corresponding stream at all — keep as before
@@ -743,7 +736,6 @@ class EpgBrowserViewModel(
         val today = now.atZone(zoneId).toLocalDate()
         val tomorrow = today.plusDays(1)
 
-        // Group airings by their local date
         val byDay =
             airings.groupBy {
                 java.time.Instant
@@ -755,7 +747,6 @@ class EpgBrowserViewModel(
         return byDay.entries
             .sortedBy { it.key }
             .map { (localDate, dayAirings) ->
-                // Compute date label
                 val label =
                     when (localDate) {
                         today -> {
@@ -775,7 +766,6 @@ class EpgBrowserViewModel(
                 // Compute day start epoch (midnight local time) for sorting
                 val dayStartEpoch = localDate.atStartOfDay(zoneId).toInstant().epochSecond
 
-                // Group by programme within this day
                 val programs =
                     dayAirings
                         .groupBy {
@@ -805,7 +795,7 @@ class EpgBrowserViewModel(
     private fun groupByChannel(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
         // For "What's on", we group by channel name and reuse EpgBrowserDateGroup
         // with the channel name as the label.
-        // ⚡ Bolt: Group by channelId directly to avoid allocating temporary Pair objects for every airing
+        // Group by channelId directly to avoid allocating temporary Pair objects for every airing
         val byChannel = airings.groupBy { it.airing.channelId }
 
         return byChannel.entries

@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.ui.theme
 
 /**
- * Reactive Cinema Color Scheme
  * Bridges the static constants to the current active palette.
  */
 

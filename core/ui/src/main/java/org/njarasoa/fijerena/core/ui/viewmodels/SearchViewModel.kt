@@ -172,10 +172,8 @@ class SearchViewModel(
     /** Called when the user presses the Search button or keyboard search action. */
     fun performSearch(query: String) {
         if (query.isBlank() || query.length < 2) return
-        // Save to history
         appSettings.addSearchHistory(query)
         _searchHistory.value = appSettings.getSearchHistory()
-        // Cancel previous search, start new one
         searchJob?.cancel()
         searchJob =
             viewModelScope.launch(Dispatchers.IO) {
@@ -310,7 +308,6 @@ class SearchViewModel(
             }
 
             if (serverSearchSuccess) {
-                // Return server results
                 val elapsed = System.currentTimeMillis() - startTime
                 val sortedResults = sortResults(serverResults, normalizedQuery, parsedQuery)
                 android.util.Log.i("SearchViewModel", "Search \"$query\": ${sortedResults.size} results in ${elapsed}ms")
@@ -375,10 +372,9 @@ class SearchViewModel(
         }
     }
 
-    // ⚡ Bolt: Performance Optimization
-    // Replaced O(N log N) dynamic evaluation of expensive string matching in `compareBy`
-    // with an O(N) bucketing approach. The string matching logic is now evaluated exactly once
-    // per item, and the simple string sorting happens only within the smaller buckets.
+    // O(N) bucketing rather than expensive string matching inside `compareBy`: the string
+    // matching is evaluated exactly once per item, and the simple string sorting happens only
+    // within the smaller buckets.
     private fun sortResults(
         results: List<SearchResult>,
         normalizedQuery: String,

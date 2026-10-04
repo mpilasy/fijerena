@@ -5,9 +5,6 @@ import android.text.format.DateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Utility for formatting numbers and durations for the UI.
- */
 object NumberUtils {
     /**
      * Format a count (e.g. programs, channels) to a short string (e.g. 1.2k, 5m).
@@ -21,9 +18,6 @@ object NumberUtils {
             else -> count.toString()
         }
 
-    /**
-     * Format a duration in milliseconds to a human-readable string.
-     */
     fun formatDuration(durationMs: Long): String {
         val totalSeconds = durationMs / 1000
         val minutes = totalSeconds / 60

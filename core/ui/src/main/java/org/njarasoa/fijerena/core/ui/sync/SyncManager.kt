@@ -267,8 +267,8 @@ class SyncManager internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Used to only log: no error on the settings screen, no retry — sync silently stopped
-            // until the app next came to the foreground. See
+            // Not only logged: shown on the settings screen and retried, or sync silently stops
+            // until the app next comes to the foreground. See
             // docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-23.
             Log.e(TAG, "Sync pass crashed", e)
             CrashLog.record("sync pass", e)

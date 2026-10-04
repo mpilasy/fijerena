@@ -80,7 +80,6 @@ private class BounceMarqueeNode(
         measurable: Measurable,
         constraints: Constraints,
     ): MeasureResult {
-        // Cache velocity in px/sec for animation calculations
         velocityPxPerSec = velocity.toPx()
 
         // Pass through if already in infinite-width context, otherwise measure the content
@@ -104,7 +103,6 @@ private class BounceMarqueeNode(
     }
 
     override fun ContentDrawScope.draw() {
-        // Clip to container bounds + translate for bounce animation
         clipRect {
             val offset = if (overflowPx > 0) -overflowPx * fraction else 0f
             translate(left = offset) {
@@ -128,7 +126,6 @@ private class BounceMarqueeNode(
         animationJob?.cancel()
         animationJob =
             coroutineScope.launch {
-                // Initial pause before first scroll
                 delay(delayMillis.toLong())
 
                 while (isActive) {
@@ -139,11 +136,9 @@ private class BounceMarqueeNode(
                             1000L
                         }
 
-                    // Forward sweep: fraction 0 -> 1
                     animateLinear(durationMs) { fraction = it }
                     delay(delayMillis.toLong())
 
-                    // Reverse sweep: fraction 1 -> 0
                     animateLinear(durationMs) { fraction = 1f - it }
                     delay(delayMillis.toLong())
                 }

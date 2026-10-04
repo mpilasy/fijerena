@@ -25,10 +25,6 @@ import org.njarasoa.fijerena.core.player.diagnostics.AppScopes
 class AppContainer(
     private val context: Context,
 ) {
-    /**
-     * Singleton instance of ProviderRepository.
-     * Manages all configured media providers and their settings.
-     */
     val providerRepository: ProviderRepository by lazy {
         ProviderRepository(context.applicationContext)
     }
@@ -70,7 +66,6 @@ class AppContainer(
                         val profileId = AppSettings(context.applicationContext).activeProfileId
                         val newRepo = MediaRepository(context.applicationContext, resolvedId, profileId, settings)
 
-                        // Set the provider implementation
                         val entity =
                             if (providerId > 0L) {
                                 providerRepository.getProviderById(providerId)
@@ -225,8 +220,7 @@ class AppContainer(
     /**
      * The settings, URL or login of [providerIds] changed, here or on another device: their cached
      * MediaRepository and the factory's provider go together, under [mutex], so the next
-     * getMediaRepository() builds both from the new values. Before, only the factory's copy was
-     * dropped and the repository reconnected its old instance with the old login. A screen still
+     * getMediaRepository() builds both from the new values. A screen still
      * holding the old repository keeps it until it asks again; playback in progress keeps its
      * stream URL. See docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-06 step 2.
      */

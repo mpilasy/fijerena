@@ -5,7 +5,6 @@ import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
 
 /**
- * Animation & Timing Constants
  * Centralizes all duration and timing values for consistent animations.
  */
 object CinemaAnimation {

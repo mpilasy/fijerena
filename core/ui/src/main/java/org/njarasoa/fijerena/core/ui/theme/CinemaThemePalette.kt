@@ -7,10 +7,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-/**
- * Defines all themeable color properties.
- * Each predefined palette provides a complete set of colors.
- */
 @Immutable
 data class CinemaThemePalette(
     val id: String,
@@ -117,8 +113,6 @@ val TealPalette =
         glassBorder = Color(0x1426C6DA),
     )
 
-// --- All palettes ---
-
 val AllPalettes: List<CinemaThemePalette> =
     listOf(
         DeepNightPalette,
@@ -134,7 +128,5 @@ fun paletteById(id: String): CinemaThemePalette = AllPalettes.firstOrNull { it.i
 object CinemaThemeHolder {
     var current: CinemaThemePalette by mutableStateOf(DeepNightPalette)
 }
-
-// --- CompositionLocal for composable access ---
 
 val LocalCinemaTheme = staticCompositionLocalOf { DeepNightPalette }

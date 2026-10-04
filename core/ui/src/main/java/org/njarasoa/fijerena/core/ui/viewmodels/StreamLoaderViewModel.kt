@@ -84,7 +84,6 @@ class StreamLoaderViewModel(
             // TMDB's transparent-PNG wordmark art, for the OSD title treatment. Null for Live TV,
             // until the TMDB lookup finishes, or when TMDB has no logo for this title.
             val logoUrl: String? = null,
-            // Next episode in sequence for TV shows, if one exists.
             val nextEpisode: EpisodeItem? = null,
             // Whether the provider lets episodes roll on to [nextEpisode] (autoplay next episode):
             // Xtream yes, Jellyfin no. Set with [nextEpisode].
@@ -129,7 +128,7 @@ class StreamLoaderViewModel(
     var requestedStreamId: String? = initialStreamId
         private set
 
-    // Job to handle delayed history saving (mimics original 5s delay)
+    // Job to handle delayed history saving
     private var historyJob: Job? = null
 
     // The load in flight (resolve the URL, publish Success). A new load cancels the previous one.
@@ -153,27 +152,24 @@ class StreamLoaderViewModel(
             Dispatchers.IO,
             onError = { _state.value = StreamState.Error(friendlyErrorMessage(it, context, appSettings.isDevMode)) },
         ) {
-            // 1. Initialize Repository
             val container =
                 org.njarasoa.fijerena.core.ui.di.AppContainer
                     .getInstance(context)
             val repo = container.getMediaRepository()
             mediaRepository = repo
 
-            // 2. Load Channel List (Live TV only) and start mirroring the shared Recent list
             if (contentType == ContentType.LIVE_TV) {
                 launch { repo.recentItems(contentType).collect { _recentItems.value = it.orEmpty() } }
                 repo.refreshRecentItems(contentType)
             }
 
-            // 3. Resolve Initial Stream on FAST PATH
+            // The initial stream first (fast path); the category channel list follows in the background.
             loadStreamInternal(
                 streamId = initialStreamId,
                 streamName = initialStreamName,
                 currentStreams = emptyList(),
             )
 
-            // 4. Asynchronously fetch Category Channel list in background (Live TV only)
             if (contentType == ContentType.LIVE_TV) {
                 launch {
                     val result = repo.getItems(currentCategoryId, contentType)
@@ -203,7 +199,6 @@ class StreamLoaderViewModel(
         val repo = mediaRepository ?: return
 
         try {
-            // Resolve URL & Playback Position (FAST PATH)
             val result =
                 repo.resolvePlayableStream(
                     itemId = streamId,
@@ -214,7 +209,6 @@ class StreamLoaderViewModel(
 
             result.fold(
                 onSuccess = { playable ->
-                    // Determine Resume Position and Track Settings
                     var resumePos = 0L
                     var savedAudioIndex: Int? = null
                     var savedSubtitleIndex: Int? = null
@@ -253,7 +247,6 @@ class StreamLoaderViewModel(
                         }
                     }
 
-                    // Check Favorite
                     val isFav = repo.isFavoriteSuspend(streamId, contentType)
                     val activeStreams = if (currentStreams.isNotEmpty()) currentStreams else channels.value.items
 
@@ -497,9 +490,6 @@ class StreamLoaderViewModel(
             }
     }
 
-    /**
-     * Loads the specified next episode in sequence for TV shows.
-     */
     fun playNextEpisode(nextEpisode: EpisodeItem) {
         currentEpisodeId = nextEpisode.id
         currentEpisodeExtension = nextEpisode.extension
@@ -704,11 +694,9 @@ class StreamLoaderViewModel(
         val currentState = _state.value as? StreamState.Success
         val repo = mediaRepository
         if (currentState != null && repo != null) {
-            // Final save - Only for VOD/Series
             if (contentType != ContentType.LIVE_TV) {
                 val progressPercent = if (duration > 0) (position.toFloat() / duration.toFloat()) * 100f else 0f
 
-                // Final check to see if we reached threshold before exiting
                 if (progressPercent >= 2.0f) {
                     repo.saveLastPlayedItem(
                         categoryId = currentCategoryId,

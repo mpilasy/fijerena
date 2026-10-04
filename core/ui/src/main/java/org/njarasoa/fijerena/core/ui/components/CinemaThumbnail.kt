@@ -267,7 +267,6 @@ fun SkeletonRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
         ) {
-            // Thumbnail block
             Box(
                 modifier =
                     Modifier
@@ -277,12 +276,10 @@ fun SkeletonRow(
                 ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
             }
 
-            // Text lines block
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
             ) {
-                // Title line
                 Box(
                     modifier =
                         Modifier
@@ -293,7 +290,6 @@ fun SkeletonRow(
                     ShimmerPlaceholder(modifier = Modifier.fillMaxSize())
                 }
 
-                // Subtitle line
                 Box(
                     modifier =
                         Modifier
@@ -308,9 +304,6 @@ fun SkeletonRow(
     }
 }
 
-/**
- * Vertical stack of [SkeletonRow] items representing a loading list.
- */
 @Composable
 fun SkeletonList(
     modifier: Modifier = Modifier,

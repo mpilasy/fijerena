@@ -133,7 +133,6 @@ class MovieDetailsViewModel(
                 onSuccess = { detail ->
                     val resume = resolveResumeState(repo)
 
-                    // Check favorite
                     val isFav = repo.isFavorite(movieId, "MOVIES")
 
                     val categoryName =

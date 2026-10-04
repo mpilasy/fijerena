@@ -69,7 +69,6 @@ fun GlassPanel(
                     shape = shape,
                 ),
     ) {
-        // Background layer: blurred on API 31+, solid on older
         Box(
             modifier =
                 Modifier
@@ -84,7 +83,6 @@ fun GlassPanel(
                         },
                     ).background(bg),
         )
-        // Content layer: always sharp, rendered on top
         content()
     }
 }
