@@ -14,13 +14,20 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
-import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
+/**
+ * Version and build, as one focusable row: the group's entry row, so Right from the rail always
+ * lands somewhere and Up/Down never skip it (focus contract rule 3). OK does nothing.
+ */
 @Composable
-fun AboutSettingsCard(scale: Float) {
+fun AboutSettingsCard(
+    scale: Float,
+    rowModifier: Modifier = Modifier,
+) {
     GlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(Spacing.md.scaled(scale))) {
             Text(
@@ -34,37 +41,27 @@ fun AboutSettingsCard(scale: Float) {
                 color = CinemaAccent,
             )
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            Text(
-                text = stringResource(R.string.settings_about_version_format, org.njarasoa.fijerena.BuildConfig.VERSION_NAME),
-                style =
-                    MaterialTheme.typography.bodyMedium.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodyMedium.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextPrimary,
-            )
-            Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-            Text(
-                text = stringResource(R.string.settings_about_build_format, org.njarasoa.fijerena.BuildConfig.GIT_HASH),
-                style =
-                    MaterialTheme.typography.bodySmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodySmall.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-            )
-            Spacer(modifier = Modifier.height(Spacing.xxs.scaled(scale)))
-            Text(
-                text = stringResource(R.string.settings_about_built_format, org.njarasoa.fijerena.BuildConfig.BUILD_TIME),
-                style =
-                    MaterialTheme.typography.bodySmall.copy(
-                        fontSize =
-                            MaterialTheme.typography.bodySmall.fontSize
-                                .scaled(scale),
-                    ),
-                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+            TvInputListItem(
+                selected = false,
+                onClick = {},
+                modifier = rowModifier.fillMaxWidth(),
+                supportingContent = {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.settings_about_build_format, org.njarasoa.fijerena.BuildConfig.GIT_HASH),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_about_built_format, org.njarasoa.fijerena.BuildConfig.BUILD_TIME),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
+                        )
+                    }
+                },
+                headlineContent = {
+                    Text(stringResource(R.string.settings_about_version_format, org.njarasoa.fijerena.BuildConfig.VERSION_NAME))
+                },
             )
         }
     }

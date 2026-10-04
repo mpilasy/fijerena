@@ -42,11 +42,13 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaProfileColors
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextPrimary
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
+import org.njarasoa.fijerena.core.ui.viewmodels.ProfileSettings
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfileUi
 import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
+import org.njarasoa.fijerena.ui.components.input.TvSwitchRow
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
@@ -62,7 +64,8 @@ fun ProfilesSettingsCard(
     message: String?,
     newProfileColorIndex: () -> Int,
     onAdd: (name: String, colorIndex: Int) -> Unit,
-    onUpdate: (id: String, name: String, colorIndex: Int) -> Unit,
+    onUpdate: (id: String, name: String, colorIndex: Int, settings: ProfileSettings) -> Unit,
+    settingsOf: (id: String) -> ProfileSettings,
     onDelete: (id: String) -> Unit,
     onSwitchTo: (id: String) -> Unit,
     onDismissMessage: () -> Unit,
@@ -156,7 +159,7 @@ fun ProfilesSettingsCard(
             title = stringResource(R.string.profile_dialog_add_title),
             initialName = "",
             initialColorIndex = remember { newProfileColorIndex() },
-            onSave = { name, color ->
+            onSave = { name, color, _ ->
                 onAdd(name, color)
                 adding = false
             },
@@ -171,8 +174,9 @@ fun ProfilesSettingsCard(
             title = stringResource(R.string.profile_dialog_edit_title),
             initialName = profile.name,
             initialColorIndex = profile.colorIndex,
-            onSave = { name, color ->
-                onUpdate(profile.id, name, color)
+            initialSettings = remember(profile.id) { settingsOf(profile.id) },
+            onSave = { name, color, settings ->
+                onUpdate(profile.id, name, color, settings ?: settingsOf(profile.id))
                 editing = null
             },
             // The active profile and the last one left can't be deleted (ProfileRepository refuses
@@ -220,14 +224,17 @@ internal fun ProfileEditDialog(
     title: String,
     initialName: String,
     initialColorIndex: Int,
-    onSave: (name: String, colorIndex: Int) -> Unit,
+    onSave: (name: String, colorIndex: Int, settings: ProfileSettings?) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
     scale: Float,
     onSwitch: (() -> Unit)? = null,
+    /** The profile's own settings, shown as switches; null (a new profile) shows none. */
+    initialSettings: ProfileSettings? = null,
 ) {
     var name by remember { mutableStateOf(initialName) }
     var colorIndex by remember { mutableIntStateOf(initialColorIndex) }
+    var settings by remember { mutableStateOf(initialSettings) }
     var showNameError by remember { mutableStateOf(false) }
     // Without an initial focus the dialog opens with focus nowhere and D-pad presses go nowhere.
     val nameFocusRequester = remember { FocusRequester() }
@@ -263,6 +270,20 @@ internal fun ProfileEditDialog(
                         }
                     }
                 }
+                settings?.let { current ->
+                    TvSwitchRow(
+                        checked = current.devMode,
+                        onCheckedChange = { settings = current.copy(devMode = it) },
+                        label = stringResource(R.string.settings_developer_mode_title),
+                        description = stringResource(R.string.settings_developer_mode_desc),
+                    )
+                    TvSwitchRow(
+                        checked = current.autoplayNextEpisode,
+                        onCheckedChange = { settings = current.copy(autoplayNextEpisode = it) },
+                        label = stringResource(R.string.settings_autoplay_next_episode_title),
+                        description = stringResource(R.string.settings_autoplay_next_episode_desc),
+                    )
+                }
                 if (onSwitch != null) {
                     CinemaSecondaryButton(
                         onClick = onSwitch,
@@ -285,7 +306,7 @@ internal fun ProfileEditDialog(
                     if (name.isBlank()) {
                         showNameError = true
                     } else {
-                        onSave(name, colorIndex)
+                        onSave(name, colorIndex, settings)
                     }
                 },
             ) { androidx.compose.material3.Text(stringResource(R.string.profile_save_button)) }

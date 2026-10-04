@@ -50,7 +50,7 @@ Season tabs over the episode list, opening on the season of the episode to resum
 - **Episode list caching (Xtream):** a show's episode list is stored on the device and reused until the source's catalogue shows the series changed (its `last_modified`, which panels bump when episodes are added), the viewer refreshes the show, or 30 days pass. Stored TMDB synopses are kept across those refetches, and TMDB is asked only for seasons still missing one.
 - **TMDB synopses:** per-episode synopses come from TMDB when the source has none. The TMDB id comes from the series info, else from the series listing. The player's info panel shows the episode's own synopsis only — never the series' — and an episode without one has it fetched from TMDB when it starts playing.
 - **Next episode:** from 80 % of an episode that has a next one (into the next season if needed), the player controls show a Next episode button (TV and mobile).
-- **Play next episode automatically** (Settings → Playback, per profile, off by default; Xtream TV shows only — not Jellyfin, which keeps its own play state): near the end of an episode that has a next one — the one the Next episode button plays — a small translucent "Up next" card appears in the top-right corner over the still-playing video (TV: inside the safe margins, under the clock while the controls are up; mobile: below the status bar and cutout), one line like "Up next · S1:E2 · 45 s" with Play now and Cancel beside it. It appears when the time left is at most 90 s or 15 % of the episode's length, whichever is shorter (`CinemaAnimation.upNextLeadMs`, `UP_NEXT_LEAD_FRACTION`: 90 s for a 22-minute episode, 45 s for a 5-minute one), or straight away when playback starts or is moved inside that window; with an unknown duration it never appears early. The countdown is playback time left, so it stops with the video (paused, buffering, app in the background). **Play now** skips to the next episode at once, as Next does. **Cancel** — or Back — hides the card for this episode (it doesn't come back, even after seeking) and playback carries on; that episode then ends back on the episode list. If the episode ends with the card not cancelled, the next one plays at once (only once the app is in the foreground; a phone in picture-in-picture counts, and the card is hidden there). TV: the card takes focus on "Play now" as it appears; with the controls up both stay usable, and Down from the player reaches the card when it isn't focused. Off, with no next episode, or on Jellyfin, the player leaves at the end; movies and Live TV are unaffected.
+- **Play next episode automatically** (per profile, switched on the profile's edit dialog in Settings → Profiles, off by default; Xtream TV shows only — not Jellyfin, which keeps its own play state): near the end of an episode that has a next one — the one the Next episode button plays — a small translucent "Up next" card appears in the top-right corner over the still-playing video (TV: inside the safe margins, under the clock while the controls are up; mobile: below the status bar and cutout), one line like "Up next · S1:E2 · 45 s" with Play now and Cancel beside it. It appears when the time left is at most 90 s or 15 % of the episode's length, whichever is shorter (`CinemaAnimation.upNextLeadMs`, `UP_NEXT_LEAD_FRACTION`: 90 s for a 22-minute episode, 45 s for a 5-minute one), or straight away when playback starts or is moved inside that window; with an unknown duration it never appears early. The countdown is playback time left, so it stops with the video (paused, buffering, app in the background). **Play now** skips to the next episode at once, as Next does. **Cancel** — or Back — hides the card for this episode (it doesn't come back, even after seeking) and playback carries on; that episode then ends back on the episode list. If the episode ends with the card not cancelled, the next one plays at once (only once the app is in the foreground; a phone in picture-in-picture counts, and the card is hidden there). TV: the card takes focus on "Play now" as it appears; with the controls up both stay usable, and Down from the player reaches the card when it isn't focused. Off, with no next episode, or on Jellyfin, the player leaves at the end; movies and Live TV are unaffected.
 - **Mark watched:** TV — long-press OK on an episode card. Mobile — tap the watched badge (filled or outline).
 
 ## Titles
@@ -200,13 +200,13 @@ Seven groups, in this order, on both platforms. **TV:** two panes — the groups
 
 | Group | Rows |
 |-------|------|
-| **Profiles** | Profiles (add, edit, delete, switch to one from its edit dialog; which one this device uses); the active profile's content filters for the active source (opens Edit Source) |
+| **Profiles** | Profiles (add, edit, delete, switch to one from its edit dialog; which one this device uses); each profile's own Developer mode and Play next episode automatically, in its edit dialog, for whichever profile it is; the active profile's content filters for the active source (opens Edit Source) |
 | **Source & guide** | Active source with its URL and subscription (Xtream: expiry, max connections, trial); Switch source (Sources: use, add, edit, copy to another source, delete, guide sources); Edit this source; Guide sources; Guide auto-refresh |
-| **Playback** | Count as watched after: 5 / 10 / 15 / 30 / 60 / 120 s (default 10; mobile also takes a custom 5–120 s); Play next episode automatically (per profile); mobile: a pointer to the per-source playback settings |
+| **Playback** | Count as watched after: 5 / 10 / 15 / 30 / 60 / 120 s (default 10; mobile also takes a custom 5–120 s); mobile: a pointer to the per-source playback settings |
 | **Display** | Theme; Look and feel; Text & grid size (TV only: 40 / 60 / 80 / 100 %, default 80 %); Language |
 | **Live sync** | Opens Live sync |
 | **Backup & storage** | Export / Import settings; Quick Import from Downloads (dev mode); Shrink Database; Guide data maintenance |
-| **About & advanced** | Version, build hash and time; Developer Mode (per profile); Diagnostics (dev mode) |
+| **About & advanced** | Version, build hash and time; Diagnostics (when the profile in use has developer mode on) |
 
 - **Shrink Database:** purges orphaned catalogue rows, cache files, credential files and guide sources of deleted sources, and compacts `xtream_v2.db` with WAL truncation. Never touches favourites or watch history. Developer mode adds the last run's time, rows and bytes.
 
@@ -241,7 +241,7 @@ Backup & storage → Export / Import, through the system file picker.
 
 ## Developer Mode
 
-Settings → About & advanced, per profile (off for a new profile). Adds:
+Per profile, switched on the profile's edit dialog in Settings → Profiles — any profile's, not only the one in use (off for a new profile). What it adds follows the profile in use:
 
 - SMB and Local in Add Source
 - Payload sizes beside a category's item count (TV)

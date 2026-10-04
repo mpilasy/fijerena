@@ -38,8 +38,6 @@ private fun watchDelayLabel(seconds: Int): String =
 fun PlaybackSettingsCard(
     watchDelaySeconds: Int,
     onOpenWatchDelayPicker: () -> Unit,
-    autoplayNextEpisode: Boolean,
-    onAutoplayNextEpisodeChanged: (Boolean) -> Unit,
     scale: Float,
     watchDelayRowFocusRequester: FocusRequester? = null,
     /** Goes on the watch-delay row, the card's first focusable — the pane's entry row. */
@@ -77,14 +75,6 @@ fun PlaybackSettingsCard(
                 onClick = onOpenWatchDelayPicker,
                 focusRequester = watchDelayRowFocusRequester,
                 modifier = watchDelayRowModifier,
-            )
-            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-            SettingsSwitchRow(
-                title = stringResource(R.string.settings_autoplay_next_episode_title),
-                description = stringResource(R.string.settings_autoplay_next_episode_desc),
-                scope = SettingsScope.PROFILE,
-                checked = autoplayNextEpisode,
-                onCheckedChange = onAutoplayNextEpisodeChanged,
             )
         }
     }

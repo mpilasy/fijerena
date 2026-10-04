@@ -158,7 +158,7 @@ fun ProfilePickerScreen(onProfileChosen: () -> Unit) {
             title = stringResource(R.string.profile_dialog_add_title),
             initialName = "",
             initialColorIndex = remember { viewModel.nextFreeColorIndex() },
-            onSave = { name, color ->
+            onSave = { name, color, _ ->
                 viewModel.addProfile(name, color)
                 adding = false
             },

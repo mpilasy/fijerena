@@ -24,6 +24,12 @@ data class ProfileUi(
     val isActive: Boolean,
 )
 
+/** A profile's own settings, edited on its profile page for whichever profile it is. */
+data class ProfileSettings(
+    val devMode: Boolean,
+    val autoplayNextEpisode: Boolean,
+)
+
 /** Settings → Profiles. See `docs/plans/archive/20260929_live-sync-plan.md` → User profiles. */
 class ProfilesViewModel(
     private val context: Context,
@@ -89,9 +95,19 @@ class ProfilesViewModel(
         id: String,
         name: String,
         colorIndex: Int,
+        settings: ProfileSettings,
     ) {
+        // Only what changed, so an untouched switch doesn't queue a sync record.
+        val stored = settingsOf(id)
+        if (settings.devMode != stored.devMode) appSettings.setDevMode(id, settings.devMode)
+        if (settings.autoplayNextEpisode != stored.autoplayNextEpisode) {
+            appSettings.setAutoplayNextEpisode(id, settings.autoplayNextEpisode)
+        }
         viewModelScope.launch { repository.updateProfile(id, name, colorIndex) }
     }
+
+    /** [id]'s own settings — not necessarily the profile this device uses. */
+    fun settingsOf(id: String): ProfileSettings = ProfileSettings(appSettings.devMode(id), appSettings.autoplayNextEpisode(id))
 
     fun deleteProfile(id: String) {
         viewModelScope.launch {

@@ -19,10 +19,10 @@ UP	Live sync
 UP	Display
 UP	Playback
 # Right enters the pane on the group's first row.
+# Playback has one row (Play next episode is on each profile's edit dialog, P2).
 RIGHT	Count as watched after / How long to watch a channel before it's added to Last Watched / This device / 10 s ›
-DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends. · This profile
 # Down at the end of the pane stays put.
-DOWN	Play next episode automatically / Near the end of an episode, the next one is offered and starts when it ends. · This profile
+DOWN	Count as watched after / How long to watch a channel before it's added to Last Watched / This device / 10 s ›
 # Left from anywhere in the pane returns to the rail row of the group.
 LEFT	Playback
 RIGHT	Count as watched after / How long to watch a channel before it's added to Last Watched / This device / 10 s ›

@@ -36,6 +36,34 @@ class AppSettingsDevModeTest {
     }
 
     @Test
+    fun `setting another profile's flag leaves the active one's alone`() {
+        settings.activeProfileId = ProfileEntity.DEFAULT_ID
+
+        settings.setDevMode(OTHER, true)
+
+        assertFalse(settings.isDevMode)
+        assertTrue(settings.devMode(OTHER))
+        settings.activeProfileId = OTHER
+        assertTrue(settings.isDevMode)
+    }
+
+    @Test
+    fun `the active profile's flag is the same through either accessor`() {
+        settings.activeProfileId = OTHER
+        settings.isDevMode = true
+
+        assertTrue(settings.devMode(OTHER))
+        assertFalse(settings.devMode(ProfileEntity.DEFAULT_ID))
+    }
+
+    @Test
+    fun `before the upgrade has run, another profile also falls back to the install-wide flag`() {
+        prefs.edit().putBoolean("dev_mode", true).commit()
+
+        assertTrue(settings.devMode(OTHER))
+    }
+
+    @Test
     fun `upgrade copies the install-wide flag to every profile, and later profiles start off`() {
         prefs.edit().putBoolean("dev_mode", true).commit()
 

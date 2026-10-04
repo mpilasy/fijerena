@@ -291,7 +291,11 @@ fun MobileSettingsScreen(
                     message = profilesMessage,
                     newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
                     onAdd = profilesViewModel::addProfile,
-                    onUpdate = profilesViewModel::updateProfile,
+                    onUpdate = { id, name, color, settings ->
+                        profilesViewModel.updateProfile(id, name, color, settings)
+                        viewModel.refreshDevMode()
+                    },
+                    settingsOf = profilesViewModel::settingsOf,
                     onDelete = profilesViewModel::deleteProfile,
                     onSwitchTo = { id -> profilesViewModel.switchTo(id, onProfileSwitched) },
                     onDismissMessage = profilesViewModel::clearMessage,
@@ -333,18 +337,6 @@ fun MobileSettingsScreen(
                     summary = stringResource(R.string.settings_seconds_short_format, uiState.watchDelaySeconds),
                     scope = SettingsScope.DEVICE,
                     onClick = { showWatchDelayPicker = true },
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_autoplay_next_episode_title),
-                    summary = stringResource(R.string.settings_autoplay_next_episode_desc),
-                    scope = SettingsScope.PROFILE,
-                    trailing = {
-                        Switch(
-                            checked = uiState.autoplayNextEpisode,
-                            onCheckedChange = { enabled -> viewModel.updateAutoplayNextEpisode(enabled) },
-                        )
-                    },
-                    onClick = { viewModel.updateAutoplayNextEpisode(!uiState.autoplayNextEpisode) },
                 )
                 SettingsListRow(
                     title = stringResource(R.string.settings_per_source_playback_hint),
@@ -496,18 +488,8 @@ fun MobileSettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                     )
                 }
-                SettingsListRow(
-                    title = stringResource(R.string.settings_developer_mode_title),
-                    summary = stringResource(R.string.settings_developer_mode_desc),
-                    scope = SettingsScope.PROFILE,
-                    trailing = {
-                        Switch(
-                            checked = uiState.isDevMode,
-                            onCheckedChange = { enabled -> viewModel.updateDevMode(enabled) },
-                        )
-                    },
-                    onClick = { viewModel.updateDevMode(!uiState.isDevMode) },
-                )
+                // Developer mode is switched on each profile's page; Diagnostics stays here for the
+                // profile in use.
                 if (uiState.isDevMode) {
                     SettingsListRow(
                         title = stringResource(R.string.settings_diagnostics_open),

@@ -166,6 +166,7 @@ fun SettingsScreen(
             val activeProvider = providerRepo.getActiveProvider()
             val hadOnLoad = hadProviderOnLoad
             viewModel.refreshProviderInfo()
+            viewModel.refreshDevMode()
 
             if (hadOnLoad == null) {
                 hadProviderOnLoad = activeProvider != null
@@ -384,7 +385,11 @@ fun SettingsScreen(
                                                 message = profilesMessage,
                                                 newProfileColorIndex = profilesViewModel::nextFreeColorIndex,
                                                 onAdd = profilesViewModel::addProfile,
-                                                onUpdate = profilesViewModel::updateProfile,
+                                                onUpdate = { id, name, color, settings ->
+                                                    profilesViewModel.updateProfile(id, name, color, settings)
+                                                    viewModel.refreshDevMode()
+                                                },
+                                                settingsOf = profilesViewModel::settingsOf,
                                                 onDelete = profilesViewModel::deleteProfile,
                                                 onSwitchTo = { id -> profilesViewModel.switchTo(id, onProfileSwitched) },
                                                 onDismissMessage = profilesViewModel::clearMessage,
@@ -464,10 +469,6 @@ fun SettingsScreen(
                                             PlaybackSettingsCard(
                                                 watchDelaySeconds = uiState.watchDelaySeconds,
                                                 onOpenWatchDelayPicker = { openPicker(SettingPicker.WATCH_DELAY) },
-                                                autoplayNextEpisode = uiState.autoplayNextEpisode,
-                                                onAutoplayNextEpisodeChanged = { enabled ->
-                                                    viewModel.updateAutoplayNextEpisode(enabled)
-                                                },
                                                 scale = scale,
                                                 watchDelayRowFocusRequester = returnFocus.requesterFor(SettingPicker.WATCH_DELAY.returnKey),
                                                 watchDelayRowModifier = entryModifier,
@@ -569,22 +570,21 @@ fun SettingsScreen(
 
                                     SettingsGroup.ABOUT_ADVANCED -> {
                                         item {
-                                            AboutSettingsCard(scale = scale)
+                                            AboutSettingsCard(scale = scale, rowModifier = entryModifier)
                                         }
-                                        item {
-                                            DeveloperSettingsCard(
-                                                isDevMode = uiState.isDevMode,
-                                                onDevModeChanged = { enabled ->
-                                                    viewModel.updateDevMode(enabled)
-                                                },
-                                                onDiagnostics = {
-                                                    returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
-                                                    onDiagnostics()
-                                                },
-                                                scale = scale,
-                                                diagnosticsButtonFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
-                                                devModeRowModifier = entryModifier,
-                                            )
+                                        // Developer mode is switched on each profile's page; Diagnostics
+                                        // stays here for the profile in use.
+                                        if (uiState.isDevMode) {
+                                            item {
+                                                DeveloperSettingsCard(
+                                                    onDiagnostics = {
+                                                        returnFocus.leaveFrom(RETURN_DIAGNOSTICS, listState)
+                                                        onDiagnostics()
+                                                    },
+                                                    scale = scale,
+                                                    diagnosticsButtonFocusRequester = returnFocus.requesterFor(RETURN_DIAGNOSTICS),
+                                                )
+                                            }
                                         }
                                     }
                                 }

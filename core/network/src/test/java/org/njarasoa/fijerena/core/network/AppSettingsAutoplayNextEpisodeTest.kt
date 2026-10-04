@@ -43,6 +43,20 @@ class AppSettingsAutoplayNextEpisodeTest {
     }
 
     @Test
+    fun `setting another profile's choice leaves the active one's alone`() {
+        settings.activeProfileId = ProfileEntity.DEFAULT_ID
+
+        settings.setAutoplayNextEpisode(OTHER, true)
+
+        assertFalse(settings.autoplayNextEpisode)
+        assertTrue(settings.autoplayNextEpisode(OTHER))
+        assertEquals(JsonPrimitive(true), settings.syncedSetting(KEY, OTHER))
+        assertNull(settings.syncedSetting(KEY, ProfileEntity.DEFAULT_ID))
+        settings.activeProfileId = OTHER
+        assertTrue(settings.autoplayNextEpisode)
+    }
+
+    @Test
     fun `it syncs per profile`() {
         assertTrue(KEY in AppSettings.SYNCED_SETTING_KEYS)
         assertTrue(KEY in AppSettings.PER_PROFILE_SETTING_KEYS)

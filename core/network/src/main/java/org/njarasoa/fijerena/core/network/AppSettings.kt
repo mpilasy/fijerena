@@ -117,11 +117,19 @@ class AppSettings(
      * this replaced until [copyLegacyDevModeToProfiles] has run.
      */
     var isDevMode: Boolean
-        get() = prefs.getBoolean(devModeKey(activeProfileId), prefs.getBoolean(KEY_DEV_MODE, false))
-        set(value) {
-            prefs.edit { putBoolean(devModeKey(activeProfileId), value) }
-            SettingsSyncQueue.setting(context, KEY_DEV_MODE, activeProfileId)
-        }
+        get() = devMode(activeProfileId)
+        set(value) = setDevMode(activeProfileId, value)
+
+    /** [profileId]'s developer mode, whichever profile this device uses (its profile page edits it). */
+    fun devMode(profileId: String): Boolean = prefs.getBoolean(devModeKey(profileId), prefs.getBoolean(KEY_DEV_MODE, false))
+
+    fun setDevMode(
+        profileId: String,
+        enabled: Boolean,
+    ) {
+        prefs.edit { putBoolean(devModeKey(profileId), enabled) }
+        SettingsSyncQueue.setting(context, KEY_DEV_MODE, profileId)
+    }
 
     /**
      * One-time upgrade: gives every profile in [profileIds] the install-wide developer-mode flag
@@ -141,11 +149,19 @@ class AppSettings(
      * countdown, when they end. Per profile and synced, like [isDevMode]; off until turned on.
      */
     var autoplayNextEpisode: Boolean
-        get() = prefs.getBoolean(profileKey(KEY_AUTOPLAY_NEXT_EPISODE, activeProfileId), false)
-        set(value) {
-            prefs.edit { putBoolean(profileKey(KEY_AUTOPLAY_NEXT_EPISODE, activeProfileId), value) }
-            SettingsSyncQueue.setting(context, KEY_AUTOPLAY_NEXT_EPISODE, activeProfileId)
-        }
+        get() = autoplayNextEpisode(activeProfileId)
+        set(value) = setAutoplayNextEpisode(activeProfileId, value)
+
+    /** [profileId]'s "Play next episode automatically", whichever profile this device uses. */
+    fun autoplayNextEpisode(profileId: String): Boolean = prefs.getBoolean(profileKey(KEY_AUTOPLAY_NEXT_EPISODE, profileId), false)
+
+    fun setAutoplayNextEpisode(
+        profileId: String,
+        enabled: Boolean,
+    ) {
+        prefs.edit { putBoolean(profileKey(KEY_AUTOPLAY_NEXT_EPISODE, profileId), enabled) }
+        SettingsSyncQueue.setting(context, KEY_AUTOPLAY_NEXT_EPISODE, profileId)
+    }
 
     /**
      * The `providerKey` of the provider [profileId] last picked, on any device — synced, unlike
