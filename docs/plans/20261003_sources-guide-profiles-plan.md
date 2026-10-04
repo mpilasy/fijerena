@@ -1,6 +1,6 @@
 # Sources, Guide Sources, Profiles and Home Plan — TV + mobile
 
-**Status:** Proposed (2026-10-03), not started. Decisions D1–D5 below are recommendations waiting
+**Status:** Proposed (2026-10-03), not started. Decisions D1–D6 below are recommendations waiting
 for the user's confirmation.
 
 ## Progress
@@ -10,7 +10,7 @@ for the user's confirmation.
 | P1 Switch to a profile from its edit dialog | Todo |
 | P2 Developer mode in the profile edit dialog | Todo |
 | P3 "Provides a guide" per source | Todo |
-| P4 Guide sources under the source | Todo |
+| P4 Guide sources under the source; Settings shows Manage sources only | Todo |
 | P5 Auto-refresh per guide source | Todo |
 | P6 Home button on every page | Todo |
 
@@ -29,6 +29,8 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
 5. Auto-refresh is a property of each guide source, not one device-wide setting.
 6. Every page except Home should have a Home button that goes straight to Home and discards the
    back stack.
+7. Settings' "Switch source" should be "Manage sources": editing the current source from Settings
+   and from the Sources page is odd and duplicated.
 
 ## How it works today (checked in the code, `main` at `b905113e`)
 
@@ -53,6 +55,11 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
   M3U, Local with an M3U) and Settings → Source & guide → **Guide Sources** (the active source),
   which reads as a global setting. Edit Source (TV `TvAddProviderScreen`, mobile
   `MobileAddProviderScreen`) doesn't mention guides.
+- **Settings → Source & guide** has Switch source (opens the Sources list, where each source has
+  Use, Edit, Guide and ⋮), **Edit this source** (Edit Source for the active one), Guide Sources and
+  Guide auto-refresh; the Profiles group's content-filters row also opens Edit Source on the
+  active source's filters (`Screen.AddProvider(focusFilters = true)`). So the active source can be
+  edited from three places.
 - **Auto-refresh** is device-wide: `AppSettings.epgAutoRefreshEnabled`, `epgRefreshInterval`
   (hours, `-1` = never) and `epgRefreshTime` (`HH:mm`), edited in Settings → Source & guide →
   Guide auto-refresh. `EpgFileManager.updateAutoRefreshSchedule` enqueues one periodic
@@ -78,6 +85,7 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
 | D2 | Per-source auto-refresh: its own time of day too, or only its own interval? | Own interval (Off / every 6 h / 12 h / daily / weekly) per guide source; one device-wide time of day ("Guide refresh time") for when the daily run starts. |
 | D3 | Keep the Sources list's **Guide** button once guide sources live in Edit Source? | Keep it as a shortcut to the same screen; remove only Settings → Source & guide → Guide Sources. |
 | D4 | Where does the Home button go? | TV: a house icon at the right end of each screen's header row (the same slot everywhere, after the screen's own buttons), reached by Up like the other header buttons; in the full-screen player, a **Home** button in the OSD's ⋮ More group. Mobile: a house icon in each top app bar's actions (and the player's controls). Not on Home, the profile picker, Safe mode or the newer-data screen. |
+| D6 | What stays of the source rows in Settings? | One **Manage sources ›** row (its value: the source in use) opening the Sources list, where switching, editing and guide sources already live. Edit this source, Guide Sources and the content-filters shortcut leave Settings; the Profiles group keeps a one-line note that filters are set per source in Edit Source. |
 | D5 | What does Home do when there is no source (Home can't show anything)? | Hide the button on those screens — Settings is the start screen then, and Home would only send the viewer back to it. |
 
 ## Target
@@ -103,9 +111,9 @@ nothing (TV) / leaves the app (mobile), as after launch. Anything that stops on 
 TV preview and player) stops as it does on Back. A screen with unsaved edits (mobile Edit Source's
 discard prompt, M4) asks first, the same way Back does.
 
-**Settings → Source & guide:** Switch source, Edit this source; **Guide refresh time** (device,
-when daily refreshes start). No Guide Sources row, no device-wide auto-refresh switch or
-interval. Backup & storage keeps Guide data maintenance (the guide index is one database per
+**Settings → Source & guide (D6):** **Manage sources ›** (value: the source in use) and **Guide
+refresh time** (device, when daily refreshes start). No Edit this source, Guide Sources or
+content-filters shortcut, no device-wide auto-refresh switch or interval. Backup & storage keeps Guide data maintenance (the guide index is one database per
 device). About & advanced: version, build; Diagnostics when the profile in use has developer mode
 on.
 
@@ -116,7 +124,7 @@ on.
 | P1 | **Switch to this profile** in the edit dialog: calls `AppContainer.switchProfile`, closes the dialog and goes Home as the picker does; hidden for the active profile. Strings ×3. | TV `ProfilesSettingsCard.kt`, mobile `ProfilesSettingsRows.kt`, both Settings screens' callbacks | S | Low |
 | P2 | **Developer mode in the edit dialog**: `AppSettings` gets `isDevMode(profileId)` / `setDevMode(profileId, value)` (same key and sync record as today); the dialog's switch edits the edited profile's value; the Developer Mode row leaves About & advanced; anything gated on dev mode keeps reading the active profile's value. | `AppSettings.kt`, `SettingsViewModel`, both profile dialogs, `DeveloperSettingsCard` / mobile Settings | S | Low |
 | P3 | **Provides a guide**: `ProviderSettings.providesGuide: Boolean? = null` (null = detect). `AutoXmltvSources.reconcile` adds the automatic guide source only when the effective value is on, and removes it (only the automatic one — hand-added guide sources are never touched) when it is off. Detection: on for Xtream with live channels (today's rule); after an ingest of the automatic source with 0 channels, set `providesGuide = false` (empty `xmltv.php`). Switch in Edit Source for Xtream. Unit tests for reconcile with each value. | `ProviderSettings.kt`, `AutoXmltvSources.kt`, `XtreamSessionManager.kt`, `EpgFileManager.kt` (empty-ingest hook), both Edit Source screens, strings ×3 | M | Med (deletes a synced row; must keep hand-added sources) |
-| P4 | **Guide sources under the source**: "Guide sources ›" row in Edit Source (sources with live channels) opening `EpgManagement(providerId)`; Settings → Source & guide loses its Guide Sources row; the Sources list's Guide button stays (D3). Back from the guide sources screen returns to the row it opened from (`NavReturnFocus`). Focus walks updated. | both Edit Source screens, both Settings screens, both nav hosts, `scripts/focus-walks/settings*.txt`, `edit-source.txt` | M | Low |
+| P4 | **Guide sources under the source; Settings shows Manage sources only**: "Guide sources ›" row in Edit Source (sources with live channels) opening `EpgManagement(providerId)`; the Sources list's Guide button stays (D3). Settings → Source & guide becomes **Manage sources ›** (renamed from Switch source, value = the source in use) — Edit this source, Guide Sources and the Profiles group's content-filters shortcut (`focusFilters` deep link) are removed (D6); unused strings removed ×3. Back from the guide sources screen returns to the row it opened from (`NavReturnFocus`). Focus walks updated. | both Edit Source screens, both Settings screens, both nav hosts, `scripts/focus-walks/settings*.txt`, `edit-source.txt` | M | Low |
 | P5 | **Auto-refresh per guide source**: `epg_source.refresh_interval_hours` (`SettingsDatabase` 15 → 16, `NOT NULL DEFAULT 24`, `-1` = off), a one-time startup step copying today's device-wide interval into every row (so nothing changes for anyone on upgrade), then the device-wide interval and switch retire (`epgRefreshTime` stays as "Guide refresh time"). `getStaleSources` uses each row's own interval (stale after half of it, as today); the periodic `EpgSyncWorker` runs at the shortest interval among enabled guide sources, first run at the refresh time, cancelled when all are off. Sync payload and export carry the field (optional, default keeps the local value, so older app versions keep working). Guide sources screen: interval in the row and a picker in the row actions. Room migration test, `docs/DATABASE_SCHEMA.md` updated in the same commit. | `EpgSourceEntity.kt`, `SettingsDatabase.kt` (+ schema JSON 16), `EpgSourceDao.kt`, `EpgFileManager.kt`, `EpgSyncWorker.kt`, `AppSettings.kt`, `SyncPayloads.kt` / sync applier, `SettingsExportManager.kt`, both guide sources screens, both Settings screens (`GuideSettingsRows`), strings ×3 | L | Med-High (schema migration on every device, sync format, worker scheduling) |
 
 | P6 | **Home button on every page**: one `goHome()` per nav host — `popBackStack(Screen.ContentTypeSelection, inclusive = false)` when Home is on the stack, else `navigate(Screen.ContentTypeSelection) { popUpTo(0) { inclusive = true } }` — and one button per platform (TV `TvHomeButton` for the header slot, mobile a top-bar action), passed as `onHome` to every screen in D4's list; TV player OSD and mobile player controls get it too; hidden when there is no source (D5). TV focus: a header stop at the row's end, reachable by Up from the content like the existing header buttons. Focus walks updated. Strings ×3 ("Home"). | both nav hosts; TV screens' headers (Settings, Sources, Edit Source, guide sources, Live sync, Diagnostics, Live TV / Movies / TV Shows browse and preview, details, episodes, Search, TV Guide, Search the guide), `TvPlayerControlsOverlay`; mobile top bars and `MobileControlsOverlay`; `scripts/focus-walks/*` | M | Med (touches every screen header; TV focus order in each) |
