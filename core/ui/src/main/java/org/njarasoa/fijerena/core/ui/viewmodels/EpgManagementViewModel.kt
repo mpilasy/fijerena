@@ -157,12 +157,6 @@ class EpgManagementViewModel(
         _selectedIds.value = emptySet()
     }
 
-    fun cancelProcessing() {
-        epgFileManager.cancelProcessing()
-        _cellularDialog.value = CellularConfirmDialog.Hidden
-        _taskSourceIds.value = emptyMap()
-    }
-
     fun setAutoRefreshEnabled(enabled: Boolean) {
         appSettings.epgAutoRefreshEnabled = enabled
         _epgSettings.value = _epgSettings.value.copy(autoRefreshEnabled = enabled)

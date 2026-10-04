@@ -1213,19 +1213,6 @@ class EpgFileManager private constructor(
         }
 
     /**
-     * Cancel all running and queued EPG refresh processing.
-     * Cancels the coroutine job which causes all downloads and ingestion to stop.
-     */
-    fun cancelProcessing() {
-        processJob?.cancel()
-        processJob = null
-        scope.launch {
-            RefreshQueue.cancelAll()
-        }
-        _state.value = MultiSourceState.Idle
-    }
-
-    /**
      * Cancel all processing, then clear all EPG data.
      * Runs entirely on this manager's scope (survives ViewModel destruction).
      */

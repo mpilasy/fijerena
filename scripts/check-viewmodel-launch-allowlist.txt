@@ -10,7 +10,6 @@ core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/DiagnosticsViewMo
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgBrowserViewModel.kt 5 # refresh/search actions; provider name and source labels catch their own
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgManagementViewModel.kt 1 # refreshDbStats catches its own
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/EpgViewModel.kt 1 # forceRefresh
-core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/LoginViewModel.kt 2 # login flows catch their own
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/MovieDetailsViewModel.kt 9 # loadMovieDetail catches its own; favourite/watched actions
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProfilesViewModel.kt 4 # profile actions
 core/ui/src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/ProviderViewModel.kt 12 # incl. init; deferred while the R-08 sync-error work is in this file

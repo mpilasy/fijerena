@@ -2564,16 +2564,6 @@
             column="5"/>
     </issue>
 
-    <issue
-        id="StaticFieldLeak"
-        message="This field leaks a context object"
-        errorLine1="    private val context: Context,"
-        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/org/njarasoa/fijerena/core/ui/viewmodels/LoginViewModel.kt"
-            line="29"
-            column="5"/>
-    </issue>
 
     <issue
         id="StaticFieldLeak"

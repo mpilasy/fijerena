@@ -29,9 +29,6 @@ class EpgIndexBusyException : Exception("EPG index optimizing, please wait...")
 class XmltvSearchService(
     private val context: Context,
 ) {
-    private val rebuildDispatcher = Dispatchers.IO.limitedParallelism(1)
-    private val rebuildScope = AppScopes.create("XmltvSearchService.rebuild", rebuildDispatcher)
-
     companion object {
         private const val TAG = "XmltvSearchService"
         private const val FTS_TIMEOUT_MS = 10_000L
@@ -44,25 +41,6 @@ class XmltvSearchService(
         // just "Movie") and mistook it for hand-written FTS syntax, silently dropping the prefix
         // wildcard below and returning only exact-term matches.
         private val FTS_OPERATOR_REGEX = Regex("\\b(AND|OR|NOT|NEAR)\\b")
-    }
-
-    /**
-     * Trigger a background FTS rebuild after detecting corruption.
-     * Safe to call multiple times — the rebuild mutex in EpgIndexer serializes.
-     */
-    private fun triggerBackgroundFtsRebuild() {
-        val indexer = EpgIndexer.getInstance(context)
-        rebuildScope.launch {
-            try {
-                Log.i(TAG, "Starting background FTS rebuild...")
-                indexer.rebuildFtsAndUpdateState()
-                Log.i(TAG, "Background FTS rebuild completed")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "Background FTS rebuild failed: ${e.message}", e)
-            }
-        }
     }
 
     /**

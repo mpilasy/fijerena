@@ -60,16 +60,6 @@ class AuthViewModel : ViewModel() {
     }
 
     /**
-     * Clears the authenticated session.
-     *
-     * Call this on logout or session expiration.
-     */
-    fun clearAuthSession() {
-        _authResponse.value = null
-        _serverUrl.value = null
-    }
-
-    /**
      * Checks if the user is currently authenticated.
      *
      * @return true if auth response exists and user is active
