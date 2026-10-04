@@ -224,7 +224,7 @@ class StreamLoaderViewModel(
                         savedAudioIndex = saved.audioTrackIndex
                         savedSubtitleIndex = saved.subtitleTrackIndex
 
-                        if (!startFromBeginning && contentType != ContentType.LIVE_TV && appSettings.autoResumeEnabled) {
+                        if (!startFromBeginning && contentType != ContentType.LIVE_TV && repo.isAutoResumeEnabled()) {
                             val progressPercent =
                                 if (saved.duration > 0) {
                                     (saved.playbackPosition.toFloat() / saved.duration.toFloat()) * 100f

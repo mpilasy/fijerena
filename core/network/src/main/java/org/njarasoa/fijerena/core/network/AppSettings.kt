@@ -28,7 +28,6 @@ class AppSettings(
         private const val KEY_WATCH_HISTORY_SIZE = "watch_history_size"
         private const val KEY_PROVIDER_NAME = "provider_name"
         private const val KEY_FAVORITES_MAX_SIZE = "favorites_max_size"
-        private const val KEY_AUTO_RESUME = "auto_resume_enabled"
         private const val KEY_CACHE_EXPIRY_HOURS = "cache_expiry_hours"
         private const val KEY_UI_SCALE = "ui_scale"
         private const val KEY_THEME_ID = "theme_id"
@@ -262,13 +261,6 @@ class AppSettings(
             val clampedValue = value.coerceIn(10, 500)
             prefs.edit { putInt(KEY_FAVORITES_MAX_SIZE, clampedValue) }
         }
-
-    /**
-     * Get or set auto-resume playback setting.
-     */
-    var autoResumeEnabled: Boolean
-        get() = prefs.getBoolean(KEY_AUTO_RESUME, true)
-        set(value) = prefs.edit { putBoolean(KEY_AUTO_RESUME, value) }
 
     /**
      * Get or set cache expiry duration in hours.

@@ -89,10 +89,12 @@ object DeviceDetector {
         val model = Build.MODEL.uppercase()
         val device = Build.DEVICE.uppercase()
 
+        // Chromecast with Google TV reports MODEL "Chromecast"; its DEVICE is a codename ("sabrina",
+        // "boreal").
         return when {
             manufacturer.contains("NVIDIA") || model.contains("SHIELD") -> DeviceType.NVIDIA_SHIELD
             model.contains("BRAVIA") || (manufacturer.contains("SONY") && isAndroidTv()) -> DeviceType.SONY_BRAVIA
-            manufacturer.contains("GOOGLE") && device.contains("chromecast") -> DeviceType.CHROMECAST_TV
+            manufacturer.contains("GOOGLE") && (model.contains("CHROMECAST") || device.contains("CHROMECAST")) -> DeviceType.CHROMECAST_TV
             isAndroidTv() -> DeviceType.GENERIC_TV
             else -> DeviceType.GENERIC_MOBILE
         }

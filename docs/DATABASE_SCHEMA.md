@@ -577,7 +577,6 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `orphan_sweep_pending` | BOOLEAN | Set while `deleteProvider` runs, cleared when it finishes; still set at the next start means a deletion was interrupted, and that start sweeps for orphaned catalogue rows. Per device, never synced |
 | `watch_history_size`, `favorites_max_size`, `cache_expiry_hours` | INT | Unused: nothing reads or writes them. The live values are per provider, in `providers.providerSettings` (`watchHistorySize`, `favoritesMaxSize`, `cacheExpiryHours`) |
 | `watch_delay_seconds`| INT | Delay before a live channel counts as watched (5-120, default 10) |
-| `auto_resume_enabled`| BOOLEAN | Read by the player (`StreamLoaderViewModel`) before resuming a stored position (default true), but no screen writes it: the settings edit the per-provider `providerSettings.autoResumeEnabled` |
 | `epg_url` | TEXT | Legacy global XMLTV URL. Read once, by `EpgFileManager`'s migration into an `epg_source` row (`migrated_to_sources_v1`); never written |
 | `epg_timezone_offset`| INT | Legacy global XMLTV timezone offset (-12..14), carried into that migrated row; never written |
 | `epg_auto_refresh` | BOOLEAN | Background EPG sync toggle (default true) |
