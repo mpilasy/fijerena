@@ -116,7 +116,7 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
 
 | # | Question | Recommendation |
 |---|---|---|
-| D1 | Is "Provides a guide" a switch the viewer flips, or set by detection only? | A switch on Xtream sources, preset by detection (on when the source has live channels), plus automatic off when the source's own guide comes back empty (P3). Not shown for other types: they never get an automatic guide. |
+| D1 | Is "Provides a guide" a switch the viewer flips, or set by detection only? | **Decided 2026-10-03:** detected automatically (on for an Xtream source with live channels, off when its own guide comes back empty), and the viewer can change it later in Edit Source. Once the viewer has set it, detection no longer changes it. Not shown for other types: they never get an automatic guide. |
 | D2 | Per-source auto-refresh: its own time of day too, or only its own interval? | Own interval (Off / every 6 h / 12 h / daily / weekly) per guide source; one device-wide time of day ("Guide refresh time") for when the daily run starts. |
 | D3 | Keep the Sources list's **Guide** button once guide sources live in Edit Source? | Keep it as a shortcut to the same screen; remove only Settings → Source & guide → Guide Sources. |
 | D4 | Where does the Home button go? | TV: a house icon at the right end of each screen's header row (the same slot everywhere, after the screen's own buttons), reached by Up like the other header buttons; in the full-screen player, a **Home** button in the OSD's ⋮ More group. Mobile: a house icon in each top app bar's actions (and the player's controls). Not on Home, the profile picker, Safe mode or the newer-data screen. |
