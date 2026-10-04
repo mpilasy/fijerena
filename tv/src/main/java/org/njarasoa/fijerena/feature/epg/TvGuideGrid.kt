@@ -788,6 +788,9 @@ private class GuideFocus {
         requesters[key] = requester
     }
 
+    /** Whether the cell with [key] is composed now (its requester registered). */
+    fun isComposed(key: String): Boolean = key in requesters
+
     fun unregister(
         key: String,
         requester: FocusRequester,
@@ -1042,9 +1045,19 @@ private fun GuideBody(
                         } else {
                             right <= scroll || left >= visibleEnd
                         }
-                    if (hidden) scrollToReveal(startSec, animate = true)
                     ensureRowComposed(row)
-                    return focus.focusKey(programKey(channelRows[row].channel.id, program.id))
+                    val key = programKey(channelRows[row].channel.id, program.id)
+                    // A composed target takes focus before the scroll, not after: scrolling first
+                    // can carry the cell that still has focus out of the composed range (a long
+                    // programme reached by Left from the end of the day), focus drops, the grid
+                    // puts it back on the remembered cell and that cell's scroll cancels this one.
+                    if (focus.isComposed(key)) {
+                        val focused = focus.focusKey(key)
+                        if (hidden) scrollToReveal(startSec, animate = true)
+                        return focused
+                    }
+                    if (hidden) scrollToReveal(startSec, animate = true)
+                    return focus.focusKey(key)
                 }
 
                 private suspend fun focusChannel(row: Int): Boolean {
