@@ -97,18 +97,15 @@ interface EpgSourceDao {
     )
     suspend fun getFailedSources(providerId: Long): List<EpgSourceEntity>
 
-    @Query(
-        """
-        SELECT * FROM epg_source
-        WHERE enabled = 1 AND provider_id = :providerId
-          AND (last_ingested_at_ms = 0 OR last_ingested_at_ms < :thresholdMs)
-        ORDER BY added_at_ms ASC
-        """,
+    @Query("UPDATE epg_source SET refresh_interval_hours = :hours WHERE id = :id")
+    suspend fun setRefreshInterval(
+        id: Long,
+        hours: Int,
     )
-    suspend fun getStaleSources(
-        providerId: Long,
-        thresholdMs: Long,
-    ): List<EpgSourceEntity>
+
+    /** Only rows without an interval of their own — see `EpgRefreshSchedule.copyLegacyIntervalOnce`. */
+    @Query("UPDATE epg_source SET refresh_interval_hours = :hours WHERE refresh_interval_hours IS NULL")
+    suspend fun fillUnsetRefreshIntervals(hours: Int)
 
     @Query("SELECT COUNT(*) FROM epg_source")
     suspend fun getSourceCount(): Int

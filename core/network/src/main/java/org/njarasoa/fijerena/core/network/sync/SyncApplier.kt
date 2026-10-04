@@ -17,6 +17,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsTombstoneEntity
 import org.njarasoa.fijerena.core.network.provider.SettingsVersionEntity
 import org.njarasoa.fijerena.core.network.sync.SyncMerge.Presence
 import org.njarasoa.fijerena.core.network.sync.SyncMerge.Resolution
+import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
@@ -512,6 +513,8 @@ class SyncApplier(
                             ?.let { sync.adoptSourceKey(it.sourceKey, sourceKey) }
                     }
                     val existing = sync.sourceByKey(sourceKey)
+                    // None (an older version's record) or one this version can't use: keep ours.
+                    val interval = remote.refreshIntervalHours?.takeIf { EpgRefreshSchedule.isValidInterval(it) }
                     if (existing != null) {
                         dao.updateSource(
                             existing.copy(
@@ -520,6 +523,7 @@ class SyncApplier(
                                 timezoneOffsetHours = remote.timezoneOffsetHours,
                                 enabled = remote.enabled,
                                 providerId = providerId,
+                                refreshIntervalHours = interval ?: existing.refreshIntervalHours,
                             ),
                         )
                     } else {
@@ -531,6 +535,7 @@ class SyncApplier(
                                 enabled = remote.enabled,
                                 providerId = providerId,
                                 sourceKey = sourceKey,
+                                refreshIntervalHours = interval,
                             ),
                         )
                     }

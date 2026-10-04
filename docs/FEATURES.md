@@ -98,7 +98,7 @@ Each source has its own XMLTV guide sources: Settings → Source & guide → Gui
 - Change detection: a source unchanged since the last refresh (`304`, or the same payload hash) skips download and ingest and reads **"Unchanged"**; a hash match is overridden once a day so the guide window keeps moving. Truncated downloads are caught against `Content-Length` and retried.
 - Retries: a refresh task retries up to 5 times (1, 2, 4, 8, 16 min); background WorkManager runs back off linearly by 10 min.
 - Programmes that ended more than 12 hours ago are skipped on import. Deleting a guide source removes its channels and programmes from the index.
-- **Guide auto-refresh** (Settings): every 4, 8, 12, 24 or 48 hours, or never, at a chosen time (a WorkManager job, run as a foreground service). **Guide data maintenance** (Settings): Cleanup (stray files not tied to a source), Purge (programmes older than 2 days), Clear All Data (drops and recreates the index at once, keeping the guide source URLs).
+- **Guide auto-refresh:** each guide source has its own interval (new ones daily, or off); on upgrade every guide source takes the old device-wide setting, so nothing changes. One background job (WorkManager, run as a foreground service) runs at the shortest interval and refreshes the active source's guide sources that are due; there is no time of day. The device-wide Settings row no longer drives the schedule (it still applies to guide sources synced from an older app version). **Guide data maintenance** (Settings): Cleanup (stray files not tied to a source), Purge (programmes older than 2 days), Clear All Data (drops and recreates the index at once, keeping the guide source URLs).
 
 Pipeline, index and search internals: [epg_guide.md](epg_guide.md), [EPG_INDEX_STORAGE.md](EPG_INDEX_STORAGE.md).
 
@@ -227,7 +227,7 @@ A failed catalogue download (network, timeout, refused login) deletes nothing; a
 
 Backup & storage → Export / Import, through the system file picker.
 
-- **Exported:** every source (name, URL, username, type, config, per-source settings with the active profile's content filters, active flag), every guide source, per-source favourites, favourite categories and watch state, and global settings (theme, UI scale, the active profile's dev mode, guide auto-refresh).
+- **Exported:** every source (name, URL, username, type, config, per-source settings with the active profile's content filters, active flag), every guide source (with its auto-refresh interval), per-source favourites, favourite categories and watch state, and global settings (theme, UI scale, the active profile's dev mode, guide auto-refresh).
 - **Not exported:** passwords (EncryptedSharedPreferences), caches, guide programme data.
 - **Import:** a "Select What to Import" dialog — General Settings, Sources, Guide sources, Favorites (favourites, favourite categories and watch state). Only the checked sections are imported. When an imported source's name matches an existing one: **Overwrite** (update URL, username, type, config and settings in place), **Duplicate** (add with an `(imported)` suffix) or **Skip**. Guide sources merge by URL and favourites by item id; duplicates are skipped. Passwords have to be entered again.
 

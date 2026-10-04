@@ -7,12 +7,13 @@ Room's own exported schema for `xtream_v2.db` and `providers.db` is committed un
 ---
 
 ## 1. Settings Database (`providers.db`)
-**Version:** 15
+**Version:** 16
 
 Manages media provider configurations, authentication metadata, persistent EPG source URLs, and
 user profiles. (v11 added `profiles`; v12 added `profiles.colorIndex`; v13 added
 `providers.providerKey` and `sync_tombstone` for live sync; v14 added `epg_source.source_key`,
-`sync_outbox` and `sync_clock`, filled by triggers; v15 turned `sync_outbox` into `sync_version`.)
+`sync_outbox` and `sync_clock`, filled by triggers; v15 turned `sync_outbox` into `sync_version`;
+v16 added `epg_source.refresh_interval_hours`.)
 
 ### Table: `epg_pipeline_stats`
 | Column | Type | Description |
@@ -111,6 +112,7 @@ The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successfu
 | `etag` | TEXT | `ETag` from the last download, sent back as `If-None-Match` (added v10) |
 | `last_modified_header` | TEXT | `Last-Modified` from the last download, sent back as `If-Modified-Since` (added v10) |
 | `source_key` | TEXT (unique) | Random UUID naming the source in live sync, like `providers.providerKey`; backfilled by `MIGRATION_13_14` (added v14) |
+| `refresh_interval_hours` | INTEGER (nullable) | The source's own auto-refresh interval in hours, `-1` = off; synced. Null = not set: rows from before v16 (`MIGRATION_15_16` adds the column with no default) and rows received from an older app version. A not-set row uses the retired device-wide interval (`epg_auto_refresh` / `epg_refresh_interval`, §5) until the one-time copy (`epg_refresh_interval_copied_v1`) fills it — the copy fills only null rows, with the sync triggers silenced. Sources added on v16 start at 24 (added v16) |
 
 **Index:** `index_epg_source_provider_id` on `(provider_id)`; `index_epg_source_source_key` (unique) on `(source_key)`
 
@@ -137,7 +139,7 @@ changes, so sync statistics, activation and EPG ingestion bookkeeping are never 
 |---|---|---|
 | `sync_providers_insert` / `_update` | insert; update changing `name`, `url`, `username`, `type`, `config` or `providerSettings` | `provider` |
 | `sync_profiles_insert` / `_update` | insert; update changing `name` or `colorIndex` | `profile` |
-| `sync_epg_source_insert` / `_update` | insert; update changing `url`, `label`, `timezone_offset_hours`, `enabled` or `provider_id` | `epg_source` |
+| `sync_epg_source_insert` / `_update` | insert; update changing `url`, `label`, `timezone_offset_hours`, `enabled`, `provider_id` or `refresh_interval_hours` | `epg_source` |
 | `sync_epg_source_delete` | delete | records an `epg_source` tombstone (which queues it) |
 | `sync_tombstone_insert` | a new `sync_tombstone` row | the tombstone's kind; stamps `deletedAt` when it is 0 |
 
@@ -571,6 +573,7 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `ui_style_id` | TEXT | Look-and-feel preset, independent of color (default `material`) |
 | `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0, default 0.8) |
 | `auto_xmltv_sources_cleaned_v1` | BOOLEAN | One-time cleanup of duplicate / stale automatic Xtream guide sources has run (set only after it succeeds) |
+| `epg_refresh_interval_copied_v1` | BOOLEAN | One-time flag, per install (never synced): `EpgRefreshSchedule.copyLegacyIntervalOnce` has written the retired device-wide interval (`epg_auto_refresh` off or `epg_refresh_interval` -1 → -1, else the interval) into every `epg_source` row whose `refresh_interval_hours` is null. Set only after it succeeds |
 | `app_language` | TEXT | ISO 639-1 code (`en`, `mg`; default `en`) |
 | `provider_name` | TEXT | Legacy single-provider name. Never written any more; a few screens still read it as a fallback (default `My Provider`) until the active provider's name loads |
 | `has_provider_cache` | BOOLEAN | Cached "at least one provider exists" flag for a fast cold start (TV) |
@@ -579,9 +582,9 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `watch_delay_seconds`| INT | Delay before a live channel counts as watched (5-120, default 10) |
 | `epg_url` | TEXT | Legacy global XMLTV URL. Read once, by `EpgFileManager`'s migration into an `epg_source` row (`migrated_to_sources_v1`); never written |
 | `epg_timezone_offset`| INT | Legacy global XMLTV timezone offset (-12..14), carried into that migrated row; never written |
-| `epg_auto_refresh` | BOOLEAN | Background EPG sync toggle (default true) |
-| `epg_refresh_time` | TEXT | EPG refresh start time `HH:mm` (default `02:00`) |
-| `epg_refresh_interval`| INT | EPG refresh interval hours: 4/8/12/24/48, or -1 (Never); default 24 |
+| `epg_auto_refresh` | BOOLEAN | **Retired** device-wide guide auto-refresh switch (default true). Still synced and exported; read only for guide sources without an interval of their own (`epg_source.refresh_interval_hours` null) and by the one-time copy |
+| `epg_refresh_time` | TEXT | **Retired** device-wide refresh time `HH:mm` (default `02:00`). Drives nothing: the periodic work has no time of day |
+| `epg_refresh_interval`| INT | **Retired** device-wide refresh interval hours: 4/8/12/24/48, or -1 (Never); default 24. Read like `epg_auto_refresh` |
 | `content_auto_refresh`| BOOLEAN | Background provider content sync toggle (default true) |
 | `content_refresh_time`| TEXT | Content refresh start time `HH:mm` (default `04:00`) |
 | `cellular_live_multiplier` | FLOAT | Live buffer multiplier on cellular (0.5-3.0). No longer shown or applied (UX overhaul A-W5); kept for settings export / import |

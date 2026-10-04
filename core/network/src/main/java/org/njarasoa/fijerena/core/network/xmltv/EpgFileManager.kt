@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -309,22 +311,6 @@ class EpgFileManager private constructor(
     private val appSettings by lazy { AppSettings(context) }
     private val scope = AppScopes.create("EpgFileManager", Dispatchers.Default)
 
-    val staleThresholdMs: Long
-        get() {
-            val interval = appSettings.epgRefreshInterval
-            return if (interval <= 0) {
-                24L * 3600 * 1000 // 24h if disabled or "Never"
-            } else {
-                // Half the configured interval, not the full interval (see AGENTS.md's Stale
-                // Threshold contract): WorkManager's periodic sync has its own scheduling
-                // jitter, so a source considered stale only once it's already a full interval
-                // old can miss a cycle entirely if the worker fires a few minutes early — it
-                // reads as still-fresh, skips, and the guide goes stale for a second full
-                // interval before the next chance to refresh.
-                interval.toLong() * 3600 * 1000 / 2
-            }
-        }
-
     private var processJob: Job? = null
 
     private val _state = MutableStateFlow<MultiSourceState>(MultiSourceState.Idle)
@@ -405,6 +391,7 @@ class EpgFileManager private constructor(
             migrateFromAppSettings()
             // Once per install: the duplicate automatic Xtream guide sources older builds left.
             AutoXmltvSources.cleanUpOnce(context)
+            copyLegacyRefreshInterval()
             val indexer = EpgIndexer.getInstance(context)
             val ftsWasStale = indexer.initialize()
             cleanupStrayFiles()
@@ -421,8 +408,28 @@ class EpgFileManager private constructor(
                 )
             }
 
-            // Schedule WorkManager periodic sync (Doze-aware, works on both mobile and TV)
-            updateAutoRefreshSchedule()
+            // Schedule WorkManager periodic sync (Doze-aware, works on both mobile and TV), and
+            // again whenever a guide source is added, removed, switched or given another interval.
+            SettingsDatabase
+                .getInstance(context)
+                .epgSourceDao()
+                .getAllSources()
+                .map { sources -> EpgRefreshSchedule.workIntervalHours(sources, EpgRefreshSchedule.legacyIntervalHours(appSettings)) }
+                .distinctUntilChanged()
+                .collect { intervalHours -> scheduleAutoRefresh(intervalHours) }
+        }
+    }
+
+    /** Once per install, the retired device-wide interval goes into every guide source without one of its own. */
+    private suspend fun copyLegacyRefreshInterval() {
+        try {
+            EpgRefreshSchedule.copyLegacyIntervalOnce(appSettings) { hours ->
+                EpgRefreshSchedule.fillUnsetIntervals(SettingsDatabase.getInstance(context), hours)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Copying the device-wide guide refresh interval failed; retried next start", e)
         }
     }
 
@@ -580,8 +587,10 @@ class EpgFileManager private constructor(
     ) {
         launchGenericTask(refreshStaleTaskId(providerId), providerId, onComplete, onCellularConfirm) {
             val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-            val thresholdMs = System.currentTimeMillis() - staleThresholdMs
-            val staleSources = sourceDao.getStaleSources(providerId, thresholdMs)
+            val now = System.currentTimeMillis()
+            val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
+            val staleSources =
+                sourceDao.getEnabledSourcesForProvider(providerId).filter { EpgRefreshSchedule.isStale(it, now, unsetHours) }
             if (staleSources.isNotEmpty()) {
                 processAllSourcesInternal(staleSources)
             } else {
@@ -1623,7 +1632,7 @@ class EpgFileManager private constructor(
 
     /**
      * Refresh the enabled sources of [providerId] that are considered stale (last ingested >
-     * interval). Returns true if refresh was started (stale sources found), false otherwise.
+     * interval, [EpgRefreshSchedule.isDue]). Returns true if refresh was started (stale sources found), false otherwise.
      */
     suspend fun refreshOutdatedSources(providerId: Long): Boolean {
         val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
@@ -1635,10 +1644,8 @@ class EpgFileManager private constructor(
         }
 
         val now = System.currentTimeMillis()
-        val staleSources =
-            sources.filter { source ->
-                source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > staleThresholdMs
-            }
+        val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
+        val staleSources = sources.filter { EpgRefreshSchedule.isDue(it, now, unsetHours) }
 
         return if (staleSources.isNotEmpty()) {
             val task =
@@ -1665,65 +1672,48 @@ class EpgFileManager private constructor(
     internal suspend fun getAllSources(providerId: Long): List<EpgSourceEntity> =
         SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSourcesForProvider(providerId)
 
+    /** The enabled sources of [providerId] due by their own interval ([EpgRefreshSchedule.isDue]), for [EpgSyncWorker]. */
     internal suspend fun getStaleSources(providerId: Long): List<EpgSourceEntity> {
-        val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
-        val sources = sourceDao.getEnabledSourcesForProvider(providerId)
-        if (sources.isEmpty()) return emptyList()
+        val sources = SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSourcesForProvider(providerId)
         val now = System.currentTimeMillis()
-        return sources.filter { source ->
-            source.lastIngestedAtMs == 0L || (now - source.lastIngestedAtMs) > staleThresholdMs
-        }
+        val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
+        return sources.filter { EpgRefreshSchedule.isDue(it, now, unsetHours) }
     }
 
-    private fun calculateDelayUntil(time: String): Long {
-        try {
-            val now = java.util.Calendar.getInstance()
-            val target = java.util.Calendar.getInstance()
-            val parts = time.split(":")
-            if (parts.size != 2) return 0
-            val hour = parts[0].toInt()
-            val minute = parts[1].toInt()
-            target.set(java.util.Calendar.HOUR_OF_DAY, hour)
-            target.set(java.util.Calendar.MINUTE, minute)
-            target.set(java.util.Calendar.SECOND, 0)
-            target.set(java.util.Calendar.MILLISECOND, 0)
-
-            if (target.before(now)) {
-                target.add(java.util.Calendar.DAY_OF_YEAR, 1)
-            }
-            return (target.timeInMillis - now.timeInMillis).coerceAtLeast(0L)
-        } catch (e: Exception) {
-            // cancellation-ok: non-suspend
-            Log.w(TAG, "Failed to calculate delay for $time", e)
-            return 0
-        }
+    /**
+     * Sets one guide source's auto-refresh interval in hours ([EpgSourceEntity.REFRESH_OFF] = off).
+     * The periodic work follows by itself (see [initialize]).
+     */
+    suspend fun setRefreshInterval(
+        sourceId: Long,
+        hours: Int,
+    ) {
+        require(EpgRefreshSchedule.isValidInterval(hours)) { "Not a refresh interval: $hours" }
+        SettingsDatabase.getInstance(context).epgSourceDao().setRefreshInterval(sourceId, hours)
     }
 
-    fun updateAutoRefreshSchedule(forceReschedule: Boolean = false) {
-        scope.launch {
-            val intervalHours = appSettings.epgRefreshInterval
-            if (intervalHours == -1) {
-                WorkManager.getInstance(context).cancelUniqueWork("epg_sync")
-                return@launch
-            }
-
+    /**
+     * One periodic `epg_sync` every [intervalHours] — the shortest among the guide sources
+     * ([EpgRefreshSchedule.workIntervalHours]), at least an hour, above WorkManager's 15-minute
+     * minimum — or none when it is null (every source off). `UPDATE` keeps the existing work's
+     * timing; there is no time of day.
+     */
+    private fun scheduleAutoRefresh(intervalHours: Int?) {
+        val workManager = WorkManager.getInstance(context)
+        if (intervalHours == null) {
+            workManager.cancelUniqueWork("epg_sync")
+        } else {
             val constraints =
                 Constraints
                     .Builder()
                     .setRequiredNetworkType(WorkNetworkType.CONNECTED)
                     .build()
-            val policy = if (forceReschedule) ExistingPeriodicWorkPolicy.REPLACE else ExistingPeriodicWorkPolicy.UPDATE
             val request =
                 PeriodicWorkRequestBuilder<EpgSyncWorker>(intervalHours.toLong(), TimeUnit.HOURS)
                     .setConstraints(constraints)
                     .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
-                    .apply { if (forceReschedule) setInitialDelay(calculateDelayUntil(appSettings.epgRefreshTime), TimeUnit.MILLISECONDS) }
                     .build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                "epg_sync",
-                policy,
-                request,
-            )
+            workManager.enqueueUniquePeriodicWork("epg_sync", ExistingPeriodicWorkPolicy.UPDATE, request)
         }
     }
 

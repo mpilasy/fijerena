@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -42,6 +41,7 @@ import org.njarasoa.fijerena.core.network.xmltv.EpgBrowserProgram
 import org.njarasoa.fijerena.core.network.xmltv.EpgChannelMatcher
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.EpgIndexBusyException
+import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
 import org.njarasoa.fijerena.core.network.xmltv.EpgSearchPath
 import org.njarasoa.fijerena.core.network.xmltv.GuideChannels
 import org.njarasoa.fijerena.core.network.xmltv.XmltvSearchService
@@ -184,16 +184,6 @@ class EpgBrowserViewModel(
     private val _epgSearchHistory = MutableStateFlow<List<String>>(emptyList())
     val epgSearchHistory: StateFlow<List<String>> = _epgSearchHistory.asStateFlow()
 
-    private val _epgSettings =
-        MutableStateFlow(
-            EpgManagementViewModel.EpgSettings(
-                autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
-                epgRefreshTime = appSettings.epgRefreshTime,
-                epgRefreshInterval = appSettings.epgRefreshInterval,
-            ),
-        )
-    val epgSettings: StateFlow<EpgManagementViewModel.EpgSettings> = _epgSettings.asStateFlow()
-
     /**
      * The stream ids of [categoryId]'s channels, resolved the way the TV Guide resolves them
      * (virtual lists included); null without a [categoryId] or until they are loaded.
@@ -267,15 +257,20 @@ class EpgBrowserViewModel(
                 }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    /** Enabled sources that ran, but longer ago than the refresh interval allows. */
+    /** Enabled sources that ran, but longer ago than their own refresh interval allows. */
     val staleSourceCount: StateFlow<Int> =
         sourcesFlow
-            .combine(epgSettings) { list, settings ->
-                val interval = settings.epgRefreshInterval
-                val staleThreshold = if (interval <= 0) 24L * 3600 * 1000 else interval.toLong() * 3600 * 1000
-                val threshold = System.currentTimeMillis() - staleThreshold
-                list.count { it.enabled && it.lastIngestedAtMs > 0L && it.lastIngestedAtMs < threshold }
+            .map { list ->
+                val now = System.currentTimeMillis()
+                val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
+                list.count { it.enabled && it.lastIngestedAtMs > 0L && isOlderThanInterval(it, now, unsetHours) }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    private fun isOlderThanInterval(
+        source: org.njarasoa.fijerena.core.network.provider.EpgSourceEntity,
+        nowMs: Long,
+        unsetHours: Int,
+    ): Boolean = nowMs - source.lastIngestedAtMs > EpgRefreshSchedule.intervalMs(EpgRefreshSchedule.intervalHours(source, unsetHours))
 
     /** Enabled sources that have never run at all — counted, not aged. */
     val neverRunSourceCount: StateFlow<Int> =
@@ -301,13 +296,12 @@ class EpgBrowserViewModel(
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_refresh_in_queue))
                 return@launch
             }
-            val interval = epgSettings.value.epgRefreshInterval
-            val staleThreshold = if (interval <= 0) 24L * 3600 * 1000 else interval.toLong() * 3600 * 1000
-            val thresholdMs = System.currentTimeMillis() - staleThreshold
+            val now = System.currentTimeMillis()
+            val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
             val stale =
                 withContext(Dispatchers.IO) {
-                    SettingsDatabase.getInstance(context).epgSourceDao().getStaleSources(providerId, thresholdMs)
-                }
+                    SettingsDatabase.getInstance(context).epgSourceDao().getEnabledSourcesForProvider(providerId)
+                }.filter { it.lastIngestedAtMs == 0L || isOlderThanInterval(it, now, unsetHours) }
             if (stale.isEmpty()) {
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_up_to_date))
                 return@launch
@@ -668,17 +662,7 @@ class EpgBrowserViewModel(
     }
 
     fun refreshNowPlaying() {
-        refreshSettings()
         initPagedNowPlaying()
-    }
-
-    private fun refreshSettings() {
-        _epgSettings.value =
-            EpgManagementViewModel.EpgSettings(
-                autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
-                epgRefreshTime = appSettings.epgRefreshTime,
-                epgRefreshInterval = appSettings.epgRefreshInterval,
-            )
     }
 
     private data class AiringWithProgramme(

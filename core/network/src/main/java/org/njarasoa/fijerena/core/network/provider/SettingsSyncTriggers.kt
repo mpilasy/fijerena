@@ -80,7 +80,14 @@ internal object SettingsSyncTriggers {
             db,
             "sync_epg_source_update",
             "CREATE TRIGGER `sync_epg_source_update` AFTER UPDATE ON `epg_source` " +
-                "WHEN $NOT_APPLYING AND (${changed("url", "label", "timezone_offset_hours", "enabled", "provider_id")}) " +
+                "WHEN $NOT_APPLYING AND (${changed(
+                    "url",
+                    "label",
+                    "timezone_offset_hours",
+                    "enabled",
+                    "provider_id",
+                    "refresh_interval_hours",
+                )}) " +
                 "BEGIN $TICK $source END",
         )
         createTrigger(

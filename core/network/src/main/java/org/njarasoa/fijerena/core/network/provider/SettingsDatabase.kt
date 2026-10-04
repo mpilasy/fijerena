@@ -35,7 +35,7 @@ abstract class SettingsDatabase : RoomDatabase() {
     abstract fun settingsSyncDao(): SettingsSyncDao
 
     companion object {
-        const val DB_VERSION = 15
+        const val DB_VERSION = 16
         private const val DB_NAME = "providers.db"
 
         @Volatile
@@ -303,6 +303,18 @@ abstract class SettingsDatabase : RoomDatabase() {
                 }
             }
 
+        /**
+         * Migration 15→16: `epg_source.refresh_interval_hours`, each guide source's own auto-refresh
+         * interval. Null (not set) here; on the next start `EpgRefreshSchedule.copyLegacyIntervalOnce`
+         * fills it with the retired device-wide interval.
+         */
+        val MIGRATION_15_16 =
+            object : Migration(15, 16) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE `epg_source` ADD COLUMN `refresh_interval_hours` INTEGER")
+                }
+            }
+
         /** `OR IGNORE`: runs from both [MIGRATION_10_11] and a fresh install's `onCreate`. */
         private fun insertDefaultProfile(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -333,6 +345,7 @@ abstract class SettingsDatabase : RoomDatabase() {
                         MIGRATION_12_13,
                         MIGRATION_13_14,
                         MIGRATION_14_15,
+                        MIGRATION_15_16,
                     ).addCallback(
                         object : RoomDatabase.Callback() {
                             override fun onCreate(db: SupportSQLiteDatabase) {

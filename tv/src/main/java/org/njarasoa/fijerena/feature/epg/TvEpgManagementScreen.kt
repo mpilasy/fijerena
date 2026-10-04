@@ -288,7 +288,7 @@ fun TvEpgManagementScreen(
                                     }
                                 }
 
-                                StatusIndicator(source, nowMs, viewModel.staleThresholdMs, scale)
+                                StatusIndicator(source, nowMs, viewModel.staleThresholdMs(source), scale)
 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(

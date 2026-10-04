@@ -108,8 +108,10 @@ class SettingsDatabaseMigrationTest {
                     SettingsDatabase.MIGRATION_12_13,
                     SettingsDatabase.MIGRATION_13_14,
                     SettingsDatabase.MIGRATION_14_15,
+                    // 15→16 has its own JVM test, SettingsDatabaseMigration15To16Test.
+                    SettingsDatabase.MIGRATION_15_16,
                 ).build()
-        assertEquals(15, migratedDb.openHelper.writableDatabase.version)
+        assertEquals(16, migratedDb.openHelper.writableDatabase.version)
 
         runBlocking {
             val profiles = migratedDb.profileDao().getAll()

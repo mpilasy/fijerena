@@ -27,6 +27,7 @@ import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.queue.RefreshQueue
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
+import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -60,8 +61,9 @@ class EpgManagementViewModel(
     val staleSourceCount: StateFlow<Int> =
         sources
             .map { list ->
-                val threshold = System.currentTimeMillis() - epgFileManager.staleThresholdMs
-                list.count { it.enabled && (it.lastIngestedAtMs == 0L || it.lastIngestedAtMs < threshold) }
+                val now = System.currentTimeMillis()
+                val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
+                list.count { it.enabled && EpgRefreshSchedule.isStale(it, now, unsetHours) }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val failedSourceCount: StateFlow<Int> =
@@ -141,7 +143,9 @@ class EpgManagementViewModel(
 
     val epgRefreshInterval: Int get() = _epgSettings.value.epgRefreshInterval
 
-    val staleThresholdMs: Long get() = epgFileManager.staleThresholdMs
+    /** How old [source] may get before its status reads stale — see [EpgRefreshSchedule.staleAfterMs]. */
+    fun staleThresholdMs(source: EpgSourceEntity): Long =
+        EpgRefreshSchedule.staleAfterMs(EpgRefreshSchedule.intervalHours(source, EpgRefreshSchedule.legacyIntervalHours(appSettings)))
 
     fun toggleSelection(id: Long) {
         _selectedIds.value =
@@ -156,22 +160,22 @@ class EpgManagementViewModel(
         _selectedIds.value = emptySet()
     }
 
+    // The retired device-wide auto-refresh (Settings → Guide auto-refresh, until P5b of
+    // docs/plans/20261003_sources-guide-profiles-plan.md): it now only applies to guide sources
+    // without an interval of their own, and the schedule follows the sources by itself.
     fun setAutoRefreshEnabled(enabled: Boolean) {
         appSettings.epgAutoRefreshEnabled = enabled
         _epgSettings.value = _epgSettings.value.copy(autoRefreshEnabled = enabled)
-        epgFileManager.updateAutoRefreshSchedule(forceReschedule = true)
     }
 
     fun setEpgRefreshTime(time: String) {
         appSettings.epgRefreshTime = time
         _epgSettings.value = _epgSettings.value.copy(epgRefreshTime = time)
-        epgFileManager.updateAutoRefreshSchedule(forceReschedule = true)
     }
 
     fun setEpgRefreshInterval(interval: Int) {
         appSettings.epgRefreshInterval = interval
         _epgSettings.value = _epgSettings.value.copy(epgRefreshInterval = interval)
-        epgFileManager.updateAutoRefreshSchedule(forceReschedule = true)
     }
 
     data class DbStats(
@@ -343,11 +347,12 @@ class EpgManagementViewModel(
 
         viewModelScope.launchGuarded("EpgManagementViewModel.refreshStale") {
             // Instant feedback: calculate which IDs will be refreshed and put them in the map
-            val thresholdMs = System.currentTimeMillis() - epgFileManager.staleThresholdMs
+            val now = System.currentTimeMillis()
+            val unsetHours = EpgRefreshSchedule.legacyIntervalHours(appSettings)
             val sourcesToRefresh =
                 withContext(Dispatchers.IO) {
-                    settingsDb().epgSourceDao().getStaleSources(providerId, thresholdMs)
-                }.filter { !queued.contains("epg_refresh_source_${it.id}") }
+                    settingsDb().epgSourceDao().getEnabledSourcesForProvider(providerId)
+                }.filter { EpgRefreshSchedule.isStale(it, now, unsetHours) && !queued.contains("epg_refresh_source_${it.id}") }
 
             if (sourcesToRefresh.isEmpty()) {
                 _toastMessage.tryEmit(UiText.StringResource(R.string.epg_no_stale_sources))

@@ -4,6 +4,7 @@
 **Release Date:** 2026-10-03
 
 - **TV: the Live TV preview changes channel only when you ask:** moving through the channel list or switching tabs no longer tunes the preview; OK on a channel plays it, OK again goes full screen. → P8.
+- **Each guide source refreshes on its own schedule:** a guide source now has its own auto-refresh interval instead of one device-wide setting, and there is no refresh time of day any more — the background refresh runs at the shortest interval among your guide sources and stops when all are off. On upgrade every guide source takes the interval you had set, so nothing changes. The interval is kept in sync between linked devices (an older app version leaves it as it is) and in settings exports. (`providers.db` v16.) → P5a.
 
 ## Version: UX overhaul, day 5
 **Release Date:** 2026-10-03

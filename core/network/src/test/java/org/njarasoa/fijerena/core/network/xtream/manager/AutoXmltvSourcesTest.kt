@@ -269,10 +269,12 @@ class AutoXmltvSourcesTest {
 
         override suspend fun getFailedSources(providerId: Long) = error("unused")
 
-        override suspend fun getStaleSources(
-            providerId: Long,
-            thresholdMs: Long,
+        override suspend fun setRefreshInterval(
+            id: Long,
+            hours: Int,
         ) = error("unused")
+
+        override suspend fun fillUnsetRefreshIntervals(hours: Int) = error("unused")
 
         override suspend fun getSourceCount() = rows.size
 

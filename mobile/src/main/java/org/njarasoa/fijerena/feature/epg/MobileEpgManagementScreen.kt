@@ -219,7 +219,7 @@ fun MobileEpgManagementScreen(
                         activeProgress = activeProgress,
                         wasUnchanged = wasUnchanged,
                         nowMs = nowMs,
-                        staleThresholdMs = viewModel.staleThresholdMs,
+                        staleThresholdMs = viewModel.staleThresholdMs(source),
                         onRefresh = { viewModel.refreshSource(source.id) },
                         onEdit = { editingSource = source },
                         onDelete = { viewModel.deleteSource(source.id) },

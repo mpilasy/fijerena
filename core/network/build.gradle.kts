@@ -44,11 +44,15 @@ android {
             // "Method getLooper in android.os.HandlerThread not mocked" and every test in
             // MediaRepositoryTest fails before reaching its assertions.
             isReturnDefaultValues = true
+            // Robolectric tests (SettingsDatabaseMigration15To16Test) read the schemas below as assets.
+            isIncludeAndroidResources = true
         }
     }
-    // MigrationTestHelper (XtreamDatabaseUpgradeTest) reads the exported schemas from the test APK's assets.
+    // MigrationTestHelper (XtreamDatabaseUpgradeTest, and SettingsDatabaseMigration15To16Test under
+    // Robolectric) reads the exported schemas from the test APK's assets.
     sourceSets {
         getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        getByName("test").assets.srcDir("$projectDir/schemas")
     }
 }
 
@@ -85,8 +89,15 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
 
-    // Instrumented: Room migration verification (MigrationTestHelper needs a real SQLite via
-    // instrumentation — no JVM/Robolectric equivalent covers actual on-device migration behavior).
+    // Room migrations on the JVM: Robolectric runs MigrationTestHelper against its own SQLite
+    // (SettingsDatabaseMigration15To16Test), no device needed.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.junit)
+    testImplementation(libs.room.testing)
+
+    // Instrumented: the older Room migration tests (XtreamDatabaseUpgradeTest,
+    // SettingsDatabaseMigrationTest) run on a device.
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.room.testing)

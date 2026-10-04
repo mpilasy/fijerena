@@ -50,4 +50,17 @@ data class EpgSourceEntity(
     /** Random UUID naming this source in live sync, like `providers.providerKey` (added v14). */
     @ColumnInfo(name = "source_key")
     val sourceKey: String = UUID.randomUUID().toString(),
-)
+    /**
+     * Hours between automatic refreshes of this source, [REFRESH_OFF] = never (added v16). Null =
+     * not set (a row from before v16, or received from an older version): it uses the retired
+     * device-wide interval — see `xmltv.EpgRefreshSchedule`. A source added on this version starts
+     * at [DEFAULT_REFRESH_INTERVAL_HOURS].
+     */
+    @ColumnInfo(name = "refresh_interval_hours")
+    val refreshIntervalHours: Int? = DEFAULT_REFRESH_INTERVAL_HOURS,
+) {
+    companion object {
+        const val REFRESH_OFF = -1
+        const val DEFAULT_REFRESH_INTERVAL_HOURS = 24
+    }
+}

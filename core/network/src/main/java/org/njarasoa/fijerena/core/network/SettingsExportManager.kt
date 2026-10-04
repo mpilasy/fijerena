@@ -13,6 +13,7 @@ import org.njarasoa.fijerena.core.network.R
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
+import org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteKind
 import org.njarasoa.fijerena.core.network.xtream.db.FavoriteStateEntity
 import org.njarasoa.fijerena.core.network.xtream.db.WatchStateEntity
@@ -50,14 +51,26 @@ class SettingsExportManager(
         // version 5 file restores onto an older build unchanged. Only the storage read from and
         // written to differs.
         private const val EXPORT_VERSION = 5
-    }
 
-    private val json =
-        Json {
-            ignoreUnknownKeys = true
-            encodeDefaults = true
-            prettyPrint = true
-        }
+        internal val json =
+            Json {
+                ignoreUnknownKeys = true
+                encodeDefaults = true
+                prettyPrint = true
+            }
+
+        /**
+         * A guide source's interval on import: its own when the file has one; otherwise (a file
+         * from before per-source intervals) off if the file's device-wide auto-refresh was off,
+         * else unset — it then uses this device's retired device-wide interval, as before.
+         */
+        internal fun importedRefreshIntervalHours(
+            source: ExportedEpgSource,
+            global: GlobalSettings,
+        ): Int? =
+            source.refreshIntervalHours?.takeIf { EpgRefreshSchedule.isValidInterval(it) }
+                ?: EpgSourceEntity.REFRESH_OFF.takeUnless { global.epgAutoRefreshEnabled }
+    }
 
     @Serializable
     data class ExportedSettings(
@@ -102,6 +115,9 @@ class SettingsExportManager(
         // owner is recorded by name + URL, matching how [ProviderFavorites] identifies providers.
         val providerName: String = "",
         val providerUrl: String = "",
+        // Its own auto-refresh interval in hours, -1 = off. Null in a file from before it existed
+        // (see importedRefreshIntervalHours) or for a source without one of its own.
+        val refreshIntervalHours: Int? = null,
     )
 
     @Serializable
@@ -261,6 +277,7 @@ class SettingsExportManager(
                         enabled = source.enabled,
                         providerName = owner.name,
                         providerUrl = owner.url,
+                        refreshIntervalHours = source.refreshIntervalHours,
                     )
                 }
 
@@ -606,6 +623,7 @@ class SettingsExportManager(
                                 timezoneOffsetHours = es.timezoneOffsetHours,
                                 enabled = es.enabled,
                                 providerId = owner.id,
+                                refreshIntervalHours = importedRefreshIntervalHours(es, exported.global),
                             ),
                         )
                         sourcesAdded++

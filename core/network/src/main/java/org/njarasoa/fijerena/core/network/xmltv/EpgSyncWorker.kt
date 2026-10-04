@@ -20,7 +20,9 @@ import org.njarasoa.fijerena.core.network.trySetForeground
 /**
  * WorkManager worker for background EPG sync (all device types).
  *
- * Refreshes the active provider from its own EPG sources only.
+ * Refreshes the active provider from its own EPG sources only: those due by their own interval
+ * ([EpgRefreshSchedule.isDue]). It runs at the shortest interval among every provider's guide
+ * sources (`EpgFileManager.scheduleAutoRefresh`).
  *
  * Runs as a foreground service via setForeground() to bypass Android Doze mode,
  * which blocks DNS on Ethernet-connected Shield TVs during overnight maintenance windows.

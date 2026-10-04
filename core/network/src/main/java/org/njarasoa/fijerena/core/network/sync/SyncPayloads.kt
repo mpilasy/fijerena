@@ -117,6 +117,10 @@ object SyncPayloads {
         val password: String? = null,
     )
 
+    /**
+     * [refreshIntervalHours]: the source's own auto-refresh interval. Null — a record from an older
+     * version, or a source without one of its own — keeps the receiver's value.
+     */
     @Serializable
     data class EpgSource(
         val providerKey: String,
@@ -124,12 +128,13 @@ object SyncPayloads {
         val label: String,
         val timezoneOffsetHours: Int,
         val enabled: Boolean,
+        val refreshIntervalHours: Int? = null,
     ) {
         companion object {
             fun of(
                 e: EpgSourceEntity,
                 providerKey: String,
-            ) = EpgSource(providerKey, e.url, e.label, e.timezoneOffsetHours, e.enabled)
+            ) = EpgSource(providerKey, e.url, e.label, e.timezoneOffsetHours, e.enabled, e.refreshIntervalHours)
         }
     }
 

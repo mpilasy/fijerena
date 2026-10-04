@@ -41,6 +41,7 @@ class AppSettings(
         private const val KEY_HAS_PROVIDER_CACHE = "has_provider_cache"
         private const val KEY_FAVORITE_CATEGORY_ROWS_PURGED = "favorite_category_rows_purged_v1"
         private const val KEY_AUTO_XMLTV_SOURCES_CLEANED = "auto_xmltv_sources_cleaned_v1"
+        private const val KEY_EPG_REFRESH_INTERVAL_COPIED = "epg_refresh_interval_copied_v1"
         private const val KEY_WATCH_DELAY_SECONDS = "watch_delay_seconds"
         private const val KEY_SEARCH_HISTORY = "search_history"
         private const val KEY_EPG_SEARCH_HISTORY = "epg_search_history"
@@ -304,6 +305,12 @@ class AppSettings(
         get() = prefs.getString(KEY_EPG_URL, DEFAULT_EPG_URL) ?: DEFAULT_EPG_URL
         set(value) = prefs.edit { putString(KEY_EPG_URL, value.trim()) }
 
+    /**
+     * Retired with [epgRefreshTime] and [epgRefreshInterval]: each guide source has its own
+     * interval (`epg_source.refresh_interval_hours`). Read once by
+     * [org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule.copyLegacyIntervalOnce]; they
+     * drive nothing else.
+     */
     var epgAutoRefreshEnabled: Boolean
         get() = prefs.getBoolean(KEY_EPG_AUTO_REFRESH, true)
         set(value) {
@@ -312,7 +319,7 @@ class AppSettings(
         }
 
     /**
-     * EPG refresh start time (HH:mm format).
+     * EPG refresh start time (HH:mm format). Retired, see [epgAutoRefreshEnabled].
      * Default: 02:00
      */
     var epgRefreshTime: String
@@ -323,7 +330,7 @@ class AppSettings(
         }
 
     /**
-     * EPG refresh interval in hours.
+     * EPG refresh interval in hours. Retired, see [epgAutoRefreshEnabled].
      * Options: 4, 8, 12, 24, 48, or -1 (Never).
      * Default: 24 hours.
      */
@@ -420,6 +427,11 @@ class AppSettings(
     var autoXmltvSourcesCleaned: Boolean
         get() = prefs.getBoolean(KEY_AUTO_XMLTV_SOURCES_CLEANED, false)
         set(value) = prefs.edit(commit = true) { putBoolean(KEY_AUTO_XMLTV_SOURCES_CLEANED, value) }
+
+    /** One-time flag: [org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule.copyLegacyIntervalOnce] has run on this install. Per device, never synced. */
+    var epgRefreshIntervalCopied: Boolean
+        get() = prefs.getBoolean(KEY_EPG_REFRESH_INTERVAL_COPIED, false)
+        set(value) = prefs.edit(commit = true) { putBoolean(KEY_EPG_REFRESH_INTERVAL_COPIED, value) }
 
     // Search and EPG search history belong to the active profile, like developer mode: stored
     // under `<key>_<profileId>`. Per device and never synced.
