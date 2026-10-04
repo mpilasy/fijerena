@@ -7,12 +7,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +36,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -326,10 +329,11 @@ fun TvStatsOverlay(
         }
     }
 
-    // Compact half-screen panel anchored to the bottom-right so the rest of the OSD stays visible.
+    // Half-width panel in the top-right corner, under the clock: the OSD's progress bar, description
+    // and buttons fill the bottom, and a panel anchored there was drawn over by them.
     val overlayWidth = Dp(configuration.screenWidthDp * 0.5f)
 
-    Box(
+    BoxWithConstraints(
         modifier =
             Modifier
                 .fillMaxSize()
@@ -339,8 +343,12 @@ fun TvStatsOverlay(
             modifier =
                 Modifier
                     .width(overlayWidth)
-                    .fillMaxHeight(0.5f)
-                    .align(Alignment.BottomEnd)
+                    // As tall as its rows, up to most of the screen: it can't take focus, so rows
+                    // past a fixed height were cut off with no way to scroll to them. The cap comes
+                    // from the layout, not Configuration, whose dp ignore the UI-scale density.
+                    .heightIn(max = maxHeight * 0.9f)
+                    .align(Alignment.TopEnd)
+                    .padding(top = Spacing.xxl)
                     .background(
                         CinemaGlassBackground,
                         shape = RoundedCornerShape(CinemaCornerRadius.medium),
@@ -352,16 +360,10 @@ fun TvStatsOverlay(
             // Not focusable - allows keys to pass to the stream
         ) {
             Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(Spacing.lg),
+                modifier = Modifier.padding(Spacing.lg),
             ) {
                 Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
                     Text(
@@ -376,11 +378,11 @@ fun TvStatsOverlay(
                     )
                     // The provider's names as sent: everywhere else they are shown cleaned (the tag
                     // as a badge, an episode's own name only).
-                    CompactStatRow(
+                    StatNameRow(
                         stringResource(R.string.player_stats_raw_name),
                         if (metadata.isLive) metadata.channelName.ifBlank { metadata.title } else metadata.title,
                     )
-                    metadata.showTitle?.let { CompactStatRow(stringResource(R.string.player_stats_raw_series), it) }
+                    metadata.showTitle?.let { StatNameRow(stringResource(R.string.player_stats_raw_series), it) }
 
                     // Live-polled (stats.position, updated every tick by the LaunchedEffect above)
                     // rather than read off playbackState itself: PlaybackState.Playing.position is
@@ -594,8 +596,6 @@ fun TvStatsOverlay(
                         }
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
-
                     Column {
                         Text(
                             text = stringResource(R.string.player_stats_hint),
@@ -629,6 +629,30 @@ fun TvStatsOverlay(
                 }
             }
         }
+    }
+}
+
+/** A label and a long value (a provider's raw name): the label keeps its width, the value wraps to two lines. */
+@Composable
+private fun StatNameRow(
+    label: String,
+    value: String,
+) {
+    val style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Text(text = label, style = style, color = CinemaTextSecondary)
+        Text(
+            text = value,
+            style = style,
+            color = CinemaTextPrimary,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

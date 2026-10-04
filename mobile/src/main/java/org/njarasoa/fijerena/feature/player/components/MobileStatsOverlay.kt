@@ -32,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.model.PlaybackState
@@ -365,8 +367,8 @@ fun MobileStatsOverlay(
 
                 // The provider's names as sent: everywhere else they are shown cleaned (the tag as a
                 // badge, an episode's own name only).
-                StatRow(stringResource(R.string.player_stats_raw_name), metadata.title)
-                metadata.showTitle?.let { StatRow(stringResource(R.string.player_stats_raw_series), it) }
+                StatNameRow(stringResource(R.string.player_stats_raw_name), metadata.title)
+                metadata.showTitle?.let { StatNameRow(stringResource(R.string.player_stats_raw_series), it) }
 
                 SectionHeader(stringResource(R.string.player_stats_video))
                 StatRow(stringResource(R.string.player_stats_codec), videoCodec)
@@ -536,6 +538,30 @@ private fun SectionHeader(title: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = Spacing.xxs + Spacing.xxxs),
     )
+}
+
+/** A label and a long value (a provider's raw name): the label keeps its width, the value wraps to two lines. */
+@Composable
+private fun StatNameRow(
+    label: String,
+    value: String,
+) {
+    val typography = MaterialTheme.typography
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
+    ) {
+        Text(text = label, style = typography.bodySmall, color = CinemaTextPrimary.copy(alpha = CinemaAlpha.textMedium))
+        Text(
+            text = value,
+            style = typography.bodySmall,
+            color = CinemaTextPrimary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f),
+        )
+    }
 }
 
 @Composable
