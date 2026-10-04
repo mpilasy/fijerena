@@ -935,6 +935,12 @@
     <string name="provider_keep_editing_button">Keep editing</string>
     <!-- T4 -->
     <string name="provider_guide_button">Guide</string>
+    <!-- Sources, guide and profiles: P3 -->
+    <string name="provider_section_guide">Guide</string>
+    <string name="provider_provides_guide_label">Provides a guide</string>
+    <string name="provider_provides_guide_desc">This source\'s own guide (xmltv.php) is added automatically</string>
+    <string name="provider_provides_guide_detected_off_desc">Turned off: this source\'s own guide (xmltv.php) came back empty</string>
+    <string name="epg_source_own_guide_off">This source\'s own guide · off. Turn on Provides a guide in Edit Source.</string>
     <!-- LT2 -->
     <string name="live_panel_no_favorites">No favourites yet — hold OK on a channel to add one</string>
     <!-- Phase 4 -->

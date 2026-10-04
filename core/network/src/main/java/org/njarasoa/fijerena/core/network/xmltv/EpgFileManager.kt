@@ -972,6 +972,7 @@ class EpgFileManager private constructor(
                     )
                 _state.value = finalState
                 updateLastPipelineStats(finalState)
+                detectEmptyOwnGuides(allStats)
             } catch (e: Exception) {
                 // cancellation-ok: cleans up, then rethrows CancellationException below
                 withContext(NonCancellable) {
@@ -991,6 +992,15 @@ class EpgFileManager private constructor(
                 _state.value = MultiSourceState.Error(e.message ?: context.getString(R.string.epg_error_processing_failed))
             }
         }
+
+    /**
+     * Sources this run downloaded and ingested with no channels: an Xtream source's automatic guide
+     * source among them turns its "Provides a guide" off ([AutoXmltvSources.onEmptyIngest]).
+     */
+    private suspend fun detectEmptyOwnGuides(stats: List<SourceStats>) {
+        val emptyIds = stats.filter { it.error == null && !it.unchanged && it.channelsIngested == 0 }.map { it.sourceId }
+        if (emptyIds.isNotEmpty()) AutoXmltvSources.onEmptyIngest(context, emptyIds)
+    }
 
     /**
      * Clear the per-provider XMLTV cache (SharedPreferences-backed, 12h TTL) for every
@@ -1200,6 +1210,7 @@ class EpgFileManager private constructor(
                     )
                 _state.value = finalState
                 updateLastPipelineStats(finalState)
+                detectEmptyOwnGuides(listOf(stats))
             } catch (e: Exception) {
                 // cancellation-ok: cleans up, then rethrows CancellationException below
                 withContext(NonCancellable) {

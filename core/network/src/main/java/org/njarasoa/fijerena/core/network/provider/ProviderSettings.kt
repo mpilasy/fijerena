@@ -31,8 +31,19 @@ data class ProviderSettings(
     val streamOutputFormat: String = "m3u8",
     /** Playlist type for Xtream API: "m3u_plus" (extended M3U with EPG) or "simple" (basic M3U) */
     val playlistType: String = "m3u_plus",
+    /**
+     * Xtream: whether the source's own guide (`xmltv.php`) is added as an automatic guide source
+     * while the source has live channels. null: not decided, which means on. Detection sets it to
+     * false when that guide comes back empty; the viewer sets it either way in Edit Source.
+     */
+    val providesGuide: Boolean? = null,
+    /** The viewer set [providesGuide]: detection no longer changes it. */
+    val providesGuideSetByUser: Boolean = false,
 ) {
     val cacheExpiryMs: Long get() = cacheExpiryHours.toLong() * 60 * 60 * 1000
+
+    /** The effective "Provides a guide": the viewer's or detection's value, else on. */
+    val providesGuideOn: Boolean get() = providesGuide != false
 
     companion object {
         val DEFAULT = ProviderSettings()

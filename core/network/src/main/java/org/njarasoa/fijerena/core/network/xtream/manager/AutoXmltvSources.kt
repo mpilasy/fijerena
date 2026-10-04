@@ -9,6 +9,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexDatabase
@@ -19,7 +20,10 @@ import java.net.URI
 /**
  * The guide source an Xtream source gets by itself: `<server>/xmltv.php?username=…&password=…`,
  * labelled `<host> (Bulk)`. There is at most one per Xtream source: a login with other credentials
- * rewrites its URL in place, and it exists only while the account has live channels.
+ * rewrites its URL in place, and it exists only while the account has live channels. It is
+ * enabled while the source's "Provides a guide" ([ProviderSettings.providesGuide]) is on and
+ * disabled, never deleted, while it is off — detected, turned off when the guide comes back empty
+ * ([onEmptyIngest]), and changeable in Edit Source ([reconcileStored]).
  *
  * No column marks it: a source is automatic when its URL is the provider's server (same scheme,
  * host, port and path) plus `/xmltv.php?username=…&password=…` and its label ends with
@@ -100,6 +104,9 @@ object AutoXmltvSources {
      *   delete the others.
      * - With none left, [addMissing] and [hasLiveChannels] `true`, add one, unless a hand-added
      *   source already has that exact URL.
+     * - [providesGuide] off ("Provides a guide", [ProviderSettings.providesGuideOn]): the kept one
+     *   is disabled, never deleted for it, and none is added. On, [enableKept] (the viewer turned it
+     *   back on) re-enables the kept one with its stats; otherwise its enabled state stays as it is.
      *
      * [currentUrl] null (no credentials at hand) keeps the row's URL as it is. [previousProviderUrl]
      * is the server the provider used before a URL change: its automatic source is carried over.
@@ -112,22 +119,38 @@ object AutoXmltvSources {
         hasLiveChannels: Boolean?,
         addMissing: Boolean,
         previousProviderUrl: String? = null,
+        providesGuide: Boolean = true,
+        enableKept: Boolean = false,
     ): Plan {
         val own = sources.filter { it.providerId == providerId }
         val serverUrls = listOfNotNull(providerUrl, previousProviderUrl)
         val autos = own.filter { source -> serverUrls.any { isAutoXmltvSource(source, it) } }.sortedBy { it.addedAtMs }
         val keep = if (hasLiveChannels == false) null else autos.firstOrNull { it.url == currentUrl } ?: autos.firstOrNull()
         val deleteIds = autos.filter { it !== keep }.map { it.id }
-        val update =
+        val rewritten =
             if (keep != null && currentUrl != null && keep.url != currentUrl) {
                 // A row carried over from the previous server takes the new server's label.
                 val newLabel = if (isAutoXmltvSource(keep, providerUrl)) keep.label else label(providerUrl)
                 keep.copy(url = currentUrl, label = newLabel).withIngestionStateReset()
             } else {
-                null
+                keep
             }
+        val target =
+            when {
+                rewritten == null -> null
+                !providesGuide -> rewritten.copy(enabled = false)
+                enableKept -> rewritten.copy(enabled = true)
+                else -> rewritten
+            }
+        val update = target?.takeIf { it != keep }
         val insert =
-            if (keep == null && addMissing && hasLiveChannels == true && currentUrl != null && own.none { it.url == currentUrl }) {
+            if (keep == null &&
+                providesGuide &&
+                addMissing &&
+                hasLiveChannels == true &&
+                currentUrl != null &&
+                own.none { it.url == currentUrl }
+            ) {
                 EpgSourceEntity(url = currentUrl, label = label(providerUrl), enabled = true, providerId = providerId)
             } else {
                 null
@@ -152,7 +175,8 @@ object AutoXmltvSources {
 
     /**
      * Applies [plan]: deleted sources lose their guide rows too ([deleteIndexRows]), as when the
-     * user deletes a source. Returns whether a source was added or rewritten (it needs a refresh).
+     * user deletes a source. Returns whether an enabled source was added or rewritten (it needs a
+     * refresh); disabling one doesn't.
      */
     suspend fun apply(
         plan: Plan,
@@ -165,10 +189,14 @@ object AutoXmltvSources {
         }
         plan.update?.let { sourceDao.updateSource(it) }
         plan.insert?.let { sourceDao.insertSource(it) }
-        return plan.insert != null || plan.update != null
+        return plan.insert != null || plan.update?.enabled == true
     }
 
-    /** [plan] then [apply] for one provider, after a login. Returns whether its guide needs a refresh. */
+    /**
+     * [plan] then [apply] for one provider, after a login. Returns whether its guide needs a
+     * refresh. [providesGuide] off ([ProviderSettings.providesGuideOn]) keeps the automatic source
+     * disabled and never adds one.
+     */
     suspend fun reconcile(
         sourceDao: EpgSourceDao,
         deleteIndexRows: suspend (List<Long>) -> Unit,
@@ -178,19 +206,141 @@ object AutoXmltvSources {
         password: String,
         hasLiveChannels: Boolean?,
         previousProviderUrl: String? = null,
+        providesGuide: Boolean = true,
+    ): Boolean =
+        reconcile(
+            sourceDao = sourceDao,
+            deleteIndexRows = deleteIndexRows,
+            providerId = providerId,
+            providerUrl = providerUrl,
+            currentUrl = xmltvUrl(providerUrl, username, password),
+            hasLiveChannels = hasLiveChannels,
+            previousProviderUrl = previousProviderUrl,
+            providesGuide = providesGuide,
+        )
+
+    /** [reconcile] with the automatic source's URL as given ([currentUrl] null: no credentials at hand). */
+    internal suspend fun reconcile(
+        sourceDao: EpgSourceDao,
+        deleteIndexRows: suspend (List<Long>) -> Unit,
+        providerId: Long,
+        providerUrl: String,
+        currentUrl: String?,
+        hasLiveChannels: Boolean?,
+        previousProviderUrl: String? = null,
+        providesGuide: Boolean = true,
+        enableKept: Boolean = false,
     ): Boolean {
         val plan =
             plan(
                 providerId = providerId,
                 providerUrl = providerUrl,
                 sources = sourceDao.getAllSourcesOnce(),
-                currentUrl = xmltvUrl(providerUrl, username, password),
+                currentUrl = currentUrl,
                 hasLiveChannels = hasLiveChannels,
                 addMissing = true,
                 previousProviderUrl = previousProviderUrl,
+                providesGuide = providesGuide,
+                enableKept = enableKept,
             )
         if (!plan.isEmpty) Log.i(TAG, "Provider $providerId: ${describe(plan)}")
         return apply(plan, sourceDao, deleteIndexRows)
+    }
+
+    /**
+     * [reconcile] for one Xtream source from what this device holds (its login and catalogue),
+     * after the viewer flips "Provides a guide". Off disables the automatic source; on re-enables
+     * it, or adds it when there is none and the catalogue has live channels (otherwise the next
+     * login does), and refreshes it.
+     */
+    suspend fun reconcileStored(
+        context: Context,
+        providerId: Long,
+    ) {
+        withContext(Dispatchers.IO) {
+            val repository = ProviderRepository(context)
+            val provider = repository.getProviderById(providerId)
+            if (provider != null && provider.type == PROVIDER_TYPE_XTREAM) {
+                val login = repository.getLogin(provider)
+                val providesGuide = repository.getProviderSettings(providerId).providesGuideOn
+                // Live channels known only from the catalogue: none there may just mean not synced yet.
+                val hasLive =
+                    XtreamDatabase
+                        .getInstance(
+                            context,
+                        ).streamDao()
+                        .hasStreams(providerId, XtreamStreamEntity.TYPE_LIVE)
+                        .takeIf { it }
+                val needsRefresh =
+                    reconcile(
+                        sourceDao = SettingsDatabase.getInstance(context).epgSourceDao(),
+                        deleteIndexRows = indexRowsDeleter(context),
+                        providerId = providerId,
+                        providerUrl = provider.url,
+                        currentUrl =
+                            if (login.username.isNotEmpty() && login.password.isNotEmpty()) {
+                                xmltvUrl(provider.url, login.username, login.password)
+                            } else {
+                                null
+                            },
+                        hasLiveChannels = hasLive,
+                        providesGuide = providesGuide,
+                        enableKept = providesGuide,
+                    )
+                if (needsRefresh) EpgFileManager.getInstance(context).refreshOutdatedSources(providerId)
+            }
+        }
+    }
+
+    /**
+     * Whether an ingest of [source] that found no channels turns "Provides a guide" off: it is the
+     * automatic source of the Xtream server at [providerUrl] (its `xmltv.php` is empty) and the
+     * viewer hasn't set the switch.
+     */
+    fun detectsNoGuide(
+        source: EpgSourceEntity,
+        providerUrl: String,
+        settings: ProviderSettings,
+    ): Boolean = !settings.providesGuideSetByUser && isAutoXmltvSource(source, providerUrl)
+
+    /**
+     * Detection, after a guide refresh: each of [sourceIds] (ingested with no channels) that
+     * [detectsNoGuide] turns its source's "Provides a guide" off, which disables the automatic
+     * source. Never throws: a failure is logged and the next empty ingest tries again.
+     */
+    suspend fun onEmptyIngest(
+        context: Context,
+        sourceIds: Collection<Long>,
+    ) {
+        try {
+            val repository = ProviderRepository(context)
+            val sourceDao = SettingsDatabase.getInstance(context).epgSourceDao()
+            sourceIds.forEach { sourceId ->
+                val source = sourceDao.getSourceById(sourceId)
+                val provider = source?.let { repository.getProviderById(it.providerId) }
+                if (source != null &&
+                    provider != null &&
+                    provider.type == PROVIDER_TYPE_XTREAM &&
+                    detectsNoGuide(source, provider.url, repository.getProviderSettings(provider.id))
+                ) {
+                    Log.i(TAG, "Provider ${provider.id}: its own guide is empty, Provides a guide turns off")
+                    repository.setProvidesGuide(provider.id, enabled = false, byUser = false)
+                    reconcile(
+                        sourceDao = sourceDao,
+                        deleteIndexRows = indexRowsDeleter(context),
+                        providerId = provider.id,
+                        providerUrl = provider.url,
+                        currentUrl = null,
+                        hasLiveChannels = null,
+                        providesGuide = false,
+                    )
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Empty guide detection failed", e)
+        }
     }
 
     /** An Xtream source as the one-time cleanup sees it. */

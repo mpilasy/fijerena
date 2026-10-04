@@ -752,6 +752,12 @@
     <string name="provider_keep_editing_button">Hanohy hanitsy</string>
     <!-- T4 -->
     <string name="provider_guide_button">Fitarihana</string>
+    <!-- Sources, guide and profiles: P3 -->
+    <string name="provider_section_guide">Fitarihana</string>
+    <string name="provider_provides_guide_label">Manome fitarihana</string>
+    <string name="provider_provides_guide_desc">Ampiana ho azy ny fitarihan\'ity loharano ity (xmltv.php)</string>
+    <string name="provider_provides_guide_detected_off_desc">Novonoina: foana ny fitarihan\'ity loharano ity (xmltv.php)</string>
+    <string name="epg_source_own_guide_off">Fitarihan\'ity loharano ity · tsy mandeha. Alefaso ny Manome fitarihana ao amin\'ny Hanova loharano.</string>
     <string name="provider_more_actions">Asa hafa</string>
     <string name="provider_more_actions_for_format">Asa hafa ho an\'ny %1$s</string>
     <!-- LT2 -->

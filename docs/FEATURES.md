@@ -219,6 +219,7 @@ The connection form (type shown read-only), then:
 | Section | Settings |
 |---------|----------|
 | Behaviour | Auto-Resume (on); Recent row size (1–100, default 25); Xtream: stream output format (m3u8 / ts), playlist type (m3u_plus / simple), Enable Caching (on) |
+| Guide (Xtream) | Provides a guide: whether the source's own guide (`xmltv.php`) is added as a guide source. Detected — on, turned off when that guide comes back empty — until the viewer sets it; off disables that guide source (kept, with its stats), on enables it again |
 | Library data | Item counts per content type; Xtream: last catalogue sync — "Last Sync: Finished at … • Took …" and what it changed ("No changes since last sync", or "N added • N updated • N removed"), hidden after a failed sync, which shows "Catalog sync failed" with the reason; Sync Data Now |
 | Danger zone | Clear all favourites; clear all progress; clear the cached library (all, or per content type) |
 

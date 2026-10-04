@@ -10,6 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.njarasoa.fijerena.core.network.provider.EpgSourceDao
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderSettings
 
 /** [AutoXmltvSources]: one automatic guide source per Xtream source, hand-added ones untouched. */
 class AutoXmltvSourcesTest {
@@ -151,6 +152,138 @@ class AutoXmltvSourcesTest {
             assertEquals("new.example (Bulk)", row.label)
         }
 
+    // --- Provides a guide (plan D1) ---
+
+    @Test
+    fun `the effective value is on unless set off`() {
+        assertTrue(ProviderSettings().providesGuideOn)
+        assertTrue(ProviderSettings(providesGuide = true, providesGuideSetByUser = true).providesGuideOn)
+        assertFalse(ProviderSettings(providesGuide = false).providesGuideOn)
+        assertFalse(ProviderSettings(providesGuide = false, providesGuideSetByUser = true).providesGuideOn)
+    }
+
+    @Test
+    fun `not set or on adds the source as before`() =
+        runBlocking {
+            listOf(ProviderSettings(), ProviderSettings(providesGuide = true, providesGuideSetByUser = true)).forEach { settings ->
+                val dao = FakeEpgSourceDao()
+                assertTrue(reconcile(dao, user = "test", hasLive = true, providesGuide = settings.providesGuideOn))
+                assertTrue(dao.rows.single().enabled)
+            }
+        }
+
+    @Test
+    fun `off disables the automatic source, keeps it and its stats, and leaves hand-added ones`() =
+        runBlocking {
+            val dao = FakeEpgSourceDao()
+            val handAdded = source(9, "http://epg.example/guide.xml.gz", label = "guide")
+            dao.rows += listOf(auto(1, "test").copy(lastChannels = 120, lastIngestedAtMs = 99), handAdded)
+            val deletedIndex = mutableListOf<Long>()
+            assertFalse(reconcile(dao, user = "test", hasLive = true, providesGuide = false, deletedIndex = deletedIndex))
+            val row = dao.rows.single { it.id == 1L }
+            assertFalse(row.enabled)
+            assertEquals(120, row.lastChannels)
+            assertEquals(99L, row.lastIngestedAtMs)
+            assertTrue(dao.rows.single { it.id == 9L }.enabled)
+            assertTrue(deletedIndex.isEmpty())
+        }
+
+    @Test
+    fun `off never adds one`() =
+        runBlocking {
+            val dao = FakeEpgSourceDao()
+            assertFalse(reconcile(dao, user = "test", hasLive = true, providesGuide = false))
+            assertTrue(dao.rows.isEmpty())
+        }
+
+    @Test
+    fun `a login while off doesn't re-enable or duplicate the disabled source`() =
+        runBlocking {
+            val dao = FakeEpgSourceDao()
+            dao.rows += auto(1, "test").copy(enabled = false)
+            dao.writes = 0
+            assertFalse(reconcile(dao, user = "test", hasLive = true, providesGuide = false))
+            assertEquals(listOf(1L), dao.rows.map { it.id })
+            assertFalse(dao.rows.single().enabled)
+            assertEquals(0, dao.writes)
+
+            // A credential change while off rewrites it in place, still disabled.
+            reconcile(dao, user = "kilonga", hasLive = true, providesGuide = false)
+            val row = dao.rows.single()
+            assertEquals(1L, row.id)
+            assertEquals(AutoXmltvSources.xmltvUrl(server, "kilonga", "pw"), row.url)
+            assertFalse(row.enabled)
+        }
+
+    @Test
+    fun `a disabled source stops a second one being added`() =
+        runBlocking {
+            val dao = FakeEpgSourceDao()
+            dao.rows += auto(1, "test").copy(enabled = false)
+            reconcile(dao, user = "test", hasLive = true, providesGuide = true)
+            assertEquals(listOf(1L), dao.rows.map { it.id })
+        }
+
+    @Test
+    fun `turned on again, the same row is enabled with its stats`() =
+        runBlocking {
+            val dao = FakeEpgSourceDao()
+            dao.rows += auto(1, "test").copy(enabled = false, lastChannels = 120, lastIngestedAtMs = 99)
+            val refresh =
+                AutoXmltvSources.reconcile(
+                    sourceDao = dao,
+                    deleteIndexRows = {},
+                    providerId = 1,
+                    providerUrl = server,
+                    currentUrl = AutoXmltvSources.xmltvUrl(server, "test", "pw"),
+                    hasLiveChannels = null,
+                    providesGuide = true,
+                    enableKept = true,
+                )
+            assertTrue(refresh)
+            val row = dao.rows.single()
+            assertEquals(1L, row.id)
+            assertTrue(row.enabled)
+            assertEquals(120, row.lastChannels)
+            assertEquals(99L, row.lastIngestedAtMs)
+        }
+
+    @Test
+    fun `detection turns off only the automatic source, and only when the viewer hasn't set it`() {
+        val autoSource = auto(1, "test")
+        assertTrue(AutoXmltvSources.detectsNoGuide(autoSource, server, ProviderSettings()))
+        assertTrue(AutoXmltvSources.detectsNoGuide(autoSource, server, ProviderSettings(providesGuide = false)))
+        assertFalse(
+            AutoXmltvSources.detectsNoGuide(autoSource, server, ProviderSettings(providesGuide = true, providesGuideSetByUser = true)),
+        )
+        assertFalse(
+            AutoXmltvSources.detectsNoGuide(autoSource, server, ProviderSettings(providesGuide = false, providesGuideSetByUser = true)),
+        )
+        assertFalse(
+            AutoXmltvSources.detectsNoGuide(source(9, "http://epg.example/guide.xml.gz", label = "guide"), server, ProviderSettings()),
+        )
+    }
+
+    @Test
+    fun `an empty own guide disables the source without credentials at hand`() =
+        runBlocking {
+            val dao = FakeEpgSourceDao()
+            dao.rows += auto(1, "test")
+            // What onEmptyIngest runs once detection has turned the setting off.
+            val refresh =
+                AutoXmltvSources.reconcile(
+                    sourceDao = dao,
+                    deleteIndexRows = {},
+                    providerId = 1,
+                    providerUrl = server,
+                    currentUrl = null,
+                    hasLiveChannels = null,
+                    providesGuide = false,
+                )
+            assertFalse(refresh)
+            assertFalse(dao.rows.single().enabled)
+        }
+
     // --- cleanUp (one-time, at start) ---
 
     @Test
@@ -194,7 +327,8 @@ class AutoXmltvSourcesTest {
         user: String,
         hasLive: Boolean?,
         deletedIndex: MutableList<Long> = mutableListOf(),
-    ): Boolean = AutoXmltvSources.reconcile(dao, { deletedIndex += it }, 1, server, user, "pw", hasLive)
+        providesGuide: Boolean = true,
+    ): Boolean = AutoXmltvSources.reconcile(dao, { deletedIndex += it }, 1, server, user, "pw", hasLive, providesGuide = providesGuide)
 
     /** In-memory [EpgSourceDao]: only what [AutoXmltvSources] uses. */
     private class FakeEpgSourceDao : EpgSourceDao {

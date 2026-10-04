@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.Result
+import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
 import org.njarasoa.fijerena.core.network.resultOf
 import org.njarasoa.fijerena.core.network.suspendResultOf
@@ -211,7 +212,8 @@ class XtreamSessionManager(
     /**
      * Keeps this source's automatic XMLTV guide source (`<server>/xmltv.php?…`) in line with the
      * login: rewritten in place on a credential change, duplicates removed, added only when the
-     * account has live channels and removed when it has none. See [AutoXmltvSources].
+     * account has live channels and removed when it has none; disabled while the source's "Provides a
+     * guide" is off. See [AutoXmltvSources].
      */
     private suspend fun reconcileAutoXmltvSource(
         service: XtreamApiService,
@@ -223,6 +225,9 @@ class XtreamSessionManager(
         // EPG sources belong to a provider - without a real provider id there is nothing to attach to.
         if (providerId > 0) {
             try {
+                // "Provides a guide" off: the automatic source stays disabled and is never added (no
+                // live check needed, so it is never deleted for that either).
+                val providesGuide = ProviderRepository(context).getProviderSettings(providerId).providesGuideOn
                 val needsRefresh =
                     AutoXmltvSources.reconcile(
                         sourceDao = SettingsDatabase.getInstance(context).epgSourceDao(),
@@ -231,8 +236,9 @@ class XtreamSessionManager(
                         providerUrl = baseUrl,
                         username = user,
                         password = pass,
-                        hasLiveChannels = hasLiveChannels(service),
+                        hasLiveChannels = if (providesGuide) hasLiveChannels(service) else null,
                         previousProviderUrl = previousUrl,
+                        providesGuide = providesGuide,
                     )
                 if (needsRefresh) {
                     // Added or rewritten: fetch its guide now rather than at the next scheduled run.

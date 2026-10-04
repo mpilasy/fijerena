@@ -897,6 +897,12 @@
     <string name="provider_keep_editing_button">Continuer la modification</string>
     <!-- T4 -->
     <string name="provider_guide_button">Guide</string>
+    <!-- Sources, guide and profiles: P3 -->
+    <string name="provider_section_guide">Guide</string>
+    <string name="provider_provides_guide_label">Fournit un guide</string>
+    <string name="provider_provides_guide_desc">Le guide propre à cette source (xmltv.php) est ajouté automatiquement</string>
+    <string name="provider_provides_guide_detected_off_desc">Désactivé : le guide propre à cette source (xmltv.php) était vide</string>
+    <string name="epg_source_own_guide_off">Guide propre à cette source · désactivé. Activez Fournit un guide dans Modifier la source.</string>
     <string name="provider_more_actions">Plus d\'actions</string>
     <string name="provider_more_actions_for_format">Plus d\'actions pour %1$s</string>
     <!-- LT2 -->

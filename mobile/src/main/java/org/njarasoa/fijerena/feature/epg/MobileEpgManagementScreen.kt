@@ -20,7 +20,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.CinemaDialogActionButton
@@ -61,14 +63,14 @@ fun MobileEpgManagementScreen(
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
-    val providerName by produceState<String?>(initialValue = null, providerId) {
+    val provider by produceState<ProviderEntity?>(initialValue = null, providerId) {
         value =
             AppContainer
                 .getInstance(context.applicationContext)
                 .providerRepository
                 .getProviderById(providerId)
-                ?.name
     }
+    val providerName = provider?.name
 
     val nowMs = remember { System.currentTimeMillis() }
 
@@ -218,6 +220,7 @@ fun MobileEpgManagementScreen(
                         latestProgrammeTime = latestTime,
                         activeProgress = activeProgress,
                         wasUnchanged = wasUnchanged,
+                        isOwnGuideOff = !source.enabled && provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true,
                         nowMs = nowMs,
                         staleThresholdMs = viewModel.staleThresholdMs(source),
                         onRefresh = { viewModel.refreshSource(source.id) },
@@ -292,6 +295,8 @@ private fun EpgSourceCard(
     latestProgrammeTime: Long,
     activeProgress: org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.ActiveSourceProgress?,
     wasUnchanged: Boolean,
+    /** The source's own guide, disabled by "Provides a guide" (Edit Source). */
+    isOwnGuideOff: Boolean,
     nowMs: Long,
     staleThresholdMs: Long,
     onRefresh: () -> Unit,
@@ -332,6 +337,13 @@ private fun EpgSourceCard(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
+                        if (isOwnGuideOff) {
+                            Text(
+                                text = stringResource(R.string.epg_source_own_guide_off),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                            )
+                        }
                     }
                 }
 

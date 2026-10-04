@@ -24,7 +24,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.tv.material3.ToggleableSurfaceDefaults
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
+import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
@@ -77,14 +79,14 @@ fun TvEpgManagementScreen(
     val staleSourceCount by viewModel.staleSourceCount.collectAsStateWithLifecycle()
     val failedSourceCount by viewModel.failedSourceCount.collectAsStateWithLifecycle()
     val processingState by viewModel.processingState.collectAsStateWithLifecycle()
-    val providerName by produceState<String?>(initialValue = null, providerId) {
+    val provider by produceState<ProviderEntity?>(initialValue = null, providerId) {
         value =
             AppContainer
                 .getInstance(context.applicationContext)
                 .providerRepository
                 .getProviderById(providerId)
-                ?.name
     }
+    val providerName = provider?.name
 
     val nowMs = remember { System.currentTimeMillis() }
 
@@ -302,6 +304,14 @@ fun TvEpgManagementScreen(
                                         maxLines = 1,
                                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                     )
+                                    // The source's own guide, disabled by "Provides a guide" (Edit Source).
+                                    if (!source.enabled && provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true) {
+                                        Text(
+                                            text = stringResource(R.string.epg_source_own_guide_off),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
+                                        )
+                                    }
                                 }
                             }
 

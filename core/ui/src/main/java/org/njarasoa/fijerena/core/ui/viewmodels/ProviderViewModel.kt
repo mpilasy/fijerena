@@ -19,9 +19,11 @@ import org.njarasoa.fijerena.core.network.provider.ProviderCopyManager
 import org.njarasoa.fijerena.core.network.provider.ProviderEntity
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
+import org.njarasoa.fijerena.core.network.xtream.manager.AutoXmltvSources
 import org.njarasoa.fijerena.core.player.api.XtreamApiService
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.utils.launchGuarded
 
 data class ParsedUrlCredentials(
     val baseUrl: String,
@@ -307,6 +309,20 @@ class ProviderViewModel(
     }
 
     fun getPassword(providerId: Long): String? = providerRepository.getPassword(providerId)
+
+    /**
+     * The viewer flips "Provides a guide" (Edit Source, Xtream): stored as their choice, then the
+     * source's automatic guide source follows it ([AutoXmltvSources.reconcileStored]).
+     */
+    fun setProvidesGuide(
+        providerId: Long,
+        enabled: Boolean,
+    ) {
+        viewModelScope.launchGuarded("setProvidesGuide") {
+            providerRepository.setProvidesGuide(providerId, enabled, byUser = true)
+            AutoXmltvSources.reconcileStored(context, providerId)
+        }
+    }
 
     fun validateAndSave(
         id: Long?,

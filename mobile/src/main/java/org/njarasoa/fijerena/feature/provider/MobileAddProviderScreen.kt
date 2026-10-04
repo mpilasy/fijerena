@@ -78,6 +78,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.parseUrlCredentials
 import org.njarasoa.fijerena.feature.provider.components.DataManagementSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerZoneSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderFormSection
+import org.njarasoa.fijerena.feature.provider.components.ProviderGuideSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderSectionTitle
 import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
 import org.njarasoa.fijerena.feature.provider.components.QuickConnectDialog
@@ -493,6 +494,15 @@ fun MobileAddProviderScreen(
                 onStreamOutputFormatChange = { streamOutputFormat = it },
                 onPlaylistTypeChange = { playlistType = it },
             )
+            if (isEditMode && selectedType == ProviderType.XTREAM) {
+                ProviderGuideSection(
+                    providerSettings = providerSettings,
+                    onProvidesGuideChange = { enabled ->
+                        providerSettings = providerSettings.copy(providesGuide = enabled, providesGuideSetByUser = true)
+                        viewModel.setProvidesGuide(editId, enabled)
+                    },
+                )
+            }
             DataManagementSection(
                 isEditMode = isEditMode,
                 editId = editId,

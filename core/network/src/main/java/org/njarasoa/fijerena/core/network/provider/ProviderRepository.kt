@@ -831,6 +831,25 @@ class ProviderRepository(
     }
 
     /**
+     * Stores "Provides a guide" ([ProviderSettings.providesGuide]) alone, leaving the rest of the
+     * settings as stored; [byUser] marks it the viewer's choice, which detection then leaves alone.
+     * Synced with the provider row. It doesn't change the source itself, so the cached provider stays.
+     */
+    suspend fun setProvidesGuide(
+        providerId: Long,
+        enabled: Boolean,
+        byUser: Boolean,
+    ) {
+        val entity = dao.getProviderById(providerId)
+        if (entity != null) {
+            val stored = parseProviderSettings(entity.providerSettings)
+            val updated = stored.copy(providesGuide = enabled, providesGuideSetByUser = stored.providesGuideSetByUser || byUser)
+            dao.updateProvider(entity.copy(providerSettings = json.encodeToString(updated)))
+            settingsCache.keys.removeAll { it.first == providerId }
+        }
+    }
+
+    /**
      * Returns default settings if parsing fails.
      */
     private fun parseProviderSettings(settingsJson: String): ProviderSettings {

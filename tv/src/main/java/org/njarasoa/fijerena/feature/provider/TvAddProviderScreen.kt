@@ -77,6 +77,7 @@ import org.njarasoa.fijerena.feature.provider.components.ConfirmActionDialog
 import org.njarasoa.fijerena.feature.provider.components.EDIT_SOURCE_FIRST_SETTING_KEY
 import org.njarasoa.fijerena.feature.provider.components.JellyfinForm
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerZoneSection
+import org.njarasoa.fijerena.feature.provider.components.ProviderGuideSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderSectionTitle
 import org.njarasoa.fijerena.feature.provider.components.ProviderSettingsSection
 import org.njarasoa.fijerena.feature.provider.components.ProviderTypeDropdown
@@ -111,9 +112,9 @@ private const val KEY_SAVE = "save"
  *
  * Edit Source: the Connection column on the left (read-only type, the login fields, Cancel and
  * Save connection right under them — the only part that needs saving) and a scrolling column on
- * the right with Behaviour (applies immediately), Library data and the Danger zone. Each column
- * is a `tvPane`: Left/Right move between them, Up/Down stay inside. First focus is the Name edit
- * button. Content filters are edited on each profile's page (D8), not here.
+ * the right with Behaviour (applies immediately), Guide (Xtream), Library data and the Danger zone.
+ * Each column is a `tvPane`: Left/Right move between them, Up/Down stay inside. First focus is the
+ * Name edit button. Content filters are edited on each profile's page (D8), not here.
  */
 @Composable
 fun TvAddProviderScreen(
@@ -615,6 +616,18 @@ fun TvAddProviderScreen(
                                     },
                                     pane = settingsPane,
                                 )
+
+                                if (selectedType == ProviderType.XTREAM) {
+                                    SectionDivider()
+                                    ProviderGuideSection(
+                                        providerSettings = providerSettings,
+                                        onProvidesGuideChange = { enabled ->
+                                            providerSettings = providerSettings.copy(providesGuide = enabled, providesGuideSetByUser = true)
+                                            viewModel.setProvidesGuide(editId, enabled)
+                                        },
+                                        pane = settingsPane,
+                                    )
+                                }
 
                                 SectionDivider()
                                 CacheManagementSection(
