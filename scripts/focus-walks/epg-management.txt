@@ -1,6 +1,9 @@
 # T6 — EPG Management per source (TvEpgManagementScreen), TV emulator, source iptv with two or
 # more guide sources.
-# Start: opened from Edit Source → Guide sources (or the Sources list's Guide); title "Guide sources · iptv".
+# Start: Settings → Source & guide → Manage sources → OK on iptv's row (Edit Source) → Guide
+# sources; title "Guide sources · iptv". That is 4 entries above Home, so the title row ends in the
+# section-root button "Settings" (P6). Opened from the Sources list's Guide it is 3 deep: no button,
+# and the walk's last UP stays on Add.
 # Entry focus is the first guide source's selection toggle ("Not selected"); with no guide
 # source it is "Add Guide Source" under "No guide sources configured". No System Status or
 # Maintenance here (they are in Settings). Each row: the toggle, then Refresh / Edit /
@@ -25,5 +28,10 @@ LEFT	Auto-refresh
 LEFT	Edit
 LEFT	Refresh
 DOWN	Not selected
+# Up from Add reaches the section-root button at the end of the title row (P6). OK on it would pop
+# back to Settings, focus on Manage sources; not pressed here.
+UP	Add Guide Source
+UP	Settings
 # Back leaves to Edit Source, focus back on the Guide sources row.
 BACK	Guide Sources
+

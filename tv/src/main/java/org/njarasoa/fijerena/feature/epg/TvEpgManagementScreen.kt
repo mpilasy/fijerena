@@ -32,6 +32,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaAlertDialog
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.di.AppContainer
+import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -43,6 +44,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
 import org.njarasoa.fijerena.feature.settings.components.PickerOption
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerPane
+import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -65,6 +67,8 @@ import org.njarasoa.fijerena.ui.theme.scaled
 fun TvEpgManagementScreen(
     providerId: Long,
     onBack: () -> Unit,
+    /** The section-root button (P6), at the end of the title row; null hides it. */
+    sectionRoot: SectionRoot? = null,
 ) {
     val context = LocalContext.current
     val viewModel: EpgManagementViewModel =
@@ -165,15 +169,20 @@ fun TvEpgManagementScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-            Text(
-                text =
-                    providerName?.let { stringResource(R.string.epg_management_title_format, it) }
-                        ?: stringResource(R.string.epg_sources_header),
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            )
+            // Up from Add (the list's first row) reaches the section-root button.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text =
+                        providerName?.let { stringResource(R.string.epg_management_title_format, it) }
+                            ?: stringResource(R.string.epg_sources_header),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                SectionRootButton(sectionRoot)
+            }
 
             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 

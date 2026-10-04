@@ -26,6 +26,8 @@ Several sources can be configured; one is active per device. Switch it from the 
 
 Live TV / Movies / TV Shows cards (only the types the active source has; with a single type, Home opens it straight away on launch). The header holds the source name (a picker with two or more sources), **Search the guide** (when the guide index is ready), Search, the profile avatar and Settings. The TV Guide grid opens from Search the guide, a category's header and the player's Guide button.
 
+**Back to the section:** four screens or more away from Home (Home → Movies → a film → a related film → its category), a button named after where browsing started — Movies, TV Shows, Live TV, Search, Search the guide, TV Guide, Settings, or the title opened from Continue Watching — goes straight back there, on the category and scroll you left, with Home one Back away. On TV it is the last button of the screen's header (the action row on details); on the phone the last icon of the top bar. Never on the player or over the Live TV preview. See [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) → Back-Stack Rules.
+
 **Continue Watching** (Movies and TV Shows together) shows one card per show: mid-watch, its episode resumes; once an episode is finished, the card offers the next one ("Up next", the next season after a season's last episode), fetching the show's episode list from the source if this device never stored it (a show watched on another device). After a show's last episode it leaves the shelf. Movies show only while mid-watch.
 
 ---

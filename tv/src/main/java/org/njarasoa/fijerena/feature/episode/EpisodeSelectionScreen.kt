@@ -131,6 +131,7 @@ import org.njarasoa.fijerena.core.ui.components.RatingBadge
 import org.njarasoa.fijerena.core.ui.components.ScoreChip
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.WatchedBadge
+import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -147,6 +148,7 @@ import org.njarasoa.fijerena.feature.category.components.tvLongPress
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.LabelledActionButton
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
+import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
@@ -181,6 +183,8 @@ fun EpisodeSelectionScreen(
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
+    /** The section-root button (P6), last in the hero's action row; null hides it. */
+    sectionRoot: SectionRoot? = null,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -243,6 +247,7 @@ fun EpisodeSelectionScreen(
                     onBack = onBack,
                     onRelatedTitleSelected = onRelatedTitleSelected,
                     onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
+                    sectionRoot = sectionRoot,
                 )
             }
 
@@ -278,6 +283,7 @@ internal fun EpisodeListContent(
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
     onAlternateStreamSelected: (MediaItem) -> Unit,
+    sectionRoot: SectionRoot? = null,
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -1029,6 +1035,7 @@ internal fun EpisodeListContent(
                             modifier = downToTabRow.then(upScrollToTop).focusRequester(moreButtonFocusRequester),
                             iconModifier = if (isRefreshing) Modifier.rotate(rotation) else Modifier,
                         )
+                        SectionRootButton(sectionRoot, modifier = downToTabRow.then(upScrollToTop))
                     }
                 }
 

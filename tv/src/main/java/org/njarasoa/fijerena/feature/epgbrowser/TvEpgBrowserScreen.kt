@@ -89,6 +89,7 @@ import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -110,6 +111,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
+import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
@@ -145,6 +147,8 @@ fun TvEpgBrowserScreen(
     categoryName: String? = null,
     onGuideSources: (providerId: Long) -> Unit = {},
     onTvGuide: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
+    /** The section-root button (P6), the header's last button; null hides it. */
+    sectionRoot: SectionRoot? = null,
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
@@ -311,6 +315,7 @@ fun TvEpgBrowserScreen(
                             modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_GUIDE_SOURCES),
                         )
                     }
+                    SectionRootButton(sectionRoot)
                 }
             }
 

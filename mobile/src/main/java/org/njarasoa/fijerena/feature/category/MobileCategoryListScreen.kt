@@ -127,6 +127,7 @@ import org.njarasoa.fijerena.core.ui.components.SkeletonList
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.staggeredEntrance
+import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.sync.RemoteStopEffect
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -152,6 +153,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.rememberStableRecentOrder
 import org.njarasoa.fijerena.core.ui.viewmodels.withCurrentChannel
 import org.njarasoa.fijerena.feature.player.MobilePlayerContent
 import org.njarasoa.fijerena.ui.components.AmbientBackdrop
+import org.njarasoa.fijerena.ui.components.SectionRootAction
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
@@ -179,6 +181,8 @@ fun MobileCategoryListScreen(
     onBack: () -> Unit,
     /** Leaves for Home — after a remote Stop of the Live TV dock. */
     onHome: () -> Unit = {},
+    /** The section-root button (P6), the top bar's last action; null hides it. */
+    sectionRoot: SectionRoot? = null,
     viewModel: CategoryViewModel =
         viewModel(
             factory =
@@ -579,6 +583,8 @@ fun MobileCategoryListScreen(
                                     Icon(CinemaIcons.Search, stringResource(R.string.common_search), tint = CinemaTextPrimary)
                                 },
                             )
+                            // Stops the dock first, as Back does.
+                            SectionRootAction(sectionRoot?.let { root -> root.copy(onClick = { stopDockThen(root.onClick) }) })
                         },
                     )
                 }

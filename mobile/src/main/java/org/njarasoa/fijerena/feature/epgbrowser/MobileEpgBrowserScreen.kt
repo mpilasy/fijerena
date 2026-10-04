@@ -79,6 +79,7 @@ import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.RetryWhenOnline
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSeconds
+import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
@@ -91,6 +92,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.message
 import org.njarasoa.fijerena.core.ui.viewmodels.noResultsMessage
 import org.njarasoa.fijerena.core.ui.viewmodels.statsLine
+import org.njarasoa.fijerena.ui.components.SectionRootAction
 import org.njarasoa.fijerena.ui.components.cards.CinemaCard
 import org.njarasoa.fijerena.ui.components.chips.CinemaAssistChip
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
@@ -114,6 +116,8 @@ fun MobileEpgBrowserScreen(
     categoryName: String? = null,
     onGuideSources: (providerId: Long) -> Unit = {},
     onTvGuide: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
+    /** The section-root button (P6), the top bar's last action; null hides it. */
+    sectionRoot: SectionRoot? = null,
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
@@ -236,6 +240,7 @@ fun MobileEpgBrowserScreen(
                             Icon(CinemaIcons.Tune, stringResource(R.string.epg_sources_header))
                         }
                     }
+                    SectionRootAction(sectionRoot)
                 },
             )
         },

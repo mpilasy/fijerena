@@ -12,6 +12,7 @@
 - **Guide sources live with their source:** Edit Source has a Guide sources row (how many, and when they last refreshed) and Search the guide has a Guide sources button next to Refresh; Back returns to where you were. Settings → Source & guide is now one Manage sources row showing the source in use; Switch source, Edit this source and Guide sources left Settings. → P4.
 - **Home keeps Search the guide:** Home's TV Guide button is gone; Search the guide has a TV Guide button that opens the grid for your Recent channels (Back returns to the search), and it searches programme titles only — the channel mode ("What's on" / "Chan.") is gone. → P7.
 - **Set each guide source's auto-refresh on its row:** every guide source shows how often it refreshes ("Refreshes daily", "Auto-refresh off") and its Auto-refresh button offers Off, every 6 hours, every 12 hours, daily or weekly; an interval kept from the old setting (4, 8 or 48 hours) stays on offer until you pick another. Settings → Source & guide no longer has Guide auto-refresh (nor a refresh time), and that old setting is no longer synced or exported. → P5b.
+- **Back to where you started, from deep in:** four screens or more from Home, a button named after the section you started in (Movies, TV Shows, Live TV, Search, Settings…) takes you straight back to it, on the category and scroll you left; Home is then one Back away. On TV it is the last button of the screen's header, on the phone the last icon of the top bar. → P6.
 
 ## Version: UX overhaul, day 5
 **Release Date:** 2026-10-03

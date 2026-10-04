@@ -81,6 +81,7 @@ import org.njarasoa.fijerena.core.player.model.resolutionLabel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.ScoreChip
+import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -94,6 +95,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.MovieDetailsViewModelFactory
 import org.njarasoa.fijerena.ui.components.DetailsMoreMenu
 import org.njarasoa.fijerena.ui.components.LabelledActionButton
 import org.njarasoa.fijerena.ui.components.RelatedTitlesRow
+import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.TvDetailHero
 import org.njarasoa.fijerena.ui.components.TvErrorState
 import org.njarasoa.fijerena.ui.components.TvSectionTabs
@@ -124,6 +126,8 @@ fun MovieDetailsScreen(
     onCategorySelected: (categoryId: String) -> Unit,
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit = {},
+    /** The section-root button (P6), last in the action row; null hides it. */
+    sectionRoot: SectionRoot? = null,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -181,6 +185,7 @@ fun MovieDetailsScreen(
                     onBack = onBack,
                     onRelatedTitleSelected = onRelatedTitleSelected,
                     onAlternateStreamSelected = { viewModel.switchToAlternateStream(it) },
+                    sectionRoot = sectionRoot,
                 )
             }
         }
@@ -210,6 +215,7 @@ private fun MovieDetailsContent(
     onBack: () -> Unit,
     onRelatedTitleSelected: (MediaItem) -> Unit,
     onAlternateStreamSelected: (MediaItem) -> Unit,
+    sectionRoot: SectionRoot?,
 ) {
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
@@ -539,6 +545,7 @@ private fun MovieDetailsContent(
                         label = stringResource(R.string.details_action_more),
                         modifier = downToTabRow.then(upScrollToTop).focusRequester(moreButtonFocusRequester),
                     )
+                    SectionRootButton(sectionRoot, modifier = downToTabRow.then(upScrollToTop))
                 }
             }
 

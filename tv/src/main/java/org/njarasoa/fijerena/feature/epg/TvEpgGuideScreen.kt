@@ -16,6 +16,7 @@ import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.player.domain.MediaItem
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.ui.R
+import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModelFactory
 import org.njarasoa.fijerena.ui.components.TvErrorState
@@ -39,6 +40,8 @@ fun TvEpgGuideScreen(
     onSearch: () -> Unit,
     onBack: () -> Unit,
     focusChannelId: String? = null,
+    /** The section-root button (P6), last in the header; null hides it. */
+    sectionRoot: SectionRoot? = null,
     viewModel: EpgViewModel =
         viewModel(
             factory =
@@ -96,6 +99,7 @@ fun TvEpgGuideScreen(
                         onToggleFavorite = viewModel::toggleFavoriteChannel,
                         onRemoveFromRecent = if (viewModel.canRemoveFromRecent) viewModel::removeFromRecent else null,
                         focusChannelId = focusChannelId,
+                        sectionRoot = sectionRoot,
                     )
                 }
             }

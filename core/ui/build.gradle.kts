@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.zxing.core)
     implementation(project(":core:network"))
     implementation(project(":core:player"))
+    implementation(project(":core:navigation"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

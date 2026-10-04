@@ -38,6 +38,7 @@ import org.njarasoa.fijerena.core.player.domain.BrowseTarget
 import org.njarasoa.fijerena.core.player.domain.ContentType
 import org.njarasoa.fijerena.core.ui.components.APP_LOADING_MIN_MS
 import org.njarasoa.fijerena.core.ui.components.AppLoadingScreen
+import org.njarasoa.fijerena.core.ui.navigation.sectionRootFor
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.category.MobileCategoryListScreen
@@ -219,6 +220,9 @@ fun MobileNavHost(
                 }
             },
         ) {
+            // sectionRoot: the button back to the section's first screen, shown 4 or more entries
+            // above Home (sectionRootFor, D4). Passed to every screen that can sit that deep; not to
+            // the player, and Live TV's full screen has no top bar to show it.
             composable<Screen.ContentTypeSelection> {
                 val navigateToContentType: (String) -> Unit = { contentType ->
                     navController.navigateOnce(Screen.CategoryList(contentType))
@@ -308,6 +312,7 @@ fun MobileNavHost(
             composable<Screen.EpgBrowser> { backStackEntry ->
                 val browserScreen = backStackEntry.toRoute<Screen.EpgBrowser>()
                 MobileEpgBrowserScreen(
+                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     categoryId = browserScreen.categoryId,
                     categoryName = browserScreen.categoryName,
                     onBack = { navController.navigateUp() },
@@ -335,6 +340,7 @@ fun MobileNavHost(
             composable<Screen.CategoryList> { backStackEntry ->
                 val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
                 MobileCategoryListScreen(
+                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     contentType = categoryListScreen.contentType,
                     initialCategoryId = categoryListScreen.initialCategoryId,
                     initialStreamId = categoryListScreen.initialStreamId,
@@ -628,6 +634,7 @@ fun MobileNavHost(
             composable<Screen.Search> { backStackEntry ->
                 val searchScreen = backStackEntry.toRoute<Screen.Search>()
                 MobileSearchScreen(
+                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     contentType = searchScreen.contentType,
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
                         when (contentType) {
@@ -678,6 +685,7 @@ fun MobileNavHost(
             composable<Screen.MovieDetails> { backStackEntry ->
                 val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
                 MobileMovieDetailsScreen(
+                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     movieId = movieDetailsScreen.movieId,
                     movieName = movieDetailsScreen.movieName,
                     categoryId = movieDetailsScreen.categoryId,
@@ -719,6 +727,7 @@ fun MobileNavHost(
             composable<Screen.EpisodeSelection> { backStackEntry ->
                 val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
                 MobileEpisodeSelectionScreen(
+                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     seriesId = episodeSelectionScreen.seriesId,
                     seriesName = episodeSelectionScreen.seriesName,
                     categoryId = episodeSelectionScreen.categoryId,
@@ -764,6 +773,7 @@ fun MobileNavHost(
             composable<Screen.EpgManagement> { backStackEntry ->
                 val epgScreen = backStackEntry.toRoute<Screen.EpgManagement>()
                 MobileEpgManagementScreen(
+                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     providerId = epgScreen.providerId,
                     onBack = { navController.navigateUp() },
                 )
@@ -772,6 +782,7 @@ fun MobileNavHost(
             composable<Screen.EpgGuide> { backStackEntry ->
                 val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
                 MobileEpgGuideScreen(
+                    sectionRoot = sectionRootFor(navController, backStackEntry),
                     categoryId = epgScreen.categoryId,
                     categoryName = epgScreen.categoryName,
                     focusChannelId = epgScreen.focusChannelId,

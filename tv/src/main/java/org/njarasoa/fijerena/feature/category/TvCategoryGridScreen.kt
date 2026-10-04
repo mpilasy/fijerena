@@ -46,6 +46,7 @@ import org.njarasoa.fijerena.core.ui.components.ImmutableMediaList
 import org.njarasoa.fijerena.core.ui.components.ImmutableNowPlaying
 import org.njarasoa.fijerena.core.ui.components.ImmutableStringSet
 import org.njarasoa.fijerena.core.ui.components.ImmutableWatchProgress
+import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModelFactory
@@ -79,6 +80,8 @@ fun TvCategoryGridScreen(
     onBack: () -> Unit = {},
     /** Leaves for Home — after a remote Stop of the Live TV preview (see LiveTvSplitLayout). */
     onHome: () -> Unit = {},
+    /** The section-root button (P6), on the browse header only — never over the Live TV preview. */
+    sectionRoot: SectionRoot? = null,
     viewModel: CategoryViewModel =
         viewModel(
             factory =
@@ -147,6 +150,7 @@ fun TvCategoryGridScreen(
         contentType = contentType,
         initialStreamId = initialStreamId,
         showPreviewPane = showPreviewPane,
+        sectionRoot = sectionRoot,
     )
 }
 
@@ -170,6 +174,7 @@ private fun CategoryGridContent(
     contentType: String,
     initialStreamId: String? = null,
     showPreviewPane: Boolean = true,
+    sectionRoot: SectionRoot? = null,
 ) {
     val scale = LocalUiScale.current
     val safeMarginModifier =
@@ -354,6 +359,7 @@ private fun CategoryGridContent(
                                     onSearchClick = onSearchClick,
                                     onEpgClick = { categoryId, categoryName -> onEpgClick(categoryId, categoryName, null) },
                                     onBack = onBack,
+                                    sectionRoot = sectionRoot,
                                 )
                             }
                         }

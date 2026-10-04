@@ -84,6 +84,7 @@ import org.njarasoa.fijerena.core.ui.components.MitadyLoading
 import org.njarasoa.fijerena.core.ui.components.ThumbnailContentType
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
 import org.njarasoa.fijerena.core.ui.model.nameAndFavoriteState
+import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
@@ -98,6 +99,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.SearchViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.buildGroupedSearchResults
 import org.njarasoa.fijerena.core.ui.viewmodels.toggled
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
+import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaIconButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -133,6 +135,8 @@ fun SearchScreen(
     onCategorySelected: (categoryId: String, contentType: String) -> Unit = { _, _ -> },
     onBack: () -> Unit,
     initialQuery: String? = null,
+    /** The section-root button (P6), at the end of the header; null hides it. */
+    sectionRoot: SectionRoot? = null,
 ) {
     val context = LocalContext.current
     val viewModel: SearchViewModel =
@@ -210,7 +214,7 @@ fun SearchScreen(
                             vertical = Spacing.tvSafeMarginVertical,
                         ),
             ) {
-                HeaderRow(contentType = contentType)
+                HeaderRow(contentType = contentType, sectionRoot = sectionRoot)
 
                 Spacer(modifier = Modifier.height(Spacing.lg))
 
@@ -299,7 +303,10 @@ fun SearchScreen(
 }
 
 @Composable
-private fun HeaderRow(contentType: String) {
+private fun HeaderRow(
+    contentType: String,
+    sectionRoot: SectionRoot?,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -317,6 +324,7 @@ private fun HeaderRow(contentType: String) {
                 color = CinemaAccent,
             )
         }
+        SectionRootButton(sectionRoot)
     }
 }
 

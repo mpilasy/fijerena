@@ -106,6 +106,7 @@ import org.njarasoa.fijerena.core.ui.components.rememberNowEpochSecondsState
 import org.njarasoa.fijerena.core.ui.guide.GuideCell
 import org.njarasoa.fijerena.core.ui.guide.GuideLayout
 import org.njarasoa.fijerena.core.ui.model.FavoriteMenuTarget
+import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccentLight
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -120,6 +121,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.guideListingsEnded
 import org.njarasoa.fijerena.feature.category.components.FavoriteContextMenuDialog
 import org.njarasoa.fijerena.feature.category.components.RowActionsHint
+import org.njarasoa.fijerena.ui.components.SectionRootButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.input.NavReturnFocus
@@ -185,7 +187,10 @@ private const val HEADER_NOW = "now"
 private const val HEADER_NEXT = "next"
 private const val HEADER_SEARCH = "search"
 private const val HEADER_REFRESH = "refresh"
-private val HEADER_KEYS = listOf(HEADER_PREV, HEADER_NOW, HEADER_NEXT, HEADER_SEARCH, HEADER_REFRESH)
+private const val HEADER_SECTION_ROOT = "sectionRoot"
+
+// The section-root button is last; while it isn't shown, Right on Refresh finds no button and stays.
+private val HEADER_KEYS = listOf(HEADER_PREV, HEADER_NOW, HEADER_NEXT, HEADER_SEARCH, HEADER_REFRESH, HEADER_SECTION_ROOT)
 
 // Keys for cells, shared by GuideFocus and NavReturnFocus (the cell that opened a preview gets
 // focus back). A programme key is prefix + channel id + separator + programme id, so its channel
@@ -243,6 +248,8 @@ fun TvGuideGrid(
     /** Null where Remove from Recent is not offered (not the Recent guide, or the source keeps the history). */
     onRemoveFromRecent: ((MediaItem) -> Unit)?,
     focusChannelId: String? = null,
+    /** The section-root button (P6), the header's last button; null hides it. */
+    sectionRoot: SectionRoot? = null,
 ) {
     val scale = LocalUiScale.current
     val scope = rememberCoroutineScope()
@@ -311,6 +318,7 @@ fun TvGuideGrid(
                 }
             },
             onRefresh = onRefresh,
+            sectionRoot = sectionRoot,
             onSearch = {
                 returnFocus.leaveFrom(HEADER_SEARCH, verticalListState)
                 onSearch()
@@ -409,6 +417,7 @@ private fun GuideHeader(
     onNextDay: () -> Unit,
     onJumpToNow: () -> Unit,
     onRefresh: () -> Unit,
+    sectionRoot: SectionRoot?,
     onSearch: () -> Unit,
     onDownIntoGrid: () -> Unit,
     modifier: Modifier = Modifier,
@@ -502,6 +511,7 @@ private fun GuideHeader(
                     Spacer(modifier = Modifier.width(Spacing.xs.scaled(scale)))
                     Text(stringResource(R.string.common_refresh))
                 }
+                SectionRootButton(sectionRoot, modifier = Modifier.paneItem(headerPane, HEADER_SECTION_ROOT))
             }
         }
 

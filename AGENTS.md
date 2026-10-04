@@ -197,6 +197,7 @@ Apply TV-safe margins to all root containers (56dp horizontal / 32dp vertical):
 1. **Startup:** `NewerData` / `SafeMode` first when they apply; otherwise the home screen (`ContentTypeSelection`; titled "Home" on mobile) if a provider is configured — on TV through `ProfilePicker` when there is more than one profile — else Settings. See `docs/NAVIGATION_GUIDE.md` → "Navigation Rules".
 2. **Selection:** Content Type -> Category Grid -> Details (VOD) -> Player.
 3. **Navigation IDs:** Always use `String` for IDs.
+4. **Section-root button:** a screen 4 or more back-stack entries above Home (`HOME_BUTTON_MIN_DEPTH`) shows a button back to the first screen above Home (Movies, Settings…). A new screen that can sit that deep takes `sectionRoot: SectionRoot?` — TV `SectionRootButton` last in its header row, mobile `SectionRootAction` last in its top bar — and both nav hosts pass `sectionRootFor(navController, backStackEntry)`. Never on the player or the Live TV preview. See `docs/NAVIGATION_GUIDE.md` → Back-Stack Rules.
 
 ### Features
 
