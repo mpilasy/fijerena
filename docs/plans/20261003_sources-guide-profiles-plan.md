@@ -1,6 +1,6 @@
 # Sources, Guide Sources, Profiles and Home Plan — TV + mobile
 
-**Status:** Proposed (2026-10-03), not started. Decisions D1–D7 below are recommendations waiting
+**Status:** Proposed (2026-10-03), not started. Decisions D1–D8 below are recommendations waiting
 for the user's confirmation.
 
 ## Progress
@@ -8,13 +8,14 @@ for the user's confirmation.
 | Phase | State |
 |---|---|
 | P1 Switch to a profile from its edit dialog | Todo |
-| P2 Developer mode in the profile edit dialog | Todo |
+| P2 Per-profile settings in the profile edit page (developer mode, play next episode) | Todo |
 | P3 "Provides a guide" per source | Todo |
 | P4 Guide sources under the source; Settings shows Manage sources only | Todo |
 | P5 Auto-refresh per guide source | Todo |
 | P6 Home button on every page | Todo |
 | P7 Home keeps Search the guide; search ↔ grid; no channel search | Todo |
 | P8 Live TV preview plays on OK, not on focus (TV only) | Todo |
+| P9 Content filters from the profile, not from the source | Todo |
 
 Rows get **In progress (since date)** when work starts and **Done date** with what was verified
 and where when merged. Plan edits go in their own `docs:` commit.
@@ -40,6 +41,9 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
 11. Search the guide's channel mode (TV "What's on", mobile "Chan.") is no longer needed.
 12. (TV only) The Live TV preview should not change channel by itself as focus moves: OK on a channel plays
     it, and only OK on the channel already playing goes full screen.
+13. From the profile's edit page the source must not be editable at all — only that profile's
+    content filters for it.
+14. "Play next episode automatically" belongs on the profile edit page too.
 
 ## How it works today (checked in the code, `main` at `b905113e`)
 
@@ -77,6 +81,15 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
   playing, then `fullScreen = true`). The hint line reads "OK Full screen · Hold OK Options"
   (`live_preview_hint`). Moving through a list, or switching tabs with Left/Right, keeps changing
   the channel. In full screen the panel already works on OK only (OK tunes and closes it).
+- **Play next episode automatically** is per profile too (`KEY_AUTOPLAY_NEXT_EPISODE`, in
+  `AppSettings.PER_PROFILE_SETTING_KEYS` with developer mode and the last source), synced, and also
+  switched only for the profile in use, from Settings → Playback (next to the device-wide "Count as
+  watched after").
+- **Content filters** are stored per source *and* per profile (`CategoryFiltersStore`, keyed
+  provider × profile, synced through `SettingsSyncQueue.categoryFilters`; 2026-09-30 profile-scoped
+  settings plan). They are edited only inside Edit Source (TV `ProviderFiltersSection` →
+  `CategoryFilterDialog`, mobile its own section), always for the profile in use — so changing a
+  profile's filters means switching to it and opening the source's full edit screen.
 - **Settings → Source & guide** has Switch source (opens the Sources list, where each source has
   Use, Edit, Guide and ⋮), **Edit this source** (Edit Source for the active one), Guide Sources and
   Guide auto-refresh; the Profiles group's content-filters row also opens Edit Source on the
@@ -109,14 +122,16 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
 | D4 | Where does the Home button go? | TV: a house icon at the right end of each screen's header row (the same slot everywhere, after the screen's own buttons), reached by Up like the other header buttons; in the full-screen player, a **Home** button in the OSD's ⋮ More group. Mobile: a house icon in each top app bar's actions (and the player's controls). Not on Home, the profile picker, Safe mode or the newer-data screen. |
 | D6 | What stays of the source rows in Settings? | One **Manage sources ›** row (its value: the source in use) opening the Sources list, where switching, editing and guide sources already live. Edit this source, Guide Sources and the content-filters shortcut leave Settings; the Profiles group keeps a one-line note that filters are set per source in Edit Source. |
 | D7 | What does the grid button on Search the guide open? | Opened from a TV Guide (with its "In <list> only" filter): the same as Back, return to that grid. Opened from Home: the TV Guide for Recent, which is what Home's TV Guide button opened. |
+| D8 | Where are content filters edited? | From the profile only: the profile edit page gets **Content filters ›**, listing the sources that have categories; picking one opens the existing filter editor for that source and *that* profile (not the profile in use), with nothing else of the source editable. Edit Source loses its filters section, since filters belong to a profile and Edit Source can't say which. The profile edit dialog becomes a page (Settings sub-pane on TV, a screen on mobile) to hold name, Developer mode, Content filters, Switch to this profile and Delete. |
 | D5 | What does Home do when there is no source (Home can't show anything)? | Hide the button on those screens — Settings is the start screen then, and Home would only send the viewer back to it. |
 
 ## Target
 
-**Profile edit dialog (both platforms):** name; **Developer mode** switch (this profile's own,
-whichever profile is being edited); **Switch to this profile** button (hidden for the profile in
-use); Save / Cancel; Delete last. The Add dialog gets the Developer mode switch too (off by
-default).
+**Profile edit page (both platforms, D8):** name; the profile's own settings, for whichever
+profile is being edited — **Developer mode** and **Play next episode automatically**; **Content filters ›** (the profile's filters per source — the
+source itself is not editable from here); **Switch to this profile** button (hidden for the
+profile in use); Save / Cancel; Delete last. Adding a profile asks only for the name (filters are
+copied from the profile in use, as today; developer mode starts off).
 
 **Edit Source (both platforms), sources with live channels:**
 - Xtream: **Provides a guide** switch — "This source's own guide (xmltv.php) is added
@@ -160,20 +175,23 @@ on.
 | Phase | Scope | Main files | Effort | Risk |
 |---|---|---|---|---|
 | P1 | **Switch to this profile** in the edit dialog: calls `AppContainer.switchProfile`, closes the dialog and goes Home as the picker does; hidden for the active profile. Strings ×3. | TV `ProfilesSettingsCard.kt`, mobile `ProfilesSettingsRows.kt`, both Settings screens' callbacks | S | Low |
-| P2 | **Developer mode in the edit dialog**: `AppSettings` gets `isDevMode(profileId)` / `setDevMode(profileId, value)` (same key and sync record as today); the dialog's switch edits the edited profile's value; the Developer Mode row leaves About & advanced; anything gated on dev mode keeps reading the active profile's value. | `AppSettings.kt`, `SettingsViewModel`, both profile dialogs, `DeveloperSettingsCard` / mobile Settings | S | Low |
+| P2 | **Per-profile settings in the edit page**: `AppSettings` gets per-profile getters/setters for the keys in `PER_PROFILE_SETTING_KEYS` that the viewer sets — developer mode and play next episode (same keys and sync records as today); the page's switches edit the edited profile's values; the Developer Mode row leaves About & advanced and "Play next episode automatically" leaves Settings → Playback (which keeps the device-wide "Count as watched after"); everything gated on them keeps reading the active profile's value. | `AppSettings.kt`, `SettingsViewModel`, both profile dialogs, `DeveloperSettingsCard`, TV `PlaybackSettingsCard`, mobile Settings | S | Low |
 | P3 | **Provides a guide**: `ProviderSettings.providesGuide: Boolean? = null` (null = detect). `AutoXmltvSources.reconcile` adds the automatic guide source only when the effective value is on, and removes it (only the automatic one — hand-added guide sources are never touched) when it is off. Detection: on for Xtream with live channels (today's rule); after an ingest of the automatic source with 0 channels, set `providesGuide = false` (empty `xmltv.php`). Switch in Edit Source for Xtream. Unit tests for reconcile with each value. | `ProviderSettings.kt`, `AutoXmltvSources.kt`, `XtreamSessionManager.kt`, `EpgFileManager.kt` (empty-ingest hook), both Edit Source screens, strings ×3 | M | Med (deletes a synced row; must keep hand-added sources) |
 | P4 | **Guide sources under the source; Settings shows Manage sources only**: "Guide sources ›" row in Edit Source (sources with live channels) opening `EpgManagement(providerId)`; the Sources list's Guide button stays (D3). Settings → Source & guide becomes **Manage sources ›** (renamed from Switch source, value = the source in use) — Edit this source, Guide Sources and the Profiles group's content-filters shortcut (`focusFilters` deep link) are removed (D6); unused strings removed ×3. Search the guide gets a Guide sources icon button next to Refresh, opening `EpgManagement(activeProviderId)`; Back returns focus to it. Back from the guide sources screen returns to the row it opened from (`NavReturnFocus`). Focus walks updated. | both Edit Source screens, both Settings screens, both Search the guide screens (`TvEpgBrowserScreen`, `MobileEpgBrowserScreen`), both nav hosts, `scripts/focus-walks/settings*.txt`, `edit-source.txt` | M | Low |
 | P5 | **Auto-refresh per guide source**: `epg_source.refresh_interval_hours` (`SettingsDatabase` 15 → 16, `NOT NULL DEFAULT 24`, `-1` = off), a one-time startup step copying today's device-wide interval into every row (so nothing changes for anyone on upgrade), then the device-wide interval and switch retire (`epgRefreshTime` stays as "Guide refresh time"). `getStaleSources` uses each row's own interval (stale after half of it, as today); the periodic `EpgSyncWorker` runs at the shortest interval among enabled guide sources, first run at the refresh time, cancelled when all are off. Sync payload and export carry the field (optional, default keeps the local value, so older app versions keep working). Guide sources screen: interval in the row and a picker in the row actions. Room migration test, `docs/DATABASE_SCHEMA.md` updated in the same commit. | `EpgSourceEntity.kt`, `SettingsDatabase.kt` (+ schema JSON 16), `EpgSourceDao.kt`, `EpgFileManager.kt`, `EpgSyncWorker.kt`, `AppSettings.kt`, `SyncPayloads.kt` / sync applier, `SettingsExportManager.kt`, both guide sources screens, both Settings screens (`GuideSettingsRows`), strings ×3 | L | Med-High (schema migration on every device, sync format, worker scheduling) |
 | P6 | **Home button on every page**: one `goHome()` per nav host — `popBackStack(Screen.ContentTypeSelection, inclusive = false)` when Home is on the stack, else `navigate(Screen.ContentTypeSelection) { popUpTo(0) { inclusive = true } }` — and one button per platform (TV `TvHomeButton` for the header slot, mobile a top-bar action), passed as `onHome` to every screen in D4's list; TV player OSD and mobile player controls get it too; hidden when there is no source (D5). TV focus: a header stop at the row's end, reachable by Up from the content like the existing header buttons. Focus walks updated. Strings ×3 ("Home"). | both nav hosts; TV screens' headers (Settings, Sources, Edit Source, guide sources, Live sync, Diagnostics, Live TV / Movies / TV Shows browse and preview, details, episodes, Search, TV Guide, Search the guide), `TvPlayerControlsOverlay`; mobile top bars and `MobileControlsOverlay`; `scripts/focus-walks/*` | M | Med (touches every screen header; TV focus order in each) |
 | P7 | **Home keeps Search the guide; search ↔ grid; no channel search**: Home drops its TV Guide button (TV and mobile; focus walk `home.txt`); Search the guide gets a TV Guide icon button (D7: pop back to the grid it came from, else `EpgGuide` for Recent); the channel mode goes — the mode chips, `SearchMode.CHANNEL`, the channel-search path in `EpgBrowserViewModel` and `XmltvSearchService.searchByChannel` if nothing else calls it, and its strings ×3. | both Home screens (`ContentTypeSelectionScreen`), both Search the guide screens, `EpgBrowserViewModel.kt`, `XmltvSearchService.kt`, both nav hosts, `scripts/focus-walks/home.txt` | S | Low |
 
+| P9 | **Content filters from the profile, not from the source** (D8): the profile edit dialog becomes a page (TV: a sub-pane of Settings' Profiles group; mobile: `Screen.ProfileEdit(profileId)`) holding P1's and P2's controls plus **Content filters ›** → a list of the profile's sources with categories → the existing filter editor (`CategoryFilterDialog` on TV, the mobile equivalent) opened for that provider × profile through `CategoryFiltersStore`; editing a profile not in use only stores its filters (they apply when it becomes active, as switching profiles already does). Edit Source drops its filters section and the `focusFilters` deep link (with D6). Focus walks (`settings.txt`, `edit-source.txt`). | both profile dialogs → pages, both Edit Source screens, filter editor entry points, `CategoryFiltersStore` (read/write for a given profile), both nav hosts (mobile route), strings ×3 | M | Med (filters for a profile not in use; the catalogue's `excluded` flags must still follow only the active profile) |
 | P8 | **Live TV preview plays on OK, not on focus (TV only; the phone is unchanged)**: drop the focus-driven tuning (`focusedItemFlow` / `PREVIEW_SETTLE_MS` / its `collectLatest`; the entry seed still sets `previewTarget` directly); the docked panel's `onStreamPromote` becomes: row ≠ playing → `previewTarget = item` (tune in the preview), row = playing → full screen as today. `live_preview_hint` reworded ×3. `NAVIGATION_GUIDE` / `FEATURES` / `AGENTS` lines on "focus tunes the preview" updated; `live-tv-preview.txt` / `live-tv-back.txt` comments. | `LiveTvSplitLayout.kt`, strings ×3, docs, focus walks | S | Low-Med (LiveTvSplitLayout has ANR history; one engine, one loader — no new player) |
 
 Order: P1 and P2 (one lane, the profile dialog), P3 then P4 (one lane, Edit Source), P5 after P4
 (its UI is on the screen P4 links). P1/P2 and P3/P4 can run in parallel. P6 is independent of the
 rest but touches every screen's header and both nav hosts, so it runs alone, after P4 (which also
 edits the nav hosts and Edit Source). P7 runs with P4 (both edit Search the guide's header) or
-right after it. P8 is independent and small; it can go first.
+right after it. P8 is independent and small; it can go first. P9
+builds on P1–P2 (same page) and goes with P4 (both edit Edit Source), so it joins lane 1 after P2
+and lands after P4.
 
 ## Data, sync and safety notes
 
@@ -205,6 +223,11 @@ right after it. P8 is independent and small; it can go first.
 - P7: Home shows Search the guide and Search All, no TV Guide; Search the guide has no mode
   chips; its TV Guide button returns to the grid it came from, or opens Recent's grid from Home;
   Back from that grid returns to Search the guide.
+- P2: developer mode and play next episode switched on the page of a profile not in use don't change the profile in use; after switching to it both apply; Settings → Playback keeps only "Count as watched after".
+- P9: from Settings → Profiles → a profile not in use → Content filters → a source: the filter
+  editor opens for that profile; hiding a category there doesn't change what the profile in use
+  sees; after switching to that profile the category is hidden; Edit Source has no filters
+  section; nothing of the source is editable from the profile page.
 - P8: in the preview, Down / Up through rows and Left / Right across tabs leave the playing
   channel alone; OK on another row plays it ("Tuning · …"), OK again goes full screen; Back from
   full screen returns to the preview on that channel; Home → Live TV still opens on the last
