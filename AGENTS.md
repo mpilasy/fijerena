@@ -286,7 +286,7 @@ For deep-dives, see the `docs/` directory:
 | [docs/design.md](docs/design.md) | Full system design: module graph, domain model, player system, EPG architecture, theme system, screen inventory |
 | [docs/FEATURES.md](docs/FEATURES.md) | Comprehensive feature reference with API details |
 | [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) | Complete database schema for all Room DBs and SharedPreferences. **Update it in the same commit as any migration** - see below |
-| [docs/epg_guide.md](docs/epg_guide.md) | EPG pipeline implementation guide with data models and file inventory |
+| [docs/epg_guide.md](docs/epg_guide.md) | EPG pipeline: ingestion, indexer, workers, TV Guide grid, Search the guide, settings, file inventory |
 | [docs/NAVIGATION_GUIDE.md](docs/NAVIGATION_GUIDE.md) | Type-safe navigation, screen definitions, flow diagrams, TV focus handling |
 | [docs/EPG_INDEX_STORAGE.md](docs/EPG_INDEX_STORAGE.md) | Why the EPG index grew to 87% dead space, the PRAGMA/Requery traps behind it, and how to read DB state from a file header |
 | [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) | Build, install, deploy, backup/restore, debugging and focus walks for TV and mobile |
