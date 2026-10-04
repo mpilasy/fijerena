@@ -6,6 +6,8 @@ import androidx.core.content.edit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -62,14 +64,15 @@ class SettingsExportManager(
         /**
          * A guide source's interval on import: its own when the file has one; otherwise (a file
          * from before per-source intervals) off if the file's device-wide auto-refresh was off,
-         * else unset — it then uses this device's retired device-wide interval, as before.
+         * else unset — it then uses this device's retired device-wide interval, as before. That
+         * switch is the only use of [GlobalSettings.epgAutoRefreshEnabled] left.
          */
         internal fun importedRefreshIntervalHours(
             source: ExportedEpgSource,
             global: GlobalSettings,
         ): Int? =
             source.refreshIntervalHours?.takeIf { EpgRefreshSchedule.isValidInterval(it) }
-                ?: EpgSourceEntity.REFRESH_OFF.takeUnless { global.epgAutoRefreshEnabled }
+                ?: EpgSourceEntity.REFRESH_OFF.takeIf { global.epgAutoRefreshEnabled == false }
     }
 
     @Serializable
@@ -84,12 +87,17 @@ class SettingsExportManager(
         val providerWatchState: List<ProviderWatchState> = emptyList(),
     )
 
+    @OptIn(ExperimentalSerializationApi::class)
     @Serializable
     data class GlobalSettings(
         val themeId: String = "deep_night",
         val uiScale: Float = 1.0f,
         val isDevMode: Boolean = false,
-        val epgAutoRefreshEnabled: Boolean = true,
+        // The retired device-wide guide auto-refresh switch: read from an older file only (see
+        // importedRefreshIntervalHours), never written — null, and then left out of the file, so
+        // an older version reading a new file keeps its own default.
+        @EncodeDefault(EncodeDefault.Mode.NEVER)
+        val epgAutoRefreshEnabled: Boolean? = null,
         val cellularLiveMultiplier: Float = 1.0f,
         val cellularVodMultiplier: Float = 1.0f,
     )
@@ -245,7 +253,6 @@ class SettingsExportManager(
                     themeId = appSettings.themeId,
                     uiScale = appSettings.uiScale,
                     isDevMode = appSettings.isDevMode,
-                    epgAutoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
                     cellularLiveMultiplier = appSettings.cellularLiveMultiplier,
                     cellularVodMultiplier = appSettings.cellularVodMultiplier,
                 )
@@ -503,7 +510,6 @@ class SettingsExportManager(
                     appSettings.themeId = exported.global.themeId
                     appSettings.uiScale = exported.global.uiScale
                     appSettings.isDevMode = exported.global.isDevMode
-                    appSettings.epgAutoRefreshEnabled = exported.global.epgAutoRefreshEnabled
                     appSettings.cellularLiveMultiplier = exported.global.cellularLiveMultiplier
                     appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
                 }

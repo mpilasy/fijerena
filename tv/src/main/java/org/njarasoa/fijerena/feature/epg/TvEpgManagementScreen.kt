@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
@@ -40,6 +41,8 @@ import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.provider.components.ProviderDangerButton
+import org.njarasoa.fijerena.feature.settings.components.PickerOption
+import org.njarasoa.fijerena.feature.settings.components.SettingsPickerPane
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
@@ -53,8 +56,9 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * One source's guide sources (A-9, T6): "Guide sources · <source>", the list under its bulk
- * actions, and an empty state that offers to add one. Guide auto-refresh and maintenance are
- * device-wide and live in Settings (Source & guide, Backup & storage).
+ * actions, and an empty state that offers to add one. Each row shows its own auto-refresh, and
+ * its Auto-refresh button drills into a picker in place of the list (P5b); guide maintenance is
+ * device-wide and lives in Settings (Backup & storage).
  */
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -116,6 +120,41 @@ fun TvEpgManagementScreen(
         if (loaded) (if (firstSourceId != null) firstRowFocus else addFocus).requestFocusWithRetry()
     }
 
+    // A source's auto-refresh picker (P5b), drawn in place of the list like Settings' choice
+    // pickers; on close, focus goes back to that row's Auto-refresh button, and the list keeps its
+    // scroll through [listState].
+    var intervalSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
+    var intervalReturnId by remember { mutableStateOf<Long?>(null) }
+    val intervalButtonFocus = remember { FocusRequester() }
+    val listState = rememberLazyListState()
+    LaunchedEffect(intervalSource) {
+        if (intervalSource == null && intervalReturnId != null) {
+            intervalButtonFocus.requestFocusWithRetry()
+            intervalReturnId = null
+        }
+    }
+    val pickerSource = intervalSource
+    if (pickerSource != null) {
+        val current = viewModel.refreshIntervalHours(pickerSource)
+        SettingsPickerPane(
+            title =
+                stringResource(R.string.epg_auto_refresh_title) + " · " +
+                    pickerSource.label.ifBlank { stringResource(R.string.epg_unnamed_source) },
+            options =
+                EpgManagementViewModel.refreshIntervalOptions(current).map { hours ->
+                    PickerOption(EpgManagementViewModel.refreshIntervalLabel(hours).asString(), hours)
+                },
+            selectedValue = current,
+            onPick = { hours -> if (hours != current) viewModel.setRefreshInterval(pickerSource.id, hours) },
+            onBack = {
+                intervalReturnId = pickerSource.id
+                intervalSource = null
+            },
+            modifier = Modifier.padding(horizontal = Spacing.tvSafeMarginHorizontal, vertical = Spacing.tvSafeMarginVertical),
+        )
+        return
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
@@ -139,6 +178,7 @@ fun TvEpgManagementScreen(
             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
             LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(vertical = Spacing.xs.scaled(scale)),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                 modifier = Modifier.fillMaxSize().focusRestorer(),
@@ -312,6 +352,15 @@ fun TvEpgManagementScreen(
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                                         )
                                     }
+                                    Text(
+                                        text =
+                                            EpgManagementViewModel
+                                                .refreshIntervalSummary(
+                                                    viewModel.refreshIntervalHours(source),
+                                                ).asString(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                                    )
                                 }
                             }
 
@@ -325,6 +374,12 @@ fun TvEpgManagementScreen(
                                 CinemaSecondaryButton(
                                     onClick = { editingSource = source },
                                     text = stringResource(R.string.provider_edit_button),
+                                )
+                                CinemaSecondaryButton(
+                                    onClick = { intervalSource = source },
+                                    text = stringResource(R.string.epg_auto_refresh_title),
+                                    modifier =
+                                        if (source.id == intervalReturnId) Modifier.focusRequester(intervalButtonFocus) else Modifier,
                                 )
                                 ProviderDangerButton(
                                     onClick = { deletingSource = source },

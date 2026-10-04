@@ -32,9 +32,10 @@ CENTER	10 s
 LEFT	Count as watched after / How long to watch a channel before it's added to Last Watched / This device / 10 s ›
 LEFT	Playback
 UP	Source & guide
-# P4 (D6): one Manage sources row (the source in use as its value), then Guide auto-refresh.
+# P4 (D6): one Manage sources row (the source in use as its value); Guide auto-refresh went
+# with P5b (each guide source has its own), so Down stays on it.
 RIGHT	Manage sources
-DOWN	Guide auto-refresh
+DOWN	Manage sources
 LEFT	Source & guide
 UP	Profiles
 # Up at the top of the rail stays put (the header has nothing to focus).

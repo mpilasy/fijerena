@@ -34,12 +34,14 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.utils.NumberUtils
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
+import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.ui.components.buttons.CinemaButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 
 /**
  * One source's guide sources (A-9, M5): the list first, its bulk actions, an empty state that
- * offers to add one. Guide auto-refresh and maintenance are device-wide and live in Settings.
+ * offers to add one. Each card shows its own auto-refresh, changed from its Auto-refresh button
+ * (P5b); guide maintenance is device-wide and lives in Settings.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -88,6 +90,7 @@ fun MobileEpgManagementScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
     var deleteSelectedIds by remember { mutableStateOf<Set<Long>?>(null) }
+    var intervalSource by remember { mutableStateOf<EpgSourceEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -223,7 +226,9 @@ fun MobileEpgManagementScreen(
                         isOwnGuideOff = !source.enabled && provider?.let { AutoXmltvSources.isAutoXmltvSource(source, it.url) } == true,
                         nowMs = nowMs,
                         staleThresholdMs = viewModel.staleThresholdMs(source),
+                        refreshSummary = EpgManagementViewModel.refreshIntervalSummary(viewModel.refreshIntervalHours(source)).asString(),
                         onRefresh = { viewModel.refreshSource(source.id) },
+                        onAutoRefresh = { intervalSource = source },
                         onEdit = { editingSource = source },
                         onDelete = { viewModel.deleteSource(source.id) },
                         onToggleSelection = { viewModel.toggleSelection(source.id) },
@@ -255,6 +260,23 @@ fun MobileEpgManagementScreen(
             },
         )
     }
+    intervalSource?.let { source ->
+        val current = viewModel.refreshIntervalHours(source)
+        SettingsPickerDialog(
+            title = stringResource(R.string.epg_auto_refresh_title),
+            options =
+                EpgManagementViewModel.refreshIntervalOptions(current).map { hours ->
+                    EpgManagementViewModel.refreshIntervalLabel(hours).asString() to hours
+                },
+            selected = current,
+            onSelect = { hours ->
+                if (hours != current) viewModel.setRefreshInterval(source.id, hours)
+                intervalSource = null
+            },
+            onDismiss = { intervalSource = null },
+        )
+    }
+
     deleteSelectedIds?.let { idsToDelete ->
         CinemaAlertDialog(
             onDismissRequest = { deleteSelectedIds = null },
@@ -299,7 +321,9 @@ private fun EpgSourceCard(
     isOwnGuideOff: Boolean,
     nowMs: Long,
     staleThresholdMs: Long,
+    refreshSummary: String,
     onRefresh: () -> Unit,
+    onAutoRefresh: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onToggleSelection: () -> Unit,
@@ -344,6 +368,11 @@ private fun EpgSourceCard(
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
                             )
                         }
+                        Text(
+                            text = refreshSummary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textMedium),
+                        )
                     }
                 }
 
@@ -454,6 +483,9 @@ private fun EpgSourceCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                CinemaTextButton(onClick = onAutoRefresh) {
+                    Text(stringResource(R.string.epg_auto_refresh_title))
+                }
                 CinemaTextButton(onClick = onEdit) {
                     Text(stringResource(R.string.provider_edit_button))
                 }

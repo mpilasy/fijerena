@@ -1,6 +1,7 @@
 package org.njarasoa.fijerena.core.network
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,6 +27,14 @@ class SettingsExportEpgIntervalTest {
     }
 
     @Test
+    fun `an older file's device-wide switch is read`() {
+        val off = decode("""{"version":5,"global":{"epgAutoRefreshEnabled":false}}""")
+
+        assertEquals(false, off.global.epgAutoRefreshEnabled)
+        assertNull(decode("""{"version":5}""").global.epgAutoRefreshEnabled)
+    }
+
+    @Test
     fun `an older file without the interval reads as not set`() {
         val source = decode("""{"version":5,"epgSources":[{"url":"u","providerName":"P"}]}""").epgSources.single()
 
@@ -38,6 +47,7 @@ class SettingsExportEpgIntervalTest {
         val own = ExportedEpgSource(url = "u", refreshIntervalHours = 12)
 
         assertNull(importedRefreshIntervalHours(older, GlobalSettings(epgAutoRefreshEnabled = true)))
+        assertNull(importedRefreshIntervalHours(older, GlobalSettings()))
         assertEquals(REFRESH_OFF, importedRefreshIntervalHours(older, GlobalSettings(epgAutoRefreshEnabled = false)))
         assertEquals(12, importedRefreshIntervalHours(own, GlobalSettings(epgAutoRefreshEnabled = false)))
         assertEquals(
@@ -55,5 +65,12 @@ class SettingsExportEpgIntervalTest {
             )
 
         assertTrue(file.contains("\"refreshIntervalHours\": 168"))
+    }
+
+    @Test
+    fun `the retired device-wide switch is not written on export`() {
+        val file = SettingsExportManager.json.encodeToString(ExportedSettings.serializer(), ExportedSettings())
+
+        assertFalse(file, file.contains("epgAutoRefreshEnabled"))
     }
 }

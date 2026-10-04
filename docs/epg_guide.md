@@ -293,15 +293,17 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 
 **Guide sources** (`Screen.EpgManagement(providerId)`, titled "Guide sources · <source>"; `TvEpgManagementScreen` / `MobileEpgManagementScreen`, `EpgManagementViewModel`): opened from the source's Edit Source (Guide sources ›, with the count and last refresh as its value), the Sources list's Guide button, or Search the guide's Guide sources button (the source in use); Back returns focus to the control that opened it. Guide sources belong to one provider (`epg_source.provider_id`); several XMLTV sources can be added, edited, enabled/disabled and deleted. Fields: see `epg_source` in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) §1.
 
-**Actions:** Refresh Stale (N), Retry Failed (N), Refresh (N) for the sources selected with the row checkboxes, a per-source Refresh, Edit and Delete, and Delete selected.
+**Actions:** Refresh Stale (N), Retry Failed (N), Refresh (N) for the sources selected with the row checkboxes, a per-source Refresh, Edit, Auto-refresh and Delete, and Delete selected.
+
+**Auto-refresh per row:** each row shows its interval ("Refreshes daily", "Refreshes every 6 hours", "Auto-refresh off"; `EpgManagementViewModel.refreshIntervalHours(source)`, i.e. `EpgRefreshSchedule.intervalHours` with the retired device-wide interval for a not-set row). Its **Auto-refresh** button opens a picker — TV: `SettingsPickerPane` in place of the list, opening on the current value, Left/Back closing it onto the button; phone: `SettingsPickerDialog` — with Off, every 6 h, 12 h, daily and weekly (`REFRESH_INTERVAL_CHOICES`). A value that isn't one of them (4, 8 or 48 h copied from the old setting) is added as an extra checked option (`refreshIntervalOptions`), so it stays until another is picked. Picking calls `EpgFileManager.setRefreshInterval(sourceId, hours)`.
 
 **Status indicators:** green = ingested within the source's stale threshold (`EpgManagementViewModel.staleThresholdMs(source)`), yellow = older than that, red = last attempt errored, gray = disabled or never ingested. A source refreshed as "unchanged" shows "Unchanged" in place of its durations.
 
 **Per-source progress:** percentage, phase ("Downloading" / "Awaiting Ingestion" / "Ingesting", then the finalizing phases), byte counts, and channel/programme counts.
 
-**Guide settings** (`GuideSettingsRows`): under Settings → Source & guide, **Guide auto-refresh** — on/off (`epg_auto_refresh`), refresh interval (4h, 8h, 12h, 24h, 48h or "Never"; `epg_refresh_interval`) and start time (`epg_refresh_time`). These device-wide values are retired: they still apply to guide sources without an interval of their own, and the start time to nothing (the rows go with P5b of `docs/plans/20261003_sources-guide-profiles-plan.md`); under Settings → Backup & storage, **Guide data maintenance** — the pipeline's current status and last run (`epg_pipeline_stats`), Cleanup (delete stray `xmltv_*` cache files), Purge (programmes ended more than two days ago) and Clear All Data (with confirmation; status shows "Clearing" while it runs).
+**Guide settings** (`GuideSettingsRows`): no device-wide auto-refresh any more (P5b of `docs/plans/20261003_sources-guide-profiles-plan.md`: each guide source has its own, above). The retired keys `epg_auto_refresh` / `epg_refresh_interval` are only read, for a guide source without an interval of its own (one synced from an older app version) and by the one-time copy; `epg_refresh_time` is unused. Under Settings → Backup & storage, **Guide data maintenance** — the pipeline's current status and last run (`epg_pipeline_stats`), Cleanup (delete stray `xmltv_*` cache files), Purge (programmes ended more than two days ago) and Clear All Data (with confirmation; status shows "Clearing" while it runs).
 
-**Refresh scheduling (per guide source):** each `epg_source` row has its own `refresh_interval_hours` (`-1` = off; null = not set, which uses the retired device-wide interval; new sources start at 24). `EpgRefreshSchedule` (`xmltv/EpgRefreshSchedule.kt`) holds the rules. A source counts as stale after **half its own interval** (`staleAfterMs`), so the periodic `EpgSyncWorker` firing slightly off-schedule doesn't skip a whole cycle; an off source counts as stale after 24h for Refresh stale and the status colour, but an automatic run (the worker, `refreshOutdatedSources`) refreshes it only while it has never been ingested. The one periodic `epg_sync` runs at the shortest interval among enabled sources of every provider and still refreshes only the active provider's due sources; adding, removing, switching or changing the interval of a source reschedules it. The interval syncs (`SyncPayloads.EpgSource.refreshIntervalHours`, absent = keep the local value) and is exported (`ExportedEpgSource.refreshIntervalHours`; an older file's sources take off when its `epgAutoRefreshEnabled` was off, else stay not set).
+**Refresh scheduling (per guide source):** each `epg_source` row has its own `refresh_interval_hours` (`-1` = off; null = not set, which uses the retired device-wide interval; new sources start at 24). `EpgRefreshSchedule` (`xmltv/EpgRefreshSchedule.kt`) holds the rules. A source counts as stale after **half its own interval** (`staleAfterMs`), so the periodic `EpgSyncWorker` firing slightly off-schedule doesn't skip a whole cycle; an off source counts as stale after 24h for Refresh stale and the status colour, but an automatic run (the worker, `refreshOutdatedSources`) refreshes it only while it has never been ingested. The one periodic `epg_sync` runs at the shortest interval among enabled sources of every provider and still refreshes only the active provider's due sources; adding, removing, switching or changing the interval of a source reschedules it. The interval syncs (`SyncPayloads.EpgSource.refreshIntervalHours`, absent = keep the local value) and is exported (`ExportedEpgSource.refreshIntervalHours`; an older file's sources take off when its `epgAutoRefreshEnabled` was off, else stay not set). The retired device-wide keys are neither synced nor exported any more (P5b).
 
 **Source deletion cleanup:** deleting a source also removes its channels and programmes from the index database.
 
@@ -400,7 +402,7 @@ A disk-backed tier for `EpgChannelMatcher` (a `providers.db` table so a cold sta
 | `EpgViewModelFactory.kt` | Factory | Creates `EpgViewModel` for a category |
 | `EpgBrowserViewModel.kt` | ViewModel | "Search the guide": programme search, matching, context filter, Paging 3 |
 | `EpgBrowserViewModelFactory.kt` | Factory | Creates `EpgBrowserViewModel` |
-| `EpgManagementViewModel.kt` | ViewModel | Guide sources screen and guide settings |
+| `EpgManagementViewModel.kt` | ViewModel | Guide sources screen (each source's auto-refresh choices) and guide maintenance |
 
 ### UI Screens
 
@@ -411,12 +413,12 @@ A disk-backed tier for `EpgChannelMatcher` (a `providers.db` table so a cold sta
 | `tv/.../feature/epg/TvGuideGrid.kt` | TV | Grid (header, channels + time canvas, focus, details panel, row actions) |
 | `tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt` | TV | "Search the guide" |
 | `tv/.../feature/epg/TvEpgManagementScreen.kt` | TV | Guide sources |
-| `tv/.../feature/settings/components/GuideSettingsRows.kt` | TV | Guide auto-refresh and data maintenance rows |
+| `tv/.../feature/settings/components/GuideSettingsRows.kt` | TV | Guide data maintenance row and sub-pane |
 | `mobile/.../feature/epg/MobileEpgGuideScreen.kt` | Mobile | TV Guide screen (date tabs, details sheet) |
 | `mobile/.../feature/epg/MobileGuideGrid.kt` | Mobile | Grid (channel column + time canvas on `GuideLayout`) |
 | `mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt` | Mobile | "Search the guide" |
 | `mobile/.../feature/epg/MobileEpgManagementScreen.kt` | Mobile | Guide sources |
-| `mobile/.../feature/settings/components/GuideSettingsRows.kt` | Mobile | Guide auto-refresh and data maintenance rows |
+| `mobile/.../feature/settings/components/GuideSettingsRows.kt` | Mobile | Guide data maintenance row and dialog |
 
 ### Integration Points
 
@@ -425,6 +427,6 @@ A disk-backed tier for `EpgChannelMatcher` (a `providers.db` table so a cold sta
 | `MediaRepository.kt` | `getGuideForItemsInWindow()` (guide pages), `getGuideForItems()` / `getEpgBulkForItems()` (index, then native EPG), `getNowPlayingFromIndex()`, `hasGuideForSource()`, `matchGuideChannels()` |
 | `CategoryViewModel.kt` | Live TV "what's on now": `getNowPlayingFromIndex()` for the first 50 channels, then the native EPG for the unmatched ones |
 | `StreamLoaderViewModel.kt` | Player EPG via `getEpgBulkForItems()` |
-| `AppSettings.kt` | `epgAutoRefreshEnabled`, `epgRefreshTime`, `epgRefreshInterval`; `epgUrl` / `epgTimezoneOffsetHours` only for the one-time migration |
+| `AppSettings.kt` | `epgAutoRefreshEnabled`, `epgRefreshInterval` (retired, read only); `epgUrl` / `epgTimezoneOffsetHours` only for the one-time migration |
 | `FijerenaApplication.kt` | `EpgFileManager.initialize()`, `EpgIndexer.purgeXtreamApiSources()` at start |
 | `Screen.kt` (navigation) | `Screen.EpgGuide(categoryId, categoryName, focusChannelId?)`, `Screen.EpgBrowser(categoryId?, categoryName?)`, `Screen.EpgManagement(providerId)` |

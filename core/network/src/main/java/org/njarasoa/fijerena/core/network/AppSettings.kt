@@ -3,7 +3,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.intOrNull
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 
@@ -32,7 +31,6 @@ class AppSettings(
         private const val KEY_EPG_URL = "epg_url"
         private const val KEY_EPG_TIMEZONE_OFFSET = "epg_timezone_offset"
         private const val KEY_EPG_AUTO_REFRESH = "epg_auto_refresh"
-        private const val KEY_EPG_REFRESH_TIME = "epg_refresh_time"
         private const val KEY_EPG_REFRESH_INTERVAL = "epg_refresh_interval"
         private const val KEY_CONTENT_AUTO_REFRESH = "content_auto_refresh"
         private const val KEY_CONTENT_REFRESH_TIME = "content_refresh_time"
@@ -61,7 +59,6 @@ class AppSettings(
         const val DEFAULT_CACHE_EXPIRY_HOURS = 24
         const val DEFAULT_UI_SCALE = 0.8f
         const val DEFAULT_EPG_URL = ""
-        const val DEFAULT_EPG_REFRESH_TIME = "02:00"
         const val DEFAULT_EPG_REFRESH_INTERVAL = 24
         const val DEFAULT_CONTENT_REFRESH_TIME = "04:00"
         const val DEFAULT_CELLULAR_MULTIPLIER = 1.0f
@@ -71,27 +68,12 @@ class AppSettings(
             listOf(
                 KEY_THEME_ID,
                 KEY_DEV_MODE,
-                KEY_EPG_AUTO_REFRESH,
-                KEY_EPG_REFRESH_TIME,
-                KEY_EPG_REFRESH_INTERVAL,
                 KEY_LAST_PROVIDER,
                 KEY_AUTOPLAY_NEXT_EPISODE,
             )
         val PER_PROFILE_SETTING_KEYS = setOf(KEY_DEV_MODE, KEY_LAST_PROVIDER, KEY_AUTOPLAY_NEXT_EPISODE)
         const val MIN_CELLULAR_MULTIPLIER = 0.5f
         const val MAX_CELLULAR_MULTIPLIER = 3.0f
-
-        /** [epgRefreshTime] as (hour, minute), or null when it isn't a valid `HH:mm` (e.g. "4:00 AM"). */
-        fun parseRefreshTime(value: String): Pair<Int, Int>? {
-            val parts = value.split(":")
-            val hour = parts.getOrNull(0)?.toIntOrNull()
-            val minute = parts.getOrNull(1)?.toIntOrNull()
-            return if (parts.size == 2 && hour != null && minute != null && hour in 0..23 && minute in 0..59) {
-                hour to minute
-            } else {
-                null
-            }
-        }
     }
 
     /**
@@ -182,10 +164,10 @@ class AppSettings(
     /**
      * A setting received from another device (live sync): written straight to prefs, not through
      * the setters, which would queue it to be sent back. Keys other than [SYNCED_SETTING_KEYS] are
-     * ignored — a newer app version may sync more. A value this version can't use (a refresh time
-     * that isn't `HH:mm`, an interval it doesn't offer, a blank theme) is dropped, so the local
-     * value stays: one bad record must not break every linked device (R-09). An unknown theme id
-     * is kept, since `paletteById` already falls back to the default palette.
+     * ignored — a newer app version may sync more, and an older one still sends the retired guide
+     * auto-refresh keys. A value this version can't use (a blank theme, a non-boolean switch) is
+     * dropped, so the local value stays: one bad record must not break every linked device (R-09).
+     * An unknown theme id is kept, since `paletteById` already falls back to the default palette.
      */
     fun applyRemoteSetting(
         key: String,
@@ -198,9 +180,6 @@ class AppSettings(
                 KEY_AUTOPLAY_NEXT_EPISODE -> value.booleanOrNull?.let { putBoolean(profileKey(key, profileId), it) }
                 KEY_LAST_PROVIDER -> if (value.isString) putString(profileKey(key, profileId), value.content)
                 KEY_THEME_ID -> if (value.isString && value.content.isNotBlank()) putString(key, value.content)
-                KEY_EPG_REFRESH_TIME -> if (value.isString && parseRefreshTime(value.content) != null) putString(key, value.content)
-                KEY_EPG_AUTO_REFRESH -> value.booleanOrNull?.let { putBoolean(key, it) }
-                KEY_EPG_REFRESH_INTERVAL -> value.intOrNull?.takeIf { it in EPG_REFRESH_INTERVAL_OPTIONS }?.let { putInt(key, it) }
             }
         }
     }
@@ -213,18 +192,14 @@ class AppSettings(
         val stored = if (key in PER_PROFILE_SETTING_KEYS) profileKey(key, profileId) else key
         if (!prefs.contains(stored)) return null
         return when (key) {
-            KEY_DEV_MODE, KEY_EPG_AUTO_REFRESH, KEY_AUTOPLAY_NEXT_EPISODE -> {
+            KEY_DEV_MODE, KEY_AUTOPLAY_NEXT_EPISODE -> {
                 kotlinx.serialization.json.JsonPrimitive(
                     prefs.getBoolean(stored, false),
                 )
             }
 
-            KEY_THEME_ID, KEY_EPG_REFRESH_TIME, KEY_LAST_PROVIDER -> {
+            KEY_THEME_ID, KEY_LAST_PROVIDER -> {
                 kotlinx.serialization.json.JsonPrimitive(prefs.getString(stored, null))
-            }
-
-            KEY_EPG_REFRESH_INTERVAL -> {
-                kotlinx.serialization.json.JsonPrimitive(prefs.getInt(stored, DEFAULT_EPG_REFRESH_INTERVAL))
             }
 
             else -> {
@@ -322,40 +297,18 @@ class AppSettings(
         set(value) = prefs.edit { putString(KEY_EPG_URL, value.trim()) }
 
     /**
-     * Retired with [epgRefreshTime] and [epgRefreshInterval]: each guide source has its own
-     * interval (`epg_source.refresh_interval_hours`). Read once by
-     * [org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule.copyLegacyIntervalOnce]; they
-     * drive nothing else.
+     * The retired device-wide guide auto-refresh, read only: each guide source has its own
+     * interval (`epg_source.refresh_interval_hours`), set on its row. Nothing writes, syncs or
+     * exports these any more; they are the interval
+     * [org.njarasoa.fijerena.core.network.xmltv.EpgRefreshSchedule.copyLegacyIntervalOnce] copies
+     * once, and the one a source without an interval of its own uses.
      */
-    var epgAutoRefreshEnabled: Boolean
+    val epgAutoRefreshEnabled: Boolean
         get() = prefs.getBoolean(KEY_EPG_AUTO_REFRESH, true)
-        set(value) {
-            prefs.edit { putBoolean(KEY_EPG_AUTO_REFRESH, value) }
-            SettingsSyncQueue.setting(context, KEY_EPG_AUTO_REFRESH)
-        }
 
-    /**
-     * EPG refresh start time (HH:mm format). Retired, see [epgAutoRefreshEnabled].
-     * Default: 02:00
-     */
-    var epgRefreshTime: String
-        get() = prefs.getString(KEY_EPG_REFRESH_TIME, DEFAULT_EPG_REFRESH_TIME) ?: DEFAULT_EPG_REFRESH_TIME
-        set(value) {
-            prefs.edit { putString(KEY_EPG_REFRESH_TIME, value) }
-            SettingsSyncQueue.setting(context, KEY_EPG_REFRESH_TIME)
-        }
-
-    /**
-     * EPG refresh interval in hours. Retired, see [epgAutoRefreshEnabled].
-     * Options: 4, 8, 12, 24, 48, or -1 (Never).
-     * Default: 24 hours.
-     */
-    var epgRefreshInterval: Int
+    /** Hours, -1 = never. Retired, see [epgAutoRefreshEnabled]. */
+    val epgRefreshInterval: Int
         get() = prefs.getInt(KEY_EPG_REFRESH_INTERVAL, DEFAULT_EPG_REFRESH_INTERVAL)
-        set(value) {
-            prefs.edit { putInt(KEY_EPG_REFRESH_INTERVAL, value) }
-            SettingsSyncQueue.setting(context, KEY_EPG_REFRESH_INTERVAL)
-        }
 
     /**
      * Enable or disable automatic background refresh of provider content (categories/streams).
@@ -568,6 +521,3 @@ class AppSettings(
         }
     }
 }
-
-/** Interval-hour choices for the EPG auto-refresh setting; -1 means "Never". Labels are localized at the UI layer. */
-val EPG_REFRESH_INTERVAL_OPTIONS = listOf(-1, 4, 8, 12, 24, 48)

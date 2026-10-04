@@ -41,7 +41,6 @@ import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsUiState
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
-import org.njarasoa.fijerena.feature.settings.components.GuideAutoRefreshRow
 import org.njarasoa.fijerena.feature.settings.components.GuideMaintenanceRow
 import org.njarasoa.fijerena.feature.settings.components.ImportConflictDialog
 import org.njarasoa.fijerena.feature.settings.components.ImportOptionsDialog
@@ -307,7 +306,6 @@ fun MobileSettingsScreen(
                     scope = SettingsScope.SOURCE,
                     onClick = onManageProviders,
                 )
-                GuideAutoRefreshRow(viewModel = epgViewModel)
             }
 
             // === 3. Playback ===

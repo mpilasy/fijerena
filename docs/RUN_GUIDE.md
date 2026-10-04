@@ -334,10 +334,10 @@ there. Each file's header comments name the start screen, the source it expects 
 | `details.txt` | Movie details and the episodes list |
 | `search.txt` | Search field (`TvSearchField`) and recent searches |
 | `settings.txt` | Settings rail and panes, pickers |
-| `settings-guide.txt` | Settings: guide auto-refresh and guide data maintenance |
+| `settings-guide.txt` | Settings: Source & guide rows and guide data maintenance |
 | `sources.txt` | Sources rows and their fixed slots |
 | `edit-source.txt` | Edit Source, two columns |
-| `epg-management.txt` | Guide sources of one source |
+| `epg-management.txt` | Guide sources of one source, a row's Auto-refresh picker |
 | `live-sync.txt` | Live sync screen |
 
 All fifteen were run on the TV emulator on 2026-10-03 (ten re-recorded with `-r`, 0 mismatches

@@ -1,9 +1,7 @@
-# T6 — the guide's device-wide controls in Settings (SettingsScreen), TV emulator, source iptv,
-# auto-refresh at its defaults (on, every 24 hours, 02:00).
+# T6 — the guide's device-wide controls in Settings (SettingsScreen), TV emulator, source iptv.
 # Start: Settings just opened, focus on the rail row "Profiles".
-# Source & guide ends with "Guide auto-refresh" (value row, This device); OK drills into a
-# sub-pane in place of the rows: the Auto-Refresh switch (entry focus), EPG Refresh Interval
-# (its own picker, opening on the current value) and Set Refresh Time (the hour/minute dialog).
+# Source & guide has no Guide auto-refresh any more: each guide source has its own interval, set
+# on its row in the guide sources screen (P5b, walk epg-management.txt).
 # Backup & storage ends with "Guide data maintenance" (database line as its value); OK drills
 # into Cleanup (entry focus), Purge, then Clear All Data last under Danger zone. Left or Back
 # leaves a sub-pane with focus back on its row. Never press OK on Cleanup / Purge / Clear.
@@ -12,19 +10,8 @@
 DOWN	Source & guide
 # P4 (D6): Manage sources is the only source row; guide sources are reached from the source.
 RIGHT	Manage sources
-DOWN	Guide auto-refresh / This device / Daily · 02:00 ›
-# Down at the end of the pane stays put.
-DOWN	Guide auto-refresh
-CENTER	Auto-Refresh
-DOWN	EPG Refresh Interval
-DOWN	Set Refresh Time
-DOWN	Set Refresh Time
-UP	EPG Refresh Interval
-# The frequency picker opens on the current value; Left closes it onto its row.
-CENTER	24 hours
-LEFT	EPG Refresh Interval
-# Left leaves the sub-pane, focus back on the Settings row; Left again goes to the rail.
-LEFT	Guide auto-refresh
+# Down at the end of the pane stays put: Manage sources is the group's only row.
+DOWN	Manage sources
 LEFT	Source & guide
 DOWN	Playback
 DOWN	Display

@@ -93,12 +93,12 @@ Programme-title search across the indexed XMLTV guide, from Home's book icon (wh
 
 Each source has its own XMLTV guide sources: Edit Source → Guide sources, Sources → a source's Guide button, or Search the guide's Guide sources button (the source in use). Add, edit and delete XMLTV URLs; refresh all, the selected, stale or failed ones; cancel a running or queued refresh.
 
-- Per guide source: label and timezone offset (applied while parsing); status dot — green fresh, yellow older than the refresh interval, red error, grey disabled; download % and ingest % with channel/programme counts.
+- Per guide source: label and timezone offset (applied while parsing); its auto-refresh ("Refreshes daily", "Auto-refresh off"); status dot — green fresh, yellow older than the refresh interval, red error, grey disabled; download % and ingest % with channel/programme counts.
 - Download → parse into SQLite → delete: TV and other fixed devices stream from the network straight into the database; phones download to the cache directory first. Up to 3 downloads at once on mobile, 2 on TV; 2 parallel ingest workers.
 - Change detection: a source unchanged since the last refresh (`304`, or the same payload hash) skips download and ingest and reads **"Unchanged"**; a hash match is overridden once a day so the guide window keeps moving. Truncated downloads are caught against `Content-Length` and retried.
 - Retries: a refresh task retries up to 5 times (1, 2, 4, 8, 16 min); background WorkManager runs back off linearly by 10 min.
 - Programmes that ended more than 12 hours ago are skipped on import. Deleting a guide source removes its channels and programmes from the index.
-- **Guide auto-refresh:** each guide source has its own interval (new ones daily, or off); on upgrade every guide source takes the old device-wide setting, so nothing changes. One background job (WorkManager, run as a foreground service) runs at the shortest interval and refreshes the active source's guide sources that are due; there is no time of day. The device-wide Settings row no longer drives the schedule (it still applies to guide sources synced from an older app version). **Guide data maintenance** (Settings): Cleanup (stray files not tied to a source), Purge (programmes older than 2 days), Clear All Data (drops and recreates the index at once, keeping the guide source URLs).
+- **Guide auto-refresh:** each guide source has its own interval — Off, every 6 hours, every 12 hours, daily (new ones) or weekly — shown on its row and changed with the row's **Auto-refresh** button (TV: a picker in place of the list, opening on the current value; phone: a picker dialog). On upgrade every guide source took the old device-wide setting, so nothing changed; an interval the picker doesn't offer (4, 8 or 48 hours from that setting) stays, shown as an extra checked option, until another is picked. One background job (WorkManager, run as a foreground service) runs at the shortest interval and refreshes the active source's guide sources that are due; there is no time of day and no device-wide setting (a guide source synced from an older app version, without an interval of its own, uses the old one). **Guide data maintenance** (Settings): Cleanup (stray files not tied to a source), Purge (programmes older than 2 days), Clear All Data (drops and recreates the index at once, keeping the guide source URLs).
 
 Pipeline, index and search internals: [epg_guide.md](epg_guide.md), [EPG_INDEX_STORAGE.md](EPG_INDEX_STORAGE.md).
 
@@ -203,7 +203,7 @@ Seven groups, in this order, on both platforms. **TV:** two panes — the groups
 | Group | Rows |
 |-------|------|
 | **Profiles** | Profiles (which one this device uses) and Add profile; each profile opens its page: name, colour, its own Developer mode and Play next episode automatically, its content filters for the source in use, Switch to this profile, Delete |
-| **Source & guide** | Manage sources, its value the source in use with its URL and subscription (Xtream: expiry, max connections, trial) — opens Sources: use, add, edit, copy to another source, delete, guide sources; Guide auto-refresh |
+| **Source & guide** | Manage sources, its value the source in use with its URL and subscription (Xtream: expiry, max connections, trial) — opens Sources: use, add, edit, copy to another source, delete, guide sources (each guide source's auto-refresh is set there) |
 | **Playback** | Count as watched after: 5 / 10 / 15 / 30 / 60 / 120 s (default 10; mobile also takes a custom 5–120 s); mobile: a pointer to the per-source playback settings |
 | **Display** | Theme; Look and feel; Text & grid size (TV only: 40 / 60 / 80 / 100 %, default 80 %); Language |
 | **Live sync** | Opens Live sync |
@@ -229,7 +229,7 @@ A failed catalogue download (network, timeout, refused login) deletes nothing; a
 
 Backup & storage → Export / Import, through the system file picker.
 
-- **Exported:** every source (name, URL, username, type, config, per-source settings with the active profile's content filters, active flag), every guide source (with its auto-refresh interval), per-source favourites, favourite categories and watch state, and global settings (theme, UI scale, the active profile's dev mode, guide auto-refresh).
+- **Exported:** every source (name, URL, username, type, config, per-source settings with the active profile's content filters, active flag), every guide source (with its auto-refresh interval), per-source favourites, favourite categories and watch state, and global settings (theme, UI scale, the active profile's dev mode). The device-wide guide auto-refresh is no longer exported; importing an older file that has it turned off sets that file's guide sources to Off.
 - **Not exported:** passwords (EncryptedSharedPreferences), caches, guide programme data.
 - **Import:** a "Select What to Import" dialog — General Settings, Sources, Guide sources, Favorites (favourites, favourite categories and watch state). Only the checked sections are imported. When an imported source's name matches an existing one: **Overwrite** (update URL, username, type, config and settings in place), **Duplicate** (add with an `(imported)` suffix) or **Skip**. Guide sources merge by URL and favourites by item id; duplicates are skipped. Passwords have to be entered again.
 

@@ -2,18 +2,26 @@
 # more guide sources.
 # Start: opened from Edit Source → Guide sources (or the Sources list's Guide); title "Guide sources · iptv".
 # Entry focus is the first guide source's selection toggle ("Not selected"); with no guide
-# source it is "Add Guide Source" under "No guide sources configured". No System Status,
-# Maintenance or Auto-Refresh here any more (they are in Settings). Each row: the toggle, then
-# Refresh / Edit / Delete under it; the second line is host … path/query tail, passwords masked.
+# source it is "Add Guide Source" under "No guide sources configured". No System Status or
+# Maintenance here (they are in Settings). Each row: the toggle, then Refresh / Edit /
+# Auto-refresh / Delete under it; the second line is host … path/query tail, passwords masked;
+# the third its auto-refresh ("Refreshes daily", "Auto-refresh off").
 # Never press OK on Delete.
-# Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
+# Written 2026-10-03 from the plan, Auto-refresh added 2026-10-04 (P5b); re-record with -r on
+# the emulator before relying on it.
 @start Not selected
 # Up from the first row reaches Add and the bulk actions above the list.
 UP	Add Guide Source
 DOWN	Not selected
 DOWN	Refresh
 RIGHT	Edit
+RIGHT	Auto-refresh
 RIGHT	Delete
+LEFT	Auto-refresh
+# Auto-refresh drills into its picker in place of the list, focus on the current interval (the
+# iptv guide sources refresh daily); Left closes it unchanged, focus back on Auto-refresh.
+CENTER	Daily
+LEFT	Auto-refresh
 LEFT	Edit
 LEFT	Refresh
 DOWN	Not selected

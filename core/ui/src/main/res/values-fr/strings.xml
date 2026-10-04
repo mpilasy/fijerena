@@ -112,12 +112,13 @@
     <string name="epg_last_run_errors"> (%1$d erreurs)</string>
     <string name="epg_maintenance_desc">Gérer la base de données locale et les fichiers temporaires.</string>
     <string name="epg_maintenance_desc_tv">Nettoyer les fichiers temporaires et les anciens programmes.</string>
-    <string name="epg_automation_frequency">Fréquence : %1$s</string>
-    <string name="epg_automation_freq_never">Jamais</string>
     <string name="epg_automation_freq_daily">Quotidien</string>
     <string name="epg_automation_freq_hours">Toutes les %1$d heures</string>
-    <string name="epg_automation_next_at">. Prochaine à %1$s</string>
-    <string name="epg_automation_start_label">Début : %1$s</string>
+    <string name="epg_automation_freq_weekly">Hebdomadaire</string>
+    <string name="epg_source_refresh_off">Mise à jour auto désactivée</string>
+    <string name="epg_source_refresh_daily">Mise à jour quotidienne</string>
+    <string name="epg_source_refresh_weekly">Mise à jour hebdomadaire</string>
+    <string name="epg_source_refresh_hours">Mise à jour toutes les %1$d heures</string>
     <string name="epg_unnamed_source">Source de guide sans nom</string>
     <string name="epg_source_stat_label">Dernière synchro</string>
     <string name="epg_source_stat_download">Téléchargement</string>
@@ -140,10 +141,6 @@
     <string name="epg_delete_source_confirm_message">Voulez-vous vraiment supprimer \'%1$s\' ? Toutes les données EPG associées seront effacées.</string>
     <string name="epg_delete_selected_confirm_title">Supprimer les sources de guide sélectionnées ?</string>
     <string name="epg_delete_selected_confirm_message">Ceci supprimera définitivement %1$d source(s) de guide et toutes leurs données indexées.</string>
-    <string name="epg_set_refresh_time_title">Définir l\'heure de mise à jour</string>
-    <string name="epg_refresh_interval_title">Intervalle de mise à jour EPG</string>
-    <string name="epg_hour_label">Heure</string>
-    <string name="epg_minute_label">Minute</string>
 
     <!-- Category -->
     <string name="category_select_category">Sélectionner une catégorie</string>
@@ -485,7 +482,6 @@
     <string name="settings_provider_manage_button">Gérer les sources</string>
 
     <!-- EPG Management extras -->
-    <string name="epg_automation_disabled">Désactivé</string>
     <string name="epg_delete_sources_count_btn">Supprimer %1$d source(s) de guide</string>
     <string name="epg_source_phase_format">%1$s…</string>
     <string name="epg_source_progress_percent">%1$d%%</string>
@@ -523,7 +519,6 @@
     <string name="epg_browser_remove_description">Supprimer</string>
 
     <!-- EPG Settings Card -->
-    <string name="settings_epg_section_title">Données EPG</string>
     <string name="epg_summary_no_sources">Aucune source de guide configurée</string>
     <string name="epg_data_manage_button">Gérer les données EPG</string>
 
@@ -601,8 +596,6 @@
     <string name="epg_source_selected_description">Sélectionné</string>
     <string name="epg_source_not_selected_description">Non sélectionné</string>
     <string name="epg_delete_source_message_tv">Cela supprimera \"%1$s\" et toutes ses données indexées.</string>
-    <string name="epg_increase_description_format">Augmenter %1$s</string>
-    <string name="epg_decrease_description_format">Diminuer %1$s</string>
 
     <!-- EPG Browser (TV) -->
     <string name="epg_browser_provider_suffix_format"> — %1$s</string>
@@ -682,7 +675,6 @@
     <string name="provider_error_http_status_format">Le serveur a retourné HTTP %1$d</string>
     <string name="provider_error_invalid_m3u">Fichier M3U invalide : en-tête #EXTM3U manquant</string>
     <string name="provider_error_connection_failed">Échec de la connexion</string>
-    <string name="epg_refresh_interval_hours_format">%1$d heures</string>
     <string name="stream_count_format">%1$d flux</string>
     <string name="category_select_to_view_channels">Sélectionnez une catégorie pour voir les chaînes</string>
     <string name="category_no_channels">Aucune chaîne dans cette catégorie</string>
@@ -901,8 +893,6 @@
     <string name="content_type_live_tv_no_channels">Aucune chaîne</string>
     <!-- M5 -->
     <string name="epg_management_title_format">Sources de guide · %1$s</string>
-    <string name="settings_guide_auto_refresh_title">Mise à jour auto du guide</string>
-    <string name="settings_guide_auto_refresh_summary_format">%1$s · %2$s</string>
     <string name="settings_guide_maintenance_title">Maintenance des données du guide</string>
     <!-- GD3 -->
     <string name="epg_guide_header_title_format">Guide TV · %1$s</string>

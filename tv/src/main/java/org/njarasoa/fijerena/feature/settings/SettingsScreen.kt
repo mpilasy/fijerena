@@ -373,10 +373,6 @@ fun SettingsScreen(
                             )
                         }
 
-                        SettingPicker.GUIDE_AUTO_REFRESH -> {
-                            GuideAutoRefreshPane(viewModel = epgViewModel, onBack = closePicker)
-                        }
-
                         SettingPicker.GUIDE_MAINTENANCE -> {
                             GuideMaintenancePane(viewModel = epgViewModel, onBack = closePicker)
                         }
@@ -448,19 +444,6 @@ fun SettingsScreen(
                                                 scale = scale,
                                                 manageRowFocusRequester = returnFocus.requesterFor(RETURN_PROVIDERS),
                                                 manageRowModifier = entryModifier,
-                                            )
-                                        }
-                                        item {
-                                            EpgSettingsCard(
-                                                scale = scale,
-                                                extraRows = {
-                                                    GuideAutoRefreshRow(
-                                                        viewModel = epgViewModel,
-                                                        onOpen = { openPicker(SettingPicker.GUIDE_AUTO_REFRESH) },
-                                                        focusRequester =
-                                                            returnFocus.requesterFor(SettingPicker.GUIDE_AUTO_REFRESH.returnKey),
-                                                    )
-                                                },
                                             )
                                         }
                                     }
@@ -673,7 +656,7 @@ enum class SettingsGroup(
 
 /**
  * The rows that drill into a pane in place of the group's rows — a [SettingsPickerPane] for the
- * choice settings, a sub-pane for the guide's device-wide controls (T6); [returnKey] names the row
+ * choice settings, a sub-pane for the guide's maintenance (T6); [returnKey] names the row
  * for rememberNavReturnFocus.
  */
 enum class SettingPicker(
@@ -684,7 +667,6 @@ enum class SettingPicker(
     TEXT_SIZE("picker:textSize"),
     WATCH_DELAY("picker:watchDelay"),
     LANGUAGE("picker:language"),
-    GUIDE_AUTO_REFRESH("picker:guideAutoRefresh"),
     GUIDE_MAINTENANCE("picker:guideMaintenance"),
 
     /** A profile's page; its rows return focus by `profileReturnKey`, not by this key. */

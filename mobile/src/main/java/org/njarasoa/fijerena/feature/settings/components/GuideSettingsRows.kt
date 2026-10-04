@@ -8,24 +8,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.njarasoa.fijerena.core.network.EPG_REFRESH_INTERVAL_OPTIONS
 import org.njarasoa.fijerena.core.network.provider.EpgPipelineStatsEntity
 import org.njarasoa.fijerena.core.network.xmltv.EpgFileManager.MultiSourceState
 import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
@@ -44,160 +38,10 @@ import org.njarasoa.fijerena.ui.components.buttons.CinemaTextButton
 import org.njarasoa.fijerena.ui.theme.Spacing
 
 /*
- * The guide's device-wide controls, moved out of the per-source EPG Management screen into
- * Settings (A-9, M5): auto-refresh under Source & guide, maintenance under Backup & storage.
- * Both still go through [EpgManagementViewModel], which writes the same AppSettings keys.
+ * The guide's device-wide maintenance, moved out of the per-source EPG Management screen into
+ * Settings → Backup & storage (A-9, M5). Auto-refresh is set on each guide source's row
+ * (docs/plans/20261003_sources-guide-profiles-plan.md → P5b).
  */
-
-/** "Guide auto-refresh" value row: frequency and start time, or Disabled; opens its dialog. */
-@Composable
-fun GuideAutoRefreshRow(viewModel: EpgManagementViewModel) {
-    val epgSettings by viewModel.epgSettings.collectAsStateWithLifecycle()
-    var showDialog by remember { mutableStateOf(false) }
-    val interval = epgSettings.epgRefreshInterval
-    val summary =
-        if (!epgSettings.autoRefreshEnabled || interval == -1) {
-            stringResource(R.string.epg_automation_disabled)
-        } else {
-            stringResource(R.string.settings_guide_auto_refresh_summary_format, frequencyLabel(interval), epgSettings.epgRefreshTime)
-        }
-    SettingsListRow(
-        title = stringResource(R.string.settings_guide_auto_refresh_title),
-        summary = summary,
-        scope = SettingsScope.DEVICE,
-        onClick = { showDialog = true },
-    )
-    if (showDialog) {
-        GuideAutoRefreshDialog(viewModel = viewModel, onDismiss = { showDialog = false })
-    }
-}
-
-@Composable
-private fun frequencyLabel(interval: Int): String =
-    when (interval) {
-        -1 -> stringResource(R.string.epg_automation_freq_never)
-        24 -> stringResource(R.string.epg_automation_freq_daily)
-        else -> stringResource(R.string.epg_automation_freq_hours, interval)
-    }
-
-/** The controls EPG Management's Auto-Refresh card had: on/off, frequency, start time. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun GuideAutoRefreshDialog(
-    viewModel: EpgManagementViewModel,
-    onDismiss: () -> Unit,
-) {
-    val context = LocalContext.current
-    val epgSettings by viewModel.epgSettings.collectAsStateWithLifecycle()
-    val nextRefreshAtMs by viewModel.nextRefreshAtMs.collectAsStateWithLifecycle()
-    var showTimePicker by remember { mutableStateOf(false) }
-    var showIntervalPicker by remember { mutableStateOf(false) }
-
-    CinemaAlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_guide_auto_refresh_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.epg_auto_refresh_title), style = MaterialTheme.typography.bodyLarge)
-                        val intervalText =
-                            when (val interval = epgSettings.epgRefreshInterval) {
-                                -1 -> {
-                                    stringResource(R.string.epg_automation_disabled)
-                                }
-
-                                else -> {
-                                    // 0 = no next run (a malformed start time, or not computed yet):
-                                    // formatted, it read as the epoch, "Next at 6:00 PM" (R-09).
-                                    val timeStr =
-                                        android.text.format.DateFormat
-                                            .getTimeFormat(context)
-                                            .format(java.util.Date(nextRefreshAtMs))
-                                    if (nextRefreshAtMs > 0L) {
-                                        frequencyLabel(interval) + stringResource(R.string.epg_automation_next_at, timeStr)
-                                    } else {
-                                        frequencyLabel(interval)
-                                    }
-                                }
-                            }
-                        Text(
-                            intervalText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.textLow),
-                        )
-                    }
-                    Switch(
-                        checked = epgSettings.autoRefreshEnabled,
-                        onCheckedChange = { viewModel.setAutoRefreshEnabled(it) },
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    CinemaOutlinedButton(onClick = { showIntervalPicker = true }) {
-                        Text(stringResource(R.string.epg_automation_frequency, frequencyLabel(epgSettings.epgRefreshInterval)))
-                    }
-                    if (epgSettings.epgRefreshInterval != -1) {
-                        CinemaOutlinedButton(onClick = { showTimePicker = true }) {
-                            Text(stringResource(R.string.epg_automation_start_label, epgSettings.epgRefreshTime))
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            CinemaDialogTextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
-        },
-    )
-
-    if (showIntervalPicker) {
-        SettingsPickerDialog(
-            title = stringResource(R.string.epg_refresh_interval_title),
-            options =
-                EPG_REFRESH_INTERVAL_OPTIONS.map { interval ->
-                    val label =
-                        if (interval == -1) {
-                            stringResource(R.string.epg_automation_freq_never)
-                        } else {
-                            stringResource(R.string.epg_refresh_interval_hours_format, interval)
-                        }
-                    label to interval
-                },
-            selected = epgSettings.epgRefreshInterval,
-            onSelect = { interval ->
-                viewModel.setEpgRefreshInterval(interval)
-                viewModel.setAutoRefreshEnabled(interval != -1)
-                showIntervalPicker = false
-            },
-            onDismiss = { showIntervalPicker = false },
-        )
-    }
-
-    if (showTimePicker) {
-        val parts = epgSettings.epgRefreshTime.split(":")
-        val timePickerState =
-            rememberTimePickerState(
-                initialHour = parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 0,
-                initialMinute = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 59) ?: 0,
-                is24Hour = true,
-            )
-        CinemaAlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            title = { Text(stringResource(R.string.epg_set_refresh_time_title)) },
-            text = { TimePicker(state = timePickerState) },
-            confirmButton = {
-                CinemaDialogActionButton(
-                    onClick = {
-                        viewModel.setEpgRefreshTime("%02d:%02d".format(timePickerState.hour, timePickerState.minute))
-                        showTimePicker = false
-                    },
-                ) { Text(stringResource(R.string.provider_save_button)) }
-            },
-            dismissButton = {
-                CinemaDialogTextButton(onClick = { showTimePicker = false }) { Text(stringResource(R.string.common_cancel)) }
-            },
-        )
-    }
-}
 
 /**
  * "Guide data maintenance" row: the guide database's state as its summary; opens the old

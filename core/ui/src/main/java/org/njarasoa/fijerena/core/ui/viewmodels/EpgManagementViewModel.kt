@@ -113,39 +113,14 @@ class EpgManagementViewModel(
     private val _taskSourceIds = MutableStateFlow<Map<String, Set<Long>>>(emptyMap())
     val taskSourceIds: StateFlow<Map<String, Set<Long>>> = _taskSourceIds.asStateFlow()
 
-    data class EpgSettings(
-        val autoRefreshEnabled: Boolean,
-        val epgRefreshTime: String,
-        val epgRefreshInterval: Int,
-    )
-
-    private val _epgSettings =
-        MutableStateFlow(
-            EpgSettings(
-                autoRefreshEnabled = appSettings.epgAutoRefreshEnabled,
-                epgRefreshTime = appSettings.epgRefreshTime,
-                epgRefreshInterval = appSettings.epgRefreshInterval,
-            ),
-        )
-    val epgSettings: StateFlow<EpgSettings> = _epgSettings.asStateFlow()
-
-    val nextRefreshAtMs: StateFlow<Long> =
-        epgSettings
-            .map { settings ->
-                calculateNextRefreshTime(settings.epgRefreshTime, settings.epgRefreshInterval)
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
-
     val isDevMode: Boolean get() = appSettings.isDevMode
 
-    val autoRefreshEnabled: Boolean get() = _epgSettings.value.autoRefreshEnabled
-
-    val epgRefreshTime: String get() = _epgSettings.value.epgRefreshTime
-
-    val epgRefreshInterval: Int get() = _epgSettings.value.epgRefreshInterval
-
     /** How old [source] may get before its status reads stale — see [EpgRefreshSchedule.staleAfterMs]. */
-    fun staleThresholdMs(source: EpgSourceEntity): Long =
-        EpgRefreshSchedule.staleAfterMs(EpgRefreshSchedule.intervalHours(source, EpgRefreshSchedule.legacyIntervalHours(appSettings)))
+    fun staleThresholdMs(source: EpgSourceEntity): Long = EpgRefreshSchedule.staleAfterMs(refreshIntervalHours(source))
+
+    /** [source]'s auto-refresh interval in hours, [EpgSourceEntity.REFRESH_OFF] = off; its row shows it. */
+    fun refreshIntervalHours(source: EpgSourceEntity): Int =
+        EpgRefreshSchedule.intervalHours(source, EpgRefreshSchedule.legacyIntervalHours(appSettings))
 
     fun toggleSelection(id: Long) {
         _selectedIds.value =
@@ -160,22 +135,17 @@ class EpgManagementViewModel(
         _selectedIds.value = emptySet()
     }
 
-    // The retired device-wide auto-refresh (Settings → Guide auto-refresh, until P5b of
-    // docs/plans/20261003_sources-guide-profiles-plan.md): it now only applies to guide sources
-    // without an interval of their own, and the schedule follows the sources by itself.
-    fun setAutoRefreshEnabled(enabled: Boolean) {
-        appSettings.epgAutoRefreshEnabled = enabled
-        _epgSettings.value = _epgSettings.value.copy(autoRefreshEnabled = enabled)
-    }
-
-    fun setEpgRefreshTime(time: String) {
-        appSettings.epgRefreshTime = time
-        _epgSettings.value = _epgSettings.value.copy(epgRefreshTime = time)
-    }
-
-    fun setEpgRefreshInterval(interval: Int) {
-        appSettings.epgRefreshInterval = interval
-        _epgSettings.value = _epgSettings.value.copy(epgRefreshInterval = interval)
+    /**
+     * Sets one guide source's auto-refresh, from its row's picker ([refreshIntervalOptions]); the
+     * row and the periodic work follow from the database (docs/plans/20261003_sources-guide-profiles-plan.md → P5b).
+     */
+    fun setRefreshInterval(
+        sourceId: Long,
+        hours: Int,
+    ) {
+        viewModelScope.launchGuarded("EpgManagementViewModel.setRefreshInterval") {
+            withContext(Dispatchers.IO) { epgFileManager.setRefreshInterval(sourceId, hours) }
+        }
     }
 
     data class DbStats(
@@ -557,41 +527,41 @@ class EpgManagementViewModel(
     }
 
     companion object {
-        internal fun calculateNextRefreshTime(
-            anchorTime: String,
-            intervalHours: Int,
-        ): Long {
-            // A malformed time (an older record, another app version) means no schedule, not a
-            // crash every time this screen opens (R-09).
-            val parsed = AppSettings.parseRefreshTime(anchorTime)
-            var next = 0L
+        private const val DAILY_HOURS = 24
+        private const val WEEKLY_HOURS = 168
 
-            if (intervalHours > 0 && parsed != null) {
-                val now = java.util.Calendar.getInstance()
-                val anchor = java.util.Calendar.getInstance()
-                val (hour, minute) = parsed
+        /** A guide source's auto-refresh choices (D2): off, every 6 h, 12 h, daily, weekly. */
+        val REFRESH_INTERVAL_CHOICES = listOf(EpgSourceEntity.REFRESH_OFF, 6, 12, DAILY_HOURS, WEEKLY_HOURS)
 
-                anchor.set(java.util.Calendar.HOUR_OF_DAY, hour)
-                anchor.set(java.util.Calendar.MINUTE, minute)
-                anchor.set(java.util.Calendar.SECOND, 0)
-                anchor.set(java.util.Calendar.MILLISECOND, 0)
-
-                val intervalMs = intervalHours.toLong() * 3600 * 1000
-                next = anchor.timeInMillis
-
-                if (next < now.timeInMillis) {
-                    val diff = now.timeInMillis - next
-                    val numIntervals = (diff / intervalMs) + 1
-                    next += numIntervals * intervalMs
-                } else {
-                    val diff = next - now.timeInMillis
-                    val numIntervals = diff / intervalMs
-                    next -= numIntervals * intervalMs
-                }
+        /**
+         * The picker's options for a source refreshing every [currentHours]: the choices, plus the
+         * current value in its place when it is another one (4, 8 or 48 h, copied from the
+         * retired device-wide setting), so opening the picker doesn't lose it.
+         */
+        fun refreshIntervalOptions(currentHours: Int): List<Int> =
+            if (currentHours in REFRESH_INTERVAL_CHOICES) {
+                REFRESH_INTERVAL_CHOICES
+            } else {
+                (REFRESH_INTERVAL_CHOICES + currentHours).sortedBy { if (it == EpgSourceEntity.REFRESH_OFF) Int.MIN_VALUE else it }
             }
 
-            return next
-        }
+        /** An option's label in the picker: "Off", "Every 6 hours", "Daily", "Weekly". */
+        fun refreshIntervalLabel(hours: Int): UiText =
+            when (hours) {
+                EpgSourceEntity.REFRESH_OFF -> UiText.StringResource(R.string.common_off)
+                DAILY_HOURS -> UiText.StringResource(R.string.epg_automation_freq_daily)
+                WEEKLY_HOURS -> UiText.StringResource(R.string.epg_automation_freq_weekly)
+                else -> UiText.StringResource(R.string.epg_automation_freq_hours, hours)
+            }
+
+        /** The interval as a source's row shows it: "Refreshes daily", "Auto-refresh off". */
+        fun refreshIntervalSummary(hours: Int): UiText =
+            when (hours) {
+                EpgSourceEntity.REFRESH_OFF -> UiText.StringResource(R.string.epg_source_refresh_off)
+                DAILY_HOURS -> UiText.StringResource(R.string.epg_source_refresh_daily)
+                WEEKLY_HOURS -> UiText.StringResource(R.string.epg_source_refresh_weekly)
+                else -> UiText.StringResource(R.string.epg_source_refresh_hours, hours)
+            }
 
         private fun formatCount(count: Int): String =
             when {

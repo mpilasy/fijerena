@@ -146,8 +146,10 @@ changes, so sync statistics, activation and EPG ingestion bookkeeping are never 
 Values kept in SharedPreferences are queued by `SettingsSyncQueue` instead, just after they are
 written (no shared transaction): provider passwords (`provider`), Jellyfin logins
 (`provider_login`), category filters (`category_filters`), and the synced settings (`setting`):
-`theme_id`, `dev_mode` (per profile), `epg_auto_refresh`, `epg_refresh_time`, `epg_refresh_interval`,
-`last_provider` (per profile), `autoplay_next_episode` (per profile).
+`theme_id`, `dev_mode` (per profile), `last_provider` (per profile), `autoplay_next_episode` (per
+profile). The retired guide auto-refresh keys (`epg_auto_refresh`, `epg_refresh_time`,
+`epg_refresh_interval`, §5) are no longer synced: received from an older app version, they are
+ignored.
 
 ---
 
@@ -582,8 +584,8 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 | `watch_delay_seconds`| INT | Delay before a live channel counts as watched (5-120, default 10) |
 | `epg_url` | TEXT | Legacy global XMLTV URL. Read once, by `EpgFileManager`'s migration into an `epg_source` row (`migrated_to_sources_v1`); never written |
 | `epg_timezone_offset`| INT | Legacy global XMLTV timezone offset (-12..14), carried into that migrated row; never written |
-| `epg_auto_refresh` | BOOLEAN | **Retired** device-wide guide auto-refresh switch (default true). Still synced and exported; read only for guide sources without an interval of their own (`epg_source.refresh_interval_hours` null) and by the one-time copy |
-| `epg_refresh_time` | TEXT | **Retired** device-wide refresh time `HH:mm` (default `02:00`). Drives nothing: the periodic work has no time of day |
+| `epg_auto_refresh` | BOOLEAN | **Retired** device-wide guide auto-refresh switch (default true). Never written, synced or exported any more (P5b); read only for guide sources without an interval of their own (`epg_source.refresh_interval_hours` null) and by the one-time copy. Settings import still reads an older file's `global.epgAutoRefreshEnabled`, only to set that file's guide sources without an interval to off when it is false — it doesn't write this key |
+| `epg_refresh_time` | TEXT | **Retired** device-wide refresh time `HH:mm` (default `02:00`). Nothing reads or writes it any more |
 | `epg_refresh_interval`| INT | **Retired** device-wide refresh interval hours: 4/8/12/24/48, or -1 (Never); default 24. Read like `epg_auto_refresh` |
 | `content_auto_refresh`| BOOLEAN | Background provider content sync toggle (default true) |
 | `content_refresh_time`| TEXT | Content refresh start time `HH:mm` (default `04:00`) |
