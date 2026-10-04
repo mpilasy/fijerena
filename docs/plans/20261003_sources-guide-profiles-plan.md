@@ -22,7 +22,7 @@
 | P5b Auto-refresh per guide source: guide sources rows, Settings | Todo (after P4) |
 | P6 Section-root button at depth 4 | Todo (last) |
 | P7 Home keeps Search the guide; search → grid; no channel search | In progress (lane C) |
-| P8 Live TV preview plays on OK, not on focus (TV only) | **Done 2026-10-03** (`6bda98f9`), checked on the TV emulator with bearstv: Down/Up through rows and Right to another tab left the channel alone; OK on another row tuned it ("Tuning · …"), OK again went full screen; Back → preview on that channel → browse on it; new hint line. Playback itself returned HTTP 511 (bearstv's one-connection limit, a Shield was using it). OK on a row with nothing playing yet plays it. Focus walks `live-tv-back.txt` / `live-tv-preview.txt` to re-record on iptv. |
+| P8 Live TV preview plays on OK, not on focus (TV only) | **Done 2026-10-03** (`6bda98f9`), checked on the TV emulator with bearstv: Down/Up through rows and Right to another tab left the channel alone; OK on another row tuned it ("Tuning · …"), OK again went full screen; Back → preview on that channel → browse on it; new hint line. Playback itself returned HTTP 511 (bearstv's one-connection limit, a Shield was using it). OK on a row with nothing playing yet plays it. Rechecked on iptv with real playback (9 Plus News: OK plays it, OK again full screen, same stream); `live-tv-preview.txt` and `live-tv-back.txt` re-recorded on iptv. |
 | P9 Content filters from the profile, not from the source | In progress (lane B) |
 
 Rows get **In progress (since date)** when work starts and **Done date** with what was verified

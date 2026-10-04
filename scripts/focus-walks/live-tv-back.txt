@@ -10,21 +10,21 @@
 # the expected focus are unchanged.
 # Written 2026-10-03 from the plan.
 # OK opens the preview on this channel; the panel shows this category, focus on its row.
-CENTER	3 / 3Cat Exclusiu 1 (1080p) [Geo-blocked] / Hold OK or press Menu for actions
+CENTER	00s Replay / Hold OK or press Menu for actions
 # Two rows down; moving focus leaves the preview on the channel it opened on (P8).
-DOWN	3 / 3ABN French / Hold OK or press Menu for actions
-DOWN	3 / 3ABN International (720p) / Hold OK or press Menu for actions
+DOWN	4ever Cinema (1080p) / Hold OK or press Menu for actions
+DOWN	24 Hour Free Movies (720p) / Hold OK or press Menu for actions
 # OK plays the focused row in the preview ("Tuning · <channel>" until it plays); focus stays.
-CENTER	3 / 3ABN International (720p) / Hold OK or press Menu for actions
-WAIT 2	3 / 3ABN International (720p) / Hold OK or press Menu for actions
+CENTER	24 Hour Free Movies (720p) / Hold OK or press Menu for actions
+WAIT 2	24 Hour Free Movies (720p) / Hold OK or press Menu for actions
 # OK again, on the row now playing, promotes it to full screen.
 CENTER
 # Down zaps to the next channel of the same list.
 DOWN
 WAIT 3
 # Back demotes to the preview: focus on the zapped-to channel's row in the panel.
-BACK	3 / 3ABN Latino / Hold OK or press Menu for actions
+BACK	3 / 30A TV Classic Movies (720p) / Hold OK or press Menu for actions
 # Back leaves the preview. Expected: the browse list with focus on the zapped-to channel (three
 # rows below the one the walk started on), not the row that opened the preview and not the
 # category row.
-BACK	3 / 3ABN Latino / Hold OK or press Menu for actions
+BACK	3 / 30A TV Classic Movies (720p) / Hold OK or press Menu for actions

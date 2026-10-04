@@ -21,16 +21,16 @@ RIGHT	Refresh streams
 LEFT	Favorites
 # Down enters the rows: the current channel when Favorites has it, else the first row (text
 # varies, not asserted). With no favourites nothing below is focusable and focus stays here.
-DOWN	Favorites
+DOWN	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
 # Left (on a row, or on the tab when Favorites is empty) switches back to Recent.
-LEFT
+LEFT	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
 # Down into Recent's rows, then Right on a row: Favorites, focus on its first row — or on its
 # tab when it is empty. Left on a row: back to Recent, on the current channel. Texts vary.
-DOWN
-RIGHT
-LEFT
+DOWN	A / Arena Sport 1 / Hold OK or press Menu for actions
+RIGHT	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
+LEFT	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
 # Up from the first row lands on the selected tab.
 UP	Recent
 # Left on the first tab leaves the preview as Back does: browse, focus on the playing
 # channel's row (the current channel the walk started on).
-LEFT	3 / 3ABN French / Hold OK or press Menu for actions
+LEFT	9 / ★ / 9 Plus News (1080p) / Hold OK or press Menu for actions
