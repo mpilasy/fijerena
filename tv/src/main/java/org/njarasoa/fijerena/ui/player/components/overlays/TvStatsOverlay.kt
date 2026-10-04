@@ -379,6 +379,13 @@ fun TvStatsOverlay(
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
+                    // The provider's names as sent: everywhere else they are shown cleaned (the tag
+                    // as a badge, an episode's own name only).
+                    CompactStatRow(
+                        stringResource(R.string.player_stats_raw_name),
+                        if (metadata.isLive) metadata.channelName.ifBlank { metadata.title } else metadata.title,
+                    )
+                    metadata.showTitle?.let { CompactStatRow(stringResource(R.string.player_stats_raw_series), it) }
 
                     // Live-polled (stats.position, updated every tick by the LaunchedEffect above)
                     // rather than read off playbackState itself: PlaybackState.Playing.position is

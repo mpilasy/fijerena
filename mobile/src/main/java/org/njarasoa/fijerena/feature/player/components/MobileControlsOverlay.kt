@@ -59,6 +59,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.playerEpisodeName
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -68,6 +70,7 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.AdaptiveLogoImage
+import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.GlassPanel
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -207,31 +210,27 @@ fun MobileControlsOverlay(
                         if (logoUrl != null) {
                             AdaptiveLogoImage(
                                 logoUrl = logoUrl,
-                                contentDescription = bigTitle,
+                                contentDescription = parseDisplayTitle(bigTitle).title,
                                 modifier = Modifier.height(MobileDimensions.osdLogoHeight),
                             )
                         } else {
                             // No TMDB logo art for this title — fall back to a stylized gradient
-                            // rendering of the title text instead.
-                            Text(
-                                text = bigTitle,
+                            // rendering of the title text instead, its provider tag as a badge.
+                            BadgedTitle(
+                                raw = bigTitle,
                                 style =
                                     typography.headlineSmall.copy(
                                         fontWeight = FontWeight.Black,
                                         brush = Brush.linearGradient(listOf(CinemaAccent, CinemaTextPrimary)),
                                     ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                         if (metadata.showTitle != null) {
-                            // Some providers' episode titles already embed the show name (e.g.
-                            // the whole title is "A+ - Silo (2023) (US) - S03E01 - Who Are
-                            // You?") — appending that verbatim next to the wordmark would repeat
-                            // it and bury the actual episode name. The real name is consistently
-                            // the last " - "-separated segment, so take that; a clean title (no
-                            // " - " in it, the common case) passes through unchanged.
-                            val episodeName = metadata.title.substringAfterLast(" - ").takeIf { it.isNotBlank() }
+                            // Some providers' episode titles already embed the show name and
+                            // number ("A+ - Silo (2023) (US) - S03E01 - Who Are You?"): only the
+                            // episode's own name is shown, none when the title is just the show
+                            // and the number.
+                            val episodeName = playerEpisodeName(metadata.title).takeIf { it.isNotBlank() }
                             val episodeSubtitle = listOfNotNull(metadata.episodeLabel, episodeName).joinToString(" - ")
                             if (episodeSubtitle.isNotBlank()) {
                                 Text(
@@ -244,13 +243,7 @@ fun MobileControlsOverlay(
                             }
                         }
                     } else {
-                        Text(
-                            text = metadata.title,
-                            style = typography.titleMedium,
-                            color = CinemaTextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        BadgedTitle(raw = metadata.title, style = typography.titleMedium, color = CinemaTextPrimary)
                     }
 
                     // Resolution and Codec Info
@@ -634,11 +627,7 @@ fun MobileControlsOverlay(
                             ).padding(CinemaSpacing.lg),
                 ) {
                     Column {
-                        Text(
-                            text = metadata.title,
-                            style = typography.titleMedium,
-                            color = CinemaTextPrimary,
-                        )
+                        BadgedTitle(raw = metadata.title, style = typography.titleMedium, color = CinemaTextPrimary)
                         metadata.description?.let { description ->
                             Text(
                                 text = description,

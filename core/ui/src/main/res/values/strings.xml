@@ -52,6 +52,8 @@
     <string name="player_retry">Retry</string>
     <string name="player_back">Back</string>
     <string name="player_stats_title">Stats for Nerds</string>
+    <string name="player_stats_raw_name">Name</string>
+    <string name="player_stats_raw_series">Series</string>
     <string name="player_now_playing">Now Playing</string>
     <string name="player_no_channels">No channels available</string>
 

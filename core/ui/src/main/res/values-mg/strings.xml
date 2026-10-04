@@ -52,6 +52,8 @@
     <string name="player_retry">Andramo indray</string>
     <string name="player_back">Miverena</string>
     <string name="player_stats_title">Antsipirihany ara-teknika</string>
+    <string name="player_stats_raw_name">Anarana</string>
+    <string name="player_stats_raw_series">Andiany</string>
     <string name="player_now_playing">Mandeha izao</string>
     <string name="player_no_channels">Tsy misy fantsona azo jerena</string>
 

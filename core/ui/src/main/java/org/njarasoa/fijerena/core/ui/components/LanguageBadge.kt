@@ -1,16 +1,21 @@
 package org.njarasoa.fijerena.core.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.player.model.formatRating
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
@@ -60,6 +65,36 @@ fun LanguageBadge(
         backgroundColor = CinemaSurfaceVariant,
         textColor = CinemaTextSecondary,
     )
+}
+
+/**
+ * A provider's raw title shown clean: its "EN - " / "4K-NF - " / "4K:" tag as a [LanguageBadge],
+ * then the title without it ([parseDisplayTitle]). One line; [textModifier] goes on the title text.
+ */
+@Composable
+fun BadgedTitle(
+    raw: String,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    textModifier: Modifier = Modifier,
+) {
+    val parsed = remember(raw) { parseDisplayTitle(raw) }
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        parsed.badge?.let { LanguageBadge(it) }
+        Text(
+            text = parsed.title.ifBlank { raw },
+            style = style,
+            color = color,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false).then(textModifier),
+        )
+    }
 }
 
 /**

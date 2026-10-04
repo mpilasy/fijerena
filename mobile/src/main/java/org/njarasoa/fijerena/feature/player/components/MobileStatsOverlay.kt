@@ -364,6 +364,11 @@ fun MobileStatsOverlay(
                     }
                 }
 
+                // The provider's names as sent: everywhere else they are shown cleaned (the tag as a
+                // badge, an episode's own name only).
+                StatRow(stringResource(R.string.player_stats_raw_name), metadata.title)
+                metadata.showTitle?.let { StatRow(stringResource(R.string.player_stats_raw_series), it) }
+
                 SectionHeader(stringResource(R.string.player_stats_video))
                 StatRow(stringResource(R.string.player_stats_codec), videoCodec)
                 StatRow(stringResource(R.string.player_stats_resolution), videoResolution)

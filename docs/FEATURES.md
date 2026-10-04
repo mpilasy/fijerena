@@ -182,6 +182,7 @@ Double-tap OK (TV) or tap stats button (mobile) to **dismiss** the overlay. Fixe
 ### Buffering Awareness
 Instead of showing the stats overlay automatically on buffering, the app now shows a discrete "High Buffering" toast when excessive buffering is detected, ensuring minimal distraction from the content while keeping the user informed of network conditions.
 
+**NAME:** the provider's raw name (and the series' raw name for an episode), as sent — everywhere else titles are shown cleaned: the "EN - " / "4K-NF - " / "4K:" tag as a badge, an episode's own name only
 **VIDEO:** Codec, Resolution, Frame Rate, Bitrate
 **AUDIO:** Codec, Sample Rate, Channels, Bitrate
 **NETWORK:** Speed, Measured Bandwidth, Buffer health, Buffered position, Rebuffer count/duration, ABR quality switches

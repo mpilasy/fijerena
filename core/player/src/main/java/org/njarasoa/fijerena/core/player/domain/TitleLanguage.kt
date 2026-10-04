@@ -75,3 +75,13 @@ fun episodeOwnTitle(raw: String): String {
     val match = NUMBERED_EPISODE_TITLE.matchEntire(text) ?: return text
     return match.groupValues[1].trim()
 }
+
+/**
+ * The episode name the player shows under its series title: [episodeOwnTitle] when the title
+ * carries an "S01E22" number ("" when nothing follows it), else the last " - " segment, since
+ * providers that embed the show name without a number still put the episode name last.
+ */
+fun playerEpisodeName(raw: String): String {
+    val own = episodeOwnTitle(raw)
+    return if (own != raw.trim()) own else raw.substringAfterLast(" - ").trim()
+}

@@ -66,6 +66,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import org.njarasoa.fijerena.core.player.domain.EpisodeItem
+import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
+import org.njarasoa.fijerena.core.player.domain.playerEpisodeName
 import org.njarasoa.fijerena.core.player.model.EpgProgram
 import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
@@ -75,6 +77,7 @@ import org.njarasoa.fijerena.core.player.service.StreamingPlaybackService
 import org.njarasoa.fijerena.core.player.viewmodel.PlaybackViewModel
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.AdaptiveLogoImage
+import org.njarasoa.fijerena.core.ui.components.BadgedTitle
 import org.njarasoa.fijerena.core.ui.components.CinemaBadge
 import org.njarasoa.fijerena.core.ui.components.bounceMarquee
 import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
@@ -293,29 +296,27 @@ fun TvPlayerControlsOverlay(
                     if (logoUrl != null) {
                         AdaptiveLogoImage(
                             logoUrl = logoUrl,
-                            contentDescription = bigTitle,
+                            contentDescription = parseDisplayTitle(bigTitle).title,
                             modifier = Modifier.height(TvDimensions.osdLogoHeight),
                         )
                     } else {
                         // No TMDB logo art for this title — fall back to a stylized gradient
-                        // rendering of the title text instead.
-                        Text(
-                            text = bigTitle,
+                        // rendering of the title text instead, its provider tag as a badge.
+                        BadgedTitle(
+                            raw = bigTitle,
                             style =
                                 MaterialTheme.typography.headlineSmall.copy(
                                     fontWeight = FontWeight.Black,
                                     brush = Brush.linearGradient(listOf(CinemaAccent, CinemaTextPrimary)),
                                 ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.bounceMarquee(),
+                            textModifier = Modifier.bounceMarquee(),
                         )
                     }
                     if (metadata.showTitle != null) {
-                        // Some providers' episode titles already embed the show name — the real
-                        // name is consistently the last " - "-separated segment, so take that; a
-                        // clean title (no " - " in it, the common case) passes through unchanged.
-                        val episodeName = metadata.title.substringAfterLast(" - ").takeIf { it.isNotBlank() }
+                        // Some providers' episode titles already embed the show name and number
+                        // ("EN - Show - S01E22 - Pilot"): only the episode's own name is shown, and
+                        // none when the title is just the show and the number.
+                        val episodeName = playerEpisodeName(metadata.title).takeIf { it.isNotBlank() }
                         val episodeSubtitle = listOfNotNull(metadata.episodeLabel, episodeName).joinToString(" - ")
                         if (episodeSubtitle.isNotBlank()) {
                             Text(
@@ -574,13 +575,12 @@ fun TvPlayerControlsOverlay(
                                 style = MaterialTheme.typography.labelLarge,
                                 color = CinemaTextPrimary,
                             )
-                            Text(
-                                text = metadata.channelName,
+                            BadgedTitle(
+                                raw = metadata.channelName,
                                 style = MaterialTheme.typography.titleLarge,
                                 color = CinemaTextPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(start = Spacing.xs).bounceMarquee(),
+                                modifier = Modifier.padding(start = Spacing.xs),
+                                textModifier = Modifier.bounceMarquee(),
                             )
                         }
                         if (currentEpgProgram != null) {

@@ -72,4 +72,12 @@ class TitleLanguageTest {
         assertEquals("The Body in the Library", episodeOwnTitle("The Body in the Library"))
         assertEquals("Pilot", episodeOwnTitle("Pilot"))
     }
+
+    @Test
+    fun `player episode name`() {
+        assertEquals("", playerEpisodeName("EN - The King of Queens - S01E22"))
+        assertEquals("Whatever You Do", playerEpisodeName("4K-A+ - Silo (2023) (US) - S03E04 - Whatever You Do"))
+        assertEquals("Pilot", playerEpisodeName("EN - Show - Pilot"))
+        assertEquals("Pilot", playerEpisodeName("Pilot"))
+    }
 }
