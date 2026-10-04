@@ -36,7 +36,7 @@ Deployed: days 1–4 (`main` at `1e413854`) installed in place on both Shields (
 Deployed: everything through the regression round (`main` at `0ab0d25b`) installed in place on both Shields (mdarcy, darcy) and the Bravia on 2026-10-03 19:37, app data backed up first (`backups/*-20261003-1937*.tar.gz`).
 Deployed: everything through the process-death fix (`main` at `6e109058`) installed in place on both Shields and the Bravia on 2026-10-03 20:54, app data backed up first (`backups/*-20261003-205436.tar.gz`).
 Deployed: `main` at `5e562727` (Stats for Nerds fix) installed in place on mdarcy (.20) only, 2026-10-03 21:52, playback stopped first at the user's request, app data backed up (`backups/192_168_68_20_5555-20261003-215217.tar.gz`). Same build on darcy (.21) and the Bravia (.22) at 21:53 (`backups/*-20261003-215336.tar.gz`).
-Deployed: `main` at `0cf5b64b` (Left/Right on panel rows switch tabs) on darcy (.21) and the Bravia (.22) at 22:21 (`backups/*-20261003-222141.tar.gz`); mdarcy (.20) skipped, it was playing.
+Deployed: `main` at `0cf5b64b` (Left/Right on panel rows switch tabs) on darcy (.21) and the Bravia (.22) at 22:21 (`backups/*-20261003-222141.tar.gz`); mdarcy (.20) at 22:25 after stopping its playback at the user's request (`backups/192_168_68_20_5555-20261003-222514.tar.gz`).
 
 Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
 release time (`docs/RUN_GUIDE.md`).
