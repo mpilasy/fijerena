@@ -549,6 +549,13 @@ fun MobileNavHost(
                     onEditSource = { id ->
                         navController.navigateOnce(Screen.AddProvider(editId = id))
                     },
+                    onProfileSwitched = {
+                        // As after the profile picker: every screen below may hold the previous
+                        // profile's repository, so start over from home.
+                        navController.navigate(Screen.ContentTypeSelection) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    },
                     onProviderChanged = {
                         coroutineScope.launch {
                             val providerRepo = ProviderRepository(context.applicationContext)

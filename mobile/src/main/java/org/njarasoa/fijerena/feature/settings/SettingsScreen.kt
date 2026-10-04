@@ -73,6 +73,7 @@ fun MobileSettingsScreen(
     onLiveSync: () -> Unit = {},
     onGuideSources: (providerId: Long) -> Unit = {},
     onEditSource: (providerId: Long) -> Unit = {},
+    onProfileSwitched: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -292,6 +293,7 @@ fun MobileSettingsScreen(
                     onAdd = profilesViewModel::addProfile,
                     onUpdate = profilesViewModel::updateProfile,
                     onDelete = profilesViewModel::deleteProfile,
+                    onSwitchTo = { id -> profilesViewModel.switchTo(id, onProfileSwitched) },
                     onDismissMessage = profilesViewModel::clearMessage,
                 )
                 SettingsListRow(

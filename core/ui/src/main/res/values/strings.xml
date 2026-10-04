@@ -799,6 +799,7 @@
     <string name="profile_switch_description">Switch profile (%1$s)</string>
     <string name="profile_jellyfin_sign_in_prompt">Sign in to %1$s for this profile</string>
     <string name="profile_jellyfin_sign_in_button">Sign in</string>
+    <string name="profile_switch_to_button">Switch to this profile</string>
     <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Live sync</string>
     <string name="live_sync_desc">Keep profiles, sources, favourites and watch progress the same on all your devices, through your own sync server. Everything is encrypted on the device before it leaves.</string>

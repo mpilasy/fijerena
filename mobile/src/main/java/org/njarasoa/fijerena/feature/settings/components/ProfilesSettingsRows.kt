@@ -52,6 +52,7 @@ fun ProfilesSettingsRows(
     onAdd: (name: String, colorIndex: Int) -> Unit,
     onUpdate: (id: String, name: String, colorIndex: Int) -> Unit,
     onDelete: (id: String) -> Unit,
+    onSwitchTo: (id: String) -> Unit,
     onDismissMessage: () -> Unit,
 ) {
     var adding by remember { mutableStateOf(false) }
@@ -128,6 +129,16 @@ fun ProfilesSettingsRows(
                 } else {
                     null
                 },
+            // Switching to the profile already in use would do nothing.
+            onSwitch =
+                if (!profile.isActive) {
+                    {
+                        editing = null
+                        onSwitchTo(profile.id)
+                    }
+                } else {
+                    null
+                },
             onDismiss = { editing = null },
         )
     }
@@ -158,6 +169,7 @@ internal fun ProfileEditDialog(
     onSave: (name: String, colorIndex: Int) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
+    onSwitch: (() -> Unit)? = null,
 ) {
     var name by remember { mutableStateOf(initialName) }
     var colorIndex by remember { mutableIntStateOf(initialColorIndex) }
@@ -192,6 +204,11 @@ internal fun ProfileEditDialog(
                         rowIndices.forEach { index ->
                             ColorSwatch(index = index, selected = index == colorIndex, onClick = { colorIndex = index })
                         }
+                    }
+                }
+                if (onSwitch != null) {
+                    OutlinedButton(onClick = onSwitch, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.profile_switch_to_button))
                     }
                 }
                 if (onDelete != null) {

@@ -175,7 +175,7 @@ Recent and Favorites live in `xtream_v2.db` (`watch_state`, `favorite_state`); R
 
 ## Profiles
 
-"Who's watching?" picker at launch on TV when there is more than one profile, and from the header avatar on TV and mobile. Each profile has its own favourites, watch history, search history, content filters per source, dev-mode switch, "Play next episode automatically" switch and Jellyfin login; sources, guide sources and other settings are shared. Which profile is in use is per device. Each profile also remembers the source it last picked (or added), on every device: switching to a profile moves the device to that source. A profile that hasn't picked one yet, or whose source was deleted, stays on the device's current source. Another device's pick never moves a device that is already on that profile — it applies at the next switch (`docs/plans/archive/20261002_profile-last-provider-plan.md`). Switching takes a fraction of a second: only category rows carry the filter flag, and streams and series follow their category at query time (`docs/plans/archive/20261001_fast-profile-switch-plan.md`).
+"Who's watching?" picker at launch on TV when there is more than one profile, and from the header avatar on TV and mobile; a profile's edit dialog in Settings → Profiles also has **Switch to this profile** (not shown for the profile in use), which lands on Home with that profile, as the picker does. Each profile has its own favourites, watch history, search history, content filters per source, dev-mode switch, "Play next episode automatically" switch and Jellyfin login; sources, guide sources and other settings are shared. Which profile is in use is per device. Each profile also remembers the source it last picked (or added), on every device: switching to a profile moves the device to that source. A profile that hasn't picked one yet, or whose source was deleted, stays on the device's current source. Another device's pick never moves a device that is already on that profile — it applies at the next switch (`docs/plans/archive/20261002_profile-last-provider-plan.md`). Switching takes a fraction of a second: only category rows carry the filter flag, and streams and series follow their category at query time (`docs/plans/archive/20261001_fast-profile-switch-plan.md`).
 
 ## Live Sync
 
@@ -200,7 +200,7 @@ Seven groups, in this order, on both platforms. **TV:** two panes — the groups
 
 | Group | Rows |
 |-------|------|
-| **Profiles** | Profiles (add, edit, delete; which one this device uses); the active profile's content filters for the active source (opens Edit Source) |
+| **Profiles** | Profiles (add, edit, delete, switch to one from its edit dialog; which one this device uses); the active profile's content filters for the active source (opens Edit Source) |
 | **Source & guide** | Active source with its URL and subscription (Xtream: expiry, max connections, trial); Switch source (Sources: use, add, edit, copy to another source, delete, guide sources); Edit this source; Guide sources; Guide auto-refresh |
 | **Playback** | Count as watched after: 5 / 10 / 15 / 30 / 60 / 120 s (default 10; mobile also takes a custom 5–120 s); Play next episode automatically (per profile); mobile: a pointer to the per-source playback settings |
 | **Display** | Theme; Look and feel; Text & grid size (TV only: 40 / 60 / 80 / 100 %, default 80 %); Language |

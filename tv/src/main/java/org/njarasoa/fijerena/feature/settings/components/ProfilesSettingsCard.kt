@@ -64,6 +64,7 @@ fun ProfilesSettingsCard(
     onAdd: (name: String, colorIndex: Int) -> Unit,
     onUpdate: (id: String, name: String, colorIndex: Int) -> Unit,
     onDelete: (id: String) -> Unit,
+    onSwitchTo: (id: String) -> Unit,
     onDismissMessage: () -> Unit,
     scale: Float,
     /** Goes on the card's first focusable (the first profile row, else Add profile) — the pane's entry row. */
@@ -185,6 +186,16 @@ fun ProfilesSettingsCard(
                 } else {
                     null
                 },
+            // Switching to the profile already in use would do nothing.
+            onSwitch =
+                if (!profile.isActive) {
+                    {
+                        editing = null
+                        onSwitchTo(profile.id)
+                    }
+                } else {
+                    null
+                },
             onDismiss = { editing = null },
             scale = scale,
         )
@@ -213,6 +224,7 @@ internal fun ProfileEditDialog(
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
     scale: Float,
+    onSwitch: (() -> Unit)? = null,
 ) {
     var name by remember { mutableStateOf(initialName) }
     var colorIndex by remember { mutableIntStateOf(initialColorIndex) }
@@ -250,6 +262,13 @@ internal fun ProfileEditDialog(
                             )
                         }
                     }
+                }
+                if (onSwitch != null) {
+                    CinemaSecondaryButton(
+                        onClick = onSwitch,
+                        text = stringResource(R.string.profile_switch_to_button),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
                 if (onDelete != null) {
                     CinemaSecondaryButton(

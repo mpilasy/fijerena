@@ -88,7 +88,8 @@ Settings
 ├─→ AddProvider(editId)                  Edit this source (TV filters row: focusFilters = true)
 ├─→ EpgManagement(active source)         Guide sources
 ├─→ SyncSettings
-└─→ Diagnostics                          dev mode
+├─→ Diagnostics                          dev mode
+└─→ ContentTypeSelection                 Switch to this profile (back stack cleared)
 
 ProfilePicker ─→ ContentTypeSelection (back stack cleared)
 ```

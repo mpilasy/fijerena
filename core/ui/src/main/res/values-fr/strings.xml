@@ -762,6 +762,7 @@
     <string name="profile_switch_description">Changer de profil (%1$s)</string>
     <string name="profile_jellyfin_sign_in_prompt">Connectez-vous à %1$s pour ce profil</string>
     <string name="profile_jellyfin_sign_in_button">Se connecter</string>
+    <string name="profile_switch_to_button">Passer à ce profil</string>
     <!-- Live sync (docs/plans/archive/20260929_live-sync-plan.md, Phase 9) -->
     <string name="live_sync_title">Synchronisation en direct</string>
     <string name="live_sync_desc">Gardez les profils, sources, favoris et la progression de lecture identiques sur tous vos appareils, via votre propre serveur de synchronisation. Tout est chiffré sur l\'appareil avant de le quitter.</string>

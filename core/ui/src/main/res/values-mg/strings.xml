@@ -901,6 +901,7 @@
     <string name="profile_switch_description">Hanova mombamomba (%1$s)</string>
     <string name="profile_jellyfin_sign_in_prompt">Midira amin\'ny %1$s ho an\'ity mombamomba ity</string>
     <string name="profile_jellyfin_sign_in_button">Hiditra</string>
+    <string name="profile_switch_to_button">Mifindra amin\'ity mombamomba ity</string>
     <string name="live_sync_title">Fampifanarahana mivantana</string>
     <string name="live_sync_desc">Ataovy mitovy amin\'ny fitaovanao rehetra ny mombamomba, ny loharano, ny ankafizina ary ny fandrosoan\'ny fijerena, amin\'ny alalan\'ny mpizara fampifanarahana anao manokana. Voaafina eo amin\'ny fitaovana avokoa ny zava-drehetra alohan\'ny hivoahany.</string>
     <string name="live_sync_open">Amboary</string>
