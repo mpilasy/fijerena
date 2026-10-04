@@ -16,7 +16,7 @@ A native Android media player for Xtream IPTV, Jellyfin, SMB shares, local files
 
 Add Source offers SMB and Local only in developer mode: SMB can't play yet (no SMB data source) and Local has no folder picker. An existing SMB or Local source stays editable. The source type can't be changed once a source is saved.
 
-Several sources can be configured; one is active per device. Switch it from the source picker on Home (with two or more sources) or Settings → Source & guide → Switch source.
+Several sources can be configured; one is active per device. Switch it from the source picker on Home (with two or more sources) or Settings → Source & guide → Manage sources.
 
 **Jellyfin Quick Connect:** when adding a Jellyfin source, choose **Use Quick Connect** instead of a password. The app shows a 6-digit code to approve in Jellyfin's web UI or another client; on approval it stores the access token. No password is stored.
 
@@ -91,7 +91,7 @@ Programme-title search across the indexed XMLTV guide, from Home's book icon (wh
 
 ## Guide Sources (EPG management)
 
-Each source has its own XMLTV guide sources: Settings → Source & guide → Guide sources (the active source), or Sources → a source's Guide button. Add, edit and delete XMLTV URLs; refresh all, the selected, stale or failed ones; cancel a running or queued refresh.
+Each source has its own XMLTV guide sources: Edit Source → Guide sources, Sources → a source's Guide button, or Search the guide's Guide sources button (the source in use). Add, edit and delete XMLTV URLs; refresh all, the selected, stale or failed ones; cancel a running or queued refresh.
 
 - Per guide source: label and timezone offset (applied while parsing); status dot — green fresh, yellow older than the refresh interval, red error, grey disabled; download % and ingest % with channel/programme counts.
 - Download → parse into SQLite → delete: TV and other fixed devices stream from the network straight into the database; phones download to the cache directory first. Up to 3 downloads at once on mobile, 2 on TV; 2 parallel ingest workers.
@@ -203,7 +203,7 @@ Seven groups, in this order, on both platforms. **TV:** two panes — the groups
 | Group | Rows |
 |-------|------|
 | **Profiles** | Profiles (which one this device uses) and Add profile; each profile opens its page: name, colour, its own Developer mode and Play next episode automatically, its content filters for the source in use, Switch to this profile, Delete |
-| **Source & guide** | Active source with its URL and subscription (Xtream: expiry, max connections, trial); Switch source (Sources: use, add, edit, copy to another source, delete, guide sources); Edit this source; Guide sources; Guide auto-refresh |
+| **Source & guide** | Manage sources, its value the source in use with its URL and subscription (Xtream: expiry, max connections, trial) — opens Sources: use, add, edit, copy to another source, delete, guide sources; Guide auto-refresh |
 | **Playback** | Count as watched after: 5 / 10 / 15 / 30 / 60 / 120 s (default 10; mobile also takes a custom 5–120 s); mobile: a pointer to the per-source playback settings |
 | **Display** | Theme; Look and feel; Text & grid size (TV only: 40 / 60 / 80 / 100 %, default 80 %); Language |
 | **Live sync** | Opens Live sync |
@@ -219,7 +219,7 @@ The connection form (type shown read-only), then:
 | Section | Settings |
 |---------|----------|
 | Behaviour | Auto-Resume (on); Recent row size (1–100, default 25); Xtream: stream output format (m3u8 / ts), playlist type (m3u_plus / simple), Enable Caching (on) |
-| Guide (Xtream) | Provides a guide: whether the source's own guide (`xmltv.php`) is added as a guide source. Detected — on, turned off when that guide comes back empty — until the viewer sets it; off disables that guide source (kept, with its stats), on enables it again |
+| Guide (sources with live channels) | Xtream: Provides a guide — whether the source's own guide (`xmltv.php`) is added as a guide source. Detected — on, turned off when that guide comes back empty — until the viewer sets it; off disables that guide source (kept, with its stats), on enables it again. Guide sources ›, its value the count and last refresh: this source's guide sources |
 | Library data | Item counts per content type; Xtream: last catalogue sync — "Last Sync: Finished at … • Took …" and what it changed ("No changes since last sync", or "N added • N updated • N removed"), hidden after a failed sync, which shows "Catalog sync failed" with the reason; Sync Data Now |
 | Danger zone | Clear all favourites; clear all progress; clear the cached library (all, or per content type) |
 

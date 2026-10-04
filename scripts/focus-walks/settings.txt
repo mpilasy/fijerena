@@ -32,9 +32,9 @@ CENTER	10 s
 LEFT	Count as watched after / How long to watch a channel before it's added to Last Watched / This device / 10 s ›
 LEFT	Playback
 UP	Source & guide
-RIGHT	Switch source
-DOWN	Edit this source / ›
-DOWN	Guide Sources / 4.4K channels, 170.0K programmes
+# P4 (D6): one Manage sources row (the source in use as its value), then Guide auto-refresh.
+RIGHT	Manage sources
+DOWN	Guide auto-refresh
 LEFT	Source & guide
 UP	Profiles
 # Up at the top of the rail stays put (the header has nothing to focus).

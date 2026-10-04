@@ -33,7 +33,6 @@ data class SettingsUiState(
     val watchDelaySeconds: Int = AppSettings.DEFAULT_WATCH_DELAY_SECONDS,
     val uiScale: Float = AppSettings.DEFAULT_UI_SCALE,
     val exportImportMessage: String? = null,
-    val epgRefreshTrigger: Int = 0,
     val isPruningDatabase: Boolean = false,
     val databaseMaintenanceMessage: String? = null,
     val lastShrinkAtMs: Long = 0L,
@@ -172,13 +171,9 @@ class SettingsViewModel(
                         )
                 }
 
-                // Trigger UI refresh for providers and EPG
+                // Trigger UI refresh for providers
                 refreshProviderInfo()
-                _uiState.value =
-                    _uiState.value.copy(
-                        exportImportMessage = message,
-                        epgRefreshTrigger = _uiState.value.epgRefreshTrigger + 1,
-                    )
+                _uiState.value = _uiState.value.copy(exportImportMessage = message)
             } else {
                 _uiState.value = _uiState.value.copy(exportImportMessage = message)
             }

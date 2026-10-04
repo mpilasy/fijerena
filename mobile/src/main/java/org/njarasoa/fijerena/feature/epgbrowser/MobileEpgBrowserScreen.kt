@@ -110,6 +110,7 @@ fun MobileEpgBrowserScreen(
     onNavigateToPlayer: (streamId: String, streamName: String, categoryId: String) -> Unit = { _, _, _ -> },
     categoryId: String? = null,
     categoryName: String? = null,
+    onGuideSources: (providerId: Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
@@ -124,6 +125,7 @@ fun MobileEpgBrowserScreen(
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
     val activeProviderName by viewModel.activeProviderName.collectAsStateWithLifecycle()
+    val guideSourcesProviderId by viewModel.guideSourcesProviderId.collectAsStateWithLifecycle()
     val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
 
@@ -221,6 +223,12 @@ fun MobileEpgBrowserScreen(
                                         MaterialTheme.colorScheme.onSurface
                                     },
                             )
+                        }
+                    }
+                    // The guides this search runs over, for a source that can have them.
+                    guideSourcesProviderId?.let { providerId ->
+                        IconButton(onClick = { onGuideSources(providerId) }) {
+                            Icon(CinemaIcons.Tune, stringResource(R.string.epg_sources_header))
                         }
                     }
                 },

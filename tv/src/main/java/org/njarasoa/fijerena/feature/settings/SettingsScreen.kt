@@ -66,8 +66,6 @@ fun SettingsScreen(
     onManageProviders: () -> Unit = {},
     onLiveSync: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
-    onGuideSources: (providerId: Long) -> Unit = {},
-    onEditSource: (providerId: Long) -> Unit = {},
     onProfileSwitched: () -> Unit = {},
     onProviderChanged: () -> Unit,
 ) {
@@ -447,30 +445,14 @@ fun SettingsScreen(
                                                     returnFocus.leaveFrom(RETURN_PROVIDERS, listState)
                                                     onManageProviders()
                                                 },
-                                                onEditSource = {
-                                                    uiState.activeProviderId?.let { id ->
-                                                        returnFocus.leaveFrom(RETURN_EDIT_SOURCE, listState)
-                                                        onEditSource(id)
-                                                    }
-                                                },
                                                 scale = scale,
-                                                editEnabled = uiState.activeProviderId != null,
-                                                manageButtonFocusRequester = returnFocus.requesterFor(RETURN_PROVIDERS),
-                                                editRowFocusRequester = returnFocus.requesterFor(RETURN_EDIT_SOURCE),
-                                                manageButtonModifier = entryModifier,
+                                                manageRowFocusRequester = returnFocus.requesterFor(RETURN_PROVIDERS),
+                                                manageRowModifier = entryModifier,
                                             )
                                         }
                                         item {
                                             EpgSettingsCard(
-                                                context = context,
-                                                epgRefreshTrigger = uiState.epgRefreshTrigger,
-                                                activeProviderId = uiState.activeProviderId,
-                                                onGuideSources = { id ->
-                                                    returnFocus.leaveFrom(RETURN_EPG, listState)
-                                                    onGuideSources(id)
-                                                },
                                                 scale = scale,
-                                                rowFocusRequester = returnFocus.requesterFor(RETURN_EPG),
                                                 extraRows = {
                                                     GuideAutoRefreshRow(
                                                         viewModel = epgViewModel,
@@ -663,10 +645,8 @@ fun SettingsScreen(
 
 // Keys for the controls that navigate away from Settings — see rememberNavReturnFocus.
 private const val RETURN_PROVIDERS = "providers"
-private const val RETURN_EDIT_SOURCE = "editSource"
 private const val RETURN_LIVE_SYNC = "liveSync"
 private const val RETURN_DIAGNOSTICS = "diagnostics"
-private const val RETURN_EPG = "epg"
 
 private fun profileReturnKey(profileId: String) = "profile:$profileId"
 

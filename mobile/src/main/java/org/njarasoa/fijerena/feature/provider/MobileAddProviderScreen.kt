@@ -53,6 +53,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AccountManager
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.jellyfin.JellyfinApiService
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
@@ -92,6 +93,7 @@ fun MobileAddProviderScreen(
     editId: Long = -1L,
     onBack: () -> Unit,
     onSuccess: () -> Unit,
+    onGuideSources: (providerId: Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -119,6 +121,8 @@ fun MobileAddProviderScreen(
     var loadedConnection by remember { mutableStateOf(listOf("", "", "", "", "", "")) }
     val hasUnsavedConnectionEdits = isEditMode && listOf(name, url, username, password, host, shareName) != loadedConnection
     var showDiscardDialog by remember { mutableStateOf(false) }
+    // Leaving for the guide sources with unsaved connection edits asks first, as Back does.
+    var discardThen by remember { mutableStateOf<(() -> Unit)?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
@@ -494,12 +498,18 @@ fun MobileAddProviderScreen(
                 onStreamOutputFormatChange = { streamOutputFormat = it },
                 onPlaylistTypeChange = { playlistType = it },
             )
-            if (isEditMode && selectedType == ProviderType.XTREAM) {
+            if (isEditMode && currentProvider?.let { MediaProviderFactory.hasLiveTv(it) } == true) {
                 ProviderGuideSection(
+                    providerId = editId,
+                    showProvidesGuide = selectedType == ProviderType.XTREAM,
                     providerSettings = providerSettings,
                     onProvidesGuideChange = { enabled ->
                         providerSettings = providerSettings.copy(providesGuide = enabled, providesGuideSetByUser = true)
                         viewModel.setProvidesGuide(editId, enabled)
+                    },
+                    onGuideSourcesClick = {
+                        val open = { onGuideSources(editId) }
+                        if (hasUnsavedConnectionEdits) discardThen = open else open()
                     },
                 )
             }
@@ -536,23 +546,31 @@ fun MobileAddProviderScreen(
                 ) { Text(submitLabel) }
             }
 
-            if (showDiscardDialog) {
+            if (showDiscardDialog || discardThen != null) {
                 CinemaAlertDialog(
-                    onDismissRequest = { showDiscardDialog = false },
+                    onDismissRequest = {
+                        showDiscardDialog = false
+                        discardThen = null
+                    },
                     title = { Text(stringResource(R.string.provider_discard_changes_title)) },
                     text = { Text(stringResource(R.string.provider_discard_changes_message)) },
                     confirmButton = {
                         CinemaDialogActionButton(
                             onClick = {
+                                val then = discardThen
                                 showDiscardDialog = false
-                                onBack()
+                                discardThen = null
+                                if (then != null) then() else onBack()
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = CinemaError),
                         ) { Text(stringResource(R.string.provider_discard_button)) }
                     },
                     dismissButton = {
                         CinemaDialogTextButton(
-                            onClick = { showDiscardDialog = false },
+                            onClick = {
+                                showDiscardDialog = false
+                                discardThen = null
+                            },
                         ) { Text(stringResource(R.string.provider_keep_editing_button)) }
                     },
                 )

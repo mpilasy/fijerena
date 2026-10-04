@@ -315,6 +315,9 @@ fun MobileNavHost(
                     categoryId = browserScreen.categoryId,
                     categoryName = browserScreen.categoryName,
                     onBack = { navController.navigateUp() },
+                    onGuideSources = { id ->
+                        navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                    },
                     onNavigateToPlayer = { streamId, _, categoryId ->
                         // Land on the docked mini-player, not full-screen — same parity as every
                         // other Live TV entry point.
@@ -466,6 +469,9 @@ fun MobileNavHost(
                     onSuccess = {
                         navController.navigateUp()
                     },
+                    onGuideSources = { id ->
+                        navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                    },
                 )
             }
 
@@ -563,9 +569,6 @@ fun MobileNavHost(
                     },
                     onLiveSync = {
                         navController.navigateOnce(Screen.SyncSettings)
-                    },
-                    onGuideSources = { id ->
-                        navController.navigateOnce(Screen.EpgManagement(providerId = id))
                     },
                     onEditSource = { id ->
                         navController.navigateOnce(Screen.AddProvider(editId = id))

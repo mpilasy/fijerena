@@ -1,5 +1,5 @@
 # T5 — Edit Source (TvAddProviderScreen, edit mode), TV emulator, an Xtream source
-# (jellyxtream). Start: Settings → Source & guide → Switch source → OK on the source's row (or ⋮
+# (jellyxtream). Start: Settings → Source & guide → Manage sources → OK on the source's row (or ⋮
 # → Edit). Focus is on the Name edit button (T-12).
 # Two panes: the Connection column (Name, Server URL, Username, Password, then Cancel / Save
 # connection) and the settings column (Behaviour, Guide, Library data, Danger zone; content filters
@@ -30,3 +30,11 @@ DOWN	m3u_plus
 LEFT	Save connection
 # Right comes back to the settings row it left.
 RIGHT	m3u_plus
+# P3/P4 Guide section, after Enable Caching: Provides a guide (Xtream), then Guide sources.
+DOWN	Enable Caching
+DOWN	Provides a guide
+DOWN	Guide Sources
+# OK opens the source's guide sources (entry: its first row, or Add Guide Source when it has
+# none — re-record); Back returns to the Guide sources row.
+CENTER	Not selected
+BACK	Guide Sources

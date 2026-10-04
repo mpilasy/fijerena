@@ -489,7 +489,7 @@
     <string name="settings_provider_expires_label">Expires</string>
     <string name="settings_provider_max_connections_label">Max connections</string>
     <string name="settings_provider_trial_account_label">Trial account</string>
-    <string name="settings_provider_manage_button">Manage Sources</string>
+    <string name="settings_provider_manage_button">Manage sources</string>
 
     <!-- EPG Management extras -->
     <string name="epg_automation_disabled">Disabled</string>
@@ -535,9 +535,6 @@
 
     <!-- EPG Settings Card -->
     <string name="settings_epg_section_title">EPG Data</string>
-    <string name="epg_summary_channels_programmes">%1$s channels, %2$s programmes</string>
-    <string name="epg_summary_indexing">Indexing: %1$d%%</string>
-    <string name="epg_summary_not_indexed">%1$d guide source(s) configured, not yet indexed</string>
     <string name="epg_summary_no_sources">No guide sources configured</string>
     <string name="epg_data_manage_button">Manage EPG Data</string>
 
@@ -894,8 +891,6 @@
     <string name="settings_scope_profile">This profile</string>
     <string name="settings_scope_source">This source</string>
     <string name="settings_scope_synced">Synced</string>
-    <string name="settings_switch_source">Switch source</string>
-    <string name="settings_edit_this_source">Edit this source</string>
     <string name="settings_applies_immediately">Changes here apply immediately</string>
     <string name="settings_per_source_playback_hint">Auto-resume, Recent row size and stream format are set per source</string>
     <string name="common_custom">Custom</string>
@@ -916,11 +911,11 @@
     <string name="epg_guide_source_native">source EPG</string>
     <string name="epg_guide_updated_unknown">unknown</string>
     <string name="epg_guide_no_listings_title">No listings</string>
-    <string name="epg_guide_no_listings_index_empty">The guide index has nothing for these channels. Refresh the guide in Settings → Source &amp; guide.</string>
+    <string name="epg_guide_no_listings_index_empty">The guide index has nothing for these channels. Refresh the guide in Edit Source → Guide sources.</string>
     <string name="epg_guide_no_listings_stale_format">Nothing for this day: the %1$s was updated %2$s and stops before it.</string>
     <string name="epg_guide_no_listings_none">No listings for these channels, from the guide or from the source.</string>
     <string name="epg_guide_no_guide_title">No guide</string>
-    <string name="epg_guide_no_guide_message">This source has no programme guide. Add a guide source in Settings → Source &amp; guide.</string>
+    <string name="epg_guide_no_guide_message">This source has no programme guide. Add a guide source in Edit Source → Guide sources.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Connection</string>
     <string name="provider_save_connection_button">Save connection</string>
@@ -941,6 +936,9 @@
     <string name="provider_provides_guide_desc">This source\'s own guide (xmltv.php) is added automatically</string>
     <string name="provider_provides_guide_detected_off_desc">Turned off: this source\'s own guide (xmltv.php) came back empty</string>
     <string name="epg_source_own_guide_off">This source\'s own guide · off. Turn on Provides a guide in Edit Source.</string>
+    <!-- Sources, guide and profiles: P4 -->
+    <string name="provider_guide_sources_value_format">%1$d · last refresh %2$s</string>
+    <string name="provider_guide_sources_value_never_format">%1$d · never refreshed</string>
     <!-- LT2 -->
     <string name="live_panel_no_favorites">No favourites yet — hold OK on a channel to add one</string>
     <!-- Phase 4 -->

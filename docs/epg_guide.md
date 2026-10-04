@@ -227,7 +227,7 @@ A one-day channel schedule for one list of live channels: a category, or Recent 
 - `Loading`
 - `Ready(channelRows, timeSlots, currentTimeSlot, selectedDate, listedCount, totalCount, source, updatedAtMs, devStats, loadedCount, lastListingEndSec)` — `channelRows` holds **every** channel of the list (GD4, no cap); rows of a page not loaded yet have no programmes. `listedCount` counts loaded rows with at least one programme on the day (a channel that answered `[]` is not listed), `loadedCount` the rows on loaded pages, `totalCount` all channels. Both screens show "N of M channels have listings · <XMLTV guide|source EPG> · updated <relative>" under the title once every page is loaded, and "N of K loaded channels have listings · M in all · …" until then; `devStats` ("x/y channels answered · p/P pages · first Nms") as a dimmed line beneath it in dev mode only — never in the title. `source` is the layer behind the first page with listings. `lastListingEndSec` is the latest end among the loaded day's listings ("Listings end at …").
 - `NoListings(reason, selectedDate, source?, updatedAtMs?)` — every row empty for the day; replaces the blank grid with a centred message. `reason`: `STALE` (listings exist but stop before the day), `INDEX_EMPTY` (index built, nothing for these channels), `NONE` (no index, no native data).
-- `NoGuide` — decided **per source** (GD4, `MediaRepository.hasGuideForSource`): the source has no native EPG and no enabled guide source of its own; another source's indexed guide does not count. The message points at Settings → Source & guide.
+- `NoGuide` — decided **per source** (GD4, `MediaRepository.hasGuideForSource`): the source has no native EPG and no enabled guide source of its own; another source's indexed guide does not count. The message points at Edit Source → Guide sources.
 - `Error(message)` — channels or guide failed to load.
 
 **Flow (GD4, paged):**
@@ -283,15 +283,15 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 
 ### Search UI
 
-**TV** (`tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt`): GlassPanel search, LazyColumn with date group headers, D-pad navigable, search source indicator, "In <category> only" and "Matched only" toggles.
+**TV** (`tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt`): GlassPanel search, LazyColumn with date group headers, D-pad navigable, search source indicator, "In <category> only" and "Matched only" toggles. The header has Refresh, then **Guide sources** (when the source in use has live channels, `EpgBrowserViewModel.guideSourcesProviderId`) opening `EpgManagement` for it; Back lands on that button (its own `NavReturnFocus`, which also holds off the search field's first-open focus).
 
-**Mobile** (`mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt`): Scaffold, LazyColumn with sticky date headers and expandable programme cards, the same toggles.
+**Mobile** (`mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt`): Scaffold, LazyColumn with sticky date headers and expandable programme cards, the same toggles; the top bar's actions are Refresh and Guide sources, as on TV.
 
 ---
 
 ## Settings & Configuration
 
-**Guide sources** (`Screen.EpgManagement(providerId)`, titled "Guide sources · <source>"; `TvEpgManagementScreen` / `MobileEpgManagementScreen`, `EpgManagementViewModel`): opened from Settings → Source & guide, or from a source's edit screen. Guide sources belong to one provider (`epg_source.provider_id`); several XMLTV sources can be added, edited, enabled/disabled and deleted. Fields: see `epg_source` in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) §1.
+**Guide sources** (`Screen.EpgManagement(providerId)`, titled "Guide sources · <source>"; `TvEpgManagementScreen` / `MobileEpgManagementScreen`, `EpgManagementViewModel`): opened from the source's Edit Source (Guide sources ›, with the count and last refresh as its value), the Sources list's Guide button, or Search the guide's Guide sources button (the source in use); Back returns focus to the control that opened it. Guide sources belong to one provider (`epg_source.provider_id`); several XMLTV sources can be added, edited, enabled/disabled and deleted. Fields: see `epg_source` in [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) §1.
 
 **Actions:** Refresh Stale (N), Retry Failed (N), Refresh (N) for the sources selected with the row checkboxes, a per-source Refresh, Edit and Delete, and Delete selected.
 

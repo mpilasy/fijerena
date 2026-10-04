@@ -356,6 +356,9 @@ fun TvNavHost(
                         categoryId = browserScreen.categoryId,
                         categoryName = browserScreen.categoryName,
                         onBack = { navController.navigateUp() },
+                        onGuideSources = { id ->
+                            navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                        },
                         onNavigateToPlayer = { streamId, _, categoryId ->
                             // Land on the preview pane, not full-screen — see LiveTvSplitLayout.
                             // Pushing (not popUpTo) a new CategoryList entry means Back from the
@@ -671,6 +674,9 @@ fun TvNavHost(
                             appSettings.hasProviderCache = true
                             navController.navigateUp()
                         },
+                        onGuideSources = { id ->
+                            navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                        },
                     )
                 }
 
@@ -762,12 +768,6 @@ fun TvNavHost(
                         },
                         onDiagnostics = {
                             navController.navigateOnce(Screen.Diagnostics)
-                        },
-                        onGuideSources = { id ->
-                            navController.navigateOnce(Screen.EpgManagement(providerId = id))
-                        },
-                        onEditSource = { id ->
-                            navController.navigateOnce(Screen.AddProvider(editId = id))
                         },
                         onProfileSwitched = {
                             // As after the profile picker: every screen below may hold the previous

@@ -1,5 +1,5 @@
 # T4 — Sources (ProviderSelectionScreen), TV emulator, two or more sources.
-# Start: Sources just opened from Settings → Source & guide → Switch source / Manage sources,
+# Start: Sources just opened from Settings → Source & guide → Manage sources,
 # focus on the active source's row (T-8; the row shows name / Active / URL / username, so its
 # text depends on the device — unasserted). Rows are ordered active first, then by name.
 # Each row: the row itself (OK = Edit), then fixed slots Use (empty on the active row), Guide

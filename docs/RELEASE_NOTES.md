@@ -9,6 +9,7 @@
 - **Developer mode and Play next episode on each profile:** both are switched in the profile's edit dialog (Settings → Profiles), for any profile, not only the one in use; they left About & advanced and Playback. About & advanced keeps Diagnostics while the profile in use has developer mode on. → P2.
 - **A page for each profile, with its own content filters:** a profile in Settings → Profiles opens its page (on TV in place of the list; on the phone its own screen) with its name, colour, settings, **Content filters ›** for the source in use, Switch to this profile and Delete. Filters set for a profile not in use apply when it becomes the one in use. Edit Source no longer shows content filters, and the Profiles group's content-filters shortcut is gone. → P9.
 - **Provides a guide, per Xtream source:** Edit Source has a Guide section with a "Provides a guide" switch for the source's own guide (xmltv.php). It is on by itself and turns off when that guide comes back empty; once you set it, it stays as you set it. Off keeps the guide source but disables it, on enables it again. → P3.
+- **Guide sources live with their source:** Edit Source has a Guide sources row (how many, and when they last refreshed) and Search the guide has a Guide sources button next to Refresh; Back returns to where you were. Settings → Source & guide is now one Manage sources row showing the source in use; Switch source, Edit this source and Guide sources left Settings. → P4.
 
 ## Version: UX overhaul, day 5
 **Release Date:** 2026-10-03

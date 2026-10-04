@@ -28,8 +28,6 @@ import org.njarasoa.fijerena.BuildConfig
 import org.njarasoa.fijerena.core.network.AppSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState
-import org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
 import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.ProfileAvatar
 import org.njarasoa.fijerena.core.ui.sync.SyncManager
@@ -52,7 +50,6 @@ import org.njarasoa.fijerena.feature.settings.components.SettingsGroupHeader
 import org.njarasoa.fijerena.feature.settings.components.SettingsListRow
 import org.njarasoa.fijerena.feature.settings.components.SettingsPickerDialog
 import org.njarasoa.fijerena.feature.settings.components.SettingsScope
-import org.njarasoa.fijerena.feature.settings.components.formatProgrammeCount
 import org.njarasoa.fijerena.ui.components.buttons.CinemaOutlinedButton
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 import org.njarasoa.fijerena.ui.theme.Spacing
@@ -71,7 +68,6 @@ fun MobileSettingsScreen(
     onManageProviders: () -> Unit = {},
     onDiagnostics: () -> Unit = {},
     onLiveSync: () -> Unit = {},
-    onGuideSources: (providerId: Long) -> Unit = {},
     onEditSource: (providerId: Long) -> Unit = {},
     onEditProfile: (profileId: String) -> Unit = {},
     onProviderChanged: () -> Unit,
@@ -304,20 +300,12 @@ fun MobileSettingsScreen(
             // === 2. Source & guide ===
             item {
                 SettingsGroupHeader(stringResource(R.string.settings_group_source_guide))
+                // One way in (D6): switching, editing and guide sources live on the Sources list.
                 SettingsListRow(
-                    title = uiState.providerName.ifEmpty { stringResource(R.string.provider_none_label) },
-                    summary = activeSourceSummary(uiState),
+                    title = stringResource(R.string.settings_provider_manage_button),
+                    summary = manageSourcesSummary(uiState),
                     scope = SettingsScope.SOURCE,
-                    onClick = { activeProviderId?.let(onEditSource) },
-                    enabled = activeProviderId != null,
-                )
-                SettingsListRow(
-                    title = stringResource(R.string.settings_switch_source),
                     onClick = onManageProviders,
-                )
-                GuideSourcesRow(
-                    uiState = uiState,
-                    onGuideSources = onGuideSources,
                 )
                 GuideAutoRefreshRow(viewModel = epgViewModel)
             }
@@ -495,11 +483,12 @@ fun MobileSettingsScreen(
 }
 
 /**
- * Active source summary: URL, then subscription facts when the source reports them; an expired
- * subscription date stands out in the error colour.
+ * Manage sources' value: the source in use, its URL, then subscription facts when the source
+ * reports them; an expired subscription date stands out in the error colour.
  */
 @Composable
-private fun activeSourceSummary(uiState: SettingsUiState): AnnotatedString? {
+private fun manageSourcesSummary(uiState: SettingsUiState): AnnotatedString {
+    val sourceName = uiState.providerName.ifEmpty { stringResource(R.string.provider_none_label) }
     val expiresLabel = stringResource(R.string.settings_provider_expires_label)
     val isExpired = uiState.subscriptionStatus?.equals("Expired", ignoreCase = true) == true
     val errorColor = MaterialTheme.colorScheme.error
@@ -510,72 +499,16 @@ private fun activeSourceSummary(uiState: SettingsUiState): AnnotatedString? {
         )
     val summary =
         buildAnnotatedString {
-            uiState.currentUrl.ifEmpty { null }?.let { append(it) }
+            append(sourceName)
+            uiState.currentUrl.ifEmpty { null }?.let { append("\n$it") }
             uiState.subscriptionExpiry?.let { expiry ->
-                if (length > 0) append("\n")
+                append("\n")
                 append("$expiresLabel ")
                 if (isExpired) withStyle(SpanStyle(color = errorColor)) { append(expiry) } else append(expiry)
             }
-            trailingLines.forEach { line ->
-                if (length > 0) append("\n")
-                append(line)
-            }
+            trailingLines.forEach { line -> append("\n$line") }
         }
-    return summary.takeIf { it.isNotEmpty() }
-}
-
-/** Guide sources row: index status as the summary; opens EPG Management for the active source. */
-@Composable
-private fun GuideSourcesRow(
-    uiState: SettingsUiState,
-    onGuideSources: (providerId: Long) -> Unit,
-) {
-    val context = LocalContext.current
-    val epgIndexer = remember { EpgIndexer.getInstance(context.applicationContext) }
-    val indexState by epgIndexer.state.collectAsStateWithLifecycle()
-    var sourceCount by remember { mutableIntStateOf(0) }
-    LaunchedEffect(uiState.epgRefreshTrigger) {
-        sourceCount = epgIndexer.getSourceCount()
-    }
-    val summaryText =
-        when (val idx = indexState) {
-            is EpgIndexState.Indexed -> {
-                stringResource(
-                    R.string.epg_summary_channels_programmes,
-                    formatProgrammeCount(idx.channelCount),
-                    formatProgrammeCount(idx.programmeCount),
-                )
-            }
-
-            is EpgIndexState.Indexing -> {
-                stringResource(R.string.epg_summary_indexing, idx.progressPercent)
-            }
-
-            is EpgIndexState.Optimizing -> {
-                stringResource(R.string.epg_database_optimizing)
-            }
-
-            is EpgIndexState.NotIndexed -> {
-                if (sourceCount > 0) {
-                    stringResource(R.string.epg_summary_not_indexed, sourceCount)
-                } else {
-                    stringResource(R.string.epg_summary_no_sources)
-                }
-            }
-
-            is EpgIndexState.Failed -> {
-                stringResource(R.string.epg_database_error, idx.reason)
-            }
-        }
-    // Guide sources belong to a source; with no active one there is nowhere to go.
-    val activeProviderId = uiState.activeProviderId
-    SettingsListRow(
-        title = stringResource(R.string.epg_sources_header),
-        summary = summaryText,
-        scope = SettingsScope.SOURCE,
-        onClick = { activeProviderId?.let(onGuideSources) },
-        enabled = activeProviderId != null,
-    )
+    return summary
 }
 
 /** Live sync's line in Settings: whether it's on, and the way into its own screen. */

@@ -21,11 +21,15 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.core.ui.theme.CinemaAlpha
 import org.njarasoa.fijerena.core.ui.theme.CinemaError
 import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
-import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
 import org.njarasoa.fijerena.ui.components.input.TvInputListItem
 import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.scaled
 
+/**
+ * Source: one **Manage sources ›** row (plan D6) opening the Sources list, where sources are
+ * switched, edited and given guide sources. Its value is the source in use, with its URL and
+ * subscription under it.
+ */
 @Composable
 fun ProviderSettingsCard(
     providerName: String,
@@ -35,13 +39,10 @@ fun ProviderSettingsCard(
     subscriptionIsTrial: Boolean = false,
     subscriptionStatus: String? = null,
     onManageProviders: () -> Unit,
-    onEditSource: () -> Unit,
     scale: Float,
-    editEnabled: Boolean = true,
-    manageButtonFocusRequester: FocusRequester? = null,
-    editRowFocusRequester: FocusRequester? = null,
-    /** Goes on the Switch source button, the card's first focusable — the pane's entry row. */
-    manageButtonModifier: Modifier = Modifier,
+    manageRowFocusRequester: FocusRequester? = null,
+    /** Goes on the Manage sources row, the card's only focusable — the pane's entry row. */
+    manageRowModifier: Modifier = Modifier,
 ) {
     val bodySmallStyle =
         MaterialTheme.typography.bodySmall.copy(
@@ -67,80 +68,68 @@ fun ProviderSettingsCard(
                 SettingsScopeChip(SettingsScope.SOURCE)
             }
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+            TvInputListItem(
+                selected = false,
+                onClick = onManageProviders,
+                modifier = manageRowModifier.then(manageRowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
+                trailingContent = {
                     Text(
-                        text = providerName.ifEmpty { stringResource(R.string.provider_none_label) },
-                        style =
-                            MaterialTheme.typography.bodyLarge.copy(
-                                fontSize =
-                                    MaterialTheme.typography.bodyLarge.fontSize
-                                        .scaled(scale),
-                            ),
-                        color = MaterialTheme.colorScheme.onSurface,
+                        text = "${providerName.ifEmpty { stringResource(R.string.provider_none_label) }} ›",
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
                     )
-                    Text(
-                        text = currentUrl,
-                        style = bodySmallStyle,
-                        color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
-                    )
-                    if (subscriptionExpiry != null) {
-                        Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
-                        val isExpired = subscriptionStatus?.equals("Expired", ignoreCase = true) == true
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
+                },
+                supportingContent = {
+                    Column {
+                        if (currentUrl.isNotEmpty()) {
                             Text(
-                                stringResource(R.string.settings_provider_expires_label),
+                                text = currentUrl,
                                 style = bodySmallStyle,
-                                color = CinemaTextSecondary,
-                            )
-                            Text(
-                                text = subscriptionExpiry,
-                                style = bodySmallStyle,
-                                color = if (isExpired) CinemaError else MaterialTheme.colorScheme.onSurface,
+                                color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
                             )
                         }
-                        if (subscriptionMaxCons != null) {
+                        if (subscriptionExpiry != null) {
+                            Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
+                            val isExpired = subscriptionStatus?.equals("Expired", ignoreCase = true) == true
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Text(
-                                    stringResource(R.string.settings_provider_max_connections_label),
+                                    stringResource(R.string.settings_provider_expires_label),
                                     style = bodySmallStyle,
                                     color = CinemaTextSecondary,
                                 )
-                                Text(subscriptionMaxCons, style = bodySmallStyle)
+                                Text(
+                                    text = subscriptionExpiry,
+                                    style = bodySmallStyle,
+                                    color = if (isExpired) CinemaError else MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            if (subscriptionMaxCons != null) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        stringResource(R.string.settings_provider_max_connections_label),
+                                        style = bodySmallStyle,
+                                        color = CinemaTextSecondary,
+                                    )
+                                    Text(subscriptionMaxCons, style = bodySmallStyle)
+                                }
+                            }
+                            if (subscriptionIsTrial) {
+                                Text(
+                                    stringResource(R.string.settings_provider_trial_account_label),
+                                    style = bodySmallStyle,
+                                    color = CinemaAccent,
+                                )
                             }
                         }
-                        if (subscriptionIsTrial) {
-                            Text(
-                                stringResource(R.string.settings_provider_trial_account_label),
-                                style = bodySmallStyle,
-                                color = CinemaAccent,
-                            )
-                        }
                     }
-                }
-                CinemaSecondaryButton(
-                    onClick = onManageProviders,
-                    text = stringResource(R.string.settings_switch_source),
-                    modifier = manageButtonModifier.then(manageButtonFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
-                )
-            }
-            Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
-            TvInputListItem(
-                selected = false,
-                onClick = onEditSource,
-                modifier = editRowFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
-                enabled = editEnabled,
-                trailingContent = { Text(text = "›", style = MaterialTheme.typography.bodyMedium) },
-                headlineContent = { Text(stringResource(R.string.settings_edit_this_source)) },
+                },
+                headlineContent = { Text(stringResource(R.string.settings_provider_manage_button)) },
             )
         }
     }

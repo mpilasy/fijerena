@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -48,8 +49,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.XtreamRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.ProviderSettings
@@ -90,7 +93,10 @@ import org.njarasoa.fijerena.ui.components.ReadOnlyFieldWithEdit
 import org.njarasoa.fijerena.ui.components.buttons.CinemaDangerButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.NavReturnFocusEffect
+import org.njarasoa.fijerena.ui.components.input.navReturnFocusTarget
 import org.njarasoa.fijerena.ui.components.input.paneItem
+import org.njarasoa.fijerena.ui.components.input.rememberNavReturnFocus
 import org.njarasoa.fijerena.ui.components.input.rememberPaneFocus
 import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.components.input.tvPane
@@ -100,6 +106,9 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 /** Edit Source's Connection column takes this share of the width, the settings column the rest (T-11). */
 private const val CONNECTION_COLUMN_WEIGHT = 0.4f
 private const val SETTINGS_COLUMN_WEIGHT = 0.6f
+
+// The Guide sources row, for rememberNavReturnFocus.
+private const val RETURN_GUIDE_SOURCES = "guideSources"
 
 // Focus stops of the Connection column (its tvPane memory).
 private const val KEY_NAME = "name"
@@ -112,15 +121,18 @@ private const val KEY_SAVE = "save"
  *
  * Edit Source: the Connection column on the left (read-only type, the login fields, Cancel and
  * Save connection right under them — the only part that needs saving) and a scrolling column on
- * the right with Behaviour (applies immediately), Guide (Xtream), Library data and the Danger zone.
+ * the right with Behaviour (applies immediately), Guide (sources with live channels: Provides a
+ * guide for Xtream, Guide sources › opening [onGuideSources]), Library data and the Danger zone.
  * Each column is a `tvPane`: Left/Right move between them, Up/Down stay inside. First focus is the
- * Name edit button. Content filters are edited on each profile's page (D8), not here.
+ * Name edit button; Back from the guide sources returns to Guide sources. Content filters are
+ * edited on each profile's page (D8), not here.
  */
 @Composable
 fun TvAddProviderScreen(
     editId: Long = -1L,
     onBack: () -> Unit,
     onSuccess: () -> Unit,
+    onGuideSources: (providerId: Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -163,11 +175,14 @@ fun TvAddProviderScreen(
     val hasUnsavedConnectionEdits =
         isEditMode && loadedConnection.let { it != null && it != listOf(name, url, username, password, host, shareName) }
     var showDiscardDialog by remember { mutableStateOf(false) }
+    // Leaving for the guide sources with unsaved connection edits asks first, as Back does.
+    var discardThen by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     var showQuickConnectDialog by remember { mutableStateOf(false) }
 
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
+    val returnFocus = rememberNavReturnFocus()
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
     var currentProvider by remember { mutableStateOf<org.njarasoa.fijerena.core.network.provider.ProviderEntity?>(null) }
 
@@ -486,8 +501,10 @@ fun TvAddProviderScreen(
 
                 // First focus once the source has loaded: the Name edit button (T-12).
                 val connectionLoaded = loadedConnection != null
+                // Back from the guide sources lands on Guide sources, once the source has loaded.
+                NavReturnFocusEffect(returnFocus, prepare = { snapshotFlow { currentProvider != null }.first { it } })
                 LaunchedEffect(connectionLoaded) {
-                    if (connectionLoaded) nameFocusRequester.requestFocusWithRetry()
+                    if (connectionLoaded && !returnFocus.isReturn) nameFocusRequester.requestFocusWithRetry()
                 }
 
                 Column(
@@ -617,15 +634,25 @@ fun TvAddProviderScreen(
                                     pane = settingsPane,
                                 )
 
-                                if (selectedType == ProviderType.XTREAM) {
+                                if (currentProvider?.let { MediaProviderFactory.hasLiveTv(it) } == true) {
                                     SectionDivider()
                                     ProviderGuideSection(
+                                        providerId = editId,
+                                        showProvidesGuide = selectedType == ProviderType.XTREAM,
                                         providerSettings = providerSettings,
                                         onProvidesGuideChange = { enabled ->
                                             providerSettings = providerSettings.copy(providesGuide = enabled, providesGuideSetByUser = true)
                                             viewModel.setProvidesGuide(editId, enabled)
                                         },
+                                        onGuideSourcesClick = {
+                                            val open = {
+                                                returnFocus.leaveFrom(RETURN_GUIDE_SOURCES)
+                                                onGuideSources(editId)
+                                            }
+                                            if (hasUnsavedConnectionEdits) discardThen = open else open()
+                                        },
                                         pane = settingsPane,
+                                        guideSourcesModifier = Modifier.navReturnFocusTarget(returnFocus, RETURN_GUIDE_SOURCES),
                                     )
                                 }
 
@@ -715,16 +742,21 @@ fun TvAddProviderScreen(
             }
 
             // Discard unsaved connection edits (edit mode, Back)
-            if (showDiscardDialog) {
+            if (showDiscardDialog || discardThen != null) {
                 CinemaAlertDialog(
-                    onDismissRequest = { showDiscardDialog = false },
+                    onDismissRequest = {
+                        showDiscardDialog = false
+                        discardThen = null
+                    },
                     title = { Text(stringResource(R.string.provider_discard_changes_title), color = CinemaTextPrimary) },
                     text = { Text(stringResource(R.string.provider_discard_changes_message), color = CinemaTextSecondary) },
                     confirmButton = {
                         CinemaDialogActionButton(
                             onClick = {
+                                val then = discardThen
                                 showDiscardDialog = false
-                                onBack()
+                                discardThen = null
+                                if (then != null) then() else onBack()
                             },
                             colors =
                                 androidx.compose.material3.ButtonDefaults.buttonColors(
@@ -735,7 +767,10 @@ fun TvAddProviderScreen(
                     },
                     dismissButton = {
                         CinemaDialogActionButton(
-                            onClick = { showDiscardDialog = false },
+                            onClick = {
+                                showDiscardDialog = false
+                                discardThen = null
+                            },
                             colors =
                                 androidx.compose.material3.ButtonDefaults.buttonColors(
                                     containerColor = CinemaSurfaceVariant,

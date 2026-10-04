@@ -10,9 +10,8 @@
 # Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
 @start Profiles
 DOWN	Source & guide
-RIGHT	Switch source
-DOWN	Edit this source
-DOWN	Guide Sources
+# P4 (D6): Manage sources is the only source row; guide sources are reached from the source.
+RIGHT	Manage sources
 DOWN	Guide auto-refresh / This device / Daily · 02:00 ›
 # Down at the end of the pane stays put.
 DOWN	Guide auto-refresh

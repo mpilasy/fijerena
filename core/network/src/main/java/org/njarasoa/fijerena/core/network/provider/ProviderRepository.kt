@@ -152,6 +152,9 @@ class ProviderRepository(
 
     suspend fun getProviderCount(): Int = dao.getProviderCount()
 
+    /** [providerId]'s guide sources, as they change (Edit Source's Guide sources row). */
+    fun getGuideSources(providerId: Long): Flow<List<EpgSourceEntity>> = db.epgSourceDao().getSourcesForProvider(providerId)
+
     /**
      * Add a new provider. Stores the password in a per-provider encrypted prefs file.
      * Deactivates all other providers and activates this one, unless [activate] is false — used

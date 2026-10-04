@@ -528,9 +528,6 @@
 
     <!-- EPG Settings Card -->
     <string name="settings_epg_section_title">Données EPG</string>
-    <string name="epg_summary_channels_programmes">%1$s chaînes, %2$s programmes</string>
-    <string name="epg_summary_indexing">Indexation : %1$d %%</string>
-    <string name="epg_summary_not_indexed">%1$d source(s) de guide configurée(s), pas encore indexée(s)</string>
     <string name="epg_summary_no_sources">Aucune source de guide configurée</string>
     <string name="epg_data_manage_button">Gérer les données EPG</string>
 
@@ -856,8 +853,6 @@
     <string name="settings_scope_profile">Ce profil</string>
     <string name="settings_scope_source">Cette source</string>
     <string name="settings_scope_synced">Synchronisé</string>
-    <string name="settings_switch_source">Changer de source</string>
-    <string name="settings_edit_this_source">Modifier cette source</string>
     <string name="settings_applies_immediately">Les changements ici s\'appliquent immédiatement</string>
     <string name="settings_per_source_playback_hint">La reprise automatique, la taille de la ligne Récents et le format de flux se règlent par source</string>
     <string name="common_custom">Personnalisé</string>
@@ -878,11 +873,11 @@
     <string name="epg_guide_source_native">EPG de la source</string>
     <string name="epg_guide_updated_unknown">inconnu</string>
     <string name="epg_guide_no_listings_title">Aucun programme</string>
-    <string name="epg_guide_no_listings_index_empty">L\'index du guide n\'a rien pour ces chaînes. Actualisez le guide dans Paramètres → Source et guide.</string>
+    <string name="epg_guide_no_listings_index_empty">L\'index du guide n\'a rien pour ces chaînes. Actualisez le guide dans Modifier la source → Sources de guide.</string>
     <string name="epg_guide_no_listings_stale_format">Rien pour ce jour : %1$s, mis à jour %2$s, s\'arrête avant.</string>
     <string name="epg_guide_no_listings_none">Aucun programme pour ces chaînes, ni dans le guide ni chez la source.</string>
     <string name="epg_guide_no_guide_title">Pas de guide</string>
-    <string name="epg_guide_no_guide_message">Cette source n\'a pas de guide des programmes. Ajoutez une source de guide dans Paramètres → Source et guide.</string>
+    <string name="epg_guide_no_guide_message">Cette source n\'a pas de guide des programmes. Ajoutez une source de guide dans Modifier la source → Sources de guide.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Connexion</string>
     <string name="provider_save_connection_button">Enregistrer la connexion</string>
@@ -903,6 +898,9 @@
     <string name="provider_provides_guide_desc">Le guide propre à cette source (xmltv.php) est ajouté automatiquement</string>
     <string name="provider_provides_guide_detected_off_desc">Désactivé : le guide propre à cette source (xmltv.php) était vide</string>
     <string name="epg_source_own_guide_off">Guide propre à cette source · désactivé. Activez Fournit un guide dans Modifier la source.</string>
+    <!-- Sources, guide and profiles: P4 -->
+    <string name="provider_guide_sources_value_format">%1$d · dernière actualisation %2$s</string>
+    <string name="provider_guide_sources_value_never_format">%1$d · jamais actualisée</string>
     <string name="provider_more_actions">Plus d\'actions</string>
     <string name="provider_more_actions_for_format">Plus d\'actions pour %1$s</string>
     <!-- LT2 -->

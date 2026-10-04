@@ -125,9 +125,13 @@ import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import org.njarasoa.fijerena.ui.theme.scaled
 
+// Header buttons that navigate away, for rememberNavReturnFocus.
+private const val RETURN_GUIDE_SOURCES = "header:guideSources"
+
 /**
  * "Search the guide". Opened from a TV Guide ([categoryId] set, GD5), an "In <category> only"
- * toggle — on by default — keeps the results on that guide's channels.
+ * toggle — on by default — keeps the results on that guide's channels. The header's Guide sources
+ * button, next to Refresh, opens the guide sources of the source in use ([onGuideSources]).
  */
 @Composable
 fun TvEpgBrowserScreen(
@@ -135,6 +139,7 @@ fun TvEpgBrowserScreen(
     onNavigateToPlayer: (streamId: String, streamName: String, categoryId: String) -> Unit = { _, _, _ -> },
     categoryId: String? = null,
     categoryName: String? = null,
+    onGuideSources: (providerId: Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
@@ -147,6 +152,11 @@ fun TvEpgBrowserScreen(
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
     val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
     val activeProviderName by viewModel.activeProviderName.collectAsStateWithLifecycle()
+    val guideSourcesProviderId by viewModel.guideSourcesProviderId.collectAsStateWithLifecycle()
+    // Back from a header button's screen lands on that button (the results' own hand-back is
+    // ResultsContent's).
+    val headerReturnFocus = rememberNavReturnFocus()
+    NavReturnFocusEffect(headerReturnFocus)
     val isDevMode = viewModel.isDevMode
     val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
     val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
@@ -261,6 +271,24 @@ fun TvEpgBrowserScreen(
                             }
                         },
                     )
+                    // The guides this search runs over, for a source that can have them.
+                    guideSourcesProviderId?.let { providerId ->
+                        CinemaIconButton(
+                            onClick = {
+                                headerReturnFocus.leaveFrom(RETURN_GUIDE_SOURCES)
+                                onGuideSources(providerId)
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = CinemaIcons.Tune,
+                                    contentDescription = stringResource(R.string.epg_sources_header),
+                                    tint = CinemaTextPrimary,
+                                    modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                                )
+                            },
+                            modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_GUIDE_SOURCES),
+                        )
+                    }
                 }
             }
 
@@ -321,6 +349,7 @@ fun TvEpgBrowserScreen(
                         onNavigateToPlayer = onNavigateToPlayer,
                         contextName = contextName,
                         contextChannels = contextChannels,
+                        headerReturnPending = headerReturnFocus.key != null,
                     )
                 }
             }
@@ -346,6 +375,8 @@ private fun EpgBrowserContent(
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
     contextName: String? = null,
     contextChannels: GuideChannels? = null,
+    // Back is handing focus to a header button: no first-open focus or keyboard here.
+    headerReturnPending: Boolean = false,
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     val firstItemFocusRequester = remember { FocusRequester() }
@@ -374,13 +405,15 @@ private fun EpgBrowserContent(
     // Down reaches them; straight into the keyboard for a first search. Not on a return from a
     // channel — NavReturnFocusEffect lands on the airing instead.
     var editing by remember {
-        mutableStateOf(returnFocus.key == null && uiState is EpgBrowserViewModel.UiState.Idle && epgSearchHistory.isEmpty())
+        mutableStateOf(
+            returnFocus.key == null && !headerReturnPending && uiState is EpgBrowserViewModel.UiState.Idle && epgSearchHistory.isEmpty(),
+        )
     }
 
     // Auto-focus logic: when results appear for the first time for a new query, focus the first item
     // (not when Back is about to hand focus to the airing that was opened).
     LaunchedEffect(uiState) {
-        if (returnFocus.key == null && uiState is EpgBrowserViewModel.UiState.Results) {
+        if (returnFocus.key == null && !headerReturnPending && uiState is EpgBrowserViewModel.UiState.Results) {
             firstItemFocusRequester.requestFocusWithRetry()
         }
     }
@@ -461,7 +494,7 @@ private fun EpgBrowserContent(
 
         // Auto-focus on screen open (not on a return from a channel)
         LaunchedEffect(Unit) {
-            if (returnFocus.key == null && !editing) searchFocusRequester.requestFocusWithRetry()
+            if (returnFocus.key == null && !headerReturnPending && !editing) searchFocusRequester.requestFocusWithRetry()
         }
 
         if (isDevMode && epgDbStats != null) {

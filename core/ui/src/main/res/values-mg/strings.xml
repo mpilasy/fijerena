@@ -458,9 +458,6 @@
 
     <!-- EPG Settings Card -->
     <string name="settings_epg_section_title">Angon-drakitra EPG</string>
-    <string name="epg_summary_channels_programmes">%1$s fantsona, %2$s fandaharana</string>
-    <string name="epg_summary_indexing">Mandahatra: %1$d%%</string>
-    <string name="epg_summary_not_indexed">loharanon\'ny fitarihana %1$d voalamina, mbola tsy voalahatra</string>
     <string name="epg_summary_no_sources">Tsy misy loharanon\'ny fitarihana voalamina</string>
     <string name="epg_data_manage_button">Hitantana ny Angon-drakitra EPG</string>
 
@@ -711,8 +708,6 @@
     <string name="settings_scope_profile">Ity mombamomba ity</string>
     <string name="settings_scope_source">Ity loharano ity</string>
     <string name="settings_scope_synced">Ampifanarahina</string>
-    <string name="settings_switch_source">Hanova loharano</string>
-    <string name="settings_edit_this_source">Hanitsy ity loharano ity</string>
     <string name="settings_applies_immediately">Mihatra avy hatrany ny fanovana eto</string>
     <string name="settings_per_source_playback_hint">Ny famerenana ho azy, ny haben\'ny andalana Vao haingana ary ny endrika fampitana dia apetraka isaky ny loharano</string>
     <string name="common_custom">Safidy manokana</string>
@@ -733,11 +728,11 @@
     <string name="epg_guide_source_native">EPG an\'ny loharano</string>
     <string name="epg_guide_updated_unknown">tsy fantatra</string>
     <string name="epg_guide_no_listings_title">Tsy misy fandaharana</string>
-    <string name="epg_guide_no_listings_index_empty">Tsy misy na inona na inona ho an\'ireto fantsona ireto ao amin\'ny fitarihana. Havaozy ny fitarihana ao amin\'ny Fandrindrana → Loharano sy fitarihana.</string>
+    <string name="epg_guide_no_listings_index_empty">Tsy misy na inona na inona ho an\'ireto fantsona ireto ao amin\'ny fitarihana. Havaozy ny fitarihana ao amin\'ny Hanova loharano → Ireo loharanon\'ny fitarihana.</string>
     <string name="epg_guide_no_listings_stale_format">Tsy misy ho an\'ity andro ity: %1$s, nohavaozina %2$s, tsy mahatratra azy.</string>
     <string name="epg_guide_no_listings_none">Tsy misy fandaharana ho an\'ireto fantsona ireto, na avy amin\'ny fitarihana na avy amin\'ny loharano.</string>
     <string name="epg_guide_no_guide_title">Tsy misy fitarihana</string>
-    <string name="epg_guide_no_guide_message">Tsy manana fitarihana ity loharano ity. Ampio loharanon\'ny fitarihana ao amin\'ny Fandrindrana → Loharano sy fitarihana.</string>
+    <string name="epg_guide_no_guide_message">Tsy manana fitarihana ity loharano ity. Ampio loharanon\'ny fitarihana ao amin\'ny Hanova loharano → Ireo loharanon\'ny fitarihana.</string>
     <!-- M4 -->
     <string name="provider_section_connection">Fifandraisana</string>
     <string name="provider_save_connection_button">Tehirizo ny fifandraisana</string>
@@ -758,6 +753,9 @@
     <string name="provider_provides_guide_desc">Ampiana ho azy ny fitarihan\'ity loharano ity (xmltv.php)</string>
     <string name="provider_provides_guide_detected_off_desc">Novonoina: foana ny fitarihan\'ity loharano ity (xmltv.php)</string>
     <string name="epg_source_own_guide_off">Fitarihan\'ity loharano ity · tsy mandeha. Alefaso ny Manome fitarihana ao amin\'ny Hanova loharano.</string>
+    <!-- Sources, guide and profiles: P4 -->
+    <string name="provider_guide_sources_value_format">%1$d · fanavaozana farany %2$s</string>
+    <string name="provider_guide_sources_value_never_format">%1$d · mbola tsy nohavaozina</string>
     <string name="provider_more_actions">Asa hafa</string>
     <string name="provider_more_actions_for_format">Asa hafa ho an\'ny %1$s</string>
     <!-- LT2 -->

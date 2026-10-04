@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.njarasoa.fijerena.core.network.AppSettings
+import org.njarasoa.fijerena.core.network.MediaProviderFactory
 import org.njarasoa.fijerena.core.network.friendlyErrorMessage
 import org.njarasoa.fijerena.core.network.provider.ProviderRepository
 import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
@@ -158,6 +159,10 @@ class EpgBrowserViewModel(
 
     private val _activeProviderName = MutableStateFlow<String?>(null)
     val activeProviderName: StateFlow<String?> = _activeProviderName.asStateFlow()
+
+    /** The source in use when it can have guide sources (it has live channels), else null. */
+    private val _guideSourcesProviderId = MutableStateFlow<Long?>(null)
+    val guideSourcesProviderId: StateFlow<Long?> = _guideSourcesProviderId.asStateFlow()
 
     fun setSearchMode(mode: SearchMode) {
         if (_searchMode.value != mode) {
@@ -390,6 +395,7 @@ class EpgBrowserViewModel(
                             .providerDao()
                             .getActiveProvider()
                     _activeProviderName.value = provider?.name
+                    _guideSourcesProviderId.value = provider?.takeIf { MediaProviderFactory.hasLiveTv(it) }?.id
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
