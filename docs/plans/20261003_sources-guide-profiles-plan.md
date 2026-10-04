@@ -11,7 +11,7 @@
 | P3 "Provides a guide" per source | Todo |
 | P4 Guide sources under the source; Settings shows Manage sources only | Todo |
 | P5 Auto-refresh per guide source | Todo |
-| P6 Home button on the catalogue screens | Todo |
+| P6 Section-root button at depth 4 | Todo |
 | P7 Home keeps Search the guide; search ↔ grid; no channel search | Todo |
 | P8 Live TV preview plays on OK, not on focus (TV only) | Todo |
 | P9 Content filters from the profile, not from the source | Todo |
@@ -29,8 +29,9 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
    global-looking Settings row.
 4. The profile edit dialog has no way to switch to that profile.
 5. Auto-refresh is a property of each guide source, not one device-wide setting.
-6. Every page except Home should have a Home button that goes straight to Home and discards the
-   back stack.
+6. Deep screens need a button that goes straight back and discards the back stack — shown from 4
+   screens deep, returning to the root of the section (Movies, TV Shows, Search, Settings…) rather
+   than Home.
 7. Settings' "Switch source" should be "Manage sources": editing the current source from Settings
    and from the Sources page is odd and duplicated.
 8. Search the guide should have a button next to its Refresh to edit the guide sources.
@@ -118,7 +119,7 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
 | D1 | Is "Provides a guide" a switch the viewer flips, or set by detection only? | **Decided 2026-10-03:** detected automatically (on for an Xtream source with live channels, off when its own guide comes back empty), and the viewer can change it later in Edit Source. Once the viewer has set it, detection no longer changes it. Not shown for other types: they never get an automatic guide. |
 | D2 | Per-source auto-refresh: its own time of day too, or only its own interval? | **Decided 2026-10-03:** an interval per guide source only (Off / every 6 h / 12 h / daily / weekly). No time-of-day setting: the device-wide "Guide refresh time" goes with the rest of the device-wide auto-refresh. |
 | D3 | Keep the Sources list's **Guide** button once guide sources live in Edit Source? | **Decided 2026-10-03 (no preference):** keep it as a shortcut to the same screen; remove only Settings → Source & guide → Guide Sources. |
-| D4 | Where does the Home button go? | **Decided 2026-10-03:** only on the catalogue screens where Related / collection links let the stack grow without end — movie details, series and episodes, the Movies / TV Shows lists reached from them, and Search results. TV: the last button in the screen's header row; mobile: a top-bar icon. Not on Home, and never on the player, its OSD or the Live TV preview. |
+| D4 | Where does the Home button go? | **Decided 2026-10-03:** a **section-root button** on any screen 4 or more entries above Home (`HOME_BUTTON_MIN_DEPTH = 4`, depth counted on the nav back stack), except the player, its OSD and the Live TV preview. It returns to the first screen above Home in the current stack — the root of the section (Movies, TV Shows, Live TV, Search, Settings) — discarding everything above it; that screen keeps its saved state (category, scroll, search results). Labelled with its destination ("Movies", "Settings"…). Same rule for every section; in Live TV it rarely shows, since preview and full screen are layers (LT7) and deep Live TV chains end on a preview. |
 | D5 | What does Home do when there is no source (Home can't show anything)? | **Dropped 2026-10-03:** without a source there are no catalogue screens, so the question doesn't arise. |
 | D6 | What stays of the source rows in Settings? | **Decided 2026-10-03:** Settings → Source & guide becomes one **Manage sources ›** row (its value: the source in use) opening the Sources list, where switching, editing and guide sources live. Switch source, Edit this source and Guide Sources leave Settings, and so does the content-filters shortcut (filters are on each profile's page, D8). |
 | D7 | What does the grid button on Search the guide open? | **Decided 2026-10-03:** it always opens the TV Guide grid for Recent; arriving from a grid, Back still returns there. |
@@ -142,9 +143,11 @@ copied from the profile in use, as today; developer mode starts off).
 and changes it from the row's action menu (TV: long-press OK / Menu, a picker; mobile: the row's
 ⋮). New guide sources start at the default (daily).
 
-**Home button (both platforms, D4):** on the catalogue screens only — movie details, series and
-episodes, the Movies / TV Shows lists, Search results — where Related and collection links can
-stack screens without end. Not on Home, the player or the Live TV preview. It
+**Section-root button (both platforms, D4):** on any screen 4 or more entries above Home, except
+the player, its OSD and the Live TV preview. It returns to the root of the section — the first
+screen above Home in the stack (Movies, TV Shows, Live TV, Search, Settings) — discarding
+everything above it, and is labelled with that destination. The root keeps its saved state, so
+Movies comes back on the category and scroll where browsing started; Home stays one Back away. It
 leaves for Home and clears the back stack: Home becomes the only entry, so Back on Home does
 nothing (TV) / leaves the app (mobile), as after launch. Anything that stops on leaving (the Live
 TV preview and player) stops as it does on Back. A screen with unsaved edits (mobile Edit Source's
@@ -180,7 +183,7 @@ on.
 | P3 | **Provides a guide**: `ProviderSettings.providesGuide: Boolean? = null` (null = detect). `AutoXmltvSources.reconcile` adds the automatic guide source only when the effective value is on, and removes it (only the automatic one — hand-added guide sources are never touched) when it is off. Detection: on for Xtream with live channels (today's rule); after an ingest of the automatic source with 0 channels, set `providesGuide = false` (empty `xmltv.php`). Switch in Edit Source for Xtream. Unit tests for reconcile with each value. | `ProviderSettings.kt`, `AutoXmltvSources.kt`, `XtreamSessionManager.kt`, `EpgFileManager.kt` (empty-ingest hook), both Edit Source screens, strings ×3 | M | Med (deletes a synced row; must keep hand-added sources) |
 | P4 | **Guide sources under the source; Settings shows Manage sources only**: "Guide sources ›" row in Edit Source (sources with live channels) opening `EpgManagement(providerId)`; the Sources list's Guide button stays (D3). Settings → Source & guide becomes **Manage sources ›** (renamed from Switch source, value = the source in use) — Edit this source, Guide Sources and the Profiles group's content-filters shortcut (`focusFilters` deep link) are removed (D6); unused strings removed ×3. Search the guide gets a Guide sources icon button next to Refresh, opening `EpgManagement(activeProviderId)`; Back returns focus to it. Back from the guide sources screen returns to the row it opened from (`NavReturnFocus`). Focus walks updated. | both Edit Source screens, both Settings screens, both Search the guide screens (`TvEpgBrowserScreen`, `MobileEpgBrowserScreen`), both nav hosts, `scripts/focus-walks/settings*.txt`, `edit-source.txt` | M | Low |
 | P5 | **Auto-refresh per guide source**: `epg_source.refresh_interval_hours` (`SettingsDatabase` 15 → 16, `NOT NULL DEFAULT 24`, `-1` = off), a one-time startup step copying today's device-wide interval into every row (so nothing changes for anyone on upgrade), then the device-wide switch, interval and time of day retire (D2). `getStaleSources` uses each row's own interval (stale after half of it, as today); the periodic `EpgSyncWorker` runs at the shortest interval among enabled guide sources, cancelled when all are off. Sync payload and export carry the field (optional, default keeps the local value, so older app versions keep working). Guide sources screen: interval in the row and a picker in the row actions. Room migration test, `docs/DATABASE_SCHEMA.md` updated in the same commit. | `EpgSourceEntity.kt`, `SettingsDatabase.kt` (+ schema JSON 16), `EpgSourceDao.kt`, `EpgFileManager.kt`, `EpgSyncWorker.kt`, `AppSettings.kt`, `SyncPayloads.kt` / sync applier, `SettingsExportManager.kt`, both guide sources screens, both Settings screens (`GuideSettingsRows`), strings ×3 | L | Med-High (schema migration on every device, sync format, worker scheduling) |
-| P6 | **Home button on the catalogue screens** (D4): one `goHome()` per nav host — `popBackStack(Screen.ContentTypeSelection, inclusive = false)` (Home is always on the stack when a source exists) — and one button per platform (TV `TvHomeButton` as the header row's last button, mobile a top-bar action), on movie details, series / episodes, the Movies / TV Shows lists and Search results. Not on Home, the player, its OSD or the Live TV preview. Focus walks updated (`details.txt`, `search.txt`). Strings ×3 ("Home"). | both nav hosts; TV `MovieDetailsScreen`, `EpisodeSelectionScreen`, `TwoColumnLayout`/category header, `SearchScreen`; the mobile equivalents; `scripts/focus-walks/*` | S | Low |
+| P6 | **Section-root button at depth 4** (D4): per nav host, `depth` = entries above Home in `navController.currentBackStack`, and `goToSectionRoot()` popping one entry at a time until the first entry above Home is on top (a plain `popBackStack<CategoryList>()` would stop at the nearest of several category lists). Shown when `depth >= HOME_BUTTON_MIN_DEPTH` (4) and the screen is not the player / Live TV preview; label = the root's name (Movies, TV Shows, Live TV, Search, Settings). TV: the last button of each screen's header row (appearing doesn't move the others); mobile: a top-bar action. Focus walks updated (`details.txt`, `search.txt`, `settings*.txt`). Strings ×3. | both nav hosts; a shared header slot on the TV screens with a header (details, episodes, category lists, Search, TV Guide, Search the guide, Settings sub-screens, Sources, Edit Source, guide sources, Live sync) and the mobile top bars; `scripts/focus-walks/*` | M | Low-Med (every screen header; back-stack popping) |
 | P7 | **Home keeps Search the guide; search ↔ grid; no channel search**: Home drops its TV Guide button (TV and mobile; focus walk `home.txt`); Search the guide gets a TV Guide icon button opening `EpgGuide` for Recent (D7); the channel mode goes — the mode chips, `SearchMode.CHANNEL`, the channel-search path in `EpgBrowserViewModel` and `XmltvSearchService.searchByChannel` if nothing else calls it, and its strings ×3. | both Home screens (`ContentTypeSelectionScreen`), both Search the guide screens, `EpgBrowserViewModel.kt`, `XmltvSearchService.kt`, both nav hosts, `scripts/focus-walks/home.txt` | S | Low |
 
 | P9 | **Content filters from the profile, not from the source** (D8): the profile edit dialog becomes a page (TV: a sub-pane of Settings' Profiles group; mobile: `Screen.ProfileEdit(profileId)`) holding P1's and P2's controls plus **Content filters ›**, which opens the existing filter editor (`CategoryFilterDialog` on TV, the mobile equivalent) for the source in use and *that* profile through `CategoryFiltersStore`, headed with the source's name only. Editing a profile not in use only stores its filters (they apply when it becomes active). Edit Source drops its filters section and the `focusFilters` deep link (with D6). Focus walks (`settings.txt`, `edit-source.txt`). | both profile dialogs → pages, both Edit Source screens, filter editor entry point, `CategoryFiltersStore` (read/write for a given profile), mobile nav host (route), strings ×3 | M | Med (filters for a profile not in use; the catalogue's `excluded` flags must still follow only the active profile) |
@@ -216,10 +219,11 @@ and lands after P4.
   checked after switching); Edit Source shows Provides a guide (Xtream) and Guide sources ›;
   turning Provides a guide off removes the automatic guide source and it stays gone after a
   re-login; per-source interval shown and changed; focus walks re-recorded.
-- Home button: from a deep catalogue stack (Home → Movies → a film → Related → another film →
-  its collection → … → Home) lands on Home with nothing behind it (TV: Back stays on Home;
-  mobile: Back leaves the app); not shown on Home, the player or the Live TV preview; TV focus
-  walks: the icon is the header row's last stop on each catalogue screen.
+- Section-root button: absent at depths 1–3; at depth 4 (Home → Movies → film → Related film →
+  collection) it shows "Movies", and pressing it lands on Movies at the category and scroll where
+  browsing started, with only Home behind it; same from Search (back to the results) and Settings
+  (Home → Settings → Sources → Edit Source → Guide sources → "Settings"); never on the player or
+  the Live TV preview; TV focus walks: it is the header row's last stop when shown.
 - P7: Home shows Search the guide and Search All, no TV Guide; Search the guide has no mode
   chips; its TV Guide button opens Recent's grid; Back from that grid returns to Search the guide.
 - P2: developer mode and play next episode switched on the page of a profile not in use don't change the profile in use; after switching to it both apply; Settings → Playback keeps only "Count as watched after".
