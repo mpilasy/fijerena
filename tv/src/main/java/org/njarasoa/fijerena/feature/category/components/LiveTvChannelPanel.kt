@@ -80,7 +80,6 @@ internal fun LiveTvChannelPanel(
     onCategorySelected: (String) -> Unit,
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
     onStreamPromote: (MediaItem) -> Unit,
-    onStreamFocused: (MediaItem) -> Unit,
     onRefresh: () -> Unit,
     /** Full screen: the panel has just opened over the video and must hold focus at once. */
     overlay: Boolean = false,
@@ -212,7 +211,6 @@ internal fun LiveTvChannelPanel(
                     }
                 }
             },
-            onStreamFocused = onStreamFocused,
             onRefreshStreams = { onRefresh() },
             modifier =
                 Modifier.fillMaxSize().onPreviewKeyEvent { event ->

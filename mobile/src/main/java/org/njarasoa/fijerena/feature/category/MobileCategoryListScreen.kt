@@ -227,10 +227,10 @@ fun MobileCategoryListScreen(
         }
     }
 
-    // Tap-driven equivalent of TV's focus-driven preview pane (tv/.../LiveTvSplitLayout.kt): a
+    // Tap-driven equivalent of TV's preview pane (tv/.../LiveTvSplitLayout.kt): a
     // small always-playing mini-player docked above the channel list, promotable to full screen
     // in place (same engine, same ViewModel pair — never a second connection). Unlike TV, mobile
-    // commits immediately on tap (no debounced "light" preview step — a tap is already a
+    // commits immediately on tap (no "light" preview step — a tap is already a
     // deliberate choice to watch) and does not auto-seed from the app-wide last-played channel on
     // a bare entry (no passive "focus" state to preview from on touch).
     val isLiveTv = contentType == ContentType.LIVE_TV

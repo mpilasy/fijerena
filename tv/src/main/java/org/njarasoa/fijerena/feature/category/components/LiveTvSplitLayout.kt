@@ -40,9 +40,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -81,12 +78,13 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * Live-TV-only split layout: a small preview player + now/next EPG card on the left, the channel
  * list on the right. See docs/live-tv-preview-pane-plan.md.
  *
- * The preview is focus-driven and debounced (800 ms) — nothing plays until the user's focus settles
- * on a row, so scrolling never leaves a stream churning in the background. A watchdog also stops a
- * channel that fails to start within 8s rather than let it buffer indefinitely.
+ * The preview plays what OK picks, never what focus rests on: moving through the list or across its
+ * tabs leaves the playing channel alone. OK on another row tunes the preview to it; OK on the row
+ * already playing goes full screen. A watchdog also stops a channel that fails to start within 8s
+ * rather than let it buffer indefinitely.
  *
- * Selecting a channel (OK) does not navigate to a separate full-screen destination. It PROMOTES the
- * existing preview's playback (same PlaybackViewModel, same StreamLoaderViewModel, same engine
+ * Full screen does not navigate to a separate destination. It PROMOTES the existing preview's
+ * playback (same PlaybackViewModel, same StreamLoaderViewModel, same engine
  * connection) to a full-screen PlayerScreen in place. A second, independently-connecting
  * PlaybackViewModel here (i.e. actually navigating to Screen.Player) reliably caused a main-thread
  * ANR (Android's QueuedWork.waitToFinish flush racing the new Service/MediaSession connection) —
@@ -126,28 +124,10 @@ internal fun LiveTvSplitLayout(
     val context = LocalContext.current
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
 
-    // Focus-driven, debounced preview: the highlighted channel becomes the preview target only
-    // after focus settles (800 ms, LT5), so scrolling the list doesn't machine-gun the tuner or leave a
-    // stream churning in the background. Nothing auto-plays on entry until the user lands on a row —
-    // unless this screen was entered with a specific stream already in mind (see the seeding effect
-    // below), in which case it plays immediately.
-    // Focus is held in a StateFlow, not snapshot state, deliberately: as snapshot state it had to
-    // be read in composition to key the debouncing LaunchedEffect, so every single D-pad move
-    // invalidated this whole composable — video pane, EPG texts and the channel list all recomposed
-    // per keypress, at 800 ms before anything even wanted to change. Writing to a flow notifies the
-    // collector without touching the snapshot system, so focus moves now cost no recomposition at
-    // all and only previewTarget (which changes once, after the debounce) drives the UI.
-    val focusedItemFlow = remember { MutableStateFlow<MediaItem?>(null) }
+    // The channel the preview plays: set by the entry seed below and by OK on a row (P8 of
+    // docs/plans/20261003_sources-guide-profiles-plan.md) — focus moves never change it, so moving
+    // through the list doesn't tune anything.
     var previewTarget by remember { mutableStateOf<MediaItem?>(null) }
-    LaunchedEffect(Unit) {
-        // collectLatest, not debounce(): cancels the pending delay on each new focus, which is the
-        // same semantics, without opting into the FlowPreview API.
-        focusedItemFlow.collectLatest { item ->
-            if (item == null) return@collectLatest
-            delay(PREVIEW_SETTLE_MS)
-            previewTarget = item
-        }
-    }
 
     // Seed the initial preview once the category's streams are loaded (runs once — hasSeeded
     // guards against re-firing on every streams refresh). Two cases:
@@ -171,10 +151,7 @@ internal fun LiveTvSplitLayout(
         // death the list comes back as Recent first, then the category the preview was on.
         if (seed == null && (guideReturnStreamId != null || initialStreamId != null)) return@LaunchedEffect
         hasSeeded = true
-        if (seed != null) {
-            previewTarget = seed
-            focusedItemFlow.value = seed
-        }
+        if (seed != null) previewTarget = seed
     }
 
     // No setContentType(LIVE_TV) effect here: StreamingPlaybackService.playStream() picks the
@@ -306,7 +283,8 @@ internal fun LiveTvSplitLayout(
     }
 
     if (target == null) {
-        // Nothing focused/settled yet (e.g. streams still loading) — show the list only.
+        // Nothing playing yet (streams still loading, or no channel to seed with) — the list only,
+        // until OK picks a channel.
         AmbientBackdrop(modifier = Modifier.fillMaxSize())
         Row(modifier = safeMarginModifier, horizontalArrangement = Arrangement.spacedBy(Spacing.lg)) {
             Box(modifier = Modifier.weight(0.66f).fillMaxHeight())
@@ -326,8 +304,7 @@ internal fun LiveTvSplitLayout(
                 watchedIds = watchedIds,
                 onCategorySelected = onCategorySelected,
                 onStreamSelected = onStreamSelected,
-                onStreamPromote = { },
-                onStreamFocused = { item -> focusedItemFlow.value = item },
+                onStreamPromote = { item -> previewTarget = item },
                 onRefresh = refreshContext,
                 onLeftFromFirstTab = onBack,
                 modifier = Modifier.weight(0.34f).fillMaxHeight(),
@@ -356,8 +333,8 @@ internal fun LiveTvSplitLayout(
     val streamState by loader.state.collectAsStateWithLifecycle()
     val success = streamState as? StreamLoaderViewModel.StreamState.Success
 
-    // Zap feedback (LT5): "Tuning · <channel>" from the moment the target changes — a preview
-    // retune after the settle, an OK on another row, Up/Down or a panel pick in full screen —
+    // Zap feedback (LT5): "Tuning · <channel>" from the moment the target changes — an OK on
+    // another row in the preview, Up/Down or a panel pick in full screen —
     // until the engine plays *that* channel. Only display state: derived from what the loader and
     // engine already publish, it changes nothing about how a channel is loaded or played. The
     // engine keeps the old channel (or its state) until the loader resolves the new one, so
@@ -568,13 +545,10 @@ internal fun LiveTvSplitLayout(
                                 // Switching channels while already full-screen is a real "commit to
                                 // watching" — use the full loadStream (with side effects), still on
                                 // the SAME loader/engine.
-                                focusedItemFlow.value = newItem
                                 previewTarget = newItem
                                 loader.loadStream(newItem)
                                 close()
                             },
-                            // Focus alone never tunes over the video; only OK does.
-                            onStreamFocused = { },
                             onRefresh = refreshContext,
                             overlay = true,
                             modifier = Modifier.fillMaxSize(),
@@ -583,14 +557,12 @@ internal fun LiveTvSplitLayout(
                 },
                 onNextChannel = {
                     neighborChannel(contextStreams, target.id, +1)?.let { newItem ->
-                        focusedItemFlow.value = newItem
                         previewTarget = newItem
                         loader.loadStream(newItem)
                     }
                 },
                 onPreviousChannel = {
                     neighborChannel(contextStreams, target.id, -1)?.let { newItem ->
-                        focusedItemFlow.value = newItem
                         previewTarget = newItem
                         loader.loadStream(newItem)
                     }
@@ -722,24 +694,23 @@ internal fun LiveTvSplitLayout(
                 onStreamSelected = onStreamSelected,
                 onRefresh = refreshContext,
                 onStreamPromote = { item ->
-                    // Selecting a different channel (e.g. OK pressed before the debounce settled):
-                    // commit to it on the SAME loader/engine before promoting — still only one
-                    // connection ever.
+                    // OK on another row plays it here: the target change re-points the SAME
+                    // loader/engine (loadStreamLight above) — still only one connection ever.
+                    // OK on the row playing goes full screen.
                     if (item.id != target.id) {
-                        focusedItemFlow.value = item
                         previewTarget = item
+                    } else {
+                        // Upgrade from the dock's light load (empty categoryStreams/
+                        // recent-channel list — see loadStreamLight's doc
+                        // comment) to a full load so the promoted full-screen view has real category/
+                        // last-watched lists and actually records watch history. Safe for the
+                        // channel already previewing: playback itself is driven by a
+                        // separate LaunchedEffect keyed on the streamId *value*, which doesn't change
+                        // here, so this only refreshes metadata — it does not restart the stream.
+                        loader.loadStream(item)
+                        fullScreen = true
                     }
-                    // Always upgrade from the dock's light load (empty categoryStreams/
-                    // recent-channel list — see loadStreamLight's doc
-                    // comment) to a full load so the promoted full-screen view has real category/
-                    // last-watched lists and actually records watch history. Safe to call even when
-                    // it's the same channel already previewing: playback itself is driven by a
-                    // separate LaunchedEffect keyed on the streamId *value*, which doesn't change
-                    // here, so this only refreshes metadata — it does not restart the stream.
-                    loader.loadStream(item)
-                    fullScreen = true
                 },
-                onStreamFocused = { item -> focusedItemFlow.value = item },
                 onLeftFromFirstTab = onBack,
                 modifier = Modifier.weight(0.34f).fillMaxHeight(),
             )
@@ -766,13 +737,6 @@ private fun neighborChannel(
         }
     return neighbor
 }
-
-/**
- * How long focus must rest on a row before the preview tunes it (LT5, decision 3 of
- * docs/plans/archive/20261003_ux-overhaul-plan.md): long enough that moving through a list does not start
- * a stream at every pause.
- */
-private const val PREVIEW_SETTLE_MS = 800L
 
 private fun previewMetadata(s: StreamLoaderViewModel.StreamState.Success) =
     PlayerMetadata(

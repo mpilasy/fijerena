@@ -7,7 +7,8 @@
 # picked from one · Recent · Favorites, Refresh at its end) above the rows; Left/Right on the
 # tabs switch the list, and so do Left/Right on a row (focus stays in the rows: the current
 # channel when the new list has it, else its first row); an empty tab keeps focus on the tab.
-# OK on a row promotes to full screen and is deliberately not walked.
+# None of these keys changes the channel (P8). OK on a row plays it in the preview, OK on the
+# playing row goes full screen; neither is walked here (live-tv-back.txt walks both).
 # Ends in browse: Left on the first tab leaves the preview as Back does (Live TV target item 8),
 # so nothing after it is in the panel.
 # Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.

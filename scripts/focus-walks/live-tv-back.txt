@@ -11,11 +11,13 @@
 # Written 2026-10-03 from the plan.
 # OK opens the preview on this channel; the panel shows this category, focus on its row.
 CENTER	3 / 3Cat Exclusiu 1 (1080p) [Geo-blocked] / Hold OK or press Menu for actions
-# Two rows down; the preview retunes to the focused row once focus has rested (800 ms).
+# Two rows down; moving focus leaves the preview on the channel it opened on (P8).
 DOWN	3 / 3ABN French / Hold OK or press Menu for actions
 DOWN	3 / 3ABN International (720p) / Hold OK or press Menu for actions
+# OK plays the focused row in the preview ("Tuning · <channel>" until it plays); focus stays.
+CENTER	3 / 3ABN International (720p) / Hold OK or press Menu for actions
 WAIT 2	3 / 3ABN International (720p) / Hold OK or press Menu for actions
-# OK promotes the focused (now playing) channel to full screen.
+# OK again, on the row now playing, promotes it to full screen.
 CENTER
 # Down zaps to the next channel of the same list.
 DOWN

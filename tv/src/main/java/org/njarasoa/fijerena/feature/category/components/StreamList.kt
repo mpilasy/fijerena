@@ -177,7 +177,6 @@ internal fun StreamList(
     watchProgress: ImmutableWatchProgress = ImmutableWatchProgress(),
     watchedIds: ImmutableStringSet = ImmutableStringSet(),
     onStreamSelected: (streamId: String, streamName: String, categoryId: String, target: BrowseTarget) -> Unit,
-    onStreamFocused: (MediaItem) -> Unit = {},
     onRefreshStreams: (String) -> Unit,
     modifier: Modifier = Modifier,
     thumbnailScale: Float = 1f,
@@ -451,7 +450,6 @@ internal fun StreamList(
                                     onStreamSelected(item.id, item.name, item.categoryId, item.browseTarget(contentType))
                                 },
                                 onOpenActions = { actionsItem = item },
-                                onFocused = { onStreamFocused(item) },
                                 cardModifier = Modifier.paneItem(pane, item.id),
                                 thumbnailScale = thumbnailScale,
                                 cardStyle = cardStyle,
@@ -563,7 +561,6 @@ private fun StreamItem(
     onClick: () -> Unit,
     /** Long-press OK or the Menu key: open the row's action menu (P3). */
     onOpenActions: () -> Unit,
-    onFocused: () -> Unit = {},
     /** Applied to the card itself (the focusable), not the row. */
     cardModifier: Modifier = Modifier,
     thumbnailScale: Float = 1f,
@@ -587,10 +584,8 @@ private fun StreamItem(
                 .padding(horizontal = Spacing.md.scaled(scale))
                 .fillMaxWidth()
                 .then(cardModifier)
-                .onFocusChanged {
-                    isFocused = it.isFocused
-                    if (it.isFocused) onFocused()
-                }.onKeyEvent { event ->
+                .onFocusChanged { isFocused = it.isFocused }
+                .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown || event.key != Key.Menu) return@onKeyEvent false
                     onOpenActions()
                     true

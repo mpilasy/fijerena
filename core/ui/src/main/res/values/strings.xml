@@ -968,7 +968,7 @@
     <!-- LT5 -->
     <string name="live_tuning_format">Tuning · %1$s</string>
     <string name="live_preview_next_format">Next: %1$s</string>
-    <string name="live_preview_hint">OK  Full screen   ·   Hold OK  Options</string>
+    <string name="live_preview_hint">OK  Play   ·   OK again  Full screen   ·   Hold OK  Options</string>
     <!-- GD4 -->
     <string name="epg_guide_status_partial_format">%1$d of %2$d loaded channels have listings · %3$d in all · %4$s · updated %5$s</string>
     <string name="epg_guide_listings_end_format">Listings end at %1$s</string>

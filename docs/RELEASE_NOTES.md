@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Sources, guide and profiles
+**Release Date:** 2026-10-03
+
+- **TV: the Live TV preview changes channel only when you ask:** moving through the channel list or switching tabs no longer tunes the preview; OK on a channel plays it, OK again goes full screen. → P8.
+
 ## Version: UX overhaul, day 5
 **Release Date:** 2026-10-03
 
