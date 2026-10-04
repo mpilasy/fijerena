@@ -33,6 +33,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 | Phase 2 / GD3 / LT4 | ~~Unused dimension, `TvSearchTextField`, 25 strings, stale `docs/design.md` names~~ — removed 2026-10-03 (follow-ups sweep). Also in the sweep: Search category results on the surface colour, section/season tabs with a bottom accent bar (`currentIndicator(edge = Bottom)`), guide-source Delete outlined, series Refresh under More, Settings filters row deep-links to Edit Source's filters (`Screen.AddProvider.focusFilters`) — verified on the TV with bearstv (focus lands on Manage Filters; non-Xtream sources fall back to Name). Left: EPG Management's bulk "Delete N selected" still filled. | sweep ✓ |
 
 Deployed: days 1–4 (`main` at `1e413854`) installed in place on both Shields (mdarcy, darcy) on 2026-10-03 16:39, app data backed up first (`backups/*-20261003-163920.tar.gz`).
+Deployed: everything through the regression round (`main` at `0ab0d25b`) installed in place on both Shields (mdarcy, darcy) and the Bravia on 2026-10-03 19:37, app data backed up first (`backups/*-20261003-1937*.tar.gz`).
 
 Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
 release time (`docs/RUN_GUIDE.md`).
