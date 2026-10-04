@@ -16,9 +16,8 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 2–5: single-return sweep of `core:player` and `core:network`, TV Compose allocations and Coil contention, more Compose UI tests; SecretStore part of Phase 6 deferred |
+| 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
-| 2026-08-26 | [TV UI performance](./20260826_tv-ui-performance-plan.md) | Make TV UI navigation smooth on the Shield, driven by measurements | Xtream EPG cache sized by working set (hit rate, LRU); mobile `RelatedTitlesRow` per-card allocations; 6b back-out tail needs a repro (not reproduced 2026-09-16) |
 
 ## Archive
 
@@ -55,4 +54,5 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 | 2026-08-28 | [Watch state durable storage](./archive/20260828_watch-state-durable-storage-plan.md) | Watch state moved to a Room table, TMDB dedup, mark watched from the UI | Done |
 | 2026-08-28 | [Favorites durable storage](./archive/20260828_favorites-durable-storage-plan.md) | Favorites moved to a Room table, no 100-item cap | Done |
 | 2026-08-27 | [Refresh change detection](./archive/20260827_refresh-change-detection-plan.md) | Catalog delta and EPG conditional GET/hash skip unchanged refreshes | Done; optional Phase 4 not pursued |
+| 2026-08-26 | [TV UI performance](./archive/20260826_tv-ui-performance-plan.md) | Smooth TV navigation on the Shield, driven by hardware measurements | Done; leftovers optional (EPG cache sizing, mobile related-row allocations, unreproduced 6b) |
 | 2026-08-24 | [Codebase audit fix](./archive/20260824_codebase-audit-fix-plan.md) | 29 audit findings fixed across tiers T1–T4 | Done |

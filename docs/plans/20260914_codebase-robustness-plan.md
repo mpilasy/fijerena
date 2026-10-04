@@ -1,6 +1,6 @@
 # Codebase Robustness & Technical Debt Plan
 
-**Status:** Phase 1 landed 2026-09-29 (`3e78292f`); Phases 2-5 not started. Phase 6: live sync is now complete (`20260929_live-sync-plan.md`), secret-store migration still deferred.  
+**Status:** Phase 1 landed 2026-09-29 (`3e78292f`); Phases 2-3 (single-return sweeps) dropped by the user 2026-10-03, the AGENTS.md rule stays for new code; Phases 4-5 not started. Phase 6: live sync is now complete (`20260929_live-sync-plan.md`), secret-store migration still deferred.  
 **Date:** 2026-09-14  
 **Scope:** Full codebase review (`core:player`, `core:network`, `core:ui`, `core:data`, `core:navigation`, `tv`, `mobile`)
 
@@ -67,14 +67,14 @@ graph TD
   1. In [`FijerenaApplication.kt`](file:///home/tahiry/data/code/mpilasy/fijerena/core/ui/src/main/java/org/njarasoa/fijerena/core/ui/FijerenaApplication.kt), add `@OptIn(androidx.media3.common.util.UnstableApi::class)` where `StreamingPlaybackService` playback state is checked.
   2. Verify `./gradlew lintDebug` passes across all modules.
 
-### Phase 2: Single Return Statement Sweep in `core:player` (P1)
+### Phase 2: Single Return Statement Sweep in `core:player` (P1) — dropped 2026-10-03
 - **Goal:** Enforce the project's single return statement rule across all methods in `core:player`.
 - **Tasks:**
   1. Audit ~33 candidate functions identified by heuristic scan.
   2. Refactor each function to use a single exit point with immutable/accumulator return assignments.
   3. Verify with `./gradlew :core:player:testDebugUnitTest` and `./gradlew assembleDebug`.
 
-### Phase 3: Single Return Statement Sweep in `core:network` (P2)
+### Phase 3: Single Return Statement Sweep in `core:network` (P2) — dropped 2026-10-03
 - **Goal:** Complete the single return refactoring across `core:network`.
 - **Tasks:**
   1. Audit candidate functions in DAOs, API clients, and repositories.

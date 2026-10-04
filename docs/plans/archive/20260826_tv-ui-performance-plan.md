@@ -3,7 +3,7 @@
 **Symptom:** playback is fine; the UI is not. Focus moves between menu items, screen-to-screen
 navigation, and returning from a stream are all sluggish on the Shield.
 
-**Status:** measured on hardware 2026-08-26. Priorities below are derived from the measurements,
+**Status:** Done, archived 2026-10-03. What is left below is optional, not planned: the Xtream EPG cache sizing ("Remaining, in rough order of promise" — the guide index now serves almost every lookup), mobile `RelatedTitlesRow` per-card allocations, and 6b, which did not reproduce on 2026-09-16. Measured on hardware 2026-08-26. Priorities below are derived from the measurements,
 not from code reading — an earlier draft of this plan guessed wrong about the GPU and about the
 blur, and the numbers corrected it.
 
