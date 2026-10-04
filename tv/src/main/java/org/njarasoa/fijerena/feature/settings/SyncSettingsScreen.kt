@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -115,14 +116,22 @@ fun SyncSettingsScreen() {
                 label = stringResource(R.string.live_sync_share_playing),
                 description = stringResource(R.string.live_sync_share_playing_desc),
             )
-            DevicesPanel(ui.devices, nowPlaying, onRemove = { confirmRemove = it })
+            // Up from Leave goes to the last Remove: it sits at the far right of its row, outside the
+            // left-aligned Leave button's beam, so plain focus search skipped it for the share switch.
+            val lastRemoveFocus = remember { FocusRequester() }
+            val hasRemovable = ui.devices.orEmpty().any { !it.revoked && !it.current }
+            DevicesPanel(ui.devices, nowPlaying, lastRemoveFocus, onRemove = { confirmRemove = it })
             // Rare and drastic: last, under its own heading, outlined in the error colour.
             Text(
                 stringResource(R.string.provider_section_danger_zone),
                 style = MaterialTheme.typography.titleMedium,
                 color = CinemaError,
             )
-            ProviderDangerButton(onClick = { confirmLeave = true }, text = stringResource(R.string.live_sync_leave))
+            ProviderDangerButton(
+                onClick = { confirmLeave = true },
+                text = stringResource(R.string.live_sync_leave),
+                modifier = if (hasRemovable) Modifier.focusProperties { up = lastRemoveFocus } else Modifier,
+            )
         } else {
             SetupPanel(ui, viewModel)
         }
@@ -275,10 +284,12 @@ private fun LinkedPanel(
 private fun DevicesPanel(
     devices: List<SyncWire.Device>?,
     nowPlaying: Map<String, SyncPayloads.NowPlaying>,
+    lastRemoveFocus: FocusRequester,
     onRemove: (SyncWire.Device) -> Unit,
 ) {
     val scale = LocalUiScale.current
     val active = devices?.filterNot { it.revoked } ?: return
+    val lastRemovable = active.lastOrNull { !it.current }
     TvGlassPanel(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md.scaled(scale)), verticalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale))) {
             Text(stringResource(R.string.live_sync_devices_title), style = MaterialTheme.typography.titleMedium, color = CinemaAccent)
@@ -307,7 +318,11 @@ private fun DevicesPanel(
                     }
                     if (!device.current) {
                         Spacer(Modifier.width(Spacing.sm.scaled(scale)))
-                        CinemaSecondaryButton(onClick = { onRemove(device) }, text = stringResource(R.string.live_sync_device_remove))
+                        CinemaSecondaryButton(
+                            onClick = { onRemove(device) },
+                            text = stringResource(R.string.live_sync_device_remove),
+                            modifier = if (device == lastRemovable) Modifier.focusRequester(lastRemoveFocus) else Modifier,
+                        )
                     }
                 }
             }
