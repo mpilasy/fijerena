@@ -198,7 +198,7 @@ class AccountManager(
     fun updateUrl(newUrl: String) {
         prefs.edit().apply {
             putString(KEY_URL, newUrl)
-            remove(KEY_AUTH_RESPONSE) // Clear cached auth, will re-authenticate on next request
+            remove(KEY_AUTH_RESPONSE)
             apply()
         }
     }

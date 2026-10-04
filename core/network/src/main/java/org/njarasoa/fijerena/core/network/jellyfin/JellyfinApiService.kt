@@ -110,8 +110,6 @@ class JellyfinApiService(
         this.userId = userId
     }
 
-    // ---- Auth ----
-
     suspend fun authenticate(
         username: String,
         password: String,
@@ -186,8 +184,6 @@ class JellyfinApiService(
 
     fun isAuthenticated(): Boolean = accessToken != null && userId != null
 
-    // ---- Capabilities ----
-
     /**
      * POST /Sessions/Capabilities/Full — tells Jellyfin this session is a capable
      * playback client. Called automatically after successful authentication.
@@ -204,8 +200,6 @@ class JellyfinApiService(
             Log.w(TAG, "Failed to post capabilities (non-fatal)", e)
         }
     }
-
-    // ---- PlaybackInfo negotiation ----
 
     /**
      * POST /Items/{itemId}/PlaybackInfo with a DeviceProfile.
@@ -241,8 +235,6 @@ class JellyfinApiService(
             Log.e(TAG, "PlaybackInfo request failed for $itemId", e)
             Result.failure(e)
         }
-
-    // ---- Catalog browsing ----
 
     suspend fun getLibraries(): Result<List<JellyfinItem>> =
         try {
@@ -392,8 +384,6 @@ class JellyfinApiService(
             Result.failure(e)
         }
 
-    // ---- URL builders ----
-
     /**
      * Build a direct-play stream URL. Appends MediaSourceId when known.
      */
@@ -412,8 +402,6 @@ class JellyfinApiService(
         imageType: String = "Primary",
         maxHeight: Int = 400,
     ): String = "$serverUrl/Items/$itemId/Images/$imageType?maxHeight=$maxHeight&api_key=$accessToken"
-
-    // ---- Playback reporting ----
 
     suspend fun reportPlaybackProgress(
         itemId: String,
@@ -585,8 +573,6 @@ class JellyfinApiService(
             Result.failure(e)
         }
 
-    // ---- Quick Connect ----
-
     /**
      * Initiate a Quick Connect session.
      * The returned [JellyfinQuickConnectResult] contains a 6-digit [JellyfinQuickConnectResult.code]
@@ -656,8 +642,6 @@ class JellyfinApiService(
         serverId = null
     }
 
-    // ---- Device profile ----
-
     /**
      * Build a Jellyfin DeviceProfile for ExoPlayer on Android with the Jellyfin FFmpeg
      * extension (adds AC3, EAC3, DTS, TrueHD, MLP software decoding).
@@ -689,7 +673,6 @@ class JellyfinApiService(
                     put("VideoCodec", "h264,hevc,vp9,av1,mpeg4")
                     put("AudioCodec", "aac,mp3,ac3,eac3,dts,truehd,mlp,flac,opus,vorbis,pcm")
                 }
-                // WebM
                 addJsonObject {
                     put("Container", "webm")
                     put("Type", "Video")

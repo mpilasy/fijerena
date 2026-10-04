@@ -193,7 +193,7 @@ class SmbMediaProvider(
         }
     }
 
-    // ⚡ Bolt: Zero-allocation file extension matching to avoid substring and lowercase allocations.
+    // Zero-allocation file extension matching to avoid substring and lowercase allocations.
     private fun isVideoFile(name: String): Boolean {
         val dotIndex = name.lastIndexOf('.')
         if (dotIndex == -1 || dotIndex == name.length - 1) return false

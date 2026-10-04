@@ -35,7 +35,7 @@ abstract class BaseM3uMediaProvider : MediaProvider {
     override fun isConnected(): Boolean = connected
 
     // Large IPTV/local playlists (50k-100k entries) hold `items`, `categories`, and the
-    // itemsByCategory index in memory indefinitely otherwise — this had no eviction hook at all.
+    // itemsByCategory index in memory indefinitely otherwise.
     // Resetting `connected` alongside them (matching disconnect()) is required, not optional:
     // getCategories()/getItems() only re-scan when `!connected`, so dropping the lists without
     // it would make a trimmed provider look permanently empty instead of transparently

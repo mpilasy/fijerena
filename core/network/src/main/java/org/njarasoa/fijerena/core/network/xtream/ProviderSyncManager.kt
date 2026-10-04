@@ -38,7 +38,7 @@ class ProviderSyncManager private constructor(
     companion object {
         private const val TAG = "ProviderSyncManager"
         private const val WORK_NAME = "provider_content_sync"
-        private const val AUTO_REFRESH_CHECK_INTERVAL_MS = 15 * 60 * 1000L // 15 minutes
+        private const val AUTO_REFRESH_CHECK_INTERVAL_MS = 15 * 60 * 1000L
 
         /** Content syncs run on this cadence, anchored on `AppSettings.contentRefreshTime`. */
         private const val REFRESH_INTERVAL_HOURS = 4
@@ -200,18 +200,11 @@ class ProviderSyncManager private constructor(
     }
 
     /**
-     * Start a manual sync for a specific provider.
-     * This runs in the manager's scope, so it persists even if the calling ViewModel is cleared.
-     */
-
-    /**
      * Runs in [scope] — a singleton scope outside any ViewModel — so the sync itself keeps going
      * even if the screen that requested it is closed. The returned [Deferred] is just a handle a
      * caller can await to know when *this* attempt is over; it resolves exactly once on every
      * path (success, a provider-side error, or bailing out early because the provider or its
-     * password vanished) via `try`/`finally`, so nothing awaiting it is ever left hanging — unlike
-     * the previous approach of a ViewModel polling for `lastSyncedAtMs` to have moved in the last
-     * 30 seconds, which never noticed a sync that bailed out before reaching that DB write.
+     * password vanished) via `try`/`finally`, so nothing awaiting it is ever left hanging.
      *
      * Calls for a provider that is already syncing return that sync's handle instead of starting
      * a second one.

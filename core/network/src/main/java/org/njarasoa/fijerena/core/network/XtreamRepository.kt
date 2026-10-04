@@ -37,14 +37,12 @@ class XtreamRepository(
             cacheName,
             Context.MODE_PRIVATE,
         )
-    private val appSettings = AppSettings(context) // Keep for global settings (isDevMode)
+    private val appSettings = AppSettings(context)
     private val database = XtreamDatabase.getInstance(context)
     private val filtersStore = CategoryFiltersStore(context)
 
-    // Managers
     private val metricsManager = XtreamMetricsManager(appSettings)
 
-    // StatsManager (needs to be initialized early for onClearCache callback if needed, but here onClearCache is just a lambda)
     private val statsManager = XtreamStatsManager(database, cache, metricsManager, providerId)
 
     private val sessionManager =
@@ -68,8 +66,6 @@ class XtreamRepository(
         )
 
     private val epgManager = XtreamEpgManager(sessionManager, cache, providerSettings, database.epgCacheDao(), providerId)
-
-    // Delegate methods
 
     suspend fun login(
         url: String,
@@ -257,8 +253,6 @@ class XtreamRepository(
     suspend fun clearStreamsCache(categoryId: String) = statsManager.clearStreamsCache(categoryId)
 
     suspend fun clearCategoriesCache(contentType: String) = statsManager.clearCategoriesCache(contentType)
-
-    // Metrics (Delegated partially via getFetchTime/Formatted)
 
     fun getFetchTime(key: String): Long? = metricsManager.getFetchTime(key)
 

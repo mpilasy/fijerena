@@ -377,8 +377,6 @@ class SyncApplier(
     private fun skippedOrDeferred(resolution: Resolution): Outcome =
         if (resolution is Resolution.Defer) Outcome.Deferred else Outcome.Skipped
 
-    // --- Profiles ---
-
     private suspend fun applyProfile(record: SyncRecord): Outcome {
         val id = record.key.itemId
         val local =
@@ -420,8 +418,6 @@ class SyncApplier(
             }
         }
     }
-
-    // --- Providers ---
 
     private suspend fun applyProvider(record: SyncRecord): Outcome {
         val providerKey = record.key.providerKey
@@ -492,8 +488,6 @@ class SyncApplier(
         sync.upsertTombstone(SettingsTombstoneEntity(kind, itemKey, hlc))
         markSettingsVersion(kind, SyncKind.SHARED, itemKey, hlc)
     }
-
-    // --- EPG sources ---
 
     private suspend fun applyEpgSource(record: SyncRecord): Outcome {
         val sourceKey = record.key.itemId

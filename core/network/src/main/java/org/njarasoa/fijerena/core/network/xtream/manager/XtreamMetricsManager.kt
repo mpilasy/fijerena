@@ -9,9 +9,6 @@ class XtreamMetricsManager(
     // Fetch time tracking (in milliseconds)
     private val fetchTimes = ConcurrentHashMap<String, Long>()
 
-    /**
-     * Track fetch time for a specific key
-     */
     fun trackFetchTime(
         key: String,
         timeMs: Long,
@@ -19,9 +16,6 @@ class XtreamMetricsManager(
         fetchTimes[key] = timeMs
     }
 
-    /**
-     * Get fetch time for a specific key in milliseconds
-     */
     fun getFetchTime(key: String): Long? = fetchTimes[key]
 
     /**

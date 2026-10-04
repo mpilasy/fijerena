@@ -69,7 +69,6 @@ class JellyfinMediaProvider(
         )
 
     override suspend fun connect(): Result<Unit> {
-        // Don't re-authenticate if already connected
         if (isConnected()) return Result.success(Unit)
         return api
             .authenticate(username, password)
@@ -421,7 +420,7 @@ class JellyfinMediaProvider(
                     ?.split(",")
                     ?.firstOrNull { ext ->
                         val trimmed = ext.trim()
-                        // ⚡ Bolt: Zero-allocation file extension matching to avoid lowercase string and set allocation
+                        // Zero-allocation file extension matching to avoid lowercase string and set allocation
                         SUPPORTED_CONTAINERS.any {
                             it.length == trimmed.length &&
                                 trimmed.regionMatches(0, it, 0, trimmed.length, ignoreCase = true)
@@ -554,7 +553,6 @@ class JellyfinMediaProvider(
             mediaSourceId = mediaSourceIds[itemId],
             playMethod = playMethods[itemId],
         )
-        // Clean up session tracking after stop
         playSessionIds.remove(itemId)
         mediaSourceIds.remove(itemId)
         playMethods.remove(itemId)
@@ -719,6 +717,6 @@ class JellyfinMediaProvider(
     companion object {
         // Detail data (plot/cast/genre/rating/contentRating) rarely changes for a given title —
         // long TTL avoids re-hitting the server every time a detail screen is reopened.
-        private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
+        private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L
     }
 }

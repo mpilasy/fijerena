@@ -45,11 +45,8 @@ object M3uParser {
             while (iterator.hasNext()) {
                 val line = iterator.next()
 
-                // Skip empty lines efficiently
                 if (line.isEmpty()) continue
 
-                // Check using startsWith on the original line (assuming standard formatting)
-                // or trimStart only if needed. Most M3U files don't have leading spaces, but we should be safe.
                 // Using trimStart() creates a new string only if there is whitespace.
                 val trimmedLine = if (line.isNotEmpty() && line[0].isWhitespace()) line.trimStart() else line
                 if (trimmedLine.isEmpty()) continue
@@ -58,7 +55,6 @@ object M3uParser {
                     // Pass the original string and offset to avoid removing prefix allocation
                     val offset = EXTINF_PREFIX.length
 
-                    // Extract directly from the line with offset
                     val name = extractName(trimmedLine, offset)
                     val groupTitle = extractAttribute(trimmedLine, GROUP_TITLE_PREFIX, offset) ?: "Uncategorized"
                     val logo = extractAttribute(trimmedLine, LOGO_PREFIX, offset)

@@ -7,9 +7,6 @@ import kotlinx.serialization.json.intOrNull
 import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 import org.njarasoa.fijerena.core.network.sync.SettingsSyncQueue
 
-/**
- * Manages application settings and preferences.
- */
 class AppSettings(
     private val context: Context,
 ) {
@@ -235,9 +232,6 @@ class AppSettings(
         profileId: String,
     ) = "${key}_$profileId"
 
-    /**
-     * Get or set the maximum size of the watch history queue.
-     */
     var watchHistorySize: Int
         get() = prefs.getInt(KEY_WATCH_HISTORY_SIZE, DEFAULT_WATCH_HISTORY_SIZE)
         set(value) {
@@ -245,16 +239,10 @@ class AppSettings(
             prefs.edit { putInt(KEY_WATCH_HISTORY_SIZE, clampedValue) }
         }
 
-    /**
-     * Get or set the provider name.
-     */
     var providerName: String
         get() = prefs.getString(KEY_PROVIDER_NAME, "My Provider") ?: "My Provider"
         set(value) = prefs.edit { putString(KEY_PROVIDER_NAME, value) }
 
-    /**
-     * Get or set the maximum size of the favorites queue.
-     */
     var favoritesMaxSize: Int
         get() = prefs.getInt(KEY_FAVORITES_MAX_SIZE, DEFAULT_FAVORITES_MAX_SIZE)
         set(value) {
@@ -263,20 +251,16 @@ class AppSettings(
         }
 
     /**
-     * Get or set cache expiry duration in hours.
      * Default: 24 hours (1 day)
      * Range: 1-168 hours (1 hour to 7 days)
      */
     var cacheExpiryHours: Int
         get() = prefs.getInt(KEY_CACHE_EXPIRY_HOURS, DEFAULT_CACHE_EXPIRY_HOURS)
         set(value) {
-            val clampedValue = value.coerceIn(1, 168) // 1 hour to 7 days
+            val clampedValue = value.coerceIn(1, 168)
             prefs.edit { putInt(KEY_CACHE_EXPIRY_HOURS, clampedValue) }
         }
 
-    /**
-     * Get cache expiry duration in milliseconds.
-     */
     val cacheExpiryMs: Long
         get() = cacheExpiryHours * 60 * 60 * 1000L
 
@@ -320,12 +304,6 @@ class AppSettings(
         get() = prefs.getString(KEY_EPG_URL, DEFAULT_EPG_URL) ?: DEFAULT_EPG_URL
         set(value) = prefs.edit { putString(KEY_EPG_URL, value.trim()) }
 
-    /**
-     * Timezone offset override for XMLTV data, in hours (e.g., 8 for UTC+8, -5 for UTC-5).
-     * When non-zero, replaces the timezone offset in XMLTV timestamps during parsing.
-     * This fixes XMLTV sources that encode local times but mislabel them as UTC (+0000).
-     * Default: 0 (use timezone from XMLTV data as-is).
-     */
     var epgAutoRefreshEnabled: Boolean
         get() = prefs.getBoolean(KEY_EPG_AUTO_REFRESH, true)
         set(value) {
@@ -371,6 +349,12 @@ class AppSettings(
         get() = prefs.getString(KEY_CONTENT_REFRESH_TIME, DEFAULT_CONTENT_REFRESH_TIME) ?: DEFAULT_CONTENT_REFRESH_TIME
         set(value) = prefs.edit { putString(KEY_CONTENT_REFRESH_TIME, value) }
 
+    /**
+     * Timezone offset override for XMLTV data, in hours (e.g., 8 for UTC+8, -5 for UTC-5).
+     * When non-zero, replaces the timezone offset in XMLTV timestamps during parsing.
+     * This fixes XMLTV sources that encode local times but mislabel them as UTC (+0000).
+     * Default: 0 (use timezone from XMLTV data as-is).
+     */
     var epgTimezoneOffsetHours: Int
         get() = prefs.getInt(KEY_EPG_TIMEZONE_OFFSET, 0)
         set(value) {
@@ -399,12 +383,6 @@ class AppSettings(
         }
 
     /**
-     * Cached flag for whether at least one provider exists.
-     * Used for fast startup — avoids Room DB query on cold start.
-     * Must be updated whenever providers are added or removed.
-     */
-
-    /**
      * Delay in seconds before a live channel is marked as "watched" (added to Last Watched).
      * Range: 5-120 seconds. Default: 30 seconds.
      */
@@ -415,6 +393,11 @@ class AppSettings(
             prefs.edit { putInt(KEY_WATCH_DELAY_SECONDS, clamped) }
         }
 
+    /**
+     * Cached flag for whether at least one provider exists.
+     * Used for fast startup — avoids Room DB query on cold start.
+     * Must be updated whenever providers are added or removed.
+     */
     var hasProviderCache: Boolean
         get() = prefs.getBoolean(KEY_HAS_PROVIDER_CACHE, false)
         set(value) = prefs.edit { putBoolean(KEY_HAS_PROVIDER_CACHE, value) }
@@ -451,14 +434,8 @@ class AppSettings(
      */
     fun addSearchHistory(query: String) = addToHistory(KEY_SEARCH_HISTORY, query)
 
-    /**
-     * Remove a single entry from search history.
-     */
     fun removeSearchHistory(query: String) = removeFromHistory(KEY_SEARCH_HISTORY, query)
 
-    /**
-     * Clear all search history.
-     */
     fun clearSearchHistory() {
         prefs.edit { remove(historyKey(KEY_SEARCH_HISTORY, activeProfileId)) }
     }
@@ -473,14 +450,8 @@ class AppSettings(
      */
     fun addEpgSearchHistory(query: String) = addToHistory(KEY_EPG_SEARCH_HISTORY, query)
 
-    /**
-     * Remove a single entry from EPG search history.
-     */
     fun removeEpgSearchHistory(query: String) = removeFromHistory(KEY_EPG_SEARCH_HISTORY, query)
 
-    /**
-     * Clear all EPG search history.
-     */
     fun clearEpgSearchHistory() {
         prefs.edit { remove(historyKey(KEY_EPG_SEARCH_HISTORY, activeProfileId)) }
     }

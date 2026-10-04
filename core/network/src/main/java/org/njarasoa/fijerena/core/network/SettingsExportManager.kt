@@ -165,9 +165,6 @@ class SettingsExportManager(
         val subtitleTrackIndex: Int? = null,
     )
 
-    /**
-     * Export all application settings to a JSON string.
-     */
     data class ImportOptions(
         val importProviders: Boolean = true,
         val importEpgSources: Boolean = true,
@@ -204,9 +201,6 @@ class SettingsExportManager(
         return null
     }
 
-    /**
-     * Parsed import data with conflict information.
-     */
     data class ParsedImport(
         val settings: ExportedSettings,
         val jsonString: String,
@@ -224,9 +218,6 @@ class SettingsExportManager(
                 settings.providerWatchState.isNotEmpty()
     }
 
-    /**
-     * Export all settings to a JSON string.
-     */
     suspend fun exportToJson(): String =
         withContext(Dispatchers.IO) {
             val appSettings = AppSettings(context)
@@ -301,7 +292,6 @@ class SettingsExportManager(
                     )
                 }
 
-            // Export favorite categories per provider
             val providerFavoriteCategories =
                 allProviders.mapNotNull { entity ->
                     val favCats =
@@ -482,9 +472,6 @@ class SettingsExportManager(
         options: ImportOptions = ImportOptions(),
     ): ImportResult = importFromJson(parsed.jsonString, conflictResolution, options)
 
-    /**
-     * Import settings from a JSON string.
-     */
     suspend fun importFromJson(
         jsonString: String,
         conflictResolution: ConflictResolution = ConflictResolution.SKIP,
@@ -494,7 +481,6 @@ class SettingsExportManager(
             try {
                 val exported = json.decodeFromString<ExportedSettings>(jsonString)
 
-                // Apply global settings
                 if (options.importGlobalSettings) {
                     val appSettings = AppSettings(context)
                     appSettings.themeId = exported.global.themeId
@@ -505,7 +491,6 @@ class SettingsExportManager(
                     appSettings.cellularVodMultiplier = exported.global.cellularVodMultiplier
                 }
 
-                // Import providers
                 val providerRepo = ProviderRepository(context)
                 val existingProviders = providerRepo.getAllProvidersList()
                 val existingByName = existingProviders.associateBy { it.name }
@@ -523,7 +508,6 @@ class SettingsExportManager(
                                 }
 
                                 ConflictResolution.OVERWRITE -> {
-                                    // Update existing provider's URL, username, type, config, settings
                                     providerRepo.updateProvider(
                                         id = existing.id,
                                         name = ep.name,
@@ -550,7 +534,6 @@ class SettingsExportManager(
                                 }
 
                                 ConflictResolution.DUPLICATE -> {
-                                    // Add as new provider with "(imported)" suffix
                                     addNewProvider(providerRepo, ep.copy(name = "${ep.name} (imported)"))
                                     providersAdded++
                                 }
@@ -676,7 +659,6 @@ class SettingsExportManager(
                     }
                 }
 
-                // Import favorite categories per provider
                 var favoriteCategoriesRestored = 0
 
                 if (options.importFavorites && exported.providerFavoriteCategories.isNotEmpty()) {
@@ -760,7 +742,6 @@ class SettingsExportManager(
                     }
                 }
 
-                // No-op (Log.d removed)
                 ImportResult(
                     providersAdded = providersAdded,
                     providersUpdated = providersUpdated,
@@ -825,7 +806,6 @@ class SettingsExportManager(
             if (error != null) return context.getString(R.string.settings_export_summary_import_failed_format, error)
             val parts = mutableListOf<String>()
 
-            // Providers
             if (providersAdded > 0 || providersUpdated > 0 || providersSkipped > 0) {
                 val p = mutableListOf<String>()
                 if (providersAdded > 0) p.add(context.getString(R.string.settings_export_item_added_format, providersAdded))
@@ -834,7 +814,6 @@ class SettingsExportManager(
                 parts.add(context.getString(R.string.settings_export_summary_providers_format, p.joinToString(", ")))
             }
 
-            // EPG Sources
             if (epgSourcesAdded > 0 || epgSourcesSkipped > 0) {
                 val e = mutableListOf<String>()
                 if (epgSourcesAdded > 0) e.add(context.getString(R.string.settings_export_item_added_format, epgSourcesAdded))
@@ -842,7 +821,6 @@ class SettingsExportManager(
                 parts.add(context.getString(R.string.settings_export_summary_epg_sources_format, e.joinToString(", ")))
             }
 
-            // Favorites
             val favTotal = favoritesRestored + favoriteCategoriesRestored
             if (favTotal > 0) {
                 parts.add(context.getString(R.string.settings_export_summary_favorites_format, favTotal))

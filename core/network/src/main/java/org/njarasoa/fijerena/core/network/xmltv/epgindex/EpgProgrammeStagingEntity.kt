@@ -33,9 +33,6 @@ data class EpgProgrammeStagingEntity(
     val sourceId: Long = 0,
 )
 
-/**
- * Extension to convert staging entity to primary entity.
- */
 fun EpgProgrammeStagingEntity.toPrimary() =
     EpgProgrammeEntity(
         channelId = channelId,
@@ -48,9 +45,6 @@ fun EpgProgrammeStagingEntity.toPrimary() =
         sourceId = sourceId,
     )
 
-/**
- * Extension to convert primary entity to staging entity.
- */
 fun EpgProgrammeEntity.toStaging() =
     EpgProgrammeStagingEntity(
         channelId = channelId,

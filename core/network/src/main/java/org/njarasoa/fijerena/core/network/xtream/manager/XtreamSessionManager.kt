@@ -59,7 +59,6 @@ class XtreamSessionManager(
                     try {
                         val authResponse = service.authenticate()
 
-                        // Validate authentication response
                         if (authResponse.userInfo.auth != 1) {
                             throw Exception("Authentication failed: Invalid credentials")
                         }
@@ -68,7 +67,6 @@ class XtreamSessionManager(
                             throw Exception("Account is not active: ${authResponse.userInfo.status}")
                         }
 
-                        // Save credentials
                         accountManager.saveCredentials(url, username, password, authResponse, rememberMe)
 
                         // Store the API service for future use, closing whatever it replaces so its
@@ -118,7 +116,6 @@ class XtreamSessionManager(
                                 throw e
                             }
 
-                        // Validate authentication response
                         if (authResponse.userInfo.auth != 1) {
                             accountManager.clearCredentials()
                             throw Exception("Stored credentials are invalid")
@@ -129,7 +126,6 @@ class XtreamSessionManager(
                             throw Exception("Account is not active: ${authResponse.userInfo.status}")
                         }
 
-                        // Update stored auth response
                         accountManager.saveCredentials(
                             credentials.url,
                             credentials.username,
@@ -138,7 +134,6 @@ class XtreamSessionManager(
                             rememberMe = true,
                         )
 
-                        // Store the API service for future use
                         replaceApiService(service)
                         serviceAssigned = true
 
@@ -171,16 +166,13 @@ class XtreamSessionManager(
                         credentials.password
                             ?: throw Exception("Password not stored. Please login again.")
 
-                    // Update URL in storage
                     accountManager.updateUrl(newUrl)
 
                     var serviceAssigned = false
-                    // Create new API service with updated URL
                     val service = XtreamApiService(newUrl, credentials.username, password, streamOutputFormat)
                     try {
                         val authResponse = service.authenticate()
 
-                        // Validate authentication response
                         if (authResponse.userInfo.auth != 1) {
                             throw Exception("Authentication failed with new URL")
                         }
@@ -189,7 +181,6 @@ class XtreamSessionManager(
                             throw Exception("Account is not active: ${authResponse.userInfo.status}")
                         }
 
-                        // Save updated credentials with new URL
                         accountManager.saveCredentials(
                             newUrl,
                             credentials.username,
@@ -201,7 +192,6 @@ class XtreamSessionManager(
                         // Clear all cached data since it's from the old provider
                         onClearCache()
 
-                        // Update the API service
                         replaceApiService(service)
                         serviceAssigned = true
 

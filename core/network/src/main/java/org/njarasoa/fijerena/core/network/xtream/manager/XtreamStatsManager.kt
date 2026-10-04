@@ -58,7 +58,6 @@ class XtreamStatsManager(
             sharedPreferences.edit { clear() }
             metricsManager.clearFetchTimes()
 
-            // Clear DB
             categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_LIVE)
             categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_VOD)
             categoryDao.deleteAll(providerId, XtreamCategoryEntity.TYPE_SERIES)
@@ -102,9 +101,6 @@ class XtreamStatsManager(
             }
         }
 
-    /**
-     * Clear streams cache for a specific category
-     */
     suspend fun clearStreamsCache(categoryId: String) =
         withContext(Dispatchers.IO) {
             sharedPreferences.edit {
@@ -122,9 +118,6 @@ class XtreamStatsManager(
             seriesDao.deleteByCategoryId(providerId, categoryId)
         }
 
-    /**
-     * Clear categories cache for a specific content type
-     */
     suspend fun clearCategoriesCache(contentType: String) =
         withContext(Dispatchers.IO) {
             sharedPreferences.edit {

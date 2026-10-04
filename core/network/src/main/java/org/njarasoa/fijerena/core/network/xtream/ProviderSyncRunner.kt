@@ -23,8 +23,7 @@ import java.net.UnknownHostException
  * Single per-provider Xtream sync shared by [ProviderSyncManager] (manual + periodic
  * foreground refresh) and [XtreamSyncWorker] (WorkManager). Adds transient-vs-permanent
  * classification and in-run retry with exponential backoff, mirroring
- * EpgFileManager.downloadSource(). Previously this block was copy-pasted three times with
- * no retry at all.
+ * EpgFileManager.downloadSource().
  */
 object ProviderSyncRunner {
     private const val TAG = "ProviderSyncRunner"

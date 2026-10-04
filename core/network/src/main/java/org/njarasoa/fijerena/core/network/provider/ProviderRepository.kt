@@ -211,9 +211,6 @@ class ProviderRepository(
         return id
     }
 
-    /**
-     * Update an existing provider's details.
-     */
     suspend fun updateProvider(
         id: Long,
         name: String,
@@ -289,7 +286,6 @@ class ProviderRepository(
             clearProviderCatalog(id)
             settingsCache.keys.removeAll { it.first == id }
             filtersStore.removeProvider(id)
-            // Clear cached provider instance
             MediaProviderFactory.providerChanged(id)
             if (entity.isActive) {
                 dao.getAllProvidersList().firstOrNull()?.let { setActiveProvider(it.id) }
@@ -451,9 +447,7 @@ class ProviderRepository(
     /**
      * EPG sources belong to a single provider, and their indexed channels/programmes live in a
      * separate database ([EpgIndexDatabase]), so no SQL cascade is possible - delete both by hand.
-     */
-
-    /**
+     *
      * EPG source records carry no provider tag, so the server's provider cascade doesn't reach
      * them: a deletion made here must queue a tombstone per source ([recordTombstones]). Applying
      * another device's provider deletion must not — that device already sent them, and queueing
@@ -515,9 +509,6 @@ class ProviderRepository(
         return true
     }
 
-    /**
-     * Update sync statistics for a provider.
-     */
     suspend fun updateSyncStats(
         id: Long,
         timestamp: Long,
@@ -746,8 +737,6 @@ class ProviderRepository(
     private fun loginProfileId(type: String): String =
         if (type == "JELLYFIN") AppSettings(context).activeProfileId else ProfileEntity.DEFAULT_ID
 
-    // --- Provider Settings ---
-
     private val json = Json { ignoreUnknownKeys = true }
 
     private fun activeProfileId(): String = AppSettings(context).activeProfileId
@@ -805,7 +794,6 @@ class ProviderRepository(
     }
 
     /**
-     * Parse provider settings from JSON string.
      * Returns default settings if parsing fails.
      */
     private fun parseProviderSettings(settingsJson: String): ProviderSettings {
@@ -878,8 +866,6 @@ class ProviderRepository(
         settingsCache.clear()
     }
 
-    // --- Cache management ---
-
     suspend fun getCacheStatsForProvider(providerId: Long): XtreamRepository.CacheStats {
         // We need an instance of XtreamRepository to get accurate DB stats.
         // Since we don't have dependency injection here, we create a temporary instance.
@@ -909,8 +895,6 @@ class ProviderRepository(
         val repo = XtreamRepository(accountManager, context, providerId)
         repo.clearCacheForContentType(contentType)
     }
-
-    // --- Private helpers ---
 
     private fun savePassword(
         providerId: Long,

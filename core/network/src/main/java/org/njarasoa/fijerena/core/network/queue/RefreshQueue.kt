@@ -68,7 +68,6 @@ object RefreshQueue {
     }
 
     /**
-     * Submit a task to the queue.
      * Returns a Deferred that completes when the task finishes. If a task with the same
      * ID is already executing, coalesces into that run's Deferred instead of starting a
      * second, concurrent one.
@@ -78,7 +77,6 @@ object RefreshQueue {
             queueMutex.withLock {
                 activeTasks[task.id]?.let { return@withLock it.deferred }
 
-                // Remove existing queued task with same ID to ensure we don't queue multiple same tasks
                 val existing = queue.find { it.task.id == task.id }
                 if (existing != null) {
                     queue.remove(existing)

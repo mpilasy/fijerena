@@ -99,7 +99,7 @@ class EpgFileManager private constructor(
         // A content-hash match skips ingestion (see canSkipIngest) unless the last real ingest is
         // older than this — ingestFromStream's programme window is wall-clock relative, so a
         // static file left un-ingested longer than this would fall behind regardless of content.
-        private const val STALENESS_FORCE_INGEST_MS = 24 * 3600 * 1000L // 24 hours
+        private const val STALENESS_FORCE_INGEST_MS = 24 * 3600 * 1000L
 
         @Volatile
         private var instance: EpgFileManager? = null
@@ -377,8 +377,6 @@ class EpgFileManager private constructor(
             val dbSize = dbFile.length()
             val availableSpace = context.dataDir.usableSpace
 
-            // Allow staging only if we have 1.5x the DB size free.
-            // Example: 1.5GB DB requires 2.25GB free space.
             val isSafe = availableSpace > (dbSize * 1.5).toLong()
 
             if (!isSafe) {
@@ -534,7 +532,7 @@ class EpgFileManager private constructor(
                                     }
                                     dbQueryAndProcess()
                                     onComplete?.invoke()
-                                    return // Success
+                                    return
                                 } catch (e: CancellationException) {
                                     // Not a failure — the caller cancelled this job. Retrying it
                                     // would keep the coroutine (and its scheduled delay) alive
@@ -563,7 +561,6 @@ class EpgFileManager private constructor(
                                 }
                             }
 
-                            // All attempts failed
                             Log.e(TAG, "Task $taskId failed after $maxAttempts retries: ${lastException?.message}", lastException)
                             _state.value =
                                 MultiSourceState.Error(
@@ -696,7 +693,7 @@ class EpgFileManager private constructor(
             val startTime = System.currentTimeMillis()
             val fixedDevice = isFixedDevice()
             val batchSize = if (fixedDevice) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
-            // Declared before the try block (not inside it, as before) so the catch block's cleanup
+            // Declared before the try block so the catch block's cleanup
             // call can pass the same value beginBulkIngestion() was actually called with.
             val useStaging = shouldUseStaging()
             try {
@@ -1029,7 +1026,7 @@ class EpgFileManager private constructor(
         ingestMutex.withLock {
             val startTime = System.currentTimeMillis()
             val batchSize = if (isFixedDevice()) EpgIndexer.BATCH_SIZE_TV else EpgIndexer.BATCH_SIZE_MOBILE
-            // Declared before the try block (not inside it, as before) so the catch block's cleanup
+            // Declared before the try block so the catch block's cleanup
             // call can pass the same value beginBulkIngestion() was actually called with.
             val useStaging = shouldUseStaging()
             try {
@@ -1071,7 +1068,6 @@ class EpgFileManager private constructor(
                 // Start bulk setup in parallel with the download — same rationale as processAllSourcesInternal.
                 val bulkReady = scope.async(Dispatchers.IO) { indexer.beginBulkIngestion(useStaging) }
 
-                // Download phase
                 activeProgress[source.id] = ActiveSourceProgress(source.id, label, "Downloading")
                 updateSingleProgress()
 
@@ -1105,7 +1101,6 @@ class EpgFileManager private constructor(
                             )
                         updateSingleProgress()
 
-                        // Ingest phase
                         activeProgress[source.id] =
                             ActiveSourceProgress(
                                 sourceId = source.id,
@@ -1768,9 +1763,6 @@ class EpgFileManager private constructor(
         }
     }
 
-    /**
-     * InputStream wrapper that tracks total bytes read.
-     */
     private class CountingInputStream(
         private val wrapped: java.io.InputStream,
     ) : java.io.InputStream() {

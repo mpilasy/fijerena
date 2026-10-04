@@ -22,7 +22,7 @@ class RemoteM3uMediaProvider(
     companion object {
         private const val TAG = "RemoteM3uProvider"
         private const val ID_PREFIX = "rm3u"
-        private const val CACHE_TTL_MS = 6L * 60 * 60 * 1000 // 6 hours
+        private const val CACHE_TTL_MS = 6L * 60 * 60 * 1000
         private const val CONNECT_TIMEOUT_MS = 30_000
         private const val READ_TIMEOUT_MS = 60_000
         private const val BUFFER_SIZE = 65536
@@ -68,7 +68,6 @@ class RemoteM3uMediaProvider(
         }
 
     private suspend fun loadM3uContent(): File {
-        // Check cache
         if (cacheFile.exists()) {
             val age = System.currentTimeMillis() - cacheFile.lastModified()
             if (age < CACHE_TTL_MS) {
@@ -76,7 +75,6 @@ class RemoteM3uMediaProvider(
             }
         }
 
-        // Download with retries
         downloadWithRetries()
         return cacheFile
     }
@@ -110,7 +108,6 @@ class RemoteM3uMediaProvider(
                 // the same file and publish each other's half-written playlist.
                 val tmpFile = File.createTempFile("remote_m3u_${providerId}_", ".tmp", context.cacheDir)
                 try {
-                    // Stream to temp file
                     connection.inputStream.buffered(BUFFER_SIZE).use { input ->
                         tmpFile.outputStream().buffered(BUFFER_SIZE).use { output ->
                             input.copyTo(output, BUFFER_SIZE)

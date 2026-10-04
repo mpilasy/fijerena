@@ -241,8 +241,7 @@ object LocalFileScanner {
                     }
                 }
         } catch (e: Exception) {
-            // Logging can be added here if needed, but for now we swallow to match previous behavior
-            // or let the caller catch it (but we return empty list for partial failure)
+            // Swallowed: whatever was listed before the failure is returned.
         }
         return result
     }
@@ -333,7 +332,7 @@ object LocalFileScanner {
             streamUri = file.uri.toString(),
         )
 
-    // ⚡ Bolt: Zero-allocation file extension matching to avoid substring and lowercase allocations during file scanning.
+    // Zero-allocation file extension matching to avoid substring and lowercase allocations during file scanning.
     private fun isVideoFile(name: String?): Boolean {
         if (name == null) return false
         val dotIndex = name.lastIndexOf('.')

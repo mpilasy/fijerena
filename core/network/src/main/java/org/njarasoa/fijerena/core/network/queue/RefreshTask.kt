@@ -1,8 +1,5 @@
 package org.njarasoa.fijerena.core.network.queue
 
-/**
- * Interface representing a task to be executed in the refresh queue.
- */
 interface RefreshTask : Comparable<RefreshTask> {
     /**
      * Unique identifier for the task, used to deduplicate tasks.

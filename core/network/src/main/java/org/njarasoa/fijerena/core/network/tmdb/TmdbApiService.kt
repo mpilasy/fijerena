@@ -41,7 +41,7 @@ class TmdbApiService(
 
     private val client: HttpClient by lazy {
         HttpClient(OkHttp) {
-            // CORRECTION (2026-09-21): `preconfigured` does NOT guarantee an isolated Dispatcher.
+            // `preconfigured` does NOT guarantee an isolated Dispatcher.
             // ktor-client-okhttp 3.5.2 (the version actually resolved here) only builds a fresh
             // Dispatcher() when `preconfigured == null` — when it's set, the built client shares
             // NetworkModule.okHttpClient's real Dispatcher object. This client has no close()

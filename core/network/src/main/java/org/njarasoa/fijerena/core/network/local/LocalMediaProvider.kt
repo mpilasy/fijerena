@@ -41,7 +41,6 @@ class LocalMediaProvider(
                 val cats = mutableListOf<MediaCategory>()
                 val its = mutableListOf<MediaItem>()
 
-                // Parse M3U if configured
                 if (config.m3uPath != null) {
                     val m3uUri = config.m3uPath.toUri()
                     val m3uData =
@@ -57,7 +56,6 @@ class LocalMediaProvider(
                     }
                 }
 
-                // Scan local directories
                 for (rootPath in config.rootPaths) {
                     val rootUri = rootPath.toUri()
                     val (dirCategories, dirItems) = LocalFileScanner.scanDirectory(context, rootUri)

@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap
 object MediaProviderFactory {
     private val json = Json { ignoreUnknownKeys = true }
 
-    // Cache of provider instances by provider ID
     // Prevents multiple auth sessions that can invalidate each other
     // ConcurrentHashMap: create() is called from background workers, IO dispatchers, and
     // composables, while trimMemory()/clearCache() mutate/iterate it from other threads.
@@ -43,11 +42,8 @@ object MediaProviderFactory {
     private val disconnectScope = AppScopes.create("MediaProviderFactory.disconnect", kotlinx.coroutines.Dispatchers.IO)
 
     /**
-     * Get or create a [MediaProvider] for the given [ProviderEntity].
      * Reuses cached instances to avoid creating duplicate auth sessions.
      *
-     * @param entity The provider entity from Room database
-     * @param context Application context
      * @param password The decrypted password from ProviderRepository
      */
     fun create(
@@ -337,7 +333,6 @@ object MediaProviderFactory {
     }
 
     /**
-     * Parse provider settings from JSON string.
      * Returns default settings if parsing fails.
      */
     private fun parseProviderSettings(settingsJson: String): ProviderSettings {

@@ -81,7 +81,6 @@ class XmltvEpgService(
     )
 
     private suspend fun buildChannelMatchMaps(): ChannelMatchMaps? {
-        // Return cached maps if available — avoids full DB scan on every call
         cachedChannelMaps?.let { return it }
         if (System.currentTimeMillis() < missCachedUntilMs) return null
 
@@ -202,7 +201,6 @@ class XmltvEpgService(
 
                 val uniqueXmltvIds = matchedIds.values.distinct()
 
-                // ⚡ Bolt: Performance Optimization
                 // Replaced chunked().flatMap() and .groupBy() with explicit loops to avoid
                 // intermediate list and Map.Entry allocations.
                 // A channel id can be indexed from several EPG sources, which yields the same
@@ -353,7 +351,6 @@ class XmltvEpgService(
 
                 val uniqueXmltvIds = matchedIds.values.distinct()
 
-                // ⚡ Bolt: Performance Optimization
                 // Replaced chunked().flatMap() and .associateBy() with explicit loops to avoid
                 // intermediate list and Map.Entry allocations.
                 val nowPlayingByChannel = mutableMapOf<String, EpgSearchResultRow>()

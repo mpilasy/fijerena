@@ -100,12 +100,12 @@ class XtreamContentManager(
 
         // Matches the scheduled sync cadence in ProviderSyncManager, so a screen opened between
         // scheduled runs still tops the catalogue up rather than sitting on day-old data.
-        private const val CACHE_EXPIRATION_MS = 4 * 3600 * 1000L // 4 hours
+        private const val CACHE_EXPIRATION_MS = 4 * 3600 * 1000L
 
         // Episode synopses are written once and essentially never revised, so they get a much
         // longer life than the catalogue itself — long enough to make refetching rare, short
         // enough that a correction upstream still lands eventually.
-        private const val OVERVIEW_CACHE_TTL_MS = 30L * 24 * 3600 * 1000 // 30 days
+        private const val OVERVIEW_CACHE_TTL_MS = 30L * 24 * 3600 * 1000
 
         // SQLite caps bound variables per statement (historically 999 on Android); chunk large
         // DELETE ... IN (...) batches well under that so deletes don't fail outright on
@@ -864,7 +864,6 @@ class XtreamContentManager(
 
                 val seriesInfo = (response as? XtreamResponse.Ok)?.value ?: return@withContext response
 
-                // Update series metadata
                 val info = seriesInfo.info
                 if (info != null) {
                     seriesDao.getSeriesById(providerId, seriesId)?.let { existing ->
@@ -887,7 +886,6 @@ class XtreamContentManager(
                     }
                 }
 
-                // Persist episodes for AI vectorization
                 val episodesToInsert = mutableListOf<XtreamEpisodeEntity>()
                 seriesInfo.episodes.forEach { (seasonNum, episodes) ->
                     val sNum = seasonNum.toIntOrNull()
@@ -944,7 +942,6 @@ class XtreamContentManager(
 
                 val vodInfo = (response as? XtreamResponse.Ok)?.value ?: return@withContext response
 
-                // Update movie metadata for AI and UI
                 val info = vodInfo.info
                 if (info != null) {
                     streamDao.updateVodMetadata(

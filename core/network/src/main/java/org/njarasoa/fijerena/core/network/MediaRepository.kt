@@ -258,7 +258,7 @@ class MediaRepository(
             context.getSharedPreferences(profileCacheName(providerId, profileId), Context.MODE_PRIVATE)
         }
     }
-    private val appSettings = AppSettings(context) // Keep for global settings (isDevMode)
+    private val appSettings = AppSettings(context)
     private val json =
         Json {
             ignoreUnknownKeys = true
@@ -549,7 +549,6 @@ class MediaRepository(
             ?: kotlin.Result.failure(Exception("No provider set"))
 
     /**
-     * Get categories filtered by provider's category filters.
      * If no filters are set, returns all categories.
      */
     suspend fun getFilteredCategories(contentType: String): kotlin.Result<List<MediaCategory>> {
@@ -814,9 +813,6 @@ class MediaRepository(
             emptyMap()
         }
 
-    /**
-     * Check whether the SQLite EPG index has data available for search/display.
-     */
     fun hasIndexedEpgData(): Boolean {
         val state =
             org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexer
@@ -824,8 +820,6 @@ class MediaRepository(
                 .state.value
         return state !is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.NotIndexed
     }
-
-    // --- Progress sync hook ---
 
     suspend fun onPlaybackStarted(itemId: String) {
         provider?.onPlaybackStarted(itemId)
@@ -882,8 +876,7 @@ class MediaRepository(
 
         // Owns recency and metadata only (Phase 4, docs/plans/archive/20260828_watch-state-durable-storage-plan.md).
         // Must not name positionMs/durationMs/isCompleted, so a start write can never erase
-        // progress a later progress write already stored. The blob write this used to fall back
-        // to (`addToWatchHistory`) is gone — watch_history_v3 is retired.
+        // progress a later progress write already stored.
         val recencyNow = System.currentTimeMillis()
         writeScope.launch {
             watchStateDao.upsertRecency(
@@ -922,8 +915,6 @@ class MediaRepository(
 
     fun getLastContentType(): String? = profileCache.getString(KEY_LAST_CONTENT_TYPE, null)
 
-    // --- Recent Categories ---
-
     // In-memory cache for recent categories — avoids JSON deserialization from SharedPreferences
     // on every call. ConcurrentHashMap: addToCategoryHistory() writes from Dispatchers.IO while
     // getRecentlyViewedCategories() reads synchronously from the UI thread, and clearCache() can
@@ -937,10 +928,8 @@ class MediaRepository(
     ) {
         val key = KEY_RECENT_CATEGORIES + "_" + contentType
         val existing = getRecentCategoryList(key)
-        // Remove existing entry for same category, add new one at front
         val updated = existing.filter { it.categoryId != categoryId }.toMutableList()
         updated.add(0, RecentCategory(categoryId, categoryName, contentType, System.currentTimeMillis()))
-        // Keep max 20 entries
         val trimmed = updated.take(MAX_RECENT_CATEGORIES)
         profileCache.commitAsync { putString(key, json.encodeToString(trimmed)) }
         cachedRecentCategories[contentType] = trimmed
@@ -1194,8 +1183,6 @@ class MediaRepository(
             favoriteIdSet = null
             writeScope.launch { favoriteStateDao.deleteAllOfKindRecordingTombstones(providerId, profileId, FavoriteKind.STREAM) }
         }
-
-    // --- Favorite Categories ---
 
     fun addFavoriteCategory(
         categoryId: String,
@@ -1991,8 +1978,6 @@ class MediaRepository(
 
     fun getAppSettings(): AppSettings = appSettings
 
-    // --- Payload/fetch time tracking ---
-
     fun getPayloadSize(key: String): String? {
         if (!appSettings.isDevMode) return null
         val sizeInBytes = payloadSizes[key] ?: return null
@@ -2025,8 +2010,6 @@ class MediaRepository(
         }
         recentItemsFlows.keys.toList().forEach { refreshRecentItems(it) }
     }
-
-    // --- Cache management ---
 
     fun clearCache() {
         // Only this profile's file: for Default that is media_cache_<providerId> itself, exactly

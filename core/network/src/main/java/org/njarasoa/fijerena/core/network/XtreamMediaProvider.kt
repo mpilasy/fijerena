@@ -148,7 +148,6 @@ class XtreamMediaProvider(
 
     override suspend fun getAllItems(contentType: String): kotlin.Result<List<MediaItem>> {
         val mediaType = getMediaType(contentType)
-        // Use repository.getAllStreams which handles caching and fetching all streams
         val result = repository.getAllStreams(contentType)
         return when (result) {
             is Result.Success -> {
@@ -590,8 +589,7 @@ class XtreamMediaProvider(
             // The provider answered and had nothing to say about this movie. Its own catalogue
             // row is still local, and a movie needs no more than that to play — the stream URL is
             // built from the id, with the extension defaulting to mp4. Failing here would refuse
-            // to open a film whose only problem is missing metadata, which is what this did
-            // between 4220ce69 and now.
+            // to open a film whose only problem is missing metadata.
             is XtreamResponse.Unavailable, is XtreamResponse.Malformed -> {
                 result.logAsFailure("get_vod_info", movieId)
                 val cached =
@@ -1032,14 +1030,14 @@ class XtreamMediaProvider(
     companion object {
         // Detail data (plot/cast/genre/rating/contentRating) rarely changes for a given title —
         // long TTL avoids re-hitting Xtream + TMDB every time a detail screen is reopened.
-        private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L // 7 days
+        private const val DETAIL_CACHE_TTL_MS = 7 * 24 * 3600 * 1000L
 
         // Separate stamp from DETAIL_CACHE_TTL_MS: this one guards the episode list itself, not
         // the TMDB-derived enrichment fields. Only a safety net: new episodes normally show up
         // because the catalogue sync clears the stamp when a series changes, but a provider that
         // never updates `last_modified` (the jellyxtream bridge, for one) would otherwise never
         // be asked again. See docs/plans/archive/20261002_catalog-sync-cache-churn-plan.md, Phase 2.
-        private const val EPISODE_LIST_CACHE_TTL_MS = 30 * 24 * 3600 * 1000L // 30 days
+        private const val EPISODE_LIST_CACHE_TTL_MS = 30 * 24 * 3600 * 1000L
         private const val MAX_CONCURRENT_TMDB_REQUESTS = 10
 
         // Below this a row reads as an accident rather than a suggestion, so it is not shown.

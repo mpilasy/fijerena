@@ -37,7 +37,7 @@ object CredentialStoreHealth {
     /**
      * Stands in for an encrypted store that can't be created even after a reset: credentials
      * entered now work for this run of the app and are never written to disk — never a plaintext
-     * file, which is what the fallback used to be.
+     * file.
      */
     class InMemoryPrefs : SharedPreferences {
         private val values = java.util.concurrent.ConcurrentHashMap<String, Any>()

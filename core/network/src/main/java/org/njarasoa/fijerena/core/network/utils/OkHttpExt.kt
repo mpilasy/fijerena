@@ -9,7 +9,6 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * Suspend extension that allows suspend [Call] inside coroutine.
  * By using the asynchronous enqueue method, we avoid blocking the coroutine dispatcher thread.
  */
 suspend fun Call.await(): Response {

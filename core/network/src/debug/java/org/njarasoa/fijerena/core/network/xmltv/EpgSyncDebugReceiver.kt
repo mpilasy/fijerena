@@ -26,9 +26,9 @@ class EpgSyncDebugReceiver : BroadcastReceiver() {
     ) {
         if (intent.action != ACTION) return
         Log.i(TAG, "Debug trigger received — enqueuing force OneTimeWorkRequest for EpgSyncWorker")
-        // No backoff criteria here previously meant WorkManager's aggressive default (~30s
-        // initial, doubling) between retries — fine for a transient blip, hostile to a source
-        // that's actively rate-limiting/blocking (retrying every 30s only keeps it blocked).
+        // Explicit backoff: WorkManager's default (~30s initial, doubling) is fine for a transient
+        // blip, hostile to a source that's actively rate-limiting/blocking (retrying every 30s
+        // only keeps it blocked).
         val request =
             OneTimeWorkRequestBuilder<EpgSyncWorker>()
                 .setInputData(androidx.work.workDataOf("force" to true))

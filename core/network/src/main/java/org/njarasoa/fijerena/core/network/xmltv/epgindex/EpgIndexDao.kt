@@ -27,8 +27,6 @@ interface EpgIndexDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMetadata(metadata: EpgIndexMetadata)
 
-    // --------------- Staging management & Atomic Swap ---------------
-
     @Query("DELETE FROM epg_programme_staging")
     suspend fun clearStagingProgrammes()
 
@@ -94,8 +92,6 @@ interface EpgIndexDao {
 
     @Query("SELECT COUNT(*) FROM epg_programme WHERE end_epoch < :cutoffEpoch")
     suspend fun countStaleProgrammes(cutoffEpoch: Long): Int
-
-    // --------------- Search queries ---------------
 
     @Query(
         """
@@ -188,8 +184,6 @@ interface EpgIndexDao {
         windowEnd: Long,
     ): PagingSource<Int, EpgSearchResultRow>
 
-    // --------------- Channel queries ---------------
-
     @Query(
         """
         SELECT * FROM epg_channel
@@ -255,8 +249,6 @@ interface EpgIndexDao {
         sourceIds: List<Long>,
     ): Long?
 
-    // --------------- Now Playing for specific channels ---------------
-
     @Query(
         """
         SELECT p.*, c.display_name AS channelDisplayName, c.icon_url AS channelIconUrl
@@ -272,8 +264,6 @@ interface EpgIndexDao {
         sourceIds: List<Long>,
         nowEpoch: Long,
     ): List<EpgSearchResultRow>
-
-    // --------------- Source-scoped cleanup ---------------
 
     @Query("DELETE FROM epg_programme WHERE source_id = :sourceId")
     suspend fun deleteProgrammesBySourceId(sourceId: Long)
@@ -298,8 +288,6 @@ interface EpgIndexDao {
         deleteProgrammesBySourceIds(sourceIds)
         deleteChannelsBySourceIds(sourceIds)
     }
-
-    // --------------- Metadata & cleanup ---------------
 
     @Query("SELECT * FROM epg_index_metadata WHERE id = 1")
     suspend fun getMetadata(): EpgIndexMetadata?

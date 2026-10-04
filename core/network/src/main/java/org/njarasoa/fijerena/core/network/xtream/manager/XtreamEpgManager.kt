@@ -41,7 +41,6 @@ class XtreamEpgManager(
     // which must not block the caller.
     private val writeScope = AppScopes.create("XtreamEpgManager.write", Dispatchers.IO.limitedParallelism(1))
 
-    /** Whether caching is enabled for this provider */
     private val cachingEnabled: Boolean get() = providerSettings.cachingEnabled
 
     init {
@@ -118,7 +117,6 @@ class XtreamEpgManager(
             suspendResultOf {
                 val service = sessionManager.apiService ?: throw Exception("Not authenticated")
 
-                // Try cache first
                 val cached = getCachedEpg(streamId)
                 if (cached != null) {
                     // Refresh in background
@@ -178,8 +176,6 @@ class XtreamEpgManager(
 
                     if (fetched.isNotEmpty()) {
                         results.putAll(fetched)
-                        // One batched insert per chunk — the old path wrote every freshly fetched
-                        // entry back through a single blocking SharedPreferences commit.
                         cacheEpgBatch(fetched.toMap())
                     }
                 }
@@ -214,9 +210,6 @@ class XtreamEpgManager(
         }
     }
 
-    /**
-     * Get cached EPG data for a stream
-     */
     private fun getCachedEpg(streamId: Int): EpgResponse? {
         if (!cachingEnabled) return null
         val payload = epgCacheDao.getFreshPayload(providerId, streamId, freshnessCutoff()) ?: return null
@@ -246,9 +239,6 @@ class XtreamEpgManager(
             null
         }
 
-    /**
-     * Cache EPG data for a stream
-     */
     private fun cacheEpg(
         streamId: Int,
         epg: EpgResponse,
@@ -282,16 +272,10 @@ class XtreamEpgManager(
         epgCacheDao.upsertAll(rows)
     }
 
-    /**
-     * Clear EPG cache for a specific stream
-     */
     fun clearEpgCache(streamId: Int) {
         writeScope.launch { epgCacheDao.deleteStream(providerId, streamId) }
     }
 
-    /**
-     * Clear all EPG cache
-     */
     fun clearAllEpgCache() {
         writeScope.launch { epgCacheDao.deleteAll(providerId) }
     }

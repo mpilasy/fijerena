@@ -198,14 +198,6 @@ class EpgIndexer private constructor(
         }
 
     /**
-     * Ingest EPG data from an InputStream into the SQLite index.
-     *
-     * Uses 500-row batch inserts for memory efficiency (~100KB per batch).
-     * Commits transactions every 5000 items to prevent Room/SQLite from buffering
-     * too much data in memory for a single massive transaction.
-     */
-
-    /**
      * Set state to Indexing if not already Indexed.
      * Call once before parallel ingestion begins.
      */
@@ -238,7 +230,7 @@ class EpgIndexer private constructor(
             // Keep database size manageable: skip programmes that ended more than 12 hours ago.
             // No future limit — everything ahead that the source provides is kept and searchable.
             val now = System.currentTimeMillis() / 1000
-            val cutoffEpoch = now - 43200 // 12 hours ago
+            val cutoffEpoch = now - 43200
 
             try {
                 val channelBatch = mutableListOf<EpgChannelEntity>()
@@ -339,7 +331,6 @@ class EpgIndexer private constructor(
                     eventType = parser.next()
                 }
 
-                // Flush remaining
                 if (channelBatch.isNotEmpty() || channelStagingBatch.isNotEmpty()) {
                     writeMutex.withLock {
                         db.withTransaction {
@@ -566,9 +557,6 @@ class EpgIndexer private constructor(
             Log.i(TAG, "swapAndRebuildFts: complete in ${System.currentTimeMillis() - startMs}ms")
         }
 
-    /**
-     * Clear all staging tables.
-     */
     suspend fun clearStaging() =
         withContext(Dispatchers.IO) {
             val db = EpgIndexDatabase.getInstance(context)
@@ -732,9 +720,6 @@ class EpgIndexer private constructor(
             }
         }
 
-    /**
-     * Delete programmes older than the given epoch and rebuild FTS.
-     */
     suspend fun countStaleProgrammes(cutoffEpoch: Long): Int =
         withContext(Dispatchers.IO) {
             try {
@@ -793,12 +778,6 @@ class EpgIndexer private constructor(
                 0
             }
         }
-
-    /**
-     * Reclaim free pages left by delete-heavy operations.
-     * Requires auto_vacuum=INCREMENTAL (set in EpgIndexDatabase onOpen callback).
-     * No page limit = free all available pages.
-     */
 
     /**
      * Get the number of configured EPG sources (regardless of index state).

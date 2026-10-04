@@ -1,7 +1,6 @@
 package org.njarasoa.fijerena.core.network.xtream.manager
 
 object XtreamCacheKeys {
-    // Cache expiry is now configurable via AppSettings (default: 24 hours)
     const val KEY_CATEGORIES_TIMESTAMP = "categories_timestamp"
     const val KEY_VOD_CATEGORIES_TIMESTAMP = "vod_categories_timestamp"
     const val KEY_SERIES_CATEGORIES_TIMESTAMP = "series_categories_timestamp"
@@ -21,5 +20,5 @@ object XtreamCacheKeys {
 
     // Matches MediaRepository's XTREAM_EPG_TTL_MS. At 10 minutes the entire catalogue expired
     // between ingest runs, so every pass re-fetched every channel over the network.
-    const val EPG_CACHE_EXPIRY_MS = 6L * 60 * 60 * 1000 // 6 hours
+    const val EPG_CACHE_EXPIRY_MS = 6L * 60 * 60 * 1000
 }

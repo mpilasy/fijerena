@@ -111,8 +111,6 @@ data class JellyfinUserData(
     @SerialName("PlayedPercentage") val playedPercentage: Double? = null,
 )
 
-// ---- Playback reporting ----
-
 @Serializable
 data class JellyfinPlaybackProgress(
     @SerialName("ItemId") val itemId: String,
@@ -140,10 +138,6 @@ data class JellyfinPlaybackStart(
     @SerialName("PlayMethod") val playMethod: String? = null,
 )
 
-// ---- Auth ----
-
-// ---- Quick Connect ----
-
 @Serializable
 data class JellyfinQuickConnectResult(
     @SerialName("Secret") val secret: String,
@@ -156,8 +150,6 @@ data class JellyfinQuickConnectAuthBody(
     @SerialName("Secret") val secret: String,
 )
 
-// ---- Capabilities ----
-
 @Serializable
 data class JellyfinClientCapabilities(
     @SerialName("PlayableMediaTypes") val playableMediaTypes: List<String> = listOf("Audio", "Video"),
@@ -166,8 +158,6 @@ data class JellyfinClientCapabilities(
     @SerialName("SupportsContentUploading") val supportsContentUploading: Boolean = false,
     @SerialName("SupportsPersistentIdentifier") val supportsPersistentIdentifier: Boolean = true,
 )
-
-// ---- PlaybackInfo negotiation ----
 
 @Serializable
 data class JellyfinPlaybackInfoRequest(

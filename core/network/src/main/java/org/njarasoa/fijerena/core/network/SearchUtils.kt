@@ -8,7 +8,6 @@ data class ParsedQuery(
 }
 
 object SearchUtils {
-    // ⚡ Bolt: Performance Optimization
     // Pre-parse the query so we don't perform substring operations or prefix checks in the hot loop
     fun parseQuery(query: String): ParsedQuery {
         val words = query.lowercase().split(" ").filter { it.isNotBlank() }

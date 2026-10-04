@@ -28,9 +28,6 @@ abstract class EpgIndexDatabase : RoomDatabase() {
         private const val TAG = "EpgIndexDatabase"
         private const val DB_NAME = "epg_index.db"
 
-        // FTS4 -> FTS5 migration is complex via raw SQL because of Room's internal validation.
-        // We rely on fallbackToDestructiveMigration(true) for this jump to ensure a clean schema.
-
         @Volatile
         private var INSTANCE: EpgIndexDatabase? = null
 
