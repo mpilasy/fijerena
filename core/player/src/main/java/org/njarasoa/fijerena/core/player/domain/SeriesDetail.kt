@@ -97,15 +97,6 @@ fun firstSeasonWithUnwatchedEpisode(
 }
 
 /**
- * Episode to land on when the series screen opens: the most recently played one, or the
- * episode right after it when that one was already finished (nobody comes back to a series
- * to rewatch what they just completed). Null when nothing here has been played yet.
- *
- * [lastPlayedEpisodeId] is the id with the newest playback timestamp among this series'
- * episodes; [isCompleted] reports whether an episode was watched past the completion mark.
- */
-
-/**
  * This show's episode with the season and episode number in [name]'s `SxxEyy` — how an episode
  * played from another copy of the show (an alternate stream: another language or quality, its own
  * episode ids) is found in this one. Null when [name] carries no `SxxEyy` or this show has no such
@@ -123,6 +114,14 @@ fun SeriesDetail.episodeIdMatchingName(name: String): String? {
 
 private val SEASON_EPISODE = Regex("""\bS(\d{1,3})\s*E(\d{1,4})\b""", RegexOption.IGNORE_CASE)
 
+/**
+ * Episode to land on when the series screen opens: the most recently played one, or the
+ * episode right after it when that one was already finished (nobody comes back to a series
+ * to rewatch what they just completed). Null when nothing here has been played yet.
+ *
+ * [lastPlayedEpisodeId] is the id with the newest playback timestamp among this series'
+ * episodes; [isCompleted] reports whether an episode was watched past the completion mark.
+ */
 fun SeriesDetail.resumeAnchorEpisodeId(
     sortedSeasons: List<SeasonInfo>,
     lastPlayedEpisodeId: String?,

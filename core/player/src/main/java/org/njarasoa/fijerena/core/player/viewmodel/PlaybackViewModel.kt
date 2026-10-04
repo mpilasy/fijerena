@@ -187,10 +187,8 @@ class PlaybackViewModel(
 
     private suspend fun connectToService() {
         serviceConnection.connect().collect { controller ->
-            // Remove listener from old controller
             _controller.value?.removeListener(playerListener)
 
-            // Add listener to new controller
             controller?.addListener(playerListener)
 
             _controller.value = controller
@@ -201,7 +199,6 @@ class PlaybackViewModel(
         metadata: PlayerMetadata,
         resumeFromPosition: Long = 0L,
     ) {
-        // Reset error state on new stream
         isInErrorState = false
         liveStoppedInBackground = false
         onFocusRegained()
@@ -274,7 +271,6 @@ class PlaybackViewModel(
     }
 
     fun stop() {
-        // Reset error state when user goes back
         isInErrorState = false
         liveStoppedInBackground = false
         onFocusRegained()
@@ -295,7 +291,6 @@ class PlaybackViewModel(
     /**
      * Called when the app loses focus (e.g. backgrounded).
      * Pauses playback and starts a 30s timer to stop playback completely.
-     * @param isInPip Current Picture-in-Picture state of the activity.
      */
     fun onFocusLost(isInPip: Boolean = false) {
         if (isInPip || _isInPictureInPictureMode.value) return
@@ -338,7 +333,6 @@ class PlaybackViewModel(
             pause()
         }
 
-        // Always start/reset the stop timer if we were at least in a non-idle state
         if (currentState !is PlaybackState.Idle && currentState !is PlaybackState.Ended) {
             focusLostJob?.cancel()
             focusLostJob =
@@ -385,10 +379,6 @@ class PlaybackViewModel(
         launchServiceAction { it.setPlaybackSpeed(speed) }
     }
 
-    /**
-     * Get available audio tracks from the player.
-     * Returns a list of audio track info (language, label, track group index, track index).
-     */
     fun getAudioTracks(): List<AudioTrackInfo> {
         val controller = _controller.value ?: return emptyList()
         val tracks = controller.currentTracks
@@ -426,9 +416,6 @@ class PlaybackViewModel(
         return audioTracks
     }
 
-    /**
-     * Select an audio track by group and track index.
-     */
     fun selectAudioTrack(
         groupIndex: Int,
         trackIndex: Int,
@@ -436,10 +423,6 @@ class PlaybackViewModel(
         launchServiceAction { it.selectAudioTrack(groupIndex, trackIndex) }
     }
 
-    /**
-     * Get available subtitle tracks from the player.
-     * Returns a list of subtitle track info (language, label, mime type, selection status).
-     */
     fun getSubtitleTracks(): List<SubtitleTrackInfo> {
         val controller = _controller.value ?: return emptyList()
         val tracks = controller.currentTracks
@@ -471,9 +454,6 @@ class PlaybackViewModel(
         return subtitleTracks
     }
 
-    /**
-     * Select a subtitle track by group and track index.
-     */
     fun selectSubtitleTrack(
         groupIndex: Int,
         trackIndex: Int,
@@ -481,9 +461,6 @@ class PlaybackViewModel(
         launchServiceAction { it.selectSubtitleTrack(groupIndex, trackIndex) }
     }
 
-    /**
-     * Disable all subtitle tracks.
-     */
     fun disableSubtitles() {
         launchServiceAction { it.disableSubtitles() }
     }
@@ -539,7 +516,6 @@ class PlaybackViewModel(
             }
         }
 
-        // Sort by resolution (highest first)
         return qualities.sortedByDescending { it.height }
     }
 
@@ -571,9 +547,6 @@ class PlaybackViewModel(
         return chapters
     }
 
-    /**
-     * Select a specific video quality.
-     */
     fun selectVideoQuality(
         groupIndex: Int,
         trackIndex: Int,
@@ -581,9 +554,6 @@ class PlaybackViewModel(
         launchServiceAction { it.selectVideoQuality(groupIndex, trackIndex) }
     }
 
-    /**
-     * Enable automatic quality selection (adaptive bitrate).
-     */
     fun enableAutoQuality() {
         launchServiceAction { it.enableAutoQuality() }
     }

@@ -17,9 +17,6 @@ import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonNames
 import kotlinx.serialization.json.JsonObject
 
-/**
- * Represents a live TV category from Xtream API
- */
 @Serializable
 data class XtreamCategory(
     @SerialName("category_id")
@@ -30,9 +27,6 @@ data class XtreamCategory(
     val parentId: Int = 0,
 )
 
-/**
- * Represents a live stream from Xtream API
- */
 @Serializable
 data class XtreamStream(
     @SerialName("num")
@@ -81,7 +75,6 @@ data class XtreamStream(
 )
 
 /**
- * Represents a series (TV show) listing from Xtream API
  * Note: Series use series_id instead of stream_id
  */
 @Serializable
@@ -124,9 +117,6 @@ data class XtreamSeries(
     val tmdb: kotlinx.serialization.json.JsonElement? = null,
 )
 
-/**
- * Represents authentication response from Xtream API
- */
 @Serializable
 data class XtreamAuthResponse(
     @SerialName("user_info")
@@ -135,9 +125,6 @@ data class XtreamAuthResponse(
     val serverInfo: XtreamServerInfo,
 )
 
-/**
- * User information from authentication response
- */
 @Serializable
 data class XtreamUserInfo(
     @SerialName("username")
@@ -164,9 +151,6 @@ data class XtreamUserInfo(
     val allowedOutputFormats: List<String>? = null,
 )
 
-/**
- * Server information from authentication response
- */
 @Serializable
 data class XtreamServerInfo(
     @SerialName("url")
@@ -187,9 +171,6 @@ data class XtreamServerInfo(
     val timeNow: String? = null,
 )
 
-/**
- * Represents detailed information about a series including seasons and episodes
- */
 @Serializable
 data class SeriesInfo(
     @SerialName("info")
@@ -201,9 +182,6 @@ data class SeriesInfo(
     val episodes: Map<String, List<Episode>> = emptyMap(),
 )
 
-/**
- * Details about a series
- */
 @Serializable
 data class SeriesDetails(
     // Nullable: some Xtream servers omit it from `info` entirely, or send it as `title`. It is
@@ -242,9 +220,6 @@ data class SeriesDetails(
     val tmdb: kotlinx.serialization.json.JsonElement? = null,
 )
 
-/**
- * Represents a season in a series
- */
 @Serializable
 data class Season(
     @SerialName("season_number")
@@ -257,9 +232,6 @@ data class Season(
     val cover: String? = null,
 )
 
-/**
- * Represents an episode in a series
- */
 @Serializable
 data class Episode(
     @SerialName("id")
@@ -276,9 +248,6 @@ data class Episode(
     val season: Int? = null,
 )
 
-/**
- * Additional information about an episode
- */
 @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable
 data class EpisodeInfo(
@@ -311,9 +280,6 @@ data class EpisodeInfo(
     val tmdbId: String? = null,
 )
 
-/**
- * Represents detailed information about a VOD movie
- */
 @Serializable
 data class VodInfo(
     @SerialName("info")
@@ -322,9 +288,6 @@ data class VodInfo(
     val movieData: MovieData? = null,
 )
 
-/**
- * Detailed information about a movie
- */
 @Serializable
 data class MovieInfo(
     @SerialName("name")
@@ -361,9 +324,6 @@ data class MovieInfo(
     val youtubeTrailer: String? = null,
 )
 
-/**
- * Movie stream data
- */
 @Serializable
 data class MovieData(
     @SerialName("stream_id")
@@ -374,9 +334,6 @@ data class MovieData(
     val containerExtension: String? = null,
 )
 
-/**
- * Video technical information
- */
 @Serializable
 data class VideoInfo(
     @SerialName("width")
@@ -387,9 +344,6 @@ data class VideoInfo(
     val codecName: String? = null,
 )
 
-/**
- * Audio technical information
- */
 @Serializable
 data class AudioInfo(
     @SerialName("codec_name")
@@ -456,11 +410,9 @@ object VideoInfoSerializer : KSerializer<VideoInfo?> {
         val jsonDecoder = decoder as? JsonDecoder ?: return null
         val element = jsonDecoder.decodeJsonElement()
 
-        // If it's an array (empty or not), return null
         return if (element.toString().startsWith("[")) {
             null
         } else {
-            // Try to decode as VideoInfo object
             try {
                 jsonDecoder.json.decodeFromJsonElement(VideoInfo.serializer(), element)
             } catch (e: Exception) {
@@ -494,11 +446,9 @@ object AudioInfoSerializer : KSerializer<AudioInfo?> {
         val jsonDecoder = decoder as? JsonDecoder ?: return null
         val element = jsonDecoder.decodeJsonElement()
 
-        // If it's an array (empty or not), return null
         return if (element.toString().startsWith("[")) {
             null
         } else {
-            // Try to decode as AudioInfo object
             try {
                 jsonDecoder.json.decodeFromJsonElement(AudioInfo.serializer(), element)
             } catch (e: Exception) {

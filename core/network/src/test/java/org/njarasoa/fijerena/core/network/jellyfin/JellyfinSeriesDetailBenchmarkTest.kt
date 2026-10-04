@@ -98,7 +98,6 @@ class JellyfinSeriesDetailBenchmarkTest {
                         val result = provider.getSeriesDetail(SeriesId(seriesId))
                         assertTrue("getSeriesDetail should succeed", result.isSuccess)
                         val detail = result.getOrThrow()
-                        // Verify correctness
                         assertTrue("Should have 3 seasons", detail.seasons.size == 3)
                         assertTrue("Should have episodes for 3 seasons", detail.episodes.size == 3)
                     }

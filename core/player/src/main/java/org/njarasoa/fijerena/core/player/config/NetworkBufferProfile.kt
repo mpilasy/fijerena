@@ -1,8 +1,5 @@
 package org.njarasoa.fijerena.core.player.config
 
-/**
- * Network type classification for adaptive buffering.
- */
 enum class NetworkType {
     WIFI,
     CELLULAR,

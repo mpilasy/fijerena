@@ -1,8 +1,5 @@
 package org.njarasoa.fijerena.core.navigation
 
-/**
- * Content types available in the IPTV application.
- */
 enum class ContentType(
     val displayName: String,
 ) {

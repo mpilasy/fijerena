@@ -41,7 +41,6 @@ class LocalFileScannerTest {
         every { rootUri.toString() } returns "content://media/external/file/123"
         every { rootUri.path } returns "/media/external/file/123"
 
-        // Setup a real temporary directory
         val tempDir =
             java.nio.file.Files
                 .createTempDirectory("test_media")
@@ -67,7 +66,6 @@ class LocalFileScannerTest {
             contentResolver.query(rootUri, arrayOf("_data"), null, null, null)
         } returns cursor
 
-        // Mock Uri.fromFile
         val mockFileUri = mockk<Uri>()
         every { mockFileUri.scheme } returns "file"
         every { mockFileUri.path } returns tempDir.absolutePath
@@ -90,7 +88,6 @@ class LocalFileScannerTest {
                 .fromTreeUri(context, rootUri)
         } returns null
 
-        // Run scanner
         var result: Pair<List<MediaCategory>, List<MediaItem>>? = null
         val time =
             measureTimeMillis {
@@ -102,7 +99,6 @@ class LocalFileScannerTest {
 
         println("Resolved File optimization took $time ms")
 
-        // Cleanup
         tempDir.deleteRecursively()
     }
 }

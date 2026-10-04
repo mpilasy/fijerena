@@ -14,8 +14,6 @@ import org.njarasoa.fijerena.core.player.network.NetworkModule
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
 
 /**
- * Factory for creating [MediaSource] instances.
- *
  * Reuses an internal [DefaultMediaSourceFactory] to avoid memory churn and binder exhaustion
  * during rapid channel switching. The HTTP data source is backed by OkHttp (via
  * [NetworkModule.streamingClientFor]) so streaming shares the same connection pool and
@@ -45,7 +43,6 @@ class StreamingMediaSourceFactory(
                 .apply { if (metadata != null) setMediaMetadata(metadata.toMediaMetadata()) }
                 .build()
 
-        // Configure common HTTP factory
         val allHeaders =
             buildMap {
                 put("User-Agent", userAgent)
@@ -68,7 +65,6 @@ class StreamingMediaSourceFactory(
 
         val errorPolicy = AdaptiveLoadErrorPolicy(onRetry = onRetry)
 
-        // Reuse media source factory with updated policy
         return mediaSourceFactory
             .setLoadErrorHandlingPolicy(errorPolicy)
             .createMediaSource(mediaItem)

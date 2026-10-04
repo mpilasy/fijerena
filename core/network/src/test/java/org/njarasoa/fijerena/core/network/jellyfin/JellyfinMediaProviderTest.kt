@@ -26,7 +26,6 @@ class JellyfinMediaProviderTest {
     @Test
     fun `getSeriesDetail fetches all episodes in one call (optimized behavior)`() =
         runTest {
-            // Setup mocks
             val seriesId = "series1"
             val season1Id = "season1"
             val season2Id = "season2"
@@ -43,8 +42,6 @@ class JellyfinMediaProviderTest {
             coEvery { api.getItemById(seriesId) } returns Result.success(seriesItem)
             coEvery { api.getSeasons(seriesId) } returns Result.success(listOf(season1Item, season2Item))
 
-            // Mock getItems for episodes
-            // api.getItems(parentId = seriesId, includeItemTypes = "Episode", ...)
             coEvery {
                 api.getItems(
                     parentId = seriesId,
@@ -54,18 +51,14 @@ class JellyfinMediaProviderTest {
                 )
             } returns Result.success(listOf(ep1, ep2))
 
-            // Assume connected
             every { api.isAuthenticated() } returns true
 
-            // Execute
             val result = provider.getSeriesDetail(SeriesId(seriesId))
 
-            // Verify
             assertTrue(result.isSuccess)
             val detail = result.getOrThrow()
             assertEquals(2, detail.seasons.size)
 
-            // Verify episodes are grouped correctly
             // seasonKey is indexNumber.toString()
             assertEquals(1, detail.episodes["1"]?.size)
             assertEquals(1, detail.episodes["2"]?.size)
@@ -73,7 +66,6 @@ class JellyfinMediaProviderTest {
             // Verify optimization: NO calls to getEpisodes
             coVerify(exactly = 0) { api.getEpisodes(any(), any()) }
 
-            // Verify single call to getItems
             coVerify(exactly = 1) {
                 api.getItems(
                     parentId = seriesId,

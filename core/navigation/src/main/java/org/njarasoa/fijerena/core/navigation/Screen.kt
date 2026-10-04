@@ -2,20 +2,6 @@ package org.njarasoa.fijerena.core.navigation
 
 import kotlinx.serialization.Serializable
 
-/**
- * Type-safe navigation destinations for Xtream IPTV app.
- *
- * Uses kotlinx.serialization for type-safe navigation with Navigation Compose.
- * Each screen is a @Serializable object/data class that can be passed directly
- * to NavController.navigate().
- *
- * Usage:
- * ```kotlin
- * navController.navigate(Screen.Login)
- * navController.navigate(Screen.CategoryList)
- * navController.navigate(Screen.Player(streamId = 12345))
- * ```
- */
 sealed interface Screen {
     /**
      * Provider selection screen destination.
@@ -59,10 +45,6 @@ sealed interface Screen {
     @Serializable
     data object ContentTypeSelection : Screen
 
-    /**
-     * Settings screen destination.
-     * Allows users to configure app settings like dev mode, watch history size, etc.
-     */
     @Serializable
     data object Settings : Screen
 
@@ -96,9 +78,6 @@ sealed interface Screen {
      * Episode selection screen destination for TV shows.
      * Shows seasons and episodes for a selected series.
      *
-     * @param seriesId The Xtream series ID
-     * @param seriesName The display name of the series
-     * @param categoryId The category ID this series belongs to
      * @param initialEpisodeId When set (e.g. arriving from Continue Watching), open straight to
      * this episode's detail/resume panel instead of the season/episode list.
      */
@@ -110,14 +89,6 @@ sealed interface Screen {
         val initialEpisodeId: String? = null,
     ) : Screen
 
-    /**
-     * Movie details screen destination for VOD movies.
-     * Shows movie information and play button.
-     *
-     * @param movieId The Xtream movie ID
-     * @param movieName The display name of the movie
-     * @param categoryId The category ID this movie belongs to
-     */
     @Serializable
     data class MovieDetails(
         val movieId: String,
@@ -129,7 +100,6 @@ sealed interface Screen {
      * Search screen destination.
      * Allows users to search across all categories for a specific content type.
      *
-     * @param contentType The type of content to search (LIVE_TV, MOVIES, TV_SHOWS)
      * @param initialQuery Search term to run on arrival, e.g. a title tapped in a
      *   "more like this" row. Null when the user opened search themselves.
      */
@@ -145,7 +115,6 @@ sealed interface Screen {
      *
      * @param categoryId The category ID to show EPG for (a real category, or the virtual
      *   `recent` / `favorites` lists)
-     * @param categoryName The display name of the category
      * @param focusChannelId The channel whose row the guide opens on (the one playing when opened
      *   from the player); null opens on the first channel with a programme on now
      */
@@ -162,7 +131,6 @@ sealed interface Screen {
      *
      * @param categoryId When opened from a TV Guide: the guide's channel set, which the browser
      *   offers as an "In <category> only" filter (on by default). Null searches every channel.
-     * @param categoryName The display name of [categoryId]
      */
     @Serializable
     data class EpgBrowser(
@@ -200,9 +168,6 @@ sealed interface Screen {
      * Player screen destination with stream parameters.
      *
      * @param streamId The Xtream stream ID to play (or episode ID for TV shows as string converted to int hash)
-     * @param streamName The display name of the stream
-     * @param categoryId The category ID this stream belongs to
-     * @param contentType The type of content being played (LIVE_TV, MOVIES, TV_SHOWS)
      * @param episodeId Optional episode ID for TV shows (actual string ID from API)
      * @param episodeExtension Optional container extension for episode playback (e.g., "mp4", "mkv")
      * @param seriesId Optional series ID for TV shows (used for watch history tracking)

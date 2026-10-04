@@ -66,7 +66,6 @@ class M3uParserOptimizationTest {
 
     @Test
     fun `parse benchmark`() {
-        // Generate a large M3U file
         val sb = StringBuilder()
         sb.append("#EXTM3U\n")
         repeat(5000) { i ->

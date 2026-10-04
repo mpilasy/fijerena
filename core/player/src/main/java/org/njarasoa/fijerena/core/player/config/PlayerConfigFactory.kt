@@ -23,11 +23,9 @@ object PlayerConfigFactory {
                 .Builder()
                 .setPreferredAudioLanguage("en")
                 .apply {
-                    // Set max resolution based on device
                     val (maxWidth, maxHeight) = capabilities.maxResolution
                     setMaxVideoSize(maxWidth, maxHeight)
 
-                    // Set bitrate constraints
                     val maxBitrate =
                         when (capabilities.deviceType) {
                             DeviceType.NVIDIA_SHIELD -> if (capabilities.supports4K) 20_000_000 else 10_000_000

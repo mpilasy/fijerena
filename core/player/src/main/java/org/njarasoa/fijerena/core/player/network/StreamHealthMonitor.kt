@@ -113,7 +113,6 @@ class StreamHealthMonitor(
         } else {
             firstHealthyTimestamp = 0L
 
-            // Start or continue tracking the degradation window
             if (firstFailureTimestamp == 0L) {
                 firstFailureTimestamp = now
             }

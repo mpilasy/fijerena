@@ -45,11 +45,9 @@ object NetworkModule {
             .dns(AndroidAwareDns)
             .followRedirects(true)
             .followSslRedirects(true)
-            // Standard timeouts for general API calls
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
-            // Automatically clean up idle connections
             .connectionPool(okhttp3.ConnectionPool(5, 5, TimeUnit.MINUTES))
             .build()
     }

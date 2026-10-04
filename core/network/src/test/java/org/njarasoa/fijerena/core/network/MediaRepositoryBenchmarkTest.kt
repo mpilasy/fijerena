@@ -40,7 +40,6 @@ class MediaRepositoryBenchmarkTest {
         context = mockk(relaxed = true)
         sharedPreferences = mockk(relaxed = true)
 
-        // Mock SharedPreferences
         every { context.getSharedPreferences(any(), any()) } returns sharedPreferences
     }
 
@@ -51,7 +50,6 @@ class MediaRepositoryBenchmarkTest {
 
     @Test
     fun benchmarkGetWatchHistory() {
-        // Create a large watch history
         val historySize = 25 // Default size
         val history =
             (1..historySize).map {

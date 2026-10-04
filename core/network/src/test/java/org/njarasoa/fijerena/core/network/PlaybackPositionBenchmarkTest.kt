@@ -75,7 +75,6 @@ class PlaybackPositionBenchmarkTest {
             val episodeCount = 50
             val episodeIds = (1..episodeCount).map { "ep_$it" }
 
-            // Simulate network latency
             coEvery { provider.getPlaybackPosition(any()) } coAnswers {
                 kotlinx.coroutines.delay(10) // 10ms latency per request
                 PlaybackStatus(1000L, 2000L, false)

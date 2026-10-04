@@ -45,7 +45,6 @@ object NetworkMonitor {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         connectivityManager = cm
 
-        // Seed with current network state
         val initial = resolveNetworkType(cm.getNetworkCapabilities(cm.activeNetwork))
         updateType(initial)
         Log.i(TAG, "Initialized. Current network: $initial")

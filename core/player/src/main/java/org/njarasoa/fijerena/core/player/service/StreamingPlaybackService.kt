@@ -429,7 +429,6 @@ class StreamingPlaybackService : MediaSessionService() {
                 .getSingletonInstance(this)
         bandwidthMeter = bm
 
-        // Build ExoPlayer with standard factory
         val playerBuilder =
             androidx.media3.exoplayer.ExoPlayer
                 .Builder(this)
@@ -469,7 +468,6 @@ class StreamingPlaybackService : MediaSessionService() {
                         // single Playing state fires right after every recycle too, so resetting
                         // eagerly on it wiped recycleAttempts before it could ever escalate to
                         // the degraded/give-up tier (see StreamHealthMonitor.updateMetrics()).
-                        // Reset recycling mode once we are successfully playing the new stream
                         if (isRecycling) {
                             Log.i(TAG, "Successfully resumed after recycle. Resetting recycling flag.")
                             setRecycling(false)
@@ -625,7 +623,7 @@ class StreamingPlaybackService : MediaSessionService() {
             }
         adaptiveLoadControl?.updateContentType(expectedContentType)
 
-        // DIAGNOSTIC (temporary, see conversation): split startup latency into
+        // DIAGNOSTIC (temporary): split startup latency into
         // request-init -> first-byte -> STATE_READY so a slow provider/DNS can be told
         // apart from a slow buffer gate. Remove once the 30s VOD startup is root-caused.
         val startupTiming = StartupTimingTransferListener(bandwidthMeter, _streamStartTimeMs.value)
@@ -1282,7 +1280,6 @@ class StreamingPlaybackService : MediaSessionService() {
             if (playWhenReady) {
                 onWakeLockRequired()
             }
-            // Trigger immediate save when play/pause state changes
             if (player.playbackState == Player.STATE_READY) {
                 onPositionSave?.invoke(player.currentPosition, player.duration, !playWhenReady, null, null)
             }
@@ -1293,7 +1290,6 @@ class StreamingPlaybackService : MediaSessionService() {
             if (isPlaying) {
                 onWakeLockRequired()
             }
-            // Trigger immediate save when play/pause state changes
             if (player.playbackState == Player.STATE_READY) {
                 onPositionSave?.invoke(player.currentPosition, player.duration, !isPlaying, null, null)
             }
