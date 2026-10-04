@@ -34,6 +34,7 @@ in their own `docs:` commit, never amended into a lane's code commit.
 
 Deployed: days 1–4 (`main` at `1e413854`) installed in place on both Shields (mdarcy, darcy) on 2026-10-03 16:39, app data backed up first (`backups/*-20261003-163920.tar.gz`).
 Deployed: everything through the regression round (`main` at `0ab0d25b`) installed in place on both Shields (mdarcy, darcy) and the Bravia on 2026-10-03 19:37, app data backed up first (`backups/*-20261003-1937*.tar.gz`).
+Deployed: everything through the process-death fix (`main` at `6e109058`) installed in place on both Shields and the Bravia on 2026-10-03 20:54, app data backed up first (`backups/*-20261003-205436.tar.gz`).
 
 Verified on: TV = Television_1080p emulator, phone = Pixel_10 emulator; real devices only at
 release time (`docs/RUN_GUIDE.md`).
