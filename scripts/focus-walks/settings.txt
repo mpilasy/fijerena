@@ -34,7 +34,7 @@ LEFT	Playback
 UP	Source & guide
 RIGHT	Switch source
 DOWN	Edit this source / ›
-DOWN	Guide Sources / 4.4K channels, 177.8K programmes
+DOWN	Guide Sources / 4.4K channels, 170.0K programmes
 LEFT	Source & guide
 UP	Profiles
 # Up at the top of the rail stays put (the header has nothing to focus).

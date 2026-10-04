@@ -10,19 +10,19 @@
 # the expected focus are unchanged.
 # Written 2026-10-03 from the plan.
 # OK opens the preview on this channel; the panel shows this category, focus on its row.
-CENTER
+CENTER	3 / 3Cat Exclusiu 1 (1080p) [Geo-blocked] / Hold OK or press Menu for actions
 # Two rows down; the preview retunes to the focused row once focus has rested (800 ms).
-DOWN
-DOWN
-WAIT 2
+DOWN	3 / 3ABN French / Hold OK or press Menu for actions
+DOWN	3 / 3ABN International (720p) / Hold OK or press Menu for actions
+WAIT 2	3 / 3ABN International (720p) / Hold OK or press Menu for actions
 # OK promotes the focused (now playing) channel to full screen.
 CENTER
 # Down zaps to the next channel of the same list.
 DOWN
 WAIT 3
 # Back demotes to the preview: focus on the zapped-to channel's row in the panel.
-BACK
+BACK	3 / 3ABN Latino / Hold OK or press Menu for actions
 # Back leaves the preview. Expected: the browse list with focus on the zapped-to channel (three
 # rows below the one the walk started on), not the row that opened the preview and not the
 # category row.
-BACK
+BACK	3 / 3ABN Latino / Hold OK or press Menu for actions

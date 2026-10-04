@@ -32,6 +32,8 @@ DOWN	Display
 DOWN	Live sync
 DOWN	Backup & storage
 RIGHT	Export Settings
+# Developer mode only (the emulator has it on); drop this line without it.
+DOWN	Quick Import from Downloads
 DOWN	Shrink Database
 DOWN	Guide data maintenance
 CENTER	Cleanup

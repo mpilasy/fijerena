@@ -18,12 +18,12 @@ DOWN	Recent
 # Changed (F-C-5, R2): Right from a category enters the item pane on the remembered row — the
 # row focus started on, not the row level with the category. Text varies, so not asserted.
 # Phase 3: a regular category has no ★ stop any more either; Right goes straight to the items.
-RIGHT	2 / 24 Horas Catalunya (720p)
+RIGHT	3 / 3ABN Latino / Hold OK or press Menu for actions
 # Changed in Phase 3 (F-C-5, R3): the hidden "Add to Favorites" star is gone. Right from a
 # stream goes nowhere (the item pane has no right neighbour); focus stays on the row.
-RIGHT	2 / 24 Horas Catalunya (720p)
+RIGHT	3 / 3ABN Latino / Hold OK or press Menu for actions
 # Down goes to the next row.
-DOWN	3 / 3ABN Latino
+DOWN	3 / 3Cat Exclusiu 1 (1080p) [Geo-blocked] / Hold OK or press Menu for actions
 # Changed (F-C-3, R1/R2): Left from an item lands on the selected category, not the one level
 # with it ("Recent Categories" before).
 LEFT	Recent

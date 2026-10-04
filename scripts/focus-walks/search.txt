@@ -3,15 +3,15 @@
 # beforehand, then Back out and in again). Focus is on the field, no keyboard (F-S-1).
 # Written 2026-10-03 from the plan, not yet recorded — re-record with -r on the emulator.
 # The recent-search chip shows the term only, so its line is left unchecked until recorded.
-@start Enter stream name
+@start Enter stream name…
 # Down from the field → the first recent search, not the "Clear all" icon (F-S-2).
-DOWN
-UP	Enter stream name
+DOWN	news
+UP	Enter stream name…
 # Right reaches the trailing buttons: the search button (the clear × only shows with text).
 RIGHT	Search
-LEFT	Enter stream name
+LEFT	Enter stream name…
 # OK opens the keyboard on the field (not asserted: the focused node is the text field).
-CENTER
-WAIT 1
+CENTER	Enter stream name…
+WAIT 1	Enter stream name…
 # Back closes the keyboard and leaves focus on the resting field, not on the screen root.
-BACK	Enter stream name
+BACK	Enter stream name…

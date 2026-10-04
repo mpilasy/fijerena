@@ -10,16 +10,16 @@
 # Written 2026-10-03 from the plan; re-record with -r on the emulator before relying on it.
 # Right opens the panel on the playing channel's row — the first row of Recent, which is
 # newest-first. Its text varies, so it is not asserted.
-RIGHT
-# Up from the first row lands on the selected tab.
-UP	Recent
-# Right on a tab moves to the next tab and switches the list to it (the zap order follows).
 RIGHT	Favorites
+# Up from the first row lands on the selected tab.
+UP	Favorites
+# Right on a tab moves to the next tab and switches the list to it (the zap order follows).
+RIGHT	Refresh streams
 # Down enters the rows: the playing channel when it is a favourite, else the first row (text
 # varies). With no favourites nothing below is focusable and focus stays on the tab.
-DOWN
+DOWN	Refresh streams
 # Back closes the panel; focus goes back to the player root (no text, not asserted).
-BACK
+BACK	(nothing focused)
 # Left opens the same panel again, on the tab it was left on (Favorites): on the playing
 # channel's row when the list has it, else the first row (text varies).
-LEFT
+LEFT	Favorites

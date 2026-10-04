@@ -25,4 +25,4 @@ UP	Recent
 # Left on a tab moves to the previous tab and switches the list back.
 LEFT	Recent
 # Down lands on the current channel row again (text varies).
-DOWN	2 / 24 Horas Catalunya (720p) / Hold OK or press Menu for actions
+DOWN	3 / 3ABN French / Hold OK or press Menu for actions

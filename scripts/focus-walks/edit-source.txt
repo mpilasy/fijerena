@@ -11,9 +11,9 @@
 # Steps marked "re-record" depend on Compose's geometric Down from the Recent row size's Edit
 # button onto the option rows (m3u8 or ts, m3u_plus or simple) and are asserted loosely.
 @start Edit Source Name
-DOWN	Edit M3U Playlist URL
-DOWN	Cancel
-DOWN	Cancel
+DOWN	Edit Server URL
+DOWN	Edit Username
+DOWN	Edit Password
 # Down from the last field lands on Cancel, not on whichever button sits under the edit icon.
 DOWN	Cancel
 RIGHT	Save connection
@@ -22,10 +22,10 @@ RIGHT	Auto-Resume / Resume VOD content from where you left off
 # Recent row size ("Last Watched Queue Size"): its Edit button.
 DOWN	Edit
 # Stream format: m3u8 (re-record: may land on ts).
-DOWN	Clear All Favorites
+DOWN	m3u8
 # Playlist type: m3u_plus (re-record: may land on simple).
-DOWN	Clear All Progress
+DOWN	m3u_plus
 # Left goes back to the Connection column, on the row it left.
 LEFT	Save connection
 # Right comes back to the settings row it left.
-RIGHT	Clear All Progress
+RIGHT	m3u_plus

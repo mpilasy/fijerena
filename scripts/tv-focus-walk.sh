@@ -9,6 +9,9 @@
 # MENU, or `WAIT <seconds>`. `expected` is a substring of the focused node's text; leave it
 # empty to send the key without checking. A first line `@start <substring>` checks focus
 # before any key is sent. `#` comments and blank lines are ignored.
+# After the first mismatch a check run no longer sends CENTER (the walk is off its path and OK
+# would press whatever is focused); record mode replays every key, so record only from a
+# start state the check run has matched.
 # Focus is read the way the 2026-10-03 audit did: `uiautomator dump`, then the text and
 # content-desc of the focused="true" node and its descendants (first four, joined by " / ").
 # One driver per device: never run this while anything else is sending keys to it.
@@ -77,6 +80,9 @@ for walk in "$@"; do
     step=0
     mismatch=0
     recorded=""
+    # After a mismatch the walk is off its path: OK would press whatever is focused instead (an
+    # extra Settings row once made it press Shrink Database), so CENTER is no longer sent.
+    derailed=false
     while IFS= read -r line || [ -n "$line" ]; do
         line="${line%$'\r'}"
         case "$line" in
@@ -94,6 +100,14 @@ for walk in "$@"; do
         case "$key" in
             @start) ;;
             "WAIT "*) sleep "${key#WAIT }"; step=$((step + 1)) ;;
+            CENTER) if [ "$derailed" = true ]; then
+                       step=$((step + 1))
+                       printf '%-3s %-8s →  %s\n' "$step" "$key" "skipped (after a mismatch)"
+                       continue
+                   fi
+                   adb -s "$SERIAL" shell input keyevent "$(keycode "$key")" </dev/null
+                   sleep "$DELAY"
+                   step=$((step + 1)) ;;
             *) code="$(keycode "$key")"
                adb -s "$SERIAL" shell input keyevent "$code" </dev/null
                sleep "$DELAY"
@@ -115,6 +129,7 @@ for walk in "$@"; do
             else
                 verdict="MISMATCH (expected \"$expected\")"
                 mismatch=$((mismatch + 1))
+                derailed=true
             fi
         fi
         printf '%-3s %-8s →  %s%s\n' "$step" "$key" "$got" "${verdict:+  $verdict}"
