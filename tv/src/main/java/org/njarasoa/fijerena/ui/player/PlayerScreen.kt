@@ -283,6 +283,12 @@ fun PlayerScreen(
                             false
                         }
 
+                        // Error up, OSD hidden: its Retry and Back get the D-pad and OK.
+                        playbackState is PlaybackState.Error && !state.showControls && !state.isModalOpen &&
+                            keyEvent.key in UP_NEXT_CARD_KEYS -> {
+                            false
+                        }
+
                         // Card up, OSD hidden, focus on the player: Down moves onto the card.
                         upNextVisible && !state.showControls && !state.isModalOpen && keyEvent.key == Key.DirectionDown -> {
                             if (keyEvent.type == KeyEventType.KeyDown) upNextFocus.requestFocus()
@@ -579,7 +585,7 @@ private const val CHANNEL_PANEL_WIDTH_FRACTION = 0.34f
 /** The glass the channel flyouts had over video, kept for the panel. */
 private const val CHANNEL_PANEL_BACKGROUND_ALPHA = 0.5f
 
-/** Keys the "Up next" card's buttons get while it holds focus. */
+/** Keys the "Up next" card's buttons, and the error's Retry and Back, get while they hold focus. */
 private val UP_NEXT_CARD_KEYS =
     setOf(Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight, Key.DirectionCenter, Key.Enter)
 

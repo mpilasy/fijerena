@@ -3,6 +3,7 @@ package org.njarasoa.fijerena.core.player.source
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import org.njarasoa.fijerena.core.player.config.NetworkBufferProfile
 import org.njarasoa.fijerena.core.player.config.NetworkType
@@ -26,6 +27,10 @@ class AdaptiveLoadErrorPolicy(
         }
 
     override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
+        // The account is busy elsewhere: surface it at once — the service waits it out.
+        val httpStatus = (loadErrorInfo.exception as? HttpDataSource.InvalidResponseCodeException)?.responseCode
+        if (AccountBusy.isAccountBusy(httpStatus)) return C.TIME_UNSET
+
         val errorCount = loadErrorInfo.errorCount
         val maxRetries = getMinimumLoadableRetryCount(loadErrorInfo.mediaLoadData.dataType)
 

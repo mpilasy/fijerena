@@ -41,6 +41,8 @@ import org.njarasoa.fijerena.core.player.model.PlaybackState
 import org.njarasoa.fijerena.core.player.model.PlayerMetadata
 import org.njarasoa.fijerena.core.player.model.PositionSave
 import org.njarasoa.fijerena.core.player.network.NetworkMonitor
+import org.njarasoa.fijerena.core.player.source.AccountBusy
+import org.njarasoa.fijerena.core.player.source.AccountBusyWait
 import org.njarasoa.fijerena.core.player.source.StreamingMediaSourceFactory
 import java.util.UUID
 
@@ -143,6 +145,7 @@ class StreamingPlaybackService : MediaSessionService() {
     private var pendingResumePositionMs: Long = 0L
     internal var mainHandler = Handler(Looper.getMainLooper())
     private var pendingRetry: Runnable? = null
+    private val accountBusyWait = AccountBusyWait()
 
     private var adaptiveLoadControl: AdaptiveLoadControl? = null
     private var bandwidthMeter: androidx.media3.exoplayer.upstream.DefaultBandwidthMeter? = null
@@ -496,6 +499,7 @@ class StreamingPlaybackService : MediaSessionService() {
                 onStreamEndedOrError = { errorMessage ->
                     handleStreamEndedOrError(errorMessage)
                 },
+                onAccountBusy = ::handleAccountBusy,
                 streamStartTimeMs = { _streamStartTimeMs.value },
             )
         player.addListener(playerListener!!)
@@ -592,6 +596,7 @@ class StreamingPlaybackService : MediaSessionService() {
         playerListener?.resetStartupTiming()
         retryCount = 0
         autoRetryAttempted = false
+        accountBusyWait.reset()
         lastErrorMessage = null
         pendingResumePositionMs = 0L
         healthMonitor?.notifyStablePlayback()
@@ -764,30 +769,63 @@ class StreamingPlaybackService : MediaSessionService() {
 
         val retryRunnable =
             Runnable {
-                val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return@Runnable
                 playerListener?.resetErrorState()
-                healthMonitor?.reset()
-
-                val mediaSource =
-                    mediaSourceFactory?.createMediaSource(
-                        streamUrl = metadata.streamUrl,
-                        headers = metadata.headers,
-                        isLive = metadata.isLive,
-                        onRetry = { _streamRetryCount.update { it + 1 } },
-                        transferListener = bandwidthMeter,
-                        metadata = metadata,
-                    ) ?: return@Runnable
-
-                player.setMediaSource(mediaSource)
-                // Live reconnects at the live edge; VOD must resume where it failed.
-                if (!metadata.isLive && resumePosition > 0L) {
-                    player.seekTo(resumePosition)
-                }
-                player.playWhenReady = true
-                player.prepare()
+                reprepare(metadata, resumePosition)
             }
         pendingRetry = retryRunnable
         mainHandler.postDelayed(retryRunnable, delayMs)
+    }
+
+    private fun reprepare(
+        metadata: PlayerMetadata,
+        resumePosition: Long,
+    ) {
+        val player = mediaSession?.player as? androidx.media3.exoplayer.ExoPlayer ?: return
+        healthMonitor?.reset()
+
+        val mediaSource =
+            mediaSourceFactory?.createMediaSource(
+                streamUrl = metadata.streamUrl,
+                headers = metadata.headers,
+                isLive = metadata.isLive,
+                onRetry = { _streamRetryCount.update { it + 1 } },
+                transferListener = bandwidthMeter,
+                metadata = metadata,
+            ) ?: return
+
+        player.setMediaSource(mediaSource)
+        // Live reconnects at the live edge; VOD must resume where it failed.
+        if (!metadata.isLive && resumePosition > 0L) {
+            player.seekTo(resumePosition)
+        }
+        player.playWhenReady = true
+        player.prepare()
+    }
+
+    /**
+     * The provider refused the stream because the account is streaming elsewhere ([AccountBusy]).
+     * Retrying at once can't help, so the message stays up — saying playback starts by itself —
+     * while the stream is tried again every [AccountBusy.RETRY_INTERVAL_MS], for longer than the
+     * ~5 minutes some providers keep a stopped stream counted. Retry and Back work as usual.
+     */
+    private fun handleAccountBusy(httpStatus: Int) {
+        val metadata = _currentMetadata.value
+        cancelPendingRetry()
+        pendingResumePositionMs = getPlayer()?.currentPosition?.coerceAtLeast(0L) ?: pendingResumePositionMs
+        if (accountBusyWait.next(SystemClock.elapsedRealtime()) == AccountBusyWait.Decision.GiveUp) {
+            _playbackState.value = PlaybackState.Error(getString(R.string.player_error_account_busy_gave_up_format, httpStatus))
+            return
+        }
+        _playbackState.value = PlaybackState.Error(getString(R.string.player_error_account_busy_waiting_format, httpStatus))
+        val resumePosition = pendingResumePositionMs
+        val retryRunnable =
+            Runnable {
+                // The message stays up through the attempt; only playing again replaces it.
+                playerListener?.holdErrorUntilReady()
+                reprepare(metadata, resumePosition)
+            }
+        pendingRetry = retryRunnable
+        mainHandler.postDelayed(retryRunnable, AccountBusy.RETRY_INTERVAL_MS)
     }
 
     private fun cancelPendingRetry() {
@@ -1234,17 +1272,25 @@ class StreamingPlaybackService : MediaSessionService() {
         private val player: Player,
         private val onPositionSave: ((Long, Long, Boolean, Int?, Int?) -> Unit)? = null,
         private val onStreamEndedOrError: (errorMessage: String?) -> Unit = {},
+        private val onAccountBusy: (httpStatus: Int) -> Unit = {},
         // DIAGNOSTIC (temporary): wall-clock playStream() start, so the first STATE_READY
         // after a new stream can log total prepare-to-ready latency.
         private val streamStartTimeMs: () -> Long = { 0L },
     ) : Player.Listener {
         private var isInErrorState = false
+        private var errorHeldUntilReady = false
         private val saveIntervalMs = POSITION_SAVE_INTERVAL_MS
         private var lastSavedPosition = -saveIntervalMs
         private var loggedFirstReady = false
 
         fun resetErrorState() {
             isInErrorState = false
+            errorHeldUntilReady = false
+        }
+
+        /** Keeps the error on screen through a retry until the stream actually plays. */
+        fun holdErrorUntilReady() {
+            errorHeldUntilReady = true
         }
 
         // DIAGNOSTIC (temporary): rearm the STATE_READY timing log for the next stream.
@@ -1298,6 +1344,13 @@ class StreamingPlaybackService : MediaSessionService() {
 
         override fun onPlayerError(error: PlaybackException) {
             isInErrorState = true
+            errorHeldUntilReady = false
+            val httpStatus =
+                if (error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS) extractHttpStatusCode(error) else null
+            if (httpStatus != null && AccountBusy.isAccountBusy(httpStatus)) {
+                onAccountBusy(httpStatus)
+                return
+            }
             val errorMessage = parsePlaybackError(error)
             onStreamEndedOrError(errorMessage)
         }
@@ -1409,7 +1462,11 @@ class StreamingPlaybackService : MediaSessionService() {
         }
 
         private fun updatePlaybackState() {
-            if (isInErrorState) return
+            if (isInErrorState) {
+                if (!errorHeldUntilReady || player.playbackState != Player.STATE_READY) return
+                isInErrorState = false
+                errorHeldUntilReady = false
+            }
 
             val state =
                 when (player.playbackState) {

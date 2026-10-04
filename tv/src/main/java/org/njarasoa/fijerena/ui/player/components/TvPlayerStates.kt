@@ -21,10 +21,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -37,6 +40,7 @@ import org.njarasoa.fijerena.core.ui.R
 import org.njarasoa.fijerena.core.ui.components.MitohanaLoading
 import org.njarasoa.fijerena.ui.components.buttons.CinemaPrimaryButton
 import org.njarasoa.fijerena.ui.components.buttons.CinemaSecondaryButton
+import org.njarasoa.fijerena.ui.components.input.requestFocusWithRetry
 import org.njarasoa.fijerena.ui.theme.CinemaAccent
 import org.njarasoa.fijerena.ui.theme.CinemaBackground
 import org.njarasoa.fijerena.ui.theme.CinemaError
@@ -83,6 +87,8 @@ fun ErrorContent(
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context.applicationContext) }
     val isDevMode = appSettings.isDevMode
+    val retryFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { retryFocus.requestFocusWithRetry() }
 
     Box(
         modifier =
@@ -178,7 +184,11 @@ fun ErrorContent(
                 CinemaPrimaryButton(
                     onClick = onRetry,
                     text = stringResource(R.string.player_retry),
-                    modifier = Modifier.width(TvDimensions.epgTimeSlotWidth).height(TvDimensions.trackItemHeight),
+                    modifier =
+                        Modifier
+                            .width(TvDimensions.epgTimeSlotWidth)
+                            .height(TvDimensions.trackItemHeight)
+                            .focusRequester(retryFocus),
                 )
                 CinemaSecondaryButton(
                     onClick = onBack,

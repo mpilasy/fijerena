@@ -1,5 +1,10 @@
 # Release Notes - Complete Player Enhancement Suite
 
+## Version: Account in use
+**Release Date:** 2026-10-04
+
+- **Switching TVs on a one-connection account:** a provider can keep a stopped stream counted for a few minutes when the next one comes from a different internet address (a phone on mobile data, a TV routed through a VPN), so that device was refused (HTTP 460) and sat on "Buffering" for about a minute and a half before an error. It now says at once that the account is streaming on another device, tries again every 20 seconds and starts playing by itself when the provider frees the account (up to 6 minutes). The TV error screen now puts focus on Retry, so Retry and Back can be reached with the remote.
+
 ## Version: Sources, guide and profiles
 **Release Date:** 2026-10-03
 
