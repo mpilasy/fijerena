@@ -793,9 +793,8 @@ class EpgBrowserViewModel(
     }
 
     private fun groupByChannel(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
-        // For "What's on", we group by channel name and reuse EpgBrowserDateGroup
-        // with the channel name as the label.
-        // Group by channelId directly to avoid allocating temporary Pair objects for every airing
+        // "What's on" reuses EpgBrowserDateGroup with the channel name as the label. Grouped by
+        // channelId directly to avoid allocating a temporary Pair for every airing.
         val byChannel = airings.groupBy { it.airing.channelId }
 
         return byChannel.entries

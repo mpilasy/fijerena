@@ -16,7 +16,7 @@ import org.njarasoa.fijerena.core.network.sync.SyncAccountStore
 import org.njarasoa.fijerena.core.network.sync.SyncEngine
 
 /**
- * Debug builds only: drives live sync over adb until Phase 9's settings screen exists. Results go
+ * Debug builds only: drives live sync over adb, for scripted checks (Settings → Live sync is the UI). Results go
  * to logcat under `SyncDebug`. The receiver requires `android.permission.DUMP`, which the adb shell
  * holds and other apps don't.
  *
