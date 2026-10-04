@@ -125,7 +125,7 @@ internal fun LiveTvSplitLayout(
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
 
     // The channel the preview plays: set by the entry seed below and by OK on a row (P8 of
-    // docs/plans/20261003_sources-guide-profiles-plan.md) — focus moves never change it, so moving
+    // docs/plans/archive/20261003_sources-guide-profiles-plan.md) — focus moves never change it, so moving
     // through the list doesn't tune anything.
     var previewTarget by remember { mutableStateOf<MediaItem?>(null) }
 

@@ -38,7 +38,7 @@ sealed interface Screen {
     /**
      * A profile's page (mobile; TV opens it inside Settings): name, colour, its own settings, its
      * content filters for the source in use, Switch to this profile, Delete. See
-     * docs/plans/20261003_sources-guide-profiles-plan.md → P9.
+     * docs/plans/archive/20261003_sources-guide-profiles-plan.md → P9.
      */
     @Serializable
     data class ProfileEdit(

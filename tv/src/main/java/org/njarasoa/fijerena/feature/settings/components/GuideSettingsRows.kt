@@ -59,7 +59,7 @@ import org.njarasoa.fijerena.ui.theme.scaled
  * The guide's device-wide maintenance, moved out of the per-source EPG Management screen into
  * Settings → Backup & storage (A-9, T6, as M5 did on mobile): a value row that drills into a
  * sub-pane in place of the group's rows, like the choice pickers. Auto-refresh is set on each
- * guide source's row (docs/plans/20261003_sources-guide-profiles-plan.md → P5b).
+ * guide source's row (docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5b).
  */
 
 /** "Guide data maintenance" card (Backup & storage): the guide database's state; OK opens [GuideMaintenancePane]. */

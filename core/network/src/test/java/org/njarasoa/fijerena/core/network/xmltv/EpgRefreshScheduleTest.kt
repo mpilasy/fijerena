@@ -14,7 +14,7 @@ import org.njarasoa.fijerena.core.network.fixtures.FakeSharedPreferences
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity.Companion.REFRESH_OFF
 
-/** Each guide source refreshes by its own interval — see docs/plans/20261003_sources-guide-profiles-plan.md → P5. */
+/** Each guide source refreshes by its own interval — see docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5. */
 class EpgRefreshScheduleTest {
     private val hour = 3_600_000L
     private val now = 1_000_000 * hour

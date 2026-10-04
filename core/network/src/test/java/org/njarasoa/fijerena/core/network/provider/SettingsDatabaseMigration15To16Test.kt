@@ -20,7 +20,7 @@ import org.robolectric.annotation.Config
  * [SettingsDatabase.MIGRATION_15_16] adds `epg_source.refresh_interval_hours` as a nullable column
  * (null = not set), and the one-time copy of the retired device-wide interval fills only the rows
  * still unset, sending nothing to live sync. On the JVM under Robolectric, against the exported
- * schemas (`core/network/schemas`). See `docs/plans/20261003_sources-guide-profiles-plan.md` → P5.
+ * schemas (`core/network/schemas`). See `docs/plans/archive/20261003_sources-guide-profiles-plan.md` → P5.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])

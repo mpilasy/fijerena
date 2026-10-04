@@ -7,7 +7,7 @@ import org.njarasoa.fijerena.core.ui.navigation.SectionRoot
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 
 /**
- * The section-root button (D4, docs/plans/20261003_sources-guide-profiles-plan.md → P6) as a
+ * The section-root button (D4, docs/plans/archive/20261003_sources-guide-profiles-plan.md → P6) as a
  * top-bar action, the bar's last: back to the section's first screen (Movies, Settings…), shown
  * four or more screens above Home — the nav host decides, see
  * [org.njarasoa.fijerena.core.ui.navigation.sectionRootFor]. Its content description is the

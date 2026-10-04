@@ -28,7 +28,7 @@ import org.njarasoa.fijerena.core.network.xtream.db.XtreamDatabase
 
 /**
  * A guide source's own refresh interval travels with its record; a record without one (an older
- * version) keeps this device's value. See docs/plans/20261003_sources-guide-profiles-plan.md → P5.
+ * version) keeps this device's value. See docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5.
  */
 class SyncApplierEpgSourceTest {
     private val sync = mockk<SettingsSyncDao>(relaxed = true)

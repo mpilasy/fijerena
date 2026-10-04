@@ -23,7 +23,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
 /**
  * A profile's page edits that profile's content filters for the source in use; only the profile
  * this device uses has them applied straight away. See
- * docs/plans/20261003_sources-guide-profiles-plan.md → P9.
+ * docs/plans/archive/20261003_sources-guide-profiles-plan.md → P9.
  */
 class ProfileCategoryFiltersEditTest {
     private val prefsFiles = mutableMapOf<String, SharedPreferences>()

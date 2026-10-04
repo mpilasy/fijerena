@@ -6,7 +6,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 
 /**
- * The section-root button (docs/plans/20261003_sources-guide-profiles-plan.md → D4, P6) shows on a
+ * The section-root button (docs/plans/archive/20261003_sources-guide-profiles-plan.md → D4, P6) shows on a
  * screen this many back-stack entries above Home ([Screen.ContentTypeSelection]) or more.
  */
 const val HOME_BUTTON_MIN_DEPTH = 4

@@ -16,7 +16,6 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-03 | [Sources, guide sources, profiles and Home](./20261003_sources-guide-profiles-plan.md) | Developer mode, play next episode, content filters and Switch to on the profile page; "Provides a guide" per source; guide sources under Edit Source (and from Search the guide) and Settings down to Manage sources; auto-refresh per guide source; a button back to the section's root from 4 screens deep; Home keeps one guide button, search ↔ grid, no channel search; TV Live TV preview plays on OK only | All nine phases; decisions taken, not started |
 | 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
 
@@ -24,6 +23,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Summary | Status |
 |---|---|---|---|
+| 2026-10-03 | [Sources, guide sources, profiles and section root](./archive/20261003_sources-guide-profiles-plan.md) | Profile page (switch to, developer mode, play next, content filters); "Provides a guide" per source; guide sources under Edit Source and Search the guide; auto-refresh per guide source (providers.db 16); section-root button from 4 deep; Home keeps Search the guide; TV preview plays on OK | Done |
 | 2026-10-03 | [UX overhaul](./archive/20261003_ux-overhaul-plan.md) | Settings rebuilt on TV and mobile, app-wide TV focus rules, Live TV flows, rebuilt TV Guide | Done; native-speaker review of a few mg terms deferred |
 | 2026-10-02 | [Provider to Source rename](./archive/20261002_provider-to-source-rename-plan.md) | "Provider" is "Source" everywhere in the UI, in all three languages | Done |
 | 2026-10-02 | [Profile last provider](./archive/20261002_profile-last-provider-plan.md) | Each profile returns to the source it last picked, synced across devices | Done |

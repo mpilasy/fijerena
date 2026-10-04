@@ -1,6 +1,6 @@
 # Sources, Guide Sources, Profiles and Home Plan — TV + mobile
 
-**Status:** In progress (since 2026-10-03). All decisions taken (D1–D8, 2026-10-03).
+**Status: done (2026-10-04).** All nine phases merged and checked on the TV and phone emulators. All decisions taken (D1–D8, 2026-10-03).
 
 ## Progress
 
@@ -10,7 +10,7 @@
 | B Profile page | P1 → P2 → P9 | P1, P2, P9 (2026-10-04, TV and phone) | — | — |
 | C Sources & guide UI | P3 → P4 → P7 | P3, P4, P7 (2026-10-04, TV and phone) | — | — |
 | D Guide refresh | P5a backend → P5b UI | P5a, P5b (2026-10-04, TV and phone) | — | — |
-| Last | P6 | — | P6 (since 2026-10-04) | — |
+| Last | P6 | P6 (2026-10-04, TV and phone) | — | — |
 
 | Phase | State |
 |---|---|
@@ -20,7 +20,7 @@
 | P4 Guide sources under the source; Settings shows Manage sources only | **Done 2026-10-04** (`665a48f9`), checked on the TV: Settings → Source & guide → Manage sources (value: source URL and expiry) → Sources list → Back lands on Manage sources; Edit Source → Guide Sources ("1 · last refresh …") → guide sources → Back lands on the row; Search the guide's Guide sources button → guide sources → Back lands on it. Phone: Manage sources is the only source row; Edit Source has a Guide card (Provides a guide, Guide Sources ›) and no filters; Search the guide's top bar has TV Guide, Refresh and Guide sources. |
 | P5a Auto-refresh per guide source: database, worker, sync, export | **Done 2026-10-04** (`e585911f`): nullable `refresh_interval_hours`, `providers.db` 16, guarded one-time copy (flag `epg_refresh_interval_copied_v1`, writes without sync triggers), worker at the shortest interval (rescheduled by watching `epg_source`), sync and export fields, Robolectric migration test (Robolectric 4.17) + 21 unit tests. Upgrade checked on the TV emulator (version 15 → 16, both guide sources got the old 24 h, flag set, `epg_sync` periodic at 24 h) and the phone (16, data kept). Accepted side effect: with every guide source off, `epg_sync` is cancelled, so the orphan-catalogue sweep then runs only at app start. Left for P5b: the old Settings rows still write the retired keys, which still sync and export; intervals like 4/8/48 h copied as they are, the picker must show them. |
 | P5b Auto-refresh per guide source: guide sources rows, Settings | **Done 2026-10-04** (`65e032e9`): each guide source row reads "Refreshes daily/weekly/every N hours" or "Auto-refresh off" and has a visible **Auto-refresh** button (labelled buttons, as AGENTS rule 1 asks for guide-source rows, rather than a long-press menu) opening a picker (Off / 6 h / 12 h / daily / weekly, plus an odd stored value as an extra option); the device-wide auto-refresh row, sub-pane and dialogs, and Settings' EPG card, are gone; retired keys no longer synced or exported. Checked on the TV: picking Weekly stored 168 h and the row updated; the job stayed at 24 h because another source's guide is still daily. On the phone: same row and dialog, and the TV's Weekly arrived by live sync. |
-| P6 Section-root button at depth 4 | In progress (since 2026-10-04) |
+| P6 Section-root button at depth 4 | **Done 2026-10-04** (`058948cb`): `HOME_BUTTON_MIN_DEPTH = 4`, `sectionRootIndex` (pure, 5 unit tests) and `popUpToEntry` (one pop at a time) in core/navigation; button on the screens that can be 4 deep today — category lists, movie and episode details, Search, TV Guide, Search the guide, guide sources (Settings, Sources, Live sync, Diagnostics and Edit Source never reach depth 4 with today's navigation, so they don't carry it). Checked on the TV: Settings → Manage sources → Edit Source → Guide sources shows "Settings" (header, Up from Add) → Settings on Manage sources → Back → Home; Movies → film → its category → another film shows "Movies" after More → Movies on the first film's row → Back → Home. Phone: the "Settings" top-bar icon at guide sources → Settings → Back → Home. |
 | P7 Home keeps Search the guide; search → grid; no channel search | **Done 2026-10-04** (`04590bef`), checked on the TV: Home header has Search the guide and Search All, no TV Guide; Search the guide has no mode chips; its TV Guide button opens "TV Guide - Recent" and Back lands on the button. Phone: no calendar on Home, no Prog./Chan. options, the calendar opens the Recent grid and Back returns to the search. |
 | P8 Live TV preview plays on OK, not on focus (TV only) | **Done 2026-10-03** (`6bda98f9`), checked on the TV emulator with bearstv: Down/Up through rows and Right to another tab left the channel alone; OK on another row tuned it ("Tuning · …"), OK again went full screen; Back → preview on that channel → browse on it; new hint line. Playback itself returned HTTP 511 (bearstv's one-connection limit, a Shield was using it). OK on a row with nothing playing yet plays it. Rechecked on iptv with real playback (9 Plus News: OK plays it, OK again full screen, same stream); `live-tv-preview.txt` and `live-tv-back.txt` re-recorded on iptv. |
 | P9 Content filters from the profile, not from the source | **Done 2026-10-04** (`87715009`), checked on the TV: the profile page (name, Colour ›, Developer mode, Play next episode, Content filters ›, Switch to this profile, Save, Cancel, Delete last) opens in place in Settings → Profiles; Content filters › on Kid's page (atr in use, bearstv) opens the editor titled "Content filters · bearstv", Back returns to the row; hidden on iptv (filters act on Xtream only). Not changed on purpose: no filters edited on the emulator. Edit Source's filters section and `focusFilters` removed. Phone: the Edit profile screen (name, colour swatches, Developer mode, Play next episode, Content filters › bearstv, Switch to this profile, Cancel / Save, Delete) and the filter dialog titled "Content filters · bearstv"; Settings has no filters, Developer Mode or play-next rows. |
@@ -152,8 +152,8 @@ copied from the profile in use, as today; developer mode starts off).
 and changes it from the row's action menu (TV: long-press OK / Menu, a picker; mobile: the row's
 ⋮). New guide sources start at the default (daily).
 
-**Section-root button (both platforms, D4):** on any screen 4 or more entries above Home, except
-the player, its OSD and the Live TV preview. It returns to the root of the section — the first
+**Section-root button (both platforms, D4):** on screens 4 or more entries above Home (in practice
+the screens that can get that deep), except the player, its OSD and the Live TV preview. It returns to the root of the section — the first
 screen above Home in the stack (Movies, TV Shows, Live TV, Search, Settings) — discarding
 everything above it, and is labelled with that destination. The root keeps its saved state, so
 Movies comes back on the category and scroll where browsing started; Home stays one Back away. It

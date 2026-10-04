@@ -32,7 +32,7 @@ import org.njarasoa.fijerena.core.ui.viewmodels.EpgManagementViewModel.Companion
 /**
  * Each guide source's auto-refresh, set from its row: the picker's options (an interval copied
  * from the retired device-wide setting stays on offer) and the write. See
- * docs/plans/20261003_sources-guide-profiles-plan.md → P5b.
+ * docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5b.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class EpgManagementRefreshIntervalTest {

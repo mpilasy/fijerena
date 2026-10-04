@@ -11,7 +11,7 @@ import org.njarasoa.fijerena.core.network.SettingsExportManager.ExportedSettings
 import org.njarasoa.fijerena.core.network.SettingsExportManager.GlobalSettings
 import org.njarasoa.fijerena.core.network.provider.EpgSourceEntity.Companion.REFRESH_OFF
 
-/** A guide source's own refresh interval in a settings file — see docs/plans/20261003_sources-guide-profiles-plan.md → P5. */
+/** A guide source's own refresh interval in a settings file — see docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5. */
 class SettingsExportEpgIntervalTest {
     private fun decode(file: String) = SettingsExportManager.json.decodeFromString<ExportedSettings>(file)
 

@@ -137,7 +137,7 @@ class EpgManagementViewModel(
 
     /**
      * Sets one guide source's auto-refresh, from its row's picker ([refreshIntervalOptions]); the
-     * row and the periodic work follow from the database (docs/plans/20261003_sources-guide-profiles-plan.md → P5b).
+     * row and the periodic work follow from the database (docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5b).
      */
     fun setRefreshInterval(
         sourceId: Long,

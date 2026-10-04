@@ -11,7 +11,7 @@ import org.njarasoa.fijerena.core.network.provider.SettingsDatabase
  * is due, and the one periodic `epg_sync` work runs at the shortest of them. A row without one of
  * its own (null: there before v16, or received from a device on an older version) uses the retired
  * device-wide interval, [legacyIntervalHours] — the `unsetHours` the functions below take. See
- * `docs/plans/20261003_sources-guide-profiles-plan.md` → P5, D2.
+ * `docs/plans/archive/20261003_sources-guide-profiles-plan.md` → P5, D2.
  */
 object EpgRefreshSchedule {
     private const val HOUR_MS = 3_600_000L

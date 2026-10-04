@@ -40,7 +40,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 /*
  * The guide's device-wide maintenance, moved out of the per-source EPG Management screen into
  * Settings → Backup & storage (A-9, M5). Auto-refresh is set on each guide source's row
- * (docs/plans/20261003_sources-guide-profiles-plan.md → P5b).
+ * (docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5b).
  */
 
 /**

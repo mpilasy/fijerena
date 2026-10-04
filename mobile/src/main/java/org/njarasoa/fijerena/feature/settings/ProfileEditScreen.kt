@@ -47,7 +47,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
  * A profile's page (`Screen.ProfileEdit`, D8): name, colour, its own Developer mode and Play next
  * episode automatically, Content filters › (the source in use, for this profile; Xtream only),
  * Switch to this profile, Save / Cancel, and Delete last. Content filters are saved by their own
- * editor's Save, at once; the rest by Save. See docs/plans/20261003_sources-guide-profiles-plan.md → P9.
+ * editor's Save, at once; the rest by Save. See docs/plans/archive/20261003_sources-guide-profiles-plan.md → P9.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

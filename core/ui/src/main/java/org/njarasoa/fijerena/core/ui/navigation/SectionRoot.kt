@@ -18,7 +18,7 @@ import org.njarasoa.fijerena.core.player.domain.parseDisplayTitle
 import org.njarasoa.fijerena.core.ui.R
 
 /**
- * The section-root button a screen shows (D4, docs/plans/20261003_sources-guide-profiles-plan.md
+ * The section-root button a screen shows (D4, docs/plans/archive/20261003_sources-guide-profiles-plan.md
  * → P6): [label] names where it leads (Movies, Settings…), [onClick] pops back to it. Screens take
  * it as `sectionRoot: SectionRoot?`, null = no button.
  */

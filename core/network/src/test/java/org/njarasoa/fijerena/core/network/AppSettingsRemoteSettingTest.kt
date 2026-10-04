@@ -17,7 +17,7 @@ import org.njarasoa.fijerena.core.network.profile.ProfileEntity
  * crash EPG management on every linked device. See
  * docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-09. The guide
  * auto-refresh keys an older version still sends are retired (each guide source has its own
- * interval, docs/plans/20261003_sources-guide-profiles-plan.md → P5b) and ignored.
+ * interval, docs/plans/archive/20261003_sources-guide-profiles-plan.md → P5b) and ignored.
  */
 class AppSettingsRemoteSettingTest {
     private lateinit var settings: AppSettings
