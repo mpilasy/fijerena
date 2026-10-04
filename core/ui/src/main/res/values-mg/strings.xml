@@ -429,17 +429,13 @@
     <string name="epg_browser_title">Hikaroka ao amin\'ny fandaharana</string>
     <string name="epg_browser_title_with_provider">Hikaroka ao amin\'ny fandaharana — %1$s</string>
     <string name="epg_browser_refresh_stale_description">Havaozina ireo loharanon\'ny fitarihana lany andro</string>
-    <string name="epg_browser_mode_programme">Fandaharana</string>
-    <string name="epg_browser_mode_channel">Fantsona</string>
     <string name="epg_browser_matched_label">Mifanaraka</string>
     <string name="epg_browser_search_titles_placeholder">Karohy ny lohateny…</string>
-    <string name="epg_browser_search_channels_placeholder">Karohy ny fantsona…</string>
     <string name="epg_indexing_progress_count">%1$d%% (%2$s)</string>
     <string name="epg_browser_finalizing_format">mamarana… (%1$s)</string>
     <string name="epg_browser_indexing_label">Mandahatra…</string>
     <string name="epg_browser_optimizing_label">Manatsara…</string>
     <string name="epg_browser_hint_search_titles">Karohy ny lohatenin\'ny fandaharana</string>
-    <string name="epg_browser_hint_search_channels">Karohy amin\'ny anaran\'ny fantsona</string>
     <string name="epg_browser_no_file_message">Tsy misy rakitra EPG.\nAmpidiro URL EPG ao amin\'ny Fandrindrana.</string>
     <string name="epg_browser_watch_confirm_title">Hijery ve izao?</string>
     <string name="epg_browser_watch_confirm_message">Hivoaka amin\'ny %1$s ity fandaharana ity.\nHijery ny %2$s izao?</string>
@@ -552,17 +548,13 @@
     <string name="epg_browser_provider_suffix_format"> — %1$s</string>
     <string name="epg_browser_dev_stats_counts_format">fandaharana %1$s, fantsona %2$s</string>
     <string name="epg_browser_dev_stats_format">EPG : %1$s</string>
-    <string name="epg_browser_search_mode_programme">Fandaharana</string>
-    <string name="epg_browser_search_mode_channel">Inona no mandeha</string>
     <string name="epg_browser_matched_only_label">Mifanaraka ihany</string>
     <string name="epg_browser_enter_programme_placeholder">Ampidiro ny lohatenin\'ny fandaharana…</string>
-    <string name="epg_browser_enter_channel_placeholder">Ampidiro ny anaran\'ny fantsona…</string>
     <string name="epg_browser_indexing_progress_programmes_format">%1$d%% (fandaharana %2$s)</string>
     <string name="epg_browser_finalizing_programmes_format">mamarana… (fandaharana %1$s)</string>
     <string name="epg_browser_building_index_label">Manangana ny tahirin-kevitra fikarohana…</string>
     <string name="epg_browser_optimizing_index_label">Manatsara ny tahirin-kevitra fikarohana…</string>
     <string name="epg_browser_hint_search_titles_local">Karohy ny lohatenin\'ny fandaharana ao amin\'ny angon-drakitra EPG eto an-toerana</string>
-    <string name="epg_browser_hint_search_channels_2h">Karohy amin\'ny anaran\'ny fantsona mba hahitana izay mandeha ao anatin\'ny 2 ora manaraka</string>
 
     <!-- TV Player -->
     <string name="player_back_to_categories">Miverina any amin\'ny sokajy</string>

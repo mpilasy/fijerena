@@ -44,55 +44,6 @@ class XmltvSearchService(
     }
 
     /**
-     * Search channels by name and return the programmes on now or starting in the next 2 hours
-     * on all matching channels.
-     *
-     * @param query Case-insensitive substring to match against channel display names
-     * @return [XmltvSearchResult] or null if no index is available.
-     */
-    suspend fun searchByChannel(query: String): XmltvSearchResult? {
-        val indexer = EpgIndexer.getInstance(context)
-        val state = indexer.state.value
-        if (state is EpgIndexState.NotIndexed) {
-            return null
-        }
-
-        val now = System.currentTimeMillis() / 1000L
-        val twoHoursLater = now + 2 * 3600L
-
-        return try {
-            val db = EpgIndexDatabase.getInstance(context)
-            val dao = db.epgIndexDao()
-
-            val providerRepo = ProviderRepository(context)
-            // EPG is provider-scoped: with no active provider there is nothing to search.
-            val activeProviderId =
-                providerRepo.getActiveProvider()?.id
-                    ?: return rowsToSearchResult(emptyList(), searchedFromIndex = true)
-            val settingsDb = SettingsDatabase.getInstance(context)
-            val sourceDao = settingsDb.epgSourceDao()
-            val validSources = sourceDao.getEnabledSourcesForProvider(activeProviderId)
-            val sourceIds = validSources.map { it.id }
-            if (sourceIds.isEmpty()) return rowsToSearchResult(emptyList(), searchedFromIndex = true)
-
-            val queryLower = query.lowercase(Locale.ROOT)
-            val matchedChannels = dao.searchChannelsByName(queryLower, sourceIds)
-            if (matchedChannels.isEmpty()) {
-                return rowsToSearchResult(emptyList(), searchedFromIndex = true)
-            }
-
-            val channelIds = matchedChannels.map { it.xmltvId }
-            val rows = dao.getProgrammesForChannels(channelIds, sourceIds, now, twoHoursLater)
-            rowsToSearchResult(rows, searchedFromIndex = true)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w(TAG, "Channel search failed", e)
-            null
-        }
-    }
-
-    /**
      * Search programme titles in the local EPG index: every programme that hasn't ended yet, with
      * no upper limit — however far ahead the guide goes.
      *

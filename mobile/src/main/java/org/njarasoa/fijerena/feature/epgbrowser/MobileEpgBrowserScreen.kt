@@ -37,7 +37,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -86,6 +85,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.message
@@ -101,7 +101,9 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 
 /**
  * "Search the guide". Opened from a TV Guide ([categoryId] set, GD5), an "In <category> only"
- * checkbox — on by default — keeps the results on that guide's channels.
+ * checkbox — on by default — keeps the results on that guide's channels. One search, programme
+ * titles (D7). For a source with live channels the top bar has TV Guide (the grid for Recent,
+ * [onTvGuide]) and Guide sources (the source in use's, [onGuideSources]) beside Refresh.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,6 +113,7 @@ fun MobileEpgBrowserScreen(
     categoryId: String? = null,
     categoryName: String? = null,
     onGuideSources: (providerId: Long) -> Unit = {},
+    onTvGuide: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
@@ -123,15 +126,11 @@ fun MobileEpgBrowserScreen(
     var inContextOnly by rememberSaveable { mutableStateOf(true) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
-    val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
     val activeProviderName by viewModel.activeProviderName.collectAsStateWithLifecycle()
     val guideSourcesProviderId by viewModel.guideSourcesProviderId.collectAsStateWithLifecycle()
     val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
-
-    LaunchedEffect(searchMode) {
-        searchQuery = ""
-    }
+    val recentLabel = stringResource(R.string.category_recent_label)
 
     val keyboardController = LocalSoftwareKeyboardController.current
     val isDevMode = viewModel.isDevMode
@@ -203,6 +202,12 @@ fun MobileEpgBrowserScreen(
                     }
                 },
                 actions = {
+                    // The grid for Recent (D7); Back from it returns here.
+                    if (guideSourcesProviderId != null) {
+                        IconButton(onClick = { onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel) }) {
+                            Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide))
+                        }
+                    }
                     IconButton(
                         onClick = { viewModel.refreshStale() },
                         enabled = !isRefreshing,
@@ -242,7 +247,7 @@ fun MobileEpgBrowserScreen(
                     .fillMaxSize()
                     .padding(paddingValues),
         ) {
-            // Filters row: Radio buttons + Matched only checkbox
+            // Filters row: Matched only checkbox
             Row(
                 modifier =
                     Modifier
@@ -251,32 +256,6 @@ fun MobileEpgBrowserScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    EpgBrowserViewModel.SearchMode.entries.forEach { mode ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier =
-                                Modifier
-                                    .clickable { viewModel.setSearchMode(mode) }
-                                    .padding(end = Spacing.sm),
-                        ) {
-                            RadioButton(
-                                selected = searchMode == mode,
-                                onClick = { viewModel.setSearchMode(mode) },
-                                modifier = Modifier.size(MobileDimensions.iconLarge),
-                            )
-                            Text(
-                                text =
-                                    when (mode) {
-                                        EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_mode_programme)
-                                        EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_mode_channel)
-                                    },
-                                style = MaterialTheme.typography.labelMedium,
-                            )
-                        }
-                    }
-                }
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable { matchedOnly = !matchedOnly },
@@ -316,11 +295,7 @@ fun MobileEpgBrowserScreen(
                 }
             }
 
-            val placeholderText =
-                when (searchMode) {
-                    EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_search_titles_placeholder)
-                    EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_search_channels_placeholder)
-                }
+            val placeholderText = stringResource(R.string.epg_browser_search_titles_placeholder)
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -441,11 +416,7 @@ fun MobileEpgBrowserScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            val hintText =
-                                when (searchMode) {
-                                    EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_hint_search_titles)
-                                    EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_hint_search_channels)
-                                }
+                            val hintText = stringResource(R.string.epg_browser_hint_search_titles)
                             Text(
                                 text = hintText,
                                 style = MaterialTheme.typography.bodyLarge,
@@ -498,7 +469,6 @@ fun MobileEpgBrowserScreen(
                     MobileResultsContent(
                         results = state,
                         nowEpoch = nowEpoch,
-                        searchMode = searchMode,
                         matchedOnly = matchedOnly,
                         onMatchedOnlyChange = { matchedOnly = it },
                         onNavigateToPlayer = onNavigateToPlayer,
@@ -530,7 +500,6 @@ fun MobileEpgBrowserScreen(
 private fun MobileResultsContent(
     results: EpgBrowserViewModel.UiState.Results,
     nowEpoch: Long,
-    searchMode: EpgBrowserViewModel.SearchMode = EpgBrowserViewModel.SearchMode.PROGRAMME,
     matchedOnly: Boolean = true,
     onMatchedOnlyChange: (Boolean) -> Unit = {},
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },

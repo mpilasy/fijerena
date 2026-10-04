@@ -241,7 +241,7 @@ A one-day channel schedule for one list of live channels: a category, or Recent 
 
 There is no in-grid search (GD5, G-9): the grid's Search opens "Search the guide" with this guide's list as `Screen.EpgBrowser(categoryId, categoryName)`.
 
-**Entry points (GD5):** the category header's TV Guide (that category); Home's TV Guide (`recent`, Part III decision 3); on TV, the full-screen OSD's Guide button (the list being zapped through, `focusChannelId` = the playing channel — entry focus lands on its row; the mobile grid scrolls to it).
+**Entry points (GD5):** the category header's TV Guide (that category); Search the guide's TV Guide button (`recent`, plan `20261003_sources-guide-profiles-plan.md` D7; Home has no TV Guide button since P7); on TV, the full-screen OSD's Guide button (the list being zapped through, `focusChannelId` = the playing channel — entry focus lands on its row; the mobile grid scrolls to it).
 
 ### Grid Layout
 
@@ -269,11 +269,11 @@ Full-text search across the active provider's indexed guide. Opened from Home's 
 
 If the FTS index is stale (`isFtsStale()` — direct-path refresh, or an interrupted rebuild being redone), both FTS steps are skipped for a title-only `LIKE '%…%'` scan of `epg_programme.title_lowercase` (`EpgIndexDao.searchByTitleLike`, `EpgSearchPath.LIKE_FALLBACK`; `\ % _` escaped) — seconds on 2M+ rows, same timeout. Only if that times out or fails does it throw `EpgIndexBusyException`; `EpgBrowserViewModel` shows why (`UiState.IndexBusy`) and reruns the query once the index is `Indexed`. The staging path never marks it stale.
 
-Programme search covers every programme that hasn't ended yet, with no upper limit (ingest has none either). **Channel search (`searchByChannel`)** matches channel names and returns their programmes from now to 2 hours ahead. Max 500 results.
+Programme search covers every programme that hasn't ended yet, with no upper limit (ingest has none either). Max 500 results. There is no channel-name search (removed in P7).
 
 ### EpgBrowserViewModel
 
-**ViewModel** (`core/ui/.../viewmodels/EpgBrowserViewModel.kt`) orchestrating search and paging. Two modes (`SearchMode.PROGRAMME`, `CHANNEL`); queries shorter than 2 characters are ignored; each search is added to the profile's EPG search history.
+**ViewModel** (`core/ui/.../viewmodels/EpgBrowserViewModel.kt`) orchestrating search and paging. One mode, programme titles; queries shorter than 2 characters are ignored; each search is added to the profile's EPG search history.
 
 **States:** `Idle` | `NoEpgFile` | `Searching` | `IndexBusy(query, refreshing)` | `Results(query, dateGroups, totalPrograms, totalAirings, truncated, searchTimeMs, searchedFromIndex, searchPath)` | `Error(message)`
 
@@ -283,9 +283,9 @@ Results are grouped by start date (Today, Tomorrow, weekday name, or full date f
 
 ### Search UI
 
-**TV** (`tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt`): GlassPanel search, LazyColumn with date group headers, D-pad navigable, search source indicator, "In <category> only" and "Matched only" toggles. The header has Refresh, then **Guide sources** (when the source in use has live channels, `EpgBrowserViewModel.guideSourcesProviderId`) opening `EpgManagement` for it; Back lands on that button (its own `NavReturnFocus`, which also holds off the search field's first-open focus).
+**TV** (`tv/.../feature/epgbrowser/TvEpgBrowserScreen.kt`): GlassPanel search, LazyColumn with date group headers, D-pad navigable, search source indicator, "In <category> only" and "Matched only" toggles. The header has **TV Guide** (`EpgGuide` for Recent; Back from the grid lands on it), Refresh, then **Guide sources** (when the source in use has live channels, `EpgBrowserViewModel.guideSourcesProviderId`) opening `EpgManagement` for it; Back lands on that button (its own `NavReturnFocus`, which also holds off the search field's first-open focus).
 
-**Mobile** (`mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt`): Scaffold, LazyColumn with sticky date headers and expandable programme cards, the same toggles; the top bar's actions are Refresh and Guide sources, as on TV.
+**Mobile** (`mobile/.../feature/epgbrowser/MobileEpgBrowserScreen.kt`): Scaffold, LazyColumn with sticky date headers and expandable programme cards, the same toggles; the top bar's actions are TV Guide, Refresh and Guide sources, as on TV.
 
 ---
 
@@ -398,7 +398,7 @@ A disk-backed tier for `EpgChannelMatcher` (a `providers.db` table so a cold sta
 |------|------|-------------|
 | `EpgViewModel.kt` | ViewModel | TV Guide: paging (`GuidePager`), day navigation, row actions |
 | `EpgViewModelFactory.kt` | Factory | Creates `EpgViewModel` for a category |
-| `EpgBrowserViewModel.kt` | ViewModel | "Search the guide": search modes, matching, context filter, Paging 3 |
+| `EpgBrowserViewModel.kt` | ViewModel | "Search the guide": programme search, matching, context filter, Paging 3 |
 | `EpgBrowserViewModelFactory.kt` | Factory | Creates `EpgBrowserViewModel` |
 | `EpgManagementViewModel.kt` | ViewModel | Guide sources screen and guide settings |
 

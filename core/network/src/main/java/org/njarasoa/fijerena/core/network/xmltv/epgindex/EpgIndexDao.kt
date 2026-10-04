@@ -184,19 +184,6 @@ interface EpgIndexDao {
         windowEnd: Long,
     ): PagingSource<Int, EpgSearchResultRow>
 
-    @Query(
-        """
-        SELECT * FROM epg_channel
-        WHERE LOWER(display_name) LIKE '%' || :queryLower || '%'
-          AND source_id IN (:sourceIds)
-        ORDER BY display_name ASC
-        """,
-    )
-    suspend fun searchChannelsByName(
-        queryLower: String,
-        sourceIds: List<Long>,
-    ): List<EpgChannelEntity>
-
     @Query("SELECT * FROM epg_channel WHERE source_id IN (:sourceIds)")
     suspend fun getChannelsForSources(sourceIds: List<Long>): List<EpgChannelEntity>
 

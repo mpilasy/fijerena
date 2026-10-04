@@ -282,10 +282,6 @@ fun TvNavHost(
                         onEpgBrowser = {
                             navController.navigateOnce(Screen.EpgBrowser())
                         },
-                        // Home's TV Guide opens on Recent (UX overhaul plan Part III, decision 3).
-                        onTvGuide = { categoryId, categoryName ->
-                            navController.navigateOnce(Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName))
-                        },
                         onContinueWatchingSelected = { item ->
                             // Same dispatch as CategoryList's Recent row (below) — a shelf card is
                             // just another resumable entry, and should route exactly like one.
@@ -358,6 +354,10 @@ fun TvNavHost(
                         onBack = { navController.navigateUp() },
                         onGuideSources = { id ->
                             navController.navigateOnce(Screen.EpgManagement(providerId = id))
+                        },
+                        // Its TV Guide opens on Recent (D7); Back from the grid returns here.
+                        onTvGuide = { categoryId, categoryName ->
+                            navController.navigateOnce(Screen.EpgGuide(categoryId = categoryId, categoryName = categoryName))
                         },
                         onNavigateToPlayer = { streamId, _, categoryId ->
                             // Land on the preview pane, not full-screen — see LiveTvSplitLayout.

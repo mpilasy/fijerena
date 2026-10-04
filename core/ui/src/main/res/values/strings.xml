@@ -506,17 +506,13 @@
     <string name="epg_browser_title">Search the guide</string>
     <string name="epg_browser_title_with_provider">Search the guide — %1$s</string>
     <string name="epg_browser_refresh_stale_description">Refresh stale guide sources</string>
-    <string name="epg_browser_mode_programme">Prog.</string>
-    <string name="epg_browser_mode_channel">Chan.</string>
     <string name="epg_browser_matched_label">Matched</string>
     <string name="epg_browser_search_titles_placeholder">Search titles…</string>
-    <string name="epg_browser_search_channels_placeholder">Search channels…</string>
     <string name="epg_indexing_progress_count">%1$d%% (%2$s)</string>
     <string name="epg_browser_finalizing_format">finalizing… (%1$s)</string>
     <string name="epg_browser_indexing_label">Indexing…</string>
     <string name="epg_browser_optimizing_label">Optimizing…</string>
     <string name="epg_browser_hint_search_titles">Search programme titles</string>
-    <string name="epg_browser_hint_search_channels">Search by channel name</string>
     <string name="epg_browser_no_file_message">No EPG file available.\nConfigure an EPG URL in Settings.</string>
     <string name="epg_browser_watch_confirm_title">Watch now?</string>
     <string name="epg_browser_watch_confirm_message">This show airs at %1$s.\nWatch %2$s now?</string>
@@ -650,17 +646,13 @@
     <string name="epg_browser_provider_suffix_format"> — %1$s</string>
     <string name="epg_browser_dev_stats_counts_format">%1$s progs, %2$s channels</string>
     <string name="epg_browser_dev_stats_format">EPG: %1$s</string>
-    <string name="epg_browser_search_mode_programme">Programme</string>
-    <string name="epg_browser_search_mode_channel">What\'s on</string>
     <string name="epg_browser_matched_only_label">Matched only</string>
     <string name="epg_browser_enter_programme_placeholder">Enter programme title…</string>
-    <string name="epg_browser_enter_channel_placeholder">Enter channel name…</string>
     <string name="epg_browser_indexing_progress_programmes_format">%1$d%% (%2$s programmes)</string>
     <string name="epg_browser_finalizing_programmes_format">finalizing… (%1$s programmes)</string>
     <string name="epg_browser_building_index_label">Building search index…</string>
     <string name="epg_browser_optimizing_index_label">Optimizing search index…</string>
     <string name="epg_browser_hint_search_titles_local">Search programme titles in your local EPG data</string>
-    <string name="epg_browser_hint_search_channels_2h">Search by channel name to see what\'s on in the next 2 hours</string>
 
     <!-- TV Player -->
     <string name="player_back_to_categories">Back to Categories</string>

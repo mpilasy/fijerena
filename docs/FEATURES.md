@@ -24,7 +24,7 @@ Several sources can be configured; one is active per device. Switch it from the 
 
 ## Home
 
-Live TV / Movies / TV Shows cards (only the types the active source has; with a single type, Home opens it straight away on launch). The header holds the source name (a picker with two or more sources), **TV Guide** (when Live TV has a guide), **Search the guide** (when the guide index is ready), Search, the profile avatar and Settings.
+Live TV / Movies / TV Shows cards (only the types the active source has; with a single type, Home opens it straight away on launch). The header holds the source name (a picker with two or more sources), **Search the guide** (when the guide index is ready), Search, the profile avatar and Settings. The TV Guide grid opens from Search the guide, a category's header and the player's Guide button.
 
 **Continue Watching** (Movies and TV Shows together) shows one card per show: mid-watch, its episode resumes; once an episode is finished, the card offers the next one ("Up next", the next season after a season's last episode), fetching the show's episode list from the source if this device never stored it (a show watched on another device). After a show's last episode it leaves the shelf. Movies show only while mid-watch.
 
@@ -61,7 +61,7 @@ Providers bake tags into names ("EN - Breaking Bad", "NP:Kantipur", "4K-NF - …
 
 ## TV Guide
 
-Live TV only, when the source has a guide (the indexed XMLTV guide, or the source's own EPG). Opened from a category's TV Guide button (that category), Home's TV Guide (Recent) or, on TV, the player's Guide button (the list being watched, on the playing channel's row). Recent / Favourites guides list those channels; category separators (`#### … ####`) are not channels.
+Live TV only, when the source has a guide (the indexed XMLTV guide, or the source's own EPG). Opened from a category's TV Guide button (that category), Search the guide's TV Guide button (Recent) or, on TV, the player's Guide button (the list being watched, on the playing channel's row). Recent / Favourites guides list those channels; category separators (`#### … ####`) are not channels.
 
 - The header says how many channels have listings, whether they came from the XMLTV guide or the source's own EPG, and when the guide was updated. A guide with nothing for its channels says "No listings" and why; when now is past the day's last listing it says "Listings end at …".
 - A fixed channel column beside a time grid; each programme is as wide as it lasts and starts under its time on the ruler. A line marks now, past programmes are dimmed, the one on air is highlighted. The grid opens scrolled to now. Listings load a page of channels at a time.
@@ -82,10 +82,10 @@ Search across Live TV, Movies and TV Shows ("ALL", from Home) or one content typ
 
 Programme-title search across the indexed XMLTV guide, from Home's book icon (when the index is ready) or a TV Guide's Search — then with an "In <category> only" toggle (on by default) that keeps results on that guide's channels.
 
-- Two modes: **Programme** (title search) and **What's on** (channel name: what's on now or starts in the next 2 hours). A **Matched only** toggle keeps channels the active source has.
+- One search, by programme title (there is no channel-name mode). A **Matched only** toggle keeps channels the active source has.
 - Results grouped by date (Today, Tomorrow, weekday, then "EEEE, MMM d"), then by programme. Every programme that hasn't ended, with no upper limit; at most 500 results per query.
 - ON AIR / SOON badges; Watch opens the channel (asking first when the show airs later); Add to calendar.
-- The header shows how fresh the guide is (stale sources flagged) and a button to refresh stale guide sources.
+- The header shows how fresh the guide is (stale sources flagged) and, for a source with live channels, **TV Guide** (the grid for Recent; Back returns to the search), a button to refresh stale guide sources, and **Guide sources** (the source in use's).
 - Search uses SQLite FTS4 (a raw query, then a sanitised AND-style retry). While a refresh runs, search keeps working on the previous guide: the new guide and its index are switched in together. When the index can't be used (a low-storage refresh writing straight into the guide, or an interrupted rebuild), search falls back to a slower title-only scan, flagged on screen as possibly incomplete and rerun in full once the index is ready; if even that times out, it says why ("The guide is updating…" or "The search index is being rebuilt…") and reruns by itself.
 - Mobile: sticky date headers; a programme card shows up to 3 airings, the rest behind "N more airings". TV: date headers and glass programme cards.
 

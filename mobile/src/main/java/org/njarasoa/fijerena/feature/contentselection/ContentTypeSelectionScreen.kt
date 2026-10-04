@@ -67,7 +67,6 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaAnimation
 import org.njarasoa.fijerena.core.ui.theme.CinemaCornerRadius
 import org.njarasoa.fijerena.core.ui.theme.CinemaIcons
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
-import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.ProfilesViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.SettingsViewModelFactory
 import org.njarasoa.fijerena.feature.contentselection.components.MobileContinueWatchingShelf
@@ -89,8 +88,6 @@ fun MobileContentTypeSelectionScreen(
     onContentTypeSelected: (contentType: String) -> Unit,
     onSettings: () -> Unit = {},
     onEpgBrowser: () -> Unit = {},
-    /** Home's TV Guide (GD5): the guide for the Recent channels (Part III, decision 3). */
-    onTvGuide: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
     onProviderChanged: () -> Unit = {},
     onSearch: () -> Unit = {},
     onCapabilitiesResolved: (Set<String>) -> Unit = {},
@@ -137,11 +134,6 @@ fun MobileContentTypeSelectionScreen(
             .state
     }.collectAsStateWithLifecycle()
     val hasEpgData = epgIndexState is org.njarasoa.fijerena.core.network.xmltv.epgindex.EpgIndexState.Indexed
-    // TV Guide (GD5): Live TV with a guide — the index, or the source's own EPG.
-    val hasTvGuide =
-        ContentType.LIVE_TV in supportedContentTypes &&
-            (hasEpgData || mediaProviderRef?.capabilities?.supportsEpg == true)
-    val recentLabel = stringResource(R.string.category_recent_label)
 
     LaunchedEffect(refreshTrigger) {
         // Reset counts so stale values don't linger during provider switch
@@ -309,14 +301,6 @@ fun MobileContentTypeSelectionScreen(
                         }
                     },
                     actions = {
-                        if (hasTvGuide) {
-                            CinemaIconButton(
-                                onClick = { onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel) },
-                                icon = {
-                                    Icon(CinemaIcons.DateRange, stringResource(R.string.common_tv_guide), tint = CinemaTextPrimary)
-                                },
-                            )
-                        }
                         if (hasEpgData) {
                             CinemaIconButton(
                                 onClick = onEpgBrowser,

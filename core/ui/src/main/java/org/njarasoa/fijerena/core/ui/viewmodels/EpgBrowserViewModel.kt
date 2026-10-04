@@ -108,11 +108,6 @@ class EpgBrowserViewModel(
         override fun hashCode(): Int = hash
     }
 
-    enum class SearchMode {
-        PROGRAMME,
-        CHANNEL,
-    }
-
     sealed interface UiState {
         data object Idle : UiState
 
@@ -154,23 +149,12 @@ class EpgBrowserViewModel(
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    private val _searchMode = MutableStateFlow(SearchMode.PROGRAMME)
-    val searchMode: StateFlow<SearchMode> = _searchMode.asStateFlow()
-
     private val _activeProviderName = MutableStateFlow<String?>(null)
     val activeProviderName: StateFlow<String?> = _activeProviderName.asStateFlow()
 
     /** The source in use when it can have guide sources (it has live channels), else null. */
     private val _guideSourcesProviderId = MutableStateFlow<Long?>(null)
     val guideSourcesProviderId: StateFlow<Long?> = _guideSourcesProviderId.asStateFlow()
-
-    fun setSearchMode(mode: SearchMode) {
-        if (_searchMode.value != mode) {
-            _searchMode.value = mode
-            _uiState.value = UiState.Idle
-            _pagedSearchResults.value = emptyFlow()
-        }
-    }
 
     /** Indexer state exposed for UI (progress banner, settings display). */
     val indexState: StateFlow<EpgIndexState> = EpgIndexer.getInstance(context).state
@@ -508,15 +492,7 @@ class EpgBrowserViewModel(
                 try {
                     val startTime = System.currentTimeMillis()
                     ensureChannelMatcherCurrent()
-                    val mode = _searchMode.value
-
-                    val result =
-                        withContext(Dispatchers.IO) {
-                            when (mode) {
-                                SearchMode.PROGRAMME -> searchService.search(query)
-                                SearchMode.CHANNEL -> searchService.searchByChannel(query)
-                            }
-                        }
+                    val result = withContext(Dispatchers.IO) { searchService.search(query) }
                     val elapsed = System.currentTimeMillis() - startTime
 
                     if (result == null) {
@@ -543,14 +519,7 @@ class EpgBrowserViewModel(
                             )
                         }
 
-                    val dateGroups =
-                        applyChannelMatching(
-                            if (mode == SearchMode.PROGRAMME) {
-                                groupByDate(allAirings)
-                            } else {
-                                groupByChannel(allAirings)
-                            },
-                        )
+                    val dateGroups = applyChannelMatching(groupByDate(allAirings))
                     val totalAirings = allAirings.size
                     val totalPrograms = dateGroups.sumOf { it.programs.size }
 
@@ -777,43 +746,6 @@ class EpgBrowserViewModel(
                 EpgBrowserDateGroup(
                     dateLabel = label,
                     dayStartEpoch = dayStartEpoch,
-                    programs = programs,
-                )
-            }
-    }
-
-    private fun groupByChannel(airings: List<AiringWithProgramme>): List<EpgBrowserDateGroup> {
-        // "What's on" reuses EpgBrowserDateGroup with the channel name as the label. Grouped by
-        // channelId directly to avoid allocating a temporary Pair for every airing.
-        val byChannel = airings.groupBy { it.airing.channelId }
-
-        return byChannel.entries
-            // Use String.CASE_INSENSITIVE_ORDER to avoid allocating new String objects during sorting
-            .sortedWith(
-                compareBy(String.CASE_INSENSITIVE_ORDER) {
-                    it.value
-                        .first()
-                        .airing.channelName
-                },
-            ).mapIndexed { index, (_, channelAirings) ->
-                val channelName = channelAirings.first().airing.channelName
-                val programs =
-                    channelAirings
-                        .mapIndexed { progIndex, airingWithProg ->
-                            EpgBrowserProgram(
-                                id = "$channelName::${airingWithProg.title}::${airingWithProg.airing.startEpoch}::$progIndex",
-                                title = airingWithProg.title,
-                                description = airingWithProg.description,
-                                category = airingWithProg.category,
-                                airings = listOf(airingWithProg.airing),
-                            )
-                        }.sortedBy { it.airings.first().startEpoch }
-
-                val channelId = channelAirings.first().airing.channelId
-                EpgBrowserDateGroup(
-                    dateLabel = channelName,
-                    // Use a unique ID derived from channelId hash or index to avoid collisions
-                    dayStartEpoch = (channelId.hashCode().toLong() and 0xFFFFFFFFL) or (index.toLong() shl 32),
                     programs = programs,
                 )
             }

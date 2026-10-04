@@ -104,6 +104,7 @@ import org.njarasoa.fijerena.core.ui.theme.CinemaTextSecondary
 import org.njarasoa.fijerena.core.ui.theme.CinemaWarning
 import org.njarasoa.fijerena.core.ui.utils.canOpenCalendar
 import org.njarasoa.fijerena.core.ui.utils.openAddToCalendarEvent
+import org.njarasoa.fijerena.core.ui.viewmodels.CategoryViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModel
 import org.njarasoa.fijerena.core.ui.viewmodels.EpgBrowserViewModelFactory
 import org.njarasoa.fijerena.core.ui.viewmodels.message
@@ -127,11 +128,14 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 // Header buttons that navigate away, for rememberNavReturnFocus.
 private const val RETURN_GUIDE_SOURCES = "header:guideSources"
+private const val RETURN_TV_GUIDE = "header:tvGuide"
 
 /**
  * "Search the guide". Opened from a TV Guide ([categoryId] set, GD5), an "In <category> only"
- * toggle — on by default — keeps the results on that guide's channels. The header's Guide sources
- * button, next to Refresh, opens the guide sources of the source in use ([onGuideSources]).
+ * toggle — on by default — keeps the results on that guide's channels. One search, programme
+ * titles (D7: the channel mode is gone). For a source with live channels the header has TV Guide,
+ * opening the grid for Recent ([onTvGuide], D7), and Guide sources next to Refresh, opening the
+ * guide sources of the source in use ([onGuideSources]).
  */
 @Composable
 fun TvEpgBrowserScreen(
@@ -140,6 +144,7 @@ fun TvEpgBrowserScreen(
     categoryId: String? = null,
     categoryName: String? = null,
     onGuideSources: (providerId: Long) -> Unit = {},
+    onTvGuide: (categoryId: String, categoryName: String) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val viewModel: EpgBrowserViewModel =
@@ -150,13 +155,13 @@ fun TvEpgBrowserScreen(
     val contextName = categoryName?.takeIf { categoryId != null }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val indexState by viewModel.indexState.collectAsStateWithLifecycle()
-    val searchMode by viewModel.searchMode.collectAsStateWithLifecycle()
     val activeProviderName by viewModel.activeProviderName.collectAsStateWithLifecycle()
     val guideSourcesProviderId by viewModel.guideSourcesProviderId.collectAsStateWithLifecycle()
     // Back from a header button's screen lands on that button (the results' own hand-back is
     // ResultsContent's).
     val headerReturnFocus = rememberNavReturnFocus()
     NavReturnFocusEffect(headerReturnFocus)
+    val recentLabel = stringResource(R.string.category_recent_label)
     val isDevMode = viewModel.isDevMode
     val sourceLabels by viewModel.sourceLabels.collectAsStateWithLifecycle()
     val epgSearchHistory by viewModel.epgSearchHistory.collectAsStateWithLifecycle()
@@ -234,6 +239,23 @@ fun TvEpgBrowserScreen(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
                     modifier = Modifier.padding(bottom = Spacing.xs.scaled(scale)),
                 ) {
+                    if (guideSourcesProviderId != null) {
+                        CinemaIconButton(
+                            onClick = {
+                                headerReturnFocus.leaveFrom(RETURN_TV_GUIDE)
+                                onTvGuide(CategoryViewModel.RECENT_CATEGORY_ID, recentLabel)
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = CinemaIcons.DateRange,
+                                    contentDescription = stringResource(R.string.common_tv_guide),
+                                    tint = CinemaTextPrimary,
+                                    modifier = Modifier.size(TvDimensions.iconMedium.scaled(scale)),
+                                )
+                            },
+                            modifier = Modifier.navReturnFocusTarget(headerReturnFocus, RETURN_TV_GUIDE),
+                        )
+                    }
                     val freshnessText =
                         freshnessLabel(context, oldestIngestedAtMs, nowEpoch, staleSourceCount, neverRunSourceCount)
                     val freshnessColor =
@@ -339,9 +361,7 @@ fun TvEpgBrowserScreen(
                         isDevMode = isDevMode,
                         epgDbStats = epgDbStats,
                         sourceLabels = sourceLabels,
-                        searchMode = searchMode,
                         epgSearchHistory = epgSearchHistory,
-                        onSearchModeChange = { viewModel.setSearchMode(it) },
                         onSearch = { viewModel.performSearch(it) },
                         onRemoveHistoryEntry = { viewModel.removeEpgSearchHistoryEntry(it) },
                         onClearHistory = { viewModel.clearEpgSearchHistory() },
@@ -365,9 +385,7 @@ private fun EpgBrowserContent(
     isDevMode: Boolean,
     epgDbStats: String?,
     sourceLabels: Map<Long, String>,
-    searchMode: EpgBrowserViewModel.SearchMode,
     epgSearchHistory: List<String> = emptyList(),
-    onSearchModeChange: (EpgBrowserViewModel.SearchMode) -> Unit,
     onSearch: (String) -> Unit,
     onRemoveHistoryEntry: (String) -> Unit = {},
     onClearHistory: () -> Unit = {},
@@ -418,10 +436,6 @@ private fun EpgBrowserContent(
         }
     }
 
-    LaunchedEffect(searchMode) {
-        localQuery = ""
-    }
-
     Column(modifier = Modifier.fillMaxSize()) {
         GlassPanel {
             Column(modifier = Modifier.padding(Spacing.sm.scaled(scale))) {
@@ -429,25 +443,8 @@ private fun EpgBrowserContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale)),
                 ) {
-                    // Bare Material3 RadioButton/Checkbox draw focus through LocalIndication, which
-                    // is a ripple — invisible without a pointer, so on TV these had no focus state
-                    // at all. They are 2-way and 1-way pickers respectively, so the selectable
-                    // button carries both states properly.
-                    EpgBrowserViewModel.SearchMode.entries.forEach { mode ->
-                        TvSelectableButton(
-                            selected = searchMode == mode,
-                            onSelect = { onSearchModeChange(mode) },
-                            text =
-                                when (mode) {
-                                    EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_search_mode_programme)
-                                    EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_search_mode_channel)
-                                },
-                            modifier = Modifier.padding(end = Spacing.sm.scaled(scale)),
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f))
-
+                    // A bare Material3 Checkbox draws focus through LocalIndication, a ripple —
+                    // invisible without a pointer on TV — so the toggles are selectable buttons.
                     if (contextName != null) {
                         TvSelectableButton(
                             selected = inContextOnly,
@@ -479,11 +476,7 @@ private fun EpgBrowserContent(
                         localQuery = ""
                         onClearSearch()
                     },
-                    placeholder =
-                        when (searchMode) {
-                            EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_enter_programme_placeholder)
-                            EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_enter_channel_placeholder)
-                        },
+                    placeholder = stringResource(R.string.epg_browser_enter_programme_placeholder),
                     focusRequester = searchFocusRequester,
                     editing = editing,
                     onEditingChange = { editing = it },
@@ -598,11 +591,7 @@ private fun EpgBrowserContent(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        val hintText =
-                            when (searchMode) {
-                                EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_hint_search_titles_local)
-                                EpgBrowserViewModel.SearchMode.CHANNEL -> stringResource(R.string.epg_browser_hint_search_channels_2h)
-                            }
+                        val hintText = stringResource(R.string.epg_browser_hint_search_titles_local)
                         Text(
                             text = hintText,
                             style =
@@ -654,7 +643,6 @@ private fun EpgBrowserContent(
                     nowEpoch = nowEpoch,
                     isDevMode = isDevMode,
                     sourceLabels = sourceLabels,
-                    searchMode = searchMode,
                     matchedOnly = matchedOnly,
                     onNavigateToPlayer = onNavigateToPlayer,
                     firstItemFocusRequester = firstItemFocusRequester,
@@ -781,7 +769,6 @@ private fun ResultsContent(
     nowEpoch: Long,
     isDevMode: Boolean = false,
     sourceLabels: Map<Long, String> = emptyMap(),
-    searchMode: EpgBrowserViewModel.SearchMode = EpgBrowserViewModel.SearchMode.PROGRAMME,
     matchedOnly: Boolean = true,
     onNavigateToPlayer: (String, String, String) -> Unit = { _, _, _ -> },
     returnFocus: NavReturnFocus,
