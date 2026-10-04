@@ -238,7 +238,8 @@ fun TvGuideGrid(
     onBack: () -> Unit,
     onRowsVisible: (first: Int, last: Int) -> Unit,
     isFavoriteChannel: suspend (channelId: String) -> Boolean,
-    onToggleFavorite: (MediaItem) -> Unit,
+    /** Returns whether the rows reload without the channel (a favourite removed in the Favourites guide). */
+    onToggleFavorite: (MediaItem) -> Boolean,
     /** Null where Remove from Recent is not offered (not the Recent guide, or the source keeps the history). */
     onRemoveFromRecent: ((MediaItem) -> Unit)?,
     focusChannelId: String? = null,
@@ -341,9 +342,10 @@ fun TvGuideGrid(
                     onChannelSelected = onChannelSelected,
                     onRowsVisible = onRowsVisible,
                     isFavoriteChannel = isFavoriteChannel,
-                    onToggleFavorite = onToggleFavorite,
-                    // The rows reload without the channel, so its cell goes: focus lands again,
-                    // as on first open, on the row that took its place.
+                    // A favourite removed in the Favourites guide, and Remove from Recent: the rows
+                    // reload without the channel, so its cell goes: focus lands again, as on first
+                    // open, on the row that took its place.
+                    onToggleFavorite = { channel -> if (onToggleFavorite(channel)) entryFocusDone = false },
                     onRemoveFromRecent =
                         onRemoveFromRecent?.let { remove ->
                             { channel ->

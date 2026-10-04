@@ -27,6 +27,7 @@
 - **TV movie with only a Details tab:** Right on the tab stays put instead of jumping up to Play; the same at the end of every details tab row. → follow-up.
 - **TV full-screen channel list never opens on an empty tab:** when the tab you used last has no channels (an empty Favourites), the list opens on the tab with the channel you are watching, on that channel. → follow-up.
 - **TV: Left from the Live TV preview's channel list goes back to browse:** Left on the first tab beside the preview does what Back does — the channel list with focus on the channel playing. → Part II Live TV target item 8.
+- **TV Guide for Favourites drops a removed favourite at once:** removing a favourite from a channel's menu in the Favourites guide takes its row away, with focus on the row that takes its place, instead of leaving it until the guide is reopened. → Part III GD6.
 
 Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 

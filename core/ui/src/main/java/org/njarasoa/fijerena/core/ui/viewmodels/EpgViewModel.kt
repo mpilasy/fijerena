@@ -311,12 +311,27 @@ class EpgViewModel(
     suspend fun isFavoriteChannel(channelId: String): Boolean =
         withContext(Dispatchers.Default) { repository.isFavorite(channelId, ContentType.LIVE_TV) }
 
-    fun toggleFavoriteChannel(channel: MediaItem) {
-        if (repository.isFavorite(channel.id, ContentType.LIVE_TV)) {
+    /**
+     * Returns whether the rows reload: a favourite removed in the Favourites guide leaves it, as
+     * Remove from Recent does in the Recent guide — reloaded without it, on the same day.
+     */
+    fun toggleFavoriteChannel(channel: MediaItem): Boolean {
+        val removing = repository.isFavorite(channel.id, ContentType.LIVE_TV)
+        if (removing) {
             repository.removeFavorite(channel.id, ContentType.LIVE_TV)
         } else {
             repository.addFavorite(channel.id, channel.name, channel.categoryId, ContentType.LIVE_TV)
         }
+        val reload = removing && categoryId == CategoryViewModel.FAVORITES_CATEGORY_ID
+        if (reload) {
+            loadJob?.cancel()
+            loadJob =
+                viewModelScope.launchGuarded("EpgViewModel.toggleFavoriteChannel", onError = ::showError) {
+                    channels = null
+                    loadEpgDataInternal(currentDate)
+                }
+        }
+        return reload
     }
 
     /** Remove from Recent: on the Recent guide, for a source that keeps its own history. */
