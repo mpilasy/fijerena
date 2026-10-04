@@ -14,6 +14,7 @@ for the user's confirmation.
 | P5 Auto-refresh per guide source | Todo |
 | P6 Home button on every page | Todo |
 | P7 Home keeps Search the guide; search ↔ grid; no channel search | Todo |
+| P8 Live TV preview plays on OK, not on focus | Todo |
 
 Rows get **In progress (since date)** when work starts and **Done date** with what was verified
 and where when merged. Plan edits go in their own `docs:` commit.
@@ -37,6 +38,8 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
    one, and the search is the one used most.
 10. Search the guide should have a button that opens the TV Guide grid.
 11. Search the guide's channel mode (TV "What's on", mobile "Chan.") is no longer needed.
+12. The Live TV preview should not change channel by itself as focus moves: OK on a channel plays
+    it, and only OK on the channel already playing goes full screen.
 
 ## How it works today (checked in the code, `main` at `b905113e`)
 
@@ -67,6 +70,13 @@ Raised by the user on 2026-10-03 about Settings on both platforms:
   `epg_browser_search_mode_channel`, `epg_browser_mode_channel`), `EpgBrowserViewModel.SearchMode`
   PROGRAM / CHANNEL; the channel mode searches channel names and lists what is on now and next. It
   has no way to the grid unless it was opened from one (Back).
+- **Live TV preview (TV)**: focus resting on a channel row for 800 ms tunes the preview to it
+  (`LiveTvSplitLayout`: `focusedItemFlow` + `collectLatest { delay(PREVIEW_SETTLE_MS) }` →
+  `previewTarget`; UX overhaul LT5, the overhaul's Live TV decision 1 "preview tunes on focus").
+  OK on any row goes full screen (`onStreamPromote`: tunes to that row first if it isn't the one
+  playing, then `fullScreen = true`). The hint line reads "OK Full screen · Hold OK Options"
+  (`live_preview_hint`). Moving through a list, or switching tabs with Left/Right, keeps changing
+  the channel. In full screen the panel already works on OK only (OK tunes and closes it).
 - **Settings → Source & guide** has Switch source (opens the Sources list, where each source has
   Use, Edit, Guide and ⋮), **Edit this source** (Edit Source for the active one), Guide Sources and
   Guide auto-refresh; the Profiles group's content-filters row also opens Edit Source on the
@@ -124,6 +134,12 @@ nothing (TV) / leaves the app (mobile), as after launch. Anything that stops on 
 TV preview and player) stops as it does on Back. A screen with unsaved edits (mobile Edit Source's
 discard prompt, M4) asks first, the same way Back does.
 
+**Live TV preview (TV):** moving focus never changes the channel. OK on a row that isn't playing
+plays it in the preview ("Tuning · <channel>" as today); OK on the row that is playing goes full
+screen. Hint line: "OK  Play · OK again  Full screen · Hold OK  Options". This replaces the
+overhaul's "preview tunes on focus" decision. The phone's dock is unchanged (it already plays only
+what is tapped).
+
 **Home (both platforms):** the header keeps **Search the guide** and Search All; the TV Guide
 button goes (the grid stays reachable from each category's header, the player's Guide button and
 Search the guide).
@@ -151,11 +167,13 @@ on.
 | P6 | **Home button on every page**: one `goHome()` per nav host — `popBackStack(Screen.ContentTypeSelection, inclusive = false)` when Home is on the stack, else `navigate(Screen.ContentTypeSelection) { popUpTo(0) { inclusive = true } }` — and one button per platform (TV `TvHomeButton` for the header slot, mobile a top-bar action), passed as `onHome` to every screen in D4's list; TV player OSD and mobile player controls get it too; hidden when there is no source (D5). TV focus: a header stop at the row's end, reachable by Up from the content like the existing header buttons. Focus walks updated. Strings ×3 ("Home"). | both nav hosts; TV screens' headers (Settings, Sources, Edit Source, guide sources, Live sync, Diagnostics, Live TV / Movies / TV Shows browse and preview, details, episodes, Search, TV Guide, Search the guide), `TvPlayerControlsOverlay`; mobile top bars and `MobileControlsOverlay`; `scripts/focus-walks/*` | M | Med (touches every screen header; TV focus order in each) |
 | P7 | **Home keeps Search the guide; search ↔ grid; no channel search**: Home drops its TV Guide button (TV and mobile; focus walk `home.txt`); Search the guide gets a TV Guide icon button (D7: pop back to the grid it came from, else `EpgGuide` for Recent); the channel mode goes — the mode chips, `SearchMode.CHANNEL`, the channel-search path in `EpgBrowserViewModel` and `XmltvSearchService.searchByChannel` if nothing else calls it, and its strings ×3. | both Home screens (`ContentTypeSelectionScreen`), both Search the guide screens, `EpgBrowserViewModel.kt`, `XmltvSearchService.kt`, both nav hosts, `scripts/focus-walks/home.txt` | S | Low |
 
+| P8 | **Live TV preview plays on OK, not on focus**: drop the focus-driven tuning (`focusedItemFlow` / `PREVIEW_SETTLE_MS` / its `collectLatest`; the entry seed still sets `previewTarget` directly); the docked panel's `onStreamPromote` becomes: row ≠ playing → `previewTarget = item` (tune in the preview), row = playing → full screen as today. `live_preview_hint` reworded ×3. `NAVIGATION_GUIDE` / `FEATURES` / `AGENTS` lines on "focus tunes the preview" updated; `live-tv-preview.txt` / `live-tv-back.txt` comments. | `LiveTvSplitLayout.kt`, strings ×3, docs, focus walks | S | Low-Med (LiveTvSplitLayout has ANR history; one engine, one loader — no new player) |
+
 Order: P1 and P2 (one lane, the profile dialog), P3 then P4 (one lane, Edit Source), P5 after P4
 (its UI is on the screen P4 links). P1/P2 and P3/P4 can run in parallel. P6 is independent of the
 rest but touches every screen's header and both nav hosts, so it runs alone, after P4 (which also
 edits the nav hosts and Edit Source). P7 runs with P4 (both edit Search the guide's header) or
-right after it.
+right after it. P8 is independent and small; it can go first.
 
 ## Data, sync and safety notes
 
@@ -187,6 +205,10 @@ right after it.
 - P7: Home shows Search the guide and Search All, no TV Guide; Search the guide has no mode
   chips; its TV Guide button returns to the grid it came from, or opens Recent's grid from Home;
   Back from that grid returns to Search the guide.
+- P8: in the preview, Down / Up through rows and Left / Right across tabs leave the playing
+  channel alone; OK on another row plays it ("Tuning · …"), OK again goes full screen; Back from
+  full screen returns to the preview on that channel; Home → Live TV still opens on the last
+  channel playing.
 - Phone emulator: the same flows.
 - Upgrade check on the emulators: existing guide sources keep refreshing at the old device-wide
   interval after the update.
