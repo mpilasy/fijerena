@@ -1,7 +1,29 @@
 # EPG Index Storage and Reclaim
 
-How `epg_index.db` grows, why it stopped reclaiming space, and what was done about it.
-Investigated and fixed 2026-08-20/21 against darcy, mdarcy and the TV emulator.
+How `epg_index.db` is configured, how it reclaims space, and the 2026-08-20/21 investigation
+(darcy, mdarcy and the TV emulator) that led there. Tables and columns: `docs/DATABASE_SCHEMA.md` §2.
+How ingestion, the staging swap and the FTS rebuild use it: `docs/epg_guide.md`.
+
+---
+
+## 0. Current configuration
+
+All in `EpgIndexDatabase.kt` and `EpgIndexer.kt`.
+
+| Setting | Where | Value |
+|---|---|---|
+| Page size | `seedPageSize()`, only when the file does not exist yet | 4096 (§5) |
+| `auto_vacuum` | `CreationPragmaFactory.onConfigure`, before Room creates the schema | `INCREMENTAL` (§4) |
+| `temp_store` | same, set once per connection | `FILE`: temp B-trees of a large ingest or FTS rebuild stay off the native heap; switching it per ingest dropped Room's TEMP `room_table_modification_log` |
+| Journal mode | Room builder | WAL |
+| `synchronous` | `onOpen`, and again around every bulk step | `NORMAL`, never `OFF` (a power cut mid-write could corrupt the file) |
+| `cache_size` | `onOpen` | 8 MB per pooled connection (`-8000`); 32 MB during bulk ingest, 16 MB for an FTS rebuild, 2 MB on that connection after a rebuild, 8 MB again after `endBulkIngestion` |
+| `journal_size_limit` | `onOpen`, through `execPragma` | 10 MB |
+| Reclaim | `EpgIndexer.incrementalVacuum()`, after every refresh that ingested rows, after a purge and after `EpgFtsRebuildWorker`'s rebuild | 2000-page batches, `wal_checkpoint(TRUNCATE)` and one retry when a batch frees nothing (§3) |
+| WAL checkpoint before an FTS rebuild | `rebuildFtsAndUpdateState`, `swapAndRebuildFts` | `PASSIVE`: `TRUNCATE` blocked every reader for the length of the rebuild |
+
+`mmap_size` is not set (§6). Clearing the guide (`EpgIndexer.clearAll()`) deletes the file and its
+`-wal`/`-shm` and lets Room recreate it, so a cleared index also gets a fresh 4 KB page size.
 
 ---
 
@@ -38,7 +60,7 @@ The same pattern silently disabled three more statements:
 | Statement | Location | Consequence |
 |---|---|---|
 | `incremental_vacuum` | `EpgIndexer.incrementalVacuum()` | freelist never reclaimed |
-| `wal_checkpoint(TRUNCATE)` | `EpgIndexer.rebuildFtsAndUpdateState()` | WAL not checkpointed before rebuild |
+| `wal_checkpoint(TRUNCATE)` | `EpgIndexer.rebuildFtsAndUpdateState()` | WAL not checkpointed before rebuild (now `PASSIVE`, §0) |
 | `mmap_size = 268435456` | `EpgIndexDatabase.onOpen` | never took effect (see §6) |
 | `journal_size_limit` | `EpgIndexDatabase.onOpen` | WAL size cap not applied |
 
@@ -119,7 +141,8 @@ Room migration, not a VACUUM, nothing.
 The `mmap_size = 268435456` pragma had never once executed. Repairing it along with the others
 would have switched on a 256 MB mapping in a process that already sits at ~497 MB against a 512 MB
 per-app ceiling. It was removed rather than fixed — enabling it is a memory decision, not a bug
-fix. `cache_size = -64000` (64 MB) does apply, because it goes through `execSQL`.
+fix. `cache_size` did apply, because it goes through `execSQL`; it was 64 MB then and is 8 MB per
+connection now (§0).
 
 ---
 
@@ -154,7 +177,8 @@ accumulated freelist once. Every later sync is short.
 The index settles at a few tens of MB of slack rather than zero, because the vacuum runs
 mid-pipeline and later sources free more pages afterwards. That is steady state, not a leak.
 
-Both Shields are still on 1 KB pages; converting them needs one delete-and-rebuild each.
+As of 2026-08-21 both Shields were still on 1 KB pages; converting one needs a delete-and-rebuild
+("Clear All Data" in the guide settings does it).
 
 ---
 
@@ -198,5 +222,5 @@ can afford, and they are not derivable from the code.
 - The Stats-for-Nerds `GC nn runs, nnnnn ms` figure comes from `Debug.getRuntimeStat("art.gc.*")`
   and is **cumulative since process start** — it includes startup and indexing, and cannot tell
   you whether GC is happening now.
-- Coil's memory cache is `maxSizePercent(0.25)`; with `largeHeap` on a 512 MB heap class that is a
-  **128 MB** bitmap cache. Not yet changed.
+- Coil's memory cache was `maxSizePercent(0.25)`; with `largeHeap` on a 512 MB heap class that is a
+  **128 MB** bitmap cache. It has since been lowered to `0.15` (`FijerenaApplication`).

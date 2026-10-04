@@ -2,7 +2,7 @@
 
 This document details the complete database schema for the Fijerena application, including Room SQLite databases and structured SharedPreferences storage.
 
-Room's own exported schema for `xtream_v2.db` and `providers.db` is committed under `core/network/schemas/` (one JSON per version, from `xtream_v2.db` v24 and `providers.db` v15 on). This document is the prose; those files are the exact shape Room validates against.
+Room's own exported schema for `xtream_v2.db` and `providers.db` is committed under `core/network/schemas/` (one JSON per version, from `xtream_v2.db` v24 and `providers.db` v15 on). This document is the prose; those files are the exact shape Room validates against. `epg_index.db` exports none (`exportSchema = false`).
 
 ---
 
@@ -104,7 +104,7 @@ The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successfu
 | `last_channels` | INTEGER | Channel count from last ingest |
 | `last_programmes` | INTEGER | Programme count from last ingest |
 | `last_download_bytes` | INTEGER | Size of XML data fetched |
-| `ingest_method` | TEXT | Ingestion strategy: `DOWNLOADED`, `STREAMED`, or `XTREAM_API` |
+| `ingest_method` | TEXT | Always `DOWNLOADED` (the only ingest path left); nothing reads it |
 | `last_ingestion_duration_ms` | INTEGER | Time spent parsing/inserting |
 | `last_download_duration_ms` | INTEGER | Time spent fetching XML file |
 | `last_content_sha256` | TEXT | SHA-256 of the last ingested payload, decompressed for `.gz` sources; null = never hashed (added v10) |
@@ -113,6 +113,10 @@ The three `lastSync{Inserted,Updated,Deleted}` columns hold the last **successfu
 | `source_key` | TEXT (unique) | Random UUID naming the source in live sync, like `providers.providerKey`; backfilled by `MIGRATION_13_14` (added v14) |
 
 **Index:** `index_epg_source_provider_id` on `(provider_id)`; `index_epg_source_source_key` (unique) on `(source_key)`
+
+`last_content_sha256`, `etag` and `last_modified_header` drive refresh change detection — see
+`docs/epg_guide.md` → "Change Detection". `EpgSourceDao.resetAllIngestionState()` clears them with the
+other ingest bookkeeping whenever the guide index is destroyed.
 
 ### Tables: `sync_version` (v15; `sync_outbox` in v14), `sync_clock` (added v14)
 The `providers.db` counterparts of `xtream_v2.db`'s (§3): `sync_version` holds the sync version of
@@ -143,14 +147,16 @@ written (no shared transaction): provider passwords (`provider`), Jellyfin login
 `theme_id`, `dev_mode` (per profile), `epg_auto_refresh`, `epg_refresh_time`, `epg_refresh_interval`,
 `last_provider` (per profile), `autoplay_next_episode` (per profile).
 
-The last three columns drive refresh change detection — see `docs/epg_guide.md` → "Change Detection".
-
 ---
 
 ## 2. EPG Index Database (`epg_index.db`)
 **Version:** 17
 
 Indexed Electronic Program Guide data from XMLTV sources. Utilizes FTS4 for fast schedule searching. This database is considered transient and may be cleared during schema updates — no `addMigrations()` is registered for any version jump, only `fallbackToDestructiveMigration(true)`; a version bump always rebuilds empty and re-syncs from the configured XMLTV sources on the next run, which is the intended, accepted behavior for this specific database (unlike `xtream_v2.db`, it holds no durable user data). v17 added `source_id` indices to both staging tables.
+
+Opened through Requery's SQLite, in WAL mode. Its PRAGMAs, page size and space reclaim are in
+`docs/EPG_INDEX_STORAGE.md`; how the staging tables and the swap are used is in `docs/epg_guide.md` →
+"The EPG Index". Times are Unix epoch **seconds**.
 
 ### Table: `epg_channel`
 | Column | Type | Description |
@@ -197,12 +203,12 @@ Provides full-text search over `epg_programme`.
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | INTEGER (PK) | Always 1 |
-| `file_size_bytes` | INTEGER | Total index size |
-| `file_last_modified_ms`| INTEGER | Last write timestamp |
-| `indexed_at_ms` | INTEGER | Last indexing completion |
-| `channel_count` | INTEGER | Global channel count |
-| `programme_count` | INTEGER | Global programme count |
-| `timezone_offset_hours`| INTEGER | Default offset |
+| `file_size_bytes` | INTEGER | Always written as 0 (left from the single-file index) |
+| `file_last_modified_ms`| INTEGER | Always written as 0 |
+| `indexed_at_ms` | INTEGER | When the last FTS rebuild (swap, rebuild or purge) committed. Restored as `EpgIndexState.Indexed.indexedAtMs` at start; the parsed-EPG cache is keyed on it |
+| `channel_count` | INTEGER | `epg_channel` rows at that time |
+| `programme_count` | INTEGER | `epg_programme` rows at that time; 0 or no row means "not indexed" at start (unless the tables hold rows, which repairs it) |
+| `timezone_offset_hours`| INTEGER | Always written as 0 (default 0); offsets are per source, on `epg_source` |
 
 ---
 
@@ -225,8 +231,8 @@ v14 added `plotFetchedAt` for TMDB synopses; v15 added `watch_state` and an inde
 `xtream_series(providerId, tmdbId)` and `xtream_episodes(providerId, season, episodeNum)` for the
 TMDB sibling-dedup joins below, which had no covering index on either table; v19 added
 `xtream_series.episodesFetchedAt`, a persisted freshness stamp so a series detail screen can skip
-the network round trip for its episode list when a stored copy is under 24 hours old, instead of
-re-fetching the whole list on every single open; v20 added `profileId` to the primary key of
+the network round trip for its episode list while the stored copy is fresh (see the column below);
+v20 added `profileId` to the primary key of
 `watch_state` and `favorite_state`, rebuilding both tables and assigning every existing row to the
 `default` profile — see `docs/plans/20260929_live-sync-plan.md` → User profiles; v21 added
 `sync_tombstone` for live sync; v22 added `sync_outbox` and `sync_clock`, filled by triggers; v23 turned
@@ -347,7 +353,9 @@ backs Xtream, SMB, Local, and Remote M3U through them. They live here because th
 **Indices:** `(seriesId, providerId)`, `(providerId)`, `(providerId, season, episodeNum)` (added v18, for the sibling-episode joins below)
 
 ### Table: `xtream_epg_cache` (added v13)
-Per-stream EPG payload cache table.
+Per-stream cache of the source's own EPG (Xtream `get_simple_data_table`), the fallback wherever the
+XMLTV index has nothing for a channel. A row is fresh for 6 hours
+(`XtreamCacheKeys.EPG_CACHE_EXPIRY_MS`).
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -428,7 +436,7 @@ id and `parentCategoryId` is NULL.
 | `kind` | TEXT (PK) | `STREAM` or `CATEGORY` |
 | `name` | TEXT | Display name at the time of favouriting |
 | `parentCategoryId` | TEXT? | The stream's owning category; NULL for `kind = CATEGORY` |
-| `createdAt` | INTEGER | When it was favourited; drives the newest-first ordering the UI shows |
+| `createdAt` | INTEGER | When it was favourited. `FavoriteStateDao` returns rows newest first; the favourites lists themselves are sorted by name |
 
 **Index:** `(providerId, profileId, kind, contentType, createdAt)`
 
@@ -493,11 +501,11 @@ provider or profile are covered by that one's tombstone.
 ### Catalog Lifecycle, Orphan Pruning & Compaction
 Catalog entries (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `favorite_state`, `xtream_epg_cache`, and `watch_state`) reside in `xtream_v2.db`, while the provider entities that own them live in `providers.db`. Because SQLite cannot enforce cross-database foreign key cascades, deleting a provider in `providers.db` does not automatically purge its rows in `xtream_v2.db`.
 
-1. **Cascaded Provider Deletion:** `ProviderRepository.deleteProvider(id)` cascades through all catalog tables in `xtream_v2.db`, deletes associated encrypted/plaintext SharedPreferences (`provider_creds_{id}.xml`, `media_cache_{id}.xml`, `xtream_cache_{id}.xml`, and every profile's `provider_creds_{id}_profile_*` / `media_cache_{id}_profile_*`), and removes associated EPG sources. Catalogue rows go 1,000 per commit (`deleteInBatches`), and no `VACUUM` follows: see 6.
+1. **Cascaded Provider Deletion:** `ProviderRepository.deleteProvider(id)` cascades through all catalog tables in `xtream_v2.db` (and the provider's `sync_tombstone` / `sync_version` rows), clears its SharedPreferences (`provider_creds_{id}`, `media_cache_{id}`, `xtream_cache_{id}`) and deletes every profile's `provider_creds_{id}_profile_*` / `media_cache_{id}_profile_*`, and removes its EPG sources with their `epg_index.db` rows. Catalogue rows go 1,000 per commit (`deleteInBatches`), and no `VACUUM` follows: see 6.
 2. **Orphan Pruning (`pruneOrphanedCatalogData`):** Sweeps only the downloaded catalogue (`xtream_streams`, `xtream_series`, `xtream_episodes`, `xtream_categories`, `xtream_epg_cache`) for `providerId NOT IN (valid ids)`, in the same 1,000-row commits, plus orphaned cache SharedPreferences (`media_cache_*`, `xtream_cache_*`). **Never `favorite_state` or `watch_state`**: "orphaned" is inferred from `providers.db`, and whenever the two files disagree (a reset or restored `providers.db`, a provider synced in between the read and the delete) the inference is wrong — it used to delete every favourite and history row. Those go only with `deleteProvider`. Orphaned credential files (`provider_creds_*`) and EPG sources (without sync tombstones) are removed only by the user's "Shrink Database". The provider list is read again before each step. See `docs/plans/20261002_next-level-rock-solid-resilience-plan.md` → R-02.
 3. **Safety Circuit Breaker:** If `validProviderIds.isEmpty()`, `pruneOrphanedCatalogData()` immediately aborts and returns `(0, 0)`, preventing accidental deletion if provider loading ever returned empty.
 4. **Automatic Background Maintenance:** `sweepOrphanedCatalogData` (never throws; a full disk or locked database is recorded in the crash log and skipped) runs during scheduled `EpgSyncWorker` runs, and at app start only when `orphan_sweep_pending` is set — a provider deletion was interrupted. It used to run unguarded from the nav hosts' composition on every start, a full scan of the catalogue tables competing with Home's first queries, and an exception there crashed every launch (R-03, R-17).
-5. **Manual Maintenance ("Shrink Database"):** Exposed in Settings → Data & Sync → "Shrink Database" (`SettingsViewModel.pruneDatabase()`), passing `userRequested = true` to force compaction and report rows removed and bytes reclaimed.
+5. **Manual Maintenance ("Shrink Database"):** Exposed in Settings → Backup & storage → "Shrink Database" (`SettingsViewModel.pruneDatabase()`), passing `userRequested = true` to force compaction and report rows removed and bytes reclaimed.
 6. **Space and the WAL:** `xtream_v2.db` runs `auto_vacuum = FULL`, so freed pages go back to the filesystem as rows are deleted — a `VACUUM` only defragments. In WAL mode a `VACUUM` first rewrites the whole database into `xtream_v2.db-wal`: measured 258 MB on a 263 MB database, room a low-storage TV may not have. It therefore runs only for the manual "Shrink Database" (`userRequested = true`, followed by `PRAGMA wal_checkpoint(TRUNCATE)`), never automatically. Deleting in 1,000-row commits keeps the WAL peak at ~13 MB for a 285k-row provider (one unbounded `DELETE`: 70 MB).
 
 ---
@@ -553,36 +561,34 @@ Located in `app_settings.xml`. Backed by `AppSettings` (`core/network/.../AppSet
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `dev_mode_<profileId>` | BOOLEAN | Toggles developer features for that profile (absent = off). Replaced the install-wide `dev_mode`, copied to every profile on upgrade |
+| `dev_mode_<profileId>` | BOOLEAN | Toggles developer features for that profile (absent = off). Replaced the install-wide `dev_mode`, which is copied to every profile on upgrade and then removed (read as the fallback until then) |
 | `autoplay_next_episode_<profileId>` | BOOLEAN | "Play next episode automatically" for that profile (absent = off): near an episode's end the next one is offered and starts when it ends (Xtream). Synced per profile, like `dev_mode` |
 | `active_profile_id` | TEXT | Profile using this device; absent means `default`. Per device, never synced |
 | `last_provider_<profileId>` | TEXT | `providerKey` of the provider that profile last picked; applied on profile switch. Synced per profile — see `docs/plans/20261002_profile-last-provider-plan.md` |
-| `last_shrink_at_ms`, `last_shrink_duration_ms`, `last_shrink_rows_removed`, `last_shrink_bytes_reclaimed` | INTEGER | Stats of the last "Shrink Database" run, shown in dev mode. Per device |
+| `last_shrink_at_ms`, `last_shrink_duration_ms`, `last_shrink_rows_removed`, `last_shrink_bytes_reclaimed` | LONG | Stats of the last orphan prune (`pruneOrphanedCatalogData`, manual "Shrink Database" or the automatic sweep), shown in dev mode. Per device |
 | `share_now_playing` | BOOLEAN | Live sync: publish what this device is playing to its sync group (default off). Per device, never synced — see `docs/plans/20261001_live-sync-now-playing-plan.md` |
 | `theme_id` | TEXT | Current dark theme variant (default `deep_night`) |
 | `ui_style_id` | TEXT | Look-and-feel preset, independent of color (default `material`) |
-| `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0) |
+| `ui_scale` | FLOAT | UI scaling factor (0.4 - 1.0, default 0.8) |
 | `auto_xmltv_sources_cleaned_v1` | BOOLEAN | One-time cleanup of duplicate / stale automatic Xtream guide sources has run (set only after it succeeds) |
-| `app_language` | TEXT | ISO 639-1 code (`en`, `mg`) |
-| `provider_name` | TEXT | Display name shown for the provider |
-| `has_provider_cache` | BOOLEAN | Cached "at least one provider exists" flag for fast cold start |
+| `app_language` | TEXT | ISO 639-1 code (`en`, `mg`; default `en`) |
+| `provider_name` | TEXT | Legacy single-provider name. Never written any more; a few screens still read it as a fallback (default `My Provider`) until the active provider's name loads |
+| `has_provider_cache` | BOOLEAN | Cached "at least one provider exists" flag for a fast cold start (TV) |
 | `orphan_sweep_pending` | BOOLEAN | Set while `deleteProvider` runs, cleared when it finishes; still set at the next start means a deletion was interrupted, and that start sweeps for orphaned catalogue rows. Per device, never synced |
-| `watch_history_size` | INT | Max watch-history entries (1-100, default 25) |
-| `favorites_max_size` | INT | Max favorites (10-500, default 100) |
-| `watch_delay_seconds`| INT | Delay before a live channel counts as watched (5-120) |
-| `auto_resume_enabled`| BOOLEAN | Resume playback from stored position |
-| `cache_expiry_hours` | INT | Content cache lifetime (1-168) |
-| `epg_url` | TEXT | Legacy global XMLTV URL |
-| `epg_timezone_offset`| INT | Global XMLTV timezone override (-12..14) |
-| `epg_auto_refresh` | BOOLEAN | Background EPG sync toggle |
+| `watch_history_size`, `favorites_max_size`, `cache_expiry_hours` | INT | Unused: nothing reads or writes them. The live values are per provider, in `providers.providerSettings` (`watchHistorySize`, `favoritesMaxSize`, `cacheExpiryHours`) |
+| `watch_delay_seconds`| INT | Delay before a live channel counts as watched (5-120, default 10) |
+| `auto_resume_enabled`| BOOLEAN | Read by the player (`StreamLoaderViewModel`) before resuming a stored position (default true), but no screen writes it: the settings edit the per-provider `providerSettings.autoResumeEnabled` |
+| `epg_url` | TEXT | Legacy global XMLTV URL. Read once, by `EpgFileManager`'s migration into an `epg_source` row (`migrated_to_sources_v1`); never written |
+| `epg_timezone_offset`| INT | Legacy global XMLTV timezone offset (-12..14), carried into that migrated row; never written |
+| `epg_auto_refresh` | BOOLEAN | Background EPG sync toggle (default true) |
 | `epg_refresh_time` | TEXT | EPG refresh start time `HH:mm` (default `02:00`) |
-| `epg_refresh_interval`| INT | EPG refresh interval hours: 4/8/12/24/48, or -1 (Never) |
-| `content_auto_refresh`| BOOLEAN | Background provider content sync toggle |
+| `epg_refresh_interval`| INT | EPG refresh interval hours: 4/8/12/24/48, or -1 (Never); default 24 |
+| `content_auto_refresh`| BOOLEAN | Background provider content sync toggle (default true) |
 | `content_refresh_time`| TEXT | Content refresh start time `HH:mm` (default `04:00`) |
 | `cellular_live_multiplier` | FLOAT | Live buffer multiplier on cellular (0.5-3.0). No longer shown or applied (UX overhaul A-W5); kept for settings export / import |
 | `cellular_vod_multiplier` | FLOAT | VOD buffer multiplier on cellular (0.5-3.0). No longer shown or applied; kept for export / import |
-| `search_history` | TEXT | Last 20 search terms, U+001F-separated |
-| `epg_search_history` | TEXT | Last 20 EPG search terms, U+001F-separated |
+| `search_history_<profileId>` | TEXT | That profile's last 20 search terms, U+001F-separated. Per device, never synced. The install-wide `search_history` it replaced goes to the `default` profile on upgrade and is removed |
+| `epg_search_history_<profileId>` | TEXT | Same, for "Search the guide"; replaced `epg_search_history` the same way |
 | `favorite_category_rows_purged_v1` | BOOLEAN | One-time flag, per install (never synced): `FavoriteCategoryRowCleanup` has removed the bogus `fav_cat_<categoryId>` stream favourites from `favorite_state` (every provider and profile, each with a `sync_tombstone`). Set only after the purge succeeds |
 
 The active provider is **not** stored here — it is the `providers.isActive` column in `providers.db`.
@@ -595,10 +601,12 @@ The application uses several specialized SharedPreferences files for internal st
 
 | Filename | Keys | Purpose |
 |----------|------|---------|
-| `epg_file_manager` | `migrated_to_sources_v1` | One-time flag: legacy single-EPG-file state has been migrated to `epg_source` rows. |
-| `epg_indexer_state` | `fts_stale` | Survives process death so an interrupted FTS rebuild is retried on next indexer run. |
+| `epg_file_manager` | `migrated_to_sources_v1` | One-time flag: the legacy global `epg_url` / `epg_timezone_offset` (§5) have been migrated to an `epg_source` row. |
+| `epg_indexer_state` | `fts_stale` | Set while the FTS index doesn't match `epg_programme` (a direct-path ingest or a rebuild in progress). Survives process death: still set at the next start, `EpgFtsRebuildWorker` rebuilds it. |
+| `xmltv_cache_{providerId}` | `xmltv_epg_data_v2`, `xmltv_cache_timestamp_v2`, `xmltv_cache_index_generation_v2` | `XmltvEpgService`'s parsed-EPG cache (JSON), valid 12 h and only for the index build it was read from (`epg_index_metadata.indexed_at_ms`). Cleared after a sync that ingested one of the provider's sources, and by the guide's Refresh. |
+| `xtream_cache_{providerId}` | timestamps | Xtream catalogue fetch timestamps (`XtreamCacheKeys`, `XtreamContentManager`); `xtream_epg_prefs_purged` marks the one-time purge of the per-stream EPG blobs older builds kept here. `xtream_cache` (no id) is the legacy single-provider file. |
 | `category_filters` | `{providerId}_{profileId}` | Category filters (`CategoryFilters` JSON) of one profile on one provider, via `CategoryFiltersStore`. No key = no filters. A new profile copies the creating profile's keys; provider and profile deletion remove theirs. |
-| `player_prefs` | `hints_dismissed` | Whether the player control discoverability hints have been dismissed (TV only). |
 | `provider_creds_{id}` | per-provider | (Encrypted) Passwords and sensitive tokens per provider, via `EncryptedSharedPreferences`. |
 | `provider_creds_{id}_profile_{profileId}` | per-provider, per-profile | (Encrypted) A non-Default profile's own Jellyfin login: `username`, `password`, `jellyfin_token`, `jellyfin_user_id`. The Default profile uses `provider_creds_{id}` and `providers.username`. Only Jellyfin logins are per profile. |
-| `xtream_secure_credentials` | `url`, `username`, `password`, `auth_response`, `remember_me` | (Encrypted) Xtream login credentials and cached auth response, held by `AccountManager`. |
+| `xtream_secure_credentials_{providerId}` | `url`, `username`, `password`, `auth_response`, `remember_me` | (Encrypted) Xtream login credentials and cached auth response, held by `AccountManager`, one file per provider. `xtream_secure_credentials` (no id) is the legacy pre-multi-provider file. |
+| `credential_store_health` | one key per encrypted file name | Plain flags, never secrets: an encrypted file that could not be decrypted (lost Keystore key) was reset, so a failing login can say why. Cleared when a login is saved again. |
