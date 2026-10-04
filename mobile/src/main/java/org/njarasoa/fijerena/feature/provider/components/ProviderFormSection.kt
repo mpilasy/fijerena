@@ -53,7 +53,6 @@ fun ColumnScope.ProviderFormSection(
     onQcErrorChange: (String?) -> Unit,
 ) {
     val resources = androidx.compose.ui.platform.LocalResources.current
-    // Type-specific fields
     when (selectedType) {
         ProviderType.XTREAM -> {
             Spacer(modifier = Modifier.height(CinemaSpacing.sm))

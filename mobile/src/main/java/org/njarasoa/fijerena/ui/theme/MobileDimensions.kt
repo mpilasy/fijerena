@@ -4,7 +4,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Mobile-Specific Dimensions
  * Component sizes optimized for handheld touch interaction.
  */
 object MobileDimensions {
@@ -50,13 +49,11 @@ object MobileDimensions {
     /** Diameter of a swipe-reveal action button (see stream row swipe actions). */
     val swipeActionCircleSize: Dp = 40.dp
 
-    // Poster / Thumbnail
     val posterWidth: Dp = 72.dp
     val posterHeight: Dp = 40.dp
     val posterHeightLarge: Dp = 200.dp
     val streamCardHeight: Dp = 64.dp
 
-    // EPG
     val epgProgramMinWidth: Dp = 140.dp
     val epgProgramHeight: Dp = 64.dp
     val epgChannelHeaderHeight: Dp = 44.dp

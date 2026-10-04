@@ -160,7 +160,6 @@ fun MobileAddProviderScreen(
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
     var currentProvider by remember { mutableStateOf<org.njarasoa.fijerena.core.network.provider.ProviderEntity?>(null) }
 
-    // Update currentProvider when providers list changes
     LaunchedEffect(providers, editId) {
         if (isEditMode) {
             currentProvider = providers.find { it.id == editId }
@@ -730,7 +729,6 @@ fun MobileAddProviderScreen(
                     },
                 )
             }
-            // Clear Favorites Confirmation Dialog
             if (showClearFavoritesDialog) {
                 CinemaAlertDialog(
                     onDismissRequest = { showClearFavoritesDialog = false },
@@ -760,7 +758,6 @@ fun MobileAddProviderScreen(
                 )
             }
 
-            // Clear Progress Confirmation Dialog
             if (showClearProgressDialog) {
                 CinemaAlertDialog(
                     onDismissRequest = { showClearProgressDialog = false },
@@ -785,7 +782,6 @@ fun MobileAddProviderScreen(
                 )
             }
 
-            // Category Filter Dialog
             if (showCategoryFilterDialog) {
                 var filterMode by remember { mutableStateOf(categoryFilters.mode) }
                 var rules by remember { mutableStateOf(categoryFilters.rules) }

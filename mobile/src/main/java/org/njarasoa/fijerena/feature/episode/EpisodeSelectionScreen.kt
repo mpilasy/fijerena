@@ -147,7 +147,6 @@ fun MobileEpisodeSelectionScreen(
             initialSeason = initialEpisodeId?.let { lastSuccess?.seriesDetail?.seasonNumberContaining(it) },
         )
 
-    // Handle back press: dismiss detail panel first, then navigate back
     BackHandler(enabled = selectedEpisode != null) {
         selectedEpisode = null
     }
@@ -500,7 +499,6 @@ private fun EpisodeListContent(
                     thumbnailContentType = ThumbnailContentType.TV_SHOW,
                 )
 
-                // Genre
                 seriesDetail.metadata.genre?.let { genre ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.xs))
                     Text(
@@ -557,7 +555,6 @@ private fun EpisodeListContent(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-                // Play / Resume button
                 if (hasResume) {
                     val resumeButtonText =
                         if (anchorEpisode != null) {
@@ -732,7 +729,7 @@ private fun seriesDetailTabLabel(tab: SeriesDetailTab): String =
 
 /**
  * Overview tab: plot, director, the stream-name picker (alternate cached instances of this
- * series), TMDB id, then the category button. Cast lives in its own tab now (see
+ * series), TMDB id, then the category button. Cast lives in its own tab (see
  * [CastChipsTabContent]); episodes live in the always-present Episodes tab.
  */
 @Composable
@@ -930,7 +927,6 @@ private fun EpisodeDetailContent(
                 }.verticalScroll(rememberScrollState())
                 .padding(CinemaSpacing.md),
     ) {
-        // Episode thumbnail
         CinemaThumbnail(
             url = episode.thumbnailUrl ?: seriesDetail.coverUrl,
             fallbackLetter = episode.title.firstOrNull(),
@@ -949,7 +945,6 @@ private fun EpisodeDetailContent(
             style = MaterialTheme.typography.headlineLarge,
         )
 
-        // Season / Episode label
         val seasonLabel = episode.seasonNumber?.let { "S${it.toString().padStart(2, '0')}" } ?: ""
         val episodeLabel = "E${episode.episodeNumber.toString().padStart(2, '0')}"
         val subLabel =
@@ -965,7 +960,6 @@ private fun EpisodeDetailContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-        // Genre (from series)
         seriesDetail.metadata.genre?.let { genre ->
             Text(
                 text = genre,
@@ -1028,7 +1022,6 @@ private fun EpisodeDetailContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-        // Play / Resume buttons + Favorite
         val hasResume = resumePositionMs > 0L
         if (hasResume) {
             val resumeTimeText = formatTime(resumePositionMs)
@@ -1073,7 +1066,6 @@ private fun EpisodeDetailContent(
             }
         }
 
-        // Plot/Description
         episode.metadata.plot?.let { plotText ->
             Spacer(modifier = Modifier.height(CinemaSpacing.lg))
             Text(
@@ -1084,7 +1076,6 @@ private fun EpisodeDetailContent(
 
         Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-        // Cast (episode-level, fallback to series)
         val cast = episode.metadata.cast ?: seriesDetail.metadata.cast
         cast?.let {
             Text(
@@ -1097,7 +1088,6 @@ private fun EpisodeDetailContent(
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
         }
 
-        // Director (episode-level, fallback to series)
         val director = episode.metadata.director ?: seriesDetail.metadata.director
         director?.let {
             Text(
@@ -1119,7 +1109,6 @@ private fun EpisodeDetailContent(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = CinemaAlpha.overlayMedium),
         )
 
-        // Container format
         episode.extension?.takeIf { it.isNotBlank() }?.let { ext ->
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
             Text(
@@ -1129,7 +1118,6 @@ private fun EpisodeDetailContent(
             )
         }
 
-        // Air date
         episode.metadata.airDate?.takeIf { it.isNotBlank() }?.let {
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
             Text(
@@ -1139,7 +1127,6 @@ private fun EpisodeDetailContent(
             )
         }
 
-        // Bitrate
         episode.metadata.bitrate?.takeIf { it > 0 }?.let {
             Spacer(modifier = Modifier.height(CinemaSpacing.xs))
             Text(
@@ -1284,7 +1271,6 @@ private fun EpisodeCard(
                     )
                 }
 
-                // Episode plot/summary
                 episode.metadata.plot?.let { plotText ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                     Text(
@@ -1296,7 +1282,6 @@ private fun EpisodeCard(
                     )
                 }
 
-                // Duration
                 episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
                     Spacer(modifier = Modifier.height(CinemaSpacing.xxs))
                     Text(

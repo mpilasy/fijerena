@@ -13,12 +13,9 @@ import androidx.compose.runtime.setValue
  * the user picked it (Play/Resume button, an episode's own Play, a season tab or swipe) or
  * because the anchor auto-select effect guessed it from watch history.
  *
- * Was three independent `rememberSaveable`/`remember` vars — `resumeEpisodeId`,
- * `selectedSeasonNumber`, `hasManuallySelectedSeason` — written from several separate call sites
- * with the "don't clobber a manual pick" rule re-implemented at each one. Collecting them into one
- * object with named transitions instead of ad hoc assignments means that rule lives in exactly one
- * place, and there's no second, independently-declared field free to drift out of sync with the
- * rest — see docs/plans/archive/20260908_episode-selection-fragility-plan.md. Mirrors TV's identical
+ * One object with named transitions instead of ad hoc assignments, so the "don't clobber a manual
+ * pick" rule lives in exactly one place and no independently-declared field can drift out of sync
+ * with the rest — see docs/plans/archive/20260908_episode-selection-fragility-plan.md. Mirrors TV's identical
  * EpisodeResumeState.kt (this app's screens are separate per platform, not shared, same as the
  * rest of feature/episode/).
  */

@@ -26,7 +26,6 @@ private val CinemaDisplayFontFamily =
     )
 
 /**
- * Cinema Typography Scale - Deep Night Design System
  * Optimized for mobile viewing distance (arms-length, ~16-20 inches)
  * Manrope for display/headline styles, Roboto (system default) for title/body/label.
  */

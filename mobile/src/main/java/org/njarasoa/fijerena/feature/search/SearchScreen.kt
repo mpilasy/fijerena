@@ -265,7 +265,6 @@ fun MobileSearchScreen(
                     ),
             )
 
-            // Content
             Box(
                 modifier =
                     Modifier

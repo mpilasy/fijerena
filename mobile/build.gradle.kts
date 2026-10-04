@@ -85,14 +85,12 @@ android {
 }
 
 dependencies {
-    // Core modules
     implementation(project(":core:ui"))
     implementation(project(":core:player"))
     implementation(project(":core:navigation"))
     implementation(project(":core:data"))
     implementation(project(":core:network"))
 
-    // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
@@ -100,7 +98,6 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
 
-    // Compose & UI
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -108,7 +105,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Image Loading
     // coil-compose pulls in org.jetbrains.compose.* (Compose Multiplatform) transitively, which
     // ships its own copy of androidx.compose.foundation.layout classes (e.g. FlowRow) under an
     // older Compose version than this app's real androidx BOM. The duplicate class wins at dex
@@ -124,18 +120,15 @@ dependencies {
         exclude(group = "org.jetbrains.compose.components")
     }
 
-    // Navigation
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
 
-    // Lifecycle & ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
 
-    // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
     // Scanning live sync pairing codes (bundled model: works without Play services' download)
@@ -150,7 +143,6 @@ dependencies {
         exclude(group = "androidx.media3")
     }
 
-    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

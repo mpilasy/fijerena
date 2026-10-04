@@ -35,13 +35,10 @@ dependencies {
     // Kotlinx Serialization for type-safe navigation
     api(libs.kotlinx.serialization.json)
 
-    // Navigation Compose
     api(libs.androidx.navigation.compose)
 
-    // Core
     implementation(libs.androidx.core.ktx)
 
-    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

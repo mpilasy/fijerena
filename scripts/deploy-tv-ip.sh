@@ -72,9 +72,8 @@ mkdir -p "$BACKUP_DIR"
 # Keep a week of backups: anything older than 7 days goes before this run adds its own.
 find "$BACKUP_DIR" -maxdepth 1 \( -name '*.tar' -o -name '*.tar.gz' \) -mtime +7 -print -delete
 
-# Installs run in parallel — safe now that the build (the part that was actually racing before,
-# via a shared output directory) has already finished: each install only reads the finished APK
-# and targets its own device serial, so there's no shared mutable state between them. Each
+# Installs run in parallel — safe once the build (which shares an output directory) has
+# finished: each install only reads the finished APK and targets its own device serial, so there's no shared mutable state between them. Each
 # install is preceded by its own backup so the two stay paired per device under `&`.
 PIDS=()
 for TARGET in "${REACHABLE[@]}"; do

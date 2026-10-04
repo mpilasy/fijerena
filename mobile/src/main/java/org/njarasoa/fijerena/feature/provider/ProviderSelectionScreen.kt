@@ -157,7 +157,6 @@ fun MobileProviderSelectionScreen(
         }
     }
 
-    // Delete confirmation
     deleteConfirmProvider?.let { provider ->
         CinemaAlertDialog(
             onDismissRequest = { deleteConfirmProvider = null },

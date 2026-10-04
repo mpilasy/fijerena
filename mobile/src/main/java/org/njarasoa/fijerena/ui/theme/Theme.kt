@@ -45,27 +45,22 @@ fun FirstVideoPlayerTheme(
     val colorScheme =
         remember(palette) {
             darkColorScheme(
-                // Primary - accent color
                 primary = palette.accent,
                 onPrimary = Color.White,
                 primaryContainer = palette.accentDark,
                 onPrimaryContainer = palette.accentLight,
-                // Secondary - Vivid Orange
                 secondary = palette.orange,
                 onSecondary = Color.White,
                 secondaryContainer = palette.orangeDark,
                 onSecondaryContainer = palette.orangeLight,
-                // Tertiary - Light accent
                 tertiary = palette.accentLight,
                 onTertiary = Color.Black,
                 tertiaryContainer = palette.surface,
                 onTertiaryContainer = palette.accentLight,
-                // Error - Red
                 error = palette.error,
                 onError = Color.White,
                 errorContainer = palette.error.copy(alpha = 0.2f),
                 onErrorContainer = palette.error.copy(alpha = 0.8f),
-                // Background & Surface
                 background = palette.background,
                 onBackground = palette.textPrimary,
                 surface = palette.surface,

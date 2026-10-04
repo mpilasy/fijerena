@@ -280,7 +280,7 @@ fun MobileContentTypeSelectionScreen(
                     title = {
                         // Only render as a dropdown when there's actually something to switch to —
                         // otherwise this is a dead tap: the picker dialog below only ever opens when
-                        // allProviders.size > 1, but the arrow/click target used to show regardless.
+                        // allProviders.size > 1.
                         if (allProviders.size > 1) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -440,7 +440,6 @@ fun MobileContentTypeSelectionScreen(
         }
     }
 
-    // Provider picker dialog
     if (showProviderPicker && allProviders.size > 1) {
         CinemaAlertDialog(
             onDismissRequest = { showProviderPicker = false },
@@ -514,9 +513,6 @@ fun MobileContentTypeSelectionScreen(
     }
 }
 
-/**
- * Full-width gradient card for content type selection (mobile).
- */
 @Composable
 private fun GradientContentCard(
     title: String,

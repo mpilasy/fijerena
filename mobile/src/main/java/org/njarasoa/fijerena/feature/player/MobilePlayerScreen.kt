@@ -87,11 +87,6 @@ import org.njarasoa.fijerena.feature.player.components.MobileUpNextOverlay
 import org.njarasoa.fijerena.feature.player.components.QualitySelectorDialog
 import org.njarasoa.fijerena.feature.player.components.SubtitleSelectorDialog
 
-/**
- * Mobile player screen with touch controls, audio/subtitle/quality selectors,
- * favorites, playback resume, and Stats for Nerds overlay.
- * Refactored to use StreamLoaderViewModel.
- */
 private const val POST_FIRST_PLAY_BUFFERING_SPINNER_DELAY_MS = 3_000L
 
 /** Double-tap seek step (2a) — matches the app-wide seek convention documented in AGENTS.md. */
@@ -273,7 +268,6 @@ fun MobilePlayerContent(
             streamState
         }
 
-    // UI State
     var showChannelToast by remember { mutableStateOf(false) }
     // Bumped every time showChannelToast is (re)triggered, so the auto-hide LaunchedEffect below
     // restarts its delay even when a second channel switch lands while the toast from the first
@@ -545,7 +539,7 @@ fun MobilePlayerContent(
                     val readyState =
                         viewModel.playbackState
                             .filter { it is PlaybackState.Playing || it is PlaybackState.Paused || it is PlaybackState.Error }
-                            .first() // Wait for first ready state
+                            .first()
 
                     if (readyState !is PlaybackState.Error) {
                         val service = StreamingPlaybackService.getInstance()
@@ -618,12 +612,11 @@ fun MobilePlayerContent(
                                         onTap = {
                                             if (!showStats) showControls = !showControls
                                         },
-                                        // Double-tap 10s relative seek (2a), replacing the old
-                                        // double-tap pause/resume — that duplicated the single-tap +
-                                        // center button path and broke the double-tap-to-seek
-                                        // convention every other mobile video player uses (YouTube,
-                                        // Netflix, Plex, MX Player). Left 40% of the width rewinds,
-                                        // right 40% seeks forward, the center 20% is left alone —
+                                        // Double-tap 10s relative seek (2a), not pause/resume — that
+                                        // would duplicate the single-tap + center button path and break
+                                        // the double-tap-to-seek convention every other mobile video
+                                        // player uses (YouTube, Netflix, Plex, MX Player). Left 40% of
+                                        // the width rewinds, right 40% seeks forward, the center 20% is left alone —
                                         // single tap already toggles the controls overlay, so a
                                         // second meaning on center double-tap would be redundant.
                                         onDoubleTap = { offset ->

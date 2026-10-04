@@ -126,7 +126,6 @@ fun ColumnScope.DataManagementSection(
                         Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     }
 
-                    // Total Items
                     Text(
                         text = stringResource(R.string.provider_total_db_items_label),
                         style = MaterialTheme.typography.bodyLarge,
@@ -145,7 +144,6 @@ fun ColumnScope.DataManagementSection(
                     )
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-                    // Live TV
                     Text(text = stringResource(R.string.provider_live_tv_label), style = MaterialTheme.typography.titleSmall)
                     Text(
                         text =
@@ -160,7 +158,6 @@ fun ColumnScope.DataManagementSection(
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-                    // Movies
                     Text(text = stringResource(R.string.provider_movies_label), style = MaterialTheme.typography.titleSmall)
                     Text(
                         text =
@@ -175,7 +172,6 @@ fun ColumnScope.DataManagementSection(
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-                    // TV Shows
                     Text(text = stringResource(R.string.provider_tv_shows_label), style = MaterialTheme.typography.titleSmall)
                     Text(
                         text =
@@ -189,8 +185,8 @@ fun ColumnScope.DataManagementSection(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
-            } // Column
-        } // GlassPanel
+            }
+        }
     }
 }
 
@@ -221,7 +217,6 @@ fun ColumnScope.ProviderDangerZoneSection(
                 )
                 Spacer(modifier = Modifier.height(CinemaSpacing.sm))
 
-                // Clear Favorites
                 Text(
                     text = stringResource(R.string.provider_clear_favorites_desc),
                     style = MaterialTheme.typography.bodySmall,
@@ -236,7 +231,6 @@ fun ColumnScope.ProviderDangerZoneSection(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-                // Clear Progress
                 Text(
                     text = stringResource(R.string.provider_clear_progress_desc),
                     style = MaterialTheme.typography.bodySmall,
@@ -288,8 +282,8 @@ fun ColumnScope.ProviderDangerZoneSection(
                         )
                     }
                 }
-            } // Column
-        } // GlassPanel
+            }
+        }
     }
 }
 

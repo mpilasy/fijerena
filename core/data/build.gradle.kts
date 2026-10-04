@@ -35,18 +35,14 @@ dependencies {
     // Depend on player module for models
     api(project(":core:player"))
 
-    // Lifecycle & ViewModel
     api(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
-    // Kotlinx Coroutines
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.coroutines.android)
 
-    // Core
     implementation(libs.androidx.core.ktx)
 
-    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

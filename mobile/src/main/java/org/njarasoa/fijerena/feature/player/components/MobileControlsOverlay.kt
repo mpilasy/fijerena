@@ -113,7 +113,6 @@ fun MobileControlsOverlay(
 ) {
     val haptic = LocalHapticFeedback.current
 
-    // Key on metadata so track counts update when a new stream is loaded
     // Keyed on tracksVersion, not just metadata: metadata is set once at playStream() time,
     // before ExoPlayer typically resolves tracks, and (for Live TV especially) may never change
     // again for the rest of the session — leaving these counts permanently 0 and hiding the
@@ -123,7 +122,6 @@ fun MobileControlsOverlay(
     val subtitleTrackCount = remember(metadata, tracksVersion) { viewModel.getSubtitleTracks().size }
     val qualityCount = remember(metadata, tracksVersion) { viewModel.getVideoQualities().size }
 
-    // State for resolution and codec
     var videoCodec by remember { mutableStateOf<String?>(null) }
     var videoResolution by remember { mutableStateOf<String?>(null) }
 
@@ -155,7 +153,6 @@ fun MobileControlsOverlay(
                         }
                     }
                 }
-                // If we found both, we can stop polling for this stream state
                 if (videoCodec != null && videoResolution != null) break
                 delay(1000)
             }
@@ -194,7 +191,6 @@ fun MobileControlsOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Title
                 Column(
                     modifier =
                         Modifier
@@ -246,7 +242,6 @@ fun MobileControlsOverlay(
                         BadgedTitle(raw = metadata.title, style = typography.titleMedium, color = CinemaTextPrimary)
                     }
 
-                    // Resolution and Codec Info
                     if (videoResolution != null || videoCodec != null) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.xs),
@@ -372,7 +367,6 @@ fun MobileControlsOverlay(
                                 textAlign = TextAlign.End,
                             )
 
-                            // Seek position state for dragging
                             var isSeeking by remember { mutableStateOf(false) }
                             var seekPosition by remember { mutableStateOf(0f) }
                             var lastHapticSecond by remember { mutableStateOf(-1L) }
@@ -515,7 +509,6 @@ fun MobileControlsOverlay(
                         horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.md),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // Audio track selector (only if multiple tracks)
                         if (audioTrackCount > 1) {
                             CinemaIconButton(
                                 onClick = onAudioTrack,
@@ -525,7 +518,6 @@ fun MobileControlsOverlay(
                             )
                         }
 
-                        // Subtitle selector (only if subtitles available)
                         if (subtitleTrackCount > 0) {
                             CinemaIconButton(
                                 onClick = onSubtitle,
@@ -535,7 +527,6 @@ fun MobileControlsOverlay(
                             )
                         }
 
-                        // Quality selector (only if multiple qualities)
                         if (qualityCount > 1) {
                             CinemaIconButton(
                                 onClick = onQuality,
@@ -545,7 +536,6 @@ fun MobileControlsOverlay(
                             )
                         }
 
-                        // Favorite toggle
                         CinemaIconButton(
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)

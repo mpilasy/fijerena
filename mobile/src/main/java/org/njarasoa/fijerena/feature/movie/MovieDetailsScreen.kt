@@ -222,7 +222,7 @@ private fun MovieDetailsContent(
                     }
 
                     // Single dot-separated meta row: star rating and content rating/resolution stay their own
-                    // small pills (same as before), everything else is plain text — all joined by " · " into
+                    // small pills, everything else is plain text — all joined by " · " into
                     // one flowing line instead of each fact carrying its own separate spacing.
                     val endsAtContext = LocalContext.current
                     val endsAtText =
@@ -276,7 +276,6 @@ private fun MovieDetailsContent(
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.lg))
 
-                    // Play / Resume button
                     val hasResume = resumePositionMs > 0L
                     if (hasResume) {
                         val resumeTimeText = formatTime(resumePositionMs)
@@ -440,8 +439,8 @@ private fun movieDetailTabLabel(tab: MovieDetailTab): String =
 
 /**
  * Overview tab: plot, release date, director, technical stream info, then the TMDB id and the
- * category button — everything that was diagnostics/context rather than headline facts on the old
- * flat layout. Cast lives in its own tab now (see [CastChipsTabContent]); alternate stream
+ * category button — diagnostics/context rather than headline facts. Cast lives in its own tab
+ * (see [CastChipsTabContent]); alternate stream
  * instances live in the Versions tab.
  */
 @Composable

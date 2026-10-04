@@ -39,30 +39,25 @@ android {
 
 dependencies {
     implementation(libs.zxing.core)
-    // Core modules
     implementation(project(":core:network"))
     implementation(project(":core:player"))
 
-    // AndroidX Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
 
-    // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Paging
     implementation(libs.paging.runtime)
     implementation(libs.paging.compose)
 
     // Room (needed for EpgIndexDatabase access in EpgBrowserViewModel)
     implementation(libs.room.runtime)
 
-    // Image Loading
     // coil-compose pulls in org.jetbrains.compose.* (Compose Multiplatform) transitively, which
     // ships its own copy of androidx.compose.foundation.layout classes (e.g. FlowRow) under an
     // older Compose version than this app's real androidx BOM. The duplicate class wins at dex
@@ -79,10 +74,8 @@ dependencies {
     }
     implementation(libs.coil.network.okhttp)
 
-    // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
-    // Testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)

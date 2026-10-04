@@ -56,24 +56,6 @@ import org.njarasoa.fijerena.feature.search.MobileSearchScreen
 import org.njarasoa.fijerena.feature.settings.MobileSettingsScreen
 import org.njarasoa.fijerena.ui.theme.MobileDimensions
 
-/**
- * Mobile navigation host with Material3 transitions.
- *
- * Features:
- * - Type-safe navigation using kotlinx.serialization
- * - Smooth slide and fade transitions between screens
- * - Shared AuthViewModel for session management
- * - Automatic navigation to CategoryList after login
- * - Standard Material3 design
- *
- * Navigation Flow:
- * 1. Login screen (unauthenticated users)
- * 2. CategoryList screen (after successful login)
- * 3. Player screen (when stream is selected)
- *
- * @param navController Optional NavController (defaults to rememberNavController)
- * @param authViewModel Shared authentication ViewModel
- */
 @Composable
 fun MobileNavHost(
     navController: NavHostController = rememberNavController(),
@@ -143,13 +125,12 @@ fun MobileNavHost(
         minimumShownElapsed = true
     }
 
-    // Provider lookup / credential migration — used to render nothing at all until it finished.
+    // Provider lookup / credential migration still running.
     if (hasProvider == null || !minimumShownElapsed) {
         AppLoadingScreen(logoSize = MobileDimensions.epgProgramMinWidth)
         return
     }
 
-    // Determine initial destination based on provider configuration
     val startDestination =
         if (ProvidersDbGuard.isBlocked) {
             Screen.NewerData
@@ -167,8 +148,7 @@ fun MobileNavHost(
             val providerRepo = ProviderRepository(context.applicationContext)
             val activeProvider = providerRepo.getActiveProvider()
             if (activeProvider != null && activeProvider.type == "XTREAM") {
-                // Use AppContainer to get the shared repository instance.
-                // AppContainer.getMediaRepository() now handles connect() internally.
+                // The shared repository instance; AppContainer.getMediaRepository() handles connect().
                 val repo =
                     org.njarasoa.fijerena.core.ui.di.AppContainer
                         .getInstance(context)
@@ -185,8 +165,6 @@ fun MobileNavHost(
             }
         }
     }
-
-    // The first screen is up: this launch counts as healthy if it lives 30 s more.
 
     Surface(modifier = Modifier.fillMaxSize()) {
         NavHost(
@@ -239,7 +217,6 @@ fun MobileNavHost(
                 }
             },
         ) {
-            // Content Type Selection Screen
             composable<Screen.ContentTypeSelection> {
                 val navigateToContentType: (String) -> Unit = { contentType ->
                     navController.navigateOnce(Screen.CategoryList(contentType))
@@ -330,7 +307,6 @@ fun MobileNavHost(
                 )
             }
 
-            // EPG Browser Screen
             composable<Screen.EpgBrowser> { backStackEntry ->
                 val browserScreen = backStackEntry.toRoute<Screen.EpgBrowser>()
                 MobileEpgBrowserScreen(
@@ -351,7 +327,6 @@ fun MobileNavHost(
                 )
             }
 
-            // Category List Screen
             composable<Screen.CategoryList> { backStackEntry ->
                 val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
                 MobileCategoryListScreen(
@@ -479,7 +454,6 @@ fun MobileNavHost(
                 )
             }
 
-            // Add/Edit Provider Screen
             composable<Screen.AddProvider> { backStackEntry ->
                 val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
                 MobileAddProviderScreen(
@@ -493,7 +467,6 @@ fun MobileNavHost(
                 )
             }
 
-            // Provider Selection Screen
             composable<Screen.ProviderSelection> {
                 MobileProviderSelectionScreen(
                     onProviderSelected = { provider ->
@@ -542,7 +515,6 @@ fun MobileNavHost(
                 )
             }
 
-            // Settings Screen
             composable<Screen.ProfilePicker> {
                 ProfilePickerScreen(
                     onProfileChosen = {
@@ -626,13 +598,11 @@ fun MobileNavHost(
                     .MobileDiagnosticsScreen(onBack = { navController.navigateUp() })
             }
 
-            // Search Screen
             composable<Screen.Search> { backStackEntry ->
                 val searchScreen = backStackEntry.toRoute<Screen.Search>()
                 MobileSearchScreen(
                     contentType = searchScreen.contentType,
                     onStreamSelected = { itemId, itemName, categoryId, contentType ->
-                        // Navigate based on content type
                         when (contentType) {
                             ContentType.TV_SHOWS -> {
                                 navController.navigateOnce(
@@ -678,7 +648,6 @@ fun MobileNavHost(
                 )
             }
 
-            // Movie Details Screen (for VOD Movies)
             composable<Screen.MovieDetails> { backStackEntry ->
                 val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
                 MobileMovieDetailsScreen(
@@ -720,7 +689,6 @@ fun MobileNavHost(
                 )
             }
 
-            // Episode Selection Screen (for TV Shows)
             composable<Screen.EpisodeSelection> { backStackEntry ->
                 val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
                 MobileEpisodeSelectionScreen(
@@ -766,7 +734,6 @@ fun MobileNavHost(
                 )
             }
 
-            // EPG Management Screen (scoped to one provider)
             composable<Screen.EpgManagement> { backStackEntry ->
                 val epgScreen = backStackEntry.toRoute<Screen.EpgManagement>()
                 MobileEpgManagementScreen(
@@ -775,7 +742,6 @@ fun MobileNavHost(
                 )
             }
 
-            // EPG Guide Screen (Live TV)
             composable<Screen.EpgGuide> { backStackEntry ->
                 val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
                 MobileEpgGuideScreen(

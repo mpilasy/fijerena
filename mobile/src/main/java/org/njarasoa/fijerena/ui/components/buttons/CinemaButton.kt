@@ -138,7 +138,6 @@ fun CinemaTextButton(
 }
 
 /**
- * Mobile Icon Button - For icon-only actions
  * Circular button with icon, uses primary color scheme, identical to TV's aesthetic.
  */
 @Composable
@@ -199,9 +198,6 @@ fun DetailIconAction(
     }
 }
 
-/**
- * Mobile Danger Icon Button
- */
 @Composable
 fun CinemaDangerIconButton(
     onClick: () -> Unit,

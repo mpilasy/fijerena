@@ -135,7 +135,6 @@ fun ColumnScope.ProviderSettingsSection(
 
                 Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-                // Watch History Size
                 Text(text = stringResource(R.string.provider_watch_history_size_label), style = MaterialTheme.typography.titleSmall)
                 Text(
                     text = stringResource(R.string.provider_watch_history_size_desc),
@@ -193,7 +192,6 @@ fun ColumnScope.ProviderSettingsSection(
                     }
                 }
 
-                // Xtream-only settings
                 if (selectedType == ProviderType.XTREAM) {
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
                     // Selected = app accent, not the theme's orange secondaryContainer (M3's chip default).
@@ -203,7 +201,6 @@ fun ColumnScope.ProviderSettingsSection(
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                         )
 
-                    // Stream Output Format
                     Text(text = stringResource(R.string.provider_stream_format_label), style = MaterialTheme.typography.titleSmall)
                     Text(
                         text = stringResource(R.string.provider_stream_format_desc),
@@ -233,7 +230,6 @@ fun ColumnScope.ProviderSettingsSection(
 
                     Spacer(modifier = Modifier.height(CinemaSpacing.md))
 
-                    // Playlist Type
                     Text(text = stringResource(R.string.provider_playlist_type_label), style = MaterialTheme.typography.titleSmall)
                     Text(
                         text = stringResource(R.string.provider_playlist_type_desc),
@@ -291,8 +287,8 @@ fun ColumnScope.ProviderSettingsSection(
                         )
                     }
                 }
-            } // Column
-        } // GlassPanel
+            }
+        }
     }
 }
 
@@ -366,7 +362,7 @@ fun ColumnScope.ProviderFiltersSection(
                     onClick = onManageFilters,
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.provider_manage_filters_button)) }
-            } // Column
-        } // GlassPanel
+            }
+        }
     }
 }

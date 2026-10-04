@@ -60,7 +60,6 @@ fun MobileStatsOverlay(
     metadata: PlayerMetadata,
     onClose: () -> Unit,
 ) {
-    // Handle Back button to close overlay
     BackHandler(enabled = true) {
         onClose()
     }

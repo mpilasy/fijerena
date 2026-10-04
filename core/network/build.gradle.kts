@@ -69,10 +69,8 @@ dependencies {
     // Ktor HTTP client for Jellyfin API
     implementation(libs.bundles.networking)
 
-    // WorkManager
     implementation(libs.work.runtime.ktx)
 
-    // Room Database
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.room.paging)
@@ -81,10 +79,8 @@ dependencies {
     // Bundled SQLite with FTS5 support (system SQLite may lack FTS5 on some OEM builds)
     implementation(libs.sqlite.android)
 
-    // Paging
     api(libs.paging.runtime)
 
-    // Testing
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)

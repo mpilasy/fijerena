@@ -4,7 +4,6 @@ import androidx.compose.ui.unit.Dp
 import org.njarasoa.fijerena.core.ui.theme.CinemaSpacing
 
 /**
- * Mobile Spacing System - Deep Night Design System
  * Re-exports shared spacing values and adds mobile-specific safe margins.
  */
 object Spacing {

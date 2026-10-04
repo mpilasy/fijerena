@@ -200,7 +200,6 @@ fun MobileEpgManagementScreen(
                     val isSelected = selectedIds.contains(source.id)
                     val latestTime = latestProgrammeTimes[source.id] ?: 0L
 
-                    // Look for active progress for this source
                     val activeProgress =
                         if (processingState is MultiSourceState.Processing) {
                             (processingState as MultiSourceState.Processing).activeProgress[source.id]

@@ -50,25 +50,21 @@ dependencies {
     api(platform(libs.androidx.compose.bom))
     api("androidx.compose.runtime:runtime")
 
-    // Media3 (ExoPlayer) - Latest stable 1.7.1
+    // Media3 (ExoPlayer)
     api(libs.bundles.media)
 
     // FFmpeg extension for software decoding of AC3, EAC3, DTS, TrueHD, etc.
     // Pre-built Media3 FFmpeg decoder from Jellyfin (Maven Central)
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.6.1+2")
 
-    // Kotlinx Coroutines
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.coroutines.android)
 
-    // Networking & Serialization
     implementation(libs.bundles.networking)
 
-    // Lifecycle & ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.core.ktx)
 
-    // Testing
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)

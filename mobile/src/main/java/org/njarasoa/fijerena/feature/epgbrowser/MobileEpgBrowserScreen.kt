@@ -243,7 +243,6 @@ fun MobileEpgBrowserScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                // Radio buttons
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     EpgBrowserViewModel.SearchMode.entries.forEach { mode ->
                         Row(
@@ -270,7 +269,6 @@ fun MobileEpgBrowserScreen(
                     }
                 }
 
-                // Matched only checkbox
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.clickable { matchedOnly = !matchedOnly },
@@ -310,7 +308,6 @@ fun MobileEpgBrowserScreen(
                 }
             }
 
-            // Search bar
             val placeholderText =
                 when (searchMode) {
                     EpgBrowserViewModel.SearchMode.PROGRAMME -> stringResource(R.string.epg_browser_search_titles_placeholder)
@@ -542,7 +539,6 @@ private fun MobileResultsContent(
         }
 
     Column {
-        // Stats row
         Text(
             text = results.statsLine(),
             style = MaterialTheme.typography.bodyMedium,
@@ -662,7 +658,6 @@ private fun MobileProgramCard(
                 }
             }
 
-            // Description
             val description = program.description
             if (!description.isNullOrBlank()) {
                 Text(
@@ -740,7 +735,6 @@ private fun MobileProgramCard(
                 )
             }
 
-            // Expand/collapse toggle
             if (showExpander) {
                 Row(
                     modifier =

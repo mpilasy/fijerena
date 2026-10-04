@@ -227,7 +227,6 @@ fun MobileCategoryListScreen(
         }
     }
 
-    // --- Live TV docked mini-player ---
     // Tap-driven equivalent of TV's focus-driven preview pane (tv/.../LiveTvSplitLayout.kt): a
     // small always-playing mini-player docked above the channel list, promotable to full screen
     // in place (same engine, same ViewModel pair — never a second connection). Unlike TV, mobile
@@ -1107,8 +1106,8 @@ private fun SwipeActionButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            // Contrasts against the tinted circle behind it — using `tint` here too (as before)
-            // put a same-hue icon on a same-hue background, which was all but invisible.
+            // Contrasts against the tinted circle behind it — `tint` here would put a same-hue icon
+            // on a same-hue background, all but invisible.
             tint = CinemaTextPrimary,
             modifier = Modifier.size(MobileDimensions.iconDefault),
         )
@@ -1202,7 +1201,6 @@ private fun CategoryChipRow(
             }
         }
 
-        // Regular categories row
         LazyRow(
             state = listState,
             modifier =
@@ -1570,7 +1568,6 @@ private fun StreamCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(CinemaSpacing.sm),
             ) {
-                // Poster thumbnail
                 CinemaThumbnail(
                     url = item.thumbnailUrl,
                     fallbackLetter = item.name.firstOrNull(),
@@ -1582,7 +1579,6 @@ private fun StreamCard(
                             height = MobileDimensions.posterHeight,
                         ),
                 )
-                // Stream name + rating
                 val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
@@ -1625,7 +1621,6 @@ private fun StreamCard(
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
-                    // "What's On Now" for Live TV
                     nowPlayingProgram?.let { program ->
                         Text(
                             text = stringResource(R.string.epg_now_prefix, program.title),
@@ -1639,7 +1634,6 @@ private fun StreamCard(
                 }
             }
 
-            // Progress bar
             if (watchProgress > 0f) {
                 LinearProgressIndicator(
                     progress = { watchProgress.coerceIn(0f, 1f) },

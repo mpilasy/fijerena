@@ -60,7 +60,7 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 /**
  * Settings as one grouped preference list: the seven shared groups of
  * `docs/plans/archive/20261003_ux-overhaul-plan.md` (Part I, A) as section headers, value rows that open
- * pickers, switches inline. Storage and ViewModel calls are unchanged from the card layout.
+ * pickers, switches inline.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -178,7 +178,6 @@ fun MobileSettingsScreen(
         )
     }
 
-    // Conflict resolution dialog
     if (showConflictDialog && parsedImport != null) {
         ImportConflictDialog(
             conflicts = parsedImport.conflictingProviders,
