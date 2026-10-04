@@ -265,12 +265,14 @@ internal fun LiveTvSplitLayout(
             ImmutableMediaList(recentStreams.withCurrentChannel(target, CurrentChannelPolicy.INCLUDE))
         }
     val favoriteList = remember(favoriteStreams) { ImmutableMediaList(favoriteStreams) }
-    val contextStreams: ImmutableMediaList? =
-        when (channelContext) {
+
+    fun streamsOf(tab: ChannelContext): ImmutableMediaList? =
+        when (tab) {
             is ChannelContext.Category -> streams
             ChannelContext.Recent -> recentWithCurrent
             ChannelContext.Favorites -> favoriteList
         }
+    val contextStreams: ImmutableMediaList? = streamsOf(channelContext)
     val contextLoading =
         when (channelContext) {
             is ChannelContext.Category -> streamsLoading
@@ -521,37 +523,59 @@ internal fun LiveTvSplitLayout(
                 // The same panel as the split's, over the video (LT3): same tabs, rows and row
                 // actions, and its tabs switch channelContext — so the zap order below follows.
                 channelPanel = { close ->
-                    LiveTvChannelPanel(
-                        tabs = contextTabs,
-                        context = channelContext,
-                        onContextSelected = { channelContext = it },
-                        streams = contextStreams,
-                        streamsLoading = contextLoading,
-                        lastPlayedItemId = target.id,
-                        nowPlaying = nowPlaying,
-                        contentType = contentType,
-                        categoryViewModel = categoryViewModel,
-                        isDevMode = isDevMode,
-                        favoriteIds = favoriteIds,
-                        watchProgress = watchProgress,
-                        watchedIds = watchedIds,
-                        onCategorySelected = onCategorySelected,
-                        onStreamSelected = onStreamSelected,
-                        onStreamPromote = { newItem ->
-                            // Switching channels while already full-screen is a real "commit to
-                            // watching" — use the full loadStream (with side effects), still on
-                            // the SAME loader/engine.
-                            focusedItemFlow.value = newItem
-                            previewTarget = newItem
-                            loader.loadStream(newItem)
-                            close()
-                        },
-                        // Focus alone never tunes over the video; only OK does.
-                        onStreamFocused = { },
-                        onRefresh = refreshContext,
-                        overlay = true,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    // Opened on a tab with no rows (no favourites, or the last one removed), focus
+                    // was left on the tab row: open on the tab that has the playing channel
+                    // instead — the category it came from, else Recent — on its row. Switched
+                    // before the panel composes: its empty tab would take focus and, focus
+                    // following selection, select itself again.
+                    val reopenOn =
+                        remember {
+                            if (!contextLoading && contextStreams?.isEmpty() == true) {
+                                contextTabs.firstOrNull { tab -> streamsOf(tab)?.any { it.id == target.id } == true }
+                            } else {
+                                null
+                            }
+                        }
+                    var panelReady by remember { mutableStateOf(reopenOn == null) }
+                    LaunchedEffect(Unit) {
+                        if (reopenOn != null) {
+                            channelContext = reopenOn
+                            panelReady = true
+                        }
+                    }
+                    if (panelReady) {
+                        LiveTvChannelPanel(
+                            tabs = contextTabs,
+                            context = channelContext,
+                            onContextSelected = { channelContext = it },
+                            streams = contextStreams,
+                            streamsLoading = contextLoading,
+                            lastPlayedItemId = target.id,
+                            nowPlaying = nowPlaying,
+                            contentType = contentType,
+                            categoryViewModel = categoryViewModel,
+                            isDevMode = isDevMode,
+                            favoriteIds = favoriteIds,
+                            watchProgress = watchProgress,
+                            watchedIds = watchedIds,
+                            onCategorySelected = onCategorySelected,
+                            onStreamSelected = onStreamSelected,
+                            onStreamPromote = { newItem ->
+                                // Switching channels while already full-screen is a real "commit to
+                                // watching" — use the full loadStream (with side effects), still on
+                                // the SAME loader/engine.
+                                focusedItemFlow.value = newItem
+                                previewTarget = newItem
+                                loader.loadStream(newItem)
+                                close()
+                            },
+                            // Focus alone never tunes over the video; only OK does.
+                            onStreamFocused = { },
+                            onRefresh = refreshContext,
+                            overlay = true,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 },
                 onNextChannel = {
                     neighborChannel(contextStreams, target.id, +1)?.let { newItem ->

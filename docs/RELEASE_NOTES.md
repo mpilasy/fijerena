@@ -25,6 +25,7 @@
 - **"Search the guide" from a TV Guide finds what the guide shows:** limited to the guide's channels, it now also finds programmes on channels the guide matches by name (several channels often share one guide), and OK plays the guide's channel. → Part III GD5.
 - **TV focus fixes from the final walk-through:** Right on an episode no longer changes season (the season tabs do, one Left away); Left in the TV Guide onto a long programme that started earlier no longer bounces back; in Live sync, Up from Leave reaches the device's Remove button. → regression round.
 - **TV movie with only a Details tab:** Right on the tab stays put instead of jumping up to Play; the same at the end of every details tab row. → follow-up.
+- **TV full-screen channel list never opens on an empty tab:** when the tab you used last has no channels (an empty Favourites), the list opens on the tab with the channel you are watching, on that channel. → follow-up.
 
 Plan: `docs/plans/20261003_ux-overhaul-plan.md`.
 
