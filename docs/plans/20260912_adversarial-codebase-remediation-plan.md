@@ -28,7 +28,7 @@ surrounding code made a difference (P3, M2).
 | P4 | `Regex("[A-Z]+")` misfires on capitalized queries | ✅ Applied as described |
 | U1 | `suppressNextCenterKeyUp` leak | ✅ Applied — narrower, reactive fix instead of per-transition resets |
 | U2 | Hardcoded spacing/typography literals | ⏸ Not done — deferred, style only |
-| U3 | Multi-return function style | 🔄 In progress — see note below |
+| U3 | Multi-return function style | ➡ Moved — the rest is Phases 2-3 of `20260914_codebase-robustness-plan.md`; see note below |
 
 **C2 detail:** `MediaRepository.loadFavoriteSnapshotLocked()`'s `runBlocking(Dispatchers.IO)` is
 memoized (only runs cold) and already has an async warm-up in `setProvider()`. Its own doc comment

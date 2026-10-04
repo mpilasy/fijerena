@@ -1,6 +1,6 @@
 # UX Overhaul Plan — Settings, TV Focus & Live TV, TV Guide
 
-**Status (2026-10-03):** Parts I, II and III approved. Days 1–2 landed and verified on both emulators; Days 1–3 landed and verified on both emulators; Days 1–4 landed, verified and deployed to both Shields; Days 1–5 landed and verified on both emulators; round 6 in progress (see Progress).
+**Status: done (2026-10-03).** Parts I, II and III landed, verified on the TV and phone emulators and deployed to both Shields and the Bravia; final TV regression walk and its follow-ups done. Deferred: a native-speaker review of a few Malagasy terms (see Progress).
 
 ## Progress
 
@@ -63,7 +63,7 @@ at the end.
 
 # Part I — Settings (TV + mobile)
 
-**Status:** Approved (2026-10-03) — not started.
+**Status:** Done (2026-10-03).
 
 Settings and every screen it opens were walked on both emulators:
 
@@ -499,7 +499,7 @@ delete both, own commit (A-W4). No user-visible change.
 
 # Part II — TV focus navigation and Live TV flows
 
-**Status:** Approved (2026-10-03), including the Live TV flows section. Not started.
+**Status:** Done (2026-10-03), including the Live TV flows section.
 
 D-pad focus feels wrong across the TV app, not only in Settings. The TV emulator
 (Television_1080p, build `578f17c7` = `main`, which already includes `393a6405` "Back returns
@@ -835,7 +835,7 @@ Nothing — all decisions taken.
 
 # Part III — TV Guide (grid), TV + mobile
 
-**Status:** Approved (2026-10-03) — not started.
+**Status:** Done (2026-10-03).
 
 Asked 2026-10-03: "epg search is great. The whole concept of the in player tv guide is
 confusing and unusable. I've never used it. Both on the tv and mobile. … scratch the whole

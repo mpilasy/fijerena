@@ -1,6 +1,6 @@
 # UI/UX Polish, Transitions & Flow Uplift Plan
 
-**Status:** In Progress — Phases 1-5 done, Phase 6 partial (2a done, 6a/2c held back by user) (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
+**Status:** Done — Phases 1-5 and 2a done; 6a and 2c held back by the user, not started (2026-09-23). Reprioritized 2026-09-23 — unified into one findings list, scored, and resequenced into ROI-ordered phases. No more "initial" vs "additional findings" split; every item below (originally Phases 1-6 plus the aggressive-audit items 8a-8d) lives in one list and one phase order.
 
 ## 1. Scoring Method
 

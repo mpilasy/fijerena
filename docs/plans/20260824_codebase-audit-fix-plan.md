@@ -58,7 +58,7 @@ Findings are grouped into 4 tiers by crossing **risk** (data loss, crash, corrup
 
 ---
 
-## T2 — High Risk / Medium–High Complexity (PENDING ⏳)
+## T2 — High Risk / Medium–High Complexity (DONE ✅)
 
 These require more design thought or touch multiple files.
 

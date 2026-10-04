@@ -435,7 +435,7 @@ The investigation uncovered **16 critical, high, and medium-severity stability a
 
 **Emulator run 2026-10-02 (TV emulator, build c53002a5, Xtream via the `jellyxtream` bridge; SMB/Local/M3U out of scope by choice):** playback Home → resume → play again: PLAYING within 2 s, no `awaitInstance` hang; 5× rapid stop/restart: no crash; memory during VOD playback: Total PSS ~214–242 MB, Native Heap PSS 35–54 MB and not growing over a minute (no 1 GB buffer growth); three rapid "Sync Data Now" presses ran one sync; a sync left mid-run completed without recording an error; EPG worker's next run ≥ 2 h away with a daily interval. Not covered: EPG-sync memory and EPG search (the Xtream test provider has no guide), browsing during a sync (the test catalogue syncs in ~150 ms), Jellyfin playback (no login on the test profile), and heap profiling with Android Studio. `RefreshQueue` concurrency and `ProviderSyncRunner` cancellation are now covered by unit tests (see the round-2 plan).
 
-**Status: not yet done.** Each phase's touched modules passed `ktlintCheck` + `compileDebugKotlin` (plus downstream `tv`/`mobile` compile checks) before commit. Nothing below has been run on hardware.
+**Status: partly done** — the emulator run above (2026-10-02) covers what it lists; items below still marked outstanding were not run. Each phase's touched modules passed `ktlintCheck` + `compileDebugKotlin` (plus downstream `tv`/`mobile` compile checks) before commit. Nothing below has been run on hardware.
 
 1. **Static Analysis & Compilation:** — done per-phase (see above); a full repo-wide `./gradlew ktlintCheck`/`assembleDebug` has not been run.
 2. **Playback Resilience Testing:** — outstanding
