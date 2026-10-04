@@ -1,20 +1,29 @@
 # Sources, Guide Sources, Profiles and Home Plan — TV + mobile
 
-**Status:** Proposed (2026-10-03), not started. All decisions taken (D1–D8, 2026-10-03).
+**Status:** In progress (since 2026-10-03). All decisions taken (D1–D8, 2026-10-03).
 
 ## Progress
 
+| Lane | Phases, in order | Done | Current | Next |
+|---|---|---|---|---|
+| A TV Live TV | P8 | — | P8 (since 2026-10-03) | — |
+| B Profile page | P1 → P2 → P9 | — | P1–P9 (since 2026-10-03) | — |
+| C Sources & guide UI | P3 → P4 → P7 | — | P3–P7 (since 2026-10-03) | — |
+| D Guide refresh | P5a backend → P5b UI | — | P5a (since 2026-10-03) | P5b after C's P4 |
+| Last | P6 | — | — | after all lanes |
+
 | Phase | State |
 |---|---|
-| P1 Switch to a profile from its edit dialog | Todo |
-| P2 Per-profile settings in the profile edit page (developer mode, play next episode) | Todo |
-| P3 "Provides a guide" per source | Todo |
-| P4 Guide sources under the source; Settings shows Manage sources only | Todo |
-| P5 Auto-refresh per guide source | Todo |
-| P6 Section-root button at depth 4 | Todo |
-| P7 Home keeps Search the guide; search ↔ grid; no channel search | Todo |
-| P8 Live TV preview plays on OK, not on focus (TV only) | Todo |
-| P9 Content filters from the profile, not from the source | Todo |
+| P1 Switch to a profile from its edit page | In progress (lane B, since 2026-10-03) |
+| P2 Per-profile settings in the profile edit page (developer mode, play next episode) | In progress (lane B) |
+| P3 "Provides a guide" per source | In progress (lane C, since 2026-10-03) |
+| P4 Guide sources under the source; Settings shows Manage sources only | In progress (lane C) |
+| P5a Auto-refresh per guide source: database, worker, sync, export | In progress (lane D, since 2026-10-03) |
+| P5b Auto-refresh per guide source: guide sources rows, Settings | Todo (after P4) |
+| P6 Section-root button at depth 4 | Todo (last) |
+| P7 Home keeps Search the guide; search → grid; no channel search | In progress (lane C) |
+| P8 Live TV preview plays on OK, not on focus (TV only) | In progress (lane A, since 2026-10-03) |
+| P9 Content filters from the profile, not from the source | In progress (lane B) |
 
 Rows get **In progress (since date)** when work starts and **Done date** with what was verified
 and where when merged. Plan edits go in their own `docs:` commit.
