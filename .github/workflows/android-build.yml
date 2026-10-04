@@ -42,7 +42,7 @@ jobs:
       - name: Android Lint
         run: ./gradlew lintDebug
 
-      # docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-20, F-33.
+      # docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-20, F-33.
       - name: User-data databases have no blanket destructive fallback
         run: |
           if grep -rnE 'fallbackToDestructiveMigration(OnDowngrade)?\(' --include='*.kt' core/network/src/main | grep -v 'EpgIndexDatabase'; then
@@ -50,15 +50,15 @@ jobs:
             exit 1
           fi
 
-      # docs/plans/20261001_rock-solid-stability-resilience-plan.md → F-27.
+      # docs/plans/archive/20261001_rock-solid-stability-resilience-plan.md → F-27.
       - name: Suspend code does not swallow cancellation
         run: scripts/check-cancellation.sh
 
-      # docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-09.
+      # docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-09.
       - name: ViewModel coroutines have an exception boundary
         run: scripts/check-viewmodel-launch.sh
 
-      # docs/plans/20261002_next-level-rock-solid-resilience-plan.md → R-05.
+      # docs/plans/archive/20261002_next-level-rock-solid-resilience-plan.md → R-05.
       - name: TV focus requests retry on the result, not an exception
         run: scripts/check-focus-retry.sh
 
