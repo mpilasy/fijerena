@@ -16,7 +16,7 @@ is active, partly done or deliberately deferred. When it is finished or dropped 
 
 | Date | Plan | Goal | Left |
 |---|---|---|---|
-| 2026-10-03 | [Sources, guide sources, profiles and Home](./20261003_sources-guide-profiles-plan.md) | Developer mode, play next episode, content filters and Switch to on the profile page; "Provides a guide" per source; guide sources under Edit Source (and from Search the guide) and Settings down to Manage sources; auto-refresh per guide source; a Home button on every page; Home keeps one guide button, search ↔ grid, no channel search; TV Live TV preview plays on OK only | All nine phases; proposed, D6–D7 to confirm |
+| 2026-10-03 | [Sources, guide sources, profiles and Home](./20261003_sources-guide-profiles-plan.md) | Developer mode, play next episode, content filters and Switch to on the profile page; "Provides a guide" per source; guide sources under Edit Source (and from Search the guide) and Settings down to Manage sources; auto-refresh per guide source; a Home button on every page; Home keeps one guide button, search ↔ grid, no channel search; TV Live TV preview plays on OK only | All nine phases; decisions taken, not started |
 | 2026-09-14 | [Codebase robustness](./20260914_codebase-robustness-plan.md) | Pay down technical debt found in a whole-codebase review | Phases 4–5: TV Compose allocations and Coil contention, more Compose UI tests; Phases 2–3 (single-return sweeps) dropped 2026-10-03; SecretStore part of Phase 6 deferred |
 | 2026-08-28 | [Secret store migration](./20260828_secret-store-migration-plan.md) | Replace deprecated `EncryptedSharedPreferences` with an owned Keystore-backed `SecretStore` | All five phases; not started, deferred on purpose (the crash loop it cites is already handled) |
 
