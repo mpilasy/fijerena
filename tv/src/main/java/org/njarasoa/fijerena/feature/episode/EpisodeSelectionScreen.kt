@@ -476,14 +476,6 @@ internal fun EpisodeListContent(
             initialManualSeason = initialResumeSeason != null,
         )
 
-    val currentSeasonIndex = sortedSeasons.indexOfFirst { it.seasonNumber == resumeState.selectedSeason }
-    val nextSeason =
-        if (currentSeasonIndex in sortedSeasons.indices && currentSeasonIndex < sortedSeasons.lastIndex) {
-            sortedSeasons[currentSeasonIndex + 1]
-        } else {
-            null
-        }
-
     // Focus requester for primary Play / Resume button
     val playButtonFocusRequester = remember { FocusRequester() }
 
@@ -544,12 +536,6 @@ internal fun EpisodeListContent(
     // SeasonTabs attaches this to whichever tab is currently selected.
     val seasonTabsFocusRequester = remember { FocusRequester() }
 
-    // D-pad focus target for the first episode card of whichever season is selected — landing
-    // spot after a Right season switch triggered from inside the episode list (see the
-    // onPreviewKeyEvent below), so browsing episodes across a season boundary stays fluid instead
-    // of stranding focus on a card whose key just vanished from the list.
-    val firstEpisodeFocusRequester = remember { FocusRequester() }
-
     // The episodes header (UX overhaul Part II Phase 6, F-E-1/F-E-2): the sticky row above the
     // episode cards. Once the hero has scrolled away it also carries a compact line — show title ·
     // season · Play next — so an episode deep in the list still has its context on screen. Left
@@ -569,19 +555,6 @@ internal fun EpisodeListContent(
             compactHeaderShown -> compactPlayFocusRequester.requestFocus()
             else -> scrollToTabRow()
         }
-    }
-
-    // Set true by that same Right switch, consumed by the LaunchedEffect(selectedSeasonNumber)
-    // below. A plain "always refocus the first episode on season change" would also fire for a
-    // season picked from the tab row itself, yanking focus down off the tab the user is still on —
-    // this scopes the refocus to the one path that actually needs it, same signal-plus-effect shape
-    // as streamSwitchSignal above.
-    var seasonSwitchedFromEpisodeList by remember { mutableStateOf(false) }
-
-    LaunchedEffect(resumeState.selectedSeason) {
-        if (!seasonSwitchedFromEpisodeList) return@LaunchedEffect
-        seasonSwitchedFromEpisodeList = false
-        firstEpisodeFocusRequester.requestFocus()
     }
 
     // Scroll to the resume episode, so "highlighted" also means visible without the user having
@@ -1236,11 +1209,6 @@ internal fun EpisodeListContent(
                                 watchProgress = episodeProgress[episode.id] ?: 0f,
                                 isWatched = episode.id in watchedEpisodeIds,
                                 focusRequester = if (isContinueWatching) resumeCardFocusRequester else null,
-                                // Second requester on this card, alongside `focusRequester` above
-                                // when both apply — landing spot for the Right season switch below,
-                                // always the current season's first episode regardless of resume
-                                // state.
-                                additionalFocusRequester = if (index == 0) firstEpisodeFocusRequester else null,
                                 modifier =
                                     Modifier
                                         .onPreviewKeyEvent { event ->
@@ -1256,11 +1224,9 @@ internal fun EpisodeListContent(
                                                     true
                                                 }
 
-                                                // Right steps to the next season and lands on its first
-                                                // episode once it exists (the effect on selectedSeason).
-                                                event.key == Key.DirectionRight && nextSeason != null -> {
-                                                    seasonSwitchedFromEpisodeList = true
-                                                    resumeState.selectSeason(nextSeason.seasonNumber)
+                                                // Right stays put: arrows move focus, they don't change
+                                                // season — that is the season tabs' job, one Left away.
+                                                event.key == Key.DirectionRight -> {
                                                     true
                                                 }
 
@@ -2207,10 +2173,6 @@ private fun EpisodeCard(
     watchProgress: Float = 0f,
     isWatched: Boolean = false,
     focusRequester: FocusRequester? = null,
-    // A second, independent FocusRequester on the same card — set alongside [focusRequester] when
-    // this episode is both the resume card and the season's first, since either can be requested
-    // on its own (resume-on-load vs. landing here after a season switch).
-    additionalFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onLongPress: () -> Unit = {},
@@ -2233,7 +2195,6 @@ private fun EpisodeCard(
                 .fillMaxWidth()
                 .height(TvDimensions.episodeCardHeight.scaled(scale))
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                .then(if (additionalFocusRequester != null) Modifier.focusRequester(additionalFocusRequester) else Modifier)
                 .tvLongPress(onLongPress),
         colors = cardStyle.colors,
         shape = cardStyle.shape,
