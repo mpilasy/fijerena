@@ -7,15 +7,15 @@
 | Lane | Phases, in order | Done | Current | Next |
 |---|---|---|---|---|
 | A TV Live TV | P8 | P8 (2026-10-03, TV) | — | — |
-| B Profile page | P1 → P2 → P9 | — | P1–P9 (since 2026-10-03) | — |
+| B Profile page | P1 → P2 → P9 | P1, P2, P9 (2026-10-04, TV; phone pending) | — | — |
 | C Sources & guide UI | P3 → P4 → P7 | — | P3–P7 (since 2026-10-03) | — |
 | D Guide refresh | P5a backend → P5b UI | P5a (2026-10-04, TV upgrade) | P5b (since 2026-10-04) | — |
 | Last | P6 | — | — | after all lanes |
 
 | Phase | State |
 |---|---|
-| P1 Switch to a profile from its edit page | In progress (lane B, since 2026-10-03) |
-| P2 Per-profile settings in the profile edit page (developer mode, play next episode) | In progress (lane B) |
+| P1 Switch to a profile from its edit page | **Done 2026-10-04** (`53c7847e`), checked on the TV: atr's page → Switch to this profile → Home with atr (header avatar), Back stays on Home; not shown on the profile in use. |
+| P2 Per-profile settings in the profile edit page (developer mode, play next episode) | **Done 2026-10-04** (`89d017b1`), checked on the TV: both switches on the profile page; after switching to atr (developer mode on) About & advanced shows Open Diagnostics and no Developer Mode row; Playback has only Count as watched after. |
 | P3 "Provides a guide" per source | In progress (lane C, since 2026-10-03) |
 | P4 Guide sources under the source; Settings shows Manage sources only | In progress (lane C) |
 | P5a Auto-refresh per guide source: database, worker, sync, export | **Done 2026-10-04** (`e585911f`): nullable `refresh_interval_hours`, `providers.db` 16, guarded one-time copy (flag `epg_refresh_interval_copied_v1`, writes without sync triggers), worker at the shortest interval (rescheduled by watching `epg_source`), sync and export fields, Robolectric migration test (Robolectric 4.17) + 21 unit tests. Upgrade checked on the TV emulator: version 15 → 16, both guide sources got the old 24 h, flag set, `epg_sync` periodic at 24 h. Accepted side effect: with every guide source off, `epg_sync` is cancelled, so the orphan-catalogue sweep then runs only at app start. Left for P5b: the old Settings rows still write the retired keys, which still sync and export; intervals like 4/8/48 h copied as they are, the picker must show them. |
@@ -23,7 +23,7 @@
 | P6 Section-root button at depth 4 | Todo (last) |
 | P7 Home keeps Search the guide; search → grid; no channel search | In progress (lane C) |
 | P8 Live TV preview plays on OK, not on focus (TV only) | **Done 2026-10-03** (`6bda98f9`), checked on the TV emulator with bearstv: Down/Up through rows and Right to another tab left the channel alone; OK on another row tuned it ("Tuning · …"), OK again went full screen; Back → preview on that channel → browse on it; new hint line. Playback itself returned HTTP 511 (bearstv's one-connection limit, a Shield was using it). OK on a row with nothing playing yet plays it. Rechecked on iptv with real playback (9 Plus News: OK plays it, OK again full screen, same stream); `live-tv-preview.txt` and `live-tv-back.txt` re-recorded on iptv. |
-| P9 Content filters from the profile, not from the source | In progress (lane B) |
+| P9 Content filters from the profile, not from the source | **Done 2026-10-04** (`87715009`), checked on the TV: the profile page (name, Colour ›, Developer mode, Play next episode, Content filters ›, Switch to this profile, Save, Cancel, Delete last) opens in place in Settings → Profiles; Content filters › on Kid's page (atr in use, bearstv) opens the editor titled "Content filters · bearstv", Back returns to the row; hidden on iptv (filters act on Xtream only). Not changed on purpose: no filters edited on the emulator. Edit Source's filters section and `focusFilters` removed. |
 
 Rows get **In progress (since date)** when work starts and **Done date** with what was verified
 and where when merged. Plan edits go in their own `docs:` commit.
