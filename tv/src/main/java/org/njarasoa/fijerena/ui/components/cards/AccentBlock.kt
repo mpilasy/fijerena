@@ -28,10 +28,10 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius
  * Content card type determines the accent gradient color.
  */
 enum class ContentCardType {
-    LIVE_TV, // Orange gradient
-    MOVIE, // Blue gradient
-    TV_SHOW, // Light blue gradient
-    DEFAULT, // Surface gradient
+    LIVE_TV,
+    MOVIE,
+    TV_SHOW,
+    DEFAULT,
 }
 
 // Pre-allocated brushes — colors are compile-time constants, no need to recreate per composition

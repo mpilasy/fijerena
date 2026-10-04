@@ -115,12 +115,6 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 
 /**
  * Search screen for searching streams across all categories.
- *
- * Features:
- * - Search input field at top
- * - Real-time filtered results below
- * - D-pad navigation between search field and results
- * - TV-optimized with 5% overscan padding
  */
 @Composable
 private fun localizedContentTypeLabel(contentType: String): String =
@@ -167,7 +161,6 @@ fun SearchScreen(
     // Back from a result's details (or a category) lands on that result — see SearchResultsList.
     val returnFocus = rememberNavReturnFocus()
 
-    // Favorite long-press state
     var favoriteMenuTarget by remember { mutableStateOf<FavoriteMenuTarget?>(null) }
     val longPressScope = rememberCoroutineScope()
 
@@ -217,7 +210,6 @@ fun SearchScreen(
                             vertical = Spacing.tvSafeMarginVertical,
                         ),
             ) {
-                // Header with back button
                 HeaderRow(contentType = contentType)
 
                 Spacer(modifier = Modifier.height(Spacing.lg))
@@ -303,7 +295,7 @@ fun SearchScreen(
                 }
             }
         }
-    } // CompositionLocalProvider
+    }
 }
 
 @Composable
@@ -410,7 +402,6 @@ private fun SearchContent(
     // Down working at all.
     val historyFocusRequester = remember { FocusRequester() }
 
-    // Local state for text field - manages user input independently
     var localQuery by remember { mutableStateOf(query) }
 
     // Sync with incoming query only if local is empty (prevents erasing user input)
@@ -435,7 +426,6 @@ private fun SearchContent(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Search field
         TvSearchField(
             modifier =
                 if (showsHistory) {
@@ -638,7 +628,6 @@ private fun SearchResultsList(
     }
 
     if (isSearching && categoryResults.isEmpty() && results.isEmpty()) {
-        // Show loading state while searching
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
@@ -649,7 +638,6 @@ private fun SearchResultsList(
             )
         }
     } else if (categoryResults.isEmpty() && results.isEmpty()) {
-        // No results found after search completed
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
@@ -739,7 +727,6 @@ private fun SearchResultsList(
                             }
 
                             if (isExpanded) {
-                                // Show categories for this type
                                 itemsIndexed(
                                     typeCats,
                                     key = { _, it -> "cat_${it.categoryId}_${it.contentType}" },
@@ -764,7 +751,6 @@ private fun SearchResultsList(
                                     )
                                     if (isFirstItem && index == 0) isFirstItem = false
                                 }
-                                // Show streams for this type
                                 itemsIndexed(
                                     typeStreams,
                                     key = { _, it -> "stream_${it.itemId}_${it.categoryId}_${it.contentType}" },
@@ -1018,7 +1004,6 @@ private fun CategoryResultItem(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Accent gradient strip on left edge
             Box(
                 modifier =
                     Modifier
@@ -1093,7 +1078,6 @@ private fun SearchResultItem(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Poster thumbnail
             CinemaThumbnail(
                 url = result.thumbnailUrl,
                 fallbackLetter = result.streamName.firstOrNull(),

@@ -206,12 +206,10 @@ fun TvEpgManagementScreen(
                     }
                 }
 
-                // Source rows
                 items(sourceList, key = { it.id }, contentType = { "source" }) { source ->
                     val isSelected = selectedIds.contains(source.id)
                     val latestTime = latestProgrammeTimes[source.id] ?: 0L
 
-                    // Look for active progress for this source
                     val activeProgress =
                         if (processingState is MultiSourceState.Processing) {
                             (processingState as MultiSourceState.Processing).activeProgress[source.id]
@@ -356,7 +354,6 @@ fun TvEpgManagementScreen(
                             } else {
                                 Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
 
-                                // Source Stats Row
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),

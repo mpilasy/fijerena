@@ -188,7 +188,6 @@ fun TvEpgBrowserScreen(
                         vertical = Spacing.tvSafeMarginVertical,
                     ),
         ) {
-            // Header
             Row(
                 verticalAlignment = Alignment.Bottom,
                 modifier = Modifier.fillMaxWidth(),
@@ -220,7 +219,6 @@ fun TvEpgBrowserScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Freshness + refresh button
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
@@ -392,7 +390,6 @@ private fun EpgBrowserContent(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Search field
         GlassPanel {
             Column(modifier = Modifier.padding(Spacing.sm.scaled(scale))) {
                 Row(
@@ -467,7 +464,6 @@ private fun EpgBrowserContent(
             if (returnFocus.key == null && !editing) searchFocusRequester.requestFocusWithRetry()
         }
 
-        // Dev mode: show EPG DB stats
         if (isDevMode && epgDbStats != null) {
             Text(
                 text = stringResource(R.string.epg_browser_dev_stats_format, epgDbStats),
@@ -482,7 +478,6 @@ private fun EpgBrowserContent(
             )
         }
 
-        // Indexing progress banner
         val currentIndexState = indexState
         if (currentIndexState is EpgIndexState.Indexing || currentIndexState is EpgIndexState.Optimizing) {
             val idx = currentIndexState
@@ -773,7 +768,6 @@ private fun ResultsContent(
         }
 
     Column {
-        // Stats row
         Text(
             text = results.statsLine(),
             style =
@@ -876,7 +870,6 @@ private fun ResultsContent(
                     }
                 }
 
-                // Pinned sticky header overlay
                 pinnedHeaderLabel?.let { label ->
                     DateHeader(
                         dateLabel = label,
@@ -948,7 +941,6 @@ private fun ProgramCard(
                     .fillMaxWidth()
                     .padding(Spacing.md.scaled(scale)),
         ) {
-            // Title + category badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -991,7 +983,6 @@ private fun ProgramCard(
                 }
             }
 
-            // Description (truncated)
             val description = program.description
             if (!description.isNullOrBlank()) {
                 Text(
@@ -1009,7 +1000,6 @@ private fun ProgramCard(
                 )
             }
 
-            // Airings
             Spacer(modifier = Modifier.height(Spacing.sm.scaled(scale)))
             program.airings.forEachIndexed { airingIndex, airing ->
                 AiringRow(
@@ -1185,7 +1175,7 @@ private fun AiringRow(
                     },
             )
         }
-    } // end rowContent
+    }
 
     Surface(
         onClick = {

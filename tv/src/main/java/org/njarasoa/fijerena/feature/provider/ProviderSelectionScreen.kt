@@ -140,7 +140,6 @@ fun TvProviderSelectionScreen(
                     vertical = Spacing.tvSafeMarginVertical,
                 ),
     ) {
-        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -246,7 +245,6 @@ fun TvProviderSelectionScreen(
         }
     }
 
-    // Delete confirmation dialog
     deleteConfirmProvider?.let { provider ->
         CinemaAlertDialog(
             onDismissRequest = { deleteConfirmProvider = null },

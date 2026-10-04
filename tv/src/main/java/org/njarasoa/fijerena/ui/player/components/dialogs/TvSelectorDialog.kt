@@ -68,13 +68,9 @@ data class TvSelectorOption(
 /**
  * The in-player picker shared by the audio, subtitle, quality and chapter dialogs.
  *
- * Those were four near-identical files of about 250 lines each, every one re-deriving the same
- * button colour and border matrix by hand, and every one making the same mistake: they drove their
- * selected index from `onFocusChanged`, so arrowing through the list re-pointed the "Active"
- * marker and the dialog reported whichever row the viewer was looking at as the current track.
- *
- * Here selection comes from the caller and focus is the row's own business, which is also what
- * lets both read at once — see
+ * Selection comes from the caller, never from `onFocusChanged` (which would re-point the "Active"
+ * marker at whichever row the viewer is looking at); focus is the row's own business, which is
+ * also what lets both read at once — see
  * [org.njarasoa.fijerena.ui.components.input.TvInputDefaults].
  */
 @Composable

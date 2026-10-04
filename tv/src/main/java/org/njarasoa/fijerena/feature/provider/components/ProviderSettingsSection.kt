@@ -122,7 +122,6 @@ fun ProviderSettingsSection(
     )
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-    // Auto-Resume
     TvSwitchRow(
         checked = providerSettings.autoResumeEnabled,
         onCheckedChange = { enabled ->
@@ -135,7 +134,6 @@ fun ProviderSettingsSection(
 
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-    // Watch History Size
     WatchHistorySizeSetting(
         currentSize = providerSettings.watchHistorySize,
         onSizeChanged = { size ->
@@ -144,7 +142,6 @@ fun ProviderSettingsSection(
         pane = pane,
     )
 
-    // Xtream-only settings
     if (providerType == ProviderType.XTREAM) {
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
@@ -172,7 +169,6 @@ fun ProviderSettingsSection(
 
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-        // Enable Caching
         TvSwitchRow(
             checked = providerSettings.cachingEnabled,
             onCheckedChange = { enabled ->

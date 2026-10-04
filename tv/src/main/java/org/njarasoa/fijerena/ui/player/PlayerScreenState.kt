@@ -18,7 +18,6 @@ class PlayerScreenState(
     context: Context,
     initialMetadata: PlayerMetadata = PlayerMetadata(),
 ) {
-    // UI visibility states
     var showControls by mutableStateOf(false)
     var showStats by mutableStateOf(false)
     var showAudioTrackSelector by mutableStateOf(false)
@@ -62,7 +61,6 @@ class PlayerScreenState(
     // from the last key rather than from when the OSD opened (LT4).
     var controlsKeyTick by mutableIntStateOf(0)
 
-    // Interaction state
     var lastOkClickTime by mutableLongStateOf(0L)
 
     // Set when a Center/Enter KeyDown reveals the OSD (and moves focus onto a button —
@@ -81,14 +79,12 @@ class PlayerScreenState(
     // direction key is held. The first tap/tick of every press fires immediately instead.
     var pendingChannelDelta by mutableIntStateOf(0)
 
-    // Data states
     var livePosition by mutableLongStateOf(0L)
     var liveDuration by mutableLongStateOf(0L)
     var displayedMetadata by mutableStateOf(initialMetadata)
     var previousMetadataTitle by mutableStateOf<String?>(null)
     var isInitialLoad by mutableStateOf(true)
 
-    // Configuration
     val focusRequester = FocusRequester()
     val appSettings = AppSettings(context.applicationContext)
     val isDeveloperMode = appSettings.isDevMode

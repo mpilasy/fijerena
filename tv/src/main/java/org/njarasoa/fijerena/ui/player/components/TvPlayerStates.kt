@@ -98,7 +98,6 @@ fun ErrorContent(
                     .padding(Spacing.xxl)
                     .width(TvDimensions.dialogWidth),
         ) {
-            // Error icon/title
             Text(
                 text = stringResource(R.string.player_playback_error_prefix),
                 color = CinemaError,
@@ -107,7 +106,6 @@ fun ErrorContent(
 
             Spacer(modifier = Modifier.height(Spacing.lg))
 
-            // User-friendly error message
             Text(
                 text = error.message,
                 color = CinemaTextPrimary,
@@ -116,7 +114,6 @@ fun ErrorContent(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            // Technical details in dev mode
             if (isDevMode && error.exception != null) {
                 Spacer(modifier = Modifier.height(Spacing.xl))
 
@@ -148,7 +145,6 @@ fun ErrorContent(
                                 exception?.message?.let { msg ->
                                     append("$messageLabel$msg\n")
                                 }
-                                // Get stack trace preview (first 5 lines)
                                 val stackTrace =
                                     exception
                                         ?.stackTraceToString()
@@ -176,7 +172,6 @@ fun ErrorContent(
 
             Spacer(modifier = Modifier.height(Spacing.xxl + Spacing.xs))
 
-            // Action buttons
             Row(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {

@@ -413,7 +413,6 @@ fun PlayerScreen(
             )
         }
 
-        // Audio track selector dialog
         if (state.showAudioTrackSelector) {
             AudioTrackSelectorDialog(
                 viewModel = viewModel,
@@ -421,7 +420,6 @@ fun PlayerScreen(
             )
         }
 
-        // Subtitle selector dialog
         if (state.showSubtitleSelector) {
             SubtitleSelectorDialog(
                 viewModel = viewModel,
@@ -429,7 +427,6 @@ fun PlayerScreen(
             )
         }
 
-        // Quality selector dialog
         if (state.showQualitySelector) {
             QualitySelectorDialog(
                 viewModel = viewModel,
@@ -437,7 +434,6 @@ fun PlayerScreen(
             )
         }
 
-        // Chapter selector dialog
         if (state.showChapterSelector) {
             ChapterSelectorDialog(
                 viewModel = viewModel,
@@ -476,7 +472,7 @@ fun PlayerScreen(
             }
         }
 
-        // Modern unified controls overlay (mobile-style). Declared before the channel panel below
+        // Controls overlay. Declared before the channel panel below
         // so that on the rare overlap (a channel-zap's showStreamInfo hasn't auto-hidden yet when
         // the panel opens) it renders underneath it, never on top — opening the panel is never
         // itself a reason to show this. hideTopBars still exists for that overlap case, so the

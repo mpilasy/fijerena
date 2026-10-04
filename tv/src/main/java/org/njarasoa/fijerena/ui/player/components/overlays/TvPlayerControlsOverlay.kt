@@ -142,7 +142,6 @@ fun TvPlayerControlsOverlay(
     val subtitleTrackCount = remember(metadata, tracksVersion) { viewModel.getSubtitleTracks().size }
     val qualityCount = remember(metadata, tracksVersion) { viewModel.getVideoQualities().size }
 
-    // State for resolution and codec
     var videoCodec by remember { mutableStateOf<String?>(null) }
     var videoResolution by remember { mutableStateOf<String?>(null) }
 
@@ -168,7 +167,6 @@ fun TvPlayerControlsOverlay(
                         }
                     }
                 }
-                // If we found both, we can stop polling for this stream state
                 if (videoCodec != null && videoResolution != null) break
                 delay(1000)
             }
@@ -178,8 +176,6 @@ fun TvPlayerControlsOverlay(
         }
     }
 
-    // Focus requester for the first focusable control.
-    //
     // [controlsFocusRequester] is attached to the centre play/pause button, which is hidden for
     // live (there is nothing to pause) AND for VOD while playbackState is anything but
     // Playing/Paused (see the button's own composition guard below). Aiming at it before that
@@ -363,9 +359,7 @@ fun TvPlayerControlsOverlay(
         // showFullControls is driven purely by the OK-key toggle, with no gate on playback state,
         // so pressing OK during Buffering/Error/Ended/Idle used to land this button directly on
         // top of PlayerScreen's own centered content for that state (BufferingContent(),
-        // ErrorContent(), ...). An earlier version of this fix excluded only Buffering and missed
-        // Error the same way; allowlisting Playing/Paused closes all of them at once instead of
-        // one at a time. Mobile's equivalent overlay uses the same allowlist for the same reason.
+        // ErrorContent(), ...). An allowlist closes all of them at once. Mobile's equivalent overlay uses the same allowlist for the same reason.
         // The rest of this panel (title, description, audio/subtitle/quality selectors) stays
         // visible regardless — only this button collides with another state's centered content.
         if (showFullControls && !isLive && (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Paused)) {
@@ -427,7 +421,6 @@ fun TvPlayerControlsOverlay(
                     )
                 }
 
-                // VOD progress bar and time info
                 if (!isLive) {
                     val position = livePosition
                     val duration = liveDuration

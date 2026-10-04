@@ -75,7 +75,6 @@ fun PlayerEffects(
         }
     }
 
-    // Request focus on mount
     LaunchedEffect(Unit) {
         state.focusRequester.requestFocus()
     }
@@ -93,7 +92,6 @@ fun PlayerEffects(
 
     // Update displayed metadata when stream actually starts playing
     LaunchedEffect(currentMetadata.title, playbackState::class) {
-        // Only update displayed metadata when stream is actually playing/buffering
         if (currentMetadata.title.isNotEmpty() &&
             (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)
         ) {
@@ -103,13 +101,11 @@ fun PlayerEffects(
 
     // Show only stream info when stream starts from menu
     LaunchedEffect(currentMetadata.title, playbackState::class) {
-        // Show only stream info when title changes on initial load from menu
         if (currentMetadata.title.isNotEmpty() &&
             currentMetadata.title != state.previousMetadataTitle &&
             (playbackState is PlaybackState.Playing || playbackState is PlaybackState.Buffering)
         ) {
             if (state.isInitialLoad) {
-                // From menu selection - show only stream info
                 state.showStreamInfo = true
                 state.isInitialLoad = false
             }

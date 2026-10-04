@@ -76,7 +76,6 @@ fun CacheManagementSection(
     Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
     cacheStats?.let { stats ->
-        // Sync Data Button (Xtream only)
         if (isXtream) {
             CinemaPrimaryButton(
                 onClick = onSyncClick,
@@ -90,7 +89,6 @@ fun CacheManagementSection(
                 modifier = Modifier.paneItem(pane, "sync"),
             )
 
-            // Last Sync Stats
             if (lastSyncedAtMs > 0L) {
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -146,7 +144,6 @@ fun CacheManagementSection(
 
         val totalItems = stats.liveTv.itemsCount + stats.movies.itemsCount + stats.tvShows.itemsCount
 
-        // Total cache
         Text(
             text = stringResource(R.string.provider_total_db_items_label),
             style = styles.bodyLarge,
@@ -199,7 +196,6 @@ fun CacheManagementSection(
 
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-        // EPG & Other
         Text(
             text = stringResource(R.string.provider_epg_stats, NumberUtils.formatCount(stats.epgCount)),
             style = styles.bodySmall,

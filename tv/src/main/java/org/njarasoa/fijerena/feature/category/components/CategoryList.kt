@@ -138,7 +138,6 @@ internal fun CategoryList(
         if (selectedCategoryId != null) paneFocus.focusKey(selectedCategoryId)
     }
 
-    // Animate rotation when refreshing
     var targetRotation by remember { mutableStateOf(0f) }
 
     // Keyed on the flag, not Unit: the loop below never returns, so as a collector body it could
@@ -253,7 +252,6 @@ internal fun CategoryList(
                     .tvPane(paneFocus, exitRight = itemsPane),
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Sticky virtual categories section
                 if (virtualCategories.isNotEmpty()) {
                     Column(
                         modifier = Modifier.padding(Spacing.sm.scaled(scale)),
@@ -275,7 +273,6 @@ internal fun CategoryList(
                         }
                     }
 
-                    // Divider between virtual and regular categories
                     Box(
                         modifier =
                             Modifier
@@ -288,7 +285,6 @@ internal fun CategoryList(
                     Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 }
 
-                // Scrollable regular categories section
                 LazyColumn(
                     state = listState,
                     contentPadding = PaddingValues(Spacing.sm.scaled(scale)),

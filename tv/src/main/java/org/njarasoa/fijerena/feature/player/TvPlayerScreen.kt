@@ -50,12 +50,6 @@ import org.njarasoa.fijerena.ui.theme.*
 
 /**
  * TV player screen that integrates stream playback via StreamLoaderViewModel.
- *
- * Features:
- * - Fetches stream URL from MediaRepository (provider-agnostic)
- * - Creates PlayerMetadata with stream info
- * - Delegates to PlayerScreen for playback UI
- * - D-pad friendly controls
  */
 @Composable
 fun TvPlayerScreen(
@@ -105,8 +99,8 @@ fun TvPlayerScreen(
         lastSuccessState = streamState as StreamLoaderViewModel.StreamState.Success
     }
 
-    // Playback Trigger key — declared here (moved up from its original spot below) because the
-    // screensaver-resume position tracking right below needs to key off it too.
+    // Playback Trigger key — declared here because the screensaver-resume position tracking
+    // right below needs to key off it too.
     // Use derived state or specific key to avoid re-triggering on EPG updates
     val currentStreamId = lastSuccessState?.streamId
 
@@ -195,7 +189,6 @@ fun TvPlayerScreen(
         onHome()
     }
 
-    // Configure player buffer profile based on content type
     LaunchedEffect(contentType) {
         val playerContentType =
             when (contentType) {

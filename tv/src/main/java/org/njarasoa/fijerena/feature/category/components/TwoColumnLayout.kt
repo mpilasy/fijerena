@@ -135,7 +135,6 @@ internal fun TwoColumnLayout(
         }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header
         Row(
             modifier =
                 Modifier
@@ -162,7 +161,6 @@ internal fun TwoColumnLayout(
                         )
                     },
                 )
-                // EPG button - show for Live TV when native EPG or XMLTV index is available
                 val hasEpgData =
                     supportsNativeEpg ||
                         epgIndexState is EpgIndexState.Indexed
@@ -210,7 +208,6 @@ internal fun TwoColumnLayout(
             )
         }
 
-        // EPG error/status banner (Live TV only)
         if (contentType == ContentType.LIVE_TV) {
             val epgErrorMessage =
                 when (epgIndexState) {
@@ -233,12 +230,10 @@ internal fun TwoColumnLayout(
             }
         }
 
-        // Two-column content
         Row(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.lg.scaled(scale)),
         ) {
-            // Left column: Categories (30% width)
             CategoryList(
                 categories = categories,
                 selectedCategoryId = selectedCategoryId,
@@ -260,7 +255,6 @@ internal fun TwoColumnLayout(
                         .fillMaxHeight(),
             )
 
-            // Right column: Streams (70% width)
             StreamList(
                 streams = streams,
                 streamsLoading = streamsLoading,

@@ -26,18 +26,12 @@ object Spacing {
     /**
      * TV Safe Area - Horizontal (5% overscan)
      * Ensures UI remains visible on Sony TVs and other devices with overscan.
-     *
-     * @param screenWidthDp Screen width in dp
-     * @return Safe horizontal padding in dp
      */
     fun tvSafeHorizontal(screenWidthDp: Int): Dp = (screenWidthDp * 0.05).dp
 
     /**
      * TV Safe Area - Vertical (5% overscan)
      * Ensures UI remains visible on Sony TVs and other devices with overscan.
-     *
-     * @param screenHeightDp Screen height in dp
-     * @return Safe vertical padding in dp
      */
     fun tvSafeVertical(screenHeightDp: Int): Dp = (screenHeightDp * 0.05).dp
 }

@@ -31,7 +31,6 @@ internal fun Modifier.tvLongPress(onLongPress: () -> Unit): Modifier =
                 event.nativeKeyEvent.isLongPress &&
                 !longPressDetected
             ) {
-                // Mark that a long-press happened, but don't fire callback yet
                 longPressDetected = true
                 true
             } else if (isDpadCenter && event.type == KeyEventType.KeyDown && longPressDetected) {

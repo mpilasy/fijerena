@@ -170,13 +170,6 @@ import org.njarasoa.fijerena.core.player.domain.EpisodeItem as DomainEpisodeItem
 
 /**
  * Episode selection screen for TV shows.
- *
- * Features:
- * - Displays series information (title, plot)
- * - Lists all episodes grouped by season
- * - Inline episode detail panel when an episode is selected
- * - D-pad friendly navigation
- * - Loads episode data from MediaRepository
  */
 @Composable
 fun EpisodeSelectionScreen(
@@ -214,7 +207,6 @@ fun EpisodeSelectionScreen(
     (uiState as? SeriesDetailsViewModel.UiState.Success)?.let { lastSuccess = it }
     val isRefreshing = uiState is SeriesDetailsViewModel.UiState.Loading && lastSuccess != null
 
-    // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
         val state = uiState
         val shown = lastSuccess
@@ -401,7 +393,6 @@ internal fun EpisodeListContent(
     }
     val relatedReturnId = returnFocus.key?.takeIf { it.startsWith(RETURN_RELATED_PREFIX) }?.removePrefix(RETURN_RELATED_PREFIX)
 
-    // Track refresh state for animation
     var targetRotation by remember { mutableStateOf(0f) }
 
     val rotation by animateFloatAsState(
@@ -410,8 +401,8 @@ internal fun EpisodeListContent(
         label = "refresh_rotation",
     )
 
-    // isRefreshing is now a parameter, so the old `while (isRefreshing)` guard would never
-    // observe it changing. The effect key does that job: a false value cancels the loop.
+    // A `while (isRefreshing)` guard would never observe the parameter changing. The effect key
+    // does that job: a false value cancels the loop.
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
             while (true) {
@@ -477,7 +468,6 @@ internal fun EpisodeListContent(
             initialManualSeason = initialResumeSeason != null,
         )
 
-    // Focus requester for primary Play / Resume button
     val playButtonFocusRequester = remember { FocusRequester() }
 
     // "More" menu (Refresh info), as on the movie hero. A Dialog window: closing it hands focus
@@ -621,7 +611,7 @@ internal fun EpisodeListContent(
     // Playback positions for every episode: the progress bars and watched checks above, plus
     // auto-expanding the season holding the next unwatched/in-progress episode.
     LaunchedEffect(seriesDetail) {
-        // ⚡ Bolt: Avoid flatten().map to prevent intermediate list allocations
+        // Avoid flatten().map to prevent intermediate list allocations
         val allEpisodeIds = mutableListOf<String>()
         for (episodes in seriesDetail.episodes.values) {
             for (ep in episodes) {
@@ -861,7 +851,6 @@ internal fun EpisodeListContent(
                 }
             val previousEpisode = flatEpisodes.getOrNull(currentIdx - 1)
             val nextEpisode = flatEpisodes.getOrNull(currentIdx + 1)
-            // Show episode detail panel
             EpisodeDetailPanel(
                 episode = current,
                 seriesDetail = seriesDetail,
@@ -880,7 +869,6 @@ internal fun EpisodeListContent(
                 onBack = closeEpisodePanel,
             )
         } else {
-            // Show series details & episode list
             LazyColumn(
                 state = listState,
                 // No horizontal margin here: the hero backdrop below must run edge to edge. Every
@@ -1385,10 +1373,9 @@ private fun SeriesCastTabContent(cast: String) {
 }
 
 /**
- * Details tab: everything that was diagnostics rather than headline facts on the old header —
- * provider name, the stream-name picker (with its hard-won stream-switch focus dance, moved here
- * unchanged), TMDB id, director, and the category button. Cast lives in its own tab now (see
- * [SeriesCastTabContent]), not repeated here.
+ * Details tab: diagnostics rather than headline facts — provider name, the stream-name picker,
+ * TMDB id, director, and the category button. Cast lives in its own tab
+ * ([SeriesCastTabContent]), not repeated here.
  */
 @Composable
 private fun SeriesDetailsTabContent(
@@ -1443,7 +1430,6 @@ private fun SeriesDetailsTabContent(
             )
         }
 
-        // Category this series belongs to — OK opens its stream list
         if (categoryName != null) {
             Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             CinemaSecondaryButton(
@@ -1686,7 +1672,6 @@ private fun EpisodeDetailPanel(
             }
         }
 
-    // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
 
     // Load resume position. Keyed on the episode so stepping to another one clears the previous
@@ -1903,7 +1888,6 @@ private fun EpisodeDetailPanel(
                 color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
             )
 
-            // Cast (episode-level, fallback to series)
             val cast = episode.metadata.cast ?: seriesDetail.metadata.cast
             cast?.let {
                 Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
@@ -1916,7 +1900,6 @@ private fun EpisodeDetailPanel(
                 )
             }
 
-            // Director (episode-level, fallback to series)
             val director = episode.metadata.director ?: seriesDetail.metadata.director
             director?.let {
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
@@ -1927,7 +1910,6 @@ private fun EpisodeDetailPanel(
                 )
             }
 
-            // Container format
             episode.extension?.takeIf { it.isNotBlank() }?.let { ext ->
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 Text(
@@ -1937,7 +1919,6 @@ private fun EpisodeDetailPanel(
                 )
             }
 
-            // Air date
             episode.metadata.airDate?.takeIf { it.isNotBlank() }?.let {
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 Text(
@@ -1947,7 +1928,6 @@ private fun EpisodeDetailPanel(
                 )
             }
 
-            // Bitrate
             episode.metadata.bitrate?.takeIf { it > 0 }?.let {
                 Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
                 Text(
@@ -2245,7 +2225,6 @@ private fun EpisodeCard(
                 }
                 Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
 
-                // Episode number
                 Text(
                     text = stringResource(R.string.series_episode_number_short, episode.episodeNumber),
                     style = cardScaledStyles.titleMedium,
@@ -2259,7 +2238,6 @@ private fun EpisodeCard(
 
                 Spacer(modifier = Modifier.width(Spacing.sm.scaled(scale)))
 
-                // Episode title and plot
                 Column(
                     modifier = Modifier.weight(1f),
                 ) {
@@ -2292,7 +2270,6 @@ private fun EpisodeCard(
                     }
                 }
 
-                // Duration
                 episode.metadata.duration?.takeIf(::hasMeaningfulDuration)?.let { duration ->
                     Spacer(modifier = Modifier.width(Spacing.md.scaled(scale)))
                     Text(

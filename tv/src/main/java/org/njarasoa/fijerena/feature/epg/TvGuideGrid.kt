@@ -164,8 +164,8 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
  * buttons; "Now" scrolls to now and focuses the on-air cell. Back leaves the guide. Opened from
  * the player (GD5), entry focus goes to the playing channel's row instead of the first one on air.
  *
- * OK on a programme opens its details panel, whose Watch channel opens the channel's preview (what
- * OK on a programme did before), as OK on a channel does. Long-press OK or the Menu key on either
+ * OK on a programme opens its details panel, whose Watch channel opens the channel's preview, as
+ * OK on a channel does. Long-press OK or the Menu key on either
  * kind of cell opens the channel's row actions (P3). Both are Dialog windows: Back closes them and
  * focus goes back to the cell (GD6).
  *

@@ -202,7 +202,6 @@ internal fun StreamList(
      */
     emptyMessage: String? = null,
 ) {
-    // Animate rotation when refreshing
     var targetRotation by remember { mutableStateOf(0f) }
 
     LaunchedEffect(streamsLoading) {
@@ -381,8 +380,7 @@ internal fun StreamList(
                 }
 
                 streams.isNullOrEmpty() -> {
-                    // Nothing else in this branch is focusable — the previous version was a bare
-                    // Text. Removing the last item from an already-loaded category (e.g.
+                    // Nothing else in this branch is focusable. Removing the last item from an already-loaded category (e.g.
                     // unfavoriting the only favorite) left D-pad focus with nowhere to land: the
                     // focused Card was gone, nothing here claimed it, so it fell to the window
                     // root and stopped responding to D-pad input. A refresh action here both
@@ -505,7 +503,6 @@ private fun StreamListHeader(
                     ),
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            // Always show refresh button when a category is selected
             selectedCategoryId?.let { categoryId ->
                 CinemaIconButton(
                     onClick = { onRefreshStreams(categoryId) },
@@ -525,7 +522,6 @@ private fun StreamListHeader(
                 )
             }
         }
-        // Show stream count
         if (streams != null) {
             val streamsLabel = stringResource(R.string.stream_count_format, streams.size)
             val streamCountText =
@@ -613,7 +609,6 @@ private fun StreamItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm.scaled(scale)),
             ) {
-                // Poster thumbnail
                 CinemaThumbnail(
                     url = item.thumbnailUrl,
                     fallbackLetter = item.name.firstOrNull(),
@@ -627,7 +622,6 @@ private fun StreamItem(
                             ),
                 )
 
-                // Text info
                 val parsedTitle = remember(item.name) { parseDisplayTitle(item.name) }
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
@@ -663,7 +657,6 @@ private fun StreamItem(
                             modifier = if (isFocused) Modifier.bounceMarquee() else Modifier,
                         )
                     }
-                    // Rating (e.g. "7.9 | PG-13")
                     item.metadata.rating?.let { rating ->
                         RatingBadge(
                             rating = rating,
@@ -671,7 +664,6 @@ private fun StreamItem(
                             style = cardStyle.bodySmall,
                         )
                     }
-                    // "What's On Now" for Live TV
                     nowPlayingProgram?.let { program ->
                         Text(
                             text = stringResource(R.string.epg_now_prefix, program.title),
@@ -688,7 +680,6 @@ private fun StreamItem(
                 if (isFocused) RowActionsHint()
             }
 
-            // Progress bar
             if (watchProgress > 0f) {
                 androidx.compose.material3.LinearProgressIndicator(
                     progress = { watchProgress },

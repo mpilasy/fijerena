@@ -84,7 +84,6 @@ private fun handleKeyDown(
                     state.lastOkClickTime = now
 
                     if (state.scrubPositionMs != null && !currentMetadata.isLive) {
-                        // Commit scrub: seek to the cursor position and exit scrub mode
                         commitScrub(state, viewModel)
                         state.showStreamInfo = true
                         true
@@ -259,8 +258,7 @@ internal fun stepScrubCursor(
     // 500ms in PlayerEffects), not playbackState.position/duration: that PlaybackState only
     // updates on discrete Player.Listener events, so during steady playback it stays frozen at
     // whatever it was minutes ago. Starting the scrub cursor from that stale value threw the
-    // seek destination off by however long playback had been running — the "rewind/fast
-    // forward fucked up" bug.
+    // seek destination off by however long playback had been running.
     val duration = state.liveDuration
 
     if (isScrubbableState && duration > 0L) {

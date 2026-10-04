@@ -8,11 +8,9 @@ import androidx.compose.ui.unit.dp
  * Component sizes optimized for 10-foot viewing distance.
  */
 object TvDimensions {
-    // Safe margins
     val safeMarginHorizontal: Dp = 56.dp
     val safeMarginVertical: Dp = 32.dp
 
-    // Form / Dialog widths
     val formFieldWidth: Dp = 600.dp
     val dialogWidth: Dp = 600.dp
     val dialogWidthLarge: Dp = 700.dp
@@ -21,7 +19,6 @@ object TvDimensions {
     val audioTrackSelectorWidth: Dp = 140.dp
     val settingsInputWidth: Dp = 200.dp
 
-    // Button / Card heights
     val buttonHeight: Dp = 64.dp
     val cardHeight: Dp = 80.dp
 
@@ -35,7 +32,6 @@ object TvDimensions {
     val moviePosterHeight: Dp = 60.dp
     val statsOverlayPanelHeight: Dp = 200.dp
 
-    // Icons
     val iconSmall: Dp = 20.dp
     val iconMedium: Dp = 28.dp
     val iconLarge: Dp = 48.dp
@@ -66,21 +62,17 @@ object TvDimensions {
     // two lines of plot text without crowding the backdrop's opaque-to-transparent scrim.
     val heroSideSlotWidth: Dp = 340.dp
 
-    // Progress indicators
     val progressIndicator: Dp = 48.dp
     val progressBar: Dp = 6.dp
 
-    // EPG (Electronic Program Guide)
     val epgTimeSlotWidth: Dp = 120.dp
     val epgRowHeight: Dp = 80.dp
     val epgChannelColumnWidth: Dp = 200.dp
 
-    // Dots / indicators
     val liveDotSize: Dp = 12.dp
     val liveDotSmall: Dp = 10.dp
     val statsDotSize: Dp = 12.dp
 
-    // Poster / Thumbnail
     val posterWidth: Dp = 160.dp
     val posterHeight: Dp = 90.dp
     val posterHeightLarge: Dp = 240.dp
@@ -91,7 +83,6 @@ object TvDimensions {
     /** "Jump Back In" shelf card — wide enough for a legible 16:9 thumbnail at 10-foot viewing. */
     val continueWatchingCardWidth: Dp = 280.dp
 
-    // Borders
     val borderDefault: Dp = 1.dp
     val borderFocused: Dp = 2.dp
 

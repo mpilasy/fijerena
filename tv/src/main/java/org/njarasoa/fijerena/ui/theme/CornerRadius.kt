@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.dp
 import org.njarasoa.fijerena.core.ui.theme.LocalUiStyle
 
 /**
- * Corner Radius System — TV overrides (restored rounded edges).
+ * Corner Radius System — TV overrides.
  * Provides consistent corner radii for TV UI elements, driven by the active look-and-feel style.
  */
 object CornerRadius {

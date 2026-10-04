@@ -40,11 +40,6 @@ import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
  * Primary Button - Main CTAs
  * Bright cyan background with dark text for maximum visibility.
  * Use for primary actions like "Play", "Start", "Continue", etc.
- *
- * @param onClick Callback when button is clicked
- * @param text Button label text
- * @param modifier Optional modifier
- * @param enabled Whether button is enabled (default true)
  */
 @Composable
 fun CinemaPrimaryButton(
@@ -100,11 +95,6 @@ fun CinemaPrimaryButton(
  * Secondary Button - Less emphasis
  * Dark gray background with white text.
  * Use for secondary actions like "Cancel", "Back", "Settings", etc.
- *
- * @param onClick Callback when button is clicked
- * @param text Button label text
- * @param modifier Optional modifier
- * @param enabled Whether button is enabled (default true)
  */
 @Composable
 fun CinemaSecondaryButton(
@@ -165,12 +155,6 @@ fun CinemaSecondaryButton(
  * [CinemaAccent] — decoratively (Add, Edit, LiveTv, the select check) or to mark an "on" state
  * (the favourite star) — so focusing the button painted an accent glyph onto an accent circle and
  * the icon disappeared at exactly the moment the viewer was pointing at it.
- *
- * @param onClick Callback when button is clicked
- * @param icon Composable icon content
- * @param modifier Optional modifier
- * @param enabled Whether button is enabled (default true)
- * @param size Button size (default 48.dp)
  */
 @Composable
 fun CinemaIconButton(
@@ -317,11 +301,6 @@ fun CinemaButton(
  * Danger Button - Destructive actions
  * Vivid Orange background with white text for destructive actions.
  * Use for dangerous operations like "Delete", "Logout", "Clear All", etc.
- *
- * @param onClick Callback when button is clicked
- * @param text Button label text
- * @param modifier Optional modifier
- * @param enabled Whether button is enabled (default true)
  */
 @Composable
 fun CinemaDangerButton(

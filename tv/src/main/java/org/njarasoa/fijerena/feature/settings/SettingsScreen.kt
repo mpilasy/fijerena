@@ -59,9 +59,6 @@ import org.njarasoa.fijerena.ui.theme.Spacing
 import org.njarasoa.fijerena.ui.theme.TvDimensions
 import org.njarasoa.fijerena.ui.theme.scaled
 
-/**
- * Settings screen for app configuration.
- */
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -90,7 +87,6 @@ fun SettingsScreen(
     val exportManager = remember { SettingsExportManager(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Track whether we had a provider at initial load
     var hadProviderOnLoad by remember { mutableStateOf<Boolean?>(null) }
 
     // Export/Import transient state (not in ViewModel yet as it involves SAF Launchers)
@@ -102,13 +98,11 @@ fun SettingsScreen(
     var showImportOptionsDialog by remember { mutableStateOf(false) }
     var pendingImportOptions by remember { mutableStateOf(SettingsExportManager.ImportOptions()) }
 
-    // SAF launcher for export (create file)
     val exportLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.CreateDocument("application/json"),
         ) { uri -> pendingExportUri = uri }
 
-    // SAF launcher for import (open file)
     val importLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
@@ -627,7 +621,6 @@ fun SettingsScreen(
             )
         }
 
-        // Conflict resolution dialog
         if (showConflictDialog && parsedImport != null) {
             ConflictResolutionDialog(
                 conflicts = parsedImport.conflictingProviders,

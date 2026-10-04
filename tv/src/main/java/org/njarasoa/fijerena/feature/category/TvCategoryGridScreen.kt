@@ -60,14 +60,6 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * TV two-column layout: Categories on left, Streams on right.
- *
- * Features:
- * - Left column: Vertical list of categories
- * - Right column: Vertical list of streams for selected category
- * - D-pad navigation between columns
- * - Focus management with visual indicators
- * - 5% padding for TV overscan safety
- * - Scroll state restoration
  */
 @Composable
 fun TvCategoryGridScreen(
@@ -117,8 +109,7 @@ fun TvCategoryGridScreen(
     LaunchedEffect(lifecycleOwner) {
         // The first RESUMED is this screen's own initial composition, which just ran the load
         // that populates uiState/favoriteIds/watchProgress/watchedIds from scratch — re-running
-        // the same per-item refresh here duplicates that work (confirmed via logcat: two full
-        // refreshPerItemData passes back to back on every entry). Only a *later* RESUMED means an
+        // the same per-item refresh here duplicates that work. Only a *later* RESUMED means an
         // actual return from elsewhere, which is what this refresh exists for.
         var isFirstResume = true
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {

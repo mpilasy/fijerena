@@ -114,12 +114,6 @@ import org.njarasoa.fijerena.ui.theme.scaled
 
 /**
  * Movie details screen for VOD content.
- *
- * Features:
- * - Displays movie information (title, plot, cast, genre, rating, duration)
- * - Large Play button
- * - D-pad friendly navigation
- * - Loads movie data from MediaRepository
  */
 @Composable
 fun MovieDetailsScreen(
@@ -148,7 +142,6 @@ fun MovieDetailsScreen(
     val backdropUrl by viewModel.backdropUrl.collectAsStateWithLifecycle()
     val alternateStreams by viewModel.alternateStreams.collectAsStateWithLifecycle()
 
-    // Provide UI scale for all child composables
     CompositionLocalProvider(LocalUiScale provides uiScale) {
         when (val state = uiState) {
             is MovieDetailsViewModel.UiState.Loading -> {
@@ -245,7 +238,6 @@ private fun MovieDetailsContent(
             }
         }
 
-    // Focus requester for Play button
     val playButtonFocusRequester = remember { FocusRequester() }
     // Focus requester for the stream name row, so switching to an alternate stream can keep
     // focus there instead of it falling back to the window root (see streamSwitchSignal below).
@@ -736,11 +728,9 @@ private fun CastTabContent(cast: String) {
 }
 
 /**
- * Details tab: everything that was diagnostics rather than headline facts on the old header —
- * provider name, release date, director, technical stream info, then the stream-name picker (with
- * its hard-won stream-switch focus dance, moved here unchanged) and TMDB id right below the
- * container row, and finally the category button. Cast lives in its own tab now (see
- * [CastTabContent]), not repeated here.
+ * Details tab: diagnostics rather than headline facts — provider name, release date, director,
+ * technical stream info, then the stream-name picker and TMDB id right below the container row,
+ * and finally the category button. Cast lives in its own tab ([CastTabContent]), not repeated here.
  */
 @Composable
 private fun DetailsTabContent(
@@ -768,7 +758,6 @@ private fun DetailsTabContent(
         )
         Spacer(modifier = Modifier.height(Spacing.md.scaled(scale)))
 
-        // Release date / year
         val displayRelease =
             movieDetail.metadata.releaseDate
                 ?: extractYear(movieDetail.metadata.year, null, movieDetail.name.ifBlank { movieName })?.toString()
@@ -789,7 +778,6 @@ private fun DetailsTabContent(
             )
             Spacer(modifier = Modifier.height(Spacing.xs.scaled(scale)))
         }
-        // Technical stream info (Jellyfin-style labeled rows)
         val hasVideoInfo =
             movieDetail.videoInfo != null &&
                 (movieDetail.videoInfo!!.width != null || movieDetail.videoInfo!!.codecName != null)
@@ -894,7 +882,6 @@ private fun DetailsTabContent(
             color = CinemaTextSecondary.copy(alpha = CinemaAlpha.textHigh),
         )
 
-        // Category this movie belongs to — OK opens its stream list
         if (categoryName != null) {
             Spacer(modifier = Modifier.height(Spacing.lg.scaled(scale)))
             CinemaSecondaryButton(

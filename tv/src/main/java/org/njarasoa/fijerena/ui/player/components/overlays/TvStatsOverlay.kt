@@ -87,7 +87,6 @@ fun TvStatsOverlay(
     val configuration = LocalConfiguration.current
     val resources = LocalResources.current
 
-    // Handle Back button to close overlay
     BackHandler(enabled = true) {
         onHide()
     }
@@ -122,13 +121,11 @@ fun TvStatsOverlay(
         )
     }
 
-    // Collect dropped frames from service
     val serviceDroppedFrames by StreamingPlaybackService.getInstance()?.droppedFrames?.collectAsStateWithLifecycle(0L)
         ?: remember { mutableStateOf(0L) }
     val serviceTotalFrames by StreamingPlaybackService.getInstance()?.totalFrames?.collectAsStateWithLifecycle(0L)
         ?: remember { mutableStateOf(0L) }
 
-    // Collect stream stats from service
     val serviceRetryCount by StreamingPlaybackService.getInstance()?.streamRetryCount?.collectAsStateWithLifecycle(0)
         ?: remember { mutableStateOf(0) }
     val serviceStartTimeMs by StreamingPlaybackService.getInstance()?.streamStartTimeMs?.collectAsStateWithLifecycle(0L)
@@ -164,7 +161,6 @@ fun TvStatsOverlay(
         onDispose { jankMonitor.stop() }
     }
 
-    // Update stats periodically
     LaunchedEffect(Unit) {
         // Persisted across ticks so an unchanged Tracks instance (no track/quality switch)
         // skips the O(N) group/track scan entirely instead of repeating it every tick.
@@ -368,7 +364,6 @@ fun TvStatsOverlay(
                             .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                 ) {
-                    // Header
                     Text(
                         text = "📊 " + stringResource(R.string.player_stats_title),
                         style =
@@ -401,31 +396,26 @@ fun TvStatsOverlay(
                             else -> 0L
                         }
 
-                    // Two-column layout
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
-                        // Left Column
                         Column(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                         ) {
-                            // Video stats
                             SectionHeader(stringResource(R.string.player_stats_video))
                             CompactStatRow(stringResource(R.string.player_stats_codec), stats.videoCodec)
                             CompactStatRow(stringResource(R.string.player_stats_res), stats.videoResolution)
                             CompactStatRow(stringResource(R.string.player_stats_fps), stats.videoFrameRate)
                             CompactStatRow(stringResource(R.string.player_stats_bitrate), stats.videoBitrate)
 
-                            // Audio stats
                             SectionHeader(stringResource(R.string.player_stats_audio))
                             CompactStatRow(stringResource(R.string.player_stats_codec), stats.audioCodec)
                             CompactStatRow(stringResource(R.string.player_stats_rate), stats.audioSampleRate)
                             CompactStatRow(stringResource(R.string.player_stats_ch), stats.audioChannels)
                             CompactStatRow(stringResource(R.string.player_stats_bitrate), stats.audioBitrate)
 
-                            // Network stats
                             SectionHeader(stringResource(R.string.player_stats_network))
                             CompactStatRow(stringResource(R.string.player_stats_speed), stats.networkSpeed)
                             val bwEstimate = serviceBandwidth
@@ -470,12 +460,10 @@ fun TvStatsOverlay(
                             }
                         }
 
-                        // Right Column
                         Column(
                             modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
                         ) {
-                            // Playback stats
                             SectionHeader(stringResource(R.string.player_stats_playback))
                             CompactStatRow(stringResource(R.string.player_stats_pos), formatTime(position))
                             CompactStatRow(
@@ -483,7 +471,6 @@ fun TvStatsOverlay(
                                 if (duration > 0) formatTime(duration) else stringResource(R.string.player_live),
                             )
 
-                            // Performance metrics with color coding
                             SectionHeader(stringResource(R.string.player_stats_performance))
                             val totalFrames = serviceTotalFrames
                             val dropRate =
@@ -496,12 +483,8 @@ fun TvStatsOverlay(
                             val dropColor =
                                 when {
                                     dropRate < 0.5f -> CinemaSuccess
-
-                                    // Green - Good
                                     dropRate < 2.0f -> CinemaWarning
-
-                                    // Yellow - Warning
-                                    else -> CinemaError // Red - Poor
+                                    else -> CinemaError
                                 }
 
                             CompactStatRowColored(
@@ -574,7 +557,6 @@ fun TvStatsOverlay(
                                 if (stats.uiFramesSkipped == 0L) CinemaSuccess else CinemaWarning,
                             )
 
-                            // Stream info
                             SectionHeader(stringResource(R.string.player_stats_stream))
                             CompactStatRow(
                                 stringResource(R.string.player_stats_type),

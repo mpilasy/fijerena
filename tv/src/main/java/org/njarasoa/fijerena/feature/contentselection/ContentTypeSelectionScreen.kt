@@ -134,9 +134,6 @@ import org.njarasoa.fijerena.ui.theme.scaled
 import org.njarasoa.fijerena.core.navigation.ContentType as NavContentType
 import org.njarasoa.fijerena.ui.theme.CornerRadius as CinemaCornerRadius
 
-/**
- * Content type selection screen with icons, category counts, and gradient cards.
- */
 @Composable
 fun ContentTypeSelectionScreen(
     onContentTypeSelected: (NavContentType) -> Unit,
@@ -177,7 +174,6 @@ fun ContentTypeSelectionScreen(
     var moviesCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var tvShowsCounts by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
-    // Stash provider ref so we can load counts
     var mediaProviderRef by remember { mutableStateOf<MediaProvider?>(null) }
     var mediaRepositoryRef by remember { mutableStateOf<MediaRepository?>(null) }
     var backdropImageUrl by remember { mutableStateOf<String?>(null) }
@@ -269,7 +265,6 @@ fun ContentTypeSelectionScreen(
         }
     }
 
-    // Load category counts in the background once provider is ready
     LaunchedEffect(mediaProviderRef) {
         val mp = mediaProviderRef ?: return@LaunchedEffect
         // getCategories() already excludes filtered-out categories at the DB layer, so its size
@@ -384,7 +379,6 @@ fun ContentTypeSelectionScreen(
                         ),
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Header with provider name in glass pill
                     Row(
                         modifier =
                             Modifier
@@ -404,7 +398,6 @@ fun ContentTypeSelectionScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.staggeredEntrance(0),
                         )
-                        // Provider name in glass pill badge + settings gear
                         Row(
                             // Applies to every button in the row (none is a focus group).
                             modifier =
@@ -660,7 +653,6 @@ fun ContentTypeSelectionScreen(
                     }
                 }
 
-                // Provider picker dialog
                 if (showProviderPicker && allProviders.size > 1) {
                     // A new dialog window starts with focus on the Close button *below* the list, so
                     // D-pad Down had nowhere to go and Center just closed the dialog. Land on the
@@ -725,7 +717,7 @@ fun ContentTypeSelectionScreen(
                 }
             }
         }
-    } // CompositionLocalProvider
+    }
 }
 
 // Keys for the controls that navigate away from Home — see rememberNavReturnFocus.
@@ -757,9 +749,6 @@ private fun focusableHeroCards(
         if (ContentType.TV_SHOWS in supportedContentTypes) add(RETURN_TV_SHOWS)
     }
 
-/**
- * Hero card with gradient background, icon, and category count.
- */
 @Composable
 private fun ContentTypeHeroCard(
     title: String,

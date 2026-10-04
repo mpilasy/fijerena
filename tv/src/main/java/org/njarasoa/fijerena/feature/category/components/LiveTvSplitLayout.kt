@@ -774,7 +774,6 @@ private fun neighborChannel(
  */
 private const val PREVIEW_SETTLE_MS = 800L
 
-/** What the preview pane plays for a resolved channel. */
 private fun previewMetadata(s: StreamLoaderViewModel.StreamState.Success) =
     PlayerMetadata(
         title = s.streamName,

@@ -167,16 +167,13 @@ fun TvAddProviderScreen(
         isEditMode && loadedConnection.let { it != null && it != listOf(name, url, username, password, host, shareName) }
     var showDiscardDialog by remember { mutableStateOf(false) }
 
-    // Quick Connect state (Jellyfin only)
     var showQuickConnectDialog by remember { mutableStateOf(false) }
 
-    // Cache management state (edit mode only)
     val providerRepo = remember { ProviderRepository(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
     var cacheStats by remember { mutableStateOf<XtreamRepository.CacheStats?>(null) }
     var currentProvider by remember { mutableStateOf<org.njarasoa.fijerena.core.network.provider.ProviderEntity?>(null) }
 
-    // Update currentProvider when providers list changes
     LaunchedEffect(providers, editId) {
         if (isEditMode) {
             currentProvider = providers.find { it.id == editId }
@@ -189,7 +186,6 @@ fun TvAddProviderScreen(
     var showClearMoviesCacheDialog by remember { mutableStateOf(false) }
     var showClearTvShowsCacheDialog by remember { mutableStateOf(false) }
 
-    // Provider settings state (edit mode only)
     var providerSettings by remember { mutableStateOf(ProviderSettings.DEFAULT) }
     var showClearFavoritesDialog by remember { mutableStateOf(false) }
     var showClearProgressDialog by remember { mutableStateOf(false) }
@@ -218,7 +214,6 @@ fun TvAddProviderScreen(
         if (isEditMode) viewModel.observeRunningSync(editId)
     }
 
-    // Refresh UI data when sync completes
     LaunchedEffect(syncState) {
         if (syncState is SyncState.Success || syncState is SyncState.Error) {
             cacheRefreshTrigger++
@@ -261,7 +256,6 @@ fun TvAddProviderScreen(
 
     // Validate the connection fields for the selected type, then save through the ViewModel.
     val submitConnection: () -> Unit = {
-        // Validate based on selected provider type
         val validationError =
             when (selectedType) {
                 ProviderType.XTREAM -> {
@@ -387,7 +381,6 @@ fun TvAddProviderScreen(
 
             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
-            // Name field (all types)
             ReadOnlyFieldWithEdit(
                 value = name,
                 onValueChange = {
@@ -400,7 +393,6 @@ fun TvAddProviderScreen(
                 editButtonFocusRequester = if (isEditMode) nameFocusRequester else null,
             )
 
-            // Type-specific fields
             val typeFields: @Composable () -> Unit = {
                 when (selectedType) {
                     ProviderType.XTREAM -> {
@@ -711,7 +703,6 @@ fun TvAddProviderScreen(
 
                             Spacer(modifier = Modifier.height(Spacing.xl.scaled(scale)))
 
-                            // Buttons
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.md.scaled(scale), Alignment.CenterHorizontally),
@@ -729,7 +720,7 @@ fun TvAddProviderScreen(
                                 )
                             }
                         }
-                    } // GlassPanel
+                    }
                 }
             }
 
@@ -766,7 +757,6 @@ fun TvAddProviderScreen(
                 )
             }
 
-            // Validation failure dialog
             val failedState = saveState as? SaveState.ValidationFailed
             if (failedState != null) {
                 val saveUrl = if (selectedType == ProviderType.SMB) "" else url.trim()
@@ -823,7 +813,6 @@ fun TvAddProviderScreen(
                 )
             }
 
-            // Cache confirmation dialogs
             if (showClearCacheDialog) {
                 ConfirmActionDialog(
                     title = stringResource(R.string.provider_clear_cache_all_title),
@@ -888,7 +877,6 @@ fun TvAddProviderScreen(
                 )
             }
 
-            // Clear Favorites Confirmation Dialog
             if (showClearFavoritesDialog) {
                 ConfirmActionDialog(
                     title = stringResource(R.string.provider_clear_favorites_title),
@@ -907,7 +895,6 @@ fun TvAddProviderScreen(
                 )
             }
 
-            // Clear Progress Confirmation Dialog
             if (showClearProgressDialog) {
                 ConfirmActionDialog(
                     title = stringResource(R.string.provider_clear_progress_title),
@@ -923,7 +910,6 @@ fun TvAddProviderScreen(
                 )
             }
 
-            // Category Filter Dialog
             if (showCategoryFilterDialog) {
                 CategoryFilterDialog(
                     currentFilters = providerSettings.categoryFilters,
@@ -939,7 +925,6 @@ fun TvAddProviderScreen(
                 )
             }
 
-            // Quick Connect dialog (Jellyfin)
             if (showQuickConnectDialog) {
                 QuickConnectDialog(
                     url = url,
@@ -961,7 +946,7 @@ fun TvAddProviderScreen(
                 )
             }
         }
-    } // CompositionLocalProvider
+    }
 }
 
 /** Separator between two sections of the Edit Source settings column. */

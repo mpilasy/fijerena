@@ -113,13 +113,6 @@ object TvFocusTokens {
             }
 
     /**
-     * Weight for text that carries selection. Taken from the active style rather than a literal
-     * [FontWeight.Bold] so Roku's heavier emphasis (800) and Cupertino's lighter one (500) both
-     * come through — the typography scale gets the same treatment in `Type.kt`, and a raw literal
-     * here would opt this text out of it.
-     */
-
-    /**
      * Ambient glow for elements that should read as raised even before focus — hero cards, not
      * list rows (those already lift on [focusedGlow] alone). Same style opt-out as [focusedGlow]
      * and a dimmer, constant elevation since it must never outshine the focus state.
@@ -136,6 +129,12 @@ object TvFocusTokens {
                 Glow.None
             }
 
+    /**
+     * Weight for text that carries selection. Taken from the active style rather than a literal
+     * [FontWeight.Bold] so Roku's heavier emphasis (800) and Cupertino's lighter one (500) both
+     * come through — the typography scale gets the same treatment in `Type.kt`, and a raw literal
+     * here would opt this text out of it.
+     */
     val emphasisWeight: FontWeight
         @Composable @ReadOnlyComposable
         get() = FontWeight(LocalUiStyle.current.type.weightEmphasis)

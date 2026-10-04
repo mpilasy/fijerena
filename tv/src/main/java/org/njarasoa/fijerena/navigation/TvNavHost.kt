@@ -62,21 +62,6 @@ import org.njarasoa.fijerena.feature.settings.SettingsScreen
 
 /**
  * TV-optimized navigation host with D-pad focus management.
- *
- * Features:
- * - Type-safe navigation using kotlinx.serialization
- * - D-pad friendly focus restoration between destinations
- * - Shared AuthViewModel for session management
- * - Automatic navigation to CategoryList after login
- * - androidx.tv.material3 components throughout
- *
- * Navigation Flow:
- * 1. Login screen (unauthenticated users)
- * 2. CategoryList screen (after successful login)
- * 3. Player screen (when stream is selected)
- *
- * @param navController Optional NavController (defaults to rememberNavController)
- * @param authViewModel Shared authentication ViewModel
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -107,7 +92,6 @@ fun TvNavHost(
     val appSettings = remember { AppSettings(context.applicationContext) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Use mutable states for asynchronous data loading
     var hasProvider by remember { mutableStateOf<Boolean?>(null) }
     var initializationComplete by remember { mutableStateOf(false) }
     // "Who's watching?" on every launch once a second profile exists — the TV is shared, so the
@@ -168,7 +152,6 @@ fun TvNavHost(
         minimumShownElapsed = true
     }
 
-    // Determine initial destination based on provider configuration
     val startDestination =
         remember(initializationComplete, hasProvider) {
             if (!initializationComplete) {
@@ -216,7 +199,6 @@ fun TvNavHost(
         shape = RectangleShape,
     ) {
         if (initializationComplete && startDestination != null && minimumShownElapsed) {
-            // The first screen is up: this launch counts as healthy if it lives 30 s more.
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
@@ -232,7 +214,6 @@ fun TvNavHost(
                 popEnterTransition = { fadeIn(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
                 popExitTransition = { fadeOut(animationSpec = tween(CinemaAnimation.navTransitionMs)) },
             ) {
-                // Content Type Selection Screen
                 composable<Screen.ContentTypeSelection> {
                     // Prevent back button from exiting the app on the root screen
                     BackHandler {}
@@ -353,7 +334,6 @@ fun TvNavHost(
                     )
                 }
 
-                // EPG Browser Screen
                 composable<Screen.SyncSettings> {
                     org.njarasoa.fijerena.feature.settings
                         .SyncSettingsScreen()
@@ -391,7 +371,6 @@ fun TvNavHost(
                     )
                 }
 
-                // Category List Screen
                 composable<Screen.CategoryList> { backStackEntry ->
                     val categoryListScreen = backStackEntry.toRoute<Screen.CategoryList>()
                     TvCategoryGridScreen(
@@ -486,13 +465,11 @@ fun TvNavHost(
                     )
                 }
 
-                // Search Screen
                 composable<Screen.Search> { backStackEntry ->
                     val searchScreen = backStackEntry.toRoute<Screen.Search>()
                     SearchScreen(
                         contentType = searchScreen.contentType,
                         onStreamSelected = { itemId, streamName, categoryId, streamContentType ->
-                            // Navigate based on content type
                             when (streamContentType) {
                                 ContentType.TV_SHOWS -> {
                                     navController.navigateOnce(
@@ -540,7 +517,6 @@ fun TvNavHost(
                     )
                 }
 
-                // Movie Details Screen (for VOD Movies)
                 composable<Screen.MovieDetails> { backStackEntry ->
                     val movieDetailsScreen = backStackEntry.toRoute<Screen.MovieDetails>()
                     MovieDetailsScreen(
@@ -582,7 +558,6 @@ fun TvNavHost(
                     )
                 }
 
-                // Episode Selection Screen (for TV Shows)
                 composable<Screen.EpisodeSelection> { backStackEntry ->
                     val episodeSelectionScreen = backStackEntry.toRoute<Screen.EpisodeSelection>()
                     EpisodeSelectionScreen(
@@ -628,7 +603,6 @@ fun TvNavHost(
                     )
                 }
 
-                // EPG Guide Screen
                 composable<Screen.EpgGuide> { backStackEntry ->
                     val epgScreen = backStackEntry.toRoute<Screen.EpgGuide>()
                     TvEpgGuideScreen(
@@ -667,7 +641,6 @@ fun TvNavHost(
                     )
                 }
 
-                // Player Screen
                 composable<Screen.Player> { backStackEntry ->
                     val playerScreen = backStackEntry.toRoute<Screen.Player>()
                     TvPlayerScreen(
@@ -687,7 +660,6 @@ fun TvNavHost(
                     )
                 }
 
-                // Add/Edit Provider Screen
                 composable<Screen.AddProvider> { backStackEntry ->
                     val addProviderScreen = backStackEntry.toRoute<Screen.AddProvider>()
                     TvAddProviderScreen(
@@ -703,12 +675,10 @@ fun TvNavHost(
                     )
                 }
 
-                // Provider Selection Screen
                 composable<Screen.ProviderSelection> {
                     TvProviderSelectionScreen(
                         onProviderSelected = { provider ->
                             coroutineScope.launch {
-                                // Activate the selected provider in Room
                                 val providerRepo = ProviderRepository(context.applicationContext)
                                 providerRepo.pickProvider(provider.id)
 
@@ -730,7 +700,6 @@ fun TvNavHost(
                                     }
                                 }
 
-                                // Navigate to content selection for all provider types
                                 // From the root, like a profile switch: every screen below holds
                                 // a repository clearAllCaches() just closed, so Back used to walk
                                 // into the old provider's Home, where writes went nowhere. See
@@ -764,7 +733,6 @@ fun TvNavHost(
                     )
                 }
 
-                // Settings Screen
                 composable<Screen.ProfilePicker> {
                     ProfilePickerScreen(
                         onProfileChosen = {
@@ -810,7 +778,6 @@ fun TvNavHost(
                                 val providerRepo = ProviderRepository(context.applicationContext)
                                 val activeProvider = providerRepo.getActiveProvider()
 
-                                // Clear AppContainer caches for the new provider
                                 val container =
                                     org.njarasoa.fijerena.core.ui.di.AppContainer
                                         .getInstance(context)

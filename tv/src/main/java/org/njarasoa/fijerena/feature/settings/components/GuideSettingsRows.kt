@@ -473,7 +473,7 @@ private fun GuideStatusLines(
     }
 }
 
-/** Hour and minute (5-minute steps) for the auto-refresh start time; moved from EPG Management. */
+/** Hour and minute (5-minute steps) for the auto-refresh start time. */
 @Composable
 private fun TvTimePickerDialog(
     initialTime: String,

@@ -144,7 +144,7 @@ class EpisodeSelectionScreenTest {
     }
 
     /**
-     * Regression test for the streamSwitchSignal fix (commit adjacent to this one): switching to
+     * Regression test for the streamSwitchSignal fix: switching to
      * an alternate stream source intentionally moves focus off Play/the resume card and onto the
      * stream-name row, and that must survive the same nav-disposal round trip as the resume
      * anchor above — a plain `remember` forgot the switch across it and let the resumeEpisodeId
@@ -213,8 +213,6 @@ class EpisodeSelectionScreenTest {
         // streamSwitchSignal.
         composeTestRule.onNodeWithTag("stream_name_picker").assertIsFocused()
 
-        // Simulates exactly what navigating to the player and coming back does: this composable
-        // disposed, then recomposed fresh from the same saved-state registry.
         restorationTester.emulateSavedInstanceStateRestore()
 
         // Bug behavior: streamSwitchSignal reset to 0, so the resumeEpisodeId effect saw "no

@@ -29,11 +29,7 @@ import org.njarasoa.fijerena.ui.theme.TvFocusTokens
 import androidx.compose.ui.geometry.CornerRadius as ComposeCornerRadius
 
 /**
- * Standard TV Focus Modifier
- * Applies consistent focus behavior across all focusable elements:
- * - 1.1x scale on focus with 200ms animated transition
- * - 2dp Electric Blue border when focused
- * - Rounded corners matching the design system
+ * Standard TV Focus Modifier: the style's focus scale (animated) and an accent border on focus.
  *
  * Implemented as a Modifier.Node to avoid the per-element composition overhead of `composed {}`.
  */
@@ -51,10 +47,7 @@ fun Modifier.tvFocusable(
         .focusable()
 
 /**
- * No Scale Focus Modifier
- * For elements that should only show border on focus without scaling:
- * - No scale
- * - 2dp animated border
+ * No Scale Focus Modifier: a border on focus, without scaling.
  *
  * Useful for cards in dense grids where scaling would cause overlaps.
  */
@@ -71,11 +64,7 @@ fun Modifier.tvFocusableNoScale(
     )
 
 /**
- * Content-First Focus Modifier (borderless)
- * For image-based cards where the content is the star:
- * - 1.05x scale on focus (gentler than standard)
- * - Subtle border only when focused
- * - No bright border, no 1.1x scale
+ * Content-First Focus Modifier, for image-based cards: half the standard scale-up on focus.
  */
 @Composable
 fun Modifier.tvFocusableContent(cornerRadius: Dp = CornerRadius.medium): Modifier =
@@ -120,7 +109,6 @@ private class TvFocusableNode(
     private var currentScale = TvFocusTokens.defaultScale
     private var animationJob: Job? = null
 
-    // Cached px values
     private var borderWidthPx = 0f
     private var cornerRadiusPx = 0f
 
