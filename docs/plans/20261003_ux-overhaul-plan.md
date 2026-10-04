@@ -11,8 +11,8 @@ in their own `docs:` commit, never amended into a lane's code commit.
 
 | Lane | Done | Current | Next |
 |---|---|---|---|
-| 1 Mobile settings | M1–M5 (2026-10-03, phone); fr/mg backfill (2026-10-03) | — | mg: ~200 keys still hold English text |
-| 2 TV focus + Live TV | LT1–LT7, Phases 1–4, 6 (2026-10-03, TV); final regression walk (2026-10-03, see below) | — | — |
+| 1 Mobile settings | M1–M5 (2026-10-03, phone); fr/mg backfill (2026-10-03) | mg translation pass (since 2026-10-03) | — |
+| 2 TV focus + Live TV | LT1–LT7, Phases 1–4, 6 (2026-10-03, TV); final regression walk (2026-10-03, see below) | small follow-ups: single-tab Right, empty Favorites tab, Left from the first tab to browse, Favourites guide row after removal (since 2026-10-03) | — |
 | 3 Core + guide | A-W4, A-W6, GD0–GD6, GD0c (2026-10-03, TV; GD0b kill-mid-refresh checked on the TV) | — | — |
 | 4 TV settings | T1–T6, Phases 7–8, follow-ups sweep (2026-10-03, TV; filters deep link verified on bearstv) | — | — |
 
